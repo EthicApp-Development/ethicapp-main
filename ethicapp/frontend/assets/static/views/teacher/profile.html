@@ -1,29 +1,42 @@
 <div ng-controller="ProfileController as vm" class="teacher-profile-page">
-    <div class="profile">
-        <img ng-src="{{ vm.getProfileAvatar() }}" alt="Profile avatar" class="profile-pic">
-        <div class="profile-info">
-            <strong class="profile-username">{{ vm.getDisplayName() }}</strong>
-            <h3 ng-if="vm.profile.role == 'P'" class="profile-role">{{ 'teacher' | translate }}</h3>
+    <div class="form-horizontal">
+        <div class="form-group profile-header-row">
+            <div class="col-sm-offset-3 col-sm-9">
+                <div class="profile">
+                    <div class="profile-avatar-control">
+                        <img ng-src="{{ vm.getProfileAvatar() }}" alt="Profile avatar" class="profile-pic">
+                        <label
+                            for="teacher-profile-avatar"
+                            class="profile-avatar-action"
+                            title="{{ 'change_profile_photo' | translate }}"
+                            tooltip="{{ 'change_profile_photo' | translate }}">
+                            <i class="fa fa-camera" aria-hidden="true"></i>
+                            <span class="sr-only">{{ 'change_profile_photo' | translate }}</span>
+                        </label>
+                        <input
+                            id="teacher-profile-avatar"
+                            class="profile-avatar-input"
+                            type="file"
+                            ngf-select
+                            ng-model="vm.selectedAvatarFile"
+                            ngf-change="vm.onAvatarSelected($file)"
+                            accept="image/*"
+                            ngf-max-size="500KB">
+                    </div>
+                    <div class="profile-info">
+                        <strong class="profile-username">{{ vm.getDisplayName() }}</strong>
+                        <h3 ng-if="vm.profile.role == 'P'" class="profile-role">{{ 'teacher' | translate }}</h3>
+                        <small class="help-block profile-avatar-hint">{{ 'avatar_format_and_size' | translate }}</small>
+                        <small class="help-block profile-avatar-hint" ng-if="vm.selectedAvatarFile">
+                            {{ vm.selectedAvatarFile.name }}
+                        </small>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
     <form class="form-horizontal" novalidate>
-        <div class="form-group">
-            <label class="col-sm-3 control-label">{{ 'profile_photo' | translate }}</label>
-            <div class="col-sm-9">
-                <input
-                    type="file"
-                    ngf-select
-                    ng-model="vm.selectedAvatarFile"
-                    ngf-change="vm.onAvatarSelected($file)"
-                    accept="image/jpeg,image/png"
-                    ngf-max-size="300KB">
-                <button type="button" class="btn btn-default btn-sm mt-medio" ng-click="vm.uploadAvatar()" ng-disabled="!vm.selectedAvatarFile">{{ 'upload_photo' | translate }}</button>
-                <small class="help-block">{{ 'avatar_format_and_size' | translate }}</small>
-                <small class="help-block">{{ 'profile_avatar_flow_hint' | translate }}</small>
-            </div>
-        </div>
-
         <div class="form-group">
             <label class="col-sm-3 control-label" for="teacher-firstname">{{ 'firstname' | translate }}</label>
             <div class="col-sm-9">
@@ -46,12 +59,16 @@
         </div>
 
         <div class="form-group">
-            <div class="col-sm-offset-3 col-sm-9">
-                <div class="profile-toast-container profile-toast-anchor">
-                    <toast></toast>
-                </div>
+            <label class="col-sm-3 control-label" for="teacher-preferred-locale">{{ 'preferred_language' | translate }}</label>
+            <div class="col-sm-9">
+                <select
+                    id="teacher-preferred-locale"
+                    class="form-control"
+                    ng-model="vm.profile.preferred_locale"
+                    ng-options="option.value as option.label for option in vm.languageOptions">
+                </select>
             </div>
-        </div>    
+        </div>
 
         <div class="form-group" ng-if="vm.isRecaptchaEnabled">
             <div class="col-sm-offset-3 col-sm-9">
@@ -62,9 +79,16 @@
         <div class="form-group">
             <div class="col-sm-offset-3 col-sm-9">
                 <button type="button" class="btn btn-default btn-sm mt-medio profile-save-btn" ng-click="vm.saveProfile()">{{ 'save_profile' | translate }}</button>
-                <small class="help-block">{{ 'profile_save_scope_hint' | translate }}</small>
             </div>
-        </div>    
+        </div>
+
+        <div class="form-group">
+            <div class="col-sm-offset-3 col-sm-9">
+                <div class="profile-toast-container profile-toast-anchor">
+                    <toast></toast>
+                </div>
+            </div>
+        </div>
     </form>
 
     <div class="form-horizontal">

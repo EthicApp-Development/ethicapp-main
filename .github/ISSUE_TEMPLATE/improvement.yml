@@ -1,0 +1,73 @@
+name: Mejora de funcionalidad existente
+description: Sugiere una mejora, ajuste o refactor de algo que ya existe. English is also welcome.
+title: "[Improvement]: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: area
+    attributes:
+      label: Área o flujo existente
+      description: ¿Qué parte de EthicApp debería mejorar?
+      placeholder: Por ejemplo, editor de casos, login, panel docente, backup, documentación...
+    validations:
+      required: true
+
+  - type: textarea
+    id: problema
+    attributes:
+      label: Problema actual
+      description: Describe la fricción, limitación, deuda técnica o comportamiento confuso.
+    validations:
+      required: true
+
+  - type: textarea
+    id: mejora
+    attributes:
+      label: Mejora propuesta
+      description: ¿Qué cambio concreto propones?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: impacto
+    attributes:
+      label: Impacto esperado
+      multiple: true
+      options:
+        - Usabilidad
+        - Accesibilidad
+        - Rendimiento
+        - Mantenibilidad
+        - Seguridad
+        - Operación / despliegue
+        - Documentación
+        - Otro / no estoy seguro/a
+    validations:
+      required: true
+
+  - type: textarea
+    id: riesgos
+    attributes:
+      label: Riesgos o consideraciones
+      description: ¿Qué compatibilidad, migración, permisos o datos podrían verse afectados?
+    validations:
+      required: false
+
+  - type: textarea
+    id: verificacion
+    attributes:
+      label: Verificación sugerida
+      description: ¿Cómo podríamos comprobar que la mejora funciona?
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: Revisé issues abiertos similares.
+          required: true
+        - label: Esta solicitud mejora algo existente y no describe una funcionalidad completamente nueva.
+          required: true

@@ -1,0 +1,61 @@
+<form name="casePublicationForm" ng-submit="$ctrl.save(casePublicationForm)" novalidate>
+    <div class="modal-header">
+        <button type="button" class="close" ng-click="$ctrl.cancel()" aria-label="{{ 'cancel' | translate }}">
+            <span aria-hidden="true">&times;</span>
+        </button>
+        <h4 class="modal-title">{{ 'case_publication_settings_modal_title' | translate }}</h4>
+    </div>
+    <div class="modal-body">
+        <p>{{ 'case_publication_settings_modal_intro' | translate }}</p>
+        <p>
+            <a class="btn btn-default btn-sm" ng-href="#!/cases/{{$ctrl.caseItem.id}}" target="_blank" rel="noopener noreferrer">
+                <i class="fa fa-external-link" aria-hidden="true"></i> {{ 'open_case_in_new_tab' | translate }}
+            </a>
+        </p>
+
+        <case-card
+            case-item="$ctrl.caseItem"
+            show-actions="false"
+            show-extended-info="true">
+        </case-card>
+
+        <hr>
+
+        <fieldset>
+            <legend>{{ 'ethical_case_language_and_visibility' | translate }}</legend>
+            <div class="form-group case-form-field">
+                <label for="casePublicationVisibility">{{ 'visibility' | translate }} <span class="text-danger" aria-hidden="true">*</span></label>
+                <select
+                    id="casePublicationVisibility"
+                    name="visibility"
+                    class="form-control"
+                    ng-model="$ctrl.formModel.visibility"
+                    ng-options="option.value as (option.labelKey | translate) for option in $ctrl.visibilityOptions"
+                    ng-class="{'input-warning': $ctrl.shouldShowError(casePublicationForm.visibility)}"
+                    required>
+                </select>
+                <p class="help-block text-danger" ng-if="$ctrl.shouldShowError(casePublicationForm.visibility)">
+                    {{ 'ethical_cases_validation_required' | translate }}
+                </p>
+            </div>
+        </fieldset>
+
+        <fieldset>
+            <legend>{{ 'ethical_case_rights_and_license' | translate }}</legend>
+            <case-rights-editor
+                form-model="$ctrl.formModel"
+                licenses="$ctrl.licenses"
+                form-ctrl="casePublicationForm"
+                has-attempted-submit="$ctrl.hasAttemptedSubmit">
+            </case-rights-editor>
+        </fieldset>
+
+        <div class="alert alert-warning" ng-if="$ctrl.publicSharingError">
+            {{ 'case_publication_settings_not_public' | translate }}
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-default" ng-click="$ctrl.cancel()">{{ 'cancel' | translate }}</button>
+        <button type="submit" class="btn btn-primary">{{ 'save_and_publish_design' | translate }}</button>
+    </div>
+</form>

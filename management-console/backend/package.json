@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "nodemon server.js",
     "start": "node server.js",
+    "anonymize:students": "node scripts/anonymize-students.js",
     "test": "node --test \"**/*.node-test.mjs\""
   },
   "dependencies": {

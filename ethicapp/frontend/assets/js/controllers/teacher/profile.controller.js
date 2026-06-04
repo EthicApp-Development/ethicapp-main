@@ -1,9 +1,10 @@
-export const ProfileController = function ($scope, $translate, toast, UserProfileService) {
+export const ProfileController = function ($scope, $translate, toast, UserProfileService, LanguageCatalogService) {
     const vm = this;
     const TOAST_INFO_TIMEOUT_MS = 4 * 1000;
     const TOAST_ERROR_TIMEOUT_MS = 6 * 1000;
 
     vm.genderOptions = [];
+    vm.languageOptions = [];
 
     vm.profile = {
         firstname: "",
@@ -12,11 +13,13 @@ export const ProfileController = function ($scope, $translate, toast, UserProfil
         email: "",
         role: "",
         name: "",
+        preferred_locale: "en_US",
         profile_image_path: null,
         profile_image_topbar_path: null
     };
 
     vm.selectedAvatarFile = null;
+    vm.selectedAvatarPreviewUrl = null;
     vm.defaultProfileAvatar = "/assets/images/user-placeholder/incognito-user.svg";
     vm.defaultTopbarAvatar = "/assets/images/user-placeholder/avatar-placeholder-64.svg";
     vm.avatarCacheToken = Date.now();
@@ -38,6 +41,12 @@ export const ProfileController = function ($scope, $translate, toast, UserProfil
             { value: "O", label: vm.translate("other") }
         ];
     };
+    vm.refreshLanguageOptions = (languages = []) => {
+        vm.languageOptions = languages.map((language) => ({
+            value: language.code,
+            label: language.native_name || language.name || language.code
+        }));
+    };
 
     vm.withCacheToken = (url) => {
         if (!url) {
@@ -48,7 +57,13 @@ export const ProfileController = function ($scope, $translate, toast, UserProfil
         return `${url}${separator}v=${vm.avatarCacheToken}`;
     };
     vm.getTopbarAvatar = () => vm.withCacheToken(vm.profile.profile_image_topbar_path || vm.defaultTopbarAvatar);
-    vm.getProfileAvatar = () => vm.withCacheToken(vm.profile.profile_image_path || vm.defaultProfileAvatar);
+    vm.getProfileAvatar = () => {
+        if (vm.selectedAvatarPreviewUrl) {
+            return vm.selectedAvatarPreviewUrl;
+        }
+
+        return vm.withCacheToken(vm.profile.profile_image_path || vm.defaultProfileAvatar);
+    };
     vm.showInfoToast = (message) => {
         toast.create({
             timeout: TOAST_INFO_TIMEOUT_MS,
@@ -143,8 +158,10 @@ export const ProfileController = function ($scope, $translate, toast, UserProfil
             vm.profile = {
                 ...vm.profile,
                 ...data,
-                sex: data.sex || "O"
+                sex: data.sex || "O",
+                preferred_locale: data.preferred_locale || vm.profile.preferred_locale
             };
+            await $translate.use(LanguageCatalogService.getUiLanguageCodeForLocale(vm.profile.preferred_locale));
             vm.avatarCacheToken = Date.now();
             vm.applyChanges();
         } catch (error) {
@@ -162,12 +179,25 @@ export const ProfileController = function ($scope, $translate, toast, UserProfil
                 return;
             }
 
-            await UserProfileService.updateProfile({
+            const result = await UserProfileService.updateProfile({
                 firstname: vm.profile.firstname,
                 lastname: vm.profile.lastname,
                 sex: vm.profile.sex,
+                preferred_locale: vm.profile.preferred_locale,
+                avatar: vm.selectedAvatarFile,
                 g_recaptcha_response: recaptchaResponse
             });
+
+            if (result?.data) {
+                vm.profile = {
+                    ...vm.profile,
+                    ...result.data
+                };
+                vm.avatarCacheToken = Date.now();
+            }
+            await $translate.use(LanguageCatalogService.getUiLanguageCodeForLocale(vm.profile.preferred_locale));
+
+            vm.clearSelectedAvatar();
 
             if (vm.isRecaptchaEnabled && window.grecaptcha && vm.profileRecaptchaWidgetId !== null) {
                 window.grecaptcha.reset(vm.profileRecaptchaWidgetId);
@@ -176,13 +206,61 @@ export const ProfileController = function ($scope, $translate, toast, UserProfil
             vm.applyChanges();
         } catch (error) {
             console.error("Could not update profile:", error);
-            vm.showErrorToast(vm.translate("profile_update_error"));
+            vm.showErrorToast(vm.getProfileSaveErrorMessage(error));
+            vm.applyChanges();
+        }
+    };
+
+    vm.loadLanguageOptions = async () => {
+        try {
+            const languages = await LanguageCatalogService.getLanguages();
+            vm.refreshLanguageOptions(languages);
+            if (!vm.languageOptions.some((option) => option.value === vm.profile.preferred_locale)) {
+                vm.profile.preferred_locale = LanguageCatalogService.getDefaultLanguageCode(languages, vm.profile.preferred_locale);
+            }
+            vm.applyChanges();
+        } catch (error) {
+            console.error("Could not load languages:", error);
+            vm.showErrorToast(vm.translate("profile_languages_load_error"));
             vm.applyChanges();
         }
     };
 
     vm.onAvatarSelected = (file) => {
+        if (vm.selectedAvatarPreviewUrl) {
+            URL.revokeObjectURL(vm.selectedAvatarPreviewUrl);
+            vm.selectedAvatarPreviewUrl = null;
+        }
+
         vm.selectedAvatarFile = file;
+        if (file) {
+            vm.selectedAvatarPreviewUrl = URL.createObjectURL(file);
+        }
+        vm.applyChanges();
+    };
+
+    vm.clearSelectedAvatar = () => {
+        if (vm.selectedAvatarPreviewUrl) {
+            URL.revokeObjectURL(vm.selectedAvatarPreviewUrl);
+        }
+        vm.selectedAvatarFile = null;
+        vm.selectedAvatarPreviewUrl = null;
+    };
+
+    vm.getProfileSaveErrorMessage = (error) => {
+        if (error?.data?.error === "avatar_size_limit_exceeded") {
+            return vm.translate("profile_avatar_size_limit_error");
+        }
+
+        if (error?.data?.error === "invalid_avatar_type") {
+            return vm.translate("profile_avatar_invalid_type_error");
+        }
+
+        if (error?.data?.error === "avatar_upload_failed") {
+            return vm.translate("profile_avatar_upload_error");
+        }
+
+        return vm.translate("profile_update_error");
     };
 
     vm.uploadAvatar = async () => {
@@ -251,6 +329,7 @@ export const ProfileController = function ($scope, $translate, toast, UserProfil
     };
 
     vm.refreshGenderOptions();
+    vm.loadLanguageOptions();
     vm.loadProfile();
     setTimeout(vm.ensureProfileRecaptcha, 300);
     const languageChangeListener = $scope.$on("$translateChangeSuccess", () => {
@@ -265,5 +344,6 @@ export const ProfileController = function ($scope, $translate, toast, UserProfil
     $scope.$on("$destroy", () => {
         languageChangeListener();
         profileUpdateListener();
+        vm.clearSelectedAvatar();
     });
 };

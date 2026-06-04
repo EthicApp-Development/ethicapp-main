@@ -12,6 +12,118 @@ import externalServicesRegistry from "../../services/external-services.service.j
 
 const router = express.Router();
 
+router.post("/sessions/join/:code", async (req, res) => {
+    if (!requireRole(req, res, "A")) {
+        return;
+    }
+
+    const { code } = req.params;
+    const { device } = req.body;
+    const userId = req.session.uid;
+
+    if (!code || !device || !userId) {
+        return res.status(400).json({ status: "error", message: "Missing required parameters." });
+    }
+
+    try {
+        const insertResult = await rpg2.execSQL({
+            dbcon: config.dbconnString,
+            sql: `
+                INSERT INTO sesusers (uid, sesid, device)
+                SELECT $1::int AS uid,
+                       id,
+                       $2 AS device
+                FROM sessions
+                WHERE code = $3
+                  AND NOT EXISTS (
+                      SELECT 1
+                      FROM sesusers AS su
+                      INNER JOIN sessions AS s
+                          ON su.sesid = s.id
+                      WHERE su.uid = $1
+                        AND s.code = $3
+                  )
+                  AND NOT EXISTS (
+                      SELECT 1
+                      FROM stages AS st
+                      INNER JOIN sessions AS ss
+                          ON st.sesid = ss.id
+                      WHERE ss.code = $3
+                        AND st.type = 'team'
+                  )
+                RETURNING sesid
+            `,
+            sqlParams: [
+                rpg2.param("plain", userId),
+                rpg2.param("plain", device),
+                rpg2.param("plain", code),
+            ],
+        });
+
+        if (insertResult.length === 0 || !insertResult[0].sesid) {
+            return res.status(400).json({ status: "end" });
+        }
+
+        const sessionId = insertResult[0].sesid;
+
+        const userResult = await rpg2.execSQL({
+            dbcon: config.dbconnString,
+            sql: `
+                SELECT name, $1 AS device, role, mail
+                FROM users
+                WHERE id = $2
+            `,
+            sqlParams: [
+                rpg2.param("plain", device),
+                rpg2.param("plain", userId),
+            ],
+        });
+
+        if (userResult.length === 0) {
+            return res.status(404).json({ status: "error", message: "User not found." });
+        }
+
+        const { name, role, mail } = userResult[0];
+
+        teacherNotifications.studentJoined(sessionId, {
+            id: userId,
+            name,
+            device,
+            role,
+            mail,
+        });
+
+        const sessionResult = await rpg2.execSQL({
+            dbcon: config.dbconnString,
+            sql: `
+                SELECT type
+                FROM sessions
+                WHERE id = $1
+            `,
+            sqlParams: [rpg2.param("plain", sessionId)],
+        });
+
+        if (sessionResult.length === 0 || !sessionResult[0].type) {
+            return res.status(400).json({ status: "end" });
+        }
+
+        const sessionType = sessionResult[0].type;
+        req.session.ses = sessionId;
+
+        const redirectUrl =
+            sessionType === "R" || sessionType === "J"
+                ? "role-playing"
+                : sessionType === "T"
+                ? "ethics"
+                : "select";
+
+        return res.json({ status: "ok", redirect: redirectUrl, sesid: sessionId });
+    } catch (err) {
+        console.error("Error joining session:", err);
+        return res.status(500).json({ status: "error", message: "Internal server error." });
+    }
+});
+
 router.get("/activities/:session_id/current_phase_state", async (req, res) => {
     const sessionId = Number(req.params.session_id);
     const invalidate = req.query.invalidate === "true";

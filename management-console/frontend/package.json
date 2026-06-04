@@ -9,12 +9,13 @@
     "preview": "vite preview --host 0.0.0.0 --port 4175"
   },
   "dependencies": {
+    "@simplewebauthn/browser": "^13.3.0",
     "bootstrap": "^5.3.8",
+    "prop-types": "^15.8.1",
     "react": "^19.2.0",
     "react-bootstrap": "^2.10.10",
     "react-dom": "^19.2.0",
-    "react-router-dom": "^7.9.4",
-    "prop-types": "^15.8.1"
+    "react-router-dom": "^7.9.4"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^5.1.0",

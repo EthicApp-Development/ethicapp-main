@@ -34,6 +34,17 @@
         "sessionEnded"
       ],
       "enabled": true
+    },
+    {
+      "id": "argumentation-tutor-system",
+      "description": "ATS integration using Keycloak-protected V2 endpoints for argument feedback in student chat overlay.",
+      "adapter": "./adapters/ats-feedback.adapter.js",
+      "hooks": [
+        "student-response-submitted",
+        "phaseEnded",
+        "external-service-result"
+      ],
+      "enabled": true
     }
   ]
 }

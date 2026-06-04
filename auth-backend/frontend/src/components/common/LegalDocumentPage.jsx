@@ -2,7 +2,7 @@ import PropTypes from 'prop-types';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useI18n } from '../../app/i18n-context';
-import { dataPrivacyContact, institutionName } from '../../config/env';
+import { useInstitutionMetadata } from '../../hooks/useInstitutionMetadata';
 import { DEFAULT_LOCALE } from '../../i18n/languages';
 import MarkdownArticle from './MarkdownArticle';
 
@@ -29,17 +29,18 @@ function LegalDocumentPage({
   const { locale, t } = useI18n();
   const navigate = useNavigate();
   const [markdownContent, setMarkdownContent] = useState('');
+  const institutionMetadata = useInstitutionMetadata();
 
   const localizedPath = `../../content/legal/${documentKey}/${locale}.md`;
   const fallbackPath = `../../content/legal/${documentKey}/${DEFAULT_LOCALE}.md`;
 
   const resolvedMarkdownVariables = useMemo(
     () => ({
-      institutionName,
-      privacyContact: dataPrivacyContact,
+      institutionName: institutionMetadata.name || t('legal.fallbacks.institutionName'),
+      privacyContact: institutionMetadata.privacyContact || t('legal.fallbacks.privacyContact'),
       ...markdownVariables
     }),
-    [markdownVariables]
+    [institutionMetadata, markdownVariables, t]
   );
 
   useEffect(() => {

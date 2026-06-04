@@ -3,15 +3,17 @@ services:
     build:
       context: ./nginx
       dockerfile: Dockerfile
+    environment:
+      - NGINX_MAINTENANCE_MODE=${NGINX_MAINTENANCE_MODE:-false}
+      - NGINX_MAINTENANCE_RETRY_AFTER=${NGINX_MAINTENANCE_RETRY_AFTER:-3600}
+      - ETHICAPP_NODE_PORT=${ETHICAPP_NODE_PORT:-8501}
+      - PORT=${PORT:-8502}
+      - ETHICAPP_STUDENT_NODE_PORT=${ETHICAPP_STUDENT_NODE_PORT:-8503}
+      - MNG_PORT=${MNG_PORT:-8504}
     ports:
       - "80:80"
-    depends_on:
-      - ethicapp
-      - auth-backend
-      - ethicapp-student
-      - management-console
     volumes:
-      - ./nginx/conf.d/dev.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d/dev.conf:/etc/nginx/dev.conf:ro
       - ./nginx/static:/usr/share/nginx/html/static:ro
       - uploads:/var/www/uploads:ro
     networks:
@@ -22,8 +24,8 @@ services:
 
   ethicapp:
     build:
-      context: ./ethicapp
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ethicapp/Dockerfile
     env_file:
       - ./.env.shared
       - ./.env
@@ -50,9 +52,6 @@ services:
       - postgresql
       - redis
       - external-mock-service
-    networks:
-      default:
-      shared-dev:
 
   external-mock-service:
     build:
@@ -73,8 +72,8 @@ services:
 
   ethicapp-pdf-worker:
     build:
-      context: ./ethicapp
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ethicapp/Dockerfile
     env_file:
       - ./.env.shared
       - ./.env
@@ -92,7 +91,33 @@ services:
       - ethicapp_pdf_worker_backend_node_modules:/app/backend/node_modules
       - uploads:/app/backend/uploads
     depends_on:
-      - postgresql
+      flyway:
+        condition: service_completed_successfully
+
+  management-console-student-anonymization:
+    build:
+      context: ./management-console
+      dockerfile: Dockerfile
+    profiles:
+      - maintenance
+    env_file:
+      - ./.env.shared
+      - ./management-console/.env
+    environment:
+      - NODE_ENV=development
+      - STUDENT_ANONYMIZATION_DRY_RUN=false
+    volumes:
+      - ./management-console:/app
+      - management_console_student_anonymization_backend_node_modules:/app/backend/node_modules
+    command: >
+      sh -lc '
+        cd /app/backend &&
+        npm install --include=dev &&
+        npm run anonymize:students
+      '
+    depends_on:
+      flyway:
+        condition: service_completed_successfully
 
   auth-backend:
     build:
@@ -111,18 +136,22 @@ services:
       - auth_frontend_node_modules:/app/frontend/node_modules
     command: >
       sh -c "
-        npm install &&
-        cd frontend && npm install &&
+        npm install --include=dev &&
+        cd frontend && npm install --include=dev &&
         cd /app &&
-        npx nodemon server.js &
-        cd frontend && npx vite --host 0.0.0.0 --port 5173
+        (
+          npm run dev &
+          npm run frontend:dev
+        )
       "
     expose:
       - "8502"
       - "5173"
     depends_on:
-      - postgresql
-      - redis
+      flyway:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
 
   ethicapp-student:
     build:
@@ -154,7 +183,8 @@ services:
       - "8503"
       - "5174"
     depends_on:
-      - postgresql
+      flyway:
+        condition: service_completed_successfully
 
   management-console:
     build:
@@ -185,12 +215,11 @@ services:
       - "8504"
       - "5175"
     depends_on:
-      - postgresql
+      flyway:
+        condition: service_completed_successfully
 
   postgresql:
-    build:
-      context: ./database
-      dockerfile: Dockerfile
+    image: postgres:16
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
@@ -199,6 +228,27 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ethicapp"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  flyway:
+    image: flyway/flyway:11-alpine
+    command: migrate
+    environment:
+      - FLYWAY_URL=jdbc:postgresql://postgresql:5432/ethicapp
+      - FLYWAY_USER=postgres
+      - FLYWAY_PASSWORD=postgres
+      - FLYWAY_CONNECT_RETRIES=60
+      - FLYWAY_LOCATIONS=filesystem:/flyway/migrations
+    volumes:
+      - ./database/migrations:/flyway/migrations:ro
+    depends_on:
+      postgresql:
+        condition: service_healthy
+    restart: "no"
 
   redis:
     image: redis:alpine
@@ -220,6 +270,7 @@ volumes:
   ethicapp_student_backend_node_modules:
   ethicapp_student_frontend_node_modules:
   management_console_backend_node_modules:
+  management_console_student_anonymization_backend_node_modules:
   management_console_frontend_node_modules:
   external_mock_service_node_modules:
   pgdata:

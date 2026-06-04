@@ -96,11 +96,12 @@ async function findCaseDocument(relativePath, uid, role, query) {
           AND (
             $3 = 'A'
             OR c.creator = $2
+            OR c.visibility = 'public'
             OR EXISTS (
                 SELECT 1
                 FROM designs d
                 WHERE d.case_id = c.id
-                  AND (d.creator = $2 OR d.public = TRUE)
+                  AND (d.creator = $2 OR d.visibility = 'public')
             )
             OR EXISTS (
                 SELECT 1

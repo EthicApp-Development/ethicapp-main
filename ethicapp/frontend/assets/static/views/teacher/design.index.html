@@ -1,4 +1,4 @@
-<div ng-controller="BrowseDesignsController as vm">
+<div class="container" ng-controller="BrowseDesignsController as vm">
     <div class="row">
         <div class="col-md-12">
             <h2><i class="fa fa-paint-brush"></i> {{'activity_designs' | translate}}</h2>
@@ -11,68 +11,91 @@
                 <i class="fa fa-plus" aria-hidden="true"></i> {{'create_design' | translate}}
             </button>
             <p class="designContext">{{'designContext' | translate}}</p>
-        </div>
-    </div>
-    <div class="row" style="position: relative;">
-        <!-- Nav Tabs -->
-        <ul class="nav nav-tabs" style="margin-left: 16px; display: inline-block;">
-            <li ng-class="{'active': vm.dsgnMode === 0}">
-                <a href="" ng-click="vm.dsgnMode = 0; vm.getUserDesigns()">{{'yours' | translate}}</a>
-            </li>
-            <li ng-class="{'active': vm.dsgnMode === 1}">
-                <a href="" ng-click="vm.dsgnMode = 1; vm.getPublicDesigns()">{{'byOthers' | translate}}</a>
-            </li>
-        </ul>
-
-        <!-- Search box -->
-        <div style="position: absolute; left: 200px; top: 6px; min-width: 80px; max-width: 200px;">
-            <div class="search-field-wrapper">
-                <input class="form-control search-input search-decorated-input" type="text"
-                    placeholder="{{'search' | translate}}" ng-model="vm.userSearch">
-                <i class="fa-solid fa-magnifying-glass search-field-icon" aria-hidden="true"></i>
+            <div class="teacher-index-search">
+                <div class="search-field-wrapper">
+                    <input class="form-control search-input search-decorated-input" type="text"
+                        placeholder="{{'search_designs_placeholder' | translate}}" ng-model="vm.userSearch" ng-change="vm.setPage(1)">
+                    <i class="fa-solid fa-magnifying-glass search-field-icon" aria-hidden="true"></i>
+                </div>
             </div>
         </div>
     </div>
-    <div class="row" style="margin-left:-14px; margin-top: -6px;">
+    <div class="row">
+        <div class="col-md-12 teacher-index-tabs">
+            <ul class="nav nav-tabs">
+                <li ng-class="{'active': vm.dsgnMode === 0}">
+                    <a href="" ng-click="vm.setDesignMode(0); vm.getUserDesigns()">{{'yours' | translate}}</a>
+                </li>
+                <li ng-class="{'active': vm.dsgnMode === 1}">
+                    <a href="" ng-click="vm.setDesignMode(1); vm.getPublicDesigns()">{{'byOthers' | translate}}</a>
+                </li>
+                <li ng-class="{'active': vm.dsgnMode === 2}">
+                    <a href="" ng-click="vm.setDesignMode(2); vm.getDesigns()">{{'archived' | translate}}</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+    <div class="row teacher-index-content">
         <div class="col-md-12">
-            <div class="panel panel-default">
-                <div class="panel-heading designs-list" style="padding-top: 0px; padding-left: 8px; min-height: 1.25em; max-height: 1.25em; background: white;">
-                    <div class="designs-toast-container">
-                        <toast></toast>
-                    </div>
-                </div>
-                <div class="panel-body">
-                    <design-item ng-repeat="design in vm.userDesigns | filter: { metainfo: { title: vm.userSearch } } track by design.id"
-                        ng-if="vm.dsgnMode === 0"
-                        design="design"
-                        is-owner="true"
-                        on-launch="vm.handleLaunch"
-                        on-edit="vm.handleEdit"
-                        on-view="vm.handleView"
-                        on-delete="vm.deleteDesign"
-                        on-duplicate="vm.duplicateDesign"
-                        on-toggle-public="vm.designPublic">
-                    </design-item>
+            <div class="designs-toast-container teacher-index-toast-container">
+                <toast></toast>
+            </div>
+            <design-item ng-repeat="design in vm.getPaginatedDesigns() track by design.id"
+                ng-if="vm.dsgnMode === 0"
+                design="design"
+                is-owner="true"
+                on-launch="vm.handleLaunch"
+                on-edit="vm.handleEdit"
+                on-view="vm.handleView"
+                on-delete="vm.deleteDesign"
+                on-duplicate="vm.duplicateDesign"
+                on-archive="vm.archiveDesign"
+                on-toggle-public="vm.designPublic">
+            </design-item>
 
-                    <!-- Public Designs -->
-                    <design-item ng-repeat="design in vm.publicDesigns | filter: { metainfo: { title: vm.userSearch } } track by design.id"
-                        ng-if="vm.dsgnMode === 1"
-                        design="design"
-                        is-owner="false"
-                        on-import="vm.importDesign">
-                    </design-item>
+            <!-- Public Designs -->
+            <design-item ng-repeat="design in vm.getPaginatedDesigns() track by design.id"
+                ng-if="vm.dsgnMode === 1"
+                design="design"
+                is-owner="false"
+                on-import="vm.importDesign">
+            </design-item>
 
-                    <div class="alert alert-info"
-                        ng-if="vm.dsgnMode === 0 && (vm.userDesigns | filter: { metainfo: { title: vm.userSearch } }).length === 0">
-                        <span>{{'empty_designs_message' | translate}}</span>
-                        <a href="" ng-click="navigateTo('/designs/new')">{{'empty_designs_link' | translate}}</a>.
-                    </div>
+            <design-item ng-repeat="design in vm.getPaginatedDesigns() track by design.id"
+                ng-if="vm.dsgnMode === 2"
+                design="design"
+                is-owner="true"
+                on-view="vm.handleView"
+                on-duplicate="vm.duplicateDesign"
+                on-archive="vm.archiveDesign">
+            </design-item>
 
-                    <div class="alert alert-info"
-                        ng-if="vm.dsgnMode === 1 && (vm.publicDesigns | filter: { metainfo: { title: vm.userSearch } }).length === 0">
-                        <span>{{'empty_shared_designs_message' | translate}}</span>
-                    </div>
-                </div>
+            <div class="resource-pagination-controls" ng-if="vm.getTotalPages() > 1">
+                <button class="btn btn-default btn-sm" ng-click="vm.previousPage()" ng-disabled="vm.currentPage === 1">
+                    <i class="fa fa-chevron-left" aria-hidden="true"></i> {{ 'pagination_previous' | translate }}
+                </button>
+                <span class="resource-pagination-status">
+                    {{ 'pagination_page' | translate }} {{ vm.currentPage }} / {{ vm.getTotalPages() }}
+                </span>
+                <button class="btn btn-default btn-sm" ng-click="vm.nextPage()" ng-disabled="vm.currentPage === vm.getTotalPages()">
+                    {{ 'pagination_next' | translate }} <i class="fa fa-chevron-right" aria-hidden="true"></i>
+                </button>
+            </div>
+
+            <div class="alert alert-info"
+                ng-if="vm.dsgnMode === 0 && vm.getFilteredDesigns().length === 0">
+                <span>{{'empty_designs_message' | translate}}</span>
+                <a href="" ng-click="navigateTo('/designs/new')">{{'empty_designs_link' | translate}}</a>.
+            </div>
+
+            <div class="alert alert-info"
+                ng-if="vm.dsgnMode === 1 && vm.getFilteredDesigns().length === 0">
+                <span>{{'empty_shared_designs_message' | translate}}</span>
+            </div>
+
+            <div class="alert alert-info"
+                ng-if="vm.dsgnMode === 2 && vm.getFilteredDesigns().length === 0">
+                <span>{{'empty_archived_designs_message' | translate}}</span>
             </div>
         </div>
     </div>

@@ -7,7 +7,7 @@ EthicApp is a multi-application workspace for case-based ethics education in Hig
 - `ethicapp-student/`: student-facing application under active development, built with React + Vite and Express.
 - `management-console/`: super-admin management console built with React + Vite, Bootstrap 5, Express, and PostgreSQL access.
 - `nginx/`: development and production NGINX facade for the applications.
-- `database/`: PostgreSQL schema, migrations, and seed assets used by the database container.
+- `database/`: Flyway PostgreSQL migrations and seed assets shared by the application services.
 - `canonical-schemas/`: JSON Schemas for portable EthicApp objects, including activity designs and rendered case-document representations.
 - `scripts/`: helper scripts exposed through the root `package.json`.
 
@@ -32,6 +32,7 @@ For repository conventions and agent/human working expectations, also review [`A
   - [8. Tests](#8-tests)
     - [8.1. Backend tests](#81-backend-tests)
     - [8.2. Docker build test stages](#82-docker-build-test-stages)
+    - [8.3. Integration regression tests](#83-integration-regression-tests)
   - [9. Useful Root Scripts](#9-useful-root-scripts)
   - [10. Production](#10-production)
 
@@ -132,7 +133,7 @@ NGINX exposes the application facade at:
 http://localhost
 ```
 
-The Compose setup starts PostgreSQL, Redis, NGINX, the legacy EthicApp service, the PDF render worker, the auth service, the student app, and the management console. Production Compose or orchestration templates belong to the deployment repository and should consume this repository's published images plus `deploy/` contract files.
+The Compose setup starts PostgreSQL, runs Flyway migrations, then starts Redis, NGINX, the legacy EthicApp service, the PDF render worker, the auth service, the student app, and the management console. Production Compose or orchestration templates belong to the deployment repository and should consume this repository's published images plus `deploy/` contract files.
 
 ### 5.2. Logs and shell access
 
@@ -146,6 +147,7 @@ docker compose -p ethicapp logs -f ethicapp-pdf-worker
 docker compose -p ethicapp logs -f ethicapp-student
 docker compose -p ethicapp logs -f management-console
 docker compose -p ethicapp logs -f postgresql
+docker compose -p ethicapp logs -f flyway
 ```
 
 Open a shell in a running service:
@@ -156,7 +158,29 @@ docker compose -p ethicapp exec auth-backend sh
 
 ### 5.3. Database initialization
 
-Database migrations and initialization scripts in `database/` run automatically when the PostgreSQL container initializes its data volume.
+The development database uses the official `postgres:16` image directly. Schema
+management is handled by Flyway, not by PostgreSQL entrypoint scripts.
+
+Flyway migrations live in [`database/migrations`](./database/migrations) and use
+Flyway's standard versioned naming convention, for example:
+
+```text
+V1__base_active_schema.sql
+V2__designs_and_activities.sql
+```
+
+On `docker compose up`, Compose waits until PostgreSQL is healthy, runs the
+`flyway` service, and only starts application services after Flyway exits
+successfully. Flyway is a short-lived migration job: it records applied versions
+in `flyway_schema_history`, applies only pending migrations, and terminates.
+
+Useful Flyway commands:
+
+```bash
+npm run db:migrate
+npm run db:info
+npm run db:validate
+```
 
 If you need a clean database, stop the stack and remove the Compose volume for the `ethicapp` project, then start the stack again. This deletes local database state.
 
@@ -206,7 +230,9 @@ In the Docker development flow, Vite is started by the root `docker-compose.yml`
 
 ## 8. Tests
 
-The repository is gradually adding focused automated tests around backend behavior that has been modernized or is security-sensitive. Tests currently use the built-in Node.js test runner and live beside the backend code they exercise.
+The repository uses a layered testing strategy. The first layer is lightweight guardrail coverage: deterministic Node.js tests that use mocks, fakes, or in-memory Express apps and are safe to run during Docker image builds. The second planned layer is broader integration regression coverage against real infrastructure, especially PostgreSQL, for development and CI verification. See [`TESTING.md`](./TESTING.md) for the full testing policy.
+
+At the moment, automated coverage is mostly the lightweight guardrail layer. These tests use the built-in Node.js test runner and live beside the backend code they exercise.
 
 ### 8.1. Backend tests
 
@@ -218,6 +244,11 @@ npm test
 ```
 
 ```bash
+cd auth-backend
+npm test
+```
+
+```bash
 cd management-console/backend
 npm test
 ```
@@ -225,6 +256,7 @@ npm test
 Current coverage includes:
 
 - `ethicapp/backend`: upload middleware behavior for PDF validation, size limits, wrong fields, temporary cleanup, final file moves, protected upload authorization, and PDF render job status helpers.
+- `auth-backend`: CSRF protection plus authentication route behavior for login, registration validation, duplicate account handling, locale normalization, forgot-password token creation, and password reset.
 - `management-console/backend`: professor impersonation route behavior, including reCAPTCHA rejection, role rejection, and EthicApp session cookie forwarding.
 
 ### 8.2. Docker build test stages
@@ -233,10 +265,19 @@ The production image builds for these services run backend tests during Docker b
 
 ```bash
 docker compose build ethicapp
+docker compose build auth-backend
 docker compose build management-console
 ```
 
 If those tests fail, the image build fails. This keeps the local Compose build path aligned with the minimum verification expected before merging backend changes.
+
+The tests executed during image build must stay fast, deterministic, and independent from running services. They should not require PostgreSQL, Redis, SMTP, external HTTP APIs, or local-only configuration. When database behavior needs to be covered in this layer, use mocks/fakes and assert the service contract, SQL shape, transaction flow, or error handling path.
+
+### 8.3. Integration regression tests
+
+Integration regression tests are intended to validate behavior that lightweight guardrails cannot prove, including real PostgreSQL schema compatibility, constraints, transactions, migrations/seeds, and cross-service session or proxy flows. These tests should run as a dedicated development/CI step, not as part of Docker image construction.
+
+This layer is not yet consistently implemented. Until it exists for a touched area, changes that depend on real database behavior should be manually verified against the local Docker Compose stack and should document that limitation in PR verification notes. The intended conventions for this layer are documented in [`TESTING.md`](./TESTING.md).
 
 ## 9. Useful Root Scripts
 
@@ -251,6 +292,9 @@ The root [`package.json`](./package.json) includes helper scripts for developmen
 | `fix-js` | Applies automatic JavaScript lint fixes where supported. |
 | `fix-css` | Applies automatic CSS lint fixes where supported. |
 | `fix-sql` | Applies automatic SQL lint fixes where supported. |
+| `db:migrate` | Runs Flyway migrations against the Compose PostgreSQL service. |
+| `db:info` | Shows Flyway migration status for the Compose PostgreSQL service. |
+| `db:validate` | Validates Flyway migration checksums and naming. |
 | `build:ethicapp-assets` | Builds production-style legacy EthicApp frontend assets through Docker. |
 | `publish:ghcr` | Builds and publishes EthicApp project images to GitHub Container Registry. |
 | `psql` | Opens a PostgreSQL client against the containerized development database. |

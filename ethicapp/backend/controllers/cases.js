@@ -1,9 +1,25 @@
 "use strict";
 
 import express from "express";
+import fs from "fs/promises";
+import path from "path";
 import * as config from "../config/database.config.js";
+import { uploadsPath } from "../config/uploads.config.js";
 import * as rpg2 from "../db/rest-pg-2.js";
 import { requireRole } from "../helpers/auth-helper.js";
+import {
+    CASE_DEFAULT_LICENSE,
+    DEFAULT_LANGUAGE_CODE,
+    PRIVATE_VISIBILITY,
+    PUBLIC_VISIBILITY,
+    buildAttributionText,
+    buildLocalizedCopyTitle,
+    getCaseAuthorName,
+    normalizeLicenseCode,
+    normalizeLanguageCode,
+    normalizeRightsStatus,
+    normalizeVisibility,
+} from "../helpers/sharing-policy-helper.js";
 import {
     enqueueCasePdfRenderJob,
     normalizePdfRenderJob,
@@ -13,6 +29,85 @@ import {
 import { moveUploadedFile, pdfUpload, removeUploadedFile } from "../middleware/upload.js";
 
 const router = express.Router();
+const uploadsRoot = path.resolve(process.cwd(), uploadsPath);
+const MAX_SEMANTIC_TAGS = 5;
+
+const launchedActivityByCaseSql = `
+    SELECT a.id
+    FROM designs d
+    INNER JOIN activity a ON a.design = d.id
+    WHERE d.case_id = $1
+    LIMIT 1;
+`;
+
+const caseSharingSelectSql = `
+    c.visibility, c.license_code, c.attribution_text,
+    c.original_case_id, c.imported_from_case_id,
+    c.source_case_title, c.source_case_author, c.source_case_license_code,
+    c.is_editable_copy, c.rights_status, c.license_notes, c.permission_statement,
+    c.commercial_source,
+    c.language_code,
+    c.archived,
+    COALESCE((
+        SELECT json_agg(json_build_object(
+            'id', a.id,
+            'authorFirstname', a.author_firstname,
+            'authorLastname', a.author_lastname,
+            'authorEmail', a.author_email,
+            'userId', ca.user_id,
+            'authorOrder', ca.author_order,
+            'isPrimary', ca.is_primary
+        ) ORDER BY ca.author_order, a.id)
+        FROM ethical_cases_authors ca
+        INNER JOIN ethical_case_author a ON a.id = ca.author_id
+        WHERE ca.case_id = c.id
+    ), '[]'::json) AS authors,
+    COALESCE((
+        SELECT json_agg(json_build_object(
+            'id', t.id,
+            'code', t.code,
+            'label', COALESCE(tt.label, fallback_tt.label, t.code),
+            'description', COALESCE(tt.description, fallback_tt.description),
+            'categoryCode', tc.code,
+            'categoryLabel', COALESCE(tct.label, fallback_tct.label, tc.code)
+        ) ORDER BY tc.sort_order, t.sort_order, t.id)
+        FROM ethical_cases_tags ect
+        INNER JOIN tags t ON t.id = ect.tag_id
+        INNER JOIN tag_categories tc ON tc.id = t.category_id
+        LEFT JOIN tag_translations tt
+            ON tt.tag_id = t.id
+           AND tt.locale = c.language_code
+        LEFT JOIN tag_translations fallback_tt
+            ON fallback_tt.tag_id = t.id
+           AND fallback_tt.locale = 'en_US'
+        LEFT JOIN tag_category_translations tct
+            ON tct.category_id = tc.id
+           AND tct.locale = c.language_code
+        LEFT JOIN tag_category_translations fallback_tct
+            ON fallback_tct.category_id = tc.id
+           AND fallback_tct.locale = 'en_US'
+        WHERE ect.case_id = c.id
+    ), '[]'::json) AS tags,
+    COALESCE((
+        SELECT json_agg(json_build_object(
+            'id', d.id,
+            'title', COALESCE(d.design #>> '{metainfo,title}', d.design ->> 'title', 'Untitled design'),
+            'licenseCode', d.license_code,
+            'attributionText', d.attribution_text
+        ) ORDER BY d.id DESC)
+        FROM designs d
+        WHERE d.case_id = c.id
+          AND d.visibility = 'public'
+          AND COALESCE(d.archived, false) = false
+    ), '[]'::json) AS public_designs
+    ,
+    EXISTS (
+        SELECT 1
+        FROM designs d
+        INNER JOIN activity a ON a.design = d.id
+        WHERE d.case_id = c.id
+    ) AS has_launched_design_activity
+`;
 
 function normalizeCase(row) {
     const representations = row.pdf_path ? [{
@@ -43,11 +138,186 @@ function normalizeCase(row) {
         authorEmail: row.author_email,
         pdfPath: row.pdf_path,
         creator: row.creator,
+        visibility: row.visibility || PRIVATE_VISIBILITY,
+        licenseCode: row.license_code || CASE_DEFAULT_LICENSE,
+        attributionText: row.attribution_text,
+        originalCaseId: row.original_case_id,
+        importedFromCaseId: row.imported_from_case_id,
+        sourceCaseTitle: row.source_case_title,
+        sourceCaseAuthor: row.source_case_author,
+        sourceCaseLicenseCode: row.source_case_license_code,
+        isEditableCopy: row.is_editable_copy !== false,
+        rightsStatus: row.rights_status,
+        licenseNotes: row.license_notes,
+        permissionStatement: row.permission_statement,
+        commercialSource: row.commercial_source,
+        public: (row.visibility || PRIVATE_VISIBILITY) === PUBLIC_VISIBILITY,
+        languageCode: row.language_code || DEFAULT_LANGUAGE_CODE,
+        archived: row.archived === true,
+        hasLaunchedDesignActivity: row.has_launched_design_activity === true,
+        authors: Array.isArray(row.authors) && row.authors.length > 0
+            ? row.authors
+            : [{
+                authorFirstname: row.author_firstname,
+                authorLastname:  row.author_lastname,
+                authorEmail:     row.author_email,
+                authorOrder:     1,
+                isPrimary:       true,
+            }],
+        tags: Array.isArray(row.tags) ? row.tags : [],
+        publicDesigns: row.public_designs || [],
         createdAt: row.created_at,
         updatedAt: row.updated_at,
         documentProcessing,
         representations,
     };
+}
+
+function normalizeCaseAuthor(author, index) {
+    return {
+        authorFirstname: String(author?.authorFirstname || author?.author_firstname || "").trim(),
+        authorLastname:  String(author?.authorLastname || author?.author_lastname || "").trim(),
+        authorEmail:     String(author?.authorEmail || author?.author_email || "").trim(),
+        authorOrder:     index + 1,
+        isPrimary:       index === 0,
+    };
+}
+
+function parseCaseAuthors(body) {
+    if (body?.authors) {
+        try {
+            const parsedAuthors = typeof body.authors === "string" ? JSON.parse(body.authors) : body.authors;
+            if (Array.isArray(parsedAuthors)) {
+                return parsedAuthors.map(normalizeCaseAuthor).filter((author) => {
+                    return author.authorFirstname || author.authorLastname || author.authorEmail;
+                });
+            }
+        } catch {
+            return [];
+        }
+    }
+
+    return [normalizeCaseAuthor({
+        authorFirstname: body?.author_firstname || body?.authorFirstname,
+        authorLastname:  body?.author_lastname || body?.authorLastname,
+        authorEmail:     body?.author_email || body?.authorEmail,
+    }, 0)];
+}
+
+function parseTagIds(value) {
+    if (!value) {
+        return [];
+    }
+
+    try {
+        const parsed = typeof value === "string" ? JSON.parse(value) : value;
+        if (!Array.isArray(parsed)) {
+            return [];
+        }
+
+        return Array.from(new Set(parsed.map(tagId => Number(tagId)).filter(Number.isSafeInteger)));
+    } catch {
+        return [];
+    }
+}
+
+function areTagIdsValid(tagIds) {
+    return tagIds.length <= MAX_SEMANTIC_TAGS;
+}
+
+async function replaceCaseTags(caseId, tagIds, assignedBy, client = null) {
+    const db = client ? null : await rpg2.getDBInstance(config.dbconnString);
+    const localClient = client || await db.connect();
+
+    try {
+        if (!client) {
+            await localClient.query("BEGIN");
+        }
+
+        await localClient.query("DELETE FROM ethical_cases_tags WHERE case_id = $1;", [caseId]);
+
+        for (const tagId of tagIds) {
+            await localClient.query(`
+                INSERT INTO ethical_cases_tags (case_id, tag_id, assigned_by)
+                VALUES ($1, $2, $3)
+                ON CONFLICT (case_id, tag_id) DO UPDATE
+                SET assigned_by = EXCLUDED.assigned_by;
+            `, [caseId, tagId, assignedBy]);
+        }
+
+        if (!client) {
+            await localClient.query("COMMIT");
+        }
+    } catch (error) {
+        if (!client) {
+            await localClient.query("ROLLBACK");
+        }
+        throw error;
+    } finally {
+        if (!client) {
+            localClient.release();
+        }
+    }
+}
+
+function areCaseAuthorsValid(authors) {
+    return authors.length > 0 && authors.every((author) => {
+        return author.authorFirstname && author.authorLastname && author.authorEmail;
+    });
+}
+
+function hasDuplicateCaseAuthorEmails(authors) {
+    const emails = authors
+        .map((author) => String(author.authorEmail || "").trim().toLowerCase())
+        .filter(Boolean);
+    return new Set(emails).size !== emails.length;
+}
+
+async function replaceCaseAuthors(caseId, authors) {
+    const db = await rpg2.getDBInstance(config.dbconnString);
+    const client = await db.connect();
+
+    try {
+        await client.query("BEGIN");
+        await client.query("DELETE FROM ethical_cases_authors WHERE case_id = $1;", [caseId]);
+
+        for (const author of authors) {
+            const userResult = await client.query(
+                "SELECT id FROM users WHERE LOWER(mail) = LOWER($1) LIMIT 1;",
+                [author.authorEmail]
+            );
+            const userId = userResult.rows[0]?.id || null;
+            const authorResult = await client.query(`
+                INSERT INTO ethical_case_author (author_firstname, author_lastname, author_email)
+                VALUES ($1, $2, $3)
+                ON CONFLICT ((LOWER(author_email))) DO UPDATE
+                SET author_firstname = EXCLUDED.author_firstname,
+                    author_lastname = EXCLUDED.author_lastname,
+                    author_email = EXCLUDED.author_email,
+                    updated_at = NOW()
+                RETURNING id;
+            `, [author.authorFirstname, author.authorLastname, author.authorEmail]);
+
+            await client.query(`
+                INSERT INTO ethical_cases_authors
+                    (case_id, author_id, user_id, author_order, is_primary)
+                VALUES
+                    ($1, $2, $3, $4, $5)
+                ON CONFLICT (case_id, author_id) DO UPDATE
+                SET user_id = EXCLUDED.user_id,
+                    author_order = EXCLUDED.author_order,
+                    is_primary = EXCLUDED.is_primary,
+                    updated_at = NOW();
+            `, [caseId, authorResult.rows[0].id, userId, author.authorOrder, author.isPrimary]);
+        }
+
+        await client.query("COMMIT");
+    } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+    } finally {
+        client.release();
+    }
 }
 
 function parseCaseId(id) {
@@ -79,12 +349,68 @@ async function enqueueCaseRenderSafely(caseObj) {
     }
 }
 
+function uploadPublicPathToAbsolute(publicPath) {
+    const normalized = String(publicPath || "").replaceAll("\\", "/").replace(/^\/+/, "");
+    const relativePath = normalized.startsWith("uploads/")
+        ? normalized.slice("uploads/".length)
+        : normalized.startsWith("assets/uploads/")
+            ? normalized.slice("assets/uploads/".length)
+            : normalized;
+
+    if (!relativePath || relativePath.startsWith("../") || relativePath.includes("/../")) {
+        return null;
+    }
+
+    return path.resolve(uploadsRoot, relativePath);
+}
+
+async function copyCasePdfIfPresent(sourcePdfPath, destinationPdfPath) {
+    const sourcePath = uploadPublicPathToAbsolute(sourcePdfPath);
+    const destinationPath = uploadPublicPathToAbsolute(destinationPdfPath);
+    if (!sourcePath || !destinationPath) {
+        return false;
+    }
+
+    try {
+        await fs.mkdir(path.dirname(destinationPath), { recursive: true });
+        await fs.copyFile(sourcePath, destinationPath);
+        return true;
+    } catch (error) {
+        console.warn("Unable to copy imported case PDF; retaining source PDF path.", {
+            sourcePdfPath,
+            destinationPdfPath,
+            error: error.message,
+        });
+        return false;
+    }
+}
+
+async function getUniqueCaseCopyTitle(client, userId, baseTitle, languageCode) {
+    for (let copyIndex = 0; copyIndex < 1000; copyIndex += 1) {
+        const candidateTitle = buildLocalizedCopyTitle(baseTitle, languageCode, copyIndex);
+        const existingResult = await client.query(`
+            SELECT id
+            FROM ethical_cases
+            WHERE creator = $1
+              AND title = $2
+            LIMIT 1;
+        `, [userId, candidateTitle]);
+
+        if (!existingResult.rows[0]) {
+            return candidateTitle;
+        }
+    }
+
+    return buildLocalizedCopyTitle(baseTitle, languageCode, Date.now());
+}
+
 async function getReadableCaseWithDocumentProcessing(caseId, userId, role = "") {
     return rpg2.singleSQL({
         dbcon: config.dbconnString,
         sql: `
             SELECT c.id, c.case_uuid, c.title, c.author_firstname, c.author_lastname, c.author_email,
                    c.pdf_path, c.creator, c.created_at, c.updated_at,
+                   ${caseSharingSelectSql},
                    ${pdfRenderJobSelectSql}
             FROM ethical_cases c
             ${pdfRenderJobJoinSql}
@@ -93,11 +419,12 @@ async function getReadableCaseWithDocumentProcessing(caseId, userId, role = "") 
                 $3 = 'A'
                 OR
                 c.creator = $2
+                OR c.visibility = 'public'
                 OR EXISTS (
                     SELECT 1
                     FROM designs d
                     WHERE d.case_id = c.id
-                      AND (d.creator = $2 OR d.public = TRUE)
+                      AND (d.creator = $2 OR d.visibility = 'public')
                 )
                 OR EXISTS (
                     SELECT 1
@@ -125,10 +452,32 @@ async function getReadableCaseWithDocumentProcessing(caseId, userId, role = "") 
     });
 }
 
+async function hasLaunchedDesignActivity(caseId) {
+    const launchedActivity = await rpg2.singleSQL({
+        dbcon: config.dbconnString,
+        sql: launchedActivityByCaseSql,
+        sqlParams: [rpg2.param("plain", caseId)],
+    });
+
+    return Boolean(launchedActivity?.id);
+}
+
+function lockedCaseResponse(res) {
+    return res.status(409).json({
+        status:  "err",
+        message: "This case cannot be modified because it is associated with a design used by an activity.",
+        code:    "CASE_USED_BY_LAUNCHED_ACTIVITY",
+    });
+}
+
 router.get("/cases", async (req, res) => {
     if (!requireRole(req, res, "P")) {
         return;
     }
+
+    const scope = String(req.query.scope || "own").trim().toLowerCase();
+    const isPublicScope = scope === "public";
+    const isArchivedScope = scope === "archived";
 
     try {
         const cases = await rpg2.execSQL({
@@ -136,10 +485,17 @@ router.get("/cases", async (req, res) => {
             sql: `
                 SELECT c.id, c.case_uuid, c.title, c.author_firstname, c.author_lastname, c.author_email,
                        c.pdf_path, c.creator, c.created_at, c.updated_at,
+                       ${caseSharingSelectSql},
                        ${pdfRenderJobSelectSql}
                 FROM ethical_cases c
                 ${pdfRenderJobJoinSql}
-                WHERE c.creator = $1
+                WHERE ${
+                    isPublicScope
+                        ? "c.visibility = 'public' AND c.creator <> $1 AND COALESCE(c.archived, false) = false"
+                        : isArchivedScope
+                            ? "c.creator = $1 AND c.archived = true"
+                            : "c.creator = $1 AND COALESCE(c.archived, false) = false"
+                }
                 ORDER BY c.id DESC;
             `,
             sqlParams: [rpg2.param("plain", req.session.uid)],
@@ -171,16 +527,36 @@ router.get("/cases/search", async (req, res) => {
             sql: `
                 SELECT c.id, c.case_uuid, c.title, c.author_firstname, c.author_lastname, c.author_email,
                        c.pdf_path, c.creator, c.created_at, c.updated_at,
+                       ${caseSharingSelectSql},
                        ${pdfRenderJobSelectSql}
                 FROM ethical_cases c
                 ${pdfRenderJobJoinSql}
-                WHERE LOWER(c.title) LIKE LOWER($1)
-                   OR LOWER(c.author_firstname) LIKE LOWER($1)
-                   OR LOWER(c.author_lastname) LIKE LOWER($1)
+                WHERE (c.creator = $2 OR c.visibility = 'public')
+                  AND COALESCE(c.archived, false) = false
+                  AND (
+                    LOWER(c.title) LIKE LOWER($1)
+                    OR LOWER(c.author_firstname) LIKE LOWER($1)
+                    OR LOWER(c.author_lastname) LIKE LOWER($1)
+                    OR EXISTS (
+                        SELECT 1
+                        FROM ethical_cases_authors ca
+                        INNER JOIN ethical_case_author author
+                            ON author.id = ca.author_id
+                        WHERE ca.case_id = c.id
+                          AND (
+                            LOWER(author.author_firstname) LIKE LOWER($1)
+                            OR LOWER(author.author_lastname) LIKE LOWER($1)
+                            OR LOWER(author.author_email) LIKE LOWER($1)
+                          )
+                    )
+                  )
                 ORDER BY c.updated_at DESC, c.id DESC
                 LIMIT 20;
             `,
-            sqlParams: [rpg2.param("plain", `%${query}%`)],
+            sqlParams: [
+                rpg2.param("plain", `%${query}%`),
+                rpg2.param("plain", req.session.uid),
+            ],
         });
 
         return res.status(200).json({
@@ -288,19 +664,46 @@ router.post("/cases", pdfUpload, async (req, res) => {
 
     const {
         title,
-        author_firstname: authorFirstname,
-        author_lastname: authorLastname,
-        author_email: authorEmail,
+        visibility,
+        license_code: licenseCode,
+        licenseCode: licenseCodeCamel,
+        attribution_text: attributionText,
+        attributionText: attributionTextCamel,
+        rights_status: rightsStatus,
+        rightsStatus: rightsStatusCamel,
+        license_notes: licenseNotes,
+        licenseNotes: licenseNotesCamel,
+        permission_statement: permissionStatement,
+        permissionStatement: permissionStatementCamel,
+        commercial_source: commercialSource,
+        commercialSource: commercialSourceCamel,
+        language_code: languageCode,
+        languageCode: languageCodeCamel,
     } = req.body;
 
-    if (!title || !authorFirstname || !authorLastname || !authorEmail) {
+    const authors = parseCaseAuthors(req.body);
+    const tagIds = parseTagIds(req.body.tag_ids || req.body.tagIds);
+    if (!title || !areCaseAuthorsValid(authors) || hasDuplicateCaseAuthorEmails(authors) || !areTagIdsValid(tagIds)) {
         await removeUploadedFile(req.file);
-        return res.status(400).json({ status: "err", message: "Missing required fields." });
+        return res.status(400).json({
+            status:  "err",
+            message: "Missing required fields.",
+            code:    "CASE_VALIDATION_FAILED",
+        });
     }
+    const primaryAuthor = authors[0];
 
     if (!req.file || req.file.mimetype !== "application/pdf") {
-        return res.status(400).json({ status: "err", message: "A PDF file is required." });
+        return res.status(400).json({
+            status:  "err",
+            message: "A PDF file is required.",
+            code:    "CASE_PDF_REQUIRED",
+        });
     }
+
+    const normalizedLicenseCode = normalizeLicenseCode(licenseCode ?? licenseCodeCamel, CASE_DEFAULT_LICENSE);
+    const normalizedRightsStatus = normalizeRightsStatus(rightsStatus ?? rightsStatusCamel);
+    const normalizedVisibility = normalizeVisibility(visibility);
 
     try {
         const caseIdResult = await rpg2.singleSQL({
@@ -315,22 +718,38 @@ router.post("/cases", pdfUpload, async (req, res) => {
             dbcon: config.dbconnString,
             sql: `
                 INSERT INTO ethical_cases
-                    (id, title, author_firstname, author_lastname, author_email, pdf_path, creator)
+                    (id, title, author_firstname, author_lastname, author_email, pdf_path, creator,
+                     visibility, license_code, attribution_text, rights_status, license_notes,
+                     permission_statement, commercial_source, language_code)
                 VALUES
-                    ($1, $2, $3, $4, $5, $6, $7)
+                    ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
                 RETURNING id, case_uuid, title, author_firstname, author_lastname, author_email,
-                          pdf_path, creator, created_at, updated_at;
+                          pdf_path, creator, visibility, license_code, attribution_text,
+                          original_case_id, imported_from_case_id, source_case_title,
+                          source_case_author, source_case_license_code, is_editable_copy,
+                          rights_status, license_notes, permission_statement, commercial_source,
+                          language_code, created_at, updated_at;
             `,
             sqlParams: [
                 rpg2.param("plain", caseId),
                 rpg2.param("plain", title),
-                rpg2.param("plain", authorFirstname),
-                rpg2.param("plain", authorLastname),
-                rpg2.param("plain", authorEmail),
+                rpg2.param("plain", primaryAuthor.authorFirstname),
+                rpg2.param("plain", primaryAuthor.authorLastname),
+                rpg2.param("plain", primaryAuthor.authorEmail),
                 rpg2.param("plain", pdfPath),
                 rpg2.param("plain", req.session.uid),
+                rpg2.param("plain", normalizedVisibility),
+                rpg2.param("plain", normalizedLicenseCode),
+                rpg2.param("plain", attributionText ?? attributionTextCamel ?? null),
+                rpg2.param("plain", normalizedRightsStatus),
+                rpg2.param("plain", licenseNotes ?? licenseNotesCamel ?? null),
+                rpg2.param("plain", permissionStatement ?? permissionStatementCamel ?? null),
+                rpg2.param("plain", commercialSource ?? commercialSourceCamel ?? null),
+                rpg2.param("plain", normalizeLanguageCode(languageCode ?? languageCodeCamel)),
             ],
         });
+        await replaceCaseAuthors(caseId, authors);
+        await replaceCaseTags(caseId, tagIds, req.session.uid);
 
         const renderJob = await enqueueCaseRenderSafely(createdCase);
 
@@ -360,20 +779,44 @@ router.patch("/cases/:id", pdfUpload, async (req, res) => {
 
     const {
         title,
-        author_firstname: authorFirstname,
-        author_lastname: authorLastname,
-        author_email: authorEmail,
+        visibility,
+        license_code: licenseCode,
+        licenseCode: licenseCodeCamel,
+        attribution_text: attributionText,
+        attributionText: attributionTextCamel,
+        rights_status: rightsStatus,
+        rightsStatus: rightsStatusCamel,
+        license_notes: licenseNotes,
+        licenseNotes: licenseNotesCamel,
+        permission_statement: permissionStatement,
+        permissionStatement: permissionStatementCamel,
+        commercial_source: commercialSource,
+        commercialSource: commercialSourceCamel,
+        language_code: languageCode,
+        languageCode: languageCodeCamel,
     } = req.body;
 
-    if (!title || !authorFirstname || !authorLastname || !authorEmail) {
+    const authors = parseCaseAuthors(req.body);
+    const tagIds = parseTagIds(req.body.tag_ids || req.body.tagIds);
+    if (!title || !areCaseAuthorsValid(authors) || hasDuplicateCaseAuthorEmails(authors) || !areTagIdsValid(tagIds)) {
         await removeUploadedFile(req.file);
-        return res.status(400).json({ status: "err", message: "Missing required fields." });
+        return res.status(400).json({
+            status:  "err",
+            message: "Missing required fields.",
+            code:    "CASE_VALIDATION_FAILED",
+        });
     }
+    const primaryAuthor = authors[0];
 
     try {
         const existingCase = await rpg2.singleSQL({
             dbcon: config.dbconnString,
-            sql: "SELECT id, pdf_path FROM ethical_cases WHERE id = $1 AND creator = $2;",
+            sql: `
+                SELECT id, pdf_path, visibility, license_code, attribution_text, rights_status,
+                       license_notes, permission_statement, commercial_source, language_code
+                FROM ethical_cases
+                WHERE id = $1 AND creator = $2;
+            `,
             sqlParams: [rpg2.param("plain", caseId), rpg2.param("plain", req.session.uid)],
         });
 
@@ -382,8 +825,16 @@ router.patch("/cases/:id", pdfUpload, async (req, res) => {
             return res.status(404).json({ status: "err", message: "Case not found." });
         }
 
+        if (await hasLaunchedDesignActivity(caseId)) {
+            await removeUploadedFile(req.file);
+            return lockedCaseResponse(res);
+        }
+
         const hasPdf = req.file && req.file.mimetype === "application/pdf";
         const pdfPath = hasPdf ? `/uploads/cases/${caseId}/case.pdf` : existingCase.pdf_path;
+        const normalizedLicenseCode = normalizeLicenseCode(licenseCode ?? licenseCodeCamel, existingCase.license_code || CASE_DEFAULT_LICENSE);
+        const normalizedRightsStatus = normalizeRightsStatus(rightsStatus ?? rightsStatusCamel, existingCase.rights_status);
+        const normalizedVisibility = normalizeVisibility(visibility, existingCase.visibility || PRIVATE_VISIBILITY);
 
         const updatedCase = await rpg2.singleSQL({
             dbcon: config.dbconnString,
@@ -394,21 +845,43 @@ router.patch("/cases/:id", pdfUpload, async (req, res) => {
                     author_lastname = $3,
                     author_email = $4,
                     pdf_path = $5,
+                    visibility = $8,
+                    license_code = $9,
+                    attribution_text = $10,
+                    rights_status = $11,
+                    license_notes = $12,
+                    permission_statement = $13,
+                    commercial_source = $14,
+                    language_code = $15,
                     updated_at = NOW()
                 WHERE id = $6 AND creator = $7
                 RETURNING id, case_uuid, title, author_firstname, author_lastname, author_email,
-                          pdf_path, creator, created_at, updated_at;
+                          pdf_path, creator, visibility, license_code, attribution_text,
+                          original_case_id, imported_from_case_id, source_case_title,
+                          source_case_author, source_case_license_code, is_editable_copy,
+                          rights_status, license_notes, permission_statement, commercial_source,
+                          language_code, created_at, updated_at;
             `,
             sqlParams: [
                 rpg2.param("plain", title),
-                rpg2.param("plain", authorFirstname),
-                rpg2.param("plain", authorLastname),
-                rpg2.param("plain", authorEmail),
+                rpg2.param("plain", primaryAuthor.authorFirstname),
+                rpg2.param("plain", primaryAuthor.authorLastname),
+                rpg2.param("plain", primaryAuthor.authorEmail),
                 rpg2.param("plain", pdfPath),
                 rpg2.param("plain", caseId),
                 rpg2.param("plain", req.session.uid),
+                rpg2.param("plain", normalizedVisibility),
+                rpg2.param("plain", normalizedLicenseCode),
+                rpg2.param("plain", attributionText ?? attributionTextCamel ?? existingCase.attribution_text ?? null),
+                rpg2.param("plain", normalizedRightsStatus),
+                rpg2.param("plain", licenseNotes ?? licenseNotesCamel ?? existingCase.license_notes ?? null),
+                rpg2.param("plain", permissionStatement ?? permissionStatementCamel ?? existingCase.permission_statement ?? null),
+                rpg2.param("plain", commercialSource ?? commercialSourceCamel ?? existingCase.commercial_source ?? null),
+                rpg2.param("plain", normalizeLanguageCode(languageCode ?? languageCodeCamel, existingCase.language_code || DEFAULT_LANGUAGE_CODE)),
             ],
         });
+        await replaceCaseAuthors(caseId, authors);
+        await replaceCaseTags(caseId, tagIds, req.session.uid);
 
         if (hasPdf) {
             await moveUploadedFile(req.file, pdfPath);
@@ -424,6 +897,427 @@ router.patch("/cases/:id", pdfUpload, async (req, res) => {
     }
 });
 
+router.post("/cases/:id/import", async (req, res) => {
+    if (!requireRole(req, res, "P")) {
+        return;
+    }
+
+    const caseId = parseCaseId(req.params.id);
+    if (!caseId) {
+        return res.status(400).json({ status: "err", message: "Invalid case id." });
+    }
+
+    const db = await rpg2.getDBInstance(config.dbconnString);
+    const client = await db.connect();
+
+    try {
+        await client.query("BEGIN");
+        const sourceResult = await client.query(`
+            SELECT id, title, author_firstname, author_lastname, author_email, pdf_path, creator,
+                   visibility, license_code, attribution_text, original_case_id,
+                   rights_status, license_notes, permission_statement, commercial_source,
+                   language_code
+            FROM ethical_cases
+            WHERE id = $1
+              AND creator <> $2
+              AND visibility = 'public'
+              AND COALESCE(archived, false) = false
+            LIMIT 1;
+        `, [caseId, req.session.uid]);
+        const sourceCase = sourceResult.rows[0];
+
+        if (!sourceCase) {
+            await client.query("ROLLBACK");
+            return res.status(403).json({
+                status:  "err",
+                message: "This case cannot be imported.",
+                code:    "CASE_NOT_IMPORTABLE",
+            });
+        }
+
+        const nextIdResult = await client.query("SELECT nextval(pg_get_serial_sequence('ethical_cases', 'id')) AS id;");
+        const importedCaseId = Number(nextIdResult.rows[0].id);
+        const destinationPdfPath = `/uploads/cases/${importedCaseId}/case.pdf`;
+        const pdfCopied = await copyCasePdfIfPresent(sourceCase.pdf_path, destinationPdfPath);
+        const sourceAuthor = getCaseAuthorName(sourceCase);
+        const sourceLicenseCode = sourceCase.license_code || CASE_DEFAULT_LICENSE;
+        const rootCaseId = sourceCase.original_case_id || sourceCase.id;
+        const importedTitle = await getUniqueCaseCopyTitle(
+            client,
+            req.session.uid,
+            sourceCase.title,
+            sourceCase.language_code
+        );
+
+        await client.query(`
+            INSERT INTO ethical_cases
+                (id, title, author_firstname, author_lastname, author_email, pdf_path, creator,
+                 visibility, license_code, attribution_text, original_case_id, imported_from_case_id,
+                 source_case_title, source_case_author, source_case_license_code, is_editable_copy,
+                 rights_status, license_notes, permission_statement, commercial_source, language_code)
+            VALUES
+                ($1, $2, $3, $4, $5, $6, $7,
+                 'private', $8, COALESCE($9, $10), $11, $12,
+                 $13, $14, $15, true,
+                 $16, $17, $18, $19,
+                 $20);
+        `, [
+            importedCaseId,
+            importedTitle,
+            sourceCase.author_firstname,
+            sourceCase.author_lastname,
+            sourceCase.author_email,
+            pdfCopied ? destinationPdfPath : sourceCase.pdf_path,
+            req.session.uid,
+            sourceLicenseCode,
+            sourceCase.attribution_text,
+            buildAttributionText({
+                title:       sourceCase.title,
+                author:      sourceAuthor,
+                licenseCode: sourceLicenseCode,
+            }),
+            rootCaseId,
+            sourceCase.id,
+            sourceCase.title,
+            sourceAuthor,
+            sourceLicenseCode,
+            sourceCase.rights_status,
+            sourceCase.license_notes,
+            sourceCase.permission_statement,
+            sourceCase.commercial_source,
+            normalizeLanguageCode(sourceCase.language_code),
+        ]);
+
+        await client.query(`
+            INSERT INTO ethical_cases_authors (case_id, author_id, user_id, author_order, is_primary)
+            SELECT $1,
+                   ca.author_id,
+                   u.id,
+                   ca.author_order,
+                   ca.is_primary
+            FROM ethical_cases_authors ca
+            INNER JOIN ethical_case_author a
+                ON a.id = ca.author_id
+            LEFT JOIN users u
+                ON LOWER(u.mail) = LOWER(a.author_email)
+            WHERE ca.case_id = $2
+            ON CONFLICT (case_id, author_id) DO UPDATE
+            SET user_id = EXCLUDED.user_id,
+                author_order = EXCLUDED.author_order,
+                is_primary = EXCLUDED.is_primary,
+                updated_at = NOW();
+        `, [importedCaseId, sourceCase.id]);
+
+        await client.query(`
+            INSERT INTO ethical_cases_tags (case_id, tag_id, assigned_by)
+            SELECT $1, ect.tag_id, $3
+            FROM ethical_cases_tags ect
+            WHERE ect.case_id = $2
+            ON CONFLICT (case_id, tag_id) DO UPDATE
+            SET assigned_by = EXCLUDED.assigned_by;
+        `, [importedCaseId, sourceCase.id, req.session.uid]);
+
+        const importedCase = await client.query(`
+            SELECT c.id, c.case_uuid, c.title, c.author_firstname, c.author_lastname, c.author_email,
+                   c.pdf_path, c.creator, c.created_at, c.updated_at,
+                   ${caseSharingSelectSql},
+                   ${pdfRenderJobSelectSql}
+            FROM ethical_cases c
+            ${pdfRenderJobJoinSql}
+            WHERE c.id = $1;
+        `, [importedCaseId]);
+
+        await client.query("COMMIT");
+
+        const caseObj = importedCase.rows[0];
+        if (pdfCopied) {
+            const renderJob = await enqueueCaseRenderSafely(caseObj);
+            Object.assign(caseObj, renderJob);
+        }
+
+        return res.status(201).json({ status: "ok", result: normalizeCase(caseObj) });
+    } catch (error) {
+        await client.query("ROLLBACK");
+        console.error("Error importing case:", error);
+        return res.status(500).json({ status: "err", message: "Failed to import case." });
+    } finally {
+        client.release();
+    }
+});
+
+router.post("/cases/:id/duplicate", async (req, res) => {
+    if (!requireRole(req, res, "P")) {
+        return;
+    }
+
+    const caseId = parseCaseId(req.params.id);
+    if (!caseId) {
+        return res.status(400).json({ status: "err", message: "Invalid case id." });
+    }
+
+    const db = await rpg2.getDBInstance(config.dbconnString);
+    const client = await db.connect();
+
+    try {
+        await client.query("BEGIN");
+        const sourceResult = await client.query(`
+            SELECT id, title, author_firstname, author_lastname, author_email, pdf_path, creator,
+                   visibility, license_code, attribution_text, original_case_id,
+                   rights_status, license_notes, permission_statement, commercial_source,
+                   language_code
+            FROM ethical_cases
+            WHERE id = $1
+              AND creator = $2
+            LIMIT 1;
+        `, [caseId, req.session.uid]);
+        const sourceCase = sourceResult.rows[0];
+
+        if (!sourceCase) {
+            await client.query("ROLLBACK");
+            return res.status(404).json({ status: "err", message: "Case not found." });
+        }
+
+        const nextIdResult = await client.query("SELECT nextval(pg_get_serial_sequence('ethical_cases', 'id')) AS id;");
+        const duplicatedCaseId = Number(nextIdResult.rows[0].id);
+        const destinationPdfPath = `/uploads/cases/${duplicatedCaseId}/case.pdf`;
+        const pdfCopied = await copyCasePdfIfPresent(sourceCase.pdf_path, destinationPdfPath);
+        const sourceAuthor = getCaseAuthorName(sourceCase);
+        const sourceLicenseCode = sourceCase.license_code || CASE_DEFAULT_LICENSE;
+        const rootCaseId = sourceCase.original_case_id || sourceCase.id;
+        const duplicatedTitle = await getUniqueCaseCopyTitle(
+            client,
+            req.session.uid,
+            sourceCase.title,
+            sourceCase.language_code
+        );
+
+        await client.query(`
+            INSERT INTO ethical_cases
+                (id, title, author_firstname, author_lastname, author_email, pdf_path, creator,
+                 visibility, license_code, attribution_text, original_case_id, imported_from_case_id,
+                 source_case_title, source_case_author, source_case_license_code, is_editable_copy,
+                 rights_status, license_notes, permission_statement, commercial_source, language_code,
+                 archived)
+            VALUES
+                ($1, $2, $3, $4, $5, $6, $7,
+                 'private', $8, COALESCE($9, $10), $11, $12,
+                 $13, $14, $15, true,
+                 $16, $17, $18, $19, $20,
+                 false);
+        `, [
+            duplicatedCaseId,
+            duplicatedTitle,
+            sourceCase.author_firstname,
+            sourceCase.author_lastname,
+            sourceCase.author_email,
+            pdfCopied ? destinationPdfPath : sourceCase.pdf_path,
+            req.session.uid,
+            sourceLicenseCode,
+            sourceCase.attribution_text,
+            buildAttributionText({
+                title:       sourceCase.title,
+                author:      sourceAuthor,
+                licenseCode: sourceLicenseCode,
+            }),
+            rootCaseId,
+            sourceCase.id,
+            sourceCase.title,
+            sourceAuthor,
+            sourceLicenseCode,
+            sourceCase.rights_status,
+            sourceCase.license_notes,
+            sourceCase.permission_statement,
+            sourceCase.commercial_source,
+            normalizeLanguageCode(sourceCase.language_code),
+        ]);
+
+        await client.query(`
+            INSERT INTO ethical_cases_authors (case_id, author_id, user_id, author_order, is_primary)
+            SELECT $1,
+                   ca.author_id,
+                   u.id,
+                   ca.author_order,
+                   ca.is_primary
+            FROM ethical_cases_authors ca
+            INNER JOIN ethical_case_author a
+                ON a.id = ca.author_id
+            LEFT JOIN users u
+                ON LOWER(u.mail) = LOWER(a.author_email)
+            WHERE ca.case_id = $2
+            ON CONFLICT (case_id, author_id) DO UPDATE
+            SET user_id = EXCLUDED.user_id,
+                author_order = EXCLUDED.author_order,
+                is_primary = EXCLUDED.is_primary,
+                updated_at = NOW();
+        `, [duplicatedCaseId, sourceCase.id]);
+
+        await client.query(`
+            INSERT INTO ethical_cases_tags (case_id, tag_id, assigned_by)
+            SELECT $1, ect.tag_id, $3
+            FROM ethical_cases_tags ect
+            WHERE ect.case_id = $2
+            ON CONFLICT (case_id, tag_id) DO UPDATE
+            SET assigned_by = EXCLUDED.assigned_by;
+        `, [duplicatedCaseId, sourceCase.id, req.session.uid]);
+
+        const duplicatedCase = await client.query(`
+            SELECT c.id, c.case_uuid, c.title, c.author_firstname, c.author_lastname, c.author_email,
+                   c.pdf_path, c.creator, c.created_at, c.updated_at,
+                   ${caseSharingSelectSql},
+                   ${pdfRenderJobSelectSql}
+            FROM ethical_cases c
+            ${pdfRenderJobJoinSql}
+            WHERE c.id = $1;
+        `, [duplicatedCaseId]);
+
+        await client.query("COMMIT");
+
+        const caseObj = duplicatedCase.rows[0];
+        if (pdfCopied) {
+            const renderJob = await enqueueCaseRenderSafely(caseObj);
+            Object.assign(caseObj, renderJob);
+        }
+
+        return res.status(201).json({ status: "ok", result: normalizeCase(caseObj) });
+    } catch (error) {
+        await client.query("ROLLBACK");
+        console.error("Error duplicating case:", error);
+        return res.status(500).json({ status: "err", message: "Failed to duplicate case." });
+    } finally {
+        client.release();
+    }
+});
+
+router.patch("/cases/:id/visibility", async (req, res) => {
+    if (!requireRole(req, res, "P")) {
+        return;
+    }
+
+    const caseId = parseCaseId(req.params.id);
+    if (!caseId) {
+        return res.status(400).json({ status: "err", message: "Invalid case id." });
+    }
+
+    const visibility = normalizeVisibility(req.body?.visibility);
+
+    const db = await rpg2.getDBInstance(config.dbconnString);
+    const client = await db.connect();
+
+    try {
+        await client.query("BEGIN");
+
+        if (await hasLaunchedDesignActivity(caseId)) {
+            await client.query("ROLLBACK");
+            return lockedCaseResponse(res);
+        }
+
+        const updatedResult = await client.query(
+            `
+                UPDATE ethical_cases
+                SET visibility = $1,
+                    license_code = COALESCE(license_code, $4),
+                    updated_at = NOW()
+                WHERE id = $2
+                  AND creator = $3
+                RETURNING id, visibility, license_code;
+            `,
+            [visibility, caseId, req.session.uid, CASE_DEFAULT_LICENSE]
+        );
+        const updated = updatedResult.rows[0];
+
+        if (!updated || !updated.id) {
+            await client.query("ROLLBACK");
+            return res.status(404).json({
+                status:  "err",
+                message: "Case not found.",
+                code:    "CASE_NOT_FOUND",
+            });
+        }
+
+        let affectedDesignIds = [];
+        if (visibility === PRIVATE_VISIBILITY) {
+            const affectedDesigns = await client.query(
+                `
+                    UPDATE designs
+                    SET visibility = 'private',
+                        public = false
+                    WHERE case_id = $1
+                      AND visibility = 'public'
+                    RETURNING id;
+                `,
+                [caseId]
+            );
+            affectedDesignIds = affectedDesigns.rows.map(row => row.id);
+        }
+
+        await client.query("COMMIT");
+
+        return res.status(200).json({
+            status: "ok",
+            result: {
+                id: updated.id,
+                visibility: updated.visibility,
+                public: updated.visibility === PUBLIC_VISIBILITY,
+                licenseCode: updated.license_code,
+                affectedDesignIds,
+            },
+        });
+    } catch (error) {
+        await client.query("ROLLBACK");
+        console.error("Error updating case visibility:", error);
+        return res.status(500).json({ status: "err", message: "Failed to update case visibility." });
+    } finally {
+        client.release();
+    }
+});
+
+router.patch("/cases/:id/archive", async (req, res) => {
+    if (!requireRole(req, res, "P")) {
+        return;
+    }
+
+    const caseId = parseCaseId(req.params.id);
+    if (!caseId) {
+        return res.status(400).json({ status: "err", message: "Invalid case id." });
+    }
+
+    const archived = req.body?.archived === true;
+
+    try {
+        const updated = await rpg2.singleSQL({
+            dbcon: config.dbconnString,
+            sql: `
+                UPDATE ethical_cases
+                SET archived = $1,
+                    updated_at = NOW()
+                WHERE id = $2
+                  AND creator = $3
+                RETURNING id, archived;
+            `,
+            sqlParams: [
+                rpg2.param("plain", archived),
+                rpg2.param("plain", caseId),
+                rpg2.param("plain", req.session.uid),
+            ],
+        });
+
+        if (!updated || !updated.id) {
+            return res.status(404).json({ status: "err", message: "Case not found." });
+        }
+
+        return res.status(200).json({
+            status: "ok",
+            result: {
+                id: updated.id,
+                archived: updated.archived === true,
+            },
+        });
+    } catch (error) {
+        console.error("Error archiving case:", error);
+        return res.status(500).json({ status: "err", message: "Failed to update case archive status." });
+    }
+});
+
 router.delete("/cases/:id", async (req, res) => {
     if (!requireRole(req, res, "P")) {
         return;
@@ -435,6 +1329,27 @@ router.delete("/cases/:id", async (req, res) => {
     }
 
     try {
+        const ownedCase = await rpg2.singleSQL({
+            dbcon: config.dbconnString,
+            sql: `
+                SELECT id
+                FROM ethical_cases
+                WHERE id = $1 AND creator = $2;
+            `,
+            sqlParams: [
+                rpg2.param("plain", caseId),
+                rpg2.param("plain", req.session.uid),
+            ],
+        });
+
+        if (!ownedCase?.id) {
+            return res.status(404).json({ status: "err", message: "Case not found." });
+        }
+
+        if (await hasLaunchedDesignActivity(caseId)) {
+            return lockedCaseResponse(res);
+        }
+
         const deleted = await rpg2.singleSQL({
             dbcon: config.dbconnString,
             sql: `

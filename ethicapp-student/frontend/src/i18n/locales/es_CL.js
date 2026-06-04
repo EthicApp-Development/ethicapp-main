@@ -124,6 +124,7 @@ const esCL = {
     responseSubmitError: 'No fue posible enviar tu respuesta.',
     responseSelectScaleFirst: 'Selecciona un valor de la escala antes de enviar.',
     responseCooldown: 'Espera antes de volver a enviar esta pregunta.',
+    atsProcessing: 'El tutor de argumentos está procesando tu respuesta...',
     externalResultTitle: 'Resultado del servicio externo',
     externalResultService: 'Servicio',
     externalResultLoading: 'Cargando componente del resultado...',

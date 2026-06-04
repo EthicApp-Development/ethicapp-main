@@ -5,66 +5,71 @@ description: >
   with different image tags or digests.
 
 release:
-  id: "production-2026-05-12"
-  source_repository: "https://github.com/example-org/ethicapp"
-  source_ref: "v2026.05.12"
-  source_revision: "77d69072a165afa1d335601ac307ea9c60ca2dd8"
+  id: "staging-uandes-external-services-architecture-2026-06-03"
+  source_repository: "https://github.com/Ethicapp-Development/ethicapp-main"
+  source_ref: "v2026.06.03-eas"
+  source_revision: "ce42723621759ca14309fa05d4f10f02e23a807c"
   env_contract:
-    path: "deploy/env.contract.yml"
-    source_ref: "v2026.05.12"
-    source_revision: "77d69072a165afa1d335601ac307ea9c60ca2dd8"
+    path: "config/contracts/staging/uandes/external-services-architecture.yml"
+    source_ref: "v2026.06.03-eas"
+    source_revision: "ce42723621759ca14309fa05d4f10f02e23a807c"
 
 images:
   ethicapp:
-    image: "ghcr.io/example-org/ethicapp"
-    tag: "v2026.05.12"
+    image: "ghcr.io/ethicapp-development/ethicapp"
+    tag: "v2026.06.03-eas"
     digest: ""
-    source_ref: "v2026.05.12"
-    source_revision: "77d69072a165afa1d335601ac307ea9c60ca2dd8"
-
-  ethicapp-pdf-worker:
-    image: "ghcr.io/example-org/ethicapp"
-    tag: "v2026.05.12"
-    digest: ""
-    source_ref: "v2026.05.12"
-    source_revision: "77d69072a165afa1d335601ac307ea9c60ca2dd8"
+    source_ref: "v2026.06.03-eas"
+    source_revision: "ce42723621759ca14309fa05d4f10f02e23a807c"
 
   nginx:
-    image: "ghcr.io/example-org/ethicapp-nginx"
-    tag: "v2026.05.12"
+    image: "ghcr.io/ethicapp-development/ethicapp-nginx"
+    tag: "v2026.06.03-eas"
     digest: ""
-    source_ref: "v2026.05.12"
-    source_revision: "77d69072a165afa1d335601ac307ea9c60ca2dd8"
+    source_ref: "v2026.06.03-eas"
+    source_revision: "ce42723621759ca14309fa05d4f10f02e23a807c"
 
   auth-backend:
-    image: "ghcr.io/example-org/ethicapp-auth-backend"
-    tag: "v2026.05.11"
+    image: "ghcr.io/ethicapp-development/ethicapp-auth-backend"
+    tag: "v2026.06.03-eas"
     digest: ""
-    source_ref: "v2026.05.11"
-    source_revision: "32b29471b464f85b9a9b6830723a808bbe1ed84e"
+    source_ref: "v2026.06.03-eas"
+    source_revision: "ce42723621759ca14309fa05d4f10f02e23a807c"
 
   ethicapp-student:
-    image: "ghcr.io/example-org/ethicapp-student"
-    tag: "v2026.05.11"
+    image: "ghcr.io/ethicapp-development/ethicapp-student"
+    tag: "v2026.06.03-eas"
     digest: ""
-    source_ref: "v2026.05.11"
-    source_revision: "32b29471b464f85b9a9b6830723a808bbe1ed84e"
+    source_ref: "v2026.06.03-eas"
+    source_revision: "ce42723621759ca14309fa05d4f10f02e23a807c"
 
   management-console:
-    image: "ghcr.io/example-org/ethicapp-management-console"
-    tag: "v2026.05.11"
+    image: "ghcr.io/ethicapp-development/ethicapp-management-console"
+    tag: "v2026.06.03-eas"
     digest: ""
-    source_ref: "v2026.05.11"
-    source_revision: "32b29471b464f85b9a9b6830723a808bbe1ed84e"
+    source_ref: "v2026.06.03-eas"
+    source_revision: "ce42723621759ca14309fa05d4f10f02e23a807c"
 
-  database:
-    image: "ghcr.io/example-org/ethicapp-database"
-    tag: "v2026.05.11"
+  external-mock-service:
+    image: "ghcr.io/ethicapp-development/ethicapp-external-mock-service"
+    tag: "v2026.06.03-eas"
     digest: ""
-    source_ref: "v2026.05.11"
-    source_revision: "32b29471b464f85b9a9b6830723a808bbe1ed84e"
+    source_ref: "v2026.06.03-eas"
+    source_revision: "ce42723621759ca14309fa05d4f10f02e23a807c"
+
+  db-migrations:
+    image: "ghcr.io/ethicapp-development/ethicapp-db-migrations"
+    tag: "v2026.06.03-eas"
+    digest: ""
+    source_ref: "v2026.06.03-eas"
+    source_revision: "ce42723621759ca14309fa05d4f10f02e23a807c"
 
 external_images:
+  postgresql:
+    image: "postgres"
+    tag: "16"
+    digest: ""
+
   redis_session:
     image: "redis"
     tag: "7.4-alpine"
@@ -75,8 +80,19 @@ external_images:
     tag: "7.4-alpine"
     digest: ""
 
+compose:
+  files:
+    - "compose.yml"
+    - "compose/staging/external-services-architecture.yml"
+  project_name: "ethicapp-stg-uandes-extsvc"
+  nginx_http_bind: "127.0.0.1:8300"
+  uploads_host_path: "/srv/ethicapp-staging-uandes-external-services-architecture/uploads"
+
 notes:
   - "Prefer digest pins in production once images are published."
   - "The env_contract source_ref/source_revision should match the contract used to render runtime .env files."
   - "For partial releases, only changed services need new image tags, but every deployed service should remain pinned here."
+  - "external-mock-service is the repository-provided PoC service for external-service adapters and should only be deployed when mock integrations are intentionally enabled."
   - "ethicapp-pdf-worker intentionally uses the ethicapp image and must mount the same protected uploads volume as ethicapp."
+  - "PostgreSQL now uses the official postgres image directly; this repository no longer publishes an ethicapp-database image."
+  - "db-migrations is a short-lived Flyway-based job image with database/migrations baked into the image. Run it before application services start."

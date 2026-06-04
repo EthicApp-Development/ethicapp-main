@@ -16,9 +16,40 @@ const execFileAsync = promisify(execFile);
 const router = express.Router();
 
 const uploadsRoot = path.resolve(process.cwd(), uploadsPath);
-const AVATAR_MAX_SIZE_BYTES = 300 * 1024;
+const AVATAR_MAX_SIZE_BYTES = 500 * 1024;
 
 const allowedMimeTypes = new Set(["image/jpeg", "image/jpg", "image/png"]);
+const DEFAULT_PREFERRED_LOCALE = "en_US";
+
+function normalizePreferredLocale(value) {
+    return String(value || "").trim().replace("-", "_");
+}
+
+async function assertSupportedPreferredLocale(preferredLocale) {
+    const normalizedPreferredLocale = normalizePreferredLocale(preferredLocale);
+    if (!normalizedPreferredLocale) {
+        return DEFAULT_PREFERRED_LOCALE;
+    }
+
+    const languages = await execSQL({
+        dbcon: config.dbconnString,
+        sql: `
+            SELECT code
+            FROM languages
+            WHERE code = $1
+            LIMIT 1
+        `,
+        sqlParams: [param("plain", normalizedPreferredLocale)]
+    });
+
+    if (languages.length === 0) {
+        const error = new Error("invalid_preferred_locale");
+        error.status = 400;
+        throw error;
+    }
+
+    return normalizedPreferredLocale;
+}
 
 
 const validateProfileRecaptcha = async (req, res) => {
@@ -105,7 +136,78 @@ router.get("/users/profile", async (req, res) => {
     }
 });
 
-router.post("/users/profile", async (req, res) => {
+const saveAvatarFile = async (req) => {
+    const avatarFile = req.file;
+    if (!avatarFile) {
+        return null;
+    }
+
+    if (!allowedMimeTypes.has(avatarFile.mimetype)) {
+        await removeUploadedFile(avatarFile);
+        const error = new Error("invalid_avatar_type");
+        error.status = 400;
+        throw error;
+    }
+
+    if (avatarFile.size > AVATAR_MAX_SIZE_BYTES) {
+        await removeUploadedFile(avatarFile);
+        const error = new Error("avatar_size_limit_exceeded");
+        error.status = 400;
+        throw error;
+    }
+
+    const sourcePath = getAbsoluteUploadPath(avatarFile.path);
+    if (!sourcePath) {
+        const error = new Error("avatar_upload_failed");
+        error.status = 400;
+        throw error;
+    }
+
+    const avatarPaths = buildAvatarPaths(req.session.uid);
+    await fs.promises.mkdir(avatarPaths.directoryAbsolute, { recursive: true });
+
+    await execFileAsync("convert", [
+        sourcePath,
+        "-auto-orient",
+        avatarPaths.originalAbsolute
+    ]);
+
+    await execFileAsync("convert", [
+        avatarPaths.originalAbsolute,
+        "-auto-orient",
+        "-thumbnail",
+        "64x64^",
+        "-gravity",
+        "center",
+        "-extent",
+        "64x64",
+        avatarPaths.topbarAbsolute
+    ]);
+
+    await execSQL({
+        dbcon: config.dbconnString,
+        sql: `
+            UPDATE users
+            SET profile_image_path = $1,
+                profile_image_topbar_path = $2
+            WHERE id = $3
+        `,
+        sqlParams: [
+            param("plain", avatarPaths.originalRelative),
+            param("plain", avatarPaths.topbarRelative),
+            param("plain", req.session.uid)
+        ]
+    });
+
+    await removeUploadedFile(avatarFile);
+
+    return {
+        profile_image_path: avatarPaths.originalRelative,
+        profile_image_topbar_path: avatarPaths.topbarRelative
+    };
+};
+
+router.post("/users/profile", avatarUpload, async (req, res) => {
     if (!requireRole(req, res, "P")) return;
 
     try {
@@ -117,6 +219,9 @@ router.post("/users/profile", async (req, res) => {
         const firstname = (req.body.firstname || "").trim();
         const lastname = (req.body.lastname || "").trim();
         const sex = (req.body.sex || "").trim().toUpperCase();
+        const preferredLocale = Object.hasOwn(req.body, "preferred_locale")
+            ? await assertSupportedPreferredLocale(req.body.preferred_locale)
+            : null;
 
         const validSex = new Set(["F", "M", "O"]);
         if (!validSex.has(sex)) {
@@ -132,22 +237,37 @@ router.post("/users/profile", async (req, res) => {
                 SET firstname = $1,
                     lastname = $2,
                     sex = $3,
-                    name = $4
-                WHERE id = $5
+                    name = $4,
+                    preferred_locale = COALESCE($5, preferred_locale)
+                WHERE id = $6
             `,
             sqlParams: [
                 param("plain", firstname),
                 param("plain", lastname),
                 param("plain", sex),
                 param("plain", fullName),
+                param("plain", preferredLocale),
                 param("plain", req.session.uid)
             ]
         });
 
-        return res.status(200).json({ success: true, message: "profile_updated" });
+        const avatarData = await saveAvatarFile(req);
+
+        return res.status(200).json({
+            success: true,
+            message: "profile_updated",
+            data: {
+                ...(avatarData || {}),
+                ...(preferredLocale ? { preferred_locale: preferredLocale } : {})
+            }
+        });
     } catch (error) {
+        await removeUploadedFile(req.file);
         console.error("Error in POST /users/profile:", error);
-        return res.status(500).json({ success: false, error: "profile_update_failed" });
+        return res.status(error.status || 500).json({
+            success: false,
+            error: error.message || "profile_update_failed"
+        });
     }
 });
 
@@ -160,75 +280,23 @@ router.post("/users/profile/avatar", avatarUpload, async (req, res) => {
             return;
         }
 
-        const avatarFile = req.file;
-        if (!avatarFile) {
+        if (!req.file) {
             return res.status(400).json({ success: false, error: "avatar_required" });
         }
 
-        if (!allowedMimeTypes.has(avatarFile.mimetype)) {
-            await removeUploadedFile(avatarFile);
-            return res.status(400).json({ success: false, error: "invalid_avatar_type" });
-        }
-
-        if (avatarFile.size > AVATAR_MAX_SIZE_BYTES) {
-            await removeUploadedFile(avatarFile);
-            return res.status(400).json({ success: false, error: "avatar_size_limit_exceeded" });
-        }
-
-        const sourcePath = getAbsoluteUploadPath(avatarFile.path);
-        if (!sourcePath) {
-            return res.status(400).json({ success: false, error: "avatar_upload_failed" });
-        }
-
-        const avatarPaths = buildAvatarPaths(req.session.uid);
-        await fs.promises.mkdir(avatarPaths.directoryAbsolute, { recursive: true });
-
-        await execFileAsync("convert", [
-            sourcePath,
-            "-auto-orient",
-            avatarPaths.originalAbsolute
-        ]);
-
-        await execFileAsync("convert", [
-            avatarPaths.originalAbsolute,
-            "-auto-orient",
-            "-thumbnail",
-            "64x64^",
-            "-gravity",
-            "center",
-            "-extent",
-            "64x64",
-            avatarPaths.topbarAbsolute
-        ]);
-
-        await execSQL({
-            dbcon: config.dbconnString,
-            sql: `
-                UPDATE users
-                SET profile_image_path = $1,
-                    profile_image_topbar_path = $2
-                WHERE id = $3
-            `,
-            sqlParams: [
-                param("plain", avatarPaths.originalRelative),
-                param("plain", avatarPaths.topbarRelative),
-                param("plain", req.session.uid)
-            ]
-        });
-
-        await removeUploadedFile(avatarFile);
+        const avatarData = await saveAvatarFile(req);
 
         return res.status(200).json({
             success: true,
-            data: {
-                profile_image_path: avatarPaths.originalRelative,
-                profile_image_topbar_path: avatarPaths.topbarRelative
-            }
+            data: avatarData
         });
     } catch (error) {
         await removeUploadedFile(req.file);
         console.error("Error in POST /users/profile/avatar:", error);
-        return res.status(500).json({ success: false, error: "avatar_upload_failed" });
+        return res.status(error.status || 500).json({
+            success: false,
+            error: error.message || "avatar_upload_failed"
+        });
     }
 });
 

@@ -4,43 +4,45 @@
             <h2><i class="fa fa-paint-brush"></i> {{ 'edit_design_title' | translate }}</h2>
         </div>
     </div>
-    <div class="form-group">
-        <label for="designTitle">{{ 'design_title_input_label' | translate }}:</label>
-        <input id="designTitle" type="text" class="form-control input-lg" 
-               placeholder="{{ 'title_input_hint_text' | translate }}" 
-               ng-model="dec.design.metainfo.title">
-    </div>
+
     <div class="panel panel-default">
         <div class="panel-body">
-            <label for="designCaseSearch">{{ 'design_associated_case_label' | translate }}</label>
-            <div class="search-field-wrapper launch-activity-search-wrapper">
-                <input
-                    id="designCaseSearch"
-                    type="text"
-                    class="form-control launch-activity-search search-decorated-input"
-                    placeholder="{{ 'design_associated_case_placeholder' | translate }}"
-                    ng-model="dec.selectedCase"
-                    uib-typeahead="caseItem as dec.formatCaseLabel(caseItem) for caseItem in dec.searchCases($viewValue)"
-                    typeahead-on-select="dec.selectCase($item)"
-                    typeahead-editable="false"
-                    typeahead-min-length="2">
-                <i class="fa-solid fa-magnifying-glass search-field-icon" aria-hidden="true"></i>
+            <div class="row" ng-if="dec.design">
+                <div class="col-md-12">
+                    <fieldset>
+                        <legend>{{ 'design_title_and_tags' | translate }}</legend>
+                        <div class="form-group case-form-field">
+                            <label for="designTitle">{{ 'design_title_input_label' | translate }}</label>
+                            <input id="designTitle" type="text" class="form-control"
+                                placeholder="{{ 'title_input_hint_text' | translate }}"
+                                ng-model="dec.design.metainfo.title">
+                        </div>
+                        <div class="form-group case-form-field">
+                            <label>{{ 'semantic_tags' | translate }}</label>
+                            <tag-selector selected-tags="dec.design.tags" scope="design"></tag-selector>
+                        </div>
+                        <div class="form-group case-form-field">
+                            <label for="designLanguage">{{ 'language' | translate }}</label>
+                            <select
+                                id="designLanguage"
+                                name="languageCode"
+                                class="form-control"
+                                ng-model="dec.design.languageCode"
+                                ng-options="language.code as language.native_name for language in dec.languages">
+                            </select>
+                        </div>
+                        <div class="form-group case-form-field">
+                            <case-search-selector
+                                associated-case="dec.associatedCase"
+                                on-select="dec.selectCase(caseItem)"
+                                on-clear="dec.clearAssociatedCase()">
+                            </case-search-selector>
+                        </div>
+                    </fieldset>
+                </div>
             </div>
-            <p class="help-block" ng-if="!dec.associatedCase">
-                {{ 'design_no_case_associated' | translate }}
-            </p>
-            <p class="help-block" ng-if="dec.associatedCase">
-                <strong>{{ 'design_associated_case_current' | translate }}:</strong>
-                <a ng-href="#!/cases/{{dec.associatedCase.id}}">
-                    {{ dec.formatCaseLabel(dec.associatedCase) }}
-                </a>
-                <button type="button" class="btn btn-link btn-xs" ng-click="dec.clearAssociatedCase()">
-                    {{ 'remove' | translate }}
-                </button>
-            </p>
         </div>
     </div>
-
     <div class="panel panel-default">
         <div class="panel-body">
             <div class="row">
@@ -71,33 +73,33 @@
                 </div>
             </div>
         </div>
-    </div>    
+    </div>
 
     <div class="design-editor" validate-design
             phases="dec.design.phases"
             on-validate="dec.handleValidationResult(result)">
         <div uib-accordion close-others="false">
-            <div uib-accordion-group class="panel-default phase-editor-item-heading" 
+            <div uib-accordion-group class="panel-default phase-editor-item-heading"
                 ng-repeat="phase in dec.design.phases track by $index"
                 is-open="dec.accordionState[$index]">
 
                 <div ng-init="phaseIndex = $index">
                     <div uib-accordion-heading ng-attr-id="phase_{{phaseIndex+1}}">
-                        <div style="background: #f5f5f5;">
-                            <div class="d-flex align-items-center">
+                        <div class="phase-editor-heading-content">
+                            <div class="d-flex align-items-center phase-editor-heading-row">
                                 <h4>{{ 'phase_title_prefix' | translate }} {{ phaseIndex + 1 }}</h4>
                                 <i class="fa-regular fa-copy  ms-auto"
                                     style="cursor: pointer;"
                                     ng-click="dec.duplicatePhase(phaseIndex, $event)"></i>&nbsp;
-                                <i class="fa-solid fa-trash text-danger" 
-                                    style="cursor: pointer;" 
-                                    phase-deleter 
-                                    phases="dec.design.phases" 
+                                <i class="fa-solid fa-trash text-danger"
+                                    style="cursor: pointer;"
+                                    phase-deleter
+                                    phases="dec.design.phases"
                                     phase-index="phaseIndex"
                                     on-delete="dec.handlePhaseDeletion(index)">
                                 </i>&nbsp;
-                                <i ng-class="{'fa-solid fa-down-left-and-up-right-to-center': dec.accordionState[phaseIndex], 
-                                            'fa-solid fa-up-right-and-down-left-from-center': !dec.accordionState[phaseIndex]}" 
+                                <i ng-class="{'fa-solid fa-down-left-and-up-right-to-center': dec.accordionState[phaseIndex],
+                                            'fa-solid fa-up-right-and-down-left-from-center': !dec.accordionState[phaseIndex]}"
                                     class="fa-solid me-2"
                                     ng-click="dec.toggleAccordionState(phaseIndex, $event)">
                                 </i>
@@ -114,20 +116,20 @@
                             </div>
                         </div>
                         <div class="col-md-4" style="padding-top: 16px" ng-if="phase.mode !== 'individual'">
-                            <grouping-mode-selector 
-                                phase="phase" 
-                                phase-index="phaseIndex" 
-                                design="dec.design" 
+                            <grouping-mode-selector
+                                phase="phase"
+                                phase-index="phaseIndex"
+                                design="dec.design"
                                 validate-callback="dec.handleValidationResult(result)">
                             </grouping-mode-selector>
-                        
+
                             <div style="margin-top:0.5em" ng-if="dec.design.phases[phaseIndex].grouping_algorithm !== 'preserve'">
                                 <label>{{ 'group_size_label' | translate }}</label>
-                                <numeric-input-with-spinbutton 
-                                    value="phase.stdntAmount" 
-                                    min="2" 
-                                    max="10" 
-                                    step="1" 
+                                <numeric-input-with-spinbutton
+                                    value="phase.stdntAmount"
+                                    min="2"
+                                    max="10"
+                                    step="1"
                                     id="phaseNumericInput">
                                 </numeric-input-with-spinbutton>
                             </div>
@@ -179,20 +181,20 @@
                                 <div ng-switch on="dec.design.type">
                                     <div ng-switch-when="semantic_differential" ng-repeat="item in phase.questions track by $index">
                                         <div>
-                                            <sd-item-editor 
+                                            <sd-item-editor
                                                 phase-number="phaseIndex+1"
-                                                question="item" 
+                                                question="item"
                                                 question-number="$index+1"
-                                                show-separator="false" 
+                                                show-separator="false"
                                                 validate-callback="dec.handleValidationResult(result)">
                                                 <div class="row">
                                                     <div class="col-xs-6">
-                                                        <item-deleter 
+                                                        <item-deleter
                                                             items="phase.questions"
                                                             index="$index"
                                                             phase-number="phaseIndex+1"
                                                             on-delete="dec.handleItemDeletion({ phaseNumber: phaseNumber, deletedItem: deletedItem, index: index })">
-                                                        </item-deleter>                                                        
+                                                        </item-deleter>
                                                         <item-duplicator items="phase.questions" index="$index"></item-duplicator>
                                                     </div>
                                                     <div class="col-xs-6 text-right">
@@ -205,7 +207,7 @@
                                     <div ng-switch-when="ranking">
                                         <input style="margin-top: 1em;" ng-model="phase.randomize_item_order" type="checkbox"> <label>{{ 'item_random_order_label' | translate }}</label>
                                         <div ng-repeat="item in phase.roles track by $index">
-                                            <ranking-item-editor 
+                                            <ranking-item-editor
                                                 phase-number="phaseIndex+1"
                                                 item="item"
                                                 item-number="$index+1"
@@ -233,7 +235,7 @@
                     <div class="row">
                         <div class="col-sm-12 text-right">
                             <hr style="margin-top:1em">
-                            <item-mover 
+                            <item-mover
                                 items="dec.design.phases"
                                 item="phase"
                                 on-move="dec.handlePhaseMove({ fromIndex, toIndex })">

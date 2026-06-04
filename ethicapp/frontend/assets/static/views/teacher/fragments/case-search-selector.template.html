@@ -1,0 +1,28 @@
+<div>
+    <label for="designCaseSearch">{{ 'design_associated_case_label' | translate }}</label>
+    <div class="search-field-wrapper launch-activity-search-wrapper">
+        <input
+            id="designCaseSearch"
+            type="text"
+            class="form-control launch-activity-search search-decorated-input"
+            placeholder="{{ 'design_associated_case_placeholder' | translate }}"
+            ng-model="$ctrl.selectedCaseLabel"
+            uib-typeahead="caseItem as $ctrl.formatCaseLabel(caseItem) for caseItem in $ctrl.searchCases($viewValue)"
+            typeahead-on-select="$ctrl.selectCase($item)"
+            typeahead-editable="false"
+            typeahead-min-length="2">
+        <i class="fa-solid fa-magnifying-glass search-field-icon" aria-hidden="true"></i>
+    </div>
+    <p class="help-block" ng-if="!$ctrl.associatedCase">
+        {{ 'design_no_case_associated' | translate }}
+    </p>
+    <p class="help-block" ng-if="$ctrl.associatedCase">
+        <strong>{{ 'design_associated_case_current' | translate }}:</strong>
+        <a ng-href="#!/cases/{{$ctrl.associatedCase.id}}">
+            {{ $ctrl.formatCaseLabel($ctrl.associatedCase) }}
+        </a>
+        <button type="button" class="btn btn-link btn-xs" ng-click="$ctrl.clearCase()">
+            {{ 'remove' | translate }}
+        </button>
+    </p>
+</div>

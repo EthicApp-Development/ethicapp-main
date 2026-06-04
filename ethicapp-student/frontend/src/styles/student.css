@@ -1,17 +1,157 @@
 :root {
   --ea-font-sans: "Nunito", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --ea-primary: #2649ec;
+  --ea-primary-hover: #071c78;
+  --ea-surface-gradient:
+    radial-gradient(900px 520px at 0% 0%, rgba(38, 73, 236, 0.08), transparent 62%),
+    radial-gradient(780px 460px at 100% -10%, rgba(38, 73, 236, 0.05), transparent 58%),
+    linear-gradient(180deg, #f8faff 0%, #f5f7ff 42%, #eef3ff 100%);
+  --student-topbar-height: 68px;
+  --student-link-color: #2649ec;
+  --student-link-hover-color: #071c78;
   --bs-font-sans-serif: var(--ea-font-sans);
   --bs-body-font-family: var(--ea-font-sans);
+  --bs-primary: var(--ea-primary);
+  --bs-primary-rgb: 38, 73, 236;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
 }
 
 body {
   font-family: var(--ea-font-sans);
+  background: var(--ea-surface-gradient);
+  background-attachment: fixed;
+}
+
+.student-app-shell {
+  background: var(--ea-surface-gradient);
+  background-attachment: fixed;
+}
+
+.btn-primary {
+  --bs-btn-bg: var(--ea-primary);
+  --bs-btn-border-color: var(--ea-primary);
+  --bs-btn-hover-bg: var(--ea-primary-hover);
+  --bs-btn-hover-border-color: var(--ea-primary-hover);
+  --bs-btn-active-bg: var(--ea-primary-hover);
+  --bs-btn-active-border-color: var(--ea-primary-hover);
+  --bs-btn-disabled-bg: #8f99bf;
+  --bs-btn-disabled-border-color: #8f99bf;
+}
+
+.student-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 1030;
+  min-height: var(--student-topbar-height);
+  color: #071c78;
+  background: linear-gradient(90deg, #f7faff 0%, #eef4ff 42%, #dfe9ff 100%);
+  box-shadow: 0 4px 18px rgba(7, 28, 120, 0.08);
+}
+
+.student-topbar-inner {
+  min-height: var(--student-topbar-height);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.student-topbar-left,
+.student-topbar-actions {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.student-topbar-left {
+  gap: 18px;
+}
+
+.student-topbar-actions {
+  gap: 16px;
+}
+
+.ethicapp-logo-topbar {
+  display: inline-flex;
+  align-items: center;
 }
 
 .ethicapp-logo-topbar-img {
-  height: 48px;
-  max-width: 180px;
+  display: block;
+  width: 152px;
+  height: auto;
+  max-width: 42vw;
   object-fit: contain;
+}
+
+.student-profile-link {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--student-link-color);
+  text-decoration: none;
+}
+
+.student-profile-name {
+  display: inline-block;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.student-logout-link {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--student-link-color);
+  background: transparent;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.student-logout-link:hover,
+.student-logout-link:focus {
+  color: var(--student-link-hover-color);
+  background: rgba(38, 73, 236, 0.1);
+  outline: none;
+}
+
+.student-app-shell .nav-tabs {
+  border-bottom-color: rgba(38, 73, 236, 0.22);
+}
+
+.student-app-shell .nav-tabs .nav-link {
+  color: var(--student-link-color);
+  border-radius: 8px 8px 0 0;
+  border-color: transparent;
+}
+
+.student-app-shell .nav-tabs .nav-link:hover,
+.student-app-shell .nav-tabs .nav-link:focus {
+  color: var(--student-link-hover-color);
+  background: rgba(255, 255, 255, 0.48);
+  border-color: rgba(38, 73, 236, 0.16);
+}
+
+.student-app-shell .nav-tabs .nav-link.active {
+  color: var(--student-link-hover-color);
+  background: rgba(255, 255, 255, 0.92);
+  border-color: rgba(38, 73, 236, 0.28) rgba(38, 73, 236, 0.28) rgba(255, 255, 255, 0.92);
+  box-shadow: 0 -1px 0 rgba(38, 73, 236, 0.08);
 }
 
 .nested-card:hover {
@@ -52,6 +192,131 @@ body {
   font-size: 0.95rem;
 }
 
+.ats-feedback-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.ats-feedback-compact__summary {
+  margin: 0;
+  color: #1f2937;
+}
+
+.ats-feedback-compact__criteria {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.ats-feedback-compact__criteria-pill {
+  display: inline-flex;
+  gap: 0.3rem;
+  padding: 0.3rem 0.55rem;
+  border-radius: 999px;
+  background: #e8eefc;
+  color: #1e3a8a;
+  font-size: 0.85rem;
+}
+
+.ats-feedback-compact__section-title {
+  margin: 0 0 0.45rem;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #334155;
+}
+
+.ats-feedback-compact__score-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 0.5rem;
+}
+
+.ats-feedback-compact__score-item {
+  border: 1px solid #dbe2f5;
+  border-radius: 0.6rem;
+  background: #fff;
+  padding: 0.5rem 0.6rem;
+}
+
+.ats-feedback-compact__score-label {
+  font-size: 0.78rem;
+  color: #64748b;
+}
+
+.ats-feedback-compact__score-values {
+  margin-top: 0.15rem;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.ats-feedback-compact__score-arrow {
+  font-weight: 600;
+  color: #64748b;
+}
+
+.ats-feedback-compact__delta {
+  margin-top: 0.2rem;
+  display: inline-block;
+  font-size: 0.76rem;
+  font-weight: 700;
+  padding: 0.1rem 0.35rem;
+  border-radius: 999px;
+}
+
+.ats-feedback-compact__delta--up {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.ats-feedback-compact__delta--down {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.ats-feedback-compact__delta--neutral {
+  background: #e2e8f0;
+  color: #334155;
+}
+
+.ats-feedback-compact__arguments {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.5rem;
+}
+
+.ats-feedback-compact__argument-card {
+  border: 1px solid #dbe2f5;
+  border-radius: 0.6rem;
+  background: #fff;
+  padding: 0.55rem 0.65rem;
+}
+
+.ats-feedback-compact__argument-card h4 {
+  margin: 0 0 0.3rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #334155;
+}
+
+.ats-feedback-compact__argument-card p {
+  margin: 0;
+  font-size: 0.88rem;
+  color: #0f172a;
+}
+
+.ats-feedback-compact__bullets {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.ats-feedback-compact__bullets li {
+  margin-bottom: 0.2rem;
+}
+
 .case-document-image-scroll {
   height: clamp(22rem, calc(100vh - 12rem), 52rem);
   height: clamp(22rem, calc(100dvh - 12rem), 52rem);
@@ -79,6 +344,31 @@ body {
 }
 
 @media (max-width: 575.98px) {
+  :root {
+    --student-topbar-height: 62px;
+  }
+
+  .student-topbar-inner {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .student-topbar-left {
+    gap: 10px;
+  }
+
+  .student-topbar-actions {
+    gap: 8px;
+  }
+
+  .ethicapp-logo-topbar-img {
+    width: 126px;
+  }
+
+  .student-profile-name {
+    display: none;
+  }
+
   .activity-tabs-panel {
     margin-left: -0.5rem;
     margin-right: -0.5rem;

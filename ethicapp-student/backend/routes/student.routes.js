@@ -61,16 +61,9 @@ router.get('/sessions', async (req, res, next) => {
                 (
                     s.id in (SELECT sesid FROM teams)
                 ) AS grouped,
-                (
-                    SELECT count(*)
-                    FROM report_pair
-                    WHERE sesid = s.id
-                ) AS paired,
-                sr.stime
-            FROM sessions AS s
-            LEFT OUTER JOIN status_record AS sr
-              ON sr.sesid = s.id
-             AND s.status = sr.status,
+                0 AS paired,
+                NULL::timestamp AS stime
+            FROM sessions AS s,
             sesusers AS su,
             users AS u
             WHERE su.uid = $1

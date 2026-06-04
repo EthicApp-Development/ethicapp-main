@@ -1,9 +1,12 @@
 import PropTypes from 'prop-types';
 import { Link } from 'react-router-dom';
+import { useInstitutionMetadata } from '../../hooks/useInstitutionMetadata';
 
 const ETHICAPP_LOGO_SRC = '/images/logos/ethicapp-logo.svg';
 
 function AuthLayout({ title, subtitle, children, footer }) {
+  const { name: institutionName } = useInstitutionMetadata();
+
   return (
     <main className="auth-page">
       <div className="auth-shell">
@@ -17,6 +20,10 @@ function AuthLayout({ title, subtitle, children, footer }) {
                   className="auth-logo-img"
                 />
               </Link>
+
+              {institutionName ? (
+                <p className="auth-institution-name">{institutionName}</p>
+              ) : null}
 
               <h1 className="auth-title">{title}</h1>
 

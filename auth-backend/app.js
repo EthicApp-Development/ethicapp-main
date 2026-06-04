@@ -8,6 +8,10 @@ import passportLocal from 'passport-local';
 import userService from './services/user.service.js';
 import { createSessionStore } from './services/session-store.service.js';
 import { csrfProtection } from './middleware/csrfProtection.js';
+import {
+  createSessionPolicyMiddleware,
+  getDefaultAuthSessionMaxAgeMs
+} from './middleware/sessionPolicy.js';
 
 import viewRoutes from './routes/view.routes.js';
 import authRoutes from './routes/auth.routes.js';
@@ -59,7 +63,7 @@ app.use(
         ? process.env.SESSION_COOKIE_SECURE === 'true'
         : process.env.NODE_ENV === 'production',
       sameSite: process.env.SESSION_COOKIE_SAMESITE || 'lax',
-      maxAge: Number(process.env.AUTH_SESSION_COOKIE_MAX_AGE_MS || 1000 * 60 * 60 * 8)
+      maxAge: getDefaultAuthSessionMaxAgeMs()
     }
   })
 );
@@ -69,6 +73,7 @@ app.use(
 // --------------------------------------------------
 app.use(passport.initialize());
 app.use(passport.session());
+app.use(createSessionPolicyMiddleware());
 
 passport.use(
   new LocalStrategy(
@@ -108,7 +113,7 @@ passport.deserializeUser(async function deserializeUser(id, done) {
   try {
     const user = await userService.findById(id);
 
-    if (!user) {
+    if (!user || !user.isActive) {
       return done(null, false);
     }
 

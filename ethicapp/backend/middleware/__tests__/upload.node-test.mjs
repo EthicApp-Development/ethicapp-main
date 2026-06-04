@@ -107,8 +107,9 @@ describe("upload middleware", () => {
 
             assert.equal(response.status, 400);
             assert.deepEqual(await response.json(), {
-                status: "err",
+                status:  "err",
                 message: "Invalid file type.",
+                code:    "INVALID_FILE_TYPE",
             });
         });
 
@@ -131,8 +132,9 @@ describe("upload middleware", () => {
 
             assert.equal(response.status, 400);
             assert.deepEqual(await response.json(), {
-                status: "err",
+                status:  "err",
                 message: "File too large",
+                code:    "FILE_TOO_LARGE",
             });
         });
 
@@ -154,8 +156,9 @@ describe("upload middleware", () => {
 
             assert.equal(response.status, 400);
             assert.deepEqual(await response.json(), {
-                status: "err",
+                status:  "err",
                 message: "Unexpected field",
+                code:    "UNEXPECTED_FILE_FIELD",
             });
         });
 

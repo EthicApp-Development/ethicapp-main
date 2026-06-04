@@ -10,6 +10,10 @@ export function ActivityController($scope, $http,
     vm.error = false;
     vm.showSpinner = false;
     vm.activityDescription = "";
+    vm.dsgnMode = 0;
+    vm.userSearch = "";
+    vm.currentPage = 1;
+    vm.pageSize = 5;
 
     vm.activities = {
         ongoing: [],
@@ -88,7 +92,7 @@ export function ActivityController($scope, $http,
                 data: requestObj,
             });
             
-            const stageid = stageResponse.data.id;
+            const stageid = stageResponse.data.phaseId || stageResponse.data.id;
             
             if (stageid) {
                 // Build the phase items
@@ -106,7 +110,7 @@ export function ActivityController($scope, $http,
             await $http({ 
                 url: `/activities/${sessionId}/phase_transition`, 
                 method: "post", 
-                data: { phase_id: stageid }
+                data: { phaseId: stageid }
             });
                 
         } catch (error) {
@@ -144,9 +148,75 @@ export function ActivityController($scope, $http,
                 return !activity.archived &&
                     activityStatus === statusCodes.finished;
             });
+            vm.setPage(vm.currentPage);
         } catch (error) {
             console.error("[ActivityController::updateActivities] An error ocurred.");
         }
+    };
+
+    vm.setActivityMode = function(mode) {
+        const nextMode = Number(mode);
+        if (!Number.isInteger(nextMode)) {
+            return;
+        }
+
+        vm.dsgnMode = [0, 1, 2].includes(nextMode) ? nextMode : 0;
+        vm.currentPage = 1;
+    };
+
+    vm.getActiveActivities = function() {
+        if (vm.dsgnMode === 1) {
+            return vm.activities.finished;
+        }
+        if (vm.dsgnMode === 2) {
+            return vm.activities.archived;
+        }
+        return vm.activities.ongoing;
+    };
+
+    vm.activityMatchesSearch = function(activity) {
+        const query = String(vm.userSearch || "").trim().toLowerCase();
+        if (query.length === 0) {
+            return true;
+        }
+
+        return String(activity?.title || "").toLowerCase().includes(query);
+    };
+
+    vm.getFilteredActivities = function() {
+        return vm.getActiveActivities().filter(vm.activityMatchesSearch);
+    };
+
+    vm.getTotalPages = function() {
+        return Math.max(1, Math.ceil(vm.getFilteredActivities().length / vm.pageSize));
+    };
+
+    vm.getPaginatedActivities = function() {
+        const startIndex = (vm.currentPage - 1) * vm.pageSize;
+        return vm.getFilteredActivities()
+            .sort((firstActivity, secondActivity) => {
+                const firstTime = Number(new Date(firstActivity.time)) || 0;
+                const secondTime = Number(new Date(secondActivity.time)) || 0;
+                return secondTime - firstTime;
+            })
+            .slice(startIndex, startIndex + vm.pageSize);
+    };
+
+    vm.setPage = function(pageNumber) {
+        const nextPage = Number(pageNumber);
+        if (!Number.isInteger(nextPage)) {
+            return;
+        }
+
+        vm.currentPage = Math.min(Math.max(nextPage, 1), vm.getTotalPages());
+    };
+
+    vm.previousPage = function() {
+        vm.setPage(vm.currentPage - 1);
+    };
+
+    vm.nextPage = function() {
+        vm.setPage(vm.currentPage + 1);
     };
 
     vm.checkContentAnalysisAvailability = function() {

@@ -1,0 +1,101 @@
+name: Reporte de error
+description: Informa un problema reproducible en EthicApp. Reports in English are also welcome.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Gracias por reportar un problema. Completa lo que sepas; si algún campo no aplica, escribe "No aplica".
+
+  - type: textarea
+    id: resumen
+    attributes:
+      label: Resumen
+      description: Describe brevemente el problema observado.
+      placeholder: Al intentar..., ocurre...
+    validations:
+      required: true
+
+  - type: textarea
+    id: pasos
+    attributes:
+      label: Pasos para reproducir
+      description: Indica los pasos mínimos para volver a observar el error.
+      placeholder: |
+        1. Ingresar como...
+        2. Ir a...
+        3. Hacer clic en...
+        4. Ver el error...
+    validations:
+      required: true
+
+  - type: textarea
+    id: resultado-esperado
+    attributes:
+      label: Resultado esperado
+      description: ¿Qué esperabas que ocurriera?
+    validations:
+      required: true
+
+  - type: textarea
+    id: resultado-observado
+    attributes:
+      label: Resultado observado
+      description: ¿Qué ocurrió realmente? Incluye mensajes de error si existen.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Área afectada
+      multiple: true
+      options:
+        - Aplicación docente legacy
+        - Aplicación estudiante
+        - Autenticación
+        - Consola de administración
+        - Base de datos / migraciones
+        - Despliegue / infraestructura
+        - Documentación
+        - No estoy seguro/a
+    validations:
+      required: true
+
+  - type: input
+    id: entorno
+    attributes:
+      label: Entorno
+      description: Indica si ocurrió en producción, staging, desarrollo local u otro entorno.
+      placeholder: Producción / staging / local
+    validations:
+      required: true
+
+  - type: input
+    id: navegador
+    attributes:
+      label: Navegador y dispositivo
+      description: Si aplica, incluye navegador, versión, sistema operativo y tipo de dispositivo.
+      placeholder: Chrome 125 en macOS, Safari en iPhone, etc.
+    validations:
+      required: false
+
+  - type: textarea
+    id: evidencia
+    attributes:
+      label: Evidencia o contexto adicional
+      description: Puedes adjuntar capturas, logs, IDs de actividad/sesión no sensibles o cualquier dato útil.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: Revisé que no exista un issue abierto que describa el mismo problema.
+          required: true
+        - label: No incluí contraseñas, tokens, datos personales sensibles ni información privada de estudiantes.
+          required: true

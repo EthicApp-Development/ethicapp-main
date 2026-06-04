@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { legacyUserApi } from '../../../api/studentApi.js';
+import AtsFeedbackBubble from './AtsFeedbackBubble.jsx';
 
 const DEFAULT_HEIGHT_PX = 320;
 const MIN_HEIGHT_PX = 220;
+const ATS_FEEDBACK_PREFIX = 'ATS_FEEDBACK_V1:';
 
 function resolveDisplayName(message, participantsByUserId, isAnonymous, t) {
   if (message.authorRole === 'external_service') {
@@ -44,6 +46,28 @@ function resolveDisplayName(message, participantsByUserId, isAnonymous, t) {
   return t('sessionDetail.chatPeerAuthor');
 }
 
+function parseAtsFeedbackPayload(content) {
+  if (typeof content !== 'string') {
+    return null;
+  }
+
+  if (!content.startsWith(ATS_FEEDBACK_PREFIX)) {
+    return null;
+  }
+
+  const rawPayload = content.slice(ATS_FEEDBACK_PREFIX.length).trim();
+  if (!rawPayload) {
+    return null;
+  }
+
+  try {
+    const parsedPayload = JSON.parse(rawPayload);
+    return parsedPayload && typeof parsedPayload === 'object' ? parsedPayload : null;
+  } catch {
+    return null;
+  }
+}
+
 function normalizeMessage(message) {
   const id = Number(message?.id ?? message?.msgid ?? message?.mid);
   const authorId = Number(message?.uid ?? message?.user_id ?? message?.author_id);
@@ -51,6 +75,7 @@ function normalizeMessage(message) {
   const authorRole = message?.author_role ?? message?.authorRole ?? '';
   const externalServiceId = message?.external_service_id ?? message?.externalServiceId ?? '';
   const content = typeof message?.content === 'string' ? message.content.trim() : '';
+  const atsFeedback = parseAtsFeedbackPayload(content);
   const createdAt = message?.date ?? message?.created_at ?? message?.createdAt ?? '';
   const parentId = Number(message?.parent_id ?? message?.parentId);
 
@@ -61,9 +86,22 @@ function normalizeMessage(message) {
     authorRole: typeof authorRole === 'string' ? authorRole : '',
     externalServiceId: typeof externalServiceId === 'string' ? externalServiceId : '',
     content,
+    atsFeedback,
     createdAt: typeof createdAt === 'string' ? createdAt : '',
     parentId: Number.isInteger(parentId) ? parentId : null
   };
+}
+
+function summarizeMessageForReply(message) {
+  if (message?.atsFeedback?.summary && typeof message.atsFeedback.summary === 'string') {
+    return message.atsFeedback.summary.trim();
+  }
+
+  if (message?.atsFeedback?.title && typeof message.atsFeedback.title === 'string') {
+    return message.atsFeedback.title.trim();
+  }
+
+  return typeof message?.content === 'string' ? message.content : '';
 }
 
 export default function PhaseChatOverlay({ isOpen, onClose, onHeightChange, phase, chatRefreshToken, userId, t }) {
@@ -258,12 +296,12 @@ export default function PhaseChatOverlay({ isOpen, onClose, onHeightChange, phas
             return (
               <div key={message.id} className={`mb-2 d-flex flex-column ${isOwnMessage ? 'align-items-end' : 'align-items-start'}`} style={{ marginLeft: `${depth * 12}px` }}>
                 <small className="text-muted d-block">{isOwnMessage ? t('sessionDetail.chatYouAuthor') : resolveDisplayName(message, participantsByUserId, isAnonymousPhase, t)}</small>
-                {replyTarget ? <div className={`small text-muted mb-1 px-2 ${isOwnMessage ? 'border-end pe-2 text-end' : 'border-start ps-2 text-start'}`}>↪ {replyTarget.content}</div> : null}
+                {replyTarget ? <div className={`small text-muted mb-1 px-2 ${isOwnMessage ? 'border-end pe-2 text-end' : 'border-start ps-2 text-start'}`}>-&gt; {summarizeMessageForReply(replyTarget)}</div> : null}
                 <div
                   className="rounded px-2 py-1 text-dark border shadow-sm"
                   style={{ maxWidth: '85%', backgroundColor: isOwnMessage ? '#deffcf' : '#ffffff' }}
                 >
-                  {message.content}
+                  {message.atsFeedback ? <AtsFeedbackBubble feedback={message.atsFeedback} t={t} /> : message.content}
                 </div>
                 <button
                   type="button"
@@ -283,7 +321,7 @@ export default function PhaseChatOverlay({ isOpen, onClose, onHeightChange, phas
               <span>
                 {t('sessionDetail.chatReplyingTo')}
                 <strong className="ms-1">{selectedReplyMessage.authorId === Number(userId) ? t('sessionDetail.chatYouAuthor') : resolveDisplayName(selectedReplyMessage, participantsByUserId, isAnonymousPhase, t)}</strong>
-                : {selectedReplyMessage.content}
+                : {summarizeMessageForReply(selectedReplyMessage)}
               </span>
               <button type="button" className="btn btn-link btn-sm p-0 text-decoration-none" onClick={() => setReplyToMessageId(null)}>{t('sessionDetail.chatCancelReply')}</button>
             </div>
