@@ -106,6 +106,7 @@ const enUS = {
     chatInputPlaceholder: 'Write a message for your team',
     chatSend: 'Send',
     chatSending: 'Sending...',
+    chatReadOnly: 'This conversation belongs to a previous phase. You can review it, but you can no longer send messages.',
     chatLoadError: 'Unable to load chat messages.',
     chatSendError: 'Unable to send the message.',
     chatResizeAria: 'Drag to resize chat',
