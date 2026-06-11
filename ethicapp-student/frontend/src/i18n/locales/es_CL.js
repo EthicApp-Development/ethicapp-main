@@ -107,6 +107,7 @@ const esCL = {
     chatInputPlaceholder: 'Escribe un mensaje para tu equipo',
     chatSend: 'Enviar',
     chatSending: 'Enviando...',
+    chatReadOnly: 'Esta conversación pertenece a una fase anterior. Puedes revisarla, pero ya no enviar mensajes.',
     chatLoadError: 'No fue posible cargar los mensajes del chat.',
     chatSendError: 'No fue posible enviar el mensaje.',
     chatResizeAria: 'Arrastrar para cambiar tamaño del chat',

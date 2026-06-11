@@ -6,6 +6,17 @@ const DEFAULT_HEIGHT_PX = 320;
 const MIN_HEIGHT_PX = 220;
 const ATS_FEEDBACK_PREFIX = 'ATS_FEEDBACK_V1:';
 
+function resolvePhaseGroupId(phase) {
+  const group = phase?.group;
+  const groupId = Number(
+    phase?.groupId
+    ?? group?.id
+    ?? group?.groupId
+  );
+
+  return Number.isInteger(groupId) && groupId > 0 ? groupId : null;
+}
+
 function resolveDisplayName(message, participantsByUserId, isAnonymous, t) {
   if (message.authorRole === 'external_service') {
     return message.authorName || t('sessionDetail.chatExternalAgentAuthor');
@@ -104,7 +115,7 @@ function summarizeMessageForReply(message) {
   return typeof message?.content === 'string' ? message.content : '';
 }
 
-export default function PhaseChatOverlay({ isOpen, onClose, onHeightChange, phase, chatRefreshToken, userId, t }) {
+export default function PhaseChatOverlay({ isOpen, onClose, onHeightChange, phase, chatRefreshToken, userId, readOnly = false, t }) {
   const [heightPx, setHeightPx] = useState(DEFAULT_HEIGHT_PX);
   const [messages, setMessages] = useState([]);
   const [draftMessage, setDraftMessage] = useState('');
@@ -122,7 +133,7 @@ export default function PhaseChatOverlay({ isOpen, onClose, onHeightChange, phas
     onHeightChange(isOpen ? heightPx : 0);
   }, [heightPx, isOpen, onHeightChange]);
 
-  const groupId = Number(phase?.group?.id ?? phase?.groupId);
+  const groupId = resolvePhaseGroupId(phase);
   const participantsByUserId = useMemo(() => {
     const participants = Array.isArray(phase?.groupParticipants) ? phase.groupParticipants : [];
 
@@ -202,6 +213,13 @@ export default function PhaseChatOverlay({ isOpen, onClose, onHeightChange, phas
     listRef.current.scrollTop = listRef.current.scrollHeight;
   }, [messages, isOpen]);
 
+  useEffect(() => {
+    if (readOnly) {
+      setReplyToMessageId(null);
+      setDraftMessage('');
+    }
+  }, [readOnly]);
+
   const onResizeStart = (event) => {
     event.preventDefault();
     const startY = event.clientY;
@@ -226,7 +244,7 @@ export default function PhaseChatOverlay({ isOpen, onClose, onHeightChange, phas
   const sendMessage = async () => {
     const content = draftMessage.trim();
 
-    if (!content || sending || !Number.isInteger(groupId) || groupId <= 0 || !Number.isInteger(fallbackQuestionId) || fallbackQuestionId <= 0) {
+    if (readOnly || !content || sending || !Number.isInteger(groupId) || groupId <= 0 || !Number.isInteger(fallbackQuestionId) || fallbackQuestionId <= 0) {
       return;
     }
 
@@ -303,20 +321,25 @@ export default function PhaseChatOverlay({ isOpen, onClose, onHeightChange, phas
                 >
                   {message.atsFeedback ? <AtsFeedbackBubble feedback={message.atsFeedback} t={t} /> : message.content}
                 </div>
-                <button
-                  type="button"
-                  className="btn btn-link btn-sm p-0 mt-1 text-decoration-none"
-                  onClick={() => setReplyToMessageId(message.id)}
-                >
-                  {t('sessionDetail.chatReply')}
-                </button>
+                {!readOnly ? (
+                  <button
+                    type="button"
+                    className="btn btn-link btn-sm p-0 mt-1 text-decoration-none"
+                    onClick={() => setReplyToMessageId(message.id)}
+                  >
+                    {t('sessionDetail.chatReply')}
+                  </button>
+                ) : null}
               </div>
             );
           })}
         </div>
         {errorMessage ? <div className="alert alert-danger rounded-0 py-1 px-2 mb-0">{errorMessage}</div> : null}
         <div className="border-top p-2">
-          {selectedReplyMessage ? (
+          {readOnly ? (
+            <p className="text-muted small mb-0">{t('sessionDetail.chatReadOnly')}</p>
+          ) : null}
+          {!readOnly && selectedReplyMessage ? (
             <div className="small text-muted border-start ps-2 mb-2 d-flex justify-content-between align-items-start gap-2">
               <span>
                 {t('sessionDetail.chatReplyingTo')}
@@ -326,21 +349,23 @@ export default function PhaseChatOverlay({ isOpen, onClose, onHeightChange, phas
               <button type="button" className="btn btn-link btn-sm p-0 text-decoration-none" onClick={() => setReplyToMessageId(null)}>{t('sessionDetail.chatCancelReply')}</button>
             </div>
           ) : null}
-          <div className="d-flex gap-2">
-            <input
-              className="form-control"
-              value={draftMessage}
-              onChange={(event) => setDraftMessage(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' && !event.shiftKey) {
-                  event.preventDefault();
-                  sendMessage();
-                }
-              }}
-              placeholder={t('sessionDetail.chatInputPlaceholder')}
-            />
-            <button type="button" className="btn btn-danger" onClick={sendMessage} disabled={sending}>{sending ? t('sessionDetail.chatSending') : t('sessionDetail.chatSend')}</button>
-          </div>
+          {!readOnly ? (
+            <div className="d-flex gap-2">
+              <input
+                className="form-control"
+                value={draftMessage}
+                onChange={(event) => setDraftMessage(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' && !event.shiftKey) {
+                    event.preventDefault();
+                    sendMessage();
+                  }
+                }}
+                placeholder={t('sessionDetail.chatInputPlaceholder')}
+              />
+              <button type="button" className="btn btn-danger" onClick={sendMessage} disabled={sending}>{sending ? t('sessionDetail.chatSending') : t('sessionDetail.chatSend')}</button>
+            </div>
+          ) : null}
         </div>
       </div>
     </section>

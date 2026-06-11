@@ -42,6 +42,17 @@ function mapResponsesByTaskId(phase) {
   }, {});
 }
 
+function resolvePhaseGroupId(phase) {
+  const group = phase?.group;
+  const groupId = Number(
+    phase?.groupId
+    ?? group?.id
+    ?? group?.groupId
+  );
+
+  return Number.isInteger(groupId) && groupId > 0 ? groupId : null;
+}
+
 export default function SemanticDifferentialPhaseView({
   phase,
   draftByTaskId,
@@ -91,6 +102,11 @@ export default function SemanticDifferentialPhaseView({
     )).sort((left, right) => left - right);
   }, [phase]);
   const previousPhaseNumbersKey = previousPhaseNumbers.join(',');
+  const canOpenGroupChat = phase?.features?.chat === true
+    && resolvePhaseGroupId(phase) != null;
+  const canPostGroupChat = canOpenGroupChat
+    && isActivePhase
+    && !isReadOnly;
 
   useEffect(() => {
     const phaseId = Number(phase?.id);
@@ -140,6 +156,13 @@ export default function SemanticDifferentialPhaseView({
       isCancelled = true;
     };
   }, [phase?.id, previousPhaseNumbersKey, t, userId]);
+
+  useEffect(() => {
+    if (!canOpenGroupChat && isChatOpen) {
+      setIsChatOpen(false);
+      setChatOverlayHeightPx(0);
+    }
+  }, [canOpenGroupChat, isChatOpen]);
 
   const setTaskDraft = (taskId, partialUpdate) => {
     if (typeof onTaskDraftChange !== 'function') {
@@ -275,7 +298,7 @@ export default function SemanticDifferentialPhaseView({
             onTaskValueChange={(value) => setTaskDraft(taskId, { value })}
             onTaskJustificationChange={(nextJustification) => setTaskDraft(taskId, { justification: nextJustification })}
             onTaskSubmit={() => submitTask(task)}
-            showChatButton={taskId === Number(tasks[0]?.id) && phase?.features?.chat === true}
+            showChatButton={taskId === Number(tasks[0]?.id) && canOpenGroupChat}
             onOpenChat={() => setIsChatOpen(true)}
             t={t}
           />
@@ -294,6 +317,7 @@ export default function SemanticDifferentialPhaseView({
         phase={phase}
         userId={userId}
         chatRefreshToken={onRequestOpenChatRefreshToken}
+        readOnly={!canPostGroupChat}
         t={t}
       />
     </div>
