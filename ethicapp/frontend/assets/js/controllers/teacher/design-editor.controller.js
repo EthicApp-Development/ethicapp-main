@@ -183,11 +183,60 @@ export function DesignEditorController($scope, $translate, $timeout,
         return vm.accordionState[index] || false;
     };      
 
+    vm.showValidationToast = function(valid) {
+        const translationKey = valid
+            ? "run_validations_success"
+            : "run_validations_errors";
+        const className = valid ? undefined : "alert-warning";
+
+        $translate(translationKey).then((result) => {
+            toast.create({
+                timeout:           4 * 1000,
+                message:           result,
+                className,
+                containerClass:    "design-editor-toast-container",
+                dismissible:       false,
+                defaultToastClass: "toast",
+                insertFromTop:     true,
+            });
+        });
+    };
+
+    vm.applyValidationState = function(validationErrors) {
+        vm.validationErrors = validationErrors;
+
+        if (vm.design) {
+            vm.design.valid = vm.isDesignValid();
+            if (!vm.design.valid) {
+                vm.design.public = false;
+            }
+        }
+
+        return vm.design?.valid === true;
+    };
+
+    vm.runValidations = function({ showToast = true } = {}) {
+        if (!vm.design) {
+            return false;
+        }
+
+        const validationResult = phaseValidationHelpers.validateDesign(vm.design);
+        const valid = vm.applyValidationState(validationResult.validationErrors);
+
+        if (showToast) {
+            vm.showValidationToast(valid);
+        }
+
+        return valid;
+    };
+
     vm.saveDesign = async function() {
         try {
             if (vm.design == null) {
                 throw Error("Cannot save a null design");
             }
+
+            vm.runValidations({ showToast: false });
             await DesignCatalogService.updateDesign(vm.designId, vm.design);
 
             $scope.$applyAsync(() => {
@@ -509,17 +558,23 @@ export function DesignEditorController($scope, $translate, $timeout,
         });
     };
 
-    vm.handleItemDeletion = function ({ phaseNumber, deletedIndex }) {
+    vm.handleItemDeletion = function ({ phaseNumber, deletedIndex, index }) {
+        const normalizedDeletedIndex = Number.isInteger(deletedIndex) ? deletedIndex : index;
         // console.debug(
-        //    `[handleItemDeletion] Deleted item at index: ${deletedIndex}, phase ${phaseNumber}`);
+        //    `[handleItemDeletion] Deleted item at index: ${normalizedDeletedIndex}, phase ${phaseNumber}`);
     
         const phaseKeyPrefix = "phase_";
         const phaseKey = `${phaseKeyPrefix}${phaseNumber}`;
-        const itemKey = `item_${deletedIndex+1}`;
+        const itemKey = `item_${normalizedDeletedIndex + 1}`;
 
         $scope.$applyAsync(function() {
             // Removes errors associated with the deleted phase
             const phaseErrors = vm.validationErrors.phases[phaseKey];
+            if (!phaseErrors || !Number.isInteger(normalizedDeletedIndex)) {
+                vm.runValidations({ showToast: false });
+                return;
+            }
+
             if (phaseErrors && phaseErrors.items[itemKey]) {
                 delete phaseErrors.items[itemKey];
 
@@ -537,6 +592,7 @@ export function DesignEditorController($scope, $translate, $timeout,
                     //     `[handleItemDeletion] No further operations are required for ${phaseKey}, deleting it from validation errors.`);
                     
                     // No further updates are required
+                    vm.runValidations({ showToast: false });
                     return;
                 }
     
@@ -547,8 +603,8 @@ export function DesignEditorController($scope, $translate, $timeout,
             if (phaseErrors.items) {
                 const updatedItems = {};
                 Object.keys(phaseErrors.items).forEach((key) => {
-                    const itemNumber = parseInt(key.split('_')[1], 10);
-                    if (itemNumber > deletedIndex + 1) {
+                    const itemNumber = parseInt(key.split("_")[1], 10);
+                    if (itemNumber > normalizedDeletedIndex + 1) {
                         const newItemKey = `${phaseKeyPrefix}${itemNumber - 1}`;
                         updatedItems[newItemKey] = phaseErrors.items[key];
                         // console.debug(`[handleItemDeletion] Updated phase key: ${key} -> ${newItemKey}`);
@@ -559,6 +615,8 @@ export function DesignEditorController($scope, $translate, $timeout,
                 console.debug(`[handleItemDeletion] validation errors post update ${JSON.stringify(phaseErrors.items)}`);
                 phaseErrors.items = updatedItems;
             }
+
+            vm.runValidations({ showToast: false });
         });
     };
 
