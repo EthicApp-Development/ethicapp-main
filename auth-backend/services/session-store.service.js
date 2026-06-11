@@ -1,5 +1,6 @@
 import { createClient } from 'redis';
 import RedisStore from 'connect-redis';
+import { getDefaultAuthSessionTtlSeconds } from '../middleware/sessionPolicy.js';
 
 function createSessionRedisClient() {
   const host = process.env.REDIS_SESSION_HOST || 'redis-session';
@@ -27,7 +28,7 @@ function createSessionStore() {
   return new RedisStore({
     client: createSessionRedisClient(),
     prefix: process.env.AUTH_SESSION_REDIS_PREFIX || 'auth:sess:',
-    ttl: Number(process.env.AUTH_SESSION_TTL_SECONDS || 60 * 60 * 8)
+    ttl: Number(process.env.AUTH_SESSION_TTL_SECONDS || getDefaultAuthSessionTtlSeconds())
   });
 }
 

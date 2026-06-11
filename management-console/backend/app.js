@@ -3,10 +3,13 @@ import session from 'express-session';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
+import { getManagementSessionCookieMaxAgeMs } from './config/session.js';
 import hydrateSessionFromAuthProxy from './middleware/hydrateSessionFromAuthProxy.js';
 import { csrfProtection } from './middleware/csrfProtection.js';
 import csrfRoutes from './routes/csrf.routes.js';
+import institutionRoutes from './routes/institution.routes.js';
 import runtimeConfigRoutes from './routes/runtime-config.routes.js';
+import profileRoutes from './routes/profile.routes.js';
 import viewRoutes from './routes/view.routes.js';
 import usersRoutes from './routes/users.routes.js';
 
@@ -16,8 +19,8 @@ const __dirname = path.dirname(__filename);
 const app = express();
 
 app.set('trust proxy', 1);
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 
 app.use(
   session({
@@ -29,7 +32,7 @@ app.use(
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 1000 * 60 * 60 * 8
+      maxAge: getManagementSessionCookieMaxAgeMs()
     }
   })
 );
@@ -39,6 +42,8 @@ app.use(runtimeConfigRoutes);
 app.use('/mng/assets', express.static(path.join(__dirname, '../frontend/dist/assets')));
 app.use(csrfRoutes);
 app.use('/mng/api', csrfProtection);
+app.use(institutionRoutes);
+app.use(profileRoutes);
 app.use(usersRoutes);
 app.use(viewRoutes);
 

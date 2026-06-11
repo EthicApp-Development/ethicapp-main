@@ -59,3 +59,8 @@ export async function logout() {
   const response = await authApiClient.post('/logout');
   return response.data;
 }
+
+export async function fetchInstitution() {
+  const response = await authApiClient.get('/institution');
+  return response.data;
+}

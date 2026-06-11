@@ -28,9 +28,15 @@ const accountConfirmationSubjects = {
 };
 
 function ensureSmtpConfig() {
-  if (!SMTP_HOST || !SMTP_PORT || !SMTP_USER || !SMTP_PASS || !SMTP_FROM) {
+  if (!SMTP_HOST || !SMTP_PORT || !SMTP_FROM) {
     throw new Error(
-      'SMTP configuration is incomplete. Required: SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM'
+      'SMTP configuration is incomplete. Required: SMTP_HOST, SMTP_PORT, SMTP_FROM'
+    );
+  }
+
+  if ((SMTP_USER && !SMTP_PASS) || (!SMTP_USER && SMTP_PASS)) {
+    throw new Error(
+      'SMTP authentication configuration is incomplete. Provide both SMTP_USER and SMTP_PASS, or leave both unset for unauthenticated SMTP.'
     );
   }
 }
@@ -69,15 +75,20 @@ function buildAccountConfirmationUrl(rawToken) {
 function createTransporter() {
   ensureSmtpConfig();
 
-  return nodemailer.createTransport({
+  const transportOptions = {
     host: SMTP_HOST,
     port: SMTP_PORT,
-    secure: SMTP_SECURE,
-    auth: {
+    secure: SMTP_SECURE
+  };
+
+  if (SMTP_USER && SMTP_PASS) {
+    transportOptions.auth = {
       user: SMTP_USER,
       pass: SMTP_PASS
-    }
-  });
+    };
+  }
+
+  return nodemailer.createTransport(transportOptions);
 }
 
 async function renderForgotPasswordHtml({ preferredLocale, templateData }) {

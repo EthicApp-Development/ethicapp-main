@@ -32,22 +32,6 @@
     </div>
 
     <div class="teacher-topbar-actions">
-      <div class="language-dropdown teacher-topbar-language"
-        ng-mouseenter="showLanguageDropdown = true"
-        ng-mouseleave="showLanguageDropdown = false">
-        <span class="topbar-lang-icon"><i class="fa fa-globe" aria-hidden="true"></i></span>
-        <i class="fa fa-angle-down" aria-hidden="true"></i>
-        <ul class="language-options" ng-show="showLanguageDropdown">
-          <li ng-repeat="languageKey in ['es_CL', 'en_US']" ng-click="changeLanguage(languageKey)">
-            <span ng-if="languageKey === lang" class="selected-language">
-              {{ getTranslatedLanguageName(languageKey) }} <i class="fa fa-check" aria-hidden="true"></i>
-            </span>
-            <span ng-if="languageKey !== lang" class="not-selected-language">
-              {{ getTranslatedLanguageName(languageKey) }}
-            </span>
-          </li>
-        </ul>
-      </div>
       <a href="#!/profile" class="teacher-profile-link">
         <img ng-src="{{ vm.getTopbarAvatar() }}" alt="Avatar" class="circle_profile">
         <span class="teacher-profile-name">{{ vm.getDisplayName() || ('profile' | translate) }}</span>
@@ -61,6 +45,13 @@
   <div class="teacher-mobile-backdrop" ng-click="teacherSidebarOpen = false"></div>
 
   <aside class="teacher-sidebar">
+    <div class="teacher-institution-logo-slot">
+      <img
+        src="/institution/logo"
+        alt="{{ 'institution' | translate }}"
+        class="teacher-institution-logo"
+        onerror="this.closest('.teacher-institution-logo-slot').style.display = 'none';">
+    </div>
     <nav aria-label="Teacher navigation">
       <ul class="teacher-nav-list">
         <li>

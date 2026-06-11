@@ -9,13 +9,170 @@ body {
   font-family: var(--ea-font-sans);
 }
 
+.management-shell {
+  background: #f5f6f8;
+  display: grid;
+  grid-template-columns: 256px minmax(0, 1fr);
+  min-height: 100vh;
+  transition: grid-template-columns 160ms ease;
+}
+
+.management-shell-collapsed {
+  grid-template-columns: 76px minmax(0, 1fr);
+}
+
+.management-sidebar {
+  align-items: stretch;
+  background: #141820;
+  color: #f8f9fa;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  padding: 14px;
+  position: sticky;
+  top: 0;
+}
+
+.management-sidebar-header {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  min-height: 44px;
+}
+
 .ethicapp-logo-topbar {
   display: inline-flex;
   align-items: center;
+  min-width: 0;
 }
 
 .ethicapp-logo-topbar-img {
   height: 42px;
   max-width: 170px;
   object-fit: contain;
+}
+
+.management-sidebar-toggle {
+  align-items: center;
+  display: inline-flex;
+  height: 34px;
+  justify-content: center;
+  min-width: 34px;
+  padding: 0;
+}
+
+.management-sidebar-title {
+  color: #adb5bd;
+  font-size: 0.9rem;
+  margin: 16px 6px 10px;
+  white-space: nowrap;
+}
+
+.management-sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.management-sidebar-link,
+.management-sidebar-logout {
+  align-items: center;
+  border-radius: 6px;
+  display: flex;
+  gap: 12px;
+  min-height: 42px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.management-sidebar-link {
+  color: #dce3ea;
+  padding: 10px 12px;
+}
+
+.management-sidebar-link:hover,
+.management-sidebar-link:focus,
+.management-sidebar-link.active {
+  background: #2f6fed;
+  color: #fff;
+}
+
+.management-sidebar-link i,
+.management-sidebar-logout i {
+  flex: 0 0 20px;
+  text-align: center;
+}
+
+.management-sidebar-logout {
+  justify-content: flex-start;
+  margin-top: auto;
+}
+
+.management-main {
+  min-width: 0;
+}
+
+.management-main-inner {
+  padding: 24px;
+}
+
+.management-shell-collapsed .ethicapp-logo-topbar,
+.management-shell-collapsed .management-sidebar-title,
+.management-shell-collapsed .management-sidebar-link span,
+.management-shell-collapsed .management-sidebar-logout span {
+  display: none;
+}
+
+.management-shell-collapsed .management-sidebar-header,
+.management-shell-collapsed .management-sidebar-link,
+.management-shell-collapsed .management-sidebar-logout {
+  justify-content: center;
+}
+
+.password-rule-list {
+  padding-left: 1.2rem;
+}
+
+.institution-logo-preview {
+  align-items: center;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  display: flex;
+  min-height: 96px;
+  padding: 12px;
+  width: min(100%, 320px);
+}
+
+.institution-logo-preview img {
+  max-height: 120px;
+  object-fit: contain;
+}
+
+@media (max-width: 767.98px) {
+  .management-shell,
+  .management-shell-collapsed {
+    grid-template-columns: 1fr;
+  }
+
+  .management-sidebar {
+    min-height: auto;
+    position: static;
+  }
+
+  .management-sidebar-nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .management-sidebar-logout {
+    margin-top: 12px;
+  }
+
+  .management-shell-collapsed .ethicapp-logo-topbar,
+  .management-shell-collapsed .management-sidebar-title,
+  .management-shell-collapsed .management-sidebar-link span,
+  .management-shell-collapsed .management-sidebar-logout span {
+    display: inline-flex;
+  }
 }

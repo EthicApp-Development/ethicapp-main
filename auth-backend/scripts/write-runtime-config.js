@@ -4,9 +4,8 @@ import path from 'node:path';
 const config = {
   authPublicUrl: process.env.VITE_AUTH_PUBLIC_URL || '',
   authApiBaseUrl: process.env.VITE_AUTH_API_BASE_URL || '',
-  recaptchaSiteKey: process.env.VITE_RECAPTCHA_SITE_KEY || '',
-  institutionName: process.env.VITE_INSTITUTION_NAME || '',
-  dataPrivacyContact: process.env.VITE_DATAPRIVACY_CONTACT || ''
+  recaptchaProvider: process.env.RECAPTCHA_PROVIDER || '',
+  recaptchaSiteKey: process.env.VITE_RECAPTCHA_SITE_KEY || ''
 };
 
 const content = `window.__AUTH_RUNTIME_CONFIG__ = ${JSON.stringify(config)};\n`;

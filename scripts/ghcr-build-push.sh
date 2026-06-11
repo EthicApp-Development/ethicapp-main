@@ -40,6 +40,7 @@ Options:
 
 Services:
   ethicapp
+  external-mock-service
   auth-backend
   ethicapp-student
   management-console
@@ -61,12 +62,13 @@ append_service() {
 }
 
 default_services() {
-  echo "ethicapp auth-backend ethicapp-student management-console nginx db-migrations"
+  echo "ethicapp external-mock-service auth-backend ethicapp-student management-console nginx db-migrations"
 }
 
 service_context() {
   case "$1" in
     ethicapp) echo "." ;;
+    external-mock-service) echo "external-mock-service" ;;
     auth-backend) echo "auth-backend" ;;
     ethicapp-student) echo "ethicapp-student" ;;
     management-console) echo "management-console" ;;
@@ -79,6 +81,7 @@ service_context() {
 service_dockerfile() {
   case "$1" in
     ethicapp) echo "ethicapp/Dockerfile" ;;
+    external-mock-service) echo "external-mock-service/Dockerfile" ;;
     auth-backend) echo "auth-backend/Dockerfile" ;;
     ethicapp-student) echo "ethicapp-student/Dockerfile" ;;
     management-console) echo "management-console/Dockerfile" ;;
@@ -269,12 +272,15 @@ for service in $SERVICES; do
     exit 1
   fi
 
+  context_path="$REPO_ROOT/$context"
+  dockerfile_path="$REPO_ROOT/$dockerfile"
+
   image="$REGISTRY/$GHCR_OWNER/$(service_image_name "$service")"
   title="EthicApp $service"
 
   set -- docker buildx build \
     --platform "$PLATFORMS" \
-    --file "$dockerfile" \
+    --file "$dockerfile_path" \
     --label "org.opencontainers.image.created=$CREATED_AT" \
     --label "org.opencontainers.image.title=$title" \
     --label "org.opencontainers.image.source=$SOURCE_URL" \
@@ -302,7 +308,7 @@ for service in $SERVICES; do
     set -- "$@" --load
   fi
 
-  set -- "$@" "$context"
+  set -- "$@" "$context_path"
 
   echo
   echo "Building $service -> $image:$IMAGE_TAG"

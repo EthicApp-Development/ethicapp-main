@@ -21,11 +21,16 @@ const CaseFormEditorController = function() {
 
         vm.hasAttemptedSubmit = true;
         vm.ensureAuthors();
-        if (!form || !form.$valid || vm.hasDuplicateAuthorEmails() || !vm.onSave) {
+        if (!form || !vm.isFormValid(form) || vm.hasDuplicateAuthorEmails() || !vm.onSave) {
             return;
         }
 
+        vm.clearUploadError();
         vm.onSave();
+    };
+
+    vm.isFormValid = function(form) {
+        return form.$valid && !vm.hasMissingRequiredPdf();
     };
 
     vm.shouldShowError = function(control) {
@@ -37,9 +42,31 @@ const CaseFormEditorController = function() {
     };
 
     vm.handlePdfSelected = function(files) {
+        vm.clearUploadError();
         if (vm.onPdfSelected) {
             vm.onPdfSelected({ files });
         }
+    };
+
+    vm.clearUploadError = function() {
+        if (vm.formModel) {
+            vm.formModel.uploadErrorKey = "";
+        }
+    };
+
+    vm.hasMissingRequiredPdf = function() {
+        return vm.isPdfRequired && !vm.formModel?.pdf && !vm.formModel?.currentPdfPath;
+    };
+
+    vm.shouldShowPdfRequiredError = function(control) {
+        return Boolean(
+            (control && vm.shouldShowError(control) && control.$error.required) ||
+            (vm.hasAttemptedSubmit && vm.hasMissingRequiredPdf())
+        );
+    };
+
+    vm.hasUploadError = function() {
+        return Boolean(vm.formModel?.uploadErrorKey);
     };
 
     vm.ensureAuthors = function() {

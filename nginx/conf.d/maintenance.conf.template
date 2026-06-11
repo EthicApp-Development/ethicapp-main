@@ -1,0 +1,67 @@
+server {
+    listen 80;
+    server_name _;
+
+    root /usr/share/nginx/html;
+    absolute_redirect off;
+
+    location = /healthz {
+        default_type text/plain;
+        add_header Cache-Control "no-store" always;
+        return 200 "maintenance\n";
+    }
+
+    location = /readyz {
+        default_type text/plain;
+        add_header Cache-Control "no-store" always;
+        return 200 "maintenance\n";
+    }
+
+    location ^~ /static/fonts/ {
+        root /usr/share/nginx/html;
+        try_files $uri =404;
+        expires 30d;
+        add_header Cache-Control "public, max-age=2592000";
+        access_log off;
+    }
+
+    location ^~ /static/logos/ {
+        root /usr/share/nginx/html;
+        try_files $uri =404;
+        expires 30d;
+        add_header Cache-Control "public, max-age=2592000";
+        access_log off;
+    }
+
+    location ^~ /favicon/ {
+        alias /usr/share/nginx/html/static/favicon/;
+        expires 30d;
+        add_header Cache-Control "public, max-age=2592000";
+        access_log off;
+    }
+
+    location ~ ^/(favicon\.ico|favicon\.svg|apple-touch-icon\.png|site\.webmanifest)$ {
+        alias /usr/share/nginx/html/static/favicon/$1;
+        expires 30d;
+        add_header Cache-Control "public, max-age=2592000";
+        access_log off;
+    }
+
+    location = /maintenance/ {
+        return 503;
+    }
+
+    location = /static/maintenance/index.html {
+        internal;
+        add_header Cache-Control "no-store" always;
+        add_header Retry-After "${NGINX_MAINTENANCE_RETRY_AFTER}" always;
+    }
+
+    error_page 503 /static/maintenance/index.html;
+
+    location / {
+        add_header Cache-Control "no-store" always;
+        add_header Retry-After "${NGINX_MAINTENANCE_RETRY_AFTER}" always;
+        return 503;
+    }
+}

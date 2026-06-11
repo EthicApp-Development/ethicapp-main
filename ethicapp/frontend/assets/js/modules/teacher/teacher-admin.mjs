@@ -105,6 +105,19 @@ app.config(function($translateProvider) {
     $translateProvider.fallbackLanguage("en_US");
 });
 
+app.run(["$translate", "UserProfileService", "LanguageCatalogService", function($translate, UserProfileService, LanguageCatalogService) {
+    UserProfileService.getProfile()
+        .then((profile) => {
+            if (profile?.preferred_locale) {
+                return $translate.use(LanguageCatalogService.getUiLanguageCodeForLocale(profile.preferred_locale));
+            }
+            return null;
+        })
+        .catch((error) => {
+            console.error("Could not apply preferred locale:", error);
+        });
+}]);
+
 // Inject controllers into application
 app.controller("LocalesController", 
     ["$translate", "$scope", "$rootScope", LocalesController]); 
@@ -137,7 +150,7 @@ app.controller("DesignEditorController",
         "DesignCatalogService", "CasesCatalogService", "LanguageCatalogService",
         "ExternalServicesCatalogService", "toast", DesignEditorController]);
 app.controller("VoidController", [VoidController]);
-app.controller("ProfileController", ["$scope", "$translate", "toast", "UserProfileService", ProfileController]);
+app.controller("ProfileController", ["$scope", "$translate", "toast", "UserProfileService", "LanguageCatalogService", ProfileController]);
 
 app.service("DialogService", function(ngDialog) {
     this.openDialog = function() {

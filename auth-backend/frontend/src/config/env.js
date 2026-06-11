@@ -23,16 +23,9 @@ const recaptchaSiteKey = (
   ''
 ).trim();
 
-const institutionName = (
-  runtimeConfig.institutionName ||
-  import.meta.env.VITE_INSTITUTION_NAME ||
-  ''
-).trim();
+const recaptchaProvider = (
+  runtimeConfig.recaptchaProvider ||
+  'classic'
+).trim().toLowerCase();
 
-const dataPrivacyContact = (
-  runtimeConfig.dataPrivacyContact ||
-  import.meta.env.VITE_DATAPRIVACY_CONTACT ||
-  ''
-).trim();
-
-export { authApiBaseUrl, dataPrivacyContact, institutionName, recaptchaSiteKey };
+export { authApiBaseUrl, recaptchaProvider, recaptchaSiteKey };

@@ -26,6 +26,10 @@ let LanguageCatalogService = ($http, $translate) => {
             );
         },
 
+        getUiLanguageCodeForLocale(languageCode) {
+            return normalizeUiLanguage(languageCode);
+        },
+
         getDefaultLanguageCode(languages = service.languages, fallback = null) {
             const uiLanguageCode = service.getCurrentUiLanguageCode();
             const availableLanguages = Array.isArray(languages) ? languages : [];

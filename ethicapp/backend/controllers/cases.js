@@ -685,12 +685,20 @@ router.post("/cases", pdfUpload, async (req, res) => {
     const tagIds = parseTagIds(req.body.tag_ids || req.body.tagIds);
     if (!title || !areCaseAuthorsValid(authors) || hasDuplicateCaseAuthorEmails(authors) || !areTagIdsValid(tagIds)) {
         await removeUploadedFile(req.file);
-        return res.status(400).json({ status: "err", message: "Missing required fields." });
+        return res.status(400).json({
+            status:  "err",
+            message: "Missing required fields.",
+            code:    "CASE_VALIDATION_FAILED",
+        });
     }
     const primaryAuthor = authors[0];
 
     if (!req.file || req.file.mimetype !== "application/pdf") {
-        return res.status(400).json({ status: "err", message: "A PDF file is required." });
+        return res.status(400).json({
+            status:  "err",
+            message: "A PDF file is required.",
+            code:    "CASE_PDF_REQUIRED",
+        });
     }
 
     const normalizedLicenseCode = normalizeLicenseCode(licenseCode ?? licenseCodeCamel, CASE_DEFAULT_LICENSE);
@@ -792,7 +800,11 @@ router.patch("/cases/:id", pdfUpload, async (req, res) => {
     const tagIds = parseTagIds(req.body.tag_ids || req.body.tagIds);
     if (!title || !areCaseAuthorsValid(authors) || hasDuplicateCaseAuthorEmails(authors) || !areTagIdsValid(tagIds)) {
         await removeUploadedFile(req.file);
-        return res.status(400).json({ status: "err", message: "Missing required fields." });
+        return res.status(400).json({
+            status:  "err",
+            message: "Missing required fields.",
+            code:    "CASE_VALIDATION_FAILED",
+        });
     }
     const primaryAuthor = authors[0];
 
