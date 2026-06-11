@@ -1,3 +1,35 @@
+const CRITERION_LABEL_KEYS = {
+  claim: 'sessionDetail.atsCriterionClaim',
+  evidence: 'sessionDetail.atsCriterionEvidence',
+  warrant: 'sessionDetail.atsCriterionWarrant',
+  qualifier: 'sessionDetail.atsCriterionQualifier'
+};
+
+// Localized label for a Toulmin criterion, falling back to the backend label.
+function localizeCriterionLabel(key, fallbackLabel, t) {
+  const i18nKey = CRITERION_LABEL_KEYS[key];
+  if (!i18nKey) {
+    return fallbackLabel;
+  }
+  const localized = t(i18nKey);
+  return localized === i18nKey ? fallbackLabel : localized;
+}
+
+// Localized text for the claim criterion value (in favor / against / neutral),
+// falling back to the backend-provided value string for other criteria.
+function localizeCriterionValue(key, score, fallbackValue, t) {
+  if (key !== 'claim' || !Number.isFinite(Number(score))) {
+    return fallbackValue;
+  }
+  const numericScore = Number(score);
+  const claimKey = numericScore === 1
+    ? 'sessionDetail.atsClaimInFavor'
+    : numericScore === -1
+      ? 'sessionDetail.atsClaimAgainst'
+      : 'sessionDetail.atsClaimNeutral';
+  return `${t(claimKey)} (${numericScore})`;
+}
+
 function normalizeCriteria(criteria) {
   if (!Array.isArray(criteria)) {
     return [];
@@ -10,7 +42,9 @@ function normalizeCriteria(criteria) {
       if (!label || !value) {
         return null;
       }
-      return { label, value };
+      const key = typeof item?.key === 'string' ? item.key.trim().toLowerCase() : '';
+      const score = Number.isFinite(Number(item?.score)) ? Number(item.score) : null;
+      return { key, label, value, score };
     })
     .filter(Boolean)
     .slice(0, 4);
@@ -76,12 +110,12 @@ function formatDelta(delta) {
   return { label: `${score}`, tone: 'down' };
 }
 
-function ComparisonScores({ comparison }) {
+function ComparisonScores({ comparison, t }) {
   const scoreEntries = [
-    ['Claim', comparison?.scores?.claim],
-    ['Evidence', comparison?.scores?.evidence],
-    ['Warrant', comparison?.scores?.warrant],
-    ['Qualifier', comparison?.scores?.qualifier]
+    ['claim', comparison?.scores?.claim],
+    ['evidence', comparison?.scores?.evidence],
+    ['warrant', comparison?.scores?.warrant],
+    ['qualifier', comparison?.scores?.qualifier]
   ].filter(([, data]) => data && (toScore(data.initial) !== null || toScore(data.revised) !== null || toScore(data.delta) !== null));
 
   if (scoreEntries.length === 0) {
@@ -90,15 +124,16 @@ function ComparisonScores({ comparison }) {
 
   return (
     <section className="ats-feedback-compact__comparison">
-      <h3 className="ats-feedback-compact__section-title">Comparación de puntajes</h3>
+      <h3 className="ats-feedback-compact__section-title">{t('sessionDetail.atsComparisonScores')}</h3>
       <div className="ats-feedback-compact__score-grid">
-        {scoreEntries.map(([label, scoreData]) => {
+        {scoreEntries.map(([criterionKey, scoreData]) => {
           const initial = toScore(scoreData?.initial);
           const revised = toScore(scoreData?.revised);
           const { label: deltaLabel, tone } = formatDelta(scoreData?.delta);
+          const label = localizeCriterionLabel(criterionKey, criterionKey, t);
 
           return (
-            <article key={label} className="ats-feedback-compact__score-item">
+            <article key={criterionKey} className="ats-feedback-compact__score-item">
               <div className="ats-feedback-compact__score-label">{label}</div>
               <div className="ats-feedback-compact__score-values">
                 <span>{initial ?? '-'}</span>
@@ -116,7 +151,7 @@ function ComparisonScores({ comparison }) {
   );
 }
 
-export default function ArgumentTutorChatFeedback({ payload = {} }) {
+export default function ArgumentTutorChatFeedback({ payload = {}, t = (key) => key }) {
   const feedback = payload?.feedback && typeof payload.feedback === 'object' ? payload.feedback : payload;
   const mode = typeof feedback?.mode === 'string' ? feedback.mode.trim().toLowerCase() : 'analysis';
   const summary = sanitizeSummary(feedback?.summary);
@@ -133,28 +168,32 @@ export default function ArgumentTutorChatFeedback({ payload = {} }) {
 
       {mode !== 'comparison' && criteria.length > 0 ? (
         <section className="ats-feedback-compact__criteria">
-          {criteria.map((item) => (
-            <span key={`${item.label}-${item.value}`} className="ats-feedback-compact__criteria-pill">
-              <strong>{item.label}:</strong> {item.value}
-            </span>
-          ))}
+          {criteria.map((item) => {
+            const criterionLabel = localizeCriterionLabel(item.key, item.label, t);
+            const criterionValue = localizeCriterionValue(item.key, item.score, item.value, t);
+            return (
+              <span key={`${item.key || item.label}-${item.value}`} className="ats-feedback-compact__criteria-pill">
+                <strong>{criterionLabel}:</strong> {criterionValue}
+              </span>
+            );
+          })}
         </section>
       ) : null}
 
-      {mode === 'comparison' ? <ComparisonScores comparison={comparison} /> : null}
+      {mode === 'comparison' ? <ComparisonScores comparison={comparison} t={t} /> : null}
 
       {mode === 'comparison' && (initialArgumentPreview || revisedArgumentPreview) ? (
         <section className="ats-feedback-compact__arguments">
           {initialArgumentPreview ? (
             <article className="ats-feedback-compact__argument-card">
-              <h4>Argumento previo</h4>
+              <h4>{t('sessionDetail.atsArgumentPrevious')}</h4>
               <p>{initialArgumentPreview}</p>
             </article>
           ) : null}
 
           {revisedArgumentPreview ? (
             <article className="ats-feedback-compact__argument-card">
-              <h4>Argumento actual</h4>
+              <h4>{t('sessionDetail.atsArgumentCurrent')}</h4>
               <p>{revisedArgumentPreview}</p>
             </article>
           ) : null}

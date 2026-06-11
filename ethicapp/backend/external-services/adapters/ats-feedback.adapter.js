@@ -567,21 +567,25 @@ function normalizeCriteriaFromAts(parsedResult) {
         {
             key: "claim",
             label: "Claim",
+            score: Number.isFinite(claimScore) ? claimScore : null,
             value: Number.isFinite(claimScore) ? `${claimText} (${claimScore})` : "Not available",
         },
         {
             key: "evidence",
             label: "Evidence",
+            score: Number.isFinite(evidenceScore) ? evidenceScore : null,
             value: Number.isFinite(evidenceScore) ? `${evidenceScore}/3` : "Not available",
         },
         {
             key: "warrant",
             label: "Warrant",
+            score: Number.isFinite(warrantScore) ? warrantScore : null,
             value: Number.isFinite(warrantScore) ? `${warrantScore}/3` : "Not available",
         },
         {
             key: "qualifier",
             label: "Qualifier",
+            score: Number.isFinite(qualifierScore) ? qualifierScore : null,
             value: Number.isFinite(qualifierScore) ? `${qualifierScore}/3` : "Not available",
         },
     ];
@@ -717,6 +721,7 @@ function buildFeedbackPayloadFromExternalResult(requestPayload, fallbackContext)
             .map(item => ({
                 key: normalizeText(item?.key) || normalizeText(item?.label).toLowerCase().replace(/\s+/gu, "-"),
                 label: normalizeText(item?.label) || "Criterion",
+                score: Number.isFinite(Number(item?.score)) ? Number(item.score) : null,
                 value: normalizeText(item?.value) || "Not available",
             }))
             .filter(item => item.label && item.value)

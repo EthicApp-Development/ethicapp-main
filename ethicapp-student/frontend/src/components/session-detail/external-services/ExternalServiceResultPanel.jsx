@@ -7,6 +7,12 @@ const localComponentRegistry = {
   'argument-tutor-chat-feedback': ArgumentTutorChatFeedback
 };
 
+// Local components whose title must follow the browser locale instead of the
+// (English) title sent by the backend adapter.
+const localizedComponentTitleKeys = {
+  'argument-tutor-chat-feedback': 'sessionDetail.atsFeedbackTitle'
+};
+
 function loadRemoteComponent({ url, exportName = 'default' }) {
   return lazy(async () => {
     const module = await import(/* @vite-ignore */ url);
@@ -66,12 +72,16 @@ export default function ExternalServiceResultPanel({ results, t, onDismiss }) {
     <aside className="external-service-results mt-3" aria-live="polite">
       {orderedResults.map((result) => {
         const Component = resolveComponent(result.component);
+        const localizedTitleKey = localizedComponentTitleKeys[result.component?.componentId];
+        const resultTitle = localizedTitleKey
+          ? t(localizedTitleKey)
+          : result.component?.title || t('sessionDetail.externalResultTitle');
 
         return (
           <article className="external-service-result border rounded-2 p-3 mb-3" key={result.id}>
             <div className="d-flex justify-content-between gap-3 align-items-start mb-2">
               <div>
-                <h2 className="h6 mb-1">{result.component?.title || t('sessionDetail.externalResultTitle')}</h2>
+                <h2 className="h6 mb-1">{resultTitle}</h2>
               </div>
               <button
                 className="btn btn-outline-secondary btn-sm"
