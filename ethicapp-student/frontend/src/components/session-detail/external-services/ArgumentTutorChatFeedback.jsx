@@ -15,11 +15,10 @@ function localizeCriterionLabel(key, fallbackLabel, t) {
   return localized === i18nKey ? fallbackLabel : localized;
 }
 
-// Localized text for the claim criterion value (in favor / against / neutral),
-// falling back to the backend-provided value string for other criteria.
-function localizeCriterionValue(key, score, fallbackValue, t) {
-  if (key !== 'claim' || !Number.isFinite(Number(score))) {
-    return fallbackValue;
+// Localized label for the claim score (in favor / against / neutral), with no numeric value.
+function localizeClaimScore(score, t) {
+  if (!Number.isFinite(Number(score))) {
+    return null;
   }
   const numericScore = Number(score);
   const claimKey = numericScore === 1
@@ -27,7 +26,16 @@ function localizeCriterionValue(key, score, fallbackValue, t) {
     : numericScore === -1
       ? 'sessionDetail.atsClaimAgainst'
       : 'sessionDetail.atsClaimNeutral';
-  return `${t(claimKey)} (${numericScore})`;
+  return t(claimKey);
+}
+
+// Localized text for the claim criterion value (in favor / against / neutral),
+// falling back to the backend-provided value string for other criteria.
+function localizeCriterionValue(key, score, fallbackValue, t) {
+  if (key !== 'claim') {
+    return fallbackValue;
+  }
+  return localizeClaimScore(score, t) ?? fallbackValue;
 }
 
 function normalizeCriteria(criteria) {
@@ -127,22 +135,27 @@ function ComparisonScores({ comparison, t }) {
       <h3 className="ats-feedback-compact__section-title">{t('sessionDetail.atsComparisonScores')}</h3>
       <div className="ats-feedback-compact__score-grid">
         {scoreEntries.map(([criterionKey, scoreData]) => {
+          const isClaim = criterionKey === 'claim';
           const initial = toScore(scoreData?.initial);
           const revised = toScore(scoreData?.revised);
           const { label: deltaLabel, tone } = formatDelta(scoreData?.delta);
           const label = localizeCriterionLabel(criterionKey, criterionKey, t);
+          const initialDisplay = isClaim ? (localizeClaimScore(initial, t) ?? '-') : (initial ?? '-');
+          const revisedDisplay = isClaim ? (localizeClaimScore(revised, t) ?? '-') : (revised ?? '-');
 
           return (
             <article key={criterionKey} className="ats-feedback-compact__score-item">
               <div className="ats-feedback-compact__score-label">{label}</div>
               <div className="ats-feedback-compact__score-values">
-                <span>{initial ?? '-'}</span>
+                <span>{initialDisplay}</span>
                 <span className="ats-feedback-compact__score-arrow">→</span>
-                <span>{revised ?? '-'}</span>
+                <span>{revisedDisplay}</span>
               </div>
-              <div className={`ats-feedback-compact__delta ats-feedback-compact__delta--${tone}`}>
-                {deltaLabel}
-              </div>
+              {isClaim ? null : (
+                <div className={`ats-feedback-compact__delta ats-feedback-compact__delta--${tone}`}>
+                  {deltaLabel}
+                </div>
+              )}
             </article>
           );
         })}
