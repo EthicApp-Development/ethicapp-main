@@ -5,6 +5,7 @@ import { dbconnString } from "../config/database.config.js";
 import * as rpg2 from "../db/rest-pg-2.js";
 import { saveChatMessage } from "../helpers/chat-helper.js";
 import { studentNotifications, teacherNotifications } from "../config/socket.config.js";
+import aiAdditionsClient from "./ai-additions-client.service.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -81,6 +82,7 @@ class ExternalServicesRegistry {
             },
             publishStudentResult: payload => this.publishStudentResult(normalizedService.id, payload),
             publishGroupChatMessage: payload => this.publishGroupChatMessage(normalizedService.id, payload),
+            aiAdditionsClient,
         });
     }
 

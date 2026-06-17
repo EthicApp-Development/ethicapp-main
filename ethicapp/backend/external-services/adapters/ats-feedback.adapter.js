@@ -3,22 +3,16 @@ import * as rpg2 from "../../db/rest-pg-2.js";
 import { getPhaseDesignByPhaseId } from "../../helpers/designs-helper.js";
 import { getCaseIdBySessionId } from "../../helpers/sessions-helper.js";
 import { getCaseDocumentRawText } from "../../helpers/case-document-content-helper.js";
+import defaultAiAdditionsClient from "../../services/ai-additions-client.service.js";
 
-const DEFAULT_ATS_BASE_URL = "http://host.docker.internal:5001";
-const DEFAULT_KEYCLOAK_BASE_URL = "http://host.docker.internal:8080";
-const DEFAULT_KEYCLOAK_REALM = "argumentation-tutor";
+const DEFAULT_ATS_BASE_PATH = "/argumentation-tutor/api/v2";
 const DEFAULT_POLL_INTERVAL_MS = 2500;
 const DEFAULT_POLL_TIMEOUT_MS = 90000;
-const DEFAULT_HTTP_TIMEOUT_MS = 12000;
 
 const atsSessionByPhase = new Map();
 const atsSessionCreationByPhase = new Map();
 const atsSubmissionCountByPhaseUser = new Map();
-
-const tokenCache = {
-    token: null,
-    expiresAtMs: 0,
-};
+let aiAdditionsClient = defaultAiAdditionsClient;
 
 function nowMs() {
     return Date.now();
@@ -46,90 +40,18 @@ function extractResponseText(context) {
 }
 
 function getAtsBaseUrl() {
-    return normalizeText(process.env.ATS_API_BASE_URL) || DEFAULT_ATS_BASE_URL;
+    return normalizeText(process.env.AI_ADDITIONS_ARGUMENTATION_TUTOR_API_BASE_URL)
+        || aiAdditionsClient.buildServiceUrl(DEFAULT_ATS_BASE_PATH);
 }
 
 function getAtsPollIntervalMs() {
-    const configured = Number(process.env.ATS_POLL_INTERVAL_MS);
+    const configured = Number(process.env.AI_ADDITIONS_ARGUMENTATION_TUTOR_POLL_INTERVAL_MS);
     return Number.isInteger(configured) && configured > 250 ? configured : DEFAULT_POLL_INTERVAL_MS;
 }
 
 function getAtsPollTimeoutMs() {
-    const configured = Number(process.env.ATS_POLL_TIMEOUT_MS);
+    const configured = Number(process.env.AI_ADDITIONS_ARGUMENTATION_TUTOR_POLL_TIMEOUT_MS);
     return Number.isInteger(configured) && configured > 5000 ? configured : DEFAULT_POLL_TIMEOUT_MS;
-}
-
-function getHttpTimeoutMs() {
-    const configured = Number(process.env.ATS_HTTP_TIMEOUT_MS);
-    return Number.isInteger(configured) && configured > 1000 ? configured : DEFAULT_HTTP_TIMEOUT_MS;
-}
-
-function getKeycloakBaseUrl() {
-    return normalizeText(process.env.ATS_KEYCLOAK_BASE_URL) || DEFAULT_KEYCLOAK_BASE_URL;
-}
-
-function getKeycloakRealm() {
-    return normalizeText(process.env.ATS_KEYCLOAK_REALM) || DEFAULT_KEYCLOAK_REALM;
-}
-
-function getKeycloakClientId() {
-    return normalizeText(process.env.ATS_KEYCLOAK_CLIENT_ID);
-}
-
-function getKeycloakClientSecret() {
-    return normalizeText(process.env.ATS_KEYCLOAK_CLIENT_SECRET);
-}
-
-function getKeycloakScope() {
-    return normalizeText(process.env.ATS_KEYCLOAK_SCOPE);
-}
-
-function getKeycloakTokenUrl() {
-    const explicitTokenUrl = normalizeText(process.env.ATS_KEYCLOAK_TOKEN_URL);
-    if (explicitTokenUrl) {
-        return explicitTokenUrl;
-    }
-
-    const baseUrl = getKeycloakBaseUrl().replace(/\/+$/u, "");
-    const realm = encodeURIComponent(getKeycloakRealm());
-    return `${baseUrl}/realms/${realm}/protocol/openid-connect/token`;
-}
-
-function buildRequestUrl(pathname) {
-    const baseUrl = getAtsBaseUrl().replace(/\/+$/u, "");
-    return `${baseUrl}${pathname}`;
-}
-
-async function fetchJsonRaw(url, { method = "GET", body = null, headers = {}, timeoutMs = getHttpTimeoutMs() } = {}) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
-    try {
-        const response = await fetch(url, {
-            method,
-            headers,
-            body,
-            signal: controller.signal,
-        });
-
-        const rawText = await response.text();
-        const parsedBody = rawText ? safeJsonParse(rawText) : null;
-
-        if (!response.ok) {
-            const error = new Error(`HTTP ${response.status} request failed on ${url}.`);
-            error.statusCode = response.status;
-            error.responseBody = parsedBody ?? rawText;
-            throw error;
-        }
-
-        return parsedBody;
-    } finally {
-        clearTimeout(timeoutId);
-    }
-}
-
-async function fetchJson(pathname, options = {}) {
-    return fetchJsonRaw(buildRequestUrl(pathname), options);
 }
 
 function safeJsonParse(value) {
@@ -140,75 +62,12 @@ function safeJsonParse(value) {
     }
 }
 
-async function fetchAtsAccessToken() {
-    const safetyWindowMs = 30000;
-
-    if (tokenCache.token && tokenCache.expiresAtMs > nowMs() + safetyWindowMs) {
-        return tokenCache.token;
-    }
-
-    const clientId = getKeycloakClientId();
-    const clientSecret = getKeycloakClientSecret();
-    if (!clientId || !clientSecret) {
-        throw new Error("Missing ATS_KEYCLOAK_CLIENT_ID or ATS_KEYCLOAK_CLIENT_SECRET in ethicapp environment.");
-    }
-
-    const body = new URLSearchParams({
-        grant_type: "client_credentials",
-        client_id: clientId,
-        client_secret: clientSecret,
-    });
-
-    const scope = getKeycloakScope();
-    if (scope) {
-        body.set("scope", scope);
-    }
-
-    const tokenResponse = await fetchJsonRaw(getKeycloakTokenUrl(), {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: body.toString(),
-    });
-
-    const accessToken = normalizeText(tokenResponse?.access_token);
-    const expiresIn = Number(tokenResponse?.expires_in);
-
-    if (!accessToken) {
-        throw new Error("Keycloak token endpoint did not return access_token.");
-    }
-
-    tokenCache.token = accessToken;
-    tokenCache.expiresAtMs = nowMs() + (Number.isFinite(expiresIn) ? expiresIn * 1000 : 300000);
-
-    return tokenCache.token;
-}
-
 async function fetchAtsJson(pathname, { method = "GET", body = null } = {}) {
-    const execute = async () => {
-        const accessToken = await fetchAtsAccessToken();
-        const headers = {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${accessToken}`,
-        };
-
-        return fetchJson(pathname, {
-            method,
-            headers,
-            body: body == null ? null : JSON.stringify(body),
-        });
-    };
-
-    try {
-        return await execute();
-    } catch (error) {
-        if (Number(error?.statusCode) !== 401) {
-            throw error;
-        }
-
-        tokenCache.token = null;
-        tokenCache.expiresAtMs = 0;
-        return execute();
-    }
+    return aiAdditionsClient.requestJson(pathname, {
+        method,
+        body,
+        baseUrl: getAtsBaseUrl(),
+    });
 }
 
 function phaseCacheKey(context) {
@@ -384,7 +243,7 @@ async function getOrCreateAtsSession(context) {
     const creationPromise = (async () => {
         const metadata = await resolveSessionMetadata(context);
 
-        const response = await fetchAtsJson("/API/V2/sessions", {
+        const response = await fetchAtsJson("/sessions", {
             method: "POST",
             body: {
                 case_id: metadata.caseId,
@@ -418,7 +277,7 @@ async function deleteAtsSession(atsSessionId) {
     }
 
     try {
-        await fetchAtsJson(`/API/V2/sessions/${encodeURIComponent(atsSessionId)}`, {
+        await fetchAtsJson(`/sessions/${encodeURIComponent(atsSessionId)}`, {
             method: "DELETE",
         });
 
@@ -435,7 +294,7 @@ async function deleteAtsSession(atsSessionId) {
 async function submitArgumentToAts(context, responseText, groupId) {
     const atsSessionId = await getOrCreateAtsSession(context);
 
-    const response = await fetchAtsJson(`/API/V2/sessions/${encodeURIComponent(atsSessionId)}/arguments`, {
+    const response = await fetchAtsJson(`/sessions/${encodeURIComponent(atsSessionId)}/arguments`, {
         method: "POST",
         body: {
             argument: responseText,
@@ -476,7 +335,7 @@ async function submitArgumentComparisonToAts(context, responseText, groupId) {
     const atsSessionId = await getOrCreateAtsSession(context);
 
     try {
-        const response = await fetchAtsJson(`/API/V2/sessions/${encodeURIComponent(atsSessionId)}/arguments/compare`, {
+        const response = await fetchAtsJson(`/sessions/${encodeURIComponent(atsSessionId)}/arguments/compare`, {
             method: "POST",
             body: {
                 revised_argument: responseText,
@@ -532,7 +391,7 @@ async function pollAtsTask({ atsSessionId, taskId }) {
 
     while (nowMs() - startedAt <= timeoutMs) {
         const statusResponse = await fetchAtsJson(
-            `/API/V2/sessions/${encodeURIComponent(atsSessionId)}/arguments/${encodeURIComponent(taskId)}/status`,
+            `/sessions/${encodeURIComponent(atsSessionId)}/arguments/${encodeURIComponent(taskId)}/status`,
             { method: "GET" }
         );
 
@@ -879,7 +738,9 @@ async function processExternalResult({ context, callback, publishStudentResult }
     });
 }
 
-export async function register({ subscribe, publishStudentResult }) {
+export async function register({ subscribe, publishStudentResult, aiAdditionsClient: providedAiAdditionsClient }) {
+    aiAdditionsClient = providedAiAdditionsClient || defaultAiAdditionsClient;
+
     subscribe("student-response-submitted", async (context, { callback }) => {
         try {
             await processStudentResponse({ context, callback, publishStudentResult });
