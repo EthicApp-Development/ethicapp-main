@@ -1,0 +1,156 @@
+# External Services
+
+This directory contains EthicApp backend adapters for optional external AI services.
+Adapters are loaded through `manifest.json` and are executed by the external services
+registry in `../services/external-services.service.js`.
+
+The current production-oriented contract is that EthicApp owns authentication to
+`ethicapp-ai-additions`. Individual adapters should call AI services through the
+shared AI Additions client instead of negotiating Keycloak tokens themselves.
+
+## Runtime Model
+
+At startup, the registry reads `manifest.json` from this directory, or the path
+configured through `EXTERNAL_SERVICES_MANIFEST`.
+
+Each enabled manifest entry must include:
+
+```json
+{
+  "id": "argumentation-tutor-system",
+  "description": "Human-readable description.",
+  "adapter": "./adapters/ats-feedback.adapter.js",
+  "hooks": ["student-response-submitted"],
+  "enabled": true
+}
+```
+
+For each enabled service, the registry imports the adapter and calls its exported
+`register()` function:
+
+```js
+export async function register({
+    service,
+    subscribe,
+    publishStudentResult,
+    publishGroupChatMessage,
+    aiAdditionsClient,
+}) {
+    subscribe("student-response-submitted", async (context, { callback }) => {
+        // Adapter logic.
+    });
+}
+```
+
+The adapter should subscribe only to hooks it handles. The registry records
+callback results in memory for operational visibility and injects the current
+`serviceId` into hook contexts.
+
+## Available Hook Publishers
+
+The registry provides two helper publishers to adapters:
+
+- `publishStudentResult(payload)`: sends a socket notification to a student.
+  The payload must include a valid `userId`.
+- `publishGroupChatMessage(payload)`: saves a message authored by the external
+  service and publishes chat notifications. The payload must include `content`,
+  `phaseId`, `questionId`, and `groupId`; `sessionId`, `parentId`, and
+  `agentDisplayName` are optional but should be provided when available.
+
+Adapters can also call the `callback(result)` function passed to a subscribed
+hook handler. This is for recording adapter outcomes, not for communicating with
+AI Additions.
+
+## AI Additions Authentication
+
+EthicApp authenticates to AI Additions centrally through
+`../services/ai-additions-client.service.js`.
+
+The client uses the Keycloak client credentials flow and:
+
+- derives the token endpoint from the AI Additions facade by default;
+- caches access tokens until shortly before expiry;
+- coalesces concurrent token requests;
+- adds the `Authorization: Bearer ...` header to authenticated requests;
+- retries once after `401` by clearing the cached token.
+
+Adapters must not implement Keycloak token negotiation directly. Use the injected
+`aiAdditionsClient`:
+
+```js
+const response = await aiAdditionsClient.requestJson("/sessions", {
+    method: "POST",
+    baseUrl: process.env.AI_ADDITIONS_MY_SERVICE_API_BASE_URL
+        || aiAdditionsClient.buildServiceUrl("/my-service/api/v1"),
+    body: {
+        example: true,
+    },
+});
+```
+
+Set `authenticated: false` only for explicitly public AI Additions endpoints.
+
+## Environment Variables
+
+The shared client reads these variables:
+
+| Variable | Purpose |
+| --- | --- |
+| `AI_ADDITIONS_BASE_URL` | Base URL for the AI Additions facade. Defaults to `http://host.docker.internal:8010`. |
+| `AI_ADDITIONS_HTTP_TIMEOUT_MS` | HTTP timeout for token and service requests. Defaults to `12000`. |
+| `AI_ADDITIONS_KEYCLOAK_BASE_URL` | Keycloak base URL. Defaults to `${AI_ADDITIONS_BASE_URL}/keycloak`. |
+| `AI_ADDITIONS_KEYCLOAK_REALM` | Keycloak realm. Defaults to `ethicapp-ai-additions`. |
+| `AI_ADDITIONS_KEYCLOAK_CLIENT_ID` | Confidential client id used by EthicApp. Required for authenticated calls. |
+| `AI_ADDITIONS_KEYCLOAK_CLIENT_SECRET` | Confidential client secret used by EthicApp. Required for authenticated calls. |
+| `AI_ADDITIONS_KEYCLOAK_TOKEN_URL` | Optional full token endpoint override. |
+| `AI_ADDITIONS_KEYCLOAK_SCOPE` | Optional token scope. |
+
+Service-specific adapters may define additional variables for their normalized
+facade path. For example, the Argumentation Tutor adapter uses:
+
+| Variable | Purpose |
+| --- | --- |
+| `AI_ADDITIONS_ARGUMENTATION_TUTOR_API_BASE_URL` | Argumentation Tutor API base URL. Defaults to `${AI_ADDITIONS_BASE_URL}/argumentation-tutor/api/v2`. |
+| `AI_ADDITIONS_ARGUMENTATION_TUTOR_POLL_INTERVAL_MS` | Poll interval for asynchronous tutor jobs. |
+| `AI_ADDITIONS_ARGUMENTATION_TUTOR_POLL_TIMEOUT_MS` | Maximum poll duration for asynchronous tutor jobs. |
+
+When adding, removing, or renaming variables, update the repository deployment
+contract in `../../../deploy/env.contract.yml` and the relevant `.env.example`
+files.
+
+## AI Additions Facade Contract
+
+EthicApp should call AI Additions through the facade URL, not through internal
+container ports. In a co-located staging deployment, AI Additions can listen only
+on localhost while EthicApp remains public. In that topology:
+
+- `AI_ADDITIONS_BASE_URL` should point to the local AI Additions facade, for
+  example `http://127.0.0.1:8010`.
+- Keycloak should be reached through the facade prefix,
+  `http://127.0.0.1:8010/keycloak`.
+- Service APIs should use normalized facade paths such as
+  `/argumentation-tutor/api/v2` or `/polyadic-agent/api`.
+
+AI Additions services validate the Bearer token issued by the shared realm.
+EthicApp adapters only need to use the shared client; authentication remains
+transparent to adapter business logic.
+
+## Adapter Guidelines
+
+When implementing a new adapter:
+
+1. Add the adapter module under `adapters/`.
+2. Export `register()` and subscribe to the hooks the service needs.
+3. Add a service entry to `manifest.json`.
+4. Use `aiAdditionsClient.requestJson()` for AI Additions HTTP calls.
+5. Keep service-specific URL configuration under an `AI_ADDITIONS_<SERVICE>_*`
+   prefix.
+6. Publish outcomes through `publishStudentResult`,
+   `publishGroupChatMessage`, or the hook `callback()` as appropriate.
+7. Add focused backend tests for reusable logic or authentication-sensitive
+   behavior.
+
+Avoid putting secrets or Keycloak client-credentials logic inside adapters. The
+adapter boundary should stay focused on translating EthicApp hook context into
+service-specific AI Additions requests and translating service responses back
+into EthicApp notifications or callback records.

@@ -1,16 +1,29 @@
-# External Services PoC
+# External Services Architecture
 
-This document describes the current proof of concept for integrating EthicApp with
-external services. The goal is to let a teacher enable services per design phase,
-dispatch lifecycle or activity events to those services, and receive asynchronous
+This document describes the current architecture for integrating EthicApp with
+external AI services. The goal is to let a teacher enable services per design
+phase, dispatch lifecycle or activity events to those services, and receive
 processing results back into EthicApp.
+
+For the adapter developer contract, including the shared AI Additions client and
+Keycloak authentication flow, see:
+
+```text
+ethicapp/backend/external-services/README.md
+```
 
 ## Scope
 
-The PoC currently lives in the legacy `ethicapp/` application and is focused on
-teacher-authored designs and activity execution. It does not yet provide production
-authentication for external callbacks, durable result storage, retry queues, or a
-stable public contract for third-party providers.
+The integration currently lives in the legacy `ethicapp/` application and is
+focused on teacher-authored designs and activity execution. EthicApp now owns
+outbound authentication to `ethicapp-ai-additions` through a shared Keycloak
+client-credentials client, so individual adapters should not negotiate tokens on
+their own.
+
+The architecture still does not provide production authentication for inbound
+external callbacks, durable result storage, retry queues, or a stable public
+contract for third-party providers outside the repository-owned AI Additions
+facade.
 
 ## Backend Architecture
 
@@ -28,9 +41,26 @@ Each manifest entry declares:
 - `hooks`: hook names supported by the service.
 - `enabled`: whether the adapter should be loaded.
 
-Adapters are ESM modules that export `register({ service, subscribe })`. During
-startup, `externalServicesRegistry.initialize()` loads the manifest, imports each
-enabled adapter, and lets it subscribe to hooks.
+Adapters are ESM modules that export `register(...)`. During startup,
+`externalServicesRegistry.initialize()` loads the manifest, imports each enabled
+adapter, and lets it subscribe to hooks.
+
+The current register contract is:
+
+```js
+export async function register({
+  service,
+  subscribe,
+  publishStudentResult,
+  publishGroupChatMessage,
+  aiAdditionsClient
+}) {
+  // Subscribe to hooks here.
+}
+```
+
+The `aiAdditionsClient` parameter is the only place adapters should obtain
+Keycloak-protected access to AI Additions.
 
 Current registry implementation:
 
@@ -49,6 +79,41 @@ Current mock chat agent adapter:
 ```text
 ethicapp/backend/external-services/adapters/mock-chat-agent.adapter.js
 ```
+
+Current Argumentation Tutor adapter:
+
+```text
+ethicapp/backend/external-services/adapters/ats-feedback.adapter.js
+```
+
+Shared AI Additions client:
+
+```text
+ethicapp/backend/services/ai-additions-client.service.js
+```
+
+## AI Additions and Keycloak
+
+Repository-owned AI services are expected to be reached through the
+`ethicapp-ai-additions` facade, not through individual service container ports.
+Keycloak is exposed by that facade under the `/keycloak` prefix.
+
+EthicApp configures the facade and Keycloak client through `AI_ADDITIONS_*`
+variables. The default contract is:
+
+- `AI_ADDITIONS_BASE_URL` points to the AI Additions facade.
+- `AI_ADDITIONS_KEYCLOAK_BASE_URL` defaults to
+  `${AI_ADDITIONS_BASE_URL}/keycloak`.
+- `AI_ADDITIONS_KEYCLOAK_REALM` defaults to `ethicapp-ai-additions`.
+- `AI_ADDITIONS_KEYCLOAK_CLIENT_ID` and
+  `AI_ADDITIONS_KEYCLOAK_CLIENT_SECRET` identify the confidential client used by
+  EthicApp.
+- Service-specific adapters use normalized facade paths, for example
+  `/argumentation-tutor/api/v2` or `/polyadic-agent/api`.
+
+The shared client obtains and caches client-credentials tokens, attaches Bearer
+authorization headers, and retries once after a `401`. Adapter code should focus
+on translating EthicApp hook context into service-specific requests.
 
 The Docker Compose PoC also includes a tiny external Express service:
 
@@ -334,10 +399,12 @@ Older designs without `externalServices` remain valid.
 
 ## Current Limitations
 
-- Callback authentication is not production-ready. The callback endpoint is
-  reachable without a legacy teacher session so external services can call it.
-- There is no per-service shared secret, token, request signature, or replay
-  protection yet.
+- Outbound authentication from EthicApp to AI Additions is centralized through
+  Keycloak client credentials, but inbound callback authentication is not
+  production-ready. The callback endpoint is reachable without a legacy teacher
+  session so external services can call it.
+- There is no callback-specific per-service shared secret, token, request
+  signature, or replay protection yet.
 - Results are stored in memory only.
 - Student websocket targeting currently relies on a PoC user room joined from the
   frontend client.
@@ -349,8 +416,9 @@ Older designs without `externalServices` remain valid.
 
 ## Recommended Next Steps
 
-- Add a manifest-level `callbackToken` or per-service secret reference and verify
-  it through an `Authorization: Bearer ...` header or HMAC signature.
+- Add production-grade authentication for inbound callbacks. For services owned
+  by AI Additions, prefer a Keycloak-compatible service-to-service flow or a
+  narrow callback token policy issued from the same deployment contract.
 - Introduce a `jobId` or `correlationId` in outbound hook payloads and require it
   in inbound results.
 - Persist external results in PostgreSQL with service id, hook name, session id,
