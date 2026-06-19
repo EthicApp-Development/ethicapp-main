@@ -57,7 +57,7 @@ async function callbackPhaseTransition({ service, context, callback, hook }) {
             phaseId:        context.phaseId,
             startedPhaseId: context.startedPhaseId,
             endedPhaseId:   context.endedPhaseId,
-            summary:        hook === "phaseStarted"
+            summary:        hook === "phase-started"
                 ? `Mock service observed phase ${context.startedPhaseId} starting.`
                 : `Mock service observed phase ${context.endedPhaseId} ending.`,
         },
@@ -176,12 +176,12 @@ export async function register({ service, subscribe, publishStudentResult }) {
         });
     });
 
-    subscribe("phaseStarted", async (context, { callback }) => {
-        await callbackPhaseTransition({ service, context, callback, hook: "phaseStarted" });
+    subscribe("phase-started", async (context, { callback }) => {
+        await callbackPhaseTransition({ service, context, callback, hook: "phase-started" });
     });
 
-    subscribe("phaseEnded", async (context, { callback }) => {
-        await callbackPhaseTransition({ service, context, callback, hook: "phaseEnded" });
+    subscribe("phase-ended", async (context, { callback }) => {
+        await callbackPhaseTransition({ service, context, callback, hook: "phase-ended" });
     });
 
     subscribe("external-service-result", async (context, { callback }) => {

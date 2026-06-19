@@ -46,6 +46,9 @@ The adapter should subscribe only to hooks it handles. The registry records
 callback results in memory for operational visibility and injects the current
 `serviceId` into hook contexts.
 
+Hook names are part of the adapter interface and must use kebab-case, for
+example `phase-started`, `phase-ended`, and `student-response-submitted`.
+
 ## Available Hook Publishers
 
 The registry provides two helper publishers to adapters:

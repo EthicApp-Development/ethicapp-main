@@ -41,6 +41,10 @@ Each manifest entry declares:
 - `hooks`: hook names supported by the service.
 - `enabled`: whether the adapter should be loaded.
 
+Hook names are standardized as kebab-case identifiers. New adapters should use
+names such as `phase-started`, `phase-ended`, `session-ended`,
+`chat-message-received`, and `student-response-submitted`.
+
 Adapters are ESM modules that export `register(...)`. During startup,
 `externalServicesRegistry.initialize()` loads the manifest, imports each enabled
 adapter, and lets it subscribe to hooks.
@@ -86,6 +90,12 @@ Current Argumentation Tutor adapter:
 ethicapp/backend/external-services/adapters/ats-feedback.adapter.js
 ```
 
+Current Polyadic Agents bridge adapter:
+
+```text
+ethicapp/backend/external-services/adapters/polyadic-bridge.adapter.js
+```
+
 Shared AI Additions client:
 
 ```text
@@ -114,6 +124,22 @@ variables. The default contract is:
 The shared client obtains and caches client-credentials tokens, attaches Bearer
 authorization headers, and retries once after a `401`. Adapter code should focus
 on translating EthicApp hook context into service-specific requests.
+
+The Polyadic Agents bridge uses `AI_ADDITIONS_POLYADIC_AGENTS_API_BASE_URL`,
+defaulting to `${AI_ADDITIONS_BASE_URL}/polyadic-agent/api`, and creates one
+Polyadic REST room per EthicApp session/phase/group. Its default pipeline type is
+`abogado-del-diablo`, configurable through
+`AI_ADDITIONS_POLYADIC_AGENTS_PIPELINE_TYPE`.
+
+Polyadic callbacks should target:
+
+```text
+/external-services/polyadic-devils-advocate/results
+```
+
+The callback payload is expected to contain `{ "room": "...", "evaluations": [] }`.
+The bridge publishes only `Orientador` responses into the EthicApp group chat;
+other agent outputs remain internal to Polyadic.
 
 The Docker Compose PoC also includes a tiny external Express service:
 
@@ -150,11 +176,15 @@ Current event hooks:
 
 - `student-response-submitted`: dispatched when a student submits a supported
   response from `POST /activities/:id/response`.
-- `phaseStarted`: dispatched when the teacher transitions a session into a phase.
-- `phaseEnded`: dispatched when the teacher transitions a session away from the
+- `phase-started`: dispatched when the teacher transitions a session into a phase.
+- `phase-ended`: dispatched when the teacher transitions a session away from the
   previously active phase.
 - `chat-message-received`: dispatched when a chat message is posted to a phase
   group chat.
+- `external-service-result`: dispatched when a service-specific callback result
+  is received.
+- `session-ended`: dispatched when a session finishes and service-local context
+  should be cleaned up.
 
 The phase transition hooks are dispatched from:
 

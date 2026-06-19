@@ -6,8 +6,8 @@
       "adapter": "./adapters/mock-ai-response-review.adapter.js",
       "hooks": [
         "student-response-submitted",
-        "phaseStarted",
-        "phaseEnded",
+        "phase-started",
+        "phase-ended",
         "chat-message-received",
         "external-service-result"
       ],
@@ -23,12 +23,25 @@
       "enabled": true
     },
     {
+      "id": "polyadic-devils-advocate",
+      "description": "Bridge adapter that connects EthicApp group chats to the Polyadic Agents Devil's Advocate pipeline.",
+      "adapter": "./adapters/polyadic-bridge.adapter.js",
+      "hooks": [
+        "chat-message-received",
+        "phase-started",
+        "phase-ended",
+        "external-service-result",
+        "session-ended"
+      ],
+      "enabled": true
+    },
+    {
       "id": "argumentation-tutor-system",
       "description": "ATS integration using Keycloak-protected V2 endpoints for argument feedback in student chat overlay.",
       "adapter": "./adapters/ats-feedback.adapter.js",
       "hooks": [
         "student-response-submitted",
-        "phaseEnded",
+        "phase-ended",
         "external-service-result"
       ],
       "enabled": true
