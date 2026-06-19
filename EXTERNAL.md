@@ -86,6 +86,12 @@ Current Argumentation Tutor adapter:
 ethicapp/backend/external-services/adapters/ats-feedback.adapter.js
 ```
 
+Current Polyadic Agents bridge adapter:
+
+```text
+ethicapp/backend/external-services/adapters/polyadic-bridge.adapter.js
+```
+
 Shared AI Additions client:
 
 ```text
@@ -114,6 +120,22 @@ variables. The default contract is:
 The shared client obtains and caches client-credentials tokens, attaches Bearer
 authorization headers, and retries once after a `401`. Adapter code should focus
 on translating EthicApp hook context into service-specific requests.
+
+The Polyadic Agents bridge uses `AI_ADDITIONS_POLYADIC_AGENTS_API_BASE_URL`,
+defaulting to `${AI_ADDITIONS_BASE_URL}/polyadic-agent/api`, and creates one
+Polyadic REST room per EthicApp session/phase/group. Its default pipeline type is
+`abogado-del-diablo`, configurable through
+`AI_ADDITIONS_POLYADIC_AGENTS_PIPELINE_TYPE`.
+
+Polyadic callbacks should target:
+
+```text
+/external-services/polyadic-devils-advocate/results
+```
+
+The callback payload is expected to contain `{ "room": "...", "evaluations": [] }`.
+The bridge publishes only `Orientador` responses into the EthicApp group chat;
+other agent outputs remain internal to Polyadic.
 
 The Docker Compose PoC also includes a tiny external Express service:
 

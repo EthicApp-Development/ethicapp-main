@@ -23,6 +23,19 @@
       "enabled": true
     },
     {
+      "id": "polyadic-devils-advocate",
+      "description": "Bridge adapter that connects EthicApp group chats to the Polyadic Agents Devil's Advocate pipeline.",
+      "adapter": "./adapters/polyadic-bridge.adapter.js",
+      "hooks": [
+        "chat-message-received",
+        "phaseStarted",
+        "phaseEnded",
+        "external-service-result",
+        "sessionEnded"
+      ],
+      "enabled": true
+    },
+    {
       "id": "argumentation-tutor-system",
       "description": "ATS integration using Keycloak-protected V2 endpoints for argument feedback in student chat overlay.",
       "adapter": "./adapters/ats-feedback.adapter.js",
