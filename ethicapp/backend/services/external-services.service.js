@@ -10,6 +10,11 @@ import aiAdditionsClient from "./ai-additions-client.service.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DEFAULT_MANIFEST_PATH = path.join(__dirname, "../external-services/manifest.json");
+const HOOK_NAME_PATTERN = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/u;
+
+function isValidHookName(hookName) {
+    return typeof hookName === "string" && HOOK_NAME_PATTERN.test(hookName);
+}
 
 class ExternalServicesRegistry {
     constructor() {
@@ -55,7 +60,15 @@ class ExternalServicesRegistry {
         const normalizedService = {
             id: service.id,
             description: service.description || "",
-            hooks: Array.isArray(service.hooks) ? service.hooks : [],
+            hooks: Array.isArray(service.hooks)
+                ? service.hooks.filter(hookName => {
+                    const isValid = isValidHookName(hookName);
+                    if (!isValid) {
+                        console.warn(`[external-services] Ignoring non-kebab-case hook "${hookName}" in ${service.id}.`);
+                    }
+                    return isValid;
+                })
+                : [],
             enabled: service.enabled !== false,
             adapter: service.adapter,
         };
@@ -87,6 +100,11 @@ class ExternalServicesRegistry {
     }
 
     subscribe(serviceId, hookName, handler) {
+        if (!isValidHookName(hookName)) {
+            console.warn(`[external-services] Ignoring non-kebab-case hook subscription "${hookName}" from ${serviceId}.`);
+            return;
+        }
+
         if (typeof handler !== "function") {
             console.warn(`[external-services] Ignoring non-function handler for ${serviceId}:${hookName}.`);
             return;

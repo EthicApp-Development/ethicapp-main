@@ -92,11 +92,11 @@ test("polyadic bridge formats stable room names and topics", () => {
     );
 });
 
-test("phaseStarted creates one Polyadic room per EthicApp group", async () => {
+test("phase-started creates one Polyadic room per EthicApp group", async () => {
     const harness = createHarness();
     await harness.initialize();
 
-    await harness.dispatch("phaseStarted", { sessionId: 11, phaseId: 22 });
+    await harness.dispatch("phase-started", { sessionId: 11, phaseId: 22 });
 
     assert.equal(harness.requests.length, 2);
     assert.deepEqual(
@@ -172,12 +172,12 @@ test("external-service-result publishes only Orientador responses to group chat"
     assert.equal(harness.callbacks.at(-1).payload.messagesPublished, 1);
 });
 
-test("phaseEnded closes rooms created for that phase", async () => {
+test("phase-ended closes rooms created for that phase", async () => {
     const harness = createHarness();
     await harness.initialize();
 
-    await harness.dispatch("phaseStarted", { sessionId: 11, phaseId: 22 });
-    await harness.dispatch("phaseEnded", { sessionId: 11, phaseId: 22 });
+    await harness.dispatch("phase-started", { sessionId: 11, phaseId: 22 });
+    await harness.dispatch("phase-ended", { sessionId: 11, phaseId: 22 });
 
     assert.deepEqual(
         harness.requests.slice(2).map(request => `${request.options.method} ${request.pathname}`),
@@ -187,4 +187,27 @@ test("phaseEnded closes rooms created for that phase", async () => {
         ]
     );
     assert.equal(harness.callbacks.at(-1).payload.roomsClosed, 2);
+});
+
+test("phase room tracking is scoped by session and phase", async () => {
+    const harness = createHarness({
+        dependencies: {
+            getTeamIdsForPhase: async (sessionId) => sessionId === 11 ? [301] : [401],
+        },
+    });
+    await harness.initialize();
+
+    await harness.dispatch("phase-started", { sessionId: 11, phaseId: 22 });
+    await harness.dispatch("phase-started", { sessionId: 12, phaseId: 22 });
+    await harness.dispatch("phase-ended", { sessionId: 11, phaseId: 22 });
+
+    assert.deepEqual(
+        harness.requests.map(request => `${request.options.method} ${request.pathname}`),
+        [
+            "POST /rooms/ethicapp-s11-p22-g301/sessions",
+            "POST /rooms/ethicapp-s12-p22-g401/sessions",
+            "DELETE /rooms/ethicapp-s11-p22-g301/sessions/active",
+        ]
+    );
+    assert.equal(harness.callbacks.at(-1).payload.roomsClosed, 1);
 });

@@ -409,7 +409,7 @@ router.post("/activities/:session_id/phase_transition", async (req, res) => {
 async function dispatchPhaseTransitionHooks({ sessionId, startedPhaseId, endedPhaseId }) {
     try {
         if (endedPhaseId && endedPhaseId !== startedPhaseId) {
-            await dispatchPhaseHook("phaseEnded", {
+            await dispatchPhaseHook("phase-ended", {
                 sessionId,
                 phaseId: endedPhaseId,
                 startedPhaseId,
@@ -417,7 +417,7 @@ async function dispatchPhaseTransitionHooks({ sessionId, startedPhaseId, endedPh
             });
         }
 
-        await dispatchPhaseHook("phaseStarted", {
+        await dispatchPhaseHook("phase-started", {
             sessionId,
             phaseId: startedPhaseId,
             startedPhaseId,
@@ -498,7 +498,7 @@ router.post("/activities/:session_id/finish", async (req, res) => {
         }
 
         if (previousPhaseId) {
-            await dispatchPhaseHook("phaseEnded", {
+            await dispatchPhaseHook("phase-ended", {
                 sessionId: Number(sessionId),
                 phaseId: previousPhaseId,
                 startedPhaseId: null,
@@ -509,11 +509,11 @@ router.post("/activities/:session_id/finish", async (req, res) => {
         studentNotifications.endSession(sessionId);
 
         try {
-            await externalServicesRegistry.dispatchServiceHook("sessionEnded", "polyadic-devils-advocate", {
+            await externalServicesRegistry.dispatchServiceHook("session-ended", "polyadic-devils-advocate", {
                 sessionId: Number(sessionId),
             });
         } catch (hookErr) {
-            console.error("[external-services] Error dispatching sessionEnded hook.", hookErr);
+            console.error("[external-services] Error dispatching session-ended hook.", hookErr);
         }
 
         res.status(200).json({ status: "ok", message: "Activity session finished successfully." });

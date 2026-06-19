@@ -41,6 +41,10 @@ Each manifest entry declares:
 - `hooks`: hook names supported by the service.
 - `enabled`: whether the adapter should be loaded.
 
+Hook names are standardized as kebab-case identifiers. New adapters should use
+names such as `phase-started`, `phase-ended`, `session-ended`,
+`chat-message-received`, and `student-response-submitted`.
+
 Adapters are ESM modules that export `register(...)`. During startup,
 `externalServicesRegistry.initialize()` loads the manifest, imports each enabled
 adapter, and lets it subscribe to hooks.
@@ -172,11 +176,15 @@ Current event hooks:
 
 - `student-response-submitted`: dispatched when a student submits a supported
   response from `POST /activities/:id/response`.
-- `phaseStarted`: dispatched when the teacher transitions a session into a phase.
-- `phaseEnded`: dispatched when the teacher transitions a session away from the
+- `phase-started`: dispatched when the teacher transitions a session into a phase.
+- `phase-ended`: dispatched when the teacher transitions a session away from the
   previously active phase.
 - `chat-message-received`: dispatched when a chat message is posted to a phase
   group chat.
+- `external-service-result`: dispatched when a service-specific callback result
+  is received.
+- `session-ended`: dispatched when a session finishes and service-local context
+  should be cleaned up.
 
 The phase transition hooks are dispatched from:
 

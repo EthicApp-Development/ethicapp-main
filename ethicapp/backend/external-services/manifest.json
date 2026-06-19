@@ -6,8 +6,8 @@
       "adapter": "./adapters/mock-ai-response-review.adapter.js",
       "hooks": [
         "student-response-submitted",
-        "phaseStarted",
-        "phaseEnded",
+        "phase-started",
+        "phase-ended",
         "chat-message-received",
         "external-service-result"
       ],
@@ -28,10 +28,10 @@
       "adapter": "./adapters/polyadic-bridge.adapter.js",
       "hooks": [
         "chat-message-received",
-        "phaseStarted",
-        "phaseEnded",
+        "phase-started",
+        "phase-ended",
         "external-service-result",
-        "sessionEnded"
+        "session-ended"
       ],
       "enabled": true
     },
@@ -41,7 +41,7 @@
       "adapter": "./adapters/ats-feedback.adapter.js",
       "hooks": [
         "student-response-submitted",
-        "phaseEnded",
+        "phase-ended",
         "external-service-result"
       ],
       "enabled": true

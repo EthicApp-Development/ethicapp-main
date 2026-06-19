@@ -55,16 +55,24 @@ export function parseRoomName(roomName) {
     };
 }
 
-async function getTeamIdsForPhase(phaseId) {
+function getPhaseRoomsKey(sessionId, phaseId) {
+    return `${sessionId}:${phaseId}`;
+}
+
+async function getTeamIdsForPhase(sessionId, phaseId) {
     const rows = await rpg2.execSQL({
         sql: `
             SELECT t.id AS team_id
             FROM teams AS t
-            WHERE t.stageid = $1
+            WHERE t.sesid = $1
+              AND t.stageid = $2
             ORDER BY t.id
         `,
         dbcon: config.dbconnString,
-        sqlParams: [rpg2.param("plain", phaseId)],
+        sqlParams: [
+            rpg2.param("plain", sessionId),
+            rpg2.param("plain", phaseId),
+        ],
     });
 
     return rows.map(row => Number(row.team_id)).filter(Number.isInteger);
@@ -275,9 +283,9 @@ export async function register({
         }
     }
 
-    subscribe("phaseStarted", async (context, { callback }) => {
+    subscribe("phase-started", async (context, { callback }) => {
         const { sessionId, phaseId } = context;
-        const teamIds = await dependencies.getTeamIdsForPhase(phaseId);
+        const teamIds = await dependencies.getTeamIdsForPhase(sessionId, phaseId);
         const { questionId, topic } = await buildTopicForPhase(sessionId, phaseId);
         const createdRooms = new Set();
 
@@ -288,11 +296,11 @@ export async function register({
             }
         }
 
-        phaseRooms.set(phaseId, createdRooms);
+        phaseRooms.set(getPhaseRoomsKey(sessionId, phaseId), createdRooms);
 
         await callback({
             serviceId: service.id,
-            hook:      "phaseStarted",
+            hook:      "phase-started",
             status:    "completed",
             payload:   {
                 sessionId,
@@ -306,6 +314,7 @@ export async function register({
         const { sessionId, phaseId, groupId, questionId, userId } = context;
         const content = normalizeText(context.content);
         const roomName = getRoomName(sessionId, phaseId, groupId);
+        const phaseRoomsKey = getPhaseRoomsKey(sessionId, phaseId);
 
         if (!content) {
             await callback({
@@ -317,10 +326,10 @@ export async function register({
             return;
         }
 
-        let phaseCreatedRooms = phaseRooms.get(phaseId);
+        let phaseCreatedRooms = phaseRooms.get(phaseRoomsKey);
         if (!phaseCreatedRooms) {
             phaseCreatedRooms = new Set();
-            phaseRooms.set(phaseId, phaseCreatedRooms);
+            phaseRooms.set(phaseRoomsKey, phaseCreatedRooms);
         }
 
         if (!phaseCreatedRooms.has(roomName)) {
@@ -441,9 +450,10 @@ export async function register({
         });
     });
 
-    subscribe("phaseEnded", async (context, { callback }) => {
+    subscribe("phase-ended", async (context, { callback }) => {
         const { sessionId, phaseId } = context;
-        const rooms = phaseRooms.get(phaseId) || new Set();
+        const phaseRoomsKey = getPhaseRoomsKey(sessionId, phaseId);
+        const rooms = phaseRooms.get(phaseRoomsKey) || new Set();
         let roomsClosed = 0;
 
         for (const roomName of rooms) {
@@ -456,17 +466,17 @@ export async function register({
             roomContext.delete(roomName);
         }
 
-        phaseRooms.delete(phaseId);
+        phaseRooms.delete(phaseRoomsKey);
 
         await callback({
             serviceId: service.id,
-            hook:      "phaseEnded",
+            hook:      "phase-ended",
             status:    "completed",
             payload:   { sessionId, phaseId, roomsClosed },
         });
     });
 
-    subscribe("sessionEnded", async (context, { callback }) => {
+    subscribe("session-ended", async (context, { callback }) => {
         const sessionId = Number(context.sessionId);
         let roomsClosed = 0;
 
@@ -484,11 +494,11 @@ export async function register({
             roomContext.delete(roomName);
         }
 
-        for (const [phaseId, rooms] of phaseRooms.entries()) {
+        for (const [phaseRoomsKey, rooms] of phaseRooms.entries()) {
             for (const roomName of rooms) {
                 const parsedRoom = parseRoomName(roomName);
                 if (parsedRoom?.sessionId === sessionId) {
-                    phaseRooms.delete(phaseId);
+                    phaseRooms.delete(phaseRoomsKey);
                     break;
                 }
             }
@@ -496,7 +506,7 @@ export async function register({
 
         await callback({
             serviceId: service.id,
-            hook:      "sessionEnded",
+            hook:      "session-ended",
             status:    "completed",
             payload:   { sessionId, roomsClosed },
         });

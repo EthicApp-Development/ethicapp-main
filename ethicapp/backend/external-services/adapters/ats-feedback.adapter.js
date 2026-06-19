@@ -687,7 +687,7 @@ async function processPhaseEnded({ context, callback }) {
     atsSessionCreationByPhase.delete(phaseKey);
 
     await callback({
-        hook: "phaseEnded",
+        hook: "phase-ended",
         status: "completed",
         payload: {
             clearedSubmissionCounters: removedKeys.length,
@@ -765,14 +765,14 @@ export async function register({ subscribe, publishStudentResult, aiAdditionsCli
         }
     });
 
-    subscribe("phaseEnded", async (context, { callback }) => {
+    subscribe("phase-ended", async (context, { callback }) => {
         try {
             await processPhaseEnded({ context, callback });
         } catch (error) {
             await callback({
-                hook: "phaseEnded",
+                hook: "phase-ended",
                 status: "failed",
-                error: normalizeText(error?.message) || "Unexpected phaseEnded handler error.",
+                error: normalizeText(error?.message) || "Unexpected phase-ended handler error.",
             });
         }
     });
