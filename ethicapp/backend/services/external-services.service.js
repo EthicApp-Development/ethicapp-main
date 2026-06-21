@@ -281,12 +281,13 @@ export class ExternalServicesRegistry {
             subscriber => subscriber.serviceId === serviceId
         );
 
-        return Promise.allSettled(selectedSubscribers.map(async ({ handler }) => {
+        const outcomes = await Promise.allSettled(selectedSubscribers.map(async ({ handler }) => {
             const serviceContext = {
                 ...context,
                 serviceId,
-                jobId:    resultRecord?.job_id ?? null,
-                resultId: resultRecord?.id     ?? null,
+                jobId:       resultRecord?.job_id      ?? null,
+                resultId:    resultRecord?.id          ?? null,
+                isDuplicate: resultRecord?.is_duplicate ?? false,
             };
 
             try {
@@ -307,6 +308,8 @@ export class ExternalServicesRegistry {
                 throw err;
             }
         }));
+
+        return { resultRecord, outcomes };
     }
 
     async recordCallbackResult({ hookName, serviceId, result, context }) {
@@ -344,9 +347,11 @@ export class ExternalServicesRegistry {
                 })
                 .catch(err => console.error("[external-services] Failed to persist callback result.", err));
         } else if (context.jobId) {
-            const jobStatus = result?.status === "failed"  ? JOB_STATUS.FAILED
-                : result?.status === "skipped" ? JOB_STATUS.SKIPPED
-                : JOB_STATUS.COMPLETED;
+            const jobStatus = result?.status === "failed"
+                ? JOB_STATUS.FAILED
+                : result?.status === "skipped"
+                    ? JOB_STATUS.SKIPPED
+                    : JOB_STATUS.COMPLETED;
             const completedAt = jobStatus === JOB_STATUS.COMPLETED ? new Date().toISOString() : undefined;
             await this._jobsService
                 .updateJobStatus(context.jobId, jobStatus, { completedAt })

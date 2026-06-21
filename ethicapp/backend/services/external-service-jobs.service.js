@@ -20,6 +20,13 @@ export const RESULT_STATUS = Object.freeze({
     UNKNOWN_CORRELATION: "unknown-correlation",
 });
 
+const TERMINAL_JOB_STATUSES = new Set([
+    JOB_STATUS.COMPLETED,
+    JOB_STATUS.FAILED,
+    JOB_STATUS.SKIPPED,
+    JOB_STATUS.EXPIRED,
+]);
+
 let _pool = null;
 
 function getPool() {
@@ -109,11 +116,12 @@ export class ExternalServiceJobsService {
         userId        = null,
     }) {
         let jobId        = null;
+        let jobStatus    = null;
         let resultStatus = RESULT_STATUS.UNKNOWN_CORRELATION;
 
         if (correlationId) {
             const matchRows = await this._db(
-                `SELECT id, session_id, phase_id, question_id, group_id, user_id
+                `SELECT id, status, session_id, phase_id, question_id, group_id, user_id
                  FROM external_service_jobs
                  WHERE id::text = $1 AND service_id = $2`,
                 [correlationId, serviceId]
@@ -121,6 +129,7 @@ export class ExternalServiceJobsService {
             if (matchRows.length > 0) {
                 const job    = matchRows[0];
                 jobId        = job.id;
+                jobStatus    = job.status;
                 resultStatus = RESULT_STATUS.CALLBACK_RECEIVED;
                 // Propagate job context to result when caller did not provide it.
                 sessionId    = sessionId  ?? job.session_id;
@@ -148,7 +157,13 @@ export class ExternalServiceJobsService {
 
         const result = rows[0] || null;
 
-        if (result && jobId) {
+        if (result && jobStatus !== null) {
+            result.job_prior_status = jobStatus;
+            result.is_duplicate     = TERMINAL_JOB_STATUSES.has(jobStatus);
+        }
+
+        // Only advance a non-terminal job to callback-received.
+        if (result && jobId && !TERMINAL_JOB_STATUSES.has(jobStatus)) {
             await this._db(
                 `UPDATE external_service_jobs
                  SET status = $2, updated_at = now()

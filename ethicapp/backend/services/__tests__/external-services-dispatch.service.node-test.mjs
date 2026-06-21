@@ -226,12 +226,61 @@ test("dispatchServiceHook: marks result FAILED when handler throws", async () =>
         { serviceId: "svc-a", handler: async () => { throw new Error("handler error"); } },
     ]);
 
-    const results = await registry.dispatchServiceHook("callback-received", "svc-a", {});
+    const { outcomes } = await registry.dispatchServiceHook("callback-received", "svc-a", {});
 
-    assert.equal(results[0].status, "rejected");
+    assert.equal(outcomes[0].status, "rejected");
     assert.equal(updateResultCalls.length, 1);
     assert.equal(updateResultCalls[0].id, RESULT_UUID);
     assert.equal(updateResultCalls[0].status, RESULT_STATUS.FAILED);
+});
+
+test("dispatchServiceHook: returns resultRecord alongside outcomes", async () => {
+    const { registry } = makeRegistry();
+
+    registry.hookSubscribers.set("callback-received", [
+        { serviceId: "svc-a", handler: async () => {} },
+    ]);
+
+    const response = await registry.dispatchServiceHook("callback-received", "svc-a", {});
+
+    assert.ok(Object.hasOwn(response, "resultRecord"), "should have resultRecord key");
+    assert.ok(Object.hasOwn(response, "outcomes"),     "should have outcomes key");
+    assert.ok(Array.isArray(response.outcomes));
+    assert.equal(response.resultRecord?.id, RESULT_UUID);
+});
+
+test("dispatchServiceHook: passes isDuplicate in handler context when job is terminal", async () => {
+    let capturedContext = null;
+    const { registry } = makeRegistry({
+        createResult: async () => ({
+            id:               RESULT_UUID,
+            job_id:           JOB_UUID,
+            job_prior_status: "completed",
+            is_duplicate:     true,
+        }),
+    });
+
+    registry.hookSubscribers.set("callback-received", [
+        { serviceId: "svc-a", handler: async (ctx) => { capturedContext = ctx; } },
+    ]);
+
+    await registry.dispatchServiceHook("callback-received", "svc-a", {});
+
+    assert.ok(capturedContext);
+    assert.equal(capturedContext.isDuplicate, true);
+});
+
+test("dispatchServiceHook: isDuplicate is false for non-terminal job", async () => {
+    let capturedContext = null;
+    const { registry } = makeRegistry();
+
+    registry.hookSubscribers.set("callback-received", [
+        { serviceId: "svc-a", handler: async (ctx) => { capturedContext = ctx; } },
+    ]);
+
+    await registry.dispatchServiceHook("callback-received", "svc-a", {});
+
+    assert.equal(capturedContext?.isDuplicate, false);
 });
 
 // ─── recordCallbackResult ─────────────────────────────────────────────────────

@@ -283,6 +283,57 @@ test("createResult: null correlationId — skips job lookup, unknown-correlation
     assert.ok(db.calls[0].sql.includes("INSERT INTO external_service_results"));
 });
 
+test("createResult: duplicate — terminal job is not overwritten to callback-received", async () => {
+    const jobRow    = {
+        id:          JOB_UUID,
+        status:      JOB_STATUS.COMPLETED,
+        session_id:  null,
+        phase_id:    null,
+        question_id: null,
+        group_id:    null,
+        user_id:     null,
+    };
+    const resultRow = { id: RESULT_UUID, job_id: JOB_UUID, status: RESULT_STATUS.CALLBACK_RECEIVED };
+    // Only 2 calls expected: SELECT + INSERT; no UPDATE because job is terminal.
+    const db  = makeDbQueue([jobRow], [resultRow]);
+    const svc = new ExternalServiceJobsService({ dbQuery: db });
+
+    const result = await svc.createResult({
+        correlationId: JOB_UUID,
+        serviceId:     "polyadic-devils-advocate",
+        rawPayload:    {},
+    });
+
+    assert.equal(db.calls.length, 2, "should not UPDATE when job is already terminal");
+    assert.equal(result.is_duplicate,     true);
+    assert.equal(result.job_prior_status, JOB_STATUS.COMPLETED);
+});
+
+test("createResult: non-terminal job sets is_duplicate to false", async () => {
+    const jobRow    = {
+        id:          JOB_UUID,
+        status:      JOB_STATUS.DISPATCHED,
+        session_id:  null,
+        phase_id:    null,
+        question_id: null,
+        group_id:    null,
+        user_id:     null,
+    };
+    const resultRow = { id: RESULT_UUID, job_id: JOB_UUID, status: RESULT_STATUS.CALLBACK_RECEIVED };
+    const db  = makeDbQueue([jobRow], [resultRow], []);
+    const svc = new ExternalServiceJobsService({ dbQuery: db });
+
+    const result = await svc.createResult({
+        correlationId: JOB_UUID,
+        serviceId:     "polyadic-devils-advocate",
+        rawPayload:    {},
+    });
+
+    assert.equal(db.calls.length, 3, "should UPDATE non-terminal job");
+    assert.equal(result.is_duplicate,     false);
+    assert.equal(result.job_prior_status, JOB_STATUS.DISPATCHED);
+});
+
 // ─── updateResult ─────────────────────────────────────────────────────────────
 
 test("updateResult: sets status, sanitizedPayload, and adapterResult", async () => {
