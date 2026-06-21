@@ -41,7 +41,7 @@ export function createCallbackAuthMiddleware({
         const config = readEnv(env);
 
         if (!config.enabled) {
-            req.externalServiceAuth = null;
+            req.externalServiceAuth = { disabled: true };
             return next();
         }
 

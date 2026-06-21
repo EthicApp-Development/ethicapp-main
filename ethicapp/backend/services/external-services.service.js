@@ -157,7 +157,7 @@ class ExternalServicesRegistry {
             throw error;
         }
 
-        if (!service.callbackAuth) {
+        if (!service.callbackAuth || authContext?.disabled === true) {
             return;
         }
 

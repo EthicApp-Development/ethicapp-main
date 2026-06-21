@@ -4,7 +4,7 @@ import { createCallbackAuthMiddleware } from "../external-services-callback-auth
 import { JwksCache } from "../../helpers/keycloak-jwt.helper.js";
 
 const TEST_ISSUER = "http://keycloak.test/realms/ethicapp-ai-additions";
-const TEST_AUDIENCE = "ethicapp-main";
+const TEST_AUDIENCE = "ethicapp-ai-services";
 const TEST_JWKS_URL = `${TEST_ISSUER}/protocol/openid-connect/certs`;
 
 async function generateRsaKeyPair() {
@@ -309,7 +309,7 @@ test("passes through unauthenticated when auth is disabled", async () => {
     await middleware(req, res, () => { nextCalled = true; });
 
     assert.equal(nextCalled, true);
-    assert.equal(req.externalServiceAuth, null);
+    assert.equal(req.externalServiceAuth?.disabled, true);
 });
 
 test("returns 500 when JWKS URL is not configured", async () => {

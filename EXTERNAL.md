@@ -480,7 +480,7 @@ Environment variables for inbound authentication:
 | `EXTERNAL_SERVICES_CALLBACK_AUTH_ENABLED` | Set to `false` to disable auth in development. Defaults to `true`. |
 | `EXTERNAL_SERVICES_CALLBACK_AUTH_ISSUER` | Keycloak issuer URL. Derived from `AI_ADDITIONS_KEYCLOAK_BASE_URL` and `AI_ADDITIONS_KEYCLOAK_REALM` when unset. |
 | `EXTERNAL_SERVICES_CALLBACK_AUTH_JWKS_URL` | Explicit JWKS URL. Derived from issuer when unset. |
-| `EXTERNAL_SERVICES_CALLBACK_AUTH_AUDIENCE` | Expected `aud` claim. Defaults to `ethicapp-main`. Leave empty to skip audience check. |
+| `EXTERNAL_SERVICES_CALLBACK_AUTH_AUDIENCE` | Expected `aud` claim. Defaults to `ethicapp-ai-services` (the audience injected by the Keycloak mapper in AI Additions). Leave empty to skip audience check. |
 | `EXTERNAL_SERVICES_CALLBACK_AUTH_CLOCK_TOLERANCE_SECONDS` | Clock skew tolerance. Defaults to `30`. |
 
 ## Current Limitations

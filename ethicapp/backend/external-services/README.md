@@ -128,7 +128,7 @@ Set `authenticated: false` only for explicitly public AI Additions endpoints.
 | `EXTERNAL_SERVICES_CALLBACK_AUTH_ENABLED` | Set to `false` to disable JWT validation in development. Defaults to `true`. |
 | `EXTERNAL_SERVICES_CALLBACK_AUTH_ISSUER` | Keycloak issuer URL for JWT `iss` claim validation. Derived from `AI_ADDITIONS_KEYCLOAK_BASE_URL` and `AI_ADDITIONS_KEYCLOAK_REALM` when unset. |
 | `EXTERNAL_SERVICES_CALLBACK_AUTH_JWKS_URL` | Explicit JWKS endpoint. Derived from issuer as `.../protocol/openid-connect/certs` when unset. |
-| `EXTERNAL_SERVICES_CALLBACK_AUTH_AUDIENCE` | Expected `aud` claim. Defaults to `ethicapp-main`. Leave empty to skip audience check. |
+| `EXTERNAL_SERVICES_CALLBACK_AUTH_AUDIENCE` | Expected `aud` claim. Defaults to `ethicapp-ai-services` (the audience injected by the Keycloak mapper in AI Additions). Leave empty to skip audience check. |
 | `EXTERNAL_SERVICES_CALLBACK_AUTH_CLOCK_TOLERANCE_SECONDS` | Clock skew tolerance for `exp`/`nbf` validation. Defaults to `30`. |
 
 Service-specific adapters may define additional variables for their normalized
