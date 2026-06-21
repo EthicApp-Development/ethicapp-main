@@ -161,6 +161,74 @@ AI Additions services validate the Bearer token issued by the shared realm.
 EthicApp adapters only need to use the shared client; authentication remains
 transparent to adapter business logic.
 
+## Correlation ID Propagation
+
+Each hook invocation creates a job in `external_service_jobs` and injects a
+`correlationId` (equal to the job UUID) into the handler context.  Adapters
+should forward this value in outbound AI Additions requests so that the
+provider can echo it back in its callback payload.  EthicApp then matches the
+inbound callback to the original job via that field.
+
+### Polyadic bridge
+
+Only outbound **message forwarding** (`POST /rooms/{room}/messages`) includes
+`ethicapp_correlation_id`. Session creation (`POST /rooms/{room}/sessions`)
+does **not** carry it, because session creation is a fan-out operation
+(one per team) that does not map to a single future callback — sending the
+same `phase-started` job UUID to all rooms would cause all but the first
+evaluation callback to be treated as duplicates under the idempotency logic
+introduced in #584.
+
+```json
+{ "username": "...", "content": "...", "ethicapp_correlation_id": "<correlationId>" }
+```
+
+The Polyadic AI Additions service should track the most recent
+`ethicapp_correlation_id` received per room and include it in EthicApp
+callbacks as `correlationId`:
+
+```json
+{
+  "serviceId":     "polyadic-devils-advocate",
+  "eventType":     "result",
+  "correlationId": "<most-recent ethicapp_correlation_id for the room>",
+  "payload": {
+    "room":        "ethicapp-s<N>-p<N>-g<N>",
+    "evaluations": [ ... ]
+  }
+}
+```
+
+This ensures each evaluation callback correlates to the `chat-message-received`
+job that last forwarded a message to the room, not to the `phase-started` job.
+
+See `send_ethicapp_callback` in
+`ethicapp-ai-additions/polyadic-agents/backend/app/agentComponents/mediators/base_mediator.py`
+for the changes required on the provider side.
+
+### Argumentation Tutor System
+
+Argument submissions (`POST /sessions/{id}/arguments` and
+`POST /sessions/{id}/arguments/compare`) include `correlationId` inside
+`client_context`:
+
+```json
+{
+  "client_context": {
+    "service": "ethicapp",
+    "correlationId": "<correlationId>",
+    "sessionId": ...,
+    "phaseId": ...,
+    "questionId": ...,
+    "groupId": ...
+  }
+}
+```
+
+ATS already stores and returns `client_context` in the task status response,
+so the correlation ID is preserved for audit without further changes to the
+ATS provider.
+
 ## Adapter Guidelines
 
 When implementing a new adapter:

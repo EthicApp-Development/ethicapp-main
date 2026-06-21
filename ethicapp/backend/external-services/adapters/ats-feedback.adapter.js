@@ -4,6 +4,9 @@ import { getPhaseDesignByPhaseId } from "../../helpers/designs-helper.js";
 import { getCaseIdBySessionId } from "../../helpers/sessions-helper.js";
 import { getCaseDocumentRawText } from "../../helpers/case-document-content-helper.js";
 import defaultAiAdditionsClient from "../../services/ai-additions-client.service.js";
+import { buildArgumentClientContext } from "./ats-feedback.utils.js";
+
+export { buildArgumentClientContext };
 
 const DEFAULT_ATS_BASE_PATH = "/argumentation-tutor/api/v2";
 const DEFAULT_POLL_INTERVAL_MS = 2500;
@@ -95,7 +98,7 @@ async function resolveGroupId(context) {
 
     const row = await rpg2.singleSQL({
         dbcon: config.dbconnString,
-        sql: `
+        sql:   `
             SELECT t.id AS group_id
             FROM teams AS t
             INNER JOIN teamusers AS tu
@@ -117,7 +120,7 @@ async function resolveGroupId(context) {
 async function resolveSessionMetadata(context) {
     const sessionRow = await rpg2.singleSQL({
         dbcon: config.dbconnString,
-        sql: `
+        sql:   `
             SELECT id, name, descr
             FROM sessions
             WHERE id = $1
@@ -193,7 +196,7 @@ async function resolveQuestionText(context) {
     if (context.designType === "ranking") {
         const row = await rpg2.singleSQL({
             dbcon: config.dbconnString,
-            sql: `
+            sql:   `
                 SELECT name
                 FROM actors
                 WHERE id = $1
@@ -211,7 +214,7 @@ async function resolveQuestionText(context) {
 
     const row = await rpg2.singleSQL({
         dbcon: config.dbconnString,
-        sql: `
+        sql:   `
             SELECT title
             FROM differential
             WHERE id = $1
@@ -245,11 +248,11 @@ async function getOrCreateAtsSession(context) {
 
         const response = await fetchAtsJson("/sessions", {
             method: "POST",
-            body: {
-                case_id: metadata.caseId,
+            body:   {
+                case_id:    metadata.caseId,
                 case_title: metadata.caseTitle,
-                case_text: metadata.caseText,
-                question: metadata.question,
+                case_text:  metadata.caseText,
+                question:   metadata.question,
             },
         });
 
@@ -291,21 +294,16 @@ async function deleteAtsSession(atsSessionId) {
     }
 }
 
+
 async function submitArgumentToAts(context, responseText, groupId) {
     const atsSessionId = await getOrCreateAtsSession(context);
 
     const response = await fetchAtsJson(`/sessions/${encodeURIComponent(atsSessionId)}/arguments`, {
         method: "POST",
-        body: {
-            argument: responseText,
-            user_id: String(context.userId),
-            client_context: {
-                service: "ethicapp",
-                sessionId: context.sessionId,
-                phaseId: context.phaseId,
-                questionId: context.questionId,
-                groupId: Number.isInteger(groupId) ? groupId : null,
-            },
+        body:   {
+            argument:       responseText,
+            user_id:        String(context.userId),
+            client_context: buildArgumentClientContext(context, groupId),
         },
     });
 
@@ -317,7 +315,7 @@ async function submitArgumentToAts(context, responseText, groupId) {
     return {
         atsSessionId,
         taskId,
-        mode: "arguments",
+        mode:                   "arguments",
         revisedArgumentPreview: responseText,
     };
 }
@@ -337,16 +335,10 @@ async function submitArgumentComparisonToAts(context, responseText, groupId) {
     try {
         const response = await fetchAtsJson(`/sessions/${encodeURIComponent(atsSessionId)}/arguments/compare`, {
             method: "POST",
-            body: {
+            body:   {
                 revised_argument: responseText,
-                user_id: String(context.userId),
-                client_context: {
-                    service: "ethicapp",
-                    sessionId: context.sessionId,
-                    phaseId: context.phaseId,
-                    questionId: context.questionId,
-                    groupId: Number.isInteger(groupId) ? groupId : null,
-                },
+                user_id:          String(context.userId),
+                client_context:   buildArgumentClientContext(context, groupId),
             },
         });
 
@@ -358,7 +350,7 @@ async function submitArgumentComparisonToAts(context, responseText, groupId) {
         return {
             atsSessionId,
             taskId,
-            mode: "compare",
+            mode:                   "compare",
             initialArgumentPreview: normalizeText(response?.initial_argument_preview),
             revisedArgumentPreview: responseText,
         };
@@ -424,25 +416,25 @@ function normalizeCriteriaFromAts(parsedResult) {
 
     return [
         {
-            key: "claim",
+            key:   "claim",
             label: "Claim",
             score: Number.isFinite(claimScore) ? claimScore : null,
             value: Number.isFinite(claimScore) ? `${claimText} (${claimScore})` : "Not available",
         },
         {
-            key: "evidence",
+            key:   "evidence",
             label: "Evidence",
             score: Number.isFinite(evidenceScore) ? evidenceScore : null,
             value: Number.isFinite(evidenceScore) ? `${evidenceScore}/3` : "Not available",
         },
         {
-            key: "warrant",
+            key:   "warrant",
             label: "Warrant",
             score: Number.isFinite(warrantScore) ? warrantScore : null,
             value: Number.isFinite(warrantScore) ? `${warrantScore}/3` : "Not available",
         },
         {
-            key: "qualifier",
+            key:   "qualifier",
             label: "Qualifier",
             score: Number.isFinite(qualifierScore) ? qualifierScore : null,
             value: Number.isFinite(qualifierScore) ? `${qualifierScore}/3` : "Not available",
@@ -517,9 +509,9 @@ function extractComparisonData(parsedResult, submissionMeta = {}) {
             || submissionMeta?.revisedArgumentPreview
         ),
         scores: {
-            claim: normalizePair("claim"),
-            evidence: normalizePair("evidence"),
-            warrant: normalizePair("warrant"),
+            claim:     normalizePair("claim"),
+            evidence:  normalizePair("evidence"),
+            warrant:   normalizePair("warrant"),
             qualifier: normalizePair("qualifier"),
         },
     };
@@ -543,19 +535,19 @@ function buildFeedbackPayloadFromAtsStatus(statusResponse, context, submissionMe
 
     return {
         version: "1",
-        source: "argumentation-tutor-system",
-        title: "Argument Tutor Feedback",
+        source:  "argumentation-tutor-system",
+        title:   "Argument Tutor Feedback",
         summary,
         mode,
         criteria,
         bullets,
         argumentPreview,
         comparison,
-        meta: {
-            sessionId: context.sessionId,
-            phaseId: context.phaseId,
+        meta:    {
+            sessionId:  context.sessionId,
+            phaseId:    context.phaseId,
             questionId: context.questionId,
-            userId: context.userId,
+            userId:     context.userId,
         },
     };
 }
@@ -571,14 +563,14 @@ function buildFeedbackPayloadFromExternalResult(requestPayload, fallbackContext)
     const comparison = input?.comparison && typeof input.comparison === "object" ? input.comparison : null;
 
     return {
-        version: "1",
-        source: "argumentation-tutor-system",
-        title: normalizeText(input.title) || "Argument Tutor Feedback",
-        summary: normalizeText(input.summary) || normalizeText(payloadRoot.message) || "Argument feedback is now available.",
+        version:  "1",
+        source:   "argumentation-tutor-system",
+        title:    normalizeText(input.title) || "Argument Tutor Feedback",
+        summary:  normalizeText(input.summary) || normalizeText(payloadRoot.message) || "Argument feedback is now available.",
         mode,
         criteria: criteria
             .map(item => ({
-                key: normalizeText(item?.key) || normalizeText(item?.label).toLowerCase().replace(/\s+/gu, "-"),
+                key:   normalizeText(item?.key) || normalizeText(item?.label).toLowerCase().replace(/\s+/gu, "-"),
                 label: normalizeText(item?.label) || "Criterion",
                 score: Number.isFinite(Number(item?.score)) ? Number(item.score) : null,
                 value: normalizeText(item?.value) || "Not available",
@@ -591,11 +583,11 @@ function buildFeedbackPayloadFromExternalResult(requestPayload, fallbackContext)
             .slice(0, 6),
         argumentPreview: normalizeText(input.argumentPreview),
         comparison,
-        meta: {
-            sessionId: Number(payloadRoot.sessionId) || fallbackContext?.sessionId || null,
-            phaseId: Number(payloadRoot.phaseId) || fallbackContext?.phaseId || null,
+        meta:            {
+            sessionId:  Number(payloadRoot.sessionId) || fallbackContext?.sessionId || null,
+            phaseId:    Number(payloadRoot.phaseId) || fallbackContext?.phaseId || null,
             questionId: Number(payloadRoot.questionId) || fallbackContext?.questionId || null,
-            userId: Number(payloadRoot.userId) || fallbackContext?.userId || null,
+            userId:     Number(payloadRoot.userId) || fallbackContext?.userId || null,
         },
     };
 }
@@ -608,18 +600,18 @@ async function publishFeedbackToStudent({ context, feedbackPayload, status, publ
 
     await publishStudentResult({
         userId,
-        sessionId: Number(context.sessionId) || null,
-        phaseId: Number(context.phaseId) || null,
+        sessionId:  Number(context.sessionId) || null,
+        phaseId:    Number(context.phaseId) || null,
         questionId: Number(context.questionId) || null,
-        component: {
+        component:  {
             componentId: "argument-tutor-chat-feedback",
-            title: "Argument Tutor Feedback",
+            title:       "Argument Tutor Feedback",
         },
         payload: {
             feedback: feedbackPayload,
         },
         message: "Your argument tutor feedback is now available.",
-        status: status || "completed",
+        status:  status || "completed",
     });
 }
 
@@ -627,7 +619,7 @@ async function processStudentResponse({ context, callback, publishStudentResult 
     const responseText = extractResponseText(context);
     if (!responseText) {
         await callback({
-            hook: "student-response-submitted",
+            hook:   "student-response-submitted",
             status: "skipped",
             reason: "No free-text response was found to send to ATS.",
         });
@@ -649,16 +641,16 @@ async function processStudentResponse({ context, callback, publishStudentResult 
     });
 
     await callback({
-        hook: "student-response-submitted",
-        status: "completed",
+        hook:    "student-response-submitted",
+        status:  "completed",
         payload: {
             atsSessionId,
             taskId,
             groupId,
             mode,
-            submissionCount: getSubmissionCount(context),
+            submissionCount:   getSubmissionCount(context),
             publishedToUserId: Number(context.userId) || null,
-            feedbackTitle: feedbackPayload.title,
+            feedbackTitle:     feedbackPayload.title,
         },
     });
 }
@@ -687,15 +679,15 @@ async function processPhaseEnded({ context, callback }) {
     atsSessionCreationByPhase.delete(phaseKey);
 
     await callback({
-        hook: "phase-ended",
-        status: "completed",
+        hook:    "phase-ended",
+        status:  "completed",
         payload: {
             clearedSubmissionCounters: removedKeys.length,
-            clearedAtsSession: atsDeleteResult.deleted || Boolean(atsSessionId),
-            atsSessionDeleteReason: atsDeleteResult.reason,
+            clearedAtsSession:         atsDeleteResult.deleted || Boolean(atsSessionId),
+            atsSessionDeleteReason:    atsDeleteResult.reason,
             atsSessionId,
-            sessionId: Number(context.sessionId) || null,
-            phaseId: Number(context.phaseId) || null,
+            sessionId:                 Number(context.sessionId) || null,
+            phaseId:                   Number(context.phaseId) || null,
         },
     });
 }
@@ -709,31 +701,31 @@ async function processExternalResult({ context, callback, publishStudentResult }
         ? payloadGroupId
         : await resolveGroupId({
             phaseId: Number(requestPayload?.phaseId) || context.phaseId,
-            userId: Number(requestPayload?.userId) || context.userId,
+            userId:  Number(requestPayload?.userId) || context.userId,
         });
 
     const fallbackContext = {
-        sessionId: Number(requestPayload?.sessionId) || context.sessionId,
-        phaseId: Number(requestPayload?.phaseId) || context.phaseId,
+        sessionId:  Number(requestPayload?.sessionId) || context.sessionId,
+        phaseId:    Number(requestPayload?.phaseId) || context.phaseId,
         questionId: Number(requestPayload?.questionId) || context.questionId,
-        userId: Number(requestPayload?.userId) || context.userId,
+        userId:     Number(requestPayload?.userId) || context.userId,
     };
 
     const feedbackPayload = buildFeedbackPayloadFromExternalResult(requestPayload, fallbackContext);
     await publishFeedbackToStudent({
         context: fallbackContext,
         feedbackPayload,
-        status: normalizeText(requestPayload?.status) || "completed",
+        status:  normalizeText(requestPayload?.status) || "completed",
         publishStudentResult,
     });
 
     await callback({
-        hook: "callback-received",
-        status: "completed",
+        hook:    "callback-received",
+        status:  "completed",
         payload: {
             groupId,
             publishedToUserId: Number(fallbackContext.userId) || null,
-            feedbackTitle: feedbackPayload.title,
+            feedbackTitle:     feedbackPayload.title,
         },
     });
 }
@@ -746,9 +738,9 @@ export async function register({ subscribe, publishStudentResult, aiAdditionsCli
             await processStudentResponse({ context, callback, publishStudentResult });
         } catch (error) {
             await callback({
-                hook: "student-response-submitted",
+                hook:   "student-response-submitted",
                 status: "failed",
-                error: normalizeText(error?.message) || "Unexpected ATS adapter error.",
+                error:  normalizeText(error?.message) || "Unexpected ATS adapter error.",
             });
         }
     });
@@ -758,9 +750,9 @@ export async function register({ subscribe, publishStudentResult, aiAdditionsCli
             await processExternalResult({ context, callback, publishStudentResult });
         } catch (error) {
             await callback({
-                hook: "callback-received",
+                hook:   "callback-received",
                 status: "failed",
-                error: normalizeText(error?.message) || "Unexpected external result adapter error.",
+                error:  normalizeText(error?.message) || "Unexpected external result adapter error.",
             });
         }
     });
@@ -770,9 +762,9 @@ export async function register({ subscribe, publishStudentResult, aiAdditionsCli
             await processPhaseEnded({ context, callback });
         } catch (error) {
             await callback({
-                hook: "phase-ended",
+                hook:   "phase-ended",
                 status: "failed",
-                error: normalizeText(error?.message) || "Unexpected phase-ended handler error.",
+                error:  normalizeText(error?.message) || "Unexpected phase-ended handler error.",
             });
         }
     });

@@ -68,7 +68,7 @@ async function getTeamIdsForPhase(sessionId, phaseId) {
               AND t.stageid = $2
             ORDER BY t.id
         `,
-        dbcon: config.dbconnString,
+        dbcon:     config.dbconnString,
         sqlParams: [
             rpg2.param("plain", sessionId),
             rpg2.param("plain", phaseId),
@@ -87,7 +87,7 @@ async function getFirstQuestionIdForPhase(phaseId) {
             ORDER BY d.orden, d.id
             LIMIT 1
         `,
-        dbcon: config.dbconnString,
+        dbcon:     config.dbconnString,
         sqlParams: [rpg2.param("plain", phaseId)],
     });
 
@@ -103,7 +103,7 @@ async function getFirstQuestionForPhase(phaseId) {
             ORDER BY d.orden, d.id
             LIMIT 1
         `,
-        dbcon: config.dbconnString,
+        dbcon:     config.dbconnString,
         sqlParams: [rpg2.param("plain", phaseId)],
     });
 
@@ -185,7 +185,7 @@ function createDependencies(overrides = {}) {
         getTeamIdsForPhase,
         getFirstQuestionIdForPhase,
         getFirstQuestionForPhase,
-        getCaseIdBySessionId: getDefaultCaseIdBySessionId,
+        getCaseIdBySessionId:   getDefaultCaseIdBySessionId,
         getCaseDocumentRawText: getDefaultCaseDocumentRawText,
         ...overrides,
     };
@@ -195,7 +195,7 @@ async function requestPolyadicJson(pathname, { method = "GET", body = null } = {
     return aiAdditionsClient.requestJson(pathname, {
         method,
         body,
-        baseUrl: getPolyadicApiBaseUrl(),
+        baseUrl:       getPolyadicApiBaseUrl(),
         authenticated: isPolyadicAuthenticated(),
     });
 }
@@ -222,10 +222,14 @@ async function closePolyadicSession(roomName) {
     return true;
 }
 
-async function forwardChatMessage(roomName, username, content) {
+async function forwardChatMessage(roomName, username, content, correlationId) {
     await requestPolyadicJson(`/rooms/${encodeURIComponent(roomName)}/messages`, {
         method: "POST",
-        body:   { username, content },
+        body:   {
+            username,
+            content,
+            ethicapp_correlation_id: correlationId ?? null,
+        },
     });
 
     console.info(`[polyadic-bridge] Message forwarded to ${roomName}.`);
@@ -265,7 +269,7 @@ export async function register({
 
         return {
             questionId: question?.id ?? null,
-            topic: composeTopic(caseText || fallbackTopic, questionText),
+            topic:      composeTopic(caseText || fallbackTopic, questionText),
         };
     }
 
@@ -311,7 +315,7 @@ export async function register({
     });
 
     subscribe("chat-message-received", async (context, { callback }) => {
-        const { sessionId, phaseId, groupId, questionId, userId } = context;
+        const { sessionId, phaseId, groupId, questionId, userId, correlationId } = context;
         const content = normalizeText(context.content);
         const roomName = getRoomName(sessionId, phaseId, groupId);
         const phaseRoomsKey = getPhaseRoomsKey(sessionId, phaseId);
@@ -339,7 +343,7 @@ export async function register({
                 phaseId,
                 groupId,
                 questionId: questionId ?? topicData.questionId,
-                topic: topicData.topic,
+                topic:      topicData.topic,
             });
 
             if (!createdRoom) {
@@ -358,7 +362,7 @@ export async function register({
         }
 
         try {
-            await forwardChatMessage(roomName, `user-${userId}`, content);
+            await forwardChatMessage(roomName, `user-${userId}`, content, correlationId);
             await callback({
                 serviceId: service.id,
                 hook:      "chat-message-received",
@@ -425,10 +429,10 @@ export async function register({
             }
 
             const published = await publishGroupChatMessage({
-                sessionId: storedContext.sessionId,
-                phaseId: storedContext.phaseId,
-                questionId: storedContext.questionId,
-                groupId: storedContext.groupId,
+                sessionId:        storedContext.sessionId,
+                phaseId:          storedContext.phaseId,
+                questionId:       storedContext.questionId,
+                groupId:          storedContext.groupId,
                 agentDisplayName: agentName,
                 content,
             });
@@ -443,9 +447,9 @@ export async function register({
             hook:      "callback-received",
             status:    "completed",
             payload:   {
-                room: roomName,
+                room:                roomName,
                 evaluationsReceived: evaluations.length,
-                messagesPublished: savedMessages.length,
+                messagesPublished:   savedMessages.length,
             },
         });
     });

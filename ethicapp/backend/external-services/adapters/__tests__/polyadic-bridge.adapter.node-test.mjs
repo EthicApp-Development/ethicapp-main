@@ -25,15 +25,15 @@ function createHarness({ dependencies = {} } = {}) {
     };
 
     const defaultDependencies = {
-        getTeamIdsForPhase: async () => [301, 302],
+        getTeamIdsForPhase:         async () => [301, 302],
         getFirstQuestionIdForPhase: async () => 701,
-        getFirstQuestionForPhase: async () => ({
-            id: 701,
-            title: "Should the team intervene?",
-            tleft: "Intervene",
+        getFirstQuestionForPhase:   async () => ({
+            id:     701,
+            title:  "Should the team intervene?",
+            tleft:  "Intervene",
             tright: "Do not intervene",
         }),
-        getCaseIdBySessionId: async () => 51,
+        getCaseIdBySessionId:   async () => 51,
         getCaseDocumentRawText: async () => "Case text for discussion.",
         ...dependencies,
     };
@@ -53,7 +53,7 @@ function createHarness({ dependencies = {} } = {}) {
                     publishedMessages.push(payload);
                     return { savedMessage: { id: publishedMessages.length } };
                 },
-                aiAdditionsClient: client,
+                aiAdditionsClient:          client,
                 polyadicBridgeDependencies: defaultDependencies,
             });
         },
@@ -80,8 +80,8 @@ test("polyadic bridge formats stable room names and topics", () => {
     assert.equal(parseRoomName("other-room"), null);
     assert.equal(
         formatQuestionText({
-            title: "Initial question",
-            tleft: "Agree",
+            title:  "Initial question",
+            tleft:  "Agree",
             tright: "Disagree",
         }),
         "Initial question | Agree vs. Disagree"
@@ -124,12 +124,13 @@ test("chat-message-received creates a missing room and forwards the message", as
     await harness.initialize();
 
     await harness.dispatch("chat-message-received", {
-        sessionId: 11,
-        phaseId: 22,
-        questionId: 701,
-        groupId: 301,
-        userId: 9001,
-        content: "  We should discuss the consequences.  ",
+        sessionId:     11,
+        phaseId:       22,
+        questionId:    701,
+        groupId:       301,
+        userId:        9001,
+        correlationId: "corr-msg-001",
+        content:       "  We should discuss the consequences.  ",
     });
 
     assert.deepEqual(
@@ -140,10 +141,72 @@ test("chat-message-received creates a missing room and forwards the message", as
         ]
     );
     assert.deepEqual(harness.requests[1].options.body, {
-        username: "user-9001",
-        content: "We should discuss the consequences.",
+        username:                "user-9001",
+        content:                 "We should discuss the consequences.",
+        ethicapp_correlation_id: "corr-msg-001",
     });
+    // Session creation does NOT carry correlationId — only message forwarding does.
+    assert.equal(harness.requests[0].options.body.ethicapp_correlation_id, undefined);
     assert.equal(harness.callbacks.at(-1).status, "completed");
+});
+
+test("chat-message-received includes ethicapp_correlation_id only in message forwarding, not session creation", async () => {
+    const harness = createHarness({
+        dependencies: {
+            getTeamIdsForPhase: async () => [],
+        },
+    });
+    await harness.initialize();
+
+    await harness.dispatch("chat-message-received", {
+        sessionId:     11,
+        phaseId:       22,
+        groupId:       301,
+        userId:        9001,
+        correlationId: "corr-msg-002",
+        content:       "Test message",
+    });
+
+    // Session creation (index 0): no correlationId
+    assert.equal(harness.requests[0].options.body.ethicapp_correlation_id, undefined);
+    // Message forwarding (index 1): carries correlationId
+    assert.equal(harness.requests[1].options.body.ethicapp_correlation_id, "corr-msg-002");
+});
+
+test("phase-started session creation does not include ethicapp_correlation_id", async () => {
+    const harness = createHarness({
+        dependencies: {
+            getTeamIdsForPhase: async () => [301, 302],
+        },
+    });
+    await harness.initialize();
+
+    await harness.dispatch("phase-started", { sessionId: 11, phaseId: 22, correlationId: "corr-phase-001" });
+
+    // Both rooms created without correlationId — avoids fan-out idempotency issue.
+    assert.equal(harness.requests[0].options.body.ethicapp_correlation_id, undefined);
+    assert.equal(harness.requests[1].options.body.ethicapp_correlation_id, undefined);
+});
+
+test("ethicapp_correlation_id defaults to null when correlationId absent from chat-message-received", async () => {
+    const harness = createHarness({
+        dependencies: {
+            getTeamIdsForPhase: async () => [],
+        },
+    });
+    await harness.initialize();
+
+    // Dispatch to an existing room so only the message forwarding request is made.
+    await harness.dispatch("chat-message-received", {
+        sessionId: 11,
+        phaseId:   22,
+        groupId:   301,
+        userId:    9001,
+        content:   "Hello",
+    });
+    // Message forwarding without correlationId → null, not undefined.
+    const messageRequest = harness.requests.find(r => r.pathname.includes("/messages"));
+    assert.equal(messageRequest.options.body.ethicapp_correlation_id, null);
 });
 
 test("callback-received publishes only Orientador responses to group chat", async () => {
@@ -152,7 +215,7 @@ test("callback-received publishes only Orientador responses to group chat", asyn
 
     await harness.dispatch("callback-received", {
         requestPayload: {
-            room: "ethicapp-s11-p22-g301",
+            room:        "ethicapp-s11-p22-g301",
             evaluations: [
                 { agente: "Validador", respuesta: "NO_INTERVENIR: active debate" },
                 { agente: "Orientador", respuesta: "What assumption is your group making?" },
@@ -162,12 +225,12 @@ test("callback-received publishes only Orientador responses to group chat", asyn
 
     assert.equal(harness.publishedMessages.length, 1);
     assert.deepEqual(harness.publishedMessages[0], {
-        sessionId: 11,
-        phaseId: 22,
-        questionId: 701,
-        groupId: 301,
+        sessionId:        11,
+        phaseId:          22,
+        questionId:       701,
+        groupId:          301,
         agentDisplayName: "Orientador",
-        content: "What assumption is your group making?",
+        content:          "What assumption is your group making?",
     });
     assert.equal(harness.callbacks.at(-1).payload.messagesPublished, 1);
 });
