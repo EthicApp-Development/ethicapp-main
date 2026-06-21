@@ -249,8 +249,8 @@ test("dispatchServiceHook: returns resultRecord alongside outcomes", async () =>
     assert.equal(response.resultRecord?.id, RESULT_UUID);
 });
 
-test("dispatchServiceHook: passes isDuplicate in handler context when job is terminal", async () => {
-    let capturedContext = null;
+test("dispatchServiceHook: skips handlers and returns empty outcomes when is_duplicate", async () => {
+    let handlerCalled = false;
     const { registry } = makeRegistry({
         createResult: async () => ({
             id:               RESULT_UUID,
@@ -261,13 +261,16 @@ test("dispatchServiceHook: passes isDuplicate in handler context when job is ter
     });
 
     registry.hookSubscribers.set("callback-received", [
-        { serviceId: "svc-a", handler: async (ctx) => { capturedContext = ctx; } },
+        { serviceId: "svc-a", handler: async () => { handlerCalled = true; } },
     ]);
 
-    await registry.dispatchServiceHook("callback-received", "svc-a", {});
+    const { resultRecord, outcomes } = await registry.dispatchServiceHook(
+        "callback-received", "svc-a", {}
+    );
 
-    assert.ok(capturedContext);
-    assert.equal(capturedContext.isDuplicate, true);
+    assert.equal(handlerCalled, false, "handler must not run for duplicate callbacks");
+    assert.deepEqual(outcomes, []);
+    assert.equal(resultRecord?.id, RESULT_UUID);
 });
 
 test("dispatchServiceHook: isDuplicate is false for non-terminal job", async () => {

@@ -5,7 +5,7 @@ import { callbackAuthMiddleware } from "../middleware/external-services-callback
 
 const router = express.Router();
 
-export async function processCallback({ serviceId, eventType, correlationId, payload, auth, registry }) {
+export async function processCallback({ serviceId, eventType, correlationId, payload, rawBody, auth, registry }) {
     if (!serviceId) {
         return {
             status: 400,
@@ -33,6 +33,7 @@ export async function processCallback({ serviceId, eventType, correlationId, pay
                 eventType,
                 correlationId,
                 requestPayload: payload,
+                rawBody,
                 auth,
             }
         );
@@ -82,6 +83,7 @@ router.post("/external-services/callbacks", callbackAuthMiddleware, async (req, 
         eventType,
         correlationId,
         payload,
+        rawBody:  req.body,
         auth:     req.externalServiceAuth,
         registry: externalServicesRegistry,
     });

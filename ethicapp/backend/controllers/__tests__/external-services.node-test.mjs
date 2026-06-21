@@ -115,7 +115,7 @@ test("processCallback: 202 with correlationStatus 'unknown' for unrecognized cor
 
 // ─── duplicate callback ───────────────────────────────────────────────────────
 
-test("processCallback: 202 with isDuplicate true for already-completed job", async () => {
+test("processCallback: 202 with isDuplicate true and dispatched 0 for completed job", async () => {
     const { status, body } = await processCallback({
         serviceId:     "svc-a",
         eventType:     "result",
@@ -125,7 +125,7 @@ test("processCallback: 202 with isDuplicate true for already-completed job", asy
         registry:      makeRegistry({
             dispatchServiceHook: async () => ({
                 resultRecord: { id: RESULT_UUID, job_id: JOB_UUID, is_duplicate: true },
-                outcomes:     [{ status: "fulfilled", value: undefined }],
+                outcomes:     [],
             }),
         }),
     });
@@ -133,6 +133,7 @@ test("processCallback: 202 with isDuplicate true for already-completed job", asy
     assert.equal(status, 202);
     assert.equal(body.result.correlationStatus, "matched");
     assert.equal(body.result.isDuplicate,        true);
+    assert.equal(body.result.dispatched,         0);
 });
 
 // ─── adapter failure / skipped ────────────────────────────────────────────────
@@ -173,6 +174,31 @@ test("processCallback: 202 with dispatched 0 when no subscribers match", async (
 
     assert.equal(status, 202);
     assert.equal(body.result.dispatched, 0);
+});
+
+test("processCallback: passes rawBody to registry when payload is null", async () => {
+    let capturedCtx = null;
+    const rawBody = { serviceId: "svc-a", eventType: "result", nested: { x: 1 } };
+
+    await processCallback({
+        serviceId:     "svc-a",
+        eventType:     "result",
+        correlationId: null,
+        payload:       null,
+        rawBody,
+        auth:          {},
+        registry:      makeRegistry({
+            dispatchServiceHook: async (_hook, _svc, ctx) => {
+                capturedCtx = ctx;
+                return {
+                    resultRecord: { id: RESULT_UUID, job_id: null, is_duplicate: false },
+                    outcomes:     [],
+                };
+            },
+        }),
+    });
+
+    assert.deepEqual(capturedCtx?.rawBody, rawBody);
 });
 
 // ─── internal error ───────────────────────────────────────────────────────────
