@@ -144,13 +144,15 @@ Polyadic REST room per EthicApp session/phase/group. Its default pipeline type i
 `abogado-del-diablo`, configurable through
 `AI_ADDITIONS_POLYADIC_AGENTS_PIPELINE_TYPE`.
 
-Polyadic callbacks should target:
+Polyadic callbacks target the unified callback endpoint:
 
 ```text
-/external-services/polyadic-devils-advocate/results
+POST /external-services/callbacks
 ```
 
-The callback payload is expected to contain `{ "room": "...", "evaluations": [] }`.
+with `"serviceId": "polyadic-devils-advocate"` in the body. The callback payload
+is expected to contain `{ "room": "...", "evaluations": [] }` in the `payload`
+field.
 The bridge publishes only `Orientador` responses into the EthicApp group chat;
 other agent outputs remain internal to Polyadic.
 
@@ -245,9 +247,7 @@ adapters should therefore key any accumulated conversation state by at least
 
 ## External Result Callback
 
-### Unified authenticated endpoint (production)
-
-External AI services should call the unified callback endpoint:
+External AI services call the unified callback endpoint:
 
 ```text
 POST /external-services/callbacks
@@ -280,18 +280,6 @@ The controller dispatches the `callback-received` hook with
 `dispatchServiceHook(...)`, which selects only subscribers belonging to the target
 service id.
 
-### Legacy endpoint (deprecated)
-
-The original service-specific endpoint is kept for backward compatibility:
-
-```text
-POST /external-services/:service_id/results
-```
-
-This endpoint does not require Bearer authentication. It translates legacy
-callbacks into the `callback-received` hook with `eventType: "result"` and
-`auth: null`. It should not be used in new integrations.
-
 Current callback controller:
 
 ```text
@@ -301,15 +289,14 @@ ethicapp/backend/controllers/external-services.js
 The adapter is responsible for sanitizing the external payload. The registry only
 routes and records the resulting callback entry for PoC inspection.
 
-Adapters subscribe to `callback-received` to handle both authenticated and
-legacy callbacks:
+Adapters subscribe to `callback-received`:
 
 ```js
 export async function register({ service, subscribe, publishStudentResult }) {
   subscribe("callback-received", async (context, { callback }) => {
     // context.serviceId, context.eventType, context.correlationId
     // context.requestPayload contains the caller's payload
-    // context.auth contains the normalized Keycloak auth context (null for legacy)
+    // context.auth contains the normalized Keycloak auth context
     await publishStudentResult({
       userId: 123,
       sessionId: 10,
@@ -506,13 +493,9 @@ Environment variables for inbound authentication:
   the mock adapter.
 - There is no `correlationId` convention for linking outbound hook dispatches to
   inbound callback results.
-- The legacy `POST /external-services/:service_id/results` endpoint does not
-  require Bearer authentication.
 
 ## Recommended Next Steps
 
-- Remove the legacy `POST /external-services/:service_id/results` endpoint once
-  all deployed callers migrate to `POST /external-services/callbacks`.
 - Introduce a `correlationId` in outbound hook payloads and require it in
   inbound callback bodies.
 - Persist external results in PostgreSQL with service id, hook name, session id,
