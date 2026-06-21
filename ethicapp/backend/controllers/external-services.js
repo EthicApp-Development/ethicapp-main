@@ -5,32 +5,27 @@ import { callbackAuthMiddleware } from "../middleware/external-services-callback
 
 const router = express.Router();
 
-router.post("/external-services/callbacks", callbackAuthMiddleware, async (req, res) => {
-    const serviceId = typeof req.body?.serviceId === "string" ? req.body.serviceId.trim() : "";
-    const eventType = typeof req.body?.eventType === "string" ? req.body.eventType.trim() : "result";
-    const correlationId = req.body?.correlationId ?? null;
-    const payload = req.body?.payload ?? null;
-
+export async function processCallback({ serviceId, eventType, correlationId, payload, rawBody, auth, registry }) {
     if (!serviceId) {
-        return res.status(400).json({
-            status: "err",
-            error:  "Missing required field: serviceId.",
-        });
+        return {
+            status: 400,
+            body:   { status: "err", error: "Missing required field: serviceId." },
+        };
     }
 
-    await externalServicesRegistry.initialize();
+    await registry.initialize();
 
     try {
-        externalServicesRegistry.authorizeCallbackCaller(serviceId, req.externalServiceAuth);
+        registry.authorizeCallbackCaller(serviceId, auth);
     } catch (error) {
-        return res.status(error.statusCode || 403).json({
-            status: "err",
-            error:  error.message,
-        });
+        return {
+            status: error.statusCode || 403,
+            body:   { status: "err", error: error.message },
+        };
     }
 
     try {
-        const dispatchResults = await externalServicesRegistry.dispatchServiceHook(
+        const { resultRecord, outcomes } = await registry.dispatchServiceHook(
             "callback-received",
             serviceId,
             {
@@ -38,33 +33,62 @@ router.post("/external-services/callbacks", callbackAuthMiddleware, async (req, 
                 eventType,
                 correlationId,
                 requestPayload: payload,
-                rawBody:        req.body,
-                auth:           req.externalServiceAuth,
+                rawBody,
+                auth,
             }
         );
 
-        return res.status(202).json({
-            status: "accepted",
-            result: {
-                serviceId,
-                eventType,
-                dispatched: dispatchResults.length,
+        const correlationStatus = resultRecord?.job_id ? "matched" : "unknown";
+        const isDuplicate       = resultRecord?.is_duplicate ?? false;
+
+        return {
+            status: 202,
+            body:   {
+                status: "accepted",
+                result: {
+                    serviceId,
+                    eventType,
+                    correlationId,
+                    correlationStatus,
+                    resultId:   resultRecord?.id ?? null,
+                    isDuplicate,
+                    dispatched: outcomes.length,
+                },
             },
-        });
+        };
     } catch (error) {
         if (error.statusCode) {
-            return res.status(error.statusCode).json({
-                status: "err",
-                error:  error.message,
-            });
+            return {
+                status: error.statusCode,
+                body:   { status: "err", error: error.message },
+            };
         }
 
         console.error("[external-services] Error dispatching callback-received hook.", error);
-        return res.status(500).json({
-            status: "err",
-            error:  "Internal server error.",
-        });
+        return {
+            status: 500,
+            body:   { status: "err", error: "Internal server error." },
+        };
     }
+}
+
+router.post("/external-services/callbacks", callbackAuthMiddleware, async (req, res) => {
+    const serviceId     = typeof req.body?.serviceId === "string" ? req.body.serviceId.trim() : "";
+    const eventType     = typeof req.body?.eventType === "string" ? req.body.eventType.trim() : "result";
+    const correlationId = req.body?.correlationId ?? null;
+    const payload       = req.body?.payload ?? null;
+
+    const { status, body } = await processCallback({
+        serviceId,
+        eventType,
+        correlationId,
+        payload,
+        rawBody:  req.body,
+        auth:     req.externalServiceAuth,
+        registry: externalServicesRegistry,
+    });
+
+    return res.status(status).json(body);
 });
 
 router.get("/external-services", async (req, res) => {

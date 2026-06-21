@@ -64,9 +64,9 @@ export class ExternalServicesRegistry {
         }
 
         const normalizedService = {
-            id: service.id,
+            id:          service.id,
             description: service.description || "",
-            hooks: Array.isArray(service.hooks)
+            hooks:       Array.isArray(service.hooks)
                 ? service.hooks.filter(hookName => {
                     const isValid = isValidHookName(hookName);
                     if (!isValid) {
@@ -75,8 +75,8 @@ export class ExternalServicesRegistry {
                     return isValid;
                 })
                 : [],
-            enabled: service.enabled !== false,
-            adapter: service.adapter,
+            enabled:      service.enabled !== false,
+            adapter:      service.adapter,
             callbackAuth: service.callbackAuth && typeof service.callbackAuth === "object"
                 ? {
                     allowedClientIds: Array.isArray(service.callbackAuth.allowedClientIds)
@@ -105,11 +105,11 @@ export class ExternalServicesRegistry {
         }
 
         await register({
-            service: normalizedService,
+            service:   normalizedService,
             subscribe: (hookName, handler) => {
                 this.subscribe(normalizedService.id, hookName, handler);
             },
-            publishStudentResult: payload => this.publishStudentResult(normalizedService.id, payload),
+            publishStudentResult:    payload => this.publishStudentResult(normalizedService.id, payload),
             publishGroupChatMessage: payload => this.publishGroupChatMessage(normalizedService.id, payload),
             aiAdditionsClient,
         });
@@ -276,17 +276,22 @@ export class ExternalServicesRegistry {
             userId:        context.userId     ?? null,
         }).catch(() => null);
 
+        if (resultRecord?.is_duplicate) {
+            return { resultRecord, outcomes: [] };
+        }
+
         const subscribers = this.hookSubscribers.get(hookName) || [];
         const selectedSubscribers = subscribers.filter(
             subscriber => subscriber.serviceId === serviceId
         );
 
-        return Promise.allSettled(selectedSubscribers.map(async ({ handler }) => {
+        const outcomes = await Promise.allSettled(selectedSubscribers.map(async ({ handler }) => {
             const serviceContext = {
                 ...context,
                 serviceId,
-                jobId:    resultRecord?.job_id ?? null,
-                resultId: resultRecord?.id     ?? null,
+                jobId:       resultRecord?.job_id      ?? null,
+                resultId:    resultRecord?.id          ?? null,
+                isDuplicate: resultRecord?.is_duplicate ?? false,
             };
 
             try {
@@ -307,16 +312,18 @@ export class ExternalServicesRegistry {
                 throw err;
             }
         }));
+
+        return { resultRecord, outcomes };
     }
 
     async recordCallbackResult({ hookName, serviceId, result, context }) {
         const entry = {
-            id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+            id:         `${Date.now()}-${Math.random().toString(16).slice(2)}`,
             hookName,
             serviceId,
             receivedAt: new Date().toISOString(),
             result,
-            context: {
+            context:    {
                 sessionId:      context.sessionId,
                 phaseId:        context.phaseId,
                 startedPhaseId: context.startedPhaseId,
@@ -343,10 +350,24 @@ export class ExternalServicesRegistry {
                     adapterResult: result,
                 })
                 .catch(err => console.error("[external-services] Failed to persist callback result.", err));
+
+            if (context.jobId) {
+                const jobStatus = result?.status === "failed"
+                    ? JOB_STATUS.FAILED
+                    : result?.status === "skipped"
+                        ? JOB_STATUS.SKIPPED
+                        : JOB_STATUS.COMPLETED;
+                const completedAt = jobStatus === JOB_STATUS.COMPLETED ? new Date().toISOString() : undefined;
+                await this._jobsService
+                    .updateJobStatus(context.jobId, jobStatus, { completedAt })
+                    .catch(err => console.error("[external-services] Failed to update job status after callback result.", err));
+            }
         } else if (context.jobId) {
-            const jobStatus = result?.status === "failed"  ? JOB_STATUS.FAILED
-                : result?.status === "skipped" ? JOB_STATUS.SKIPPED
-                : JOB_STATUS.COMPLETED;
+            const jobStatus = result?.status === "failed"
+                ? JOB_STATUS.FAILED
+                : result?.status === "skipped"
+                    ? JOB_STATUS.SKIPPED
+                    : JOB_STATUS.COMPLETED;
             const completedAt = jobStatus === JOB_STATUS.COMPLETED ? new Date().toISOString() : undefined;
             await this._jobsService
                 .updateJobStatus(context.jobId, jobStatus, { completedAt })
@@ -403,7 +424,7 @@ export class ExternalServicesRegistry {
         }
 
         const savedMessage = await saveChatMessage({
-            userId: null,
+            userId:          null,
             externalAgentId: agent.id,
             phaseId,
             questionId,
@@ -452,7 +473,7 @@ export class ExternalServicesRegistry {
                 SET display_name = EXCLUDED.display_name
                 RETURNING id, service_id, display_name
             `,
-            dbcon: dbconnString,
+            dbcon:     dbconnString,
             sqlParams: [
                 rpg2.param("plain", serviceId),
                 rpg2.param("plain", normalizedDisplayName),
@@ -465,26 +486,26 @@ export class ExternalServicesRegistry {
         }
 
         return {
-            id: Number(agent.id),
-            serviceId: agent.service_id,
+            id:          Number(agent.id),
+            serviceId:   agent.service_id,
             displayName: agent.display_name,
         };
     }
 
     normalizeServiceChatNotificationPayload({ message, agent, phaseId, questionId }) {
         return {
-            id: message.id,
-            uid: message.uid,
-            author_role: "external_service",
-            author_name: agent.displayName,
+            id:                  message.id,
+            uid:                 message.uid,
+            author_role:         "external_service",
+            author_name:         agent.displayName,
             external_service_id: agent.serviceId,
-            external_agent_id: agent.id,
-            groupId: message.tmid,
-            phaseId: message.stageid || phaseId,
-            questionId: message.did || questionId,
-            content: message.content,
-            stime: message.stime,
-            parent_id: message.parent_id,
+            external_agent_id:   agent.id,
+            groupId:             message.tmid,
+            phaseId:             message.stageid || phaseId,
+            questionId:          message.did || questionId,
+            content:             message.content,
+            stime:               message.stime,
+            parent_id:           message.parent_id,
         };
     }
 }

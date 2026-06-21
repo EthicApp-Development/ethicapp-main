@@ -226,12 +226,64 @@ test("dispatchServiceHook: marks result FAILED when handler throws", async () =>
         { serviceId: "svc-a", handler: async () => { throw new Error("handler error"); } },
     ]);
 
-    const results = await registry.dispatchServiceHook("callback-received", "svc-a", {});
+    const { outcomes } = await registry.dispatchServiceHook("callback-received", "svc-a", {});
 
-    assert.equal(results[0].status, "rejected");
+    assert.equal(outcomes[0].status, "rejected");
     assert.equal(updateResultCalls.length, 1);
     assert.equal(updateResultCalls[0].id, RESULT_UUID);
     assert.equal(updateResultCalls[0].status, RESULT_STATUS.FAILED);
+});
+
+test("dispatchServiceHook: returns resultRecord alongside outcomes", async () => {
+    const { registry } = makeRegistry();
+
+    registry.hookSubscribers.set("callback-received", [
+        { serviceId: "svc-a", handler: async () => {} },
+    ]);
+
+    const response = await registry.dispatchServiceHook("callback-received", "svc-a", {});
+
+    assert.ok(Object.hasOwn(response, "resultRecord"), "should have resultRecord key");
+    assert.ok(Object.hasOwn(response, "outcomes"),     "should have outcomes key");
+    assert.ok(Array.isArray(response.outcomes));
+    assert.equal(response.resultRecord?.id, RESULT_UUID);
+});
+
+test("dispatchServiceHook: skips handlers and returns empty outcomes when is_duplicate", async () => {
+    let handlerCalled = false;
+    const { registry } = makeRegistry({
+        createResult: async () => ({
+            id:               RESULT_UUID,
+            job_id:           JOB_UUID,
+            job_prior_status: "completed",
+            is_duplicate:     true,
+        }),
+    });
+
+    registry.hookSubscribers.set("callback-received", [
+        { serviceId: "svc-a", handler: async () => { handlerCalled = true; } },
+    ]);
+
+    const { resultRecord, outcomes } = await registry.dispatchServiceHook(
+        "callback-received", "svc-a", {}
+    );
+
+    assert.equal(handlerCalled, false, "handler must not run for duplicate callbacks");
+    assert.deepEqual(outcomes, []);
+    assert.equal(resultRecord?.id, RESULT_UUID);
+});
+
+test("dispatchServiceHook: isDuplicate is false for non-terminal job", async () => {
+    let capturedContext = null;
+    const { registry } = makeRegistry();
+
+    registry.hookSubscribers.set("callback-received", [
+        { serviceId: "svc-a", handler: async (ctx) => { capturedContext = ctx; } },
+    ]);
+
+    await registry.dispatchServiceHook("callback-received", "svc-a", {});
+
+    assert.equal(capturedContext?.isDuplicate, false);
 });
 
 // ─── recordCallbackResult ─────────────────────────────────────────────────────
@@ -269,6 +321,75 @@ test("recordCallbackResult: maps result.status 'failed' to RESULT_STATUS.FAILED"
     });
 
     assert.equal(updateResultCalls[0].status, RESULT_STATUS.FAILED);
+});
+
+test("recordCallbackResult: also advances job to completed when both resultId and jobId are present", async () => {
+    const statusCalls = [];
+    const { registry } = makeRegistry({
+        updateJobStatus: async (id, status) => { statusCalls.push({ id, status }); },
+    });
+
+    await registry.recordCallbackResult({
+        hookName:  "callback-received",
+        serviceId: "svc-a",
+        result:    { score: 42 },
+        context:   { resultId: RESULT_UUID, jobId: JOB_UUID, serviceId: "svc-a" },
+    });
+
+    assert.equal(statusCalls.length, 1);
+    assert.equal(statusCalls[0].id, JOB_UUID);
+    assert.equal(statusCalls[0].status, JOB_STATUS.COMPLETED);
+});
+
+test("recordCallbackResult: advances job to failed when resultId and jobId present and result failed", async () => {
+    const statusCalls = [];
+    const { registry } = makeRegistry({
+        updateJobStatus: async (id, status) => { statusCalls.push({ id, status }); },
+    });
+
+    await registry.recordCallbackResult({
+        hookName:  "callback-received",
+        serviceId: "svc-a",
+        result:    { status: "failed" },
+        context:   { resultId: RESULT_UUID, jobId: JOB_UUID },
+    });
+
+    assert.equal(statusCalls[0].status, JOB_STATUS.FAILED);
+});
+
+test("dispatchServiceHook: second callback for same correlationId is duplicate after first completes", async () => {
+    let handlerCallCount = 0;
+    let callCount        = 0;
+
+    const { registry } = makeRegistry({
+        createResult: async () => {
+            callCount++;
+            if (callCount === 1) {
+                return { id: RESULT_UUID, job_id: JOB_UUID, is_duplicate: false };
+            }
+            // Second call: job is now terminal after adapter called callback(result)
+            return { id: `${RESULT_UUID}-2`, job_id: JOB_UUID, is_duplicate: true, job_prior_status: JOB_STATUS.COMPLETED };
+        },
+    });
+
+    registry.hookSubscribers.set("callback-received", [
+        {
+            serviceId: "svc-a",
+            handler:   async (ctx, { callback }) => {
+                handlerCallCount++;
+                await callback({ score: 10 });
+            },
+        },
+    ]);
+
+    // First callback — should dispatch handler
+    await registry.dispatchServiceHook("callback-received", "svc-a", { correlationId: JOB_UUID });
+
+    // Second callback with same correlationId — job now terminal, should be a duplicate
+    const { outcomes } = await registry.dispatchServiceHook("callback-received", "svc-a", { correlationId: JOB_UUID });
+
+    assert.equal(handlerCallCount, 1, "handler must not run for duplicate callback");
+    assert.deepEqual(outcomes, []);
 });
 
 test("recordCallbackResult: calls updateJobStatus when context has jobId only", async () => {
