@@ -113,12 +113,21 @@ export class ExternalServiceJobsService {
 
         if (correlationId) {
             const matchRows = await this._db(
-                "SELECT id FROM external_service_jobs WHERE id::text = $1",
-                [correlationId]
+                `SELECT id, session_id, phase_id, question_id, group_id, user_id
+                 FROM external_service_jobs
+                 WHERE id::text = $1 AND service_id = $2`,
+                [correlationId, serviceId]
             );
             if (matchRows.length > 0) {
-                jobId        = matchRows[0].id;
+                const job    = matchRows[0];
+                jobId        = job.id;
                 resultStatus = RESULT_STATUS.CALLBACK_RECEIVED;
+                // Propagate job context to result when caller did not provide it.
+                sessionId    = sessionId  ?? job.session_id;
+                phaseId      = phaseId    ?? job.phase_id;
+                questionId   = questionId ?? job.question_id;
+                groupId      = groupId    ?? job.group_id;
+                userId       = userId     ?? job.user_id;
             }
         }
 

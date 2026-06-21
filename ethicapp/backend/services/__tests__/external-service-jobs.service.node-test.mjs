@@ -119,14 +119,22 @@ test("recordProviderReference: sets provider_reference on job", async () => {
 // ─── createResult ─────────────────────────────────────────────────────────────
 
 test("createResult: matching correlationId — resolves job, updates job status", async () => {
+    const jobRow    = {
+        id:          JOB_UUID,
+        session_id:  null,
+        phase_id:    null,
+        question_id: null,
+        group_id:    null,
+        user_id:     null,
+    };
     const resultRow = {
         id:             RESULT_UUID,
         job_id:         JOB_UUID,
         correlation_id: JOB_UUID,
         status:         RESULT_STATUS.CALLBACK_RECEIVED,
     };
-    // call 1: job lookup; call 2: insert result; call 3: update job status
-    const db  = makeDbQueue([{ id: JOB_UUID }], [resultRow], []);
+    // call 0: job lookup; call 1: insert result; call 2: update job status
+    const db  = makeDbQueue([jobRow], [resultRow], []);
     const svc = new ExternalServiceJobsService({ dbQuery: db });
 
     const result = await svc.createResult({
@@ -139,9 +147,10 @@ test("createResult: matching correlationId — resolves job, updates job status"
     assert.equal(result.job_id, JOB_UUID);
     assert.equal(db.calls.length, 3);
 
-    // call 0: SELECT job
-    assert.ok(db.calls[0].sql.includes("SELECT id FROM external_service_jobs"));
+    // call 0: SELECT includes service_id guard
+    assert.ok(db.calls[0].sql.includes("service_id = $2"));
     assert.equal(db.calls[0].params[0], JOB_UUID);
+    assert.equal(db.calls[0].params[1], "polyadic-devils-advocate");
 
     // call 1: INSERT result with callback-received status
     assert.ok(db.calls[1].sql.includes("INSERT INTO external_service_results"));
@@ -152,6 +161,85 @@ test("createResult: matching correlationId — resolves job, updates job status"
     assert.equal(db.calls[2].params[1], JOB_STATUS.CALLBACK_RECEIVED);
 });
 
+test("createResult: propagates job context to result when caller omits it", async () => {
+    const jobRow    = {
+        id:          JOB_UUID,
+        session_id:  10,
+        phase_id:    20,
+        question_id: 30,
+        group_id:    40,
+        user_id:     99,
+    };
+    const resultRow = {
+        id:     RESULT_UUID,
+        job_id: JOB_UUID,
+        status: RESULT_STATUS.CALLBACK_RECEIVED,
+    };
+    const db  = makeDbQueue([jobRow], [resultRow], []);
+    const svc = new ExternalServiceJobsService({ dbQuery: db });
+
+    await svc.createResult({
+        correlationId: JOB_UUID,
+        serviceId:     "polyadic-devils-advocate",
+        rawPayload:    {},
+    });
+
+    // INSERT params: $6=sessionId, $7=phaseId, $8=questionId, $9=groupId, $10=userId
+    const insertParams = db.calls[1].params;
+    assert.equal(insertParams[5],  10);
+    assert.equal(insertParams[6],  20);
+    assert.equal(insertParams[7],  30);
+    assert.equal(insertParams[8],  40);
+    assert.equal(insertParams[9],  99);
+});
+
+test("createResult: caller-provided context takes precedence over job context", async () => {
+    const jobRow    = {
+        id:          JOB_UUID,
+        session_id:  10,
+        phase_id:    20,
+        question_id: null,
+        group_id:    null,
+        user_id:     null,
+    };
+    const resultRow = {
+        id:     RESULT_UUID,
+        job_id: JOB_UUID,
+        status: RESULT_STATUS.CALLBACK_RECEIVED,
+    };
+    const db  = makeDbQueue([jobRow], [resultRow], []);
+    const svc = new ExternalServiceJobsService({ dbQuery: db });
+
+    await svc.createResult({
+        correlationId: JOB_UUID,
+        serviceId:     "polyadic-devils-advocate",
+        rawPayload:    {},
+        sessionId:     99,
+    });
+
+    // Caller passed sessionId=99; job has session_id=10. Caller wins.
+    assert.equal(db.calls[1].params[5], 99);
+    // phaseId not passed by caller; falls back to job's phase_id=20.
+    assert.equal(db.calls[1].params[6], 20);
+});
+
+test("createResult: cross-service correlationId — unknown-correlation, no job update", async () => {
+    // Job lookup returns empty when service_id doesn't match, even if UUID exists elsewhere.
+    const resultRow = { id: RESULT_UUID, job_id: null, status: RESULT_STATUS.UNKNOWN_CORRELATION };
+    const db  = makeDbQueue([], [resultRow]);
+    const svc = new ExternalServiceJobsService({ dbQuery: db });
+
+    const result = await svc.createResult({
+        correlationId: JOB_UUID,
+        serviceId:     "argumentation-tutor-system",
+        rawPayload:    {},
+    });
+
+    assert.equal(result.status, RESULT_STATUS.UNKNOWN_CORRELATION);
+    assert.equal(db.calls.length, 2);
+    assert.equal(db.calls[0].params[1], "argumentation-tutor-system");
+});
+
 test("createResult: unknown correlationId — unknown-correlation, no job update", async () => {
     const resultRow = {
         id:             RESULT_UUID,
@@ -159,7 +247,7 @@ test("createResult: unknown correlationId — unknown-correlation, no job update
         correlation_id: "unknown-id",
         status:         RESULT_STATUS.UNKNOWN_CORRELATION,
     };
-    // call 1: job lookup returns nothing; call 2: insert result
+    // call 0: job lookup returns nothing; call 1: insert result
     const db  = makeDbQueue([], [resultRow]);
     const svc = new ExternalServiceJobsService({ dbQuery: db });
 
