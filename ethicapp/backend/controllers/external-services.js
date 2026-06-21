@@ -1,34 +1,45 @@
 import express from "express";
 import { requireRole } from "../helpers/auth-helper.js";
 import externalServicesRegistry from "../services/external-services.service.js";
+import { callbackAuthMiddleware } from "../middleware/external-services-callback-auth.middleware.js";
 
 const router = express.Router();
 
-router.post("/external-services/:service_id/results", async (req, res) => {
-    const serviceId = String(req.params.service_id || "").trim();
-    const bodyServiceId = req.body?.serviceId ? String(req.body.serviceId).trim() : "";
+router.post("/external-services/callbacks", callbackAuthMiddleware, async (req, res) => {
+    const serviceId = typeof req.body?.serviceId === "string" ? req.body.serviceId.trim() : "";
+    const eventType = typeof req.body?.eventType === "string" ? req.body.eventType.trim() : "result";
+    const correlationId = req.body?.correlationId ?? null;
+    const payload = req.body?.payload ?? null;
 
     if (!serviceId) {
         return res.status(400).json({
             status: "err",
-            error:  "Missing external service id.",
+            error:  "Missing required field: serviceId.",
         });
     }
 
-    if (bodyServiceId && bodyServiceId !== serviceId) {
-        return res.status(409).json({
+    await externalServicesRegistry.initialize();
+
+    try {
+        externalServicesRegistry.authorizeCallbackCaller(serviceId, req.externalServiceAuth);
+    } catch (error) {
+        return res.status(error.statusCode || 403).json({
             status: "err",
-            error:  "Request serviceId does not match the callback route service id.",
+            error:  error.message,
         });
     }
 
     try {
         const dispatchResults = await externalServicesRegistry.dispatchServiceHook(
-            "external-service-result",
+            "callback-received",
             serviceId,
             {
                 serviceId,
-                requestPayload: req.body,
+                eventType,
+                correlationId,
+                requestPayload: payload,
+                rawBody:        req.body,
+                auth:           req.externalServiceAuth,
             }
         );
 
@@ -36,6 +47,7 @@ router.post("/external-services/:service_id/results", async (req, res) => {
             status: "accepted",
             result: {
                 serviceId,
+                eventType,
                 dispatched: dispatchResults.length,
             },
         });
@@ -47,7 +59,7 @@ router.post("/external-services/:service_id/results", async (req, res) => {
             });
         }
 
-        console.error("[external-services] Error handling external service result.", error);
+        console.error("[external-services] Error dispatching callback-received hook.", error);
         return res.status(500).json({
             status: "err",
             error:  "Internal server error.",

@@ -20,10 +20,18 @@ Each enabled manifest entry must include:
   "id": "argumentation-tutor-system",
   "description": "Human-readable description.",
   "adapter": "./adapters/ats-feedback.adapter.js",
-  "hooks": ["student-response-submitted"],
-  "enabled": true
+  "hooks": ["student-response-submitted", "callback-received"],
+  "enabled": true,
+  "callbackAuth": {
+    "allowedClientIds": ["argumentation-tutor-api"],
+    "requiredRoles": []
+  }
 }
 ```
+
+`callbackAuth` is optional. When present, EthicApp verifies that the authenticated
+Keycloak `azp` claim is in `allowedClientIds` and that any `requiredRoles` appear
+in the token's `realm_access.roles` before dispatching `callback-received`.
 
 For each enabled service, the registry imports the adapter and calls its exported
 `register()` function:
@@ -47,7 +55,8 @@ callback results in memory for operational visibility and injects the current
 `serviceId` into hook contexts.
 
 Hook names are part of the adapter interface and must use kebab-case, for
-example `phase-started`, `phase-ended`, and `student-response-submitted`.
+example `phase-started`, `phase-ended`, `student-response-submitted`, and
+`callback-received`.
 
 ## Available Hook Publishers
 
@@ -59,6 +68,10 @@ The registry provides two helper publishers to adapters:
   service and publishes chat notifications. The payload must include `content`,
   `phaseId`, `questionId`, and `groupId`; `sessionId`, `parentId`, and
   `agentDisplayName` are optional but should be provided when available.
+
+Hook names are part of the adapter interface and must use kebab-case, for
+example `phase-started`, `phase-ended`, `student-response-submitted`, and
+`callback-received`.
 
 Adapters can also call the `callback(result)` function passed to a subscribed
 hook handler. This is for recording adapter outcomes, not for communicating with
@@ -95,7 +108,7 @@ Set `authenticated: false` only for explicitly public AI Additions endpoints.
 
 ## Environment Variables
 
-The shared client reads these variables:
+### Outbound authentication (EthicApp → AI Additions)
 
 | Variable | Purpose |
 | --- | --- |
@@ -107,6 +120,16 @@ The shared client reads these variables:
 | `AI_ADDITIONS_KEYCLOAK_CLIENT_SECRET` | Confidential client secret used by EthicApp. Required for authenticated calls. |
 | `AI_ADDITIONS_KEYCLOAK_TOKEN_URL` | Optional full token endpoint override. |
 | `AI_ADDITIONS_KEYCLOAK_SCOPE` | Optional token scope. |
+
+### Inbound callback authentication (AI Additions → EthicApp)
+
+| Variable | Purpose |
+| --- | --- |
+| `EXTERNAL_SERVICES_CALLBACK_AUTH_ENABLED` | Set to `false` to disable JWT validation in development. Defaults to `true`. |
+| `EXTERNAL_SERVICES_CALLBACK_AUTH_ISSUER` | Keycloak issuer URL for JWT `iss` claim validation. Derived from `AI_ADDITIONS_KEYCLOAK_BASE_URL` and `AI_ADDITIONS_KEYCLOAK_REALM` when unset. |
+| `EXTERNAL_SERVICES_CALLBACK_AUTH_JWKS_URL` | Explicit JWKS endpoint. Derived from issuer as `.../protocol/openid-connect/certs` when unset. |
+| `EXTERNAL_SERVICES_CALLBACK_AUTH_AUDIENCE` | Expected `aud` claim. Defaults to `ethicapp-ai-services` (the audience injected by the Keycloak mapper in AI Additions). Leave empty to skip audience check. |
+| `EXTERNAL_SERVICES_CALLBACK_AUTH_CLOCK_TOLERANCE_SECONDS` | Clock skew tolerance for `exp`/`nbf` validation. Defaults to `30`. |
 
 Service-specific adapters may define additional variables for their normalized
 facade path. For example, the Argumentation Tutor adapter uses:
@@ -144,13 +167,15 @@ When implementing a new adapter:
 
 1. Add the adapter module under `adapters/`.
 2. Export `register()` and subscribe to the hooks the service needs.
-3. Add a service entry to `manifest.json`.
+3. Add a service entry to `manifest.json`, including `callbackAuth` if the
+   service posts inbound callbacks.
 4. Use `aiAdditionsClient.requestJson()` for AI Additions HTTP calls.
 5. Keep service-specific URL configuration under an `AI_ADDITIONS_<SERVICE>_*`
    prefix.
-6. Publish outcomes through `publishStudentResult`,
+6. Subscribe to `callback-received` to handle inbound callbacks from the service.
+7. Publish outcomes through `publishStudentResult`,
    `publishGroupChatMessage`, or the hook `callback()` as appropriate.
-7. Add focused backend tests for reusable logic or authentication-sensitive
+8. Add focused backend tests for reusable logic or authentication-sensitive
    behavior.
 
 Avoid putting secrets or Keycloak client-credentials logic inside adapters. The

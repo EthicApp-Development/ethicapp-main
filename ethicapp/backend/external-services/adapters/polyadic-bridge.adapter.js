@@ -376,7 +376,7 @@ export async function register({
         }
     });
 
-    subscribe("external-service-result", async (context, { callback }) => {
+    subscribe("callback-received", async (context, { callback }) => {
         const requestPayload = context.requestPayload || {};
         const roomName = normalizeText(requestPayload.room);
         const evaluations = Array.isArray(requestPayload.evaluations) ? requestPayload.evaluations : [];
@@ -385,7 +385,7 @@ export async function register({
         if (!roomName || evaluations.length === 0) {
             await callback({
                 serviceId: service.id,
-                hook:      "external-service-result",
+                hook:      "callback-received",
                 status:    "failed",
                 payload:   { reason: "invalid_payload" },
             });
@@ -396,7 +396,7 @@ export async function register({
         if (!storedContext) {
             await callback({
                 serviceId: service.id,
-                hook:      "external-service-result",
+                hook:      "callback-received",
                 status:    "failed",
                 payload:   { reason: "unknown_room", room: roomName },
             });
@@ -408,7 +408,7 @@ export async function register({
             if (storedContext.questionId == null) {
                 await callback({
                     serviceId: service.id,
-                    hook:      "external-service-result",
+                    hook:      "callback-received",
                     status:    "failed",
                     payload:   { reason: "question_not_found", room: roomName },
                 });
@@ -440,7 +440,7 @@ export async function register({
 
         await callback({
             serviceId: service.id,
-            hook:      "external-service-result",
+            hook:      "callback-received",
             status:    "completed",
             payload:   {
                 room: roomName,

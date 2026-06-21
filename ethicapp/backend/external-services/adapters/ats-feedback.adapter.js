@@ -728,7 +728,7 @@ async function processExternalResult({ context, callback, publishStudentResult }
     });
 
     await callback({
-        hook: "external-service-result",
+        hook: "callback-received",
         status: "completed",
         payload: {
             groupId,
@@ -753,12 +753,12 @@ export async function register({ subscribe, publishStudentResult, aiAdditionsCli
         }
     });
 
-    subscribe("external-service-result", async (context, { callback }) => {
+    subscribe("callback-received", async (context, { callback }) => {
         try {
             await processExternalResult({ context, callback, publishStudentResult });
         } catch (error) {
             await callback({
-                hook: "external-service-result",
+                hook: "callback-received",
                 status: "failed",
                 error: normalizeText(error?.message) || "Unexpected external result adapter error.",
             });

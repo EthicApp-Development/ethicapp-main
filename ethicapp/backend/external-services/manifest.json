@@ -9,7 +9,7 @@
         "phase-started",
         "phase-ended",
         "chat-message-received",
-        "external-service-result"
+        "callback-received"
       ],
       "enabled": true
     },
@@ -30,10 +30,14 @@
         "chat-message-received",
         "phase-started",
         "phase-ended",
-        "external-service-result",
+        "callback-received",
         "session-ended"
       ],
-      "enabled": true
+      "enabled": true,
+      "callbackAuth": {
+        "allowedClientIds": ["polyadic-agent-api"],
+        "requiredRoles": []
+      }
     },
     {
       "id": "argumentation-tutor-system",
@@ -42,9 +46,13 @@
       "hooks": [
         "student-response-submitted",
         "phase-ended",
-        "external-service-result"
+        "callback-received"
       ],
-      "enabled": true
+      "enabled": true,
+      "callbackAuth": {
+        "allowedClientIds": ["argumentation-tutor-api"],
+        "requiredRoles": []
+      }
     }
   ]
 }
