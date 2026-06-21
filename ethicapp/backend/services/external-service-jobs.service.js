@@ -263,7 +263,7 @@ export class ExternalServiceJobsService {
         }
 
         const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
-        params.push(Math.min(Number(limit) || 50, 200));
+        params.push(Math.min(Math.max(Number(limit) || 50, 1), 200));
 
         return this._db(
             `SELECT id, service_id, hook_name, status,
@@ -316,7 +316,7 @@ export class ExternalServiceJobsService {
         }
 
         const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
-        params.push(Math.min(Number(limit) || 50, 200));
+        params.push(Math.min(Math.max(Number(limit) || 50, 1), 200));
 
         return this._db(
             `SELECT id, job_id, correlation_id, service_id, hook_name, status,

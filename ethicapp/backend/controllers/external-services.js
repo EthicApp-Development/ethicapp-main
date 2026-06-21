@@ -175,7 +175,7 @@ router.get("/external-services", async (req, res) => {
 });
 
 router.get("/external-services/jobs", async (req, res) => {
-    if (!requireRole(req, res, "P")) {
+    if (!requireRole(req, res, ["P", "A"])) {
         return;
     }
 
@@ -184,7 +184,7 @@ router.get("/external-services/jobs", async (req, res) => {
 });
 
 router.get("/external-services/jobs/:jobId", async (req, res) => {
-    if (!requireRole(req, res, "P")) {
+    if (!requireRole(req, res, ["P", "A"])) {
         return;
     }
 
@@ -193,7 +193,7 @@ router.get("/external-services/jobs/:jobId", async (req, res) => {
 });
 
 router.get("/external-services/results", async (req, res) => {
-    if (!requireRole(req, res, "P")) {
+    if (!requireRole(req, res, ["P", "A"])) {
         return;
     }
 

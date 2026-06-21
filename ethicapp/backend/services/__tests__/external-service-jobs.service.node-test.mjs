@@ -407,6 +407,26 @@ test("queryRecentJobs: caps limit at 200", async () => {
     assert.equal(params[params.length - 1], 200);
 });
 
+test("queryRecentJobs: negative limit is clamped to 1 — not passed as-is to PostgreSQL", async () => {
+    const db  = makeDbQueue([]);
+    const svc = new ExternalServiceJobsService({ dbQuery: db });
+
+    await svc.queryRecentJobs({ limit: -1 });
+
+    const { params } = db.calls[0];
+    assert.ok(params[params.length - 1] >= 1, "limit must be at least 1");
+});
+
+test("queryRecentResults: negative limit is clamped to 1 — not passed as-is to PostgreSQL", async () => {
+    const db  = makeDbQueue([]);
+    const svc = new ExternalServiceJobsService({ dbQuery: db });
+
+    await svc.queryRecentResults({ limit: -1 });
+
+    const { params } = db.calls[0];
+    assert.ok(params[params.length - 1] >= 1, "limit must be at least 1");
+});
+
 // ─── queryRecentResults ───────────────────────────────────────────────────────
 
 test("queryRecentResults: sessionId filter — WHERE clause present", async () => {
