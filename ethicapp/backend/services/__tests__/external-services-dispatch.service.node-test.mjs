@@ -216,6 +216,24 @@ test("dispatchServiceHook: throws 404 for unknown service", async () => {
     );
 });
 
+test("dispatchServiceHook: marks result FAILED when handler throws", async () => {
+    const updateResultCalls = [];
+    const { registry } = makeRegistry({
+        updateResult: async (id, args) => { updateResultCalls.push({ id, ...args }); },
+    });
+
+    registry.hookSubscribers.set("callback-received", [
+        { serviceId: "svc-a", handler: async () => { throw new Error("handler error"); } },
+    ]);
+
+    const results = await registry.dispatchServiceHook("callback-received", "svc-a", {});
+
+    assert.equal(results[0].status, "rejected");
+    assert.equal(updateResultCalls.length, 1);
+    assert.equal(updateResultCalls[0].id, RESULT_UUID);
+    assert.equal(updateResultCalls[0].status, RESULT_STATUS.FAILED);
+});
+
 // ─── recordCallbackResult ─────────────────────────────────────────────────────
 
 test("recordCallbackResult: calls updateResult when context has resultId", async () => {
@@ -237,6 +255,22 @@ test("recordCallbackResult: calls updateResult when context has resultId", async
     assert.deepEqual(updateResultCalls[0].adapterResult, { score: 42 });
 });
 
+test("recordCallbackResult: maps result.status 'failed' to RESULT_STATUS.FAILED", async () => {
+    const updateResultCalls = [];
+    const { registry } = makeRegistry({
+        updateResult: async (id, args) => { updateResultCalls.push({ id, ...args }); },
+    });
+
+    await registry.recordCallbackResult({
+        hookName:  "callback-received",
+        serviceId: "svc-a",
+        result:    { status: "failed", reason: "room not found" },
+        context:   { resultId: RESULT_UUID },
+    });
+
+    assert.equal(updateResultCalls[0].status, RESULT_STATUS.FAILED);
+});
+
 test("recordCallbackResult: calls updateJobStatus when context has jobId only", async () => {
     const statusCalls = [];
     const { registry } = makeRegistry({
@@ -253,6 +287,38 @@ test("recordCallbackResult: calls updateJobStatus when context has jobId only", 
     assert.equal(statusCalls.length, 1);
     assert.equal(statusCalls[0].id, JOB_UUID);
     assert.equal(statusCalls[0].status, JOB_STATUS.COMPLETED);
+});
+
+test("recordCallbackResult: maps result.status 'failed' to JOB_STATUS.FAILED", async () => {
+    const statusCalls = [];
+    const { registry } = makeRegistry({
+        updateJobStatus: async (id, status) => { statusCalls.push({ id, status }); },
+    });
+
+    await registry.recordCallbackResult({
+        hookName:  "phase-started",
+        serviceId: "svc-a",
+        result:    { status: "failed" },
+        context:   { jobId: JOB_UUID },
+    });
+
+    assert.equal(statusCalls[0].status, JOB_STATUS.FAILED);
+});
+
+test("recordCallbackResult: maps result.status 'skipped' to JOB_STATUS.SKIPPED", async () => {
+    const statusCalls = [];
+    const { registry } = makeRegistry({
+        updateJobStatus: async (id, status) => { statusCalls.push({ id, status }); },
+    });
+
+    await registry.recordCallbackResult({
+        hookName:  "phase-started",
+        serviceId: "svc-a",
+        result:    { status: "skipped" },
+        context:   { jobId: JOB_UUID },
+    });
+
+    assert.equal(statusCalls[0].status, JOB_STATUS.SKIPPED);
 });
 
 test("recordCallbackResult: appends entry to in-memory results list", async () => {

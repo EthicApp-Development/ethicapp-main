@@ -281,7 +281,7 @@ export class ExternalServicesRegistry {
             subscriber => subscriber.serviceId === serviceId
         );
 
-        return Promise.allSettled(selectedSubscribers.map(({ handler }) => {
+        return Promise.allSettled(selectedSubscribers.map(async ({ handler }) => {
             const serviceContext = {
                 ...context,
                 serviceId,
@@ -289,14 +289,23 @@ export class ExternalServicesRegistry {
                 resultId: resultRecord?.id     ?? null,
             };
 
-            return handler(serviceContext, {
-                callback: result => this.recordCallbackResult({
-                    hookName,
-                    serviceId,
-                    result,
-                    context: serviceContext,
-                }),
-            });
+            try {
+                return await handler(serviceContext, {
+                    callback: result => this.recordCallbackResult({
+                        hookName,
+                        serviceId,
+                        result,
+                        context: serviceContext,
+                    }),
+                });
+            } catch (err) {
+                if (serviceContext.resultId) {
+                    await this._jobsService
+                        .updateResult(serviceContext.resultId, { status: RESULT_STATUS.FAILED })
+                        .catch(() => null);
+                }
+                throw err;
+            }
         }));
     }
 
@@ -325,17 +334,22 @@ export class ExternalServicesRegistry {
         }
 
         if (context.resultId) {
+            const resultStatus = result?.status === "failed"
+                ? RESULT_STATUS.FAILED
+                : RESULT_STATUS.COMPLETED;
             await this._jobsService
                 .updateResult(context.resultId, {
-                    status:        RESULT_STATUS.COMPLETED,
+                    status:        resultStatus,
                     adapterResult: result,
                 })
                 .catch(err => console.error("[external-services] Failed to persist callback result.", err));
         } else if (context.jobId) {
+            const jobStatus = result?.status === "failed"  ? JOB_STATUS.FAILED
+                : result?.status === "skipped" ? JOB_STATUS.SKIPPED
+                : JOB_STATUS.COMPLETED;
+            const completedAt = jobStatus === JOB_STATUS.COMPLETED ? new Date().toISOString() : undefined;
             await this._jobsService
-                .updateJobStatus(context.jobId, JOB_STATUS.COMPLETED, {
-                    completedAt: new Date().toISOString(),
-                })
+                .updateJobStatus(context.jobId, jobStatus, { completedAt })
                 .catch(err => console.error("[external-services] Failed to update job status.", err));
         }
 
