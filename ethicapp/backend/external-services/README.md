@@ -171,29 +171,36 @@ inbound callback to the original job via that field.
 
 ### Polyadic bridge
 
-Outbound session creation (`POST /rooms/{room}/sessions`) and message
-forwarding (`POST /rooms/{room}/messages`) include:
+Only outbound **message forwarding** (`POST /rooms/{room}/messages`) includes
+`ethicapp_correlation_id`. Session creation (`POST /rooms/{room}/sessions`)
+does **not** carry it, because session creation is a fan-out operation
+(one per team) that does not map to a single future callback — sending the
+same `phase-started` job UUID to all rooms would cause all but the first
+evaluation callback to be treated as duplicates under the idempotency logic
+introduced in #584.
 
 ```json
-{
-  "ethicapp_correlation_id": "<correlationId>"
-}
+{ "username": "...", "content": "...", "ethicapp_correlation_id": "<correlationId>" }
 ```
 
-The Polyadic AI Additions service must store `ethicapp_correlation_id` at
-session creation time and include it in the EthicApp callback body:
+The Polyadic AI Additions service should track the most recent
+`ethicapp_correlation_id` received per room and include it in EthicApp
+callbacks as `correlationId`:
 
 ```json
 {
-  "serviceId": "polyadic-devils-advocate",
-  "eventType": "result",
-  "correlationId": "<echoed ethicapp_correlation_id>",
+  "serviceId":     "polyadic-devils-advocate",
+  "eventType":     "result",
+  "correlationId": "<most-recent ethicapp_correlation_id for the room>",
   "payload": {
-    "room": "ethicapp-s<N>-p<N>-g<N>",
+    "room":        "ethicapp-s<N>-p<N>-g<N>",
     "evaluations": [ ... ]
   }
 }
 ```
+
+This ensures each evaluation callback correlates to the `chat-message-received`
+job that last forwarded a message to the room, not to the `phase-started` job.
 
 See `send_ethicapp_callback` in
 `ethicapp-ai-additions/polyadic-agents/backend/app/agentComponents/mediators/base_mediator.py`

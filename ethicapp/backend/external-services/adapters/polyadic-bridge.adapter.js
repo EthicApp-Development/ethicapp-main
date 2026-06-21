@@ -200,13 +200,12 @@ async function requestPolyadicJson(pathname, { method = "GET", body = null } = {
     });
 }
 
-async function ensurePolyadicSession(roomName, topic, correlationId) {
+async function ensurePolyadicSession(roomName, topic) {
     await requestPolyadicJson(`/rooms/${encodeURIComponent(roomName)}/sessions`, {
         method: "POST",
         body:   {
-            prompt_inicial:          topic || "EthicApp discussion",
-            pipeline_type:           getPipelineType(),
-            ethicapp_correlation_id: correlationId ?? null,
+            prompt_inicial: topic || "EthicApp discussion",
+            pipeline_type:  getPipelineType(),
         },
     });
 
@@ -274,12 +273,12 @@ export async function register({
         };
     }
 
-    async function createRoom({ sessionId, phaseId, groupId, questionId, topic, correlationId }) {
+    async function createRoom({ sessionId, phaseId, groupId, questionId, topic }) {
         const roomName = getRoomName(sessionId, phaseId, groupId);
         rememberRoomContext(roomName, sessionId, phaseId, groupId, questionId);
 
         try {
-            await ensurePolyadicSession(roomName, topic, correlationId);
+            await ensurePolyadicSession(roomName, topic);
             return roomName;
         } catch (error) {
             roomContext.delete(roomName);
@@ -289,13 +288,13 @@ export async function register({
     }
 
     subscribe("phase-started", async (context, { callback }) => {
-        const { sessionId, phaseId, correlationId } = context;
+        const { sessionId, phaseId } = context;
         const teamIds = await dependencies.getTeamIdsForPhase(sessionId, phaseId);
         const { questionId, topic } = await buildTopicForPhase(sessionId, phaseId);
         const createdRooms = new Set();
 
         for (const groupId of teamIds) {
-            const roomName = await createRoom({ sessionId, phaseId, groupId, questionId, topic, correlationId });
+            const roomName = await createRoom({ sessionId, phaseId, groupId, questionId, topic });
             if (roomName) {
                 createdRooms.add(roomName);
             }
@@ -345,7 +344,6 @@ export async function register({
                 groupId,
                 questionId: questionId ?? topicData.questionId,
                 topic:      topicData.topic,
-                correlationId,
             });
 
             if (!createdRoom) {

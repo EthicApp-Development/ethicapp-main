@@ -145,35 +145,68 @@ test("chat-message-received creates a missing room and forwards the message", as
         content:                 "We should discuss the consequences.",
         ethicapp_correlation_id: "corr-msg-001",
     });
-    assert.equal(harness.requests[0].options.body.ethicapp_correlation_id, "corr-msg-001");
+    // Session creation does NOT carry correlationId — only message forwarding does.
+    assert.equal(harness.requests[0].options.body.ethicapp_correlation_id, undefined);
     assert.equal(harness.callbacks.at(-1).status, "completed");
 });
 
-test("phase-started and chat-message-received include ethicapp_correlation_id in outbound requests", async () => {
-    const harness = createHarness();
-    await harness.initialize();
-
-    await harness.dispatch("phase-started", {
-        sessionId:     11,
-        phaseId:       22,
-        correlationId: "corr-phase-001",
-    });
-
-    assert.equal(harness.requests[0].options.body.ethicapp_correlation_id, "corr-phase-001");
-    assert.equal(harness.requests[1].options.body.ethicapp_correlation_id, "corr-phase-001");
-});
-
-test("ethicapp_correlation_id defaults to null when correlationId absent", async () => {
+test("chat-message-received includes ethicapp_correlation_id only in message forwarding, not session creation", async () => {
     const harness = createHarness({
         dependencies: {
-            getTeamIdsForPhase: async () => [301],
+            getTeamIdsForPhase: async () => [],
         },
     });
     await harness.initialize();
 
-    await harness.dispatch("phase-started", { sessionId: 11, phaseId: 22 });
+    await harness.dispatch("chat-message-received", {
+        sessionId:     11,
+        phaseId:       22,
+        groupId:       301,
+        userId:        9001,
+        correlationId: "corr-msg-002",
+        content:       "Test message",
+    });
 
-    assert.equal(harness.requests[0].options.body.ethicapp_correlation_id, null);
+    // Session creation (index 0): no correlationId
+    assert.equal(harness.requests[0].options.body.ethicapp_correlation_id, undefined);
+    // Message forwarding (index 1): carries correlationId
+    assert.equal(harness.requests[1].options.body.ethicapp_correlation_id, "corr-msg-002");
+});
+
+test("phase-started session creation does not include ethicapp_correlation_id", async () => {
+    const harness = createHarness({
+        dependencies: {
+            getTeamIdsForPhase: async () => [301, 302],
+        },
+    });
+    await harness.initialize();
+
+    await harness.dispatch("phase-started", { sessionId: 11, phaseId: 22, correlationId: "corr-phase-001" });
+
+    // Both rooms created without correlationId — avoids fan-out idempotency issue.
+    assert.equal(harness.requests[0].options.body.ethicapp_correlation_id, undefined);
+    assert.equal(harness.requests[1].options.body.ethicapp_correlation_id, undefined);
+});
+
+test("ethicapp_correlation_id defaults to null when correlationId absent from chat-message-received", async () => {
+    const harness = createHarness({
+        dependencies: {
+            getTeamIdsForPhase: async () => [],
+        },
+    });
+    await harness.initialize();
+
+    // Dispatch to an existing room so only the message forwarding request is made.
+    await harness.dispatch("chat-message-received", {
+        sessionId: 11,
+        phaseId:   22,
+        groupId:   301,
+        userId:    9001,
+        content:   "Hello",
+    });
+    // Message forwarding without correlationId → null, not undefined.
+    const messageRequest = harness.requests.find(r => r.pathname.includes("/messages"));
+    assert.equal(messageRequest.options.body.ethicapp_correlation_id, null);
 });
 
 test("callback-received publishes only Orientador responses to group chat", async () => {

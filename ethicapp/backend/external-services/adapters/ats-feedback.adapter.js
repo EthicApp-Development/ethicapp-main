@@ -291,6 +291,17 @@ async function deleteAtsSession(atsSessionId) {
     }
 }
 
+export function buildArgumentClientContext(context, groupId) {
+    return {
+        service:       "ethicapp",
+        correlationId: context.correlationId ?? null,
+        sessionId:     context.sessionId,
+        phaseId:       context.phaseId,
+        questionId:    context.questionId,
+        groupId:       Number.isInteger(groupId) ? groupId : null,
+    };
+}
+
 async function submitArgumentToAts(context, responseText, groupId) {
     const atsSessionId = await getOrCreateAtsSession(context);
 
@@ -299,14 +310,7 @@ async function submitArgumentToAts(context, responseText, groupId) {
         body:   {
             argument:       responseText,
             user_id:        String(context.userId),
-            client_context: {
-                service:       "ethicapp",
-                correlationId: context.correlationId ?? null,
-                sessionId:     context.sessionId,
-                phaseId:       context.phaseId,
-                questionId:    context.questionId,
-                groupId:       Number.isInteger(groupId) ? groupId : null,
-            },
+            client_context: buildArgumentClientContext(context, groupId),
         },
     });
 
@@ -341,14 +345,7 @@ async function submitArgumentComparisonToAts(context, responseText, groupId) {
             body:   {
                 revised_argument: responseText,
                 user_id:          String(context.userId),
-                client_context:   {
-                    service:       "ethicapp",
-                    correlationId: context.correlationId ?? null,
-                    sessionId:     context.sessionId,
-                    phaseId:       context.phaseId,
-                    questionId:    context.questionId,
-                    groupId:       Number.isInteger(groupId) ? groupId : null,
-                },
+                client_context:   buildArgumentClientContext(context, groupId),
             },
         });
 
