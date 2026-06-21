@@ -146,11 +146,11 @@ test("chat-message-received creates a missing room and forwards the message", as
     assert.equal(harness.callbacks.at(-1).status, "completed");
 });
 
-test("external-service-result publishes only Orientador responses to group chat", async () => {
+test("callback-received publishes only Orientador responses to group chat", async () => {
     const harness = createHarness();
     await harness.initialize();
 
-    await harness.dispatch("external-service-result", {
+    await harness.dispatch("callback-received", {
         requestPayload: {
             room: "ethicapp-s11-p22-g301",
             evaluations: [

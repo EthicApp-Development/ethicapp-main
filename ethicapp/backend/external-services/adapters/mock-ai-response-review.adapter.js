@@ -184,7 +184,7 @@ export async function register({ service, subscribe, publishStudentResult }) {
         await callbackPhaseTransition({ service, context, callback, hook: "phase-ended" });
     });
 
-    subscribe("external-service-result", async (context, { callback }) => {
+    subscribe("callback-received", async (context, { callback }) => {
         const payload = sanitizeExternalResultPayload(context.requestPayload);
 
         if (payload.userId) {
@@ -202,7 +202,7 @@ export async function register({ service, subscribe, publishStudentResult }) {
 
         await callback({
             serviceId: service.id,
-            hook:      "external-service-result",
+            hook:      "callback-received",
             status:    "completed",
             payload,
         });

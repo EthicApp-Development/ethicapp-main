@@ -71,6 +71,16 @@ class ExternalServicesRegistry {
                 : [],
             enabled: service.enabled !== false,
             adapter: service.adapter,
+            callbackAuth: service.callbackAuth && typeof service.callbackAuth === "object"
+                ? {
+                    allowedClientIds: Array.isArray(service.callbackAuth.allowedClientIds)
+                        ? service.callbackAuth.allowedClientIds.filter(id => typeof id === "string" && id.trim())
+                        : [],
+                    requiredRoles: Array.isArray(service.callbackAuth.requiredRoles)
+                        ? service.callbackAuth.requiredRoles.filter(r => typeof r === "string" && r.trim())
+                        : [],
+                }
+                : null,
         };
 
         this.services.set(normalizedService.id, normalizedService);
@@ -130,9 +140,47 @@ class ExternalServicesRegistry {
         return this.results.slice(-100);
     }
 
+    getServiceById(serviceId) {
+        return this.services.get(serviceId) || null;
+    }
+
     hasEnabledService(serviceId) {
         const service = this.services.get(serviceId);
         return Boolean(service?.enabled);
+    }
+
+    authorizeCallbackCaller(serviceId, authContext) {
+        const service = this.services.get(serviceId);
+        if (!service?.enabled) {
+            const error = new Error(`Unknown or disabled external service: ${serviceId}`);
+            error.statusCode = 404;
+            throw error;
+        }
+
+        if (!service.callbackAuth) {
+            return;
+        }
+
+        const { allowedClientIds, requiredRoles } = service.callbackAuth;
+
+        if (allowedClientIds.length > 0) {
+            const callerClientId = authContext?.clientId || null;
+            if (!callerClientId || !allowedClientIds.includes(callerClientId)) {
+                const error = new Error(`Caller client id "${callerClientId}" is not authorized to post callbacks for service "${serviceId}".`);
+                error.statusCode = 403;
+                throw error;
+            }
+        }
+
+        if (requiredRoles.length > 0) {
+            const callerRoles = Array.isArray(authContext?.roles) ? authContext.roles : [];
+            const missingRole = requiredRoles.find(role => !callerRoles.includes(role));
+            if (missingRole) {
+                const error = new Error(`Caller is missing required role "${missingRole}" for service "${serviceId}".`);
+                error.statusCode = 403;
+                throw error;
+            }
+        }
     }
 
     async dispatchHook(hookName, context, options = {}) {

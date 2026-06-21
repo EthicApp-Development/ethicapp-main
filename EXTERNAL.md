@@ -20,10 +20,11 @@ outbound authentication to `ethicapp-ai-additions` through a shared Keycloak
 client-credentials client, so individual adapters should not negotiate tokens on
 their own.
 
-The architecture still does not provide production authentication for inbound
-external callbacks, durable result storage, retry queues, or a stable public
+The architecture provides Bearer-token authentication for inbound callbacks
+from AI Additions services through a Keycloak-issued JWT validated against the
+shared realm JWKS. Durable result storage, retry queues, and a stable public
 contract for third-party providers outside the repository-owned AI Additions
-facade.
+facade are still not implemented.
 
 ## Backend Architecture
 
@@ -43,7 +44,7 @@ Each manifest entry declares:
 
 Hook names are standardized as kebab-case identifiers. New adapters should use
 names such as `phase-started`, `phase-ended`, `session-ended`,
-`chat-message-received`, and `student-response-submitted`.
+`chat-message-received`, `student-response-submitted`, and `callback-received`.
 
 Adapters are ESM modules that export `register(...)`. During startup,
 `externalServicesRegistry.initialize()` loads the manifest, imports each enabled
@@ -70,6 +71,18 @@ Current registry implementation:
 
 ```text
 ethicapp/backend/services/external-services.service.js
+```
+
+Inbound callback authentication middleware:
+
+```text
+ethicapp/backend/middleware/external-services-callback-auth.middleware.js
+```
+
+Keycloak JWT validation helper:
+
+```text
+ethicapp/backend/helpers/keycloak-jwt.helper.js
 ```
 
 Current mock adapter:
@@ -181,8 +194,8 @@ Current event hooks:
   previously active phase.
 - `chat-message-received`: dispatched when a chat message is posted to a phase
   group chat.
-- `external-service-result`: dispatched when a service-specific callback result
-  is received.
+- `callback-received`: dispatched when an external service calls the callback
+  endpoint. Replaces the earlier `external-service-result` hook.
 - `session-ended`: dispatched when a session finishes and service-local context
   should be cleaned up.
 
@@ -232,35 +245,54 @@ adapters should therefore key any accumulated conversation state by at least
 
 ## External Result Callback
 
-External processing results are received through:
+### Unified authenticated endpoint (production)
+
+External AI services should call the unified callback endpoint:
+
+```text
+POST /external-services/callbacks
+Authorization: Bearer <access_token>
+Content-Type: application/json
+```
+
+The request body identifies the target service and carries a service-specific
+payload:
+
+```json
+{
+  "serviceId": "polyadic-devils-advocate",
+  "eventType": "result",
+  "correlationId": "optional-provider-job-or-room-id",
+  "payload": {
+    "room": "ethicapp-s11-p22-g301",
+    "evaluations": []
+  }
+}
+```
+
+The Bearer token must be a Keycloak `client_credentials` token issued to the
+calling service's dedicated Keycloak client (for example `polyadic-agent-api` or
+`argumentation-tutor-api`). EthicApp validates the JWT locally using the realm
+JWKS, checks issuer, expiry, audience, and clock tolerance, and then authorizes
+the caller against the per-service `callbackAuth` manifest entry.
+
+The controller dispatches the `callback-received` hook with
+`dispatchServiceHook(...)`, which selects only subscribers belonging to the target
+service id.
+
+### Legacy endpoint (deprecated)
+
+The original service-specific endpoint is kept for backward compatibility:
 
 ```text
 POST /external-services/:service_id/results
 ```
 
-The route-level `service_id` is the target service id. If the request body also
-contains `serviceId`, it must match the route value. This convention prevents
-callbacks from being broadcast promiscuously to every adapter.
+This endpoint does not require Bearer authentication. It translates legacy
+callbacks into the `callback-received` hook with `eventType: "result"` and
+`auth: null`. It should not be used in new integrations.
 
-Example callback body:
-
-```json
-{
-  "serviceId": "mock-ai-response-review",
-  "status": "completed",
-  "payload": {
-    "summary": "External analysis completed.",
-    "score": 0.82
-  },
-  "message": "Processed successfully."
-}
-```
-
-The controller dispatches the `external-service-result` hook with
-`dispatchServiceHook(...)`, which selects only subscribers belonging to the target
-service id.
-
-Current result callback controller:
+Current callback controller:
 
 ```text
 ethicapp/backend/controllers/external-services.js
@@ -269,12 +301,15 @@ ethicapp/backend/controllers/external-services.js
 The adapter is responsible for sanitizing the external payload. The registry only
 routes and records the resulting callback entry for PoC inspection.
 
-Adapters can also publish student-facing results through the helper passed to
-`register(...)`:
+Adapters subscribe to `callback-received` to handle both authenticated and
+legacy callbacks:
 
 ```js
 export async function register({ service, subscribe, publishStudentResult }) {
-  subscribe("external-service-result", async (context) => {
+  subscribe("callback-received", async (context, { callback }) => {
+    // context.serviceId, context.eventType, context.correlationId
+    // context.requestPayload contains the caller's payload
+    // context.auth contains the normalized Keycloak auth context (null for legacy)
     await publishStudentResult({
       userId: 123,
       sessionId: 10,
@@ -427,30 +462,59 @@ design-schema/ethicapp-v1.schema.json
 `externalServices.enabledServiceIds` is optional and contains unique service ids.
 Older designs without `externalServices` remain valid.
 
+## Inbound Callback Authentication
+
+EthicApp validates inbound callback Bearer tokens as a resource server against the
+same Keycloak realm used for outbound authentication. The middleware reads JWKS
+from the realm endpoint, caches keys for 5 minutes, and refreshes on unknown `kid`
+to handle key rotation.
+
+Authorization policy for each service is declared in `manifest.json`:
+
+```json
+{
+  "id": "polyadic-devils-advocate",
+  "callbackAuth": {
+    "allowedClientIds": ["polyadic-agent-api"],
+    "requiredRoles": []
+  }
+}
+```
+
+EthicApp checks that the authenticated `azp` (client id) is listed in
+`allowedClientIds` and that any `requiredRoles` appear in the token's
+`realm_access.roles`. A `serviceId` from the request body that does not match
+an allowed client returns `403`.
+
+Environment variables for inbound authentication:
+
+| Variable | Purpose |
+| --- | --- |
+| `EXTERNAL_SERVICES_CALLBACK_AUTH_ENABLED` | Set to `false` to disable auth in development. Defaults to `true`. |
+| `EXTERNAL_SERVICES_CALLBACK_AUTH_ISSUER` | Keycloak issuer URL. Derived from `AI_ADDITIONS_KEYCLOAK_BASE_URL` and `AI_ADDITIONS_KEYCLOAK_REALM` when unset. |
+| `EXTERNAL_SERVICES_CALLBACK_AUTH_JWKS_URL` | Explicit JWKS URL. Derived from issuer when unset. |
+| `EXTERNAL_SERVICES_CALLBACK_AUTH_AUDIENCE` | Expected `aud` claim. Defaults to `ethicapp-main`. Leave empty to skip audience check. |
+| `EXTERNAL_SERVICES_CALLBACK_AUTH_CLOCK_TOLERANCE_SECONDS` | Clock skew tolerance. Defaults to `30`. |
+
 ## Current Limitations
 
-- Outbound authentication from EthicApp to AI Additions is centralized through
-  Keycloak client credentials, but inbound callback authentication is not
-  production-ready. The callback endpoint is reachable without a legacy teacher
-  session so external services can call it.
-- There is no callback-specific per-service shared secret, token, request
-  signature, or replay protection yet.
 - Results are stored in memory only.
 - Student websocket targeting currently relies on a PoC user room joined from the
   frontend client.
 - Remote React component loading is not production-hardened.
 - Adapter payload sanitization is service-specific and intentionally minimal in
   the mock adapter.
-- There is no job id or correlation id convention yet. Adding one would help link
-  outbound hook dispatches to inbound external results.
+- There is no `correlationId` convention for linking outbound hook dispatches to
+  inbound callback results.
+- The legacy `POST /external-services/:service_id/results` endpoint does not
+  require Bearer authentication.
 
 ## Recommended Next Steps
 
-- Add production-grade authentication for inbound callbacks. For services owned
-  by AI Additions, prefer a Keycloak-compatible service-to-service flow or a
-  narrow callback token policy issued from the same deployment contract.
-- Introduce a `jobId` or `correlationId` in outbound hook payloads and require it
-  in inbound results.
+- Remove the legacy `POST /external-services/:service_id/results` endpoint once
+  all deployed callers migrate to `POST /external-services/callbacks`.
+- Introduce a `correlationId` in outbound hook payloads and require it in
+  inbound callback bodies.
 - Persist external results in PostgreSQL with service id, hook name, session id,
   phase id, optional user/question ids, raw payload, sanitized payload, and status.
 - Define adapter capability metadata for teacher-facing configuration beyond a
