@@ -4,6 +4,9 @@ import { getPhaseDesignByPhaseId } from "../../helpers/designs-helper.js";
 import { getCaseIdBySessionId } from "../../helpers/sessions-helper.js";
 import { getCaseDocumentRawText } from "../../helpers/case-document-content-helper.js";
 import defaultAiAdditionsClient from "../../services/ai-additions-client.service.js";
+import { buildArgumentClientContext } from "./ats-feedback.utils.js";
+
+export { buildArgumentClientContext };
 
 const DEFAULT_ATS_BASE_PATH = "/argumentation-tutor/api/v2";
 const DEFAULT_POLL_INTERVAL_MS = 2500;
@@ -291,16 +294,6 @@ async function deleteAtsSession(atsSessionId) {
     }
 }
 
-export function buildArgumentClientContext(context, groupId) {
-    return {
-        service:       "ethicapp",
-        correlationId: context.correlationId ?? null,
-        sessionId:     context.sessionId,
-        phaseId:       context.phaseId,
-        questionId:    context.questionId,
-        groupId:       Number.isInteger(groupId) ? groupId : null,
-    };
-}
 
 async function submitArgumentToAts(context, responseText, groupId) {
     const atsSessionId = await getOrCreateAtsSession(context);

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildArgumentClientContext } from "../ats-feedback.adapter.js";
+import { buildArgumentClientContext } from "../ats-feedback.utils.js";
 
 // ─── buildArgumentClientContext ───────────────────────────────────────────────
 
