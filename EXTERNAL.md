@@ -357,15 +357,107 @@ service is unavailable.
 
 ## Result Inspection
 
-In-memory callback results can be inspected by teachers through:
+Teachers and administrators can inspect durable job and callback result records
+through the following endpoints. All three require an authenticated session with
+the teacher (`P`) or administrator (`A`) role.
+
+### List jobs
+
+```text
+GET /external-services/jobs
+```
+
+Returns a list of job records ordered by `created_at` descending. Supported
+query parameters:
+
+| Parameter   | Type    | Description                                      |
+| ----------- | ------- | ------------------------------------------------ |
+| `serviceId` | string  | Filter by external service id.                   |
+| `sessionId` | integer | Filter by EthicApp session.                      |
+| `phaseId`   | integer | Filter by phase.                                 |
+| `status`    | string  | Filter by job status (e.g. `completed`, `failed`). |
+| `from`      | ISO 8601 datetime | Lower bound on `created_at` (inclusive). |
+| `to`        | ISO 8601 datetime | Upper bound on `created_at` (inclusive). |
+| `limit`     | integer | Maximum number of records to return. Defaults to 50, capped at 200. |
+
+Response shape:
+
+```json
+{
+  "status": "ok",
+  "result": [
+    {
+      "id": "<uuid>",
+      "service_id": "polyadic-devils-advocate",
+      "hook_name": "chat-message-received",
+      "status": "completed",
+      "session_id": 11,
+      "phase_id": 22,
+      "question_id": 701,
+      "group_id": 301,
+      "user_id": 9001,
+      "provider_reference": null,
+      "created_at": "...",
+      "updated_at": "...",
+      "dispatched_at": "...",
+      "completed_at": "..."
+    }
+  ]
+}
+```
+
+### Get job detail
+
+```text
+GET /external-services/jobs/:job_id
+```
+
+Returns a single job and its associated callback results. The `job_id` must be
+a valid UUID.
+
+Response shape:
+
+```json
+{
+  "status": "ok",
+  "result": {
+    "job": { ... },
+    "results": [
+      {
+        "id": "<uuid>",
+        "correlation_id": "<uuid>",
+        "service_id": "polyadic-devils-advocate",
+        "hook_name": "callback-received",
+        "status": "completed",
+        "session_id": 11,
+        "phase_id": 22,
+        "question_id": 701,
+        "group_id": 301,
+        "user_id": null,
+        "adapter_result": { ... },
+        "received_at": "...",
+        "processed_at": "..."
+      }
+    ]
+  }
+}
+```
+
+Raw provider payloads (`raw_payload`) are not exposed through the inspection
+API. Only the adapter-processed result (`adapter_result`) is included in the
+detail view.
+
+### List callback results
 
 ```text
 GET /external-services/results
 ```
 
-The registry keeps the latest 100 result entries in memory. This is intentionally
-temporary for the PoC. A production design should store results durably and link
-them to sessions, phases, users, groups, questions, or service jobs as needed.
+Returns a list of callback result records ordered by `received_at` descending.
+Accepts the same filters as `GET /external-services/jobs` except that `from`
+and `to` apply to `received_at` rather than `created_at`.
+
+Raw provider payloads are not included in list responses.
 
 ## Frontend Architecture
 
@@ -485,21 +577,14 @@ Environment variables for inbound authentication:
 
 ## Current Limitations
 
-- Results are stored in memory only.
 - Student websocket targeting currently relies on a PoC user room joined from the
   frontend client.
 - Remote React component loading is not production-hardened.
 - Adapter payload sanitization is service-specific and intentionally minimal in
   the mock adapter.
-- There is no `correlationId` convention for linking outbound hook dispatches to
-  inbound callback results.
 
 ## Recommended Next Steps
 
-- Introduce a `correlationId` in outbound hook payloads and require it in
-  inbound callback bodies.
-- Persist external results in PostgreSQL with service id, hook name, session id,
-  phase id, optional user/question ids, raw payload, sanitized payload, and status.
 - Define adapter capability metadata for teacher-facing configuration beyond a
   simple enabled/disabled checkbox.
 - Add integration tests for service loading, hook dispatch filtering, callback

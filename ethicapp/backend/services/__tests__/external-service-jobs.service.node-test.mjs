@@ -407,6 +407,26 @@ test("queryRecentJobs: caps limit at 200", async () => {
     assert.equal(params[params.length - 1], 200);
 });
 
+test("queryRecentJobs: negative limit is clamped to 1 — not passed as-is to PostgreSQL", async () => {
+    const db  = makeDbQueue([]);
+    const svc = new ExternalServiceJobsService({ dbQuery: db });
+
+    await svc.queryRecentJobs({ limit: -1 });
+
+    const { params } = db.calls[0];
+    assert.ok(params[params.length - 1] >= 1, "limit must be at least 1");
+});
+
+test("queryRecentResults: negative limit is clamped to 1 — not passed as-is to PostgreSQL", async () => {
+    const db  = makeDbQueue([]);
+    const svc = new ExternalServiceJobsService({ dbQuery: db });
+
+    await svc.queryRecentResults({ limit: -1 });
+
+    const { params } = db.calls[0];
+    assert.ok(params[params.length - 1] >= 1, "limit must be at least 1");
+});
+
 // ─── queryRecentResults ───────────────────────────────────────────────────────
 
 test("queryRecentResults: sessionId filter — WHERE clause present", async () => {
@@ -430,4 +450,120 @@ test("queryRecentResults: no filters — no WHERE clause, default limit 50", asy
     const { sql, params } = db.calls[0];
     assert.ok(!sql.includes("WHERE"));
     assert.equal(params[0], 50);
+});
+
+// ─── getJob ───────────────────────────────────────────────────────────────────
+
+test("getJob: returns the job row when found", async () => {
+    const expected = { id: JOB_UUID, service_id: "svc-a", hook_name: "phase-started", status: "completed" };
+    const db  = makeDbQueue([expected]);
+    const svc = new ExternalServiceJobsService({ dbQuery: db });
+
+    const result = await svc.getJob(JOB_UUID);
+
+    assert.equal(result.id, JOB_UUID);
+    assert.equal(result.status, "completed");
+
+    const { sql, params } = db.calls[0];
+    assert.ok(sql.includes("external_service_jobs"));
+    assert.equal(params[0], JOB_UUID);
+});
+
+test("getJob: returns null when job does not exist", async () => {
+    const db  = makeDbQueue([]);
+    const svc = new ExternalServiceJobsService({ dbQuery: db });
+
+    const result = await svc.getJob("aaaaaaaa-0000-0000-0000-000000000000");
+
+    assert.equal(result, null);
+});
+
+// ─── getJobResults ────────────────────────────────────────────────────────────
+
+test("getJobResults: returns results for the given job ordered by received_at", async () => {
+    const row = { id: RESULT_UUID, job_id: JOB_UUID, status: "completed", adapter_result: null };
+    const db  = makeDbQueue([row]);
+    const svc = new ExternalServiceJobsService({ dbQuery: db });
+
+    const results = await svc.getJobResults(JOB_UUID);
+
+    assert.equal(results.length, 1);
+    assert.equal(results[0].id, RESULT_UUID);
+
+    const { sql, params } = db.calls[0];
+    assert.ok(sql.includes("external_service_results"));
+    assert.ok(sql.includes("job_id = $1"));
+    assert.ok(sql.includes("ORDER BY received_at ASC"));
+    assert.equal(params[0], JOB_UUID);
+});
+
+test("getJobResults: does not select raw_payload", async () => {
+    const db  = makeDbQueue([]);
+    const svc = new ExternalServiceJobsService({ dbQuery: db });
+
+    await svc.getJobResults(JOB_UUID);
+
+    const { sql } = db.calls[0];
+    assert.ok(!sql.includes("raw_payload"));
+});
+
+test("getJobResults: returns empty array when job has no results", async () => {
+    const db  = makeDbQueue([]);
+    const svc = new ExternalServiceJobsService({ dbQuery: db });
+
+    const results = await svc.getJobResults(JOB_UUID);
+
+    assert.deepEqual(results, []);
+});
+
+// ─── queryRecentJobs date range ───────────────────────────────────────────────
+
+test("queryRecentJobs: from and to filters — added to WHERE and params", async () => {
+    const db  = makeDbQueue([]);
+    const svc = new ExternalServiceJobsService({ dbQuery: db });
+
+    await svc.queryRecentJobs({ from: "2026-01-01T00:00:00Z", to: "2026-06-01T00:00:00Z" });
+
+    const { sql, params } = db.calls[0];
+    assert.ok(sql.includes("created_at >="));
+    assert.ok(sql.includes("created_at <="));
+    assert.ok(params.includes("2026-01-01T00:00:00Z"));
+    assert.ok(params.includes("2026-06-01T00:00:00Z"));
+});
+
+// ─── queryRecentResults additional filters ────────────────────────────────────
+
+test("queryRecentResults: phaseId filter — WHERE clause present", async () => {
+    const db  = makeDbQueue([]);
+    const svc = new ExternalServiceJobsService({ dbQuery: db });
+
+    await svc.queryRecentResults({ phaseId: 7 });
+
+    const { sql, params } = db.calls[0];
+    assert.ok(sql.includes("phase_id"));
+    assert.equal(params[0], 7);
+});
+
+test("queryRecentResults: from and to filters — added to WHERE and params", async () => {
+    const db  = makeDbQueue([]);
+    const svc = new ExternalServiceJobsService({ dbQuery: db });
+
+    await svc.queryRecentResults({ from: "2026-01-01T00:00:00Z", to: "2026-06-01T00:00:00Z" });
+
+    const { sql, params } = db.calls[0];
+    assert.ok(sql.includes("received_at >="));
+    assert.ok(sql.includes("received_at <="));
+    assert.ok(params.includes("2026-01-01T00:00:00Z"));
+    assert.ok(params.includes("2026-06-01T00:00:00Z"));
+});
+
+test("queryRecentResults: does not select raw_payload or sanitized_payload", async () => {
+    const db  = makeDbQueue([]);
+    const svc = new ExternalServiceJobsService({ dbQuery: db });
+
+    await svc.queryRecentResults();
+
+    const { sql } = db.calls[0];
+    assert.ok(!sql.includes("raw_payload"));
+    assert.ok(!sql.includes("sanitized_payload"));
 });

@@ -26,7 +26,6 @@ export class ExternalServicesRegistry {
         this.initialized      = false;
         this.services         = new Map();
         this.hookSubscribers  = new Map();
-        this.results          = [];
         this._jobsService     = jobsService ?? externalServiceJobsService;
     }
 
@@ -140,10 +139,6 @@ export class ExternalServicesRegistry {
             hooks,
             enabled,
         }));
-    }
-
-    listResults() {
-        return this.results.slice(-100);
     }
 
     getServiceById(serviceId) {
@@ -334,11 +329,6 @@ export class ExternalServicesRegistry {
                 messageId:      context.savedMessage?.id,
             },
         };
-
-        this.results.push(entry);
-        if (this.results.length > 100) {
-            this.results.shift();
-        }
 
         if (context.resultId) {
             const resultStatus = result?.status === "failed"
