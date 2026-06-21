@@ -350,6 +350,18 @@ export class ExternalServicesRegistry {
                     adapterResult: result,
                 })
                 .catch(err => console.error("[external-services] Failed to persist callback result.", err));
+
+            if (context.jobId) {
+                const jobStatus = result?.status === "failed"
+                    ? JOB_STATUS.FAILED
+                    : result?.status === "skipped"
+                        ? JOB_STATUS.SKIPPED
+                        : JOB_STATUS.COMPLETED;
+                const completedAt = jobStatus === JOB_STATUS.COMPLETED ? new Date().toISOString() : undefined;
+                await this._jobsService
+                    .updateJobStatus(context.jobId, jobStatus, { completedAt })
+                    .catch(err => console.error("[external-services] Failed to update job status after callback result.", err));
+            }
         } else if (context.jobId) {
             const jobStatus = result?.status === "failed"
                 ? JOB_STATUS.FAILED

@@ -323,6 +323,75 @@ test("recordCallbackResult: maps result.status 'failed' to RESULT_STATUS.FAILED"
     assert.equal(updateResultCalls[0].status, RESULT_STATUS.FAILED);
 });
 
+test("recordCallbackResult: also advances job to completed when both resultId and jobId are present", async () => {
+    const statusCalls = [];
+    const { registry } = makeRegistry({
+        updateJobStatus: async (id, status) => { statusCalls.push({ id, status }); },
+    });
+
+    await registry.recordCallbackResult({
+        hookName:  "callback-received",
+        serviceId: "svc-a",
+        result:    { score: 42 },
+        context:   { resultId: RESULT_UUID, jobId: JOB_UUID, serviceId: "svc-a" },
+    });
+
+    assert.equal(statusCalls.length, 1);
+    assert.equal(statusCalls[0].id, JOB_UUID);
+    assert.equal(statusCalls[0].status, JOB_STATUS.COMPLETED);
+});
+
+test("recordCallbackResult: advances job to failed when resultId and jobId present and result failed", async () => {
+    const statusCalls = [];
+    const { registry } = makeRegistry({
+        updateJobStatus: async (id, status) => { statusCalls.push({ id, status }); },
+    });
+
+    await registry.recordCallbackResult({
+        hookName:  "callback-received",
+        serviceId: "svc-a",
+        result:    { status: "failed" },
+        context:   { resultId: RESULT_UUID, jobId: JOB_UUID },
+    });
+
+    assert.equal(statusCalls[0].status, JOB_STATUS.FAILED);
+});
+
+test("dispatchServiceHook: second callback for same correlationId is duplicate after first completes", async () => {
+    let handlerCallCount = 0;
+    let callCount        = 0;
+
+    const { registry } = makeRegistry({
+        createResult: async () => {
+            callCount++;
+            if (callCount === 1) {
+                return { id: RESULT_UUID, job_id: JOB_UUID, is_duplicate: false };
+            }
+            // Second call: job is now terminal after adapter called callback(result)
+            return { id: `${RESULT_UUID}-2`, job_id: JOB_UUID, is_duplicate: true, job_prior_status: JOB_STATUS.COMPLETED };
+        },
+    });
+
+    registry.hookSubscribers.set("callback-received", [
+        {
+            serviceId: "svc-a",
+            handler:   async (ctx, { callback }) => {
+                handlerCallCount++;
+                await callback({ score: 10 });
+            },
+        },
+    ]);
+
+    // First callback — should dispatch handler
+    await registry.dispatchServiceHook("callback-received", "svc-a", { correlationId: JOB_UUID });
+
+    // Second callback with same correlationId — job now terminal, should be a duplicate
+    const { outcomes } = await registry.dispatchServiceHook("callback-received", "svc-a", { correlationId: JOB_UUID });
+
+    assert.equal(handlerCallCount, 1, "handler must not run for duplicate callback");
+    assert.deepEqual(outcomes, []);
+});
+
 test("recordCallbackResult: calls updateJobStatus when context has jobId only", async () => {
     const statusCalls = [];
     const { registry } = makeRegistry({
