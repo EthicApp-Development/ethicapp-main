@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { processCallback } from "../external-services.js";
+import { processCallback, listJobs, getJobDetail, listResults } from "../external-services.js";
 
 const JOB_UUID    = "c1d2e3f4-0000-4000-8000-000000000021";
 const RESULT_UUID = "c1d2e3f4-0000-4000-8000-000000000022";
@@ -215,4 +215,170 @@ test("processCallback: 500 on unexpected dispatchServiceHook error", async () =>
 
     assert.equal(status, 500);
     assert.equal(body.status, "err");
+});
+
+// ─── listJobs ─────────────────────────────────────────────────────────────────
+
+const JOBS_FIXTURE = [
+    { id: JOB_UUID, service_id: "svc-a", hook_name: "phase-started", status: "completed" },
+];
+
+function makeJobsService(overrides = {}) {
+    return {
+        queryRecentJobs:  async () => JOBS_FIXTURE,
+        queryRecentResults: async () => [],
+        getJob:           async () => null,
+        getJobResults:    async () => [],
+        ...overrides,
+    };
+}
+
+test("listJobs: 200 with jobs array from service", async () => {
+    const { status, body } = await listJobs({}, makeJobsService());
+
+    assert.equal(status, 200);
+    assert.equal(body.status, "ok");
+    assert.deepEqual(body.result, JOBS_FIXTURE);
+});
+
+test("listJobs: passes serviceId, sessionId, phaseId, status filters to service", async () => {
+    let capturedParams = null;
+    const svc = makeJobsService({
+        queryRecentJobs: async params => { capturedParams = params; return []; },
+    });
+
+    await listJobs({
+        serviceId: "svc-a",
+        sessionId: "10",
+        phaseId:   "20",
+        status:    "completed",
+    }, svc);
+
+    assert.equal(capturedParams.serviceId, "svc-a");
+    assert.equal(capturedParams.sessionId, 10);
+    assert.equal(capturedParams.phaseId,   20);
+    assert.equal(capturedParams.status,    "completed");
+});
+
+test("listJobs: passes from and to date filters to service", async () => {
+    let capturedParams = null;
+    const svc = makeJobsService({
+        queryRecentJobs: async params => { capturedParams = params; return []; },
+    });
+
+    await listJobs({ from: "2026-01-01T00:00:00Z", to: "2026-06-01T00:00:00Z" }, svc);
+
+    assert.ok(capturedParams.from);
+    assert.ok(capturedParams.to);
+});
+
+test("listJobs: invalid sessionId is passed as null", async () => {
+    let capturedParams = null;
+    const svc = makeJobsService({
+        queryRecentJobs: async params => { capturedParams = params; return []; },
+    });
+
+    await listJobs({ sessionId: "not-a-number" }, svc);
+
+    assert.equal(capturedParams.sessionId, null);
+});
+
+// ─── getJobDetail ─────────────────────────────────────────────────────────────
+
+const RESULTS_FIXTURE = [
+    { id: RESULT_UUID, job_id: JOB_UUID, status: "completed" },
+];
+
+test("getJobDetail: 200 with job and results when job exists", async () => {
+    const svc = makeJobsService({
+        getJob:        async () => JOBS_FIXTURE[0],
+        getJobResults: async () => RESULTS_FIXTURE,
+    });
+
+    const { status, body } = await getJobDetail(JOB_UUID, svc);
+
+    assert.equal(status, 200);
+    assert.deepEqual(body.result.job,     JOBS_FIXTURE[0]);
+    assert.deepEqual(body.result.results, RESULTS_FIXTURE);
+});
+
+test("getJobDetail: 404 when job does not exist", async () => {
+    const { status, body } = await getJobDetail(JOB_UUID, makeJobsService());
+
+    assert.equal(status, 404);
+    assert.equal(body.status, "err");
+});
+
+test("getJobDetail: 400 for non-UUID job id", async () => {
+    const { status, body } = await getJobDetail("not-a-uuid", makeJobsService());
+
+    assert.equal(status, 400);
+    assert.equal(body.status, "err");
+});
+
+test("getJobDetail: 400 for missing job id", async () => {
+    const { status, body } = await getJobDetail(undefined, makeJobsService());
+
+    assert.equal(status, 400);
+    assert.equal(body.status, "err");
+});
+
+// ─── listResults ─────────────────────────────────────────────────────────────
+
+const RESULTS_LIST_FIXTURE = [
+    { id: RESULT_UUID, job_id: JOB_UUID, service_id: "svc-a", status: "completed" },
+];
+
+test("listResults: 200 with results array from service", async () => {
+    const svc = makeJobsService({
+        queryRecentResults: async () => RESULTS_LIST_FIXTURE,
+    });
+
+    const { status, body } = await listResults({}, svc);
+
+    assert.equal(status, 200);
+    assert.equal(body.status, "ok");
+    assert.deepEqual(body.result, RESULTS_LIST_FIXTURE);
+});
+
+test("listResults: passes serviceId, sessionId, phaseId, status filters to service", async () => {
+    let capturedParams = null;
+    const svc = makeJobsService({
+        queryRecentResults: async params => { capturedParams = params; return []; },
+    });
+
+    await listResults({
+        serviceId: "svc-a",
+        sessionId: "5",
+        phaseId:   "3",
+        status:    "callback-received",
+    }, svc);
+
+    assert.equal(capturedParams.serviceId, "svc-a");
+    assert.equal(capturedParams.sessionId, 5);
+    assert.equal(capturedParams.phaseId,   3);
+    assert.equal(capturedParams.status,    "callback-received");
+});
+
+test("listResults: passes from and to date filters to service", async () => {
+    let capturedParams = null;
+    const svc = makeJobsService({
+        queryRecentResults: async params => { capturedParams = params; return []; },
+    });
+
+    await listResults({ from: "2026-01-01T00:00:00Z", to: "2026-06-01T00:00:00Z" }, svc);
+
+    assert.ok(capturedParams.from);
+    assert.ok(capturedParams.to);
+});
+
+test("listResults: empty string serviceId treated as null", async () => {
+    let capturedParams = null;
+    const svc = makeJobsService({
+        queryRecentResults: async params => { capturedParams = params; return []; },
+    });
+
+    await listResults({ serviceId: "   " }, svc);
+
+    assert.equal(capturedParams.serviceId, null);
 });

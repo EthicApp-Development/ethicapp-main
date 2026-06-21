@@ -200,11 +200,38 @@ export class ExternalServiceJobsService {
         );
     }
 
+    async getJob(jobId) {
+        const rows = await this._db(
+            `SELECT id, service_id, hook_name, status,
+                    session_id, phase_id, question_id, group_id, user_id,
+                    provider_reference, created_at, updated_at,
+                    dispatched_at, completed_at
+             FROM external_service_jobs
+             WHERE id = $1`,
+            [jobId]
+        );
+        return rows[0] || null;
+    }
+
+    async getJobResults(jobId) {
+        return this._db(
+            `SELECT id, correlation_id, service_id, hook_name, status,
+                    session_id, phase_id, question_id, group_id, user_id,
+                    adapter_result, received_at, processed_at
+             FROM external_service_results
+             WHERE job_id = $1
+             ORDER BY received_at ASC`,
+            [jobId]
+        );
+    }
+
     async queryRecentJobs({
         serviceId = null,
         sessionId = null,
         phaseId   = null,
         status    = null,
+        from      = null,
+        to        = null,
         limit     = 50,
     } = {}) {
         const conditions = [];
@@ -226,6 +253,14 @@ export class ExternalServiceJobsService {
             params.push(status);
             conditions.push(`status = $${params.length}`);
         }
+        if (from != null) {
+            params.push(from);
+            conditions.push(`created_at >= $${params.length}`);
+        }
+        if (to != null) {
+            params.push(to);
+            conditions.push(`created_at <= $${params.length}`);
+        }
 
         const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
         params.push(Math.min(Number(limit) || 50, 200));
@@ -246,7 +281,10 @@ export class ExternalServiceJobsService {
     async queryRecentResults({
         serviceId = null,
         sessionId = null,
+        phaseId   = null,
         status    = null,
+        from      = null,
+        to        = null,
         limit     = 50,
     } = {}) {
         const conditions = [];
@@ -260,9 +298,21 @@ export class ExternalServiceJobsService {
             params.push(sessionId);
             conditions.push(`session_id = $${params.length}`);
         }
+        if (phaseId != null) {
+            params.push(phaseId);
+            conditions.push(`phase_id = $${params.length}`);
+        }
         if (status != null) {
             params.push(status);
             conditions.push(`status = $${params.length}`);
+        }
+        if (from != null) {
+            params.push(from);
+            conditions.push(`received_at >= $${params.length}`);
+        }
+        if (to != null) {
+            params.push(to);
+            conditions.push(`received_at <= $${params.length}`);
         }
 
         const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
