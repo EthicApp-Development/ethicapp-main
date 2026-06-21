@@ -359,7 +359,7 @@ service is unavailable.
 
 Teachers and administrators can inspect durable job and callback result records
 through the following endpoints. All three require an authenticated session with
-the teacher (`P`) role.
+the teacher (`P`) or administrator (`A`) role.
 
 ### List jobs
 

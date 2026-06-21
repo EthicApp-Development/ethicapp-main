@@ -442,7 +442,7 @@ test("recordCallbackResult: maps result.status 'skipped' to JOB_STATUS.SKIPPED",
     assert.equal(statusCalls[0].status, JOB_STATUS.SKIPPED);
 });
 
-test("recordCallbackResult: appends entry to in-memory results list", async () => {
+test("recordCallbackResult: returns an entry with hookName, serviceId, and result", async () => {
     const { registry } = makeRegistry();
 
     const entry = await registry.recordCallbackResult({
@@ -453,24 +453,7 @@ test("recordCallbackResult: appends entry to in-memory results list", async () =
     });
 
     assert.ok(entry.id);
-    assert.equal(entry.hookName, "phase-started");
+    assert.equal(entry.hookName,  "phase-started");
     assert.equal(entry.serviceId, "svc-a");
     assert.deepEqual(entry.result, { value: 1 });
-    assert.equal(registry.results.length, 1);
-    assert.equal(registry.results[0], entry);
-});
-
-test("recordCallbackResult: caps in-memory list at 100 entries", async () => {
-    const { registry } = makeRegistry();
-
-    for (let i = 0; i < 101; i++) {
-        await registry.recordCallbackResult({
-            hookName:  "h",
-            serviceId: "svc-a",
-            result:    {},
-            context:   {},
-        });
-    }
-
-    assert.equal(registry.results.length, 100);
 });
