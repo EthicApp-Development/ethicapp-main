@@ -7,62 +7,62 @@ description: >
 release:
   id: "staging-uandes-external-services-architecture-2026-06-19"
   source_repository: "https://github.com/Ethicapp-Development/ethicapp-main"
-  source_ref: "v2026.06.19-esa"
-  source_revision: "39c77e03b56c5d57ce6eaa5c5d5c80db3af8808b"
+  source_ref: "v2026.06.21-esa"
+  source_revision: "bae5468e3ddcd19b3c39c667794160e618f3b2a9"
   env_contract:
     path: "config/contracts/staging/uandes/external-services-architecture.yml"
-    source_ref: "v2026.06.19-esa"
-    source_revision: "39c77e03b56c5d57ce6eaa5c5d5c80db3af8808b"
+    source_ref: "v2026.06.21-esa"
+    source_revision: "bae5468e3ddcd19b3c39c667794160e618f3b2a9"
 
 images:
   ethicapp:
     image: "ghcr.io/ethicapp-development/ethicapp"
-    tag: "v2026.06.19-esa"
+    tag: "v2026.06.21-esa"
     digest: ""
-    source_ref: "v2026.06.19-esa"
-    source_revision: "39c77e03b56c5d57ce6eaa5c5d5c80db3af8808b"
+    source_ref: "v2026.06.21-esa"
+    source_revision: "bae5468e3ddcd19b3c39c667794160e618f3b2a9"
 
   nginx:
     image: "ghcr.io/ethicapp-development/ethicapp-nginx"
-    tag: "v2026.06.19-esa"
+    tag: "v2026.06.21-esa"
     digest: ""
-    source_ref: "v2026.06.19-esa"
-    source_revision: "39c77e03b56c5d57ce6eaa5c5d5c80db3af8808b"
+    source_ref: "v2026.06.21-esa"
+    source_revision: "bae5468e3ddcd19b3c39c667794160e618f3b2a9"
 
   auth-backend:
     image: "ghcr.io/ethicapp-development/ethicapp-auth-backend"
-    tag: "v2026.06.19-esa"
+    tag: "v2026.06.21-esa"
     digest: ""
-    source_ref: "v2026.06.19-esa"
-    source_revision: "39c77e03b56c5d57ce6eaa5c5d5c80db3af8808b"
+    source_ref: "v2026.06.21-esa"
+    source_revision: "bae5468e3ddcd19b3c39c667794160e618f3b2a9"
 
   ethicapp-student:
     image: "ghcr.io/ethicapp-development/ethicapp-student"
-    tag: "v2026.06.19-esa"
+    tag: "v2026.06.21-esa"
     digest: ""
-    source_ref: "v2026.06.19-esa"
-    source_revision: "39c77e03b56c5d57ce6eaa5c5d5c80db3af8808b"
+    source_ref: "v2026.06.21-esa"
+    source_revision: "bae5468e3ddcd19b3c39c667794160e618f3b2a9"
 
   management-console:
     image: "ghcr.io/ethicapp-development/ethicapp-management-console"
-    tag: "v2026.06.19-esa"
+    tag: "v2026.06.21-esa"
     digest: ""
-    source_ref: "v2026.06.19-esa"
-    source_revision: "39c77e03b56c5d57ce6eaa5c5d5c80db3af8808b"
+    source_ref: "v2026.06.21-esa"
+    source_revision: "bae5468e3ddcd19b3c39c667794160e618f3b2a9"
 
   external-mock-service:
     image: "ghcr.io/ethicapp-development/ethicapp-external-mock-service"
-    tag: "v2026.06.19-esa"
+    tag: "v2026.06.21-esa"
     digest: ""
-    source_ref: "v2026.06.19-esa"
-    source_revision: "39c77e03b56c5d57ce6eaa5c5d5c80db3af8808b"
+    source_ref: "v2026.06.21-esa"
+    source_revision: "bae5468e3ddcd19b3c39c667794160e618f3b2a9"
 
   db-migrations:
     image: "ghcr.io/ethicapp-development/ethicapp-db-migrations"
-    tag: "v2026.06.19-esa"
+    tag: "v2026.06.21-esa"
     digest: ""
-    source_ref: "v2026.06.19-esa"
-    source_revision: "39c77e03b56c5d57ce6eaa5c5d5c80db3af8808b"
+    source_ref: "v2026.06.21-esa"
+    source_revision: "bae5468e3ddcd19b3c39c667794160e618f3b2a9"
 
 external_images:
   postgresql:
