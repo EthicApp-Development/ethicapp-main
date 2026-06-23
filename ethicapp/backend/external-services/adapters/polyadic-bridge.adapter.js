@@ -480,7 +480,7 @@ export async function register({
         });
     });
 
-    subscribe("session-ended", async (context, { callback }) => {
+    subscribe("activity-finished", async (context, { callback }) => {
         const sessionId = Number(context.sessionId);
         let roomsClosed = 0;
 
@@ -510,7 +510,7 @@ export async function register({
 
         await callback({
             serviceId: service.id,
-            hook:      "session-ended",
+            hook:      "activity-finished",
             status:    "completed",
             payload:   { sessionId, roomsClosed },
         });

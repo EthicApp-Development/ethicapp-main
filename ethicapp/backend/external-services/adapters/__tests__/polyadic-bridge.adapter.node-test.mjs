@@ -252,6 +252,44 @@ test("phase-ended closes rooms created for that phase", async () => {
     assert.equal(harness.callbacks.at(-1).payload.roomsClosed, 2);
 });
 
+test("activity-finished closes every room for the session across all phases", async () => {
+    const harness = createHarness();
+    await harness.initialize();
+
+    await harness.dispatch("phase-started", { sessionId: 11, phaseId: 22 });
+    await harness.dispatch("phase-started", { sessionId: 11, phaseId: 33 });
+    await harness.dispatch("activity-finished", { sessionId: 11, phaseId: 33 });
+
+    const deletes = harness.requests
+        .filter(request => request.options.method === "DELETE")
+        .map(request => request.pathname);
+
+    assert.deepEqual(deletes, [
+        "/rooms/ethicapp-s11-p22-g301/sessions/active",
+        "/rooms/ethicapp-s11-p22-g302/sessions/active",
+        "/rooms/ethicapp-s11-p33-g301/sessions/active",
+        "/rooms/ethicapp-s11-p33-g302/sessions/active",
+    ]);
+    assert.equal(harness.callbacks.at(-1).hook, "activity-finished");
+    assert.equal(harness.callbacks.at(-1).payload.roomsClosed, 4);
+});
+
+test("activity-finished only closes rooms belonging to the finished session", async () => {
+    const harness = createHarness();
+    await harness.initialize();
+
+    await harness.dispatch("phase-started", { sessionId: 11, phaseId: 22 });
+    await harness.dispatch("phase-started", { sessionId: 12, phaseId: 22 });
+    await harness.dispatch("activity-finished", { sessionId: 11, phaseId: 22 });
+
+    const deletes = harness.requests
+        .filter(request => request.options.method === "DELETE")
+        .map(request => request.pathname);
+
+    assert.ok(deletes.every(pathname => pathname.includes("-s11-")), "should not close other sessions' rooms");
+    assert.equal(harness.callbacks.at(-1).payload.roomsClosed, 2);
+});
+
 test("phase room tracking is scoped by session and phase", async () => {
     const harness = createHarness({
         dependencies: {

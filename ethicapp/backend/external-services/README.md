@@ -55,8 +55,8 @@ callback results in memory for operational visibility and injects the current
 `serviceId` into hook contexts.
 
 Hook names are part of the adapter interface and must use kebab-case, for
-example `phase-started`, `phase-ended`, `student-response-submitted`, and
-`callback-received`.
+example `phase-started`, `phase-ended`, `activity-started`, `activity-finished`,
+`student-response-submitted`, and `callback-received`.
 
 ## Available Hook Publishers
 
@@ -70,8 +70,8 @@ The registry provides two helper publishers to adapters:
   `agentDisplayName` are optional but should be provided when available.
 
 Hook names are part of the adapter interface and must use kebab-case, for
-example `phase-started`, `phase-ended`, `student-response-submitted`, and
-`callback-received`.
+example `phase-started`, `phase-ended`, `activity-started`, `activity-finished`,
+`student-response-submitted`, and `callback-received`.
 
 Adapters can also call the `callback(result)` function passed to a subscribed
 hook handler. This is for recording adapter outcomes, not for communicating with
