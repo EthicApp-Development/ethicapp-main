@@ -21,11 +21,18 @@ function parseDateParam(value) {
 
 const router = express.Router();
 
-export async function processCallback({ serviceId, eventType, correlationId, payload, rawBody, auth, registry }) {
+export async function processCallback({ serviceId, eventType, correlationId, eventId, payload, rawBody, auth, registry }) {
     if (!serviceId) {
         return {
             status: 400,
             body:   { status: "err", error: "Missing required field: serviceId." },
+        };
+    }
+
+    if (eventId !== null && eventId !== undefined && !UUID_PATTERN.test(eventId)) {
+        return {
+            status: 400,
+            body:   { status: "err", error: "eventId must be a valid UUID when provided." },
         };
     }
 
@@ -48,6 +55,7 @@ export async function processCallback({ serviceId, eventType, correlationId, pay
                 serviceId,
                 eventType,
                 correlationId,
+                eventId:        eventId ?? null,
                 requestPayload: payload,
                 rawBody,
                 auth,
@@ -65,10 +73,11 @@ export async function processCallback({ serviceId, eventType, correlationId, pay
                     serviceId,
                     eventType,
                     correlationId,
+                    eventId:     eventId ?? null,
                     correlationStatus,
-                    resultId:   resultRecord?.id ?? null,
+                    resultId:    resultRecord?.id ?? null,
                     isDuplicate,
-                    dispatched: outcomes.length,
+                    dispatched:  outcomes.length,
                 },
             },
         };
@@ -92,12 +101,14 @@ router.post("/external-services/callbacks", callbackAuthMiddleware, async (req, 
     const serviceId     = typeof req.body?.serviceId === "string" ? req.body.serviceId.trim() : "";
     const eventType     = typeof req.body?.eventType === "string" ? req.body.eventType.trim() : "result";
     const correlationId = req.body?.correlationId ?? null;
+    const eventId       = typeof req.body?.eventId === "string" ? req.body.eventId.trim() || null : null;
     const payload       = req.body?.payload ?? null;
 
     const { status, body } = await processCallback({
         serviceId,
         eventType,
         correlationId,
+        eventId,
         payload,
         rawBody:  req.body,
         auth:     req.externalServiceAuth,

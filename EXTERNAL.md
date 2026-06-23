@@ -263,12 +263,21 @@ payload:
   "serviceId": "polyadic-devils-advocate",
   "eventType": "result",
   "correlationId": "optional-provider-job-or-room-id",
+  "eventId": "550e8400-e29b-41d4-a716-446655440000",
   "payload": {
     "room": "ethicapp-s11-p22-g301",
     "evaluations": []
   }
 }
 ```
+
+| Field | Required | Description |
+|---|---|---|
+| `serviceId` | Yes | Identifier of the calling service, must match a registered service. |
+| `eventType` | No | Type label for the event; defaults to `"result"`. |
+| `correlationId` | No | The job UUID returned by EthicApp when the job was dispatched. Used to correlate callbacks to outbound jobs. |
+| `eventId` | No | A UUID minted by the caller for this specific emission attempt. When provided, EthicApp uses `(serviceId, eventId)` as a deduplication key so that network retries of the same event are idempotent. Distinct `eventId` values on the same job are each processed independently. Omitting `eventId` falls back to terminal-state deduplication: any callback on a job that has already reached a terminal status is treated as a duplicate. |
+| `payload` | No | Arbitrary service-specific data. |
 
 The Bearer token must be a Keycloak `client_credentials` token issued to the
 calling service's dedicated Keycloak client (for example `polyadic-agent-api` or
@@ -294,7 +303,7 @@ Adapters subscribe to `callback-received`:
 ```js
 export async function register({ service, subscribe, publishStudentResult }) {
   subscribe("callback-received", async (context, { callback }) => {
-    // context.serviceId, context.eventType, context.correlationId
+    // context.serviceId, context.eventType, context.correlationId, context.eventId
     // context.requestPayload contains the caller's payload
     // context.auth contains the normalized Keycloak auth context
     await publishStudentResult({

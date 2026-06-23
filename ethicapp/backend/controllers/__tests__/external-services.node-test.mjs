@@ -113,6 +113,76 @@ test("processCallback: 202 with correlationStatus 'unknown' for unrecognized cor
     assert.equal(body.result.correlationStatus, "unknown");
 });
 
+// ─── eventId handling ─────────────────────────────────────────────────────────
+
+const EVENT_UUID = "e1e2e3e4-0000-4000-8000-000000000099";
+
+test("processCallback: echoes eventId in response when provided", async () => {
+    const { status, body } = await processCallback({
+        serviceId:     "svc-a",
+        eventType:     "result",
+        correlationId: JOB_UUID,
+        eventId:       EVENT_UUID,
+        payload:       {},
+        auth:          {},
+        registry:      makeRegistry(),
+    });
+
+    assert.equal(status, 202);
+    assert.equal(body.result.eventId, EVENT_UUID);
+});
+
+test("processCallback: eventId null in response when not provided", async () => {
+    const { status, body } = await processCallback({
+        serviceId:     "svc-a",
+        eventType:     "result",
+        correlationId: JOB_UUID,
+        payload:       {},
+        auth:          {},
+        registry:      makeRegistry(),
+    });
+
+    assert.equal(status, 202);
+    assert.equal(body.result.eventId, null);
+});
+
+test("processCallback: 400 when eventId is not a valid UUID", async () => {
+    const { status, body } = await processCallback({
+        serviceId: "svc-a",
+        eventType: "result",
+        eventId:   "not-a-uuid",
+        auth:      {},
+        registry:  makeRegistry(),
+    });
+
+    assert.equal(status, 400);
+    assert.equal(body.status, "err");
+});
+
+test("processCallback: forwards eventId through context to dispatchServiceHook", async () => {
+    let capturedCtx = null;
+
+    await processCallback({
+        serviceId:     "svc-a",
+        eventType:     "result",
+        correlationId: JOB_UUID,
+        eventId:       EVENT_UUID,
+        payload:       {},
+        auth:          {},
+        registry:      makeRegistry({
+            dispatchServiceHook: async (_hook, _svc, ctx) => {
+                capturedCtx = ctx;
+                return {
+                    resultRecord: { id: RESULT_UUID, job_id: JOB_UUID, is_duplicate: false },
+                    outcomes:     [],
+                };
+            },
+        }),
+    });
+
+    assert.equal(capturedCtx?.eventId, EVENT_UUID);
+});
+
 // ─── duplicate callback ───────────────────────────────────────────────────────
 
 test("processCallback: 202 with isDuplicate true and dispatched 0 for completed job", async () => {
