@@ -31,7 +31,7 @@
         "phase-started",
         "phase-ended",
         "callback-received",
-        "session-ended"
+        "activity-finished"
       ],
       "enabled": true,
       "callbackAuth": {

@@ -43,8 +43,9 @@ Each manifest entry declares:
 - `enabled`: whether the adapter should be loaded.
 
 Hook names are standardized as kebab-case identifiers. New adapters should use
-names such as `phase-started`, `phase-ended`, `session-ended`,
-`chat-message-received`, `student-response-submitted`, and `callback-received`.
+names such as `phase-started`, `phase-ended`, `activity-started`,
+`activity-finished`, `chat-message-received`, `student-response-submitted`, and
+`callback-received`.
 
 Adapters are ESM modules that export `register(...)`. During startup,
 `externalServicesRegistry.initialize()` loads the manifest, imports each enabled
@@ -198,14 +199,36 @@ Current event hooks:
   group chat.
 - `callback-received`: dispatched when an external service calls the callback
   endpoint. Replaces the earlier `external-service-result` hook.
-- `session-ended`: dispatched when a session finishes and service-local context
-  should be cleaned up.
+- `activity-started`: dispatched once when the teacher transitions a session into
+  `in_progress` (its first phase), so adapters can run any preparation/warm-up.
+  It does not fire on ordinary phase-to-phase advances. Resolved against the
+  services enabled for the phase being entered.
+- `activity-finished`: dispatched when the teacher finishes an activity, so
+  adapters can run any required cleanup (close rooms, release provider sessions,
+  flush state). Resolved against the **union of services enabled across all
+  phases** of the activity design, so any service that may have opened
+  provider-side state is notified to clean up regardless of which phase the
+  activity finishes on (including early/incomplete finishes). Replaces the earlier
+  single-service `session-ended` hook.
 
-The phase transition hooks are dispatched from:
+> **Enabled-service resolution differs by lifecycle hook.** `activity-started` is
+> phase-scoped (resolved from the phase being entered, since preparation is
+> relevant to that phase). `activity-finished` resolves against the union of
+> enabled services across all phases of the design, guaranteeing that no
+> provider-side state leaks past the end of the activity.
+
+The phase transition and `activity-started` hooks are dispatched from:
 
 ```text
 ethicapp/backend/controllers/activities/activities-teacher.js
 POST /activities/:session_id/phase_transition
+```
+
+The `activity-finished` hook is dispatched from:
+
+```text
+ethicapp/backend/controllers/activities/activities-teacher.js
+POST /activities/:session_id/finish
 ```
 
 The student response hook is dispatched from:
@@ -342,6 +365,30 @@ export async function register({ subscribe, publishGroupChatMessage }) {
       groupId: context.groupId,
       parentId: context.savedMessage?.id,
       content: "Mock chat agent reply."
+    });
+  });
+}
+```
+
+Adapters can subscribe to the activity-lifecycle hooks to prepare or clean up
+provider-side state. These are broadcast (fire-and-forget) to the services
+enabled for the relevant phase:
+
+```js
+export async function register({ service, subscribe, callback }) {
+  subscribe("activity-started", async (context) => {
+    // context.sessionId, context.phaseId (the first phase entered)
+    // Warm up / allocate any provider resources for the activity here.
+  });
+
+  subscribe("activity-finished", async (context, { callback }) => {
+    // context.sessionId, context.phaseId (the last active phase)
+    // Release provider sessions / flush state here.
+    await callback({
+      serviceId: service.id,
+      hook:      "activity-finished",
+      status:    "completed",
+      payload:   { sessionId: context.sessionId },
     });
   });
 }
