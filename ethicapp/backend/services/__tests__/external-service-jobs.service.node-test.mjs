@@ -283,7 +283,7 @@ test("createResult: null correlationId — skips job lookup, unknown-correlation
     assert.ok(db.calls[0].sql.includes("INSERT INTO external_service_results"));
 });
 
-test("createResult: terminal job — status guard prevents job update, not a duplicate without eventId", async () => {
+test("createResult: terminal job without eventId — is_duplicate true (backward-compat fallback)", async () => {
     const jobRow    = {
         id:          JOB_UUID,
         status:      JOB_STATUS.COMPLETED,
@@ -305,11 +305,11 @@ test("createResult: terminal job — status guard prevents job update, not a dup
     });
 
     assert.equal(db.calls.length, 2, "should not UPDATE when job is already terminal");
-    assert.equal(result.is_duplicate,     undefined, "terminal state alone is not a duplicate");
+    assert.equal(result.is_duplicate,     true, "terminal state triggers duplicate when no eventId");
     assert.equal(result.job_prior_status, JOB_STATUS.COMPLETED);
 });
 
-test("createResult: non-terminal job — is_duplicate not set, job advanced to callback-received", async () => {
+test("createResult: non-terminal job without eventId — is_duplicate false, job advanced to callback-received", async () => {
     const jobRow    = {
         id:          JOB_UUID,
         status:      JOB_STATUS.DISPATCHED,
@@ -330,7 +330,7 @@ test("createResult: non-terminal job — is_duplicate not set, job advanced to c
     });
 
     assert.equal(db.calls.length, 3, "should UPDATE non-terminal job");
-    assert.equal(result.is_duplicate,     undefined, "no duplicate without eventId conflict");
+    assert.equal(result.is_duplicate,     false, "non-terminal job: not a duplicate");
     assert.equal(result.job_prior_status, JOB_STATUS.DISPATCHED);
 });
 

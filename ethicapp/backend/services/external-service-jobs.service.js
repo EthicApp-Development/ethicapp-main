@@ -177,6 +177,12 @@ export class ExternalServiceJobsService {
 
         if (result && jobStatus !== null) {
             result.job_prior_status = jobStatus;
+            // When eventId is absent, fall back to terminal-state replay protection so
+            // existing integrations that omit eventId retain the same dedup behavior
+            // they had before this feature was introduced.
+            if (eventId === null) {
+                result.is_duplicate = TERMINAL_JOB_STATUSES.has(jobStatus);
+            }
         }
 
         // Only advance a non-terminal job to callback-received.
