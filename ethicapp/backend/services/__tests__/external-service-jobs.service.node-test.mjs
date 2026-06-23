@@ -283,7 +283,7 @@ test("createResult: null correlationId — skips job lookup, unknown-correlation
     assert.ok(db.calls[0].sql.includes("INSERT INTO external_service_results"));
 });
 
-test("createResult: duplicate — terminal job is not overwritten to callback-received", async () => {
+test("createResult: terminal job — status guard prevents job update, not a duplicate without eventId", async () => {
     const jobRow    = {
         id:          JOB_UUID,
         status:      JOB_STATUS.COMPLETED,
@@ -305,11 +305,11 @@ test("createResult: duplicate — terminal job is not overwritten to callback-re
     });
 
     assert.equal(db.calls.length, 2, "should not UPDATE when job is already terminal");
-    assert.equal(result.is_duplicate,     true);
+    assert.equal(result.is_duplicate,     undefined, "terminal state alone is not a duplicate");
     assert.equal(result.job_prior_status, JOB_STATUS.COMPLETED);
 });
 
-test("createResult: non-terminal job sets is_duplicate to false", async () => {
+test("createResult: non-terminal job — is_duplicate not set, job advanced to callback-received", async () => {
     const jobRow    = {
         id:          JOB_UUID,
         status:      JOB_STATUS.DISPATCHED,
@@ -330,8 +330,68 @@ test("createResult: non-terminal job sets is_duplicate to false", async () => {
     });
 
     assert.equal(db.calls.length, 3, "should UPDATE non-terminal job");
-    assert.equal(result.is_duplicate,     false);
+    assert.equal(result.is_duplicate,     undefined, "no duplicate without eventId conflict");
     assert.equal(result.job_prior_status, JOB_STATUS.DISPATCHED);
+});
+
+test("createResult: with eventId, first delivery — inserts row and is_duplicate not set", async () => {
+    const EVENT_UUID = "e1e2e3e4-0000-4000-8000-000000000099";
+    const resultRow  = { id: RESULT_UUID, job_id: null, status: RESULT_STATUS.UNKNOWN_CORRELATION };
+    // No correlationId → only 1 call: INSERT (no job SELECT, no job UPDATE)
+    const db  = makeDbQueue([resultRow]);
+    const svc = new ExternalServiceJobsService({ dbQuery: db });
+
+    const result = await svc.createResult({
+        correlationId: null,
+        serviceId:     "polyadic-devils-advocate",
+        rawPayload:    {},
+        eventId:       EVENT_UUID,
+    });
+
+    assert.equal(db.calls.length, 1);
+    assert.ok(db.calls[0].sql.includes("INSERT INTO external_service_results"));
+    assert.ok(db.calls[0].sql.includes("ON CONFLICT"), "INSERT must include ON CONFLICT clause");
+    assert.equal(db.calls[0].params[11], EVENT_UUID, "event_id passed as $12");
+    assert.equal(result?.is_duplicate, undefined);
+});
+
+test("createResult: with eventId, conflict — fetches existing row and marks is_duplicate true", async () => {
+    const EVENT_UUID  = "e1e2e3e4-0000-4000-8000-000000000099";
+    const existingRow = { id: RESULT_UUID, job_id: JOB_UUID, status: RESULT_STATUS.CALLBACK_RECEIVED };
+    // call 0: INSERT returns [] (ON CONFLICT DO NOTHING hit); call 1: SELECT existing row
+    const db  = makeDbQueue([], [existingRow]);
+    const svc = new ExternalServiceJobsService({ dbQuery: db });
+
+    const result = await svc.createResult({
+        correlationId: null,
+        serviceId:     "polyadic-devils-advocate",
+        rawPayload:    {},
+        eventId:       EVENT_UUID,
+    });
+
+    assert.equal(db.calls.length, 2);
+    assert.ok(db.calls[1].sql.includes("event_id = $2"), "fallback SELECT must query by event_id");
+    assert.equal(db.calls[1].params[0], "polyadic-devils-advocate");
+    assert.equal(db.calls[1].params[1], EVENT_UUID);
+    assert.equal(result?.is_duplicate, true);
+    assert.equal(result?.id, RESULT_UUID);
+});
+
+test("createResult: null eventId with conflict-returning empty INSERT — not treated as duplicate", async () => {
+    // Without eventId the ON CONFLICT clause never fires, but even if INSERT returned []
+    // for some other reason, we should not do the fallback SELECT.
+    const db  = makeDbQueue([]);
+    const svc = new ExternalServiceJobsService({ dbQuery: db });
+
+    const result = await svc.createResult({
+        correlationId: null,
+        serviceId:     "polyadic-devils-advocate",
+        rawPayload:    {},
+        eventId:       null,
+    });
+
+    assert.equal(db.calls.length, 1, "no fallback SELECT when eventId is null");
+    assert.equal(result, null);
 });
 
 // ─── updateResult ─────────────────────────────────────────────────────────────

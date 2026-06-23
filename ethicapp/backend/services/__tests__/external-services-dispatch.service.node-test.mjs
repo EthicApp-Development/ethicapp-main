@@ -171,6 +171,29 @@ test("dispatchServiceHook: creates result record before calling handler", async 
     assert.equal(createResultCalls[0].sessionId, 7);
 });
 
+test("dispatchServiceHook: threads eventId from context into createResult", async () => {
+    const EVENT_UUID        = "e1e2e3e4-0000-4000-8000-000000000099";
+    const createResultCalls = [];
+    const { registry } = makeRegistry({
+        createResult: async (args) => {
+            createResultCalls.push(args);
+            return { id: RESULT_UUID, job_id: JOB_UUID };
+        },
+    });
+
+    registry.hookSubscribers.set("callback-received", [
+        { serviceId: "svc-a", handler: async () => {} },
+    ]);
+
+    await registry.dispatchServiceHook(
+        "callback-received",
+        "svc-a",
+        { correlationId: JOB_UUID, eventId: EVENT_UUID }
+    );
+
+    assert.equal(createResultCalls[0].eventId, EVENT_UUID);
+});
+
 test("dispatchServiceHook: enriches handler context with jobId and resultId", async () => {
     let capturedContext = null;
     const { registry } = makeRegistry();
@@ -357,7 +380,7 @@ test("recordCallbackResult: advances job to failed when resultId and jobId prese
     assert.equal(statusCalls[0].status, JOB_STATUS.FAILED);
 });
 
-test("dispatchServiceHook: second callback for same correlationId is duplicate after first completes", async () => {
+test("dispatchServiceHook: second callback with same eventId is duplicate — handler skipped", async () => {
     let handlerCallCount = 0;
     let callCount        = 0;
 
@@ -367,8 +390,8 @@ test("dispatchServiceHook: second callback for same correlationId is duplicate a
             if (callCount === 1) {
                 return { id: RESULT_UUID, job_id: JOB_UUID, is_duplicate: false };
             }
-            // Second call: job is now terminal after adapter called callback(result)
-            return { id: `${RESULT_UUID}-2`, job_id: JOB_UUID, is_duplicate: true, job_prior_status: JOB_STATUS.COMPLETED };
+            // Second call: same (serviceId, eventId) already recorded — createResult signals duplicate.
+            return { id: `${RESULT_UUID}-2`, job_id: JOB_UUID, is_duplicate: true };
         },
     });
 

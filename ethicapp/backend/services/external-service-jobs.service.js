@@ -109,6 +109,7 @@ export class ExternalServiceJobsService {
         serviceId,
         hookName      = "callback-received",
         rawPayload,
+        eventId       = null,
         sessionId     = null,
         phaseId       = null,
         questionId    = null,
@@ -144,22 +145,38 @@ export class ExternalServiceJobsService {
             `INSERT INTO external_service_results
                  (job_id, correlation_id, service_id, hook_name, status,
                   session_id, phase_id, question_id, group_id, user_id,
-                  raw_payload)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+                  raw_payload, event_id)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+             ON CONFLICT (service_id, event_id) WHERE event_id IS NOT NULL
+             DO NOTHING
              RETURNING id, job_id, correlation_id, service_id, hook_name,
                        status, received_at`,
             [
                 jobId, correlationId, serviceId, hookName, resultStatus,
                 sessionId, phaseId, questionId, groupId, userId,
-                rawPayload ?? {},
+                rawPayload ?? {}, eventId,
             ]
         );
+
+        // Empty result with a provided eventId means (service_id, event_id) already exists.
+        if (rows.length === 0 && eventId !== null) {
+            const existing = await this._db(
+                `SELECT id, job_id, correlation_id, service_id, hook_name, status, received_at
+                 FROM external_service_results
+                 WHERE service_id = $1 AND event_id = $2`,
+                [serviceId, eventId]
+            );
+            const dup = existing[0] || null;
+            if (dup) {
+                dup.is_duplicate = true;
+            }
+            return dup;
+        }
 
         const result = rows[0] || null;
 
         if (result && jobStatus !== null) {
             result.job_prior_status = jobStatus;
-            result.is_duplicate     = TERMINAL_JOB_STATUSES.has(jobStatus);
         }
 
         // Only advance a non-terminal job to callback-received.

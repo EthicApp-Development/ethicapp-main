@@ -264,6 +264,7 @@ export class ExternalServicesRegistry {
             serviceId,
             hookName,
             rawPayload:    context.requestPayload ?? context.rawBody ?? {},
+            eventId:       context.eventId    ?? null,
             sessionId:     context.sessionId  ?? null,
             phaseId:       context.phaseId    ?? null,
             questionId:    context.questionId ?? null,
