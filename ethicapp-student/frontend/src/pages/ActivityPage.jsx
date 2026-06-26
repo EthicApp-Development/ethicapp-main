@@ -181,6 +181,7 @@ export default function ActivityPage() {
     externalServiceResults.forEach((result) => {
       const phaseId = Number(result?.phaseId);
       if (!Number.isInteger(phaseId) || phaseId <= 0) {
+        // Session-level results are intentionally not shown in phase tabs.
         return;
       }
 
