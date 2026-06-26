@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import CaseDocumentViewer from './CaseDocumentViewer.jsx';
+import ExternalServiceResultPanel from './external-services/ExternalServiceResultPanel.jsx';
 import RankingPhaseView from './phases/RankingPhaseView.jsx';
 import SemanticDifferentialPhaseView from './phases/SemanticDifferentialPhaseView.jsx';
 
@@ -18,6 +19,8 @@ export default function ActivityTabsPanel({
   chatRefreshTokenByPhaseId,
   atsEnabledByPhaseId,
   atsProcessingByPhaseId,
+  externalResultsByPhaseId,
+  onDismissExternalResult,
   userId,
   t
 }) {
@@ -113,6 +116,14 @@ export default function ActivityTabsPanel({
 
         {activeTab !== 'case' && (!activePhase || !['semantic_differential', 'ranking'].includes(designType)) ? (
           <p className="mb-0 text-secondary">{t('sessionDetail.phaseTabPlaceholder')}</p>
+        ) : null}
+
+        {activeTab !== 'case' && activePhase ? (
+          <ExternalServiceResultPanel
+            results={externalResultsByPhaseId?.[activePhaseId] ?? []}
+            onDismiss={onDismissExternalResult}
+            t={t}
+          />
         ) : null}
       </div>
     </section>
