@@ -120,7 +120,6 @@ const enUS = {
     chatCancelReply: 'Cancel',
     submitResponse: 'Submit response',
     submittingResponse: 'Submitting...',
-    atsAwaitingFeedback: 'Waiting for tutor...',
     responseSubmitted: 'Response submitted successfully.',
     responseSubmitError: 'Unable to submit your response.',
     responseSelectScaleFirst: 'Select a scale value before submitting.',

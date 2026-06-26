@@ -5,7 +5,6 @@ export default function SemanticDifferentialTaskView({
   justification,
   taskFeedback,
   submitting,
-  atsBlocking,
   previousResponsesContent,
   onTaskValueChange,
   onTaskJustificationChange,
@@ -161,22 +160,12 @@ export default function SemanticDifferentialTaskView({
         <button
           type="button"
           className="btn btn-primary btn-sm"
-          disabled={disabled || submitting || atsBlocking}
+          disabled={disabled || submitting}
           onClick={onTaskSubmit}
         >
           <span className="d-inline-flex align-items-center gap-2">
-            {atsBlocking && !submitting ? (
-              <span className="spinner-border spinner-border-sm" aria-hidden="true" />
-            ) : (
-              <i className="fa-solid fa-paper-plane" aria-hidden="true" />
-            )}
-            <span>
-              {submitting
-                ? t('sessionDetail.submittingResponse')
-                : atsBlocking
-                  ? t('sessionDetail.atsAwaitingFeedback')
-                  : t('sessionDetail.submitResponse')}
-            </span>
+            <i className="fa-solid fa-paper-plane" aria-hidden="true" />
+            <span>{submitting ? t('sessionDetail.submittingResponse') : t('sessionDetail.submitResponse')}</span>
           </span>
         </button>
       </div>

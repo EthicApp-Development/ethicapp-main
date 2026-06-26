@@ -121,7 +121,6 @@ const esCL = {
     chatCancelReply: 'Cancelar',
     submitResponse: 'Enviar respuesta',
     submittingResponse: 'Enviando...',
-    atsAwaitingFeedback: 'Esperando al tutor...',
     responseSubmitted: 'Respuesta enviada correctamente.',
     responseSubmitError: 'No fue posible enviar tu respuesta.',
     responseSelectScaleFirst: 'Selecciona un valor de la escala antes de enviar.',
