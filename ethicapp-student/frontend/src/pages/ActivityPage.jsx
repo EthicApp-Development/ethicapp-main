@@ -10,6 +10,12 @@ import { useStudentActivityState } from '../context/StudentActivityStateContext.
 import { useActivityRealtimeSync } from './session-detail/hooks/useActivityRealtimeSync.js';
 import { usePhaseResponseSubmission } from './session-detail/hooks/usePhaseResponseSubmission.js';
 import {
+  EXTERNAL_RESPONSE_PROCESSING_TIMEOUT_MS,
+  applyResponseProcessingDelta,
+  buildResponseProcessingByPhase,
+  buildResponseProcessingServicesByPhase
+} from './session-detail/externalResponseProcessing.js';
+import {
   initialSessionDetailState,
   normalizeStatusCode,
   SESSION_STATUS,
@@ -33,6 +39,21 @@ function isCaseDocumentProcessingActive(caseDocument) {
   return status === 'pending' || status === 'processing';
 }
 
+function buildResponseProcessingTimeoutKey(phaseId, serviceId) {
+  return `${phaseId}:${serviceId}`;
+}
+
+function removeQueuedTimeout(timeoutMap, timeoutKey, timeoutId) {
+  const queue = timeoutMap.get(timeoutKey) ?? [];
+  const nextQueue = queue.filter((queuedTimeoutId) => queuedTimeoutId !== timeoutId);
+
+  if (nextQueue.length > 0) {
+    timeoutMap.set(timeoutKey, nextQueue);
+  } else {
+    timeoutMap.delete(timeoutKey);
+  }
+}
+
 export default function ActivityPage() {
   const { locale, t } = useI18n();
   const { session, sessionRefreshKey } = useOutletContext();
@@ -42,10 +63,12 @@ export default function ActivityPage() {
   const [externalServiceResults, setExternalServiceResults] = useState([]);
   const [groupIdByPhaseId, setGroupIdByPhaseId] = useState({});
   const [groupContextByPhaseId, setGroupContextByPhaseId] = useState({});
-  const [atsPendingByPhaseId, setAtsPendingByPhaseId] = useState({});
+  const [pendingExternalResponseProcessingByPhaseId, setPendingExternalResponseProcessingByPhaseId] = useState({});
   const lastAutoSelectedPhaseIdRef = useRef(null);
   const currentGroupIdRef = useRef(null);
   const currentPhaseIdRef = useRef(null);
+  const responseProcessingTimeoutsByKeyRef = useRef(new Map());
+  const responseProcessingServiceIdsByPhaseIdRef = useRef({});
   const {
     stateBySession,
     loadingBySession,
@@ -54,6 +77,71 @@ export default function ActivityPage() {
     loadCurrentPhaseState,
     submitActivityResponse
   } = useStudentActivityState();
+
+  const adjustExternalResponseProcessing = useCallback(({ phaseId, serviceId, delta }) => {
+    setPendingExternalResponseProcessingByPhaseId((previous) => (
+      applyResponseProcessingDelta(previous, { phaseId, serviceId, delta })
+    ));
+  }, []);
+
+  const clearExternalResponseProcessingTimeouts = useCallback(() => {
+    responseProcessingTimeoutsByKeyRef.current.forEach((timeoutQueue) => {
+      timeoutQueue.forEach((timeoutId) => window.clearTimeout(timeoutId));
+    });
+    responseProcessingTimeoutsByKeyRef.current.clear();
+  }, []);
+
+  const beginExternalResponseProcessing = useCallback(({ phaseId, serviceId }) => {
+    const normalizedPhaseId = Number(phaseId);
+    const normalizedServiceId = typeof serviceId === 'string' ? serviceId.trim() : '';
+
+    if (!Number.isInteger(normalizedPhaseId) || normalizedPhaseId <= 0 || !normalizedServiceId) {
+      return;
+    }
+
+    adjustExternalResponseProcessing({
+      phaseId: normalizedPhaseId,
+      serviceId: normalizedServiceId,
+      delta: 1
+    });
+
+    const timeoutKey = buildResponseProcessingTimeoutKey(normalizedPhaseId, normalizedServiceId);
+    const timeoutId = window.setTimeout(() => {
+      removeQueuedTimeout(responseProcessingTimeoutsByKeyRef.current, timeoutKey, timeoutId);
+      adjustExternalResponseProcessing({
+        phaseId: normalizedPhaseId,
+        serviceId: normalizedServiceId,
+        delta: -1
+      });
+    }, EXTERNAL_RESPONSE_PROCESSING_TIMEOUT_MS);
+
+    const timeoutQueue = responseProcessingTimeoutsByKeyRef.current.get(timeoutKey) ?? [];
+    responseProcessingTimeoutsByKeyRef.current.set(timeoutKey, [...timeoutQueue, timeoutId]);
+  }, [adjustExternalResponseProcessing]);
+
+  const resolveExternalResponseProcessing = useCallback(({ phaseId, serviceId }) => {
+    const normalizedPhaseId = Number(phaseId);
+    const normalizedServiceId = typeof serviceId === 'string' ? serviceId.trim() : '';
+
+    if (!Number.isInteger(normalizedPhaseId) || normalizedPhaseId <= 0 || !normalizedServiceId) {
+      return;
+    }
+
+    const timeoutKey = buildResponseProcessingTimeoutKey(normalizedPhaseId, normalizedServiceId);
+    const timeoutQueue = responseProcessingTimeoutsByKeyRef.current.get(timeoutKey) ?? [];
+    const timeoutId = timeoutQueue[0];
+
+    if (timeoutId) {
+      window.clearTimeout(timeoutId);
+      removeQueuedTimeout(responseProcessingTimeoutsByKeyRef.current, timeoutKey, timeoutId);
+    }
+
+    adjustExternalResponseProcessing({
+      phaseId: normalizedPhaseId,
+      serviceId: normalizedServiceId,
+      delta: -1
+    });
+  }, [adjustExternalResponseProcessing]);
 
   useEffect(() => {
     if (!session.isAuthenticated) {
@@ -106,8 +194,15 @@ export default function ActivityPage() {
   }, [selectedSessionId]);
 
   useEffect(() => {
-    setAtsPendingByPhaseId({});
-  }, [selectedSessionId]);
+    clearExternalResponseProcessingTimeouts();
+    setPendingExternalResponseProcessingByPhaseId({});
+  }, [clearExternalResponseProcessingTimeouts, selectedSessionId]);
+
+  useEffect(() => {
+    return () => {
+      clearExternalResponseProcessingTimeouts();
+    };
+  }, [clearExternalResponseProcessingTimeouts]);
 
   useEffect(() => {
     if (!session.isAuthenticated || !selectedSession) {
@@ -156,14 +251,15 @@ export default function ActivityPage() {
   const handleExternalServiceResult = useCallback((payload) => {
     const serviceId = String(payload?.serviceId || '').trim();
     const payloadPhaseId = Number(payload?.phaseId);
-    if (serviceId === 'argumentation-tutor-system' && Number.isInteger(payloadPhaseId) && payloadPhaseId > 0) {
-      setAtsPendingByPhaseId((previous) => {
-        const current = Number(previous[payloadPhaseId]) || 0;
-        return {
-          ...previous,
-          [payloadPhaseId]: Math.max(0, current - 1)
-        };
-      });
+    const responseProcessingServiceIds = responseProcessingServiceIdsByPhaseIdRef.current[payloadPhaseId] ?? [];
+
+    if (
+      serviceId
+      && Number.isInteger(payloadPhaseId)
+      && payloadPhaseId > 0
+      && responseProcessingServiceIds.includes(serviceId)
+    ) {
+      resolveExternalResponseProcessing({ phaseId: payloadPhaseId, serviceId });
     }
 
     setExternalServiceResults((previousResults) => [
@@ -173,7 +269,7 @@ export default function ActivityPage() {
       },
       ...previousResults
     ]);
-  }, []);
+  }, [resolveExternalResponseProcessing]);
 
   const externalResultsByPhaseId = useMemo(() => {
     const byPhaseId = {};
@@ -340,42 +436,32 @@ export default function ActivityPage() {
     });
   }, [activityState, groupContextByPhaseId, groupIdByPhaseId]);
 
-  const atsEnabledByPhaseId = useMemo(() => {
+  const responseProcessingServiceIdsByPhaseId = useMemo(() => {
     const design = activityState?.descriptor?.design || localState.activityDescriptor?.design;
-    const designPhases = Array.isArray(design?.phases) ? design.phases : [];
-    const enabledByPhaseId = {};
+    const services = activityState?.descriptor?.externalServices?.services
+      ?? localState.activityDescriptor?.externalServices?.services
+      ?? [];
 
-    phaseTabs.forEach((phase) => {
-      const phaseId = Number(phase?.id);
-      const phaseNumber = Number(phase?.number);
-      if (!Number.isInteger(phaseId) || phaseId <= 0 || !Number.isInteger(phaseNumber) || phaseNumber <= 0) {
-        return;
-      }
-
-      const phaseDesign = designPhases[phaseNumber - 1];
-      const enabledServiceIds = Array.isArray(phaseDesign?.externalServices?.enabledServiceIds)
-        ? phaseDesign.externalServices.enabledServiceIds
-        : [];
-
-      enabledByPhaseId[phaseId] = enabledServiceIds.includes('argumentation-tutor-system');
+    return buildResponseProcessingServicesByPhase({
+      phases: phaseTabs,
+      design,
+      services
     });
+  }, [
+    activityState?.descriptor?.design,
+    activityState?.descriptor?.externalServices?.services,
+    localState.activityDescriptor?.design,
+    localState.activityDescriptor?.externalServices?.services,
+    phaseTabs
+  ]);
 
-    return enabledByPhaseId;
-  }, [activityState?.descriptor?.design, localState.activityDescriptor?.design, phaseTabs]);
+  useEffect(() => {
+    responseProcessingServiceIdsByPhaseIdRef.current = responseProcessingServiceIdsByPhaseId;
+  }, [responseProcessingServiceIdsByPhaseId]);
 
-  const atsProcessingByPhaseId = useMemo(() => {
-    const processingByPhaseId = {};
-    Object.entries(atsPendingByPhaseId).forEach(([phaseIdRaw, pendingCount]) => {
-      const phaseId = Number(phaseIdRaw);
-      if (!Number.isInteger(phaseId) || phaseId <= 0) {
-        return;
-      }
-
-      processingByPhaseId[phaseId] = Number(pendingCount) > 0;
-    });
-
-    return processingByPhaseId;
-  }, [atsPendingByPhaseId]);
+  const externalResponseProcessingByPhaseId = useMemo(() => (
+    buildResponseProcessingByPhase(pendingExternalResponseProcessingByPhaseId)
+  ), [pendingExternalResponseProcessingByPhaseId]);
 
   const currentPhaseNumber = activityState?.descriptor?.currentPhaseNumber ?? null;
   const currentPhaseId = activityState?.descriptor?.currentPhaseId ?? null;
@@ -455,14 +541,15 @@ export default function ActivityPage() {
         return;
       }
 
-      if (!atsEnabledByPhaseId[phaseId]) {
+      const processingServiceIds = responseProcessingServiceIdsByPhaseId[phaseId] ?? [];
+
+      if (processingServiceIds.length === 0) {
         return;
       }
 
-      setAtsPendingByPhaseId((previous) => ({
-        ...previous,
-        [phaseId]: (Number(previous[phaseId]) || 0) + 1
-      }));
+      processingServiceIds.forEach((serviceId) => {
+        beginExternalResponseProcessing({ phaseId, serviceId });
+      });
     }
   });
 
@@ -540,8 +627,7 @@ export default function ActivityPage() {
                     isSessionFinished={isSessionFinished}
                     onSubmitPhaseResponse={onSubmitPhaseResponse}
                     chatRefreshTokenByPhaseId={chatRefreshTokenByPhaseId}
-                    atsEnabledByPhaseId={atsEnabledByPhaseId}
-                    atsProcessingByPhaseId={atsProcessingByPhaseId}
+                    externalResponseProcessingByPhaseId={externalResponseProcessingByPhaseId}
                     externalResultsByPhaseId={externalResultsByPhaseId}
                     onDismissExternalResult={onDismissExternalResult}
                     userId={session.uid}

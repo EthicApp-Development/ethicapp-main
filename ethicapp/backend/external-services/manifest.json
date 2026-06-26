@@ -11,6 +11,9 @@
         "chat-message-received",
         "callback-received"
       ],
+      "capabilities": {
+        "processesStudentResponses": true
+      },
       "enabled": true
     },
     {
@@ -48,6 +51,9 @@
         "phase-ended",
         "callback-received"
       ],
+      "capabilities": {
+        "processesStudentResponses": true
+      },
       "enabled": true,
       "callbackAuth": {
         "allowedClientIds": ["argumentation-tutor-api"],

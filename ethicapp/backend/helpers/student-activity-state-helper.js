@@ -4,6 +4,7 @@ import redisClient from "../db/redis.js";
 import { responseFactories } from  "../../common/modules/design-types.js";
 import * as DesignsHelper from "../helpers/designs-helper.js"
 import * as ActivitiesHelper from "../helpers/activities-helper.js"
+import externalServicesRegistry from "../services/external-services.service.js";
 
 export const buildInitialPhaseState = async function (phaseId) {
     try {
@@ -53,7 +54,7 @@ export async function getCachedStudentActivityDescriptor(sessionId, invalidate =
         throw new Error("Invalid sessionId");
     }
 
-    const cacheKey = `descriptor:${sessionId}`;
+    const cacheKey = `descriptor:${sessionId}:v2`;
 
     // Check if cache invalidation is requested
     if (invalidate) {
@@ -119,11 +120,15 @@ export async function getStudentActivityDescriptor(sessionId) {
             currentphasenumber: currentPhaseNumber,
             currentphaseid: currentPhaseId
          } = descriptorResult[0];
+        await externalServicesRegistry.initialize();
 
         return {
             descriptor: {
                 description,
                 design,
+                externalServices: {
+                    services: externalServicesRegistry.listServices(),
+                },
                 currentPhaseNumber,
                 currentPhaseId
             },
