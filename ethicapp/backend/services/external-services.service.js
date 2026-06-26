@@ -21,6 +21,16 @@ function isValidHookName(hookName) {
     return typeof hookName === "string" && HOOK_NAME_PATTERN.test(hookName);
 }
 
+function normalizeCapabilities(capabilities) {
+    if (!capabilities || typeof capabilities !== "object" || Array.isArray(capabilities)) {
+        return {};
+    }
+
+    return {
+        processesStudentResponses: capabilities.processesStudentResponses === true,
+    };
+}
+
 export class ExternalServicesRegistry {
     constructor({ jobsService } = {}) {
         this.initialized      = false;
@@ -74,6 +84,7 @@ export class ExternalServicesRegistry {
                     return isValid;
                 })
                 : [],
+            capabilities: normalizeCapabilities(service.capabilities),
             enabled:      service.enabled !== false,
             adapter:      service.adapter,
             callbackAuth: service.callbackAuth && typeof service.callbackAuth === "object"
@@ -133,10 +144,11 @@ export class ExternalServicesRegistry {
     }
 
     listServices() {
-        return Array.from(this.services.values()).map(({ id, description, hooks, enabled }) => ({
+        return Array.from(this.services.values()).map(({ id, description, hooks, capabilities, enabled }) => ({
             id,
             description,
             hooks,
+            capabilities,
             enabled,
         }));
     }

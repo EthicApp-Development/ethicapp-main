@@ -63,3 +63,21 @@ test("authorizeCallbackCaller: allows caller with required realm role", () => {
         externalServicesRegistry.authorizeCallbackCaller("test-role-ok", { clientId: "any-client", roles: ["viewer", "editor"] })
     );
 });
+
+test("listServices exposes response-processing capabilities", () => {
+    externalServicesRegistry.services.set("test-response-processor", {
+        id:           "test-response-processor",
+        description:  "test service",
+        hooks:        ["student-response-submitted"],
+        capabilities: { processesStudentResponses: true },
+        enabled:      true,
+        adapter:      "./test-adapter.js",
+        callbackAuth: null,
+    });
+
+    const service = externalServicesRegistry
+        .listServices()
+        .find(({ id }) => id === "test-response-processor");
+
+    assert.deepEqual(service?.capabilities, { processesStudentResponses: true });
+});

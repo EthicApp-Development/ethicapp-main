@@ -17,8 +17,7 @@ export default function ActivityTabsPanel({
   isSessionFinished,
   onSubmitPhaseResponse,
   chatRefreshTokenByPhaseId,
-  atsEnabledByPhaseId,
-  atsProcessingByPhaseId,
+  externalResponseProcessingByPhaseId,
   externalResultsByPhaseId,
   onDismissExternalResult,
   userId,
@@ -97,8 +96,7 @@ export default function ActivityTabsPanel({
             isReadOnly={isSessionFinished}
             isActivePhase={isActivePhase}
             onSubmitPhaseResponse={onSubmitPhaseResponse}
-            isAtsEnabled={Boolean(atsEnabledByPhaseId?.[activePhaseId])}
-            isAtsProcessing={Boolean(atsProcessingByPhaseId?.[activePhaseId])}
+            isExternalResponseProcessing={Boolean(externalResponseProcessingByPhaseId?.[activePhaseId])}
             onRequestOpenChatRefreshToken={chatRefreshTokenByPhaseId[activePhaseId] ?? 0}
             userId={userId}
             t={t}
