@@ -209,7 +209,7 @@ test("ethicapp_correlation_id defaults to null when correlationId absent from ch
     assert.equal(messageRequest.options.body.ethicapp_correlation_id, null);
 });
 
-test("callback-received publishes only Orientador responses to group chat", async () => {
+test("callback-received publishes ConversationGuide and legacy Orientador responses to group chat", async () => {
     const harness = createHarness();
     await harness.initialize();
 
@@ -218,13 +218,22 @@ test("callback-received publishes only Orientador responses to group chat", asyn
             room:        "ethicapp-s11-p22-g301",
             evaluations: [
                 { agente: "Validador", respuesta: "NO_INTERVENIR: active debate" },
+                { agente: "ConversationGuide", respuesta: "Which tradeoff matters most here?" },
                 { agente: "Orientador", respuesta: "What assumption is your group making?" },
             ],
         },
     });
 
-    assert.equal(harness.publishedMessages.length, 1);
+    assert.equal(harness.publishedMessages.length, 2);
     assert.deepEqual(harness.publishedMessages[0], {
+        sessionId:        11,
+        phaseId:          22,
+        questionId:       701,
+        groupId:          301,
+        agentDisplayName: "ConversationGuide",
+        content:          "Which tradeoff matters most here?",
+    });
+    assert.deepEqual(harness.publishedMessages[1], {
         sessionId:        11,
         phaseId:          22,
         questionId:       701,
@@ -232,7 +241,7 @@ test("callback-received publishes only Orientador responses to group chat", asyn
         agentDisplayName: "Orientador",
         content:          "What assumption is your group making?",
     });
-    assert.equal(harness.callbacks.at(-1).payload.messagesPublished, 1);
+    assert.equal(harness.callbacks.at(-1).payload.messagesPublished, 2);
 });
 
 test("phase-ended closes rooms created for that phase", async () => {

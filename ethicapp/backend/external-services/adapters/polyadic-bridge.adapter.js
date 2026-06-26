@@ -4,6 +4,7 @@ import defaultAiAdditionsClient from "../../services/ai-additions-client.service
 
 const DEFAULT_POLYADIC_BASE_PATH = "/polyadic-agent/api";
 const DEFAULT_PIPELINE_TYPE = "abogado-del-diablo";
+const CHAT_AGENT_IDENTITIES = new Set(["conversationguide", "orientador"]);
 
 let aiAdditionsClient = defaultAiAdditionsClient;
 
@@ -14,6 +15,10 @@ function normalizeText(value) {
 
     const text = String(value).trim();
     return text.length > 0 ? text : "";
+}
+
+function isPublishableChatAgent(agentName) {
+    return CHAT_AGENT_IDENTITIES.has(normalizeText(agentName).toLowerCase());
 }
 
 function readBoolean(value, fallback) {
@@ -424,7 +429,7 @@ export async function register({
             const agentName = normalizeText(evaluation?.agente);
             const content = normalizeText(evaluation?.respuesta);
 
-            if (!content || agentName.toLowerCase() !== "orientador") {
+            if (!content || !isPublishableChatAgent(agentName)) {
                 continue;
             }
 
