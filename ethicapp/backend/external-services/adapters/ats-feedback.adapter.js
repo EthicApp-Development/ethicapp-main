@@ -3,22 +3,19 @@ import * as rpg2 from "../../db/rest-pg-2.js";
 import { getPhaseDesignByPhaseId } from "../../helpers/designs-helper.js";
 import { getCaseIdBySessionId } from "../../helpers/sessions-helper.js";
 import { getCaseDocumentRawText } from "../../helpers/case-document-content-helper.js";
+import defaultAiAdditionsClient from "../../services/ai-additions-client.service.js";
+import { buildArgumentClientContext } from "./ats-feedback.utils.js";
 
-const DEFAULT_ATS_BASE_URL = "http://host.docker.internal:5001";
-const DEFAULT_KEYCLOAK_BASE_URL = "http://host.docker.internal:8080";
-const DEFAULT_KEYCLOAK_REALM = "argumentation-tutor";
+export { buildArgumentClientContext };
+
+const DEFAULT_ATS_BASE_PATH = "/argumentation-tutor/api/v2";
 const DEFAULT_POLL_INTERVAL_MS = 2500;
 const DEFAULT_POLL_TIMEOUT_MS = 90000;
-const DEFAULT_HTTP_TIMEOUT_MS = 12000;
 
 const atsSessionByPhase = new Map();
 const atsSessionCreationByPhase = new Map();
 const atsSubmissionCountByPhaseUser = new Map();
-
-const tokenCache = {
-    token: null,
-    expiresAtMs: 0,
-};
+let aiAdditionsClient = defaultAiAdditionsClient;
 
 function nowMs() {
     return Date.now();
@@ -46,90 +43,18 @@ function extractResponseText(context) {
 }
 
 function getAtsBaseUrl() {
-    return normalizeText(process.env.ATS_API_BASE_URL) || DEFAULT_ATS_BASE_URL;
+    return normalizeText(process.env.AI_ADDITIONS_ARGUMENTATION_TUTOR_API_BASE_URL)
+        || aiAdditionsClient.buildServiceUrl(DEFAULT_ATS_BASE_PATH);
 }
 
 function getAtsPollIntervalMs() {
-    const configured = Number(process.env.ATS_POLL_INTERVAL_MS);
+    const configured = Number(process.env.AI_ADDITIONS_ARGUMENTATION_TUTOR_POLL_INTERVAL_MS);
     return Number.isInteger(configured) && configured > 250 ? configured : DEFAULT_POLL_INTERVAL_MS;
 }
 
 function getAtsPollTimeoutMs() {
-    const configured = Number(process.env.ATS_POLL_TIMEOUT_MS);
+    const configured = Number(process.env.AI_ADDITIONS_ARGUMENTATION_TUTOR_POLL_TIMEOUT_MS);
     return Number.isInteger(configured) && configured > 5000 ? configured : DEFAULT_POLL_TIMEOUT_MS;
-}
-
-function getHttpTimeoutMs() {
-    const configured = Number(process.env.ATS_HTTP_TIMEOUT_MS);
-    return Number.isInteger(configured) && configured > 1000 ? configured : DEFAULT_HTTP_TIMEOUT_MS;
-}
-
-function getKeycloakBaseUrl() {
-    return normalizeText(process.env.ATS_KEYCLOAK_BASE_URL) || DEFAULT_KEYCLOAK_BASE_URL;
-}
-
-function getKeycloakRealm() {
-    return normalizeText(process.env.ATS_KEYCLOAK_REALM) || DEFAULT_KEYCLOAK_REALM;
-}
-
-function getKeycloakClientId() {
-    return normalizeText(process.env.ATS_KEYCLOAK_CLIENT_ID);
-}
-
-function getKeycloakClientSecret() {
-    return normalizeText(process.env.ATS_KEYCLOAK_CLIENT_SECRET);
-}
-
-function getKeycloakScope() {
-    return normalizeText(process.env.ATS_KEYCLOAK_SCOPE);
-}
-
-function getKeycloakTokenUrl() {
-    const explicitTokenUrl = normalizeText(process.env.ATS_KEYCLOAK_TOKEN_URL);
-    if (explicitTokenUrl) {
-        return explicitTokenUrl;
-    }
-
-    const baseUrl = getKeycloakBaseUrl().replace(/\/+$/u, "");
-    const realm = encodeURIComponent(getKeycloakRealm());
-    return `${baseUrl}/realms/${realm}/protocol/openid-connect/token`;
-}
-
-function buildRequestUrl(pathname) {
-    const baseUrl = getAtsBaseUrl().replace(/\/+$/u, "");
-    return `${baseUrl}${pathname}`;
-}
-
-async function fetchJsonRaw(url, { method = "GET", body = null, headers = {}, timeoutMs = getHttpTimeoutMs() } = {}) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
-    try {
-        const response = await fetch(url, {
-            method,
-            headers,
-            body,
-            signal: controller.signal,
-        });
-
-        const rawText = await response.text();
-        const parsedBody = rawText ? safeJsonParse(rawText) : null;
-
-        if (!response.ok) {
-            const error = new Error(`HTTP ${response.status} request failed on ${url}.`);
-            error.statusCode = response.status;
-            error.responseBody = parsedBody ?? rawText;
-            throw error;
-        }
-
-        return parsedBody;
-    } finally {
-        clearTimeout(timeoutId);
-    }
-}
-
-async function fetchJson(pathname, options = {}) {
-    return fetchJsonRaw(buildRequestUrl(pathname), options);
 }
 
 function safeJsonParse(value) {
@@ -140,75 +65,12 @@ function safeJsonParse(value) {
     }
 }
 
-async function fetchAtsAccessToken() {
-    const safetyWindowMs = 30000;
-
-    if (tokenCache.token && tokenCache.expiresAtMs > nowMs() + safetyWindowMs) {
-        return tokenCache.token;
-    }
-
-    const clientId = getKeycloakClientId();
-    const clientSecret = getKeycloakClientSecret();
-    if (!clientId || !clientSecret) {
-        throw new Error("Missing ATS_KEYCLOAK_CLIENT_ID or ATS_KEYCLOAK_CLIENT_SECRET in ethicapp environment.");
-    }
-
-    const body = new URLSearchParams({
-        grant_type: "client_credentials",
-        client_id: clientId,
-        client_secret: clientSecret,
-    });
-
-    const scope = getKeycloakScope();
-    if (scope) {
-        body.set("scope", scope);
-    }
-
-    const tokenResponse = await fetchJsonRaw(getKeycloakTokenUrl(), {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: body.toString(),
-    });
-
-    const accessToken = normalizeText(tokenResponse?.access_token);
-    const expiresIn = Number(tokenResponse?.expires_in);
-
-    if (!accessToken) {
-        throw new Error("Keycloak token endpoint did not return access_token.");
-    }
-
-    tokenCache.token = accessToken;
-    tokenCache.expiresAtMs = nowMs() + (Number.isFinite(expiresIn) ? expiresIn * 1000 : 300000);
-
-    return tokenCache.token;
-}
-
 async function fetchAtsJson(pathname, { method = "GET", body = null } = {}) {
-    const execute = async () => {
-        const accessToken = await fetchAtsAccessToken();
-        const headers = {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${accessToken}`,
-        };
-
-        return fetchJson(pathname, {
-            method,
-            headers,
-            body: body == null ? null : JSON.stringify(body),
-        });
-    };
-
-    try {
-        return await execute();
-    } catch (error) {
-        if (Number(error?.statusCode) !== 401) {
-            throw error;
-        }
-
-        tokenCache.token = null;
-        tokenCache.expiresAtMs = 0;
-        return execute();
-    }
+    return aiAdditionsClient.requestJson(pathname, {
+        method,
+        body,
+        baseUrl: getAtsBaseUrl(),
+    });
 }
 
 function phaseCacheKey(context) {
@@ -236,7 +98,7 @@ async function resolveGroupId(context) {
 
     const row = await rpg2.singleSQL({
         dbcon: config.dbconnString,
-        sql: `
+        sql:   `
             SELECT t.id AS group_id
             FROM teams AS t
             INNER JOIN teamusers AS tu
@@ -258,7 +120,7 @@ async function resolveGroupId(context) {
 async function resolveSessionMetadata(context) {
     const sessionRow = await rpg2.singleSQL({
         dbcon: config.dbconnString,
-        sql: `
+        sql:   `
             SELECT id, name, descr
             FROM sessions
             WHERE id = $1
@@ -334,7 +196,7 @@ async function resolveQuestionText(context) {
     if (context.designType === "ranking") {
         const row = await rpg2.singleSQL({
             dbcon: config.dbconnString,
-            sql: `
+            sql:   `
                 SELECT name
                 FROM actors
                 WHERE id = $1
@@ -352,7 +214,7 @@ async function resolveQuestionText(context) {
 
     const row = await rpg2.singleSQL({
         dbcon: config.dbconnString,
-        sql: `
+        sql:   `
             SELECT title
             FROM differential
             WHERE id = $1
@@ -384,13 +246,13 @@ async function getOrCreateAtsSession(context) {
     const creationPromise = (async () => {
         const metadata = await resolveSessionMetadata(context);
 
-        const response = await fetchAtsJson("/API/V2/sessions", {
+        const response = await fetchAtsJson("/sessions", {
             method: "POST",
-            body: {
-                case_id: metadata.caseId,
+            body:   {
+                case_id:    metadata.caseId,
                 case_title: metadata.caseTitle,
-                case_text: metadata.caseText,
-                question: metadata.question,
+                case_text:  metadata.caseText,
+                question:   metadata.question,
             },
         });
 
@@ -418,7 +280,7 @@ async function deleteAtsSession(atsSessionId) {
     }
 
     try {
-        await fetchAtsJson(`/API/V2/sessions/${encodeURIComponent(atsSessionId)}`, {
+        await fetchAtsJson(`/sessions/${encodeURIComponent(atsSessionId)}`, {
             method: "DELETE",
         });
 
@@ -432,21 +294,16 @@ async function deleteAtsSession(atsSessionId) {
     }
 }
 
+
 async function submitArgumentToAts(context, responseText, groupId) {
     const atsSessionId = await getOrCreateAtsSession(context);
 
-    const response = await fetchAtsJson(`/API/V2/sessions/${encodeURIComponent(atsSessionId)}/arguments`, {
+    const response = await fetchAtsJson(`/sessions/${encodeURIComponent(atsSessionId)}/arguments`, {
         method: "POST",
-        body: {
-            argument: responseText,
-            user_id: String(context.userId),
-            client_context: {
-                service: "ethicapp",
-                sessionId: context.sessionId,
-                phaseId: context.phaseId,
-                questionId: context.questionId,
-                groupId: Number.isInteger(groupId) ? groupId : null,
-            },
+        body:   {
+            argument:       responseText,
+            user_id:        String(context.userId),
+            client_context: buildArgumentClientContext(context, groupId),
         },
     });
 
@@ -458,7 +315,7 @@ async function submitArgumentToAts(context, responseText, groupId) {
     return {
         atsSessionId,
         taskId,
-        mode: "arguments",
+        mode:                   "arguments",
         revisedArgumentPreview: responseText,
     };
 }
@@ -476,18 +333,12 @@ async function submitArgumentComparisonToAts(context, responseText, groupId) {
     const atsSessionId = await getOrCreateAtsSession(context);
 
     try {
-        const response = await fetchAtsJson(`/API/V2/sessions/${encodeURIComponent(atsSessionId)}/arguments/compare`, {
+        const response = await fetchAtsJson(`/sessions/${encodeURIComponent(atsSessionId)}/arguments/compare`, {
             method: "POST",
-            body: {
+            body:   {
                 revised_argument: responseText,
-                user_id: String(context.userId),
-                client_context: {
-                    service: "ethicapp",
-                    sessionId: context.sessionId,
-                    phaseId: context.phaseId,
-                    questionId: context.questionId,
-                    groupId: Number.isInteger(groupId) ? groupId : null,
-                },
+                user_id:          String(context.userId),
+                client_context:   buildArgumentClientContext(context, groupId),
             },
         });
 
@@ -499,7 +350,7 @@ async function submitArgumentComparisonToAts(context, responseText, groupId) {
         return {
             atsSessionId,
             taskId,
-            mode: "compare",
+            mode:                   "compare",
             initialArgumentPreview: normalizeText(response?.initial_argument_preview),
             revisedArgumentPreview: responseText,
         };
@@ -532,7 +383,7 @@ async function pollAtsTask({ atsSessionId, taskId }) {
 
     while (nowMs() - startedAt <= timeoutMs) {
         const statusResponse = await fetchAtsJson(
-            `/API/V2/sessions/${encodeURIComponent(atsSessionId)}/arguments/${encodeURIComponent(taskId)}/status`,
+            `/sessions/${encodeURIComponent(atsSessionId)}/arguments/${encodeURIComponent(taskId)}/status`,
             { method: "GET" }
         );
 
@@ -565,25 +416,25 @@ function normalizeCriteriaFromAts(parsedResult) {
 
     return [
         {
-            key: "claim",
+            key:   "claim",
             label: "Claim",
             score: Number.isFinite(claimScore) ? claimScore : null,
             value: Number.isFinite(claimScore) ? `${claimText} (${claimScore})` : "Not available",
         },
         {
-            key: "evidence",
+            key:   "evidence",
             label: "Evidence",
             score: Number.isFinite(evidenceScore) ? evidenceScore : null,
             value: Number.isFinite(evidenceScore) ? `${evidenceScore}/3` : "Not available",
         },
         {
-            key: "warrant",
+            key:   "warrant",
             label: "Warrant",
             score: Number.isFinite(warrantScore) ? warrantScore : null,
             value: Number.isFinite(warrantScore) ? `${warrantScore}/3` : "Not available",
         },
         {
-            key: "qualifier",
+            key:   "qualifier",
             label: "Qualifier",
             score: Number.isFinite(qualifierScore) ? qualifierScore : null,
             value: Number.isFinite(qualifierScore) ? `${qualifierScore}/3` : "Not available",
@@ -658,9 +509,9 @@ function extractComparisonData(parsedResult, submissionMeta = {}) {
             || submissionMeta?.revisedArgumentPreview
         ),
         scores: {
-            claim: normalizePair("claim"),
-            evidence: normalizePair("evidence"),
-            warrant: normalizePair("warrant"),
+            claim:     normalizePair("claim"),
+            evidence:  normalizePair("evidence"),
+            warrant:   normalizePair("warrant"),
             qualifier: normalizePair("qualifier"),
         },
     };
@@ -684,19 +535,19 @@ function buildFeedbackPayloadFromAtsStatus(statusResponse, context, submissionMe
 
     return {
         version: "1",
-        source: "argumentation-tutor-system",
-        title: "Argument Tutor Feedback",
+        source:  "argumentation-tutor-system",
+        title:   "Argument Tutor Feedback",
         summary,
         mode,
         criteria,
         bullets,
         argumentPreview,
         comparison,
-        meta: {
-            sessionId: context.sessionId,
-            phaseId: context.phaseId,
+        meta:    {
+            sessionId:  context.sessionId,
+            phaseId:    context.phaseId,
             questionId: context.questionId,
-            userId: context.userId,
+            userId:     context.userId,
         },
     };
 }
@@ -712,14 +563,14 @@ function buildFeedbackPayloadFromExternalResult(requestPayload, fallbackContext)
     const comparison = input?.comparison && typeof input.comparison === "object" ? input.comparison : null;
 
     return {
-        version: "1",
-        source: "argumentation-tutor-system",
-        title: normalizeText(input.title) || "Argument Tutor Feedback",
-        summary: normalizeText(input.summary) || normalizeText(payloadRoot.message) || "Argument feedback is now available.",
+        version:  "1",
+        source:   "argumentation-tutor-system",
+        title:    normalizeText(input.title) || "Argument Tutor Feedback",
+        summary:  normalizeText(input.summary) || normalizeText(payloadRoot.message) || "Argument feedback is now available.",
         mode,
         criteria: criteria
             .map(item => ({
-                key: normalizeText(item?.key) || normalizeText(item?.label).toLowerCase().replace(/\s+/gu, "-"),
+                key:   normalizeText(item?.key) || normalizeText(item?.label).toLowerCase().replace(/\s+/gu, "-"),
                 label: normalizeText(item?.label) || "Criterion",
                 score: Number.isFinite(Number(item?.score)) ? Number(item.score) : null,
                 value: normalizeText(item?.value) || "Not available",
@@ -732,11 +583,11 @@ function buildFeedbackPayloadFromExternalResult(requestPayload, fallbackContext)
             .slice(0, 6),
         argumentPreview: normalizeText(input.argumentPreview),
         comparison,
-        meta: {
-            sessionId: Number(payloadRoot.sessionId) || fallbackContext?.sessionId || null,
-            phaseId: Number(payloadRoot.phaseId) || fallbackContext?.phaseId || null,
+        meta:            {
+            sessionId:  Number(payloadRoot.sessionId) || fallbackContext?.sessionId || null,
+            phaseId:    Number(payloadRoot.phaseId) || fallbackContext?.phaseId || null,
             questionId: Number(payloadRoot.questionId) || fallbackContext?.questionId || null,
-            userId: Number(payloadRoot.userId) || fallbackContext?.userId || null,
+            userId:     Number(payloadRoot.userId) || fallbackContext?.userId || null,
         },
     };
 }
@@ -749,18 +600,18 @@ async function publishFeedbackToStudent({ context, feedbackPayload, status, publ
 
     await publishStudentResult({
         userId,
-        sessionId: Number(context.sessionId) || null,
-        phaseId: Number(context.phaseId) || null,
+        sessionId:  Number(context.sessionId) || null,
+        phaseId:    Number(context.phaseId) || null,
         questionId: Number(context.questionId) || null,
-        component: {
+        component:  {
             componentId: "argument-tutor-chat-feedback",
-            title: "Argument Tutor Feedback",
+            title:       "Argument Tutor Feedback",
         },
         payload: {
             feedback: feedbackPayload,
         },
         message: "Your argument tutor feedback is now available.",
-        status: status || "completed",
+        status:  status || "completed",
     });
 }
 
@@ -768,7 +619,7 @@ async function processStudentResponse({ context, callback, publishStudentResult 
     const responseText = extractResponseText(context);
     if (!responseText) {
         await callback({
-            hook: "student-response-submitted",
+            hook:   "student-response-submitted",
             status: "skipped",
             reason: "No free-text response was found to send to ATS.",
         });
@@ -790,16 +641,16 @@ async function processStudentResponse({ context, callback, publishStudentResult 
     });
 
     await callback({
-        hook: "student-response-submitted",
-        status: "completed",
+        hook:    "student-response-submitted",
+        status:  "completed",
         payload: {
             atsSessionId,
             taskId,
             groupId,
             mode,
-            submissionCount: getSubmissionCount(context),
+            submissionCount:   getSubmissionCount(context),
             publishedToUserId: Number(context.userId) || null,
-            feedbackTitle: feedbackPayload.title,
+            feedbackTitle:     feedbackPayload.title,
         },
     });
 }
@@ -828,15 +679,15 @@ async function processPhaseEnded({ context, callback }) {
     atsSessionCreationByPhase.delete(phaseKey);
 
     await callback({
-        hook: "phaseEnded",
-        status: "completed",
+        hook:    "phase-ended",
+        status:  "completed",
         payload: {
             clearedSubmissionCounters: removedKeys.length,
-            clearedAtsSession: atsDeleteResult.deleted || Boolean(atsSessionId),
-            atsSessionDeleteReason: atsDeleteResult.reason,
+            clearedAtsSession:         atsDeleteResult.deleted || Boolean(atsSessionId),
+            atsSessionDeleteReason:    atsDeleteResult.reason,
             atsSessionId,
-            sessionId: Number(context.sessionId) || null,
-            phaseId: Number(context.phaseId) || null,
+            sessionId:                 Number(context.sessionId) || null,
+            phaseId:                   Number(context.phaseId) || null,
         },
     });
 }
@@ -850,68 +701,70 @@ async function processExternalResult({ context, callback, publishStudentResult }
         ? payloadGroupId
         : await resolveGroupId({
             phaseId: Number(requestPayload?.phaseId) || context.phaseId,
-            userId: Number(requestPayload?.userId) || context.userId,
+            userId:  Number(requestPayload?.userId) || context.userId,
         });
 
     const fallbackContext = {
-        sessionId: Number(requestPayload?.sessionId) || context.sessionId,
-        phaseId: Number(requestPayload?.phaseId) || context.phaseId,
+        sessionId:  Number(requestPayload?.sessionId) || context.sessionId,
+        phaseId:    Number(requestPayload?.phaseId) || context.phaseId,
         questionId: Number(requestPayload?.questionId) || context.questionId,
-        userId: Number(requestPayload?.userId) || context.userId,
+        userId:     Number(requestPayload?.userId) || context.userId,
     };
 
     const feedbackPayload = buildFeedbackPayloadFromExternalResult(requestPayload, fallbackContext);
     await publishFeedbackToStudent({
         context: fallbackContext,
         feedbackPayload,
-        status: normalizeText(requestPayload?.status) || "completed",
+        status:  normalizeText(requestPayload?.status) || "completed",
         publishStudentResult,
     });
 
     await callback({
-        hook: "external-service-result",
-        status: "completed",
+        hook:    "callback-received",
+        status:  "completed",
         payload: {
             groupId,
             publishedToUserId: Number(fallbackContext.userId) || null,
-            feedbackTitle: feedbackPayload.title,
+            feedbackTitle:     feedbackPayload.title,
         },
     });
 }
 
-export async function register({ subscribe, publishStudentResult }) {
+export async function register({ subscribe, publishStudentResult, aiAdditionsClient: providedAiAdditionsClient }) {
+    aiAdditionsClient = providedAiAdditionsClient || defaultAiAdditionsClient;
+
     subscribe("student-response-submitted", async (context, { callback }) => {
         try {
             await processStudentResponse({ context, callback, publishStudentResult });
         } catch (error) {
             await callback({
-                hook: "student-response-submitted",
+                hook:   "student-response-submitted",
                 status: "failed",
-                error: normalizeText(error?.message) || "Unexpected ATS adapter error.",
+                error:  normalizeText(error?.message) || "Unexpected ATS adapter error.",
             });
         }
     });
 
-    subscribe("external-service-result", async (context, { callback }) => {
+    subscribe("callback-received", async (context, { callback }) => {
         try {
             await processExternalResult({ context, callback, publishStudentResult });
         } catch (error) {
             await callback({
-                hook: "external-service-result",
+                hook:   "callback-received",
                 status: "failed",
-                error: normalizeText(error?.message) || "Unexpected external result adapter error.",
+                error:  normalizeText(error?.message) || "Unexpected external result adapter error.",
             });
         }
     });
 
-    subscribe("phaseEnded", async (context, { callback }) => {
+    subscribe("phase-ended", async (context, { callback }) => {
         try {
             await processPhaseEnded({ context, callback });
         } catch (error) {
             await callback({
-                hook: "phaseEnded",
+                hook:   "phase-ended",
                 status: "failed",
-                error: normalizeText(error?.message) || "Unexpected phaseEnded handler error.",
+                error:  normalizeText(error?.message) || "Unexpected phase-ended handler error.",
             });
         }
     });

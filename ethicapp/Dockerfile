@@ -4,6 +4,7 @@ WORKDIR /app/backend
 COPY ethicapp/backend/package*.json ./
 RUN npm ci
 COPY ethicapp/backend ./
+COPY ethicapp/common /app/common
 RUN npm test && touch /tmp/backend-tests-passed
 
 FROM node:24

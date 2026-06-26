@@ -1,59 +1,177 @@
 import express from "express";
 import { requireRole } from "../helpers/auth-helper.js";
 import externalServicesRegistry from "../services/external-services.service.js";
+import { externalServiceJobsService } from "../services/external-service-jobs.service.js";
+import { callbackAuthMiddleware } from "../middleware/external-services-callback-auth.middleware.js";
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function parseIntParam(value) {
+    const n = parseInt(value, 10);
+    return Number.isFinite(n) ? n : null;
+}
+
+function parseDateParam(value) {
+    if (typeof value !== "string" || !value) {
+        return null;
+    }
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? null : d.toISOString();
+}
 
 const router = express.Router();
 
-router.post("/external-services/:service_id/results", async (req, res) => {
-    const serviceId = String(req.params.service_id || "").trim();
-    const bodyServiceId = req.body?.serviceId ? String(req.body.serviceId).trim() : "";
-
+export async function processCallback({ serviceId, eventType, correlationId, eventId, payload, rawBody, auth, registry }) {
     if (!serviceId) {
-        return res.status(400).json({
-            status: "err",
-            error:  "Missing external service id.",
-        });
+        return {
+            status: 400,
+            body:   { status: "err", error: "Missing required field: serviceId." },
+        };
     }
 
-    if (bodyServiceId && bodyServiceId !== serviceId) {
-        return res.status(409).json({
-            status: "err",
-            error:  "Request serviceId does not match the callback route service id.",
-        });
+    if (eventId !== null && eventId !== undefined && !UUID_PATTERN.test(eventId)) {
+        return {
+            status: 400,
+            body:   { status: "err", error: "eventId must be a valid UUID when provided." },
+        };
+    }
+
+    await registry.initialize();
+
+    try {
+        registry.authorizeCallbackCaller(serviceId, auth);
+    } catch (error) {
+        return {
+            status: error.statusCode || 403,
+            body:   { status: "err", error: error.message },
+        };
     }
 
     try {
-        const dispatchResults = await externalServicesRegistry.dispatchServiceHook(
-            "external-service-result",
+        const { resultRecord, outcomes } = await registry.dispatchServiceHook(
+            "callback-received",
             serviceId,
             {
                 serviceId,
-                requestPayload: req.body,
+                eventType,
+                correlationId,
+                eventId:        eventId ?? null,
+                requestPayload: payload,
+                rawBody,
+                auth,
             }
         );
 
-        return res.status(202).json({
-            status: "accepted",
-            result: {
-                serviceId,
-                dispatched: dispatchResults.length,
+        const correlationStatus = resultRecord?.job_id ? "matched" : "unknown";
+        const isDuplicate       = resultRecord?.is_duplicate ?? false;
+
+        return {
+            status: 202,
+            body:   {
+                status: "accepted",
+                result: {
+                    serviceId,
+                    eventType,
+                    correlationId,
+                    eventId:     eventId ?? null,
+                    correlationStatus,
+                    resultId:    resultRecord?.id ?? null,
+                    isDuplicate,
+                    dispatched:  outcomes.length,
+                },
             },
-        });
+        };
     } catch (error) {
         if (error.statusCode) {
-            return res.status(error.statusCode).json({
-                status: "err",
-                error:  error.message,
-            });
+            return {
+                status: error.statusCode,
+                body:   { status: "err", error: error.message },
+            };
         }
 
-        console.error("[external-services] Error handling external service result.", error);
-        return res.status(500).json({
-            status: "err",
-            error:  "Internal server error.",
-        });
+        console.error("[external-services] Error dispatching callback-received hook.", error);
+        return {
+            status: 500,
+            body:   { status: "err", error: "Internal server error." },
+        };
     }
+}
+
+router.post("/external-services/callbacks", callbackAuthMiddleware, async (req, res) => {
+    const serviceId     = typeof req.body?.serviceId === "string" ? req.body.serviceId.trim() : "";
+    const eventType     = typeof req.body?.eventType === "string" ? req.body.eventType.trim() : "result";
+    const correlationId = req.body?.correlationId ?? null;
+    const eventId       = typeof req.body?.eventId === "string" ? req.body.eventId.trim() || null : null;
+    const payload       = req.body?.payload ?? null;
+
+    const { status, body } = await processCallback({
+        serviceId,
+        eventType,
+        correlationId,
+        eventId,
+        payload,
+        rawBody:  req.body,
+        auth:     req.externalServiceAuth,
+        registry: externalServicesRegistry,
+    });
+
+    return res.status(status).json(body);
 });
+
+export async function listJobs(params, jobsService) {
+    const serviceId = typeof params?.serviceId === "string" ? params.serviceId.trim() || null : null;
+    const sessionId = parseIntParam(params?.sessionId);
+    const phaseId   = parseIntParam(params?.phaseId);
+    const status    = typeof params?.status === "string" ? params.status.trim() || null : null;
+    const from      = parseDateParam(params?.from);
+    const to        = parseDateParam(params?.to);
+    const limit     = parseIntParam(params?.limit) ?? 50;
+
+    const jobs = await jobsService.queryRecentJobs({ serviceId, sessionId, phaseId, status, from, to, limit });
+    return {
+        status: 200,
+        body:   { status: "ok", result: jobs },
+    };
+}
+
+export async function getJobDetail(jobId, jobsService) {
+    if (!jobId || !UUID_PATTERN.test(jobId)) {
+        return {
+            status: 400,
+            body:   { status: "err", error: "Invalid or missing job id." },
+        };
+    }
+
+    const job = await jobsService.getJob(jobId);
+    if (!job) {
+        return {
+            status: 404,
+            body:   { status: "err", error: "Job not found." },
+        };
+    }
+
+    const results = await jobsService.getJobResults(jobId);
+    return {
+        status: 200,
+        body:   { status: "ok", result: { job, results } },
+    };
+}
+
+export async function listResults(params, jobsService) {
+    const serviceId = typeof params?.serviceId === "string" ? params.serviceId.trim() || null : null;
+    const sessionId = parseIntParam(params?.sessionId);
+    const phaseId   = parseIntParam(params?.phaseId);
+    const status    = typeof params?.status === "string" ? params.status.trim() || null : null;
+    const from      = parseDateParam(params?.from);
+    const to        = parseDateParam(params?.to);
+    const limit     = parseIntParam(params?.limit) ?? 50;
+
+    const results = await jobsService.queryRecentResults({ serviceId, sessionId, phaseId, status, from, to, limit });
+    return {
+        status: 200,
+        body:   { status: "ok", result: results },
+    };
+}
 
 router.get("/external-services", async (req, res) => {
     if (!requireRole(req, res, "P")) {
@@ -67,16 +185,31 @@ router.get("/external-services", async (req, res) => {
     });
 });
 
-router.get("/external-services/results", async (req, res) => {
-    if (!requireRole(req, res, "P")) {
+router.get("/external-services/jobs", async (req, res) => {
+    if (!requireRole(req, res, ["P", "A"])) {
         return;
     }
 
-    await externalServicesRegistry.initialize();
-    return res.json({
-        status: "ok",
-        result: externalServicesRegistry.listResults(),
-    });
+    const { status, body } = await listJobs(req.query, externalServiceJobsService);
+    return res.status(status).json(body);
+});
+
+router.get("/external-services/jobs/:jobId", async (req, res) => {
+    if (!requireRole(req, res, ["P", "A"])) {
+        return;
+    }
+
+    const { status, body } = await getJobDetail(req.params.jobId, externalServiceJobsService);
+    return res.status(status).json(body);
+});
+
+router.get("/external-services/results", async (req, res) => {
+    if (!requireRole(req, res, ["P", "A"])) {
+        return;
+    }
+
+    const { status, body } = await listResults(req.query, externalServiceJobsService);
+    return res.status(status).json(body);
 });
 
 export default router;

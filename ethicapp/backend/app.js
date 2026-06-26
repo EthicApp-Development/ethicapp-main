@@ -121,6 +121,8 @@ app.use(session({
 
 app.use(hydrateLegacySession);
 app.use(exposeLegacySession);
+
+app.use("/", externalServices);
 app.use("/", requireLegacyAuth, protectedUploads);
 
 // Middleware for handling redis errors
@@ -147,7 +149,6 @@ app.locals.ETHICAPP_BUILD_HASH = ETHICAPP_BUILD_HASH;
 
 await externalServicesRegistry.initialize();
 
-app.use("/", externalServices);
 app.use("/", requireLegacyAuth, teacherHome);
 app.use("/", requireLegacyAuth, user_profile);
 app.use("/", requireLegacyAuth, impersonation);

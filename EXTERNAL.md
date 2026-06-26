@@ -1,16 +1,30 @@
-# External Services PoC
+# External Services Architecture
 
-This document describes the current proof of concept for integrating EthicApp with
-external services. The goal is to let a teacher enable services per design phase,
-dispatch lifecycle or activity events to those services, and receive asynchronous
+This document describes the current architecture for integrating EthicApp with
+external AI services. The goal is to let a teacher enable services per design
+phase, dispatch lifecycle or activity events to those services, and receive
 processing results back into EthicApp.
+
+For the adapter developer contract, including the shared AI Additions client and
+Keycloak authentication flow, see:
+
+```text
+ethicapp/backend/external-services/README.md
+```
 
 ## Scope
 
-The PoC currently lives in the legacy `ethicapp/` application and is focused on
-teacher-authored designs and activity execution. It does not yet provide production
-authentication for external callbacks, durable result storage, retry queues, or a
-stable public contract for third-party providers.
+The integration currently lives in the legacy `ethicapp/` application and is
+focused on teacher-authored designs and activity execution. EthicApp now owns
+outbound authentication to `ethicapp-ai-additions` through a shared Keycloak
+client-credentials client, so individual adapters should not negotiate tokens on
+their own.
+
+The architecture provides Bearer-token authentication for inbound callbacks
+from AI Additions services through a Keycloak-issued JWT validated against the
+shared realm JWKS. Durable result storage, retry queues, and a stable public
+contract for third-party providers outside the repository-owned AI Additions
+facade are still not implemented.
 
 ## Backend Architecture
 
@@ -28,14 +42,48 @@ Each manifest entry declares:
 - `hooks`: hook names supported by the service.
 - `enabled`: whether the adapter should be loaded.
 
-Adapters are ESM modules that export `register({ service, subscribe })`. During
-startup, `externalServicesRegistry.initialize()` loads the manifest, imports each
-enabled adapter, and lets it subscribe to hooks.
+Hook names are standardized as kebab-case identifiers. New adapters should use
+names such as `phase-started`, `phase-ended`, `activity-started`,
+`activity-finished`, `chat-message-received`, `student-response-submitted`, and
+`callback-received`.
+
+Adapters are ESM modules that export `register(...)`. During startup,
+`externalServicesRegistry.initialize()` loads the manifest, imports each enabled
+adapter, and lets it subscribe to hooks.
+
+The current register contract is:
+
+```js
+export async function register({
+  service,
+  subscribe,
+  publishStudentResult,
+  publishGroupChatMessage,
+  aiAdditionsClient
+}) {
+  // Subscribe to hooks here.
+}
+```
+
+The `aiAdditionsClient` parameter is the only place adapters should obtain
+Keycloak-protected access to AI Additions.
 
 Current registry implementation:
 
 ```text
 ethicapp/backend/services/external-services.service.js
+```
+
+Inbound callback authentication middleware:
+
+```text
+ethicapp/backend/middleware/external-services-callback-auth.middleware.js
+```
+
+Keycloak JWT validation helper:
+
+```text
+ethicapp/backend/helpers/keycloak-jwt.helper.js
 ```
 
 Current mock adapter:
@@ -49,6 +97,65 @@ Current mock chat agent adapter:
 ```text
 ethicapp/backend/external-services/adapters/mock-chat-agent.adapter.js
 ```
+
+Current Argumentation Tutor adapter:
+
+```text
+ethicapp/backend/external-services/adapters/ats-feedback.adapter.js
+```
+
+Current Polyadic Agents bridge adapter:
+
+```text
+ethicapp/backend/external-services/adapters/polyadic-bridge.adapter.js
+```
+
+Shared AI Additions client:
+
+```text
+ethicapp/backend/services/ai-additions-client.service.js
+```
+
+## AI Additions and Keycloak
+
+Repository-owned AI services are expected to be reached through the
+`ethicapp-ai-additions` facade, not through individual service container ports.
+Keycloak is exposed by that facade under the `/keycloak` prefix.
+
+EthicApp configures the facade and Keycloak client through `AI_ADDITIONS_*`
+variables. The default contract is:
+
+- `AI_ADDITIONS_BASE_URL` points to the AI Additions facade.
+- `AI_ADDITIONS_KEYCLOAK_BASE_URL` defaults to
+  `${AI_ADDITIONS_BASE_URL}/keycloak`.
+- `AI_ADDITIONS_KEYCLOAK_REALM` defaults to `ethicapp-ai-additions`.
+- `AI_ADDITIONS_KEYCLOAK_CLIENT_ID` and
+  `AI_ADDITIONS_KEYCLOAK_CLIENT_SECRET` identify the confidential client used by
+  EthicApp.
+- Service-specific adapters use normalized facade paths, for example
+  `/argumentation-tutor/api/v2` or `/polyadic-agent/api`.
+
+The shared client obtains and caches client-credentials tokens, attaches Bearer
+authorization headers, and retries once after a `401`. Adapter code should focus
+on translating EthicApp hook context into service-specific requests.
+
+The Polyadic Agents bridge uses `AI_ADDITIONS_POLYADIC_AGENTS_API_BASE_URL`,
+defaulting to `${AI_ADDITIONS_BASE_URL}/polyadic-agent/api`, and creates one
+Polyadic REST room per EthicApp session/phase/group. Its default pipeline type is
+`abogado-del-diablo`, configurable through
+`AI_ADDITIONS_POLYADIC_AGENTS_PIPELINE_TYPE`.
+
+Polyadic callbacks target the unified callback endpoint:
+
+```text
+POST /external-services/callbacks
+```
+
+with `"serviceId": "polyadic-devils-advocate"` in the body. The callback payload
+is expected to contain `{ "room": "...", "evaluations": [] }` in the `payload`
+field.
+The bridge publishes only `Orientador` responses into the EthicApp group chat;
+other agent outputs remain internal to Polyadic.
 
 The Docker Compose PoC also includes a tiny external Express service:
 
@@ -85,17 +192,43 @@ Current event hooks:
 
 - `student-response-submitted`: dispatched when a student submits a supported
   response from `POST /activities/:id/response`.
-- `phaseStarted`: dispatched when the teacher transitions a session into a phase.
-- `phaseEnded`: dispatched when the teacher transitions a session away from the
+- `phase-started`: dispatched when the teacher transitions a session into a phase.
+- `phase-ended`: dispatched when the teacher transitions a session away from the
   previously active phase.
 - `chat-message-received`: dispatched when a chat message is posted to a phase
   group chat.
+- `callback-received`: dispatched when an external service calls the callback
+  endpoint. Replaces the earlier `external-service-result` hook.
+- `activity-started`: dispatched once when the teacher transitions a session into
+  `in_progress` (its first phase), so adapters can run any preparation/warm-up.
+  It does not fire on ordinary phase-to-phase advances. Resolved against the
+  services enabled for the phase being entered.
+- `activity-finished`: dispatched when the teacher finishes an activity, so
+  adapters can run any required cleanup (close rooms, release provider sessions,
+  flush state). Resolved against the **union of services enabled across all
+  phases** of the activity design, so any service that may have opened
+  provider-side state is notified to clean up regardless of which phase the
+  activity finishes on (including early/incomplete finishes). Replaces the earlier
+  single-service `session-ended` hook.
 
-The phase transition hooks are dispatched from:
+> **Enabled-service resolution differs by lifecycle hook.** `activity-started` is
+> phase-scoped (resolved from the phase being entered, since preparation is
+> relevant to that phase). `activity-finished` resolves against the union of
+> enabled services across all phases of the design, guaranteeing that no
+> provider-side state leaks past the end of the activity.
+
+The phase transition and `activity-started` hooks are dispatched from:
 
 ```text
 ethicapp/backend/controllers/activities/activities-teacher.js
 POST /activities/:session_id/phase_transition
+```
+
+The `activity-finished` hook is dispatched from:
+
+```text
+ethicapp/backend/controllers/activities/activities-teacher.js
+POST /activities/:session_id/finish
 ```
 
 The student response hook is dispatched from:
@@ -137,35 +270,49 @@ adapters should therefore key any accumulated conversation state by at least
 
 ## External Result Callback
 
-External processing results are received through:
+External AI services call the unified callback endpoint:
 
 ```text
-POST /external-services/:service_id/results
+POST /external-services/callbacks
+Authorization: Bearer <access_token>
+Content-Type: application/json
 ```
 
-The route-level `service_id` is the target service id. If the request body also
-contains `serviceId`, it must match the route value. This convention prevents
-callbacks from being broadcast promiscuously to every adapter.
-
-Example callback body:
+The request body identifies the target service and carries a service-specific
+payload:
 
 ```json
 {
-  "serviceId": "mock-ai-response-review",
-  "status": "completed",
+  "serviceId": "polyadic-devils-advocate",
+  "eventType": "result",
+  "correlationId": "optional-provider-job-or-room-id",
+  "eventId": "550e8400-e29b-41d4-a716-446655440000",
   "payload": {
-    "summary": "External analysis completed.",
-    "score": 0.82
-  },
-  "message": "Processed successfully."
+    "room": "ethicapp-s11-p22-g301",
+    "evaluations": []
+  }
 }
 ```
 
-The controller dispatches the `external-service-result` hook with
+| Field | Required | Description |
+|---|---|---|
+| `serviceId` | Yes | Identifier of the calling service, must match a registered service. |
+| `eventType` | No | Type label for the event; defaults to `"result"`. |
+| `correlationId` | No | The job UUID returned by EthicApp when the job was dispatched. Used to correlate callbacks to outbound jobs. |
+| `eventId` | No | A UUID minted by the caller for this specific emission attempt. When provided, EthicApp uses `(serviceId, eventId)` as a deduplication key so that network retries of the same event are idempotent. Distinct `eventId` values on the same job are each processed independently. Omitting `eventId` falls back to terminal-state deduplication: any callback on a job that has already reached a terminal status is treated as a duplicate. |
+| `payload` | No | Arbitrary service-specific data. |
+
+The Bearer token must be a Keycloak `client_credentials` token issued to the
+calling service's dedicated Keycloak client (for example `polyadic-agent-api` or
+`argumentation-tutor-api`). EthicApp validates the JWT locally using the realm
+JWKS, checks issuer, expiry, audience, and clock tolerance, and then authorizes
+the caller against the per-service `callbackAuth` manifest entry.
+
+The controller dispatches the `callback-received` hook with
 `dispatchServiceHook(...)`, which selects only subscribers belonging to the target
 service id.
 
-Current result callback controller:
+Current callback controller:
 
 ```text
 ethicapp/backend/controllers/external-services.js
@@ -174,12 +321,14 @@ ethicapp/backend/controllers/external-services.js
 The adapter is responsible for sanitizing the external payload. The registry only
 routes and records the resulting callback entry for PoC inspection.
 
-Adapters can also publish student-facing results through the helper passed to
-`register(...)`:
+Adapters subscribe to `callback-received`:
 
 ```js
 export async function register({ service, subscribe, publishStudentResult }) {
-  subscribe("external-service-result", async (context) => {
+  subscribe("callback-received", async (context, { callback }) => {
+    // context.serviceId, context.eventType, context.correlationId, context.eventId
+    // context.requestPayload contains the caller's payload
+    // context.auth contains the normalized Keycloak auth context
     await publishStudentResult({
       userId: 123,
       sessionId: 10,
@@ -221,6 +370,30 @@ export async function register({ subscribe, publishGroupChatMessage }) {
 }
 ```
 
+Adapters can subscribe to the activity-lifecycle hooks to prepare or clean up
+provider-side state. These are broadcast (fire-and-forget) to the services
+enabled for the relevant phase:
+
+```js
+export async function register({ service, subscribe, callback }) {
+  subscribe("activity-started", async (context) => {
+    // context.sessionId, context.phaseId (the first phase entered)
+    // Warm up / allocate any provider resources for the activity here.
+  });
+
+  subscribe("activity-finished", async (context, { callback }) => {
+    // context.sessionId, context.phaseId (the last active phase)
+    // Release provider sessions / flush state here.
+    await callback({
+      serviceId: service.id,
+      hook:      "activity-finished",
+      status:    "completed",
+      payload:   { sessionId: context.sessionId },
+    });
+  });
+}
+```
+
 Chat-agent identity is modeled through `external_service_agents`. When an adapter
 publishes a group chat message, EthicApp creates or updates the agent row using
 the adapter service id and stores the chat message with `external_agent_id`.
@@ -240,15 +413,107 @@ service is unavailable.
 
 ## Result Inspection
 
-In-memory callback results can be inspected by teachers through:
+Teachers and administrators can inspect durable job and callback result records
+through the following endpoints. All three require an authenticated session with
+the teacher (`P`) or administrator (`A`) role.
+
+### List jobs
+
+```text
+GET /external-services/jobs
+```
+
+Returns a list of job records ordered by `created_at` descending. Supported
+query parameters:
+
+| Parameter   | Type    | Description                                      |
+| ----------- | ------- | ------------------------------------------------ |
+| `serviceId` | string  | Filter by external service id.                   |
+| `sessionId` | integer | Filter by EthicApp session.                      |
+| `phaseId`   | integer | Filter by phase.                                 |
+| `status`    | string  | Filter by job status (e.g. `completed`, `failed`). |
+| `from`      | ISO 8601 datetime | Lower bound on `created_at` (inclusive). |
+| `to`        | ISO 8601 datetime | Upper bound on `created_at` (inclusive). |
+| `limit`     | integer | Maximum number of records to return. Defaults to 50, capped at 200. |
+
+Response shape:
+
+```json
+{
+  "status": "ok",
+  "result": [
+    {
+      "id": "<uuid>",
+      "service_id": "polyadic-devils-advocate",
+      "hook_name": "chat-message-received",
+      "status": "completed",
+      "session_id": 11,
+      "phase_id": 22,
+      "question_id": 701,
+      "group_id": 301,
+      "user_id": 9001,
+      "provider_reference": null,
+      "created_at": "...",
+      "updated_at": "...",
+      "dispatched_at": "...",
+      "completed_at": "..."
+    }
+  ]
+}
+```
+
+### Get job detail
+
+```text
+GET /external-services/jobs/:job_id
+```
+
+Returns a single job and its associated callback results. The `job_id` must be
+a valid UUID.
+
+Response shape:
+
+```json
+{
+  "status": "ok",
+  "result": {
+    "job": { ... },
+    "results": [
+      {
+        "id": "<uuid>",
+        "correlation_id": "<uuid>",
+        "service_id": "polyadic-devils-advocate",
+        "hook_name": "callback-received",
+        "status": "completed",
+        "session_id": 11,
+        "phase_id": 22,
+        "question_id": 701,
+        "group_id": 301,
+        "user_id": null,
+        "adapter_result": { ... },
+        "received_at": "...",
+        "processed_at": "..."
+      }
+    ]
+  }
+}
+```
+
+Raw provider payloads (`raw_payload`) are not exposed through the inspection
+API. Only the adapter-processed result (`adapter_result`) is included in the
+detail view.
+
+### List callback results
 
 ```text
 GET /external-services/results
 ```
 
-The registry keeps the latest 100 result entries in memory. This is intentionally
-temporary for the PoC. A production design should store results durably and link
-them to sessions, phases, users, groups, questions, or service jobs as needed.
+Returns a list of callback result records ordered by `received_at` descending.
+Accepts the same filters as `GET /external-services/jobs` except that `from`
+and `to` apply to `received_at` rather than `created_at`.
+
+Raw provider payloads are not included in list responses.
 
 ## Frontend Architecture
 
@@ -332,29 +597,50 @@ design-schema/ethicapp-v1.schema.json
 `externalServices.enabledServiceIds` is optional and contains unique service ids.
 Older designs without `externalServices` remain valid.
 
+## Inbound Callback Authentication
+
+EthicApp validates inbound callback Bearer tokens as a resource server against the
+same Keycloak realm used for outbound authentication. The middleware reads JWKS
+from the realm endpoint, caches keys for 5 minutes, and refreshes on unknown `kid`
+to handle key rotation.
+
+Authorization policy for each service is declared in `manifest.json`:
+
+```json
+{
+  "id": "polyadic-devils-advocate",
+  "callbackAuth": {
+    "allowedClientIds": ["polyadic-agent-api"],
+    "requiredRoles": []
+  }
+}
+```
+
+EthicApp checks that the authenticated `azp` (client id) is listed in
+`allowedClientIds` and that any `requiredRoles` appear in the token's
+`realm_access.roles`. A `serviceId` from the request body that does not match
+an allowed client returns `403`.
+
+Environment variables for inbound authentication:
+
+| Variable | Purpose |
+| --- | --- |
+| `EXTERNAL_SERVICES_CALLBACK_AUTH_ENABLED` | Set to `false` to disable auth in development. Defaults to `true`. |
+| `EXTERNAL_SERVICES_CALLBACK_AUTH_ISSUER` | Keycloak issuer URL. Derived from `AI_ADDITIONS_KEYCLOAK_BASE_URL` and `AI_ADDITIONS_KEYCLOAK_REALM` when unset. |
+| `EXTERNAL_SERVICES_CALLBACK_AUTH_JWKS_URL` | Explicit JWKS URL. Derived from issuer when unset. |
+| `EXTERNAL_SERVICES_CALLBACK_AUTH_AUDIENCE` | Expected `aud` claim. Defaults to `ethicapp-ai-services` (the audience injected by the Keycloak mapper in AI Additions). Leave empty to skip audience check. |
+| `EXTERNAL_SERVICES_CALLBACK_AUTH_CLOCK_TOLERANCE_SECONDS` | Clock skew tolerance. Defaults to `30`. |
+
 ## Current Limitations
 
-- Callback authentication is not production-ready. The callback endpoint is
-  reachable without a legacy teacher session so external services can call it.
-- There is no per-service shared secret, token, request signature, or replay
-  protection yet.
-- Results are stored in memory only.
 - Student websocket targeting currently relies on a PoC user room joined from the
   frontend client.
 - Remote React component loading is not production-hardened.
 - Adapter payload sanitization is service-specific and intentionally minimal in
   the mock adapter.
-- There is no job id or correlation id convention yet. Adding one would help link
-  outbound hook dispatches to inbound external results.
 
 ## Recommended Next Steps
 
-- Add a manifest-level `callbackToken` or per-service secret reference and verify
-  it through an `Authorization: Bearer ...` header or HMAC signature.
-- Introduce a `jobId` or `correlationId` in outbound hook payloads and require it
-  in inbound results.
-- Persist external results in PostgreSQL with service id, hook name, session id,
-  phase id, optional user/question ids, raw payload, sanitized payload, and status.
 - Define adapter capability metadata for teacher-facing configuration beyond a
   simple enabled/disabled checkbox.
 - Add integration tests for service loading, hook dispatch filtering, callback

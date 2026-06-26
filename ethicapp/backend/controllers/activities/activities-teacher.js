@@ -9,7 +9,8 @@ import { requireRole } from "../../helpers/auth-helper.js";
 import { studentNotifications } from "../../config/socket.config.js";
 import redisClient from "../../db/redis.js";
 import { getDesignTypeBySessionId } from "./activities-common.js";
-import { getPhaseDesignByPhaseId } from "../../helpers/designs-helper.js";
+import { getPhaseDesignByPhaseId, getEnabledExternalServiceIdsBySessionId } from "../../helpers/designs-helper.js";
+import { shouldDispatchActivityStarted } from "../../helpers/activity-lifecycle-helper.js";
 import externalServicesRegistry from "../../services/external-services.service.js";
 
 const router = express.Router();
@@ -362,7 +363,7 @@ router.post("/activities/:session_id/phase_transition", async (req, res) => {
 
         const sessionState = await rpg2.singleSQL({
             sql: `
-                SELECT current_stage
+                SELECT current_stage, status
                 FROM sessions
                 WHERE id = $1
             `,
@@ -375,6 +376,7 @@ router.post("/activities/:session_id/phase_transition", async (req, res) => {
         }
 
         const previousPhaseId = Number(sessionState.current_stage) || null;
+        const previousStatus  = Number(sessionState.status) || null;
 
         result = await rpg2.execSQL({
             sql: `
@@ -399,6 +401,17 @@ router.post("/activities/:session_id/phase_transition", async (req, res) => {
             endedPhaseId:   previousPhaseId,
         });
 
+        // Fire activity-started only on the transition into in_progress (the
+        // activity's first phase), not on ordinary phase-to-phase advances.
+        if (shouldDispatchActivityStarted(previousStatus)) {
+            dispatchActivityStartedHook({
+                sessionId,
+                phaseId:        phaseId,
+                startedPhaseId: phaseId,
+                endedPhaseId:   previousPhaseId,
+            });
+        }
+
         res.status(200).json({ status: "ok", message: "Session transitioned to the new phase." });
     } catch (err) {
         console.error("Error transitioning session stage:", err);
@@ -409,7 +422,7 @@ router.post("/activities/:session_id/phase_transition", async (req, res) => {
 async function dispatchPhaseTransitionHooks({ sessionId, startedPhaseId, endedPhaseId }) {
     try {
         if (endedPhaseId && endedPhaseId !== startedPhaseId) {
-            await dispatchPhaseHook("phaseEnded", {
+            await dispatchPhaseHook("phase-ended", {
                 sessionId,
                 phaseId: endedPhaseId,
                 startedPhaseId,
@@ -417,7 +430,7 @@ async function dispatchPhaseTransitionHooks({ sessionId, startedPhaseId, endedPh
             });
         }
 
-        await dispatchPhaseHook("phaseStarted", {
+        await dispatchPhaseHook("phase-started", {
             sessionId,
             phaseId: startedPhaseId,
             startedPhaseId,
@@ -425,6 +438,34 @@ async function dispatchPhaseTransitionHooks({ sessionId, startedPhaseId, endedPh
         });
     } catch (error) {
         console.error("[external-services] Error dispatching phase transition hooks.", error);
+    }
+}
+
+// Broadcasts activity-started to the services enabled for the phase being
+// entered (phase-scoped, since preparation is relevant to that phase), isolating
+// any adapter failure so it never breaks the teacher request.
+async function dispatchActivityStartedHook(context) {
+    try {
+        await dispatchPhaseHook("activity-started", context);
+    } catch (error) {
+        console.error("[external-services] Error dispatching activity-started hook.", error);
+    }
+}
+
+// Broadcasts activity-finished to the union of services enabled across ALL phases
+// of the activity design, so any service that could have opened provider-side
+// state (e.g. chat rooms) is notified to clean up — regardless of which phase the
+// activity finished on. This is the safety net guaranteeing nothing leaks past
+// the end of the activity. Adapter failures are isolated from the teacher request.
+async function dispatchActivityFinishedHook(sessionId, context) {
+    try {
+        const enabledServiceIds = await getEnabledExternalServiceIdsBySessionId(sessionId);
+        if (enabledServiceIds.length === 0) {
+            return;
+        }
+        await externalServicesRegistry.dispatchHook("activity-finished", context, { enabledServiceIds });
+    } catch (error) {
+        console.error("[external-services] Error dispatching activity-finished hook.", error);
     }
 }
 
@@ -498,7 +539,7 @@ router.post("/activities/:session_id/finish", async (req, res) => {
         }
 
         if (previousPhaseId) {
-            await dispatchPhaseHook("phaseEnded", {
+            await dispatchPhaseHook("phase-ended", {
                 sessionId: Number(sessionId),
                 phaseId: previousPhaseId,
                 startedPhaseId: null,
@@ -507,6 +548,17 @@ router.post("/activities/:session_id/finish", async (req, res) => {
         }
 
         studentNotifications.endSession(sessionId);
+
+        // Broadcast activity-finished to every service enabled anywhere in the
+        // activity design (union across phases) so adapters can run required
+        // cleanup regardless of which phase the activity finished on. Fired even
+        // when there is no current phase, so nothing leaks past the activity end.
+        await dispatchActivityFinishedHook(Number(sessionId), {
+            sessionId:      Number(sessionId),
+            phaseId:        previousPhaseId,
+            startedPhaseId: null,
+            endedPhaseId:   previousPhaseId,
+        });
 
         res.status(200).json({ status: "ok", message: "Activity session finished successfully." });
     } catch (err) {
