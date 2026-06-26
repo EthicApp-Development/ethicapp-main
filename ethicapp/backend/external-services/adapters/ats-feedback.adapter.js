@@ -500,9 +500,9 @@ function extractComparisonData(parsedResult, submissionMeta = {}) {
 
     return {
         initialArgument: normalizeText(
-            parsedResult?.original_argument
+            submissionMeta?.initialArgumentPreview
+            || parsedResult?.original_argument
             || parsedResult?.initial_argument
-            || submissionMeta?.initialArgumentPreview
         ),
         revisedArgument: normalizeText(
             parsedResult?.revised_argument
@@ -527,9 +527,10 @@ function buildFeedbackPayloadFromAtsStatus(statusResponse, context, submissionMe
     const comparison = extractComparisonData(parsedResult, submissionMeta);
     const mode = comparison || submissionMeta?.mode === "compare" ? "comparison" : "analysis";
     const argumentPreview = normalizeText(
-        parsedResult?.original_argument
+        submissionMeta?.revisedArgumentPreview
+        || statusResponse?.submitted_argument
+        || parsedResult?.original_argument
         || parsedResult?.revised_argument
-        || submissionMeta?.revisedArgumentPreview
         || submissionMeta?.initialArgumentPreview
     );
 
@@ -581,7 +582,7 @@ function buildFeedbackPayloadFromExternalResult(requestPayload, fallbackContext)
             .map(item => normalizeText(item))
             .filter(Boolean)
             .slice(0, 6),
-        argumentPreview: normalizeText(input.argumentPreview),
+        argumentPreview: normalizeText(input.argumentPreview || input.submitted_argument),
         comparison,
         meta:            {
             sessionId:  Number(payloadRoot.sessionId) || fallbackContext?.sessionId || null,

@@ -102,6 +102,7 @@ export default function SemanticDifferentialPhaseView({
     )).sort((left, right) => left - right);
   }, [phase]);
   const previousPhaseNumbersKey = previousPhaseNumbers.join(',');
+  const isAtsBlocking = Boolean(isAtsEnabled && isAtsProcessing);
   const canOpenGroupChat = phase?.features?.chat === true
     && resolvePhaseGroupId(phase) != null;
   const canPostGroupChat = canOpenGroupChat
@@ -274,6 +275,7 @@ export default function SemanticDifferentialPhaseView({
             justification={justification}
             taskFeedback={taskFeedback}
             submitting={submittingTaskId === taskId}
+            atsBlocking={isAtsBlocking}
             previousResponsesContent={
               previousPhaseNumbers.length > 0 ? (
                 <>
