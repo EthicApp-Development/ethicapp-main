@@ -4,7 +4,6 @@ import { Link, useOutletContext, useParams } from 'react-router-dom';
 import { studentApi, legacyUserApi } from '../api/studentApi.js';
 import { useI18n } from '../app/providers.jsx';
 import ActivityTabsPanel from '../components/session-detail/ActivityTabsPanel.jsx';
-import ExternalServiceResultPanel from '../components/session-detail/external-services/ExternalServiceResultPanel.jsx';
 import SessionMetadata from '../components/session-detail/SessionMetadata.jsx';
 import WaitingStatePanel from '../components/session-detail/WaitingStatePanel.jsx';
 import { useStudentActivityState } from '../context/StudentActivityStateContext.jsx';
@@ -173,7 +172,26 @@ export default function ActivityPage() {
         ...payload
       },
       ...previousResults
-    ].slice(0, 10));
+    ]);
+  }, []);
+
+  const externalResultsByPhaseId = useMemo(() => {
+    const byPhaseId = {};
+
+    externalServiceResults.forEach((result) => {
+      const phaseId = Number(result?.phaseId);
+      if (!Number.isInteger(phaseId) || phaseId <= 0) {
+        return;
+      }
+
+      (byPhaseId[phaseId] ??= []).push(result);
+    });
+
+    return byPhaseId;
+  }, [externalServiceResults]);
+
+  const onDismissExternalResult = useCallback((resultId) => {
+    setExternalServiceResults((previousResults) => previousResults.filter((result) => result.id !== resultId));
   }, []);
 
   useEffect(() => {
@@ -523,16 +541,9 @@ export default function ActivityPage() {
                     chatRefreshTokenByPhaseId={chatRefreshTokenByPhaseId}
                     atsEnabledByPhaseId={atsEnabledByPhaseId}
                     atsProcessingByPhaseId={atsProcessingByPhaseId}
+                    externalResultsByPhaseId={externalResultsByPhaseId}
+                    onDismissExternalResult={onDismissExternalResult}
                     userId={session.uid}
-                  />
-                  <ExternalServiceResultPanel
-                    results={externalServiceResults}
-                    t={t}
-                    onDismiss={(resultId) => {
-                      setExternalServiceResults((previousResults) => {
-                        return previousResults.filter((result) => result.id !== resultId);
-                      });
-                    }}
                   />
                 </>
               ) : null}
