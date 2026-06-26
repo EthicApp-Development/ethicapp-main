@@ -134,6 +134,7 @@ const enUS = {
     atsComparisonScores: 'Score comparison',
     atsArgumentPrevious: 'Previous argument',
     atsArgumentCurrent: 'Current argument',
+    atsArgumentSubmitted: 'Your argument',
     atsCriterionClaim: 'Claim',
     atsCriterionEvidence: 'Evidence',
     atsCriterionWarrant: 'Warrant',

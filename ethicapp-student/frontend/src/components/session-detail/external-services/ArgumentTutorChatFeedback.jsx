@@ -175,6 +175,10 @@ export default function ArgumentTutorChatFeedback({ payload = {}, t = (key) => k
   const initialArgumentPreview = truncateArgument(comparison?.initialArgument);
   const revisedArgumentPreview = truncateArgument(comparison?.revisedArgument || feedback?.argumentPreview);
 
+  const submittedArgument = typeof feedback?.argumentPreview === 'string'
+    ? feedback.argumentPreview.trim()
+    : '';
+
   return (
     <div className="external-service-result__body ats-feedback-compact">
       {summary ? <p className="ats-feedback-compact__summary">{summary}</p> : null}
@@ -194,6 +198,15 @@ export default function ArgumentTutorChatFeedback({ payload = {}, t = (key) => k
       ) : null}
 
       {mode === 'comparison' ? <ComparisonScores comparison={comparison} t={t} /> : null}
+
+      {mode !== 'comparison' && submittedArgument ? (
+        <section className="ats-feedback-compact__arguments">
+          <article className="ats-feedback-compact__argument-card">
+            <h4>{t('sessionDetail.atsArgumentSubmitted')}</h4>
+            <p>{submittedArgument}</p>
+          </article>
+        </section>
+      ) : null}
 
       {mode === 'comparison' && (initialArgumentPreview || revisedArgumentPreview) ? (
         <section className="ats-feedback-compact__arguments">

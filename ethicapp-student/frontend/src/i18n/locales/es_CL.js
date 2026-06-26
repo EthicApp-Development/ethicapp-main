@@ -135,6 +135,7 @@ const esCL = {
     atsComparisonScores: 'Comparación de puntajes',
     atsArgumentPrevious: 'Argumento previo',
     atsArgumentCurrent: 'Argumento actual',
+    atsArgumentSubmitted: 'Tu argumento',
     atsCriterionClaim: 'Reclamación',
     atsCriterionEvidence: 'Evidencia',
     atsCriterionWarrant: 'Garantía',
