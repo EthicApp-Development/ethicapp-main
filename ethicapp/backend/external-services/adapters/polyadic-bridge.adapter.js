@@ -99,6 +99,32 @@ async function getFirstQuestionIdForPhase(phaseId) {
     return rows.length > 0 ? Number(rows[0].question_id) : null;
 }
 
+async function getParticipantIdentity(groupId, userId, phaseId) {
+    const rows = await rpg2.execSQL({
+        sql: `
+            SELECT tu.anon_mask,
+                   u.firstname,
+                   u.lastname,
+                   u.name,
+                   st.anon AS phase_anonymous
+            FROM teamusers AS tu
+            INNER JOIN users AS u ON u.id = tu.uid
+            INNER JOIN stages AS st ON st.id = $3
+            WHERE tu.tmid = $1
+              AND tu.uid = $2
+            LIMIT 1
+        `,
+        dbcon:     config.dbconnString,
+        sqlParams: [
+            rpg2.param("plain", groupId),
+            rpg2.param("plain", userId),
+            rpg2.param("plain", phaseId),
+        ],
+    });
+
+    return rows.length > 0 ? rows[0] : null;
+}
+
 async function getFirstQuestionForPhase(phaseId) {
     const rows = await rpg2.execSQL({
         sql: `
@@ -185,6 +211,28 @@ async function resolveCaseText(sessionId, dependencies) {
     }
 }
 
+export function resolvePolyadicUsername(identity, userId) {
+    if (!identity) {
+        return `user-${userId}`;
+    }
+
+    if (identity.phase_anonymous) {
+        return normalizeText(identity.anon_mask) || `user-${userId}`;
+    }
+
+    const firstname = normalizeText(identity.firstname);
+    if (firstname) {
+        return firstname;
+    }
+
+    const fullName = `${firstname} ${normalizeText(identity.lastname)}`.trim();
+    if (fullName) {
+        return fullName;
+    }
+
+    return normalizeText(identity.name) || `user-${userId}`;
+}
+
 function createDependencies(overrides = {}) {
     return {
         getTeamIdsForPhase,
@@ -192,6 +240,7 @@ function createDependencies(overrides = {}) {
         getFirstQuestionForPhase,
         getCaseIdBySessionId:   getDefaultCaseIdBySessionId,
         getCaseDocumentRawText: getDefaultCaseDocumentRawText,
+        getParticipantIdentity,
         ...overrides,
     };
 }
@@ -367,7 +416,9 @@ export async function register({
         }
 
         try {
-            await forwardChatMessage(roomName, `user-${userId}`, content, correlationId);
+            const identity = await dependencies.getParticipantIdentity(groupId, userId, phaseId);
+            const polyadicUsername = resolvePolyadicUsername(identity, userId);
+            await forwardChatMessage(roomName, polyadicUsername, content, correlationId);
             await callback({
                 serviceId: service.id,
                 hook:      "chat-message-received",
