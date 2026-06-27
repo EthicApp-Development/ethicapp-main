@@ -6,28 +6,20 @@ import { getCaseDocumentRawText } from "../../helpers/case-document-content-help
 import defaultAiAdditionsClient from "../../services/ai-additions-client.service.js";
 import {
     buildArgumentClientContext,
-    buildFeedbackPayloadFromAtsStatus,
     buildFeedbackPayloadFromExternalResult,
 } from "./ats-feedback.utils.js";
 
 export {
     buildArgumentClientContext,
-    buildFeedbackPayloadFromAtsStatus,
     buildFeedbackPayloadFromExternalResult,
 };
 
 const DEFAULT_ATS_BASE_PATH = "/argumentation-tutor/api/v2";
-const DEFAULT_POLL_INTERVAL_MS = 2500;
-const DEFAULT_POLL_TIMEOUT_MS = 90000;
 
 const atsSessionByPhase = new Map();
 const atsSessionCreationByPhase = new Map();
 const atsSubmissionCountByPhaseUser = new Map();
 let aiAdditionsClient = defaultAiAdditionsClient;
-
-function nowMs() {
-    return Date.now();
-}
 
 function normalizeText(value) {
     if (value === null || value === undefined) {
@@ -53,16 +45,6 @@ function extractResponseText(context) {
 function getAtsBaseUrl() {
     return normalizeText(process.env.AI_ADDITIONS_ARGUMENTATION_TUTOR_API_BASE_URL)
         || aiAdditionsClient.buildServiceUrl(DEFAULT_ATS_BASE_PATH);
-}
-
-function getAtsPollIntervalMs() {
-    const configured = Number(process.env.AI_ADDITIONS_ARGUMENTATION_TUTOR_POLL_INTERVAL_MS);
-    return Number.isInteger(configured) && configured > 250 ? configured : DEFAULT_POLL_INTERVAL_MS;
-}
-
-function getAtsPollTimeoutMs() {
-    const configured = Number(process.env.AI_ADDITIONS_ARGUMENTATION_TUTOR_POLL_TIMEOUT_MS);
-    return Number.isInteger(configured) && configured > 5000 ? configured : DEFAULT_POLL_TIMEOUT_MS;
 }
 
 async function fetchAtsJson(pathname, { method = "GET", body = null } = {}) {
@@ -376,32 +358,6 @@ async function submitArgumentWithFlow(context, responseText, groupId) {
     return submitArgumentComparisonToAts(context, responseText, groupId);
 }
 
-async function pollAtsTask({ atsSessionId, taskId }) {
-    const startedAt = nowMs();
-    const timeoutMs = getAtsPollTimeoutMs();
-    const pollIntervalMs = getAtsPollIntervalMs();
-
-    while (nowMs() - startedAt <= timeoutMs) {
-        const statusResponse = await fetchAtsJson(
-            `/sessions/${encodeURIComponent(atsSessionId)}/arguments/${encodeURIComponent(taskId)}/status`,
-            { method: "GET" }
-        );
-
-        const status = normalizeText(statusResponse?.status).toLowerCase();
-        if (status === "success") {
-            return statusResponse;
-        }
-        if (status === "failure") {
-            const reason = normalizeText(statusResponse?.message) || "ATS returned failure status.";
-            throw new Error(reason);
-        }
-
-        await new Promise(resolve => setTimeout(resolve, pollIntervalMs));
-    }
-
-    throw new Error("ATS polling timed out before completing the feedback task.");
-}
-
 async function publishFeedbackToStudent({ context, feedbackPayload, status, publishStudentResult }) {
     const userId = Number(context?.userId);
     if (!Number.isInteger(userId) || userId <= 0) {
@@ -425,7 +381,7 @@ async function publishFeedbackToStudent({ context, feedbackPayload, status, publ
     });
 }
 
-async function processStudentResponse({ context, callback, publishStudentResult }) {
+async function processStudentResponse({ context, callback }) {
     const responseText = extractResponseText(context);
     if (!responseText) {
         await callback({
@@ -437,32 +393,8 @@ async function processStudentResponse({ context, callback, publishStudentResult 
     }
 
     const groupId = await resolveGroupId(context);
-    const submissionMeta = await submitArgumentWithFlow(context, responseText, groupId);
-    const { atsSessionId, taskId, mode } = submissionMeta;
+    await submitArgumentWithFlow(context, responseText, groupId);
     incrementSubmissionCount(context);
-    const statusResponse = await pollAtsTask({ atsSessionId, taskId });
-    const feedbackPayload = buildFeedbackPayloadFromAtsStatus(statusResponse, context, submissionMeta);
-
-    await publishFeedbackToStudent({
-        context,
-        feedbackPayload,
-        status: "completed",
-        publishStudentResult,
-    });
-
-    await callback({
-        hook:    "student-response-submitted",
-        status:  "completed",
-        payload: {
-            atsSessionId,
-            taskId,
-            groupId,
-            mode,
-            submissionCount:   getSubmissionCount(context),
-            publishedToUserId: Number(context.userId) || null,
-            feedbackTitle:     feedbackPayload.title,
-        },
-    });
 }
 
 async function processPhaseEnded({ context, callback }) {
@@ -545,7 +477,7 @@ export async function register({ subscribe, publishStudentResult, aiAdditionsCli
 
     subscribe("student-response-submitted", async (context, { callback }) => {
         try {
-            await processStudentResponse({ context, callback, publishStudentResult });
+            await processStudentResponse({ context, callback });
         } catch (error) {
             await callback({
                 hook:   "student-response-submitted",
