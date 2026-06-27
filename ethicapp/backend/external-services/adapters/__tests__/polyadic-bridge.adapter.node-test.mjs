@@ -390,6 +390,27 @@ test("chat-message-received forwards firstname for identified phase participants
     assert.equal(harness.callbacks.at(-1).status, "completed");
 });
 
+test("chat-message-received forwards with user-<id> fallback when identity resolution fails", async () => {
+    const harness = createHarness({
+        dependencies: {
+            getTeamIdsForPhase:    async () => [],
+            getParticipantIdentity: async () => {
+                throw new Error("db unavailable");
+            },
+        },
+    });
+    await harness.initialize();
+
+    await harness.dispatch("chat-message-received", {
+        sessionId: 11, phaseId: 22, groupId: 301, userId: 9003,
+        correlationId: "corr-fail-001", content: "Still forwarded",
+    });
+
+    const messageRequest = harness.requests.find(r => r.pathname.includes("/messages"));
+    assert.equal(messageRequest.options.body.username, "user-9003");
+    assert.equal(harness.callbacks.at(-1).status, "completed");
+});
+
 test("phase room tracking is scoped by session and phase", async () => {
     const harness = createHarness({
         dependencies: {

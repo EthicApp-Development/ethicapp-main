@@ -99,7 +99,7 @@ async function getFirstQuestionIdForPhase(phaseId) {
     return rows.length > 0 ? Number(rows[0].question_id) : null;
 }
 
-async function getParticipantIdentity(groupId, userId, phaseId) {
+async function getParticipantIdentity(groupId, userId) {
     const rows = await rpg2.execSQL({
         sql: `
             SELECT tu.anon_mask,
@@ -109,7 +109,8 @@ async function getParticipantIdentity(groupId, userId, phaseId) {
                    st.anon AS phase_anonymous
             FROM teamusers AS tu
             INNER JOIN users AS u ON u.id = tu.uid
-            INNER JOIN stages AS st ON st.id = $3
+            INNER JOIN teams AS t ON t.id = tu.tmid
+            INNER JOIN stages AS st ON st.id = t.stageid
             WHERE tu.tmid = $1
               AND tu.uid = $2
             LIMIT 1
@@ -118,7 +119,6 @@ async function getParticipantIdentity(groupId, userId, phaseId) {
         sqlParams: [
             rpg2.param("plain", groupId),
             rpg2.param("plain", userId),
-            rpg2.param("plain", phaseId),
         ],
     });
 
@@ -220,17 +220,10 @@ export function resolvePolyadicUsername(identity, userId) {
         return normalizeText(identity.anon_mask) || `user-${userId}`;
     }
 
-    const firstname = normalizeText(identity.firstname);
-    if (firstname) {
-        return firstname;
-    }
-
-    const fullName = `${firstname} ${normalizeText(identity.lastname)}`.trim();
-    if (fullName) {
-        return fullName;
-    }
-
-    return normalizeText(identity.name) || `user-${userId}`;
+    return normalizeText(identity.firstname)
+        || normalizeText(identity.lastname)
+        || normalizeText(identity.name)
+        || `user-${userId}`;
 }
 
 function createDependencies(overrides = {}) {
@@ -415,9 +408,15 @@ export async function register({
             rememberRoomContext(roomName, sessionId, phaseId, groupId, questionId);
         }
 
+        let polyadicUsername = `user-${userId}`;
         try {
-            const identity = await dependencies.getParticipantIdentity(groupId, userId, phaseId);
-            const polyadicUsername = resolvePolyadicUsername(identity, userId);
+            const identity = await dependencies.getParticipantIdentity(groupId, userId);
+            polyadicUsername = resolvePolyadicUsername(identity, userId);
+        } catch (error) {
+            console.warn(`[polyadic-bridge] Failed to resolve participant identity for user ${userId} in ${roomName}; using fallback username.`, error);
+        }
+
+        try {
             await forwardChatMessage(roomName, polyadicUsername, content, correlationId);
             await callback({
                 serviceId: service.id,
