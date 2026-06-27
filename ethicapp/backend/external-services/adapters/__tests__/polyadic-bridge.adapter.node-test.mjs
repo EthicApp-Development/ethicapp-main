@@ -6,6 +6,7 @@ import {
     getRoomName,
     parseRoomName,
     register,
+    resolvePolyadicUsername,
 } from "../polyadic-bridge.adapter.js";
 
 function createHarness({ dependencies = {} } = {}) {
@@ -35,6 +36,7 @@ function createHarness({ dependencies = {} } = {}) {
         }),
         getCaseIdBySessionId:   async () => 51,
         getCaseDocumentRawText: async () => "Case text for discussion.",
+        getParticipantIdentity: async () => null,
         ...dependencies,
     };
 
@@ -297,6 +299,116 @@ test("activity-finished only closes rooms belonging to the finished session", as
 
     assert.ok(deletes.every(pathname => pathname.includes("-s11-")), "should not close other sessions' rooms");
     assert.equal(harness.callbacks.at(-1).payload.roomsClosed, 2);
+});
+
+test("resolvePolyadicUsername uses anon_mask for anonymous phases", () => {
+    assert.equal(
+        resolvePolyadicUsername({ phase_anonymous: true, anon_mask: "B", firstname: "Juan", lastname: "García", name: "jgarcia" }, 9001),
+        "B"
+    );
+});
+
+test("resolvePolyadicUsername uses firstname for identified phases", () => {
+    assert.equal(
+        resolvePolyadicUsername({ phase_anonymous: false, anon_mask: "C", firstname: "Ana", lastname: "López", name: "alopez" }, 9002),
+        "Ana"
+    );
+});
+
+test("resolvePolyadicUsername falls back to lastname when firstname is absent", () => {
+    assert.equal(
+        resolvePolyadicUsername({ phase_anonymous: false, anon_mask: null, firstname: "", lastname: "López", name: "alopez" }, 9002),
+        "López"
+    );
+});
+
+test("resolvePolyadicUsername falls back to users.name when firstname and lastname are absent", () => {
+    assert.equal(
+        resolvePolyadicUsername({ phase_anonymous: false, anon_mask: null, firstname: "", lastname: "", name: "alopez" }, 9002),
+        "alopez"
+    );
+});
+
+test("resolvePolyadicUsername falls back to user-<id> when identity is null", () => {
+    assert.equal(resolvePolyadicUsername(null, 9001), "user-9001");
+});
+
+test("resolvePolyadicUsername falls back to user-<id> when anonymous but anon_mask is absent", () => {
+    assert.equal(
+        resolvePolyadicUsername({ phase_anonymous: true, anon_mask: "", firstname: "Juan", lastname: "García", name: "jgarcia" }, 9001),
+        "user-9001"
+    );
+});
+
+test("chat-message-received forwards anon_mask for anonymous phase participants", async () => {
+    const harness = createHarness({
+        dependencies: {
+            getTeamIdsForPhase:    async () => [],
+            getParticipantIdentity: async () => ({
+                phase_anonymous: true,
+                anon_mask:       "A",
+                firstname:       "Juan",
+                lastname:        "García",
+                name:            "jgarcia",
+            }),
+        },
+    });
+    await harness.initialize();
+
+    await harness.dispatch("chat-message-received", {
+        sessionId: 11, phaseId: 22, groupId: 301, userId: 9001,
+        correlationId: "corr-anon-001", content: "My opinion",
+    });
+
+    const messageRequest = harness.requests.find(r => r.pathname.includes("/messages"));
+    assert.equal(messageRequest.options.body.username, "A");
+    assert.equal(harness.callbacks.at(-1).status, "completed");
+});
+
+test("chat-message-received forwards firstname for identified phase participants", async () => {
+    const harness = createHarness({
+        dependencies: {
+            getTeamIdsForPhase:    async () => [],
+            getParticipantIdentity: async () => ({
+                phase_anonymous: false,
+                anon_mask:       "B",
+                firstname:       "Ana",
+                lastname:        "López",
+                name:            "alopez",
+            }),
+        },
+    });
+    await harness.initialize();
+
+    await harness.dispatch("chat-message-received", {
+        sessionId: 11, phaseId: 22, groupId: 301, userId: 9002,
+        correlationId: "corr-ident-001", content: "I think we should act",
+    });
+
+    const messageRequest = harness.requests.find(r => r.pathname.includes("/messages"));
+    assert.equal(messageRequest.options.body.username, "Ana");
+    assert.equal(harness.callbacks.at(-1).status, "completed");
+});
+
+test("chat-message-received forwards with user-<id> fallback when identity resolution fails", async () => {
+    const harness = createHarness({
+        dependencies: {
+            getTeamIdsForPhase:    async () => [],
+            getParticipantIdentity: async () => {
+                throw new Error("db unavailable");
+            },
+        },
+    });
+    await harness.initialize();
+
+    await harness.dispatch("chat-message-received", {
+        sessionId: 11, phaseId: 22, groupId: 301, userId: 9003,
+        correlationId: "corr-fail-001", content: "Still forwarded",
+    });
+
+    const messageRequest = harness.requests.find(r => r.pathname.includes("/messages"));
+    assert.equal(messageRequest.options.body.username, "user-9003");
+    assert.equal(harness.callbacks.at(-1).status, "completed");
 });
 
 test("phase room tracking is scoped by session and phase", async () => {
