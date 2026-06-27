@@ -137,8 +137,10 @@ facade path. For example, the Argumentation Tutor adapter uses:
 | Variable | Purpose |
 | --- | --- |
 | `AI_ADDITIONS_ARGUMENTATION_TUTOR_API_BASE_URL` | Argumentation Tutor API base URL. Defaults to `${AI_ADDITIONS_BASE_URL}/argumentation-tutor/api/v2`. |
-| `AI_ADDITIONS_ARGUMENTATION_TUTOR_POLL_INTERVAL_MS` | Poll interval for asynchronous tutor jobs. |
-| `AI_ADDITIONS_ARGUMENTATION_TUTOR_POLL_TIMEOUT_MS` | Maximum poll duration for asynchronous tutor jobs. |
+
+Argumentation Tutor completion is callback-driven. EthicApp submits the task and
+keeps the external-service job dispatched until the correlated `result` callback
+arrives; it does not poll the ATS task-status endpoint.
 
 When adding, removing, or renaming variables, update the repository deployment
 contract in `../../../deploy/env.contract.yml` and the relevant `.env.example`
