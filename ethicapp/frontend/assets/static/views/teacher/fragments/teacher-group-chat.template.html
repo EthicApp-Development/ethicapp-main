@@ -49,6 +49,10 @@
         background-color: #deffcf;
     }
 
+    .teacher-group-chat-bubble-agent {
+        background-color: #fdf6c3;
+    }
+
     .teacher-group-chat-reply-context {
         max-width: 85%;
         margin-bottom: .25em;
@@ -125,7 +129,8 @@
         <div class="teacher-group-chat-bubble"
              ng-class="{
                 'teacher-group-chat-bubble-own': $ctrl.isOwnMessage(message),
-                'teacher-group-chat-bubble-peer': !$ctrl.isOwnMessage(message)
+                'teacher-group-chat-bubble-agent': message.authorRole === 'external_service',
+                'teacher-group-chat-bubble-peer': !$ctrl.isOwnMessage(message) && message.authorRole !== 'external_service'
              }">
             {{ message.content }}
         </div>

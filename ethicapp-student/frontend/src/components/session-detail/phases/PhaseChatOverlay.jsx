@@ -310,6 +310,7 @@ export default function PhaseChatOverlay({ isOpen, onClose, onHeightChange, phas
             const depth = getMessageDepth(message);
             const replyTarget = Number.isInteger(message.parentId) ? messagesById[message.parentId] ?? null : null;
             const isOwnMessage = message.authorId === Number(userId);
+            const isExternalAgent = message.authorRole === 'external_service';
 
             return (
               <div key={message.id} className={`mb-2 d-flex flex-column ${isOwnMessage ? 'align-items-end' : 'align-items-start'}`} style={{ marginLeft: `${depth * 12}px` }}>
@@ -317,7 +318,7 @@ export default function PhaseChatOverlay({ isOpen, onClose, onHeightChange, phas
                 {replyTarget ? <div className={`small text-muted mb-1 px-2 ${isOwnMessage ? 'border-end pe-2 text-end' : 'border-start ps-2 text-start'}`}>-&gt; {summarizeMessageForReply(replyTarget)}</div> : null}
                 <div
                   className="rounded px-2 py-1 text-dark border shadow-sm"
-                  style={{ maxWidth: '85%', backgroundColor: isOwnMessage ? '#deffcf' : '#ffffff' }}
+                  style={{ maxWidth: '85%', backgroundColor: isOwnMessage ? '#deffcf' : isExternalAgent ? '#fdf6c3' : '#ffffff' }}
                 >
                   {message.atsFeedback ? <AtsFeedbackBubble feedback={message.atsFeedback} t={t} /> : message.content}
                 </div>
