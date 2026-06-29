@@ -6,6 +6,7 @@ import {
     getRoomName,
     parseRoomName,
     register,
+    resolveAgentNickname,
     resolvePolyadicUsername,
 } from "../polyadic-bridge.adapter.js";
 
@@ -37,6 +38,7 @@ function createHarness({ dependencies = {} } = {}) {
         getCaseIdBySessionId:   async () => 51,
         getCaseDocumentRawText: async () => "Case text for discussion.",
         getParticipantIdentity: async () => null,
+        getSessionLanguageCode: async () => "es_CL",
         ...dependencies,
     };
 
@@ -409,6 +411,69 @@ test("chat-message-received forwards with user-<id> fallback when identity resol
     const messageRequest = harness.requests.find(r => r.pathname.includes("/messages"));
     assert.equal(messageRequest.options.body.username, "user-9003");
     assert.equal(harness.callbacks.at(-1).status, "completed");
+});
+
+test("resolveAgentNickname returns localized nickname per language code", () => {
+    assert.equal(resolveAgentNickname("en_US"), "@agent");
+    assert.equal(resolveAgentNickname("es_CL"), "@agente");
+});
+
+test("resolveAgentNickname falls back by language prefix and defaults to @agente", () => {
+    assert.equal(resolveAgentNickname("en_GB"), "@agent");
+    assert.equal(resolveAgentNickname("es_ES"), "@agente");
+    assert.equal(resolveAgentNickname("pt_BR"), "@agente");
+    assert.equal(resolveAgentNickname(""), "@agente");
+    assert.equal(resolveAgentNickname(null), "@agente");
+});
+
+test("phase-started creates rooms with the localized agent nickname (en_US)", async () => {
+    const harness = createHarness({
+        dependencies: {
+            getTeamIdsForPhase:     async () => [301],
+            getSessionLanguageCode: async () => "en_US",
+        },
+    });
+    await harness.initialize();
+
+    await harness.dispatch("phase-started", { sessionId: 11, phaseId: 22 });
+
+    const sessionRequest = harness.requests.find(r => r.pathname.endsWith("/sessions"));
+    assert.equal(sessionRequest.options.body.agent_nickname, "@agent");
+});
+
+test("chat-message-received creates a missing room with the localized agent nickname (es_CL)", async () => {
+    const harness = createHarness({
+        dependencies: {
+            getTeamIdsForPhase:     async () => [],
+            getSessionLanguageCode: async () => "es_CL",
+        },
+    });
+    await harness.initialize();
+
+    await harness.dispatch("chat-message-received", {
+        sessionId: 11, phaseId: 22, groupId: 301, userId: 9001,
+        correlationId: "corr-lang-001", content: "Hola",
+    });
+
+    const sessionRequest = harness.requests.find(r => r.pathname.endsWith("/sessions"));
+    assert.equal(sessionRequest.options.body.agent_nickname, "@agente");
+});
+
+test("phase-started falls back to default agent nickname when language resolution fails", async () => {
+    const harness = createHarness({
+        dependencies: {
+            getTeamIdsForPhase:     async () => [301],
+            getSessionLanguageCode: async () => {
+                throw new Error("db unavailable");
+            },
+        },
+    });
+    await harness.initialize();
+
+    await harness.dispatch("phase-started", { sessionId: 11, phaseId: 22 });
+
+    const sessionRequest = harness.requests.find(r => r.pathname.endsWith("/sessions"));
+    assert.equal(sessionRequest.options.body.agent_nickname, "@agente");
 });
 
 test("phase room tracking is scoped by session and phase", async () => {

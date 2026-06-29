@@ -211,6 +211,37 @@ async function resolveCaseText(sessionId, dependencies) {
     }
 }
 
+async function getSessionLanguageCode(sessionId) {
+    const row = await rpg2.singleSQL({
+        sql: `
+            SELECT d.language_code
+            FROM activity AS a
+            INNER JOIN designs AS d ON d.id = a.design
+            WHERE a.session = $1
+            LIMIT 1
+        `,
+        dbcon:     config.dbconnString,
+        sqlParams: [rpg2.param("plain", sessionId)],
+    });
+
+    return row?.language_code ? normalizeText(row.language_code) : null;
+}
+
+const AGENT_NICKNAMES = {
+    en_US: "@agent",
+    es_CL: "@agente",
+};
+const DEFAULT_AGENT_NICKNAME = AGENT_NICKNAMES.es_CL;
+
+export function resolveAgentNickname(languageCode) {
+    const normalized = normalizeText(languageCode);
+    if (AGENT_NICKNAMES[normalized]) {
+        return AGENT_NICKNAMES[normalized];
+    }
+
+    return normalized.toLowerCase().startsWith("en") ? AGENT_NICKNAMES.en_US : DEFAULT_AGENT_NICKNAME;
+}
+
 export function resolvePolyadicUsername(identity, userId) {
     if (!identity) {
         return `user-${userId}`;
@@ -234,6 +265,7 @@ function createDependencies(overrides = {}) {
         getCaseIdBySessionId:   getDefaultCaseIdBySessionId,
         getCaseDocumentRawText: getDefaultCaseDocumentRawText,
         getParticipantIdentity,
+        getSessionLanguageCode,
         ...overrides,
     };
 }
@@ -247,12 +279,13 @@ async function requestPolyadicJson(pathname, { method = "GET", body = null } = {
     });
 }
 
-async function ensurePolyadicSession(roomName, topic) {
+async function ensurePolyadicSession(roomName, topic, agentNickname) {
     await requestPolyadicJson(`/rooms/${encodeURIComponent(roomName)}/sessions`, {
         method: "POST",
         body:   {
             prompt_inicial: topic || "EthicApp discussion",
             pipeline_type:  getPipelineType(),
+            agent_nickname: agentNickname || DEFAULT_AGENT_NICKNAME,
         },
     });
 
@@ -308,24 +341,36 @@ export async function register({
         return context;
     }
 
+    async function resolveAgentNicknameForSession(sessionId) {
+        try {
+            const languageCode = await dependencies.getSessionLanguageCode(sessionId);
+            return resolveAgentNickname(languageCode);
+        } catch (error) {
+            console.warn(`[polyadic-bridge] Unable to resolve conversation language for session ${sessionId}; using default agent nickname.`, error);
+            return DEFAULT_AGENT_NICKNAME;
+        }
+    }
+
     async function buildTopicForPhase(sessionId, phaseId) {
         const caseText = await resolveCaseText(sessionId, dependencies);
         const question = await dependencies.getFirstQuestionForPhase(phaseId);
         const questionText = formatQuestionText(question);
         const fallbackTopic = `EthicApp session ${sessionId} phase ${phaseId}`;
+        const agentNickname = await resolveAgentNicknameForSession(sessionId);
 
         return {
             questionId: question?.id ?? null,
             topic:      composeTopic(caseText || fallbackTopic, questionText),
+            agentNickname,
         };
     }
 
-    async function createRoom({ sessionId, phaseId, groupId, questionId, topic }) {
+    async function createRoom({ sessionId, phaseId, groupId, questionId, topic, agentNickname }) {
         const roomName = getRoomName(sessionId, phaseId, groupId);
         rememberRoomContext(roomName, sessionId, phaseId, groupId, questionId);
 
         try {
-            await ensurePolyadicSession(roomName, topic);
+            await ensurePolyadicSession(roomName, topic, agentNickname);
             return roomName;
         } catch (error) {
             roomContext.delete(roomName);
@@ -337,11 +382,11 @@ export async function register({
     subscribe("phase-started", async (context, { callback }) => {
         const { sessionId, phaseId } = context;
         const teamIds = await dependencies.getTeamIdsForPhase(sessionId, phaseId);
-        const { questionId, topic } = await buildTopicForPhase(sessionId, phaseId);
+        const { questionId, topic, agentNickname } = await buildTopicForPhase(sessionId, phaseId);
         const createdRooms = new Set();
 
         for (const groupId of teamIds) {
-            const roomName = await createRoom({ sessionId, phaseId, groupId, questionId, topic });
+            const roomName = await createRoom({ sessionId, phaseId, groupId, questionId, topic, agentNickname });
             if (roomName) {
                 createdRooms.add(roomName);
             }
@@ -389,8 +434,9 @@ export async function register({
                 sessionId,
                 phaseId,
                 groupId,
-                questionId: questionId ?? topicData.questionId,
-                topic:      topicData.topic,
+                questionId:    questionId ?? topicData.questionId,
+                topic:         topicData.topic,
+                agentNickname: topicData.agentNickname,
             });
 
             if (!createdRoom) {
