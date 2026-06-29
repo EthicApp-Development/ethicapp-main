@@ -233,13 +233,32 @@ const AGENT_NICKNAMES = {
 };
 const DEFAULT_AGENT_NICKNAME = AGENT_NICKNAMES.es_CL;
 
+const CONVERSATION_LANGUAGES = {
+    en_US: "English",
+    es_CL: "español",
+};
+const DEFAULT_CONVERSATION_LANGUAGE = CONVERSATION_LANGUAGES.es_CL;
+
+function isEnglishLanguageCode(languageCode) {
+    return normalizeText(languageCode).toLowerCase().startsWith("en");
+}
+
 export function resolveAgentNickname(languageCode) {
     const normalized = normalizeText(languageCode);
     if (AGENT_NICKNAMES[normalized]) {
         return AGENT_NICKNAMES[normalized];
     }
 
-    return normalized.toLowerCase().startsWith("en") ? AGENT_NICKNAMES.en_US : DEFAULT_AGENT_NICKNAME;
+    return isEnglishLanguageCode(normalized) ? AGENT_NICKNAMES.en_US : DEFAULT_AGENT_NICKNAME;
+}
+
+export function resolveConversationLanguage(languageCode) {
+    const normalized = normalizeText(languageCode);
+    if (CONVERSATION_LANGUAGES[normalized]) {
+        return CONVERSATION_LANGUAGES[normalized];
+    }
+
+    return isEnglishLanguageCode(normalized) ? CONVERSATION_LANGUAGES.en_US : DEFAULT_CONVERSATION_LANGUAGE;
 }
 
 export function resolvePolyadicUsername(identity, userId) {
@@ -279,13 +298,14 @@ async function requestPolyadicJson(pathname, { method = "GET", body = null } = {
     });
 }
 
-async function ensurePolyadicSession(roomName, topic, agentNickname) {
+async function ensurePolyadicSession(roomName, topic, agentNickname, idioma) {
     await requestPolyadicJson(`/rooms/${encodeURIComponent(roomName)}/sessions`, {
         method: "POST",
         body:   {
             prompt_inicial: topic || "EthicApp discussion",
             pipeline_type:  getPipelineType(),
             agent_nickname: agentNickname || DEFAULT_AGENT_NICKNAME,
+            idioma:         idioma || DEFAULT_CONVERSATION_LANGUAGE,
         },
     });
 
@@ -341,13 +361,19 @@ export async function register({
         return context;
     }
 
-    async function resolveAgentNicknameForSession(sessionId) {
+    async function resolveSessionLanguageContext(sessionId) {
         try {
             const languageCode = await dependencies.getSessionLanguageCode(sessionId);
-            return resolveAgentNickname(languageCode);
+            return {
+                agentNickname: resolveAgentNickname(languageCode),
+                idioma:        resolveConversationLanguage(languageCode),
+            };
         } catch (error) {
-            console.warn(`[polyadic-bridge] Unable to resolve conversation language for session ${sessionId}; using default agent nickname.`, error);
-            return DEFAULT_AGENT_NICKNAME;
+            console.warn(`[polyadic-bridge] Unable to resolve conversation language for session ${sessionId}; using defaults.`, error);
+            return {
+                agentNickname: DEFAULT_AGENT_NICKNAME,
+                idioma:        DEFAULT_CONVERSATION_LANGUAGE,
+            };
         }
     }
 
@@ -356,21 +382,22 @@ export async function register({
         const question = await dependencies.getFirstQuestionForPhase(phaseId);
         const questionText = formatQuestionText(question);
         const fallbackTopic = `EthicApp session ${sessionId} phase ${phaseId}`;
-        const agentNickname = await resolveAgentNicknameForSession(sessionId);
+        const { agentNickname, idioma } = await resolveSessionLanguageContext(sessionId);
 
         return {
             questionId: question?.id ?? null,
             topic:      composeTopic(caseText || fallbackTopic, questionText),
             agentNickname,
+            idioma,
         };
     }
 
-    async function createRoom({ sessionId, phaseId, groupId, questionId, topic, agentNickname }) {
+    async function createRoom({ sessionId, phaseId, groupId, questionId, topic, agentNickname, idioma }) {
         const roomName = getRoomName(sessionId, phaseId, groupId);
         rememberRoomContext(roomName, sessionId, phaseId, groupId, questionId);
 
         try {
-            await ensurePolyadicSession(roomName, topic, agentNickname);
+            await ensurePolyadicSession(roomName, topic, agentNickname, idioma);
             return roomName;
         } catch (error) {
             roomContext.delete(roomName);
@@ -382,11 +409,11 @@ export async function register({
     subscribe("phase-started", async (context, { callback }) => {
         const { sessionId, phaseId } = context;
         const teamIds = await dependencies.getTeamIdsForPhase(sessionId, phaseId);
-        const { questionId, topic, agentNickname } = await buildTopicForPhase(sessionId, phaseId);
+        const { questionId, topic, agentNickname, idioma } = await buildTopicForPhase(sessionId, phaseId);
         const createdRooms = new Set();
 
         for (const groupId of teamIds) {
-            const roomName = await createRoom({ sessionId, phaseId, groupId, questionId, topic, agentNickname });
+            const roomName = await createRoom({ sessionId, phaseId, groupId, questionId, topic, agentNickname, idioma });
             if (roomName) {
                 createdRooms.add(roomName);
             }
@@ -437,6 +464,7 @@ export async function register({
                 questionId:    questionId ?? topicData.questionId,
                 topic:         topicData.topic,
                 agentNickname: topicData.agentNickname,
+                idioma:        topicData.idioma,
             });
 
             if (!createdRoom) {
