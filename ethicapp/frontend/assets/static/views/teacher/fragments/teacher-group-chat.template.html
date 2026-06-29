@@ -119,7 +119,7 @@
          ng-repeat="message in $ctrl.getMessages() track by message.id">
         <small class="text-muted teacher-group-chat-message-meta">
             {{ $ctrl.getChatAuthorName(message) }}
-            <span>{{ message.stime | date:'short' }}</span>
+            <span>{{ message.stime | date:'HH:mm' }}</span>
         </small>
         <div class="teacher-group-chat-reply-context"
              ng-if="$ctrl.getReplyTarget(message)">

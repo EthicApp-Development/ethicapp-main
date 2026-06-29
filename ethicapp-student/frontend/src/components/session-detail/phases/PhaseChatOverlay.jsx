@@ -87,7 +87,7 @@ function normalizeMessage(message) {
   const externalServiceId = message?.external_service_id ?? message?.externalServiceId ?? '';
   const content = typeof message?.content === 'string' ? message.content.trim() : '';
   const atsFeedback = parseAtsFeedbackPayload(content);
-  const createdAt = message?.date ?? message?.created_at ?? message?.createdAt ?? '';
+  const createdAt = message?.stime ?? message?.date ?? message?.created_at ?? message?.createdAt ?? '';
   const parentId = Number(message?.parent_id ?? message?.parentId);
 
   return {
@@ -101,6 +101,19 @@ function normalizeMessage(message) {
     createdAt: typeof createdAt === 'string' ? createdAt : '',
     parentId: Number.isInteger(parentId) ? parentId : null
   };
+}
+
+function formatMessageTime(value) {
+  if (typeof value !== 'string' || value.trim().length === 0) {
+    return '';
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
 }
 
 function summarizeMessageForReply(message) {
@@ -311,10 +324,14 @@ export default function PhaseChatOverlay({ isOpen, onClose, onHeightChange, phas
             const replyTarget = Number.isInteger(message.parentId) ? messagesById[message.parentId] ?? null : null;
             const isOwnMessage = message.authorId === Number(userId);
             const isExternalAgent = message.authorRole === 'external_service';
+            const messageTime = formatMessageTime(message.createdAt);
 
             return (
               <div key={message.id} className={`mb-2 d-flex flex-column ${isOwnMessage ? 'align-items-end' : 'align-items-start'}`} style={{ marginLeft: `${depth * 12}px` }}>
-                <small className="text-muted d-block">{isOwnMessage ? t('sessionDetail.chatYouAuthor') : resolveDisplayName(message, participantsByUserId, isAnonymousPhase, t)}</small>
+                <small className="text-muted d-block">
+                  {isOwnMessage ? t('sessionDetail.chatYouAuthor') : resolveDisplayName(message, participantsByUserId, isAnonymousPhase, t)}
+                  {messageTime ? <span className="ms-1">{messageTime}</span> : null}
+                </small>
                 {replyTarget ? <div className={`small text-muted mb-1 px-2 ${isOwnMessage ? 'border-end pe-2 text-end' : 'border-start ps-2 text-start'}`}>-&gt; {summarizeMessageForReply(replyTarget)}</div> : null}
                 <div
                   className="rounded px-2 py-1 text-dark border shadow-sm"
