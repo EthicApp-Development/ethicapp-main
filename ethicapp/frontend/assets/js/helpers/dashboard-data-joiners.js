@@ -163,6 +163,16 @@ let rankingPhaseDataJoiner = (phaseDescriptor, responses, users,
         }
     });
 
+    // Sum the current cumulative chat counts before merging with persisted data.
+    // The API returns totals rather than deltas, so these values must replace
+    // any counts from a previous dashboard refresh.
+    relevantChats.forEach(chat => {
+        const user = usersMap[chat.uid || chat.userId];
+        if (user) {
+            user.chatCount += Number(chat.messageCount || 0);
+        }
+    });
+
     // If no existingData is provided, build the structure from scratch
     if (!existingData) {
         // Assign responses and chat statistics for each user
@@ -172,14 +182,6 @@ let rankingPhaseDataJoiner = (phaseDescriptor, responses, users,
                 // Assign the ranked item description and actor ID to the respective order
                 user[`r${response.orden}`] = response.description || null;
                 user[`idR${response.orden}`] = response.actorid || null;
-            }
-        });
-
-        // Sum up chat counts for each user
-        relevantChats.forEach(chat => {
-            const user = usersMap[chat.uid || chat.userId];
-            if (user) {
-                user.chatCount += chat.messageCount || 0;
             }
         });
 
@@ -207,6 +209,8 @@ let rankingPhaseDataJoiner = (phaseDescriptor, responses, users,
             existingDataMap[user.uid] = user; // Add new users
         } else {
             const existingUser = existingDataMap[user.uid];
+            existingUser.chatCount = user.chatCount;
+
             // Update ranked items and actor IDs
             responses
                 .filter(response => response.uid === user.uid)
@@ -215,12 +219,6 @@ let rankingPhaseDataJoiner = (phaseDescriptor, responses, users,
                     existingUser[`idR${response.orden}`] = response.actorid || null;
                 });
 
-            // Update chat counts
-            relevantChats
-                .filter(chat => (chat.uid || chat.userId) === user.uid)
-                .forEach(chat => {
-                    existingUser.chatCount += chat.messageCount || 0;
-                });
         }
     });
 
@@ -309,6 +307,14 @@ function addExternalGroupChatInfo(phaseState, chatMessageCount, questions) {
         acc[Number(question.id)] = question;
         return acc;
     }, {});
+
+    phaseState
+        .filter(user => !user.groupStatistics)
+        .forEach(user => {
+            (questions || []).forEach(question => {
+                user[`__groupChatR${question.number}`] = 0;
+            });
+        });
 
     (chatMessageCount || []).forEach(chat => {
         if (usersById.has(Number(chat.userId))) {
