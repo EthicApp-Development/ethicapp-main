@@ -15,6 +15,7 @@ import {
     buildSemanticDifferentialChatTranscriptSql,
     buildSemanticDifferentialResponsesReportSql,
 } from "./report-query-builders.js";
+import { buildCsv } from "./csv-builder.js";
 
 const router = express.Router();
 const REPORT_NOT_IMPLEMENTED = "REPORT_NOT_IMPLEMENTED";
@@ -138,26 +139,6 @@ function buildTimestampForFilename(date = new Date()) {
         padDatePart(date.getMinutes()),
         padDatePart(date.getSeconds()),
     ].join("");
-}
-
-function csvEscape(value) {
-    if (value === undefined || value === null) {
-        return "\"\"";
-    }
-
-    const serializedValue = value instanceof Date
-        ? value.toISOString()
-        : String(value);
-    return `"${serializedValue.replaceAll("\"", "\"\"")}"`;
-}
-
-function buildCsv(columns, rows) {
-    const lines = [
-        columns.map(csvEscape).join(","),
-        ...rows.map(row => columns.map(column => csvEscape(row[column])).join(",")),
-    ];
-
-    return `${lines.join("\n")}\n`;
 }
 
 function hashContent(content) {
