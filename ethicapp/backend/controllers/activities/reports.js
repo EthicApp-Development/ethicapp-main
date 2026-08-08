@@ -11,6 +11,11 @@ import {
     markActivityReportExportFailed,
 } from "../../helpers/activity-report-audit-helper.js";
 import { getDesignTypeBySessionId } from "./activities-common.js";
+import {
+    buildSemanticDifferentialChatTranscriptSql,
+    buildSemanticDifferentialResponsesReportSql,
+} from "./report-query-builders.js";
+import { buildCsv } from "./csv-builder.js";
 
 const router = express.Router();
 const REPORT_NOT_IMPLEMENTED = "REPORT_NOT_IMPLEMENTED";
@@ -136,26 +141,6 @@ function buildTimestampForFilename(date = new Date()) {
     ].join("");
 }
 
-function csvEscape(value) {
-    if (value === undefined || value === null) {
-        return "\"\"";
-    }
-
-    const serializedValue = value instanceof Date
-        ? value.toISOString()
-        : String(value);
-    return `"${serializedValue.replaceAll("\"", "\"\"")}"`;
-}
-
-function buildCsv(columns, rows) {
-    const lines = [
-        columns.map(csvEscape).join(","),
-        ...rows.map(row => columns.map(column => csvEscape(row[column])).join(",")),
-    ];
-
-    return `${lines.join("\n")}\n`;
-}
-
 function hashContent(content) {
     return crypto.createHash("sha256").update(content, "utf8").digest("hex");
 }
@@ -163,39 +148,7 @@ function hashContent(content) {
 async function buildSemanticDifferentialResponsesReport(context) {
     const rows = await rpg2.execSQL({
         dbcon: config.dbconnString,
-        sql: `
-            SELECT
-                ds.id,
-                ds.uid AS user_id,
-                tu.tmid AS team_id,
-                u.name,
-                u.rut,
-                u.sex AS gender,
-                d.orden AS question_number,
-                d.title AS question_text,
-                d.tleft AS left_pole,
-                d.tright AS right_pole,
-                d.num AS max_scale_range,
-                ds.sel AS selected_value,
-                ds.comment,
-                st.number AS phase_number,
-                ds.stime AS time
-            FROM differential_selection AS ds
-            INNER JOIN differential AS d
-                ON ds.did = d.id
-            INNER JOIN stages AS st
-                ON d.stageid = st.id
-            INNER JOIN users AS u
-                ON ds.uid = u.id
-            LEFT JOIN teams AS t
-                ON t.sesid = st.sesid
-               AND t.stageid = st.id
-            LEFT JOIN teamusers AS tu
-                ON tu.tmid = t.id
-               AND tu.uid = ds.uid
-            WHERE st.sesid = $1
-            ORDER BY st.number, d.orden, u.name, ds.id
-        `,
+        sql: buildSemanticDifferentialResponsesReportSql(),
         sqlParams: [rpg2.param("plain", context.sessionId)],
     });
 
@@ -214,38 +167,7 @@ async function buildSemanticDifferentialResponsesReport(context) {
 async function buildSemanticDifferentialChatTranscript(context) {
     const rows = await rpg2.execSQL({
         dbcon: config.dbconnString,
-        sql: `
-            SELECT
-                dc.id,
-                dc.uid AS user_id,
-                COALESCE(dc.tmid, tu.tmid) AS team_id,
-                u.name,
-                u.rut,
-                u.sex AS gender,
-                d.orden AS question_number,
-                d.title AS question_text,
-                d.tleft AS left_pole,
-                d.tright AS right_pole,
-                dc.content AS message,
-                st.number AS phase_number,
-                dc.stime AS time,
-                dc.parent_id AS reply_to
-            FROM differential_chat AS dc
-            INNER JOIN differential AS d
-                ON dc.did = d.id
-            INNER JOIN stages AS st
-                ON d.stageid = st.id
-            INNER JOIN users AS u
-                ON dc.uid = u.id
-            LEFT JOIN teams AS t
-                ON t.sesid = st.sesid
-               AND t.stageid = st.id
-            LEFT JOIN teamusers AS tu
-                ON tu.tmid = t.id
-               AND tu.uid = dc.uid
-            WHERE st.sesid = $1
-            ORDER BY st.number, d.orden, team_id, dc.stime, dc.id
-        `,
+        sql: buildSemanticDifferentialChatTranscriptSql(),
         sqlParams: [rpg2.param("plain", context.sessionId)],
     });
 
