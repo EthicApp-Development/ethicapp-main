@@ -39,10 +39,13 @@ const SEMANTIC_DIFFERENTIAL_RESPONSE_COLUMNS = [
 const SEMANTIC_DIFFERENTIAL_CHAT_COLUMNS = [
     "id",
     "user_id",
+    "external_agent_id",
     "team_id",
+    "author_role",
     "name",
     "rut",
     "gender",
+    "external_service_id",
     "question_number",
     "question_text",
     "left_pole",
