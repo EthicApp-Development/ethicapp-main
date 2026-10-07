@@ -40,12 +40,16 @@ Each manifest entry declares:
 - `description`: teacher-facing description.
 - `adapter`: ESM module path relative to the manifest.
 - `hooks`: hook names supported by the service.
+- `capabilities`: optional flags. `processesStudentResponses` marks services
+  that review student responses; `processesCaseDocuments` marks services that
+  run when a case document is uploaded and are therefore not offered as
+  per-phase options in the design editor.
 - `enabled`: whether the adapter should be loaded.
 
 Hook names are standardized as kebab-case identifiers. New adapters should use
 names such as `phase-started`, `phase-ended`, `activity-started`,
-`activity-finished`, `chat-message-received`, `student-response-submitted`, and
-`callback-received`.
+`activity-finished`, `chat-message-received`, `student-response-submitted`,
+`case-document-ready`, and `callback-received`.
 
 Adapters are ESM modules that export `register(...)`. During startup,
 `externalServicesRegistry.initialize()` loads the manifest, imports each enabled
@@ -267,6 +271,48 @@ Chat message hook context includes:
 Groups are ephemeral in EthicApp and are scoped to a phase. Chat-oriented
 adapters should therefore key any accumulated conversation state by at least
 `phaseId` and `groupId`.
+
+### Case hooks
+
+`case-document-ready` is dispatched when the text of an ethical case document
+is available. Case documents are rendered asynchronously by the PDF render
+worker, so the hook is started whenever a case PDF is queued for rendering
+(case creation, PDF replacement, import, and duplication; see
+`enqueueCaseRenderSafely` in `ethicapp/backend/controllers/cases.js`) and
+dispatched by the web process once that render job completes. It is not
+dispatched when the render fails or when a newer PDF replaces the document
+first. The waiting and dispatch logic lives in:
+
+```text
+ethicapp/backend/helpers/case-document-hooks-helper.js
+```
+
+Cases have no phase design, so **case hooks are resolved against the manifest**:
+every enabled service whose adapter subscribes to the hook receives it
+(`externalServicesRegistry.getEnabledServiceIdsForHook(...)`). The manifest
+`enabled` flag is the deployment-level switch.
+
+Case document hook context includes:
+
+- `caseId`
+- `caseUuid`
+- `caseTitle`
+- `languageCode`
+- `userId` (case creator)
+- `caseText` (plain text extracted from the current PDF)
+
+Waiting for the render is best effort and happens in memory. If the web process
+restarts in between, services that offer a manual action (such as the evidence
+inventory "Generate" button) let the teacher request the analysis again.
+
+The `argumentation-tutor-evidence-inventory` adapter uses this hook to ask the
+Argumentation Tutor for an evidence inventory draft of the case (the case facts
+students may invoke as evidence, with literal quotes, and the plausible
+statements the case does not make). The tutor answers through the callback
+endpoint; the adapter stores the draft in `case_evidence_inventories`
+(migration `V17`) for teacher review. The request and inventory JSON Schemas are
+owned by the tutor in `ethicapp-ai-additions`
+(`argumentation-tutor/backend/modules/evidence_inventory/schemas/`).
 
 ## External Result Callback
 
@@ -548,7 +594,36 @@ The editor initializes each phase with:
 
 When a teacher enables a service for a phase, the service id is added to
 `phase.externalServices.enabledServiceIds`. That configuration is saved as part
-of the design JSON.
+of the design JSON. Services with the `processesCaseDocuments` capability are
+not listed there because they run on case upload.
+
+The case page (`#!/cases/:id`) shows the evidence inventory of the case to its
+creator through the `caseEvidenceInventory` component:
+
+```text
+ethicapp/frontend/assets/js/components/case-evidence-inventory.component.js
+ethicapp/frontend/assets/static/views/teacher/fragments/case-evidence-inventory.template.html
+```
+
+It uses these teacher endpoints (role `P`, case creator only):
+
+```text
+GET  /cases/:id/evidence-inventory
+PUT  /cases/:id/evidence-inventory            body: { "inventory": { ... } }
+POST /cases/:id/evidence-inventory/generate
+```
+
+The teacher can review the AI draft, edit, add, or remove facts and exclusions,
+save it as reviewed, create one by hand, or request a new draft. Saving keeps
+existing `EV#`/`EX#` ids and numbers new items after the highest one, and checks
+each quote against the case text again.
+
+The GET response reports the inventory `status` (`none`, `processing`,
+`draft`, `reviewed`, `failed`), the last generation `errorMessage`, and the
+case `documentStatus` (status of the PDF render job, or `null`). A failed
+generation keeps an existing inventory with its status; `failed` only means
+that there is no inventory yet. A new AI draft replaces the inventory and its
+review, which includes the automatic regeneration after a PDF replacement.
 
 The student frontend listens for `onExternalServiceResult` in:
 

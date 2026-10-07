@@ -96,6 +96,21 @@ let CasesCatalogService = ($rootScope, $http) => {
             return response.data.result;
         },
 
+        async getEvidenceInventory(caseId) {
+            const response = await $http.get(`/cases/${caseId}/evidence-inventory`);
+            return response.data.result;
+        },
+
+        async saveEvidenceInventory(caseId, inventory) {
+            const response = await $http.put(`/cases/${caseId}/evidence-inventory`, { inventory });
+            return response.data.result;
+        },
+
+        async generateEvidenceInventory(caseId) {
+            const response = await $http.post(`/cases/${caseId}/evidence-inventory/generate`);
+            return response.data.result;
+        },
+
         async getLicenses(reload = false) {
             if (reload || service.licenses.length === 0) {
                 const response = await $http.get("/licenses");

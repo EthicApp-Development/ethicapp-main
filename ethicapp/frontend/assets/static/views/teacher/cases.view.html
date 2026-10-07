@@ -16,6 +16,12 @@
 
     <div class="row" ng-if="vm.caseObj">
         <div class="col-md-12">
+            <case-evidence-inventory case-item="vm.caseObj"></case-evidence-inventory>
+        </div>
+    </div>
+
+    <div class="row" ng-if="vm.caseObj">
+        <div class="col-md-12">
             <case-document-viewer case-item="vm.caseObj"></case-document-viewer>
         </div>
     </div>

@@ -56,7 +56,13 @@ callback results in memory for operational visibility and injects the current
 
 Hook names are part of the adapter interface and must use kebab-case, for
 example `phase-started`, `phase-ended`, `activity-started`, `activity-finished`,
-`student-response-submitted`, and `callback-received`.
+`student-response-submitted`, `case-document-ready`, and `callback-received`.
+
+Activity hooks reach the services enabled in the phase design. Case hooks such
+as `case-document-ready` have no design: they reach every enabled manifest
+service whose adapter subscribes to the hook. Mark those services with the
+`processesCaseDocuments` capability so the design editor does not offer them as
+per-phase options. See "Case hooks" in `EXTERNAL.md`.
 
 ## Available Hook Publishers
 
@@ -230,6 +236,30 @@ Argument submissions (`POST /sessions/{id}/arguments` and
 ATS already stores and returns `client_context` in the task status response,
 so the correlation ID is preserved for audit without further changes to the
 ATS provider.
+
+### Evidence inventory
+
+The `argumentation-tutor-evidence-inventory` adapter
+(`adapters/evidence-inventory.adapter.js`) subscribes to `case-document-ready`
+and sends the case to `POST /evidence-inventories` of the Argumentation Tutor V2
+API (same `AI_ADDITIONS_ARGUMENTATION_TUTOR_API_BASE_URL` as the ATS adapter).
+The body follows the tutor's `evidence-inventory-request/v1` JSON Schema and
+carries the job id in `clientContext.correlationId`:
+
+```json
+{
+  "schemaVersion": "evidence-inventory-request/v1",
+  "case": { "id": "42", "title": "...", "text": "...", "language": "es_CL" },
+  "clientContext": { "service": "ethicapp", "correlationId": "<correlationId>", "caseId": 42 }
+}
+```
+
+The tutor worker answers through the callback endpoint with serviceId
+`argumentation-tutor-evidence-inventory`, the same Keycloak client as ATS
+(`argumentation-tutor-api`), and an `evidence-inventory-result/v1` payload. The
+adapter keeps the job open after the request and stores the result in
+`case_evidence_inventories` only when the callback matches the latest
+generation of the case, so results of superseded requests are ignored.
 
 ## Adapter Guidelines
 

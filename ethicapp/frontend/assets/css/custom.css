@@ -335,10 +335,37 @@ body {
 }
 
 .case-document-viewer-heading,
-.case-document-fullscreen-heading {
+.case-document-fullscreen-heading,
+.case-evidence-inventory-heading {
     align-items: center;
     display: flex;
     justify-content: space-between;
+}
+
+.case-evidence-inventory-actions,
+.case-evidence-inventory-form-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.case-evidence-inventory-group-title {
+    border-bottom: 1px solid #b5c2fd;
+    font-weight: bold;
+    padding-bottom: 4px;
+}
+
+.case-evidence-inventory-item {
+    margin-bottom: 12px;
+}
+
+.case-evidence-inventory-item p {
+    margin-bottom: 4px;
+}
+
+.case-evidence-inventory-quote {
+    font-style: italic;
+    padding-left: 12px;
 }
 
 .case-document-fullscreen-button,

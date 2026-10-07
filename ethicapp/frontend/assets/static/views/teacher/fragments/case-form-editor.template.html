@@ -116,6 +116,9 @@
                     {{ 'ethical_cases_current_file' | translate }}
                 </a>
             </p>
+            <p class="help-block" ng-if="$ctrl.showCurrentPdf && !$ctrl.isLocked()">
+                {{ 'ethical_cases_evidence_inventory_pdf_replacement_note' | translate }}
+            </p>
             <input
                 id="casePdf"
                 type="file"

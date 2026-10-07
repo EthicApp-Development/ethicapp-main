@@ -1,0 +1,180 @@
+<div class="panel panel-default case-evidence-inventory" ng-if="$ctrl.available">
+    <div class="panel-heading case-evidence-inventory-heading">
+        <div>
+            <strong><i class="fa-solid fa-list-check" aria-hidden="true"></i> {{ 'ethical_cases_evidence_inventory_title' | translate }}</strong>
+            <span ng-class="$ctrl.getStatusLabelClass()">{{ $ctrl.getStatusLabelKey() | translate }}</span>
+        </div>
+        <div class="case-evidence-inventory-actions" ng-if="!$ctrl.editing">
+            <button type="button" class="btn btn-default btn-sm" ng-if="$ctrl.canEdit()" ng-click="$ctrl.startEditing()">
+                <i class="fa fa-pencil" aria-hidden="true"></i>
+                <span ng-if="$ctrl.hasInventory()">{{ 'edit' | translate }}</span>
+                <span ng-if="!$ctrl.hasInventory()">{{ 'ethical_cases_evidence_inventory_create_manually' | translate }}</span>
+            </button>
+            <button type="button" class="btn btn-default btn-sm" ng-if="$ctrl.canGenerate()" ng-click="$ctrl.generate()">
+                <i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i>
+                <span ng-if="$ctrl.hasInventory()">{{ 'ethical_cases_evidence_inventory_regenerate' | translate }}</span>
+                <span ng-if="!$ctrl.hasInventory()">{{ 'ethical_cases_evidence_inventory_generate' | translate }}</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="panel-body">
+        <p class="help-block">{{ 'ethical_cases_evidence_inventory_description' | translate }}</p>
+
+        <div class="alert alert-{{ $ctrl.alert.type }}" ng-if="$ctrl.alert">
+            {{ $ctrl.alert.messageKey | translate }}
+            <ul ng-if="$ctrl.alert.details.length">
+                <li ng-repeat="detail in $ctrl.alert.details track by $index">{{ detail }}</li>
+            </ul>
+        </div>
+
+        <div ng-if="!$ctrl.editing">
+            <div class="alert alert-info" ng-if="$ctrl.isProcessing()">
+                <i class="fa fa-spinner fa-spin" aria-hidden="true"></i> {{ 'ethical_cases_evidence_inventory_processing_message' | translate }}
+            </div>
+            <div class="alert alert-warning" ng-if="$ctrl.state.status === 'processing' && $ctrl.state.stale">
+                {{ 'ethical_cases_evidence_inventory_stale_message' | translate }}
+            </div>
+            <div class="alert alert-info" ng-if="$ctrl.state.serviceEnabled && $ctrl.isDocumentProcessing()">
+                <i class="fa fa-spinner fa-spin" aria-hidden="true"></i> {{ 'ethical_cases_evidence_inventory_waiting_document' | translate }}
+            </div>
+            <div class="alert alert-warning" ng-if="$ctrl.state.status === 'none' && $ctrl.isDocumentUnavailable()">
+                {{ 'ethical_cases_evidence_inventory_document_unavailable' | translate }}
+            </div>
+            <p class="text-muted" ng-if="$ctrl.state.status === 'none' && $ctrl.state.documentReady">
+                {{ 'ethical_cases_evidence_inventory_empty_message' | translate }}
+            </p>
+            <div class="alert alert-danger" ng-if="$ctrl.state.errorMessage">
+                {{ 'ethical_cases_evidence_inventory_failed_message' | translate }}
+                ({{ $ctrl.state.errorMessage }})
+            </div>
+            <div class="alert alert-warning" ng-if="$ctrl.state.status === 'draft'">
+                <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i> {{ 'ethical_cases_evidence_inventory_draft_message' | translate }}
+            </div>
+            <p class="text-muted" ng-if="$ctrl.state.status === 'reviewed' && $ctrl.state.reviewedAt">
+                <i class="fa-solid fa-circle-check" aria-hidden="true"></i> {{ 'ethical_cases_evidence_inventory_reviewed_at' | translate }} {{ $ctrl.state.reviewedAt | date:'medium' }}
+            </p>
+
+            <div ng-if="$ctrl.hasInventory()">
+                <h4>{{ 'ethical_cases_evidence_inventory_facts' | translate }} ({{ $ctrl.state.inventory.facts.length }})</h4>
+                <div class="case-evidence-inventory-group" ng-repeat="group in $ctrl.factGroups track by $index">
+                    <h5 class="case-evidence-inventory-group-title">{{ group.name }}</h5>
+                    <div class="case-evidence-inventory-item" ng-repeat="fact in group.facts track by fact.id">
+                        <p>
+                            <span class="label label-primary">{{ fact.id }}</span>
+                            <strong>{{ fact.label }}</strong>: {{ fact.statement }}
+                        </p>
+                        <p class="case-evidence-inventory-quote text-muted" ng-if="fact.sourceQuote">
+                            <i class="fa-solid fa-quote-left" aria-hidden="true"></i> {{ fact.sourceQuote }}
+                            <span class="label label-warning" ng-if="!fact.sourceQuoteFound">
+                                {{ 'ethical_cases_evidence_inventory_quote_not_found' | translate }}
+                            </span>
+                        </p>
+                        <p class="help-block" ng-if="fact.countingNote">
+                            <i class="fa-solid fa-calculator" aria-hidden="true"></i> {{ 'ethical_cases_evidence_inventory_counting_note' | translate }}: {{ fact.countingNote }}
+                        </p>
+                    </div>
+                </div>
+
+                <h4>{{ 'ethical_cases_evidence_inventory_exclusions' | translate }} ({{ $ctrl.state.inventory.exclusions.length }})</h4>
+                <div class="case-evidence-inventory-item" ng-repeat="exclusion in $ctrl.state.inventory.exclusions track by exclusion.id">
+                    <p>
+                        <span class="label label-default">{{ exclusion.id }}</span>
+                        <strong>{{ exclusion.label }}</strong>: {{ exclusion.statement }}
+                    </p>
+                    <p class="help-block" ng-if="exclusion.reason">{{ exclusion.reason }}</p>
+                </div>
+            </div>
+        </div>
+
+        <form name="inventoryForm" novalidate ng-if="$ctrl.editing" ng-submit="$ctrl.save(inventoryForm)">
+            <fieldset>
+                <legend>{{ 'ethical_cases_evidence_inventory_facts' | translate }}</legend>
+                <div class="panel panel-default case-evidence-inventory-edit-item" ng-repeat="fact in $ctrl.draft.facts">
+                    <div class="panel-body">
+                        <button type="button" class="btn btn-default btn-sm pull-right" ng-click="$ctrl.removeItem($ctrl.draft.facts, $index)"
+                            title="{{ 'ethical_cases_evidence_inventory_remove' | translate }}">
+                            <i class="fa-solid fa-trash text-danger" aria-hidden="true"></i> {{ 'ethical_cases_evidence_inventory_remove' | translate }}
+                        </button>
+                        <p>
+                            <span class="label label-primary" ng-if="fact.id">{{ fact.id }}</span>
+                            <span class="label label-info" ng-if="!fact.id">{{ 'ethical_cases_evidence_inventory_new_item' | translate }}</span>
+                        </p>
+                        <div class="row">
+                            <div class="form-group col-sm-6">
+                                <label for="fact-group-{{ $index }}">{{ 'ethical_cases_evidence_inventory_field_group' | translate }}</label>
+                                <input id="fact-group-{{ $index }}" type="text" class="form-control" ng-model="fact.group" maxlength="80">
+                            </div>
+                            <div class="form-group col-sm-6">
+                                <label for="fact-label-{{ $index }}">{{ 'ethical_cases_evidence_inventory_field_label' | translate }}</label>
+                                <input id="fact-label-{{ $index }}" type="text" class="form-control" ng-model="fact.label" maxlength="120">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="fact-statement-{{ $index }}">{{ 'ethical_cases_evidence_inventory_field_statement' | translate }}</label>
+                            <textarea id="fact-statement-{{ $index }}" name="factStatement{{ $index }}" class="form-control" rows="2"
+                                ng-model="fact.statement" maxlength="600" required
+                                ng-class="{'input-warning': inventoryForm['factStatement' + $index].$invalid && inventoryForm.$submitted}"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="fact-quote-{{ $index }}">{{ 'ethical_cases_evidence_inventory_field_source_quote' | translate }}</label>
+                            <textarea id="fact-quote-{{ $index }}" class="form-control" rows="2" ng-model="fact.sourceQuote" maxlength="600"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="fact-note-{{ $index }}">{{ 'ethical_cases_evidence_inventory_field_counting_note' | translate }}</label>
+                            <input id="fact-note-{{ $index }}" type="text" class="form-control" ng-model="fact.countingNote" maxlength="400">
+                        </div>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-default btn-sm" ng-click="$ctrl.addFact()">
+                    <i class="fa fa-plus" aria-hidden="true"></i> {{ 'ethical_cases_evidence_inventory_add_fact' | translate }}
+                </button>
+            </fieldset>
+
+            <fieldset class="margin-top-24">
+                <legend>{{ 'ethical_cases_evidence_inventory_exclusions' | translate }}</legend>
+                <div class="panel panel-default case-evidence-inventory-edit-item" ng-repeat="exclusion in $ctrl.draft.exclusions">
+                    <div class="panel-body">
+                        <button type="button" class="btn btn-default btn-sm pull-right" ng-click="$ctrl.removeItem($ctrl.draft.exclusions, $index)"
+                            title="{{ 'ethical_cases_evidence_inventory_remove' | translate }}">
+                            <i class="fa-solid fa-trash text-danger" aria-hidden="true"></i> {{ 'ethical_cases_evidence_inventory_remove' | translate }}
+                        </button>
+                        <p>
+                            <span class="label label-default" ng-if="exclusion.id">{{ exclusion.id }}</span>
+                            <span class="label label-info" ng-if="!exclusion.id">{{ 'ethical_cases_evidence_inventory_new_item' | translate }}</span>
+                        </p>
+                        <div class="form-group">
+                            <label for="exclusion-label-{{ $index }}">{{ 'ethical_cases_evidence_inventory_field_label' | translate }}</label>
+                            <input id="exclusion-label-{{ $index }}" type="text" class="form-control" ng-model="exclusion.label" maxlength="120">
+                        </div>
+                        <div class="form-group">
+                            <label for="exclusion-statement-{{ $index }}">{{ 'ethical_cases_evidence_inventory_field_exclusion_statement' | translate }}</label>
+                            <textarea id="exclusion-statement-{{ $index }}" name="exclusionStatement{{ $index }}" class="form-control" rows="2"
+                                ng-model="exclusion.statement" maxlength="600" required
+                                ng-class="{'input-warning': inventoryForm['exclusionStatement' + $index].$invalid && inventoryForm.$submitted}"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="exclusion-reason-{{ $index }}">{{ 'ethical_cases_evidence_inventory_field_reason' | translate }}</label>
+                            <input id="exclusion-reason-{{ $index }}" type="text" class="form-control" ng-model="exclusion.reason" maxlength="400">
+                        </div>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-default btn-sm" ng-click="$ctrl.addExclusion()">
+                    <i class="fa fa-plus" aria-hidden="true"></i> {{ 'ethical_cases_evidence_inventory_add_exclusion' | translate }}
+                </button>
+            </fieldset>
+
+            <p class="help-block text-danger margin-top-24" ng-if="inventoryForm.$submitted && inventoryForm.$invalid">
+                {{ 'ethical_cases_evidence_inventory_required_statements' | translate }}
+            </p>
+            <div class="case-evidence-inventory-form-actions margin-top-24">
+                <button type="submit" class="btn btn-primary" ng-disabled="$ctrl.busy">
+                    <i class="fa-solid fa-circle-check" aria-hidden="true"></i> {{ 'ethical_cases_evidence_inventory_save_reviewed' | translate }}
+                </button>
+                <button type="button" class="btn btn-default" ng-click="$ctrl.cancelEditing()" ng-disabled="$ctrl.busy">
+                    {{ 'cancel' | translate }}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
