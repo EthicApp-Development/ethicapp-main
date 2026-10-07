@@ -7,6 +7,7 @@ import * as config from "../config/database.config.js";
 import { uploadsPath } from "../config/uploads.config.js";
 import * as rpg2 from "../db/rest-pg-2.js";
 import { requireRole } from "../helpers/auth-helper.js";
+import { dispatchCaseDocumentReadyWhenRendered } from "../helpers/case-document-hooks-helper.js";
 import {
     CASE_DEFAULT_LICENSE,
     DEFAULT_LANGUAGE_CODE,
@@ -338,6 +339,15 @@ async function enqueueCaseRenderSafely(caseObj) {
         console.info("Queued PDF render job for case document.", {
             caseId: caseObj.id,
             jobId:  job.pdf_render_job_id,
+        });
+        dispatchCaseDocumentReadyWhenRendered({
+            caseId:      Number(caseObj.id),
+            requestedAt: job.pdf_render_requested_at,
+        }).catch(error => {
+            console.error("[case-document-hooks] Error dispatching case document hook:", {
+                caseId: caseObj.id,
+                error,
+            });
         });
         return job;
     } catch (error) {

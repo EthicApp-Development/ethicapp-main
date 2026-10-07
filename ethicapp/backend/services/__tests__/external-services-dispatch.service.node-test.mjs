@@ -480,3 +480,40 @@ test("recordCallbackResult: returns an entry with hookName, serviceId, and resul
     assert.equal(entry.serviceId, "svc-a");
     assert.deepEqual(entry.result, { value: 1 });
 });
+
+// ─── Case hooks ───────────────────────────────────────────────────────────────
+
+test("getEnabledServiceIdsForHook: returns enabled subscribers once", () => {
+    const { registry } = makeRegistry();
+    registry.services.set("svc-b", { id: "svc-b", enabled: false });
+    registry.services.set("svc-c", { id: "svc-c", enabled: true });
+
+    registry.hookSubscribers.set("case-document-ready", [
+        { serviceId: "svc-a", handler: async () => {} },
+        { serviceId: "svc-a", handler: async () => {} },
+        { serviceId: "svc-b", handler: async () => {} },
+    ]);
+    registry.hookSubscribers.set("phase-started", [
+        { serviceId: "svc-c", handler: async () => {} },
+    ]);
+
+    assert.deepEqual(registry.getEnabledServiceIdsForHook("case-document-ready"), ["svc-a"]);
+    assert.deepEqual(registry.getEnabledServiceIdsForHook("unknown-hook"), []);
+});
+
+test("registerService: keeps the processesCaseDocuments capability", async () => {
+    const { registry } = makeRegistry();
+
+    await registry.registerService({
+        id:           "svc-case",
+        adapter:      "./adapters/unused.adapter.js",
+        enabled:      false,
+        capabilities: { processesCaseDocuments: true, unknownCapability: true },
+    }, "/tmp/manifest.json");
+
+    const service = registry.listServices().find(({ id }) => id === "svc-case");
+    assert.deepEqual(service.capabilities, {
+        processesStudentResponses: false,
+        processesCaseDocuments:    true,
+    });
+});

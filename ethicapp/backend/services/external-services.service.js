@@ -28,6 +28,7 @@ function normalizeCapabilities(capabilities) {
 
     return {
         processesStudentResponses: capabilities.processesStudentResponses === true,
+        processesCaseDocuments:    capabilities.processesCaseDocuments === true,
     };
 }
 
@@ -160,6 +161,22 @@ export class ExternalServicesRegistry {
     hasEnabledService(serviceId) {
         const service = this.services.get(serviceId);
         return Boolean(service?.enabled);
+    }
+
+    /**
+     * Returns the ids of enabled services that subscribe to a hook.
+     *
+     * Activity hooks take their recipients from the phase design. Case hooks
+     * have no design, so the manifest `enabled` flag is the deployment-level
+     * switch for them.
+     */
+    getEnabledServiceIdsForHook(hookName) {
+        const subscribers = this.hookSubscribers.get(hookName) || [];
+        const serviceIds = subscribers
+            .map(({ serviceId }) => serviceId)
+            .filter(serviceId => this.hasEnabledService(serviceId));
+
+        return Array.from(new Set(serviceIds));
     }
 
     authorizeCallbackCaller(serviceId, authContext) {

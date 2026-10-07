@@ -57,7 +57,11 @@ export function DesignEditorController($scope, $translate, $timeout,
 
     vm.loadExternalServices = async function() {
         try {
-            vm.externalServices = await ExternalServicesCatalogService.getServices();
+            const services = await ExternalServicesCatalogService.getServices();
+            // Case-document services run when a case is uploaded, not per phase.
+            vm.externalServices = services.filter(service => {
+                return !service.capabilities?.processesCaseDocuments;
+            });
         } catch (error) {
             console.error("[DesignEditorController::loadExternalServices] Error loading external services.", error);
             vm.externalServices = [];
