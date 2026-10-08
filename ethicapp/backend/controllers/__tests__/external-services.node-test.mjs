@@ -452,3 +452,31 @@ test("listResults: empty string serviceId treated as null", async () => {
 
     assert.equal(capturedParams.serviceId, null);
 });
+
+// ─── hookName filter (#628) ──────────────────────────────────────────────────
+
+test("listJobs: passes hookName filter to service, null when absent or blank", async () => {
+    const captured = [];
+    const svc = makeJobsService({
+        queryRecentJobs: async params => { captured.push(params); return []; },
+    });
+
+    await listJobs({ hookName: " case-created " }, svc);
+    await listJobs({}, svc);
+    await listJobs({ hookName: "   " }, svc);
+
+    assert.equal(captured[0].hookName, "case-created");
+    assert.equal(captured[1].hookName, null);
+    assert.equal(captured[2].hookName, null);
+});
+
+test("listResults: passes hookName filter to service", async () => {
+    let capturedParams = null;
+    const svc = makeJobsService({
+        queryRecentResults: async params => { capturedParams = params; return []; },
+    });
+
+    await listResults({ hookName: "callback-received" }, svc);
+
+    assert.equal(capturedParams.hookName, "callback-received");
+});

@@ -250,6 +250,7 @@ export class ExternalServiceJobsService {
 
     async queryRecentJobs({
         serviceId = null,
+        hookName  = null,
         sessionId = null,
         phaseId   = null,
         status    = null,
@@ -263,6 +264,10 @@ export class ExternalServiceJobsService {
         if (serviceId != null) {
             params.push(serviceId);
             conditions.push(`service_id = $${params.length}`);
+        }
+        if (hookName != null) {
+            params.push(hookName);
+            conditions.push(`hook_name = $${params.length}`);
         }
         if (sessionId != null) {
             params.push(sessionId);
@@ -303,6 +308,7 @@ export class ExternalServiceJobsService {
 
     async queryRecentResults({
         serviceId = null,
+        hookName  = null,
         sessionId = null,
         phaseId   = null,
         status    = null,
@@ -316,6 +322,10 @@ export class ExternalServiceJobsService {
         if (serviceId != null) {
             params.push(serviceId);
             conditions.push(`service_id = $${params.length}`);
+        }
+        if (hookName != null) {
+            params.push(hookName);
+            conditions.push(`hook_name = $${params.length}`);
         }
         if (sessionId != null) {
             params.push(sessionId);

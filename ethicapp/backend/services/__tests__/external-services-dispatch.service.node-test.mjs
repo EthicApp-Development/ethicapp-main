@@ -480,3 +480,163 @@ test("recordCallbackResult: returns an entry with hookName, serviceId, and resul
     assert.equal(entry.serviceId, "svc-a");
     assert.deepEqual(entry.result, { value: 1 });
 });
+
+// ─── globalHooks (manifest-level opt-in, #628) ───────────────────────────────
+
+function captureWarnings(fn) {
+    const warnings     = [];
+    const originalWarn = console.warn;
+    console.warn = (...args) => { warnings.push(args.join(" ")); };
+    return Promise.resolve()
+        .then(fn)
+        .then(result => ({ result, warnings }))
+        .finally(() => { console.warn = originalWarn; });
+}
+
+test("registerService: normalizes globalHooks (kebab-case, declared in hooks, de-duplicated)", async () => {
+    const { registry } = makeRegistry();
+
+    const { warnings } = await captureWarnings(() => registry.registerService({
+        id:          "svc-global",
+        adapter:     "./adapters/not-imported.adapter.js",
+        hooks:       ["case-created", "callback-received"],
+        globalHooks: ["case-created", "Bad Name", "phase-started", "case-created"],
+        enabled:     false,
+    }, "/nonexistent/manifest.json"));
+
+    assert.deepEqual(registry.services.get("svc-global").globalHooks, ["case-created"]);
+    assert.equal(warnings.length, 2, "one warning per dropped entry");
+    assert.ok(warnings[0].includes("Bad Name"));
+    assert.ok(warnings[1].includes("phase-started"));
+});
+
+test("registerService: globalHooks defaults to [] when absent", async () => {
+    const { registry } = makeRegistry();
+
+    await registry.registerService({
+        id:      "svc-plain",
+        adapter: "./adapters/not-imported.adapter.js",
+        hooks:   ["phase-started"],
+        enabled: false,
+    }, "/nonexistent/manifest.json");
+
+    assert.deepEqual(registry.services.get("svc-plain").globalHooks, []);
+});
+
+test("listServices: exposes globalHooks and defaults it to [] for legacy entries", () => {
+    const { registry } = makeRegistry();
+    registry.services.set("svc-global", {
+        id: "svc-global", enabled: true, hooks: ["case-created"], globalHooks: ["case-created"],
+    });
+
+    const listed = registry.listServices();
+    assert.deepEqual(listed.find(s => s.id === "svc-global").globalHooks, ["case-created"]);
+    assert.deepEqual(listed.find(s => s.id === "svc-a").globalHooks, []);
+});
+
+test("getGloballyEnabledServiceIds: returns only enabled services that list the hook", () => {
+    const { registry } = makeRegistry();
+    registry.services.set("svc-global",   { id: "svc-global",   enabled: true,  globalHooks: ["case-created"] });
+    registry.services.set("svc-disabled", { id: "svc-disabled", enabled: false, globalHooks: ["case-created"] });
+    registry.services.set("svc-other",    { id: "svc-other",    enabled: true,  globalHooks: ["case-updated"] });
+
+    assert.deepEqual(registry.getGloballyEnabledServiceIds("case-created"), ["svc-global"]);
+    assert.deepEqual(registry.getGloballyEnabledServiceIds("unknown-hook"), []);
+});
+
+test("dispatchGlobalHook: invokes only globally enabled subscribers and enriches context", async () => {
+    const calledBy = [];
+    let capturedContext = null;
+    const { registry } = makeRegistry();
+    registry.services.set("svc-global", { id: "svc-global", enabled: true, globalHooks: ["case-created"] });
+
+    registry.hookSubscribers.set("case-created", [
+        { serviceId: "svc-global", handler: async (ctx) => { calledBy.push("svc-global"); capturedContext = ctx; } },
+        { serviceId: "svc-a",      handler: async () => { calledBy.push("svc-a"); } },
+    ]);
+
+    const results = await registry.dispatchGlobalHook("case-created", { caseId: 99, userId: 7 });
+
+    assert.deepEqual(calledBy, ["svc-global"]);
+    assert.equal(results.length, 1);
+    assert.equal(capturedContext.serviceId, "svc-global");
+    assert.equal(capturedContext.jobId, JOB_UUID);
+    assert.equal(capturedContext.correlationId, JOB_UUID);
+    assert.deepEqual(capturedContext.enabledServiceIds, ["svc-global"]);
+    assert.equal(capturedContext.caseId, 99);
+});
+
+test("dispatchGlobalHook: creates a job with null activity columns", async () => {
+    const calls = [];
+    const { registry } = makeRegistry({
+        createJob: async (args) => { calls.push(args); return { id: JOB_UUID }; },
+    });
+    registry.services.set("svc-global", { id: "svc-global", enabled: true, globalHooks: ["case-created"] });
+    registry.hookSubscribers.set("case-created", [
+        { serviceId: "svc-global", handler: async () => {} },
+    ]);
+
+    await registry.dispatchGlobalHook("case-created", { caseId: 99, userId: 7 });
+
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].serviceId, "svc-global");
+    assert.equal(calls[0].hookName, "case-created");
+    assert.equal(calls[0].sessionId, null);
+    assert.equal(calls[0].phaseId, null);
+    assert.equal(calls[0].questionId, null);
+    assert.equal(calls[0].groupId, null);
+    assert.equal(calls[0].userId, 7);
+});
+
+test("dispatchGlobalHook: returns [] and creates no jobs when no service opted in", async () => {
+    let createJobCalls = 0;
+    const { registry } = makeRegistry({
+        createJob: async () => { createJobCalls++; return { id: JOB_UUID }; },
+    });
+    registry.hookSubscribers.set("case-created", [
+        { serviceId: "svc-a", handler: async () => {} },
+    ]);
+
+    const results = await registry.dispatchGlobalHook("case-created", { caseId: 1 });
+
+    assert.deepEqual(results, []);
+    assert.equal(createJobCalls, 0);
+});
+
+test("dispatchGlobalHook: isolates a throwing handler from other services", async () => {
+    const statusCalls = [];
+    let healthyCalled = false;
+    const { registry } = makeRegistry({
+        updateJobStatus: async (id, status) => { statusCalls.push({ id, status }); },
+    });
+    registry.services.set("svc-broken",  { id: "svc-broken",  enabled: true, globalHooks: ["case-created"] });
+    registry.services.set("svc-healthy", { id: "svc-healthy", enabled: true, globalHooks: ["case-created"] });
+    registry.hookSubscribers.set("case-created", [
+        { serviceId: "svc-broken",  handler: async () => { throw new Error("adapter error"); } },
+        { serviceId: "svc-healthy", handler: async () => { healthyCalled = true; } },
+    ]);
+
+    const results = await registry.dispatchGlobalHook("case-created", {});
+
+    assert.equal(results.length, 2);
+    assert.equal(results[0].status, "rejected");
+    assert.equal(results[1].status, "fulfilled");
+    assert.ok(healthyCalled);
+    assert.equal(statusCalls.filter(c => c.status === JOB_STATUS.FAILED).length, 1);
+});
+
+test("dispatchHook: never consults globalHooks for activity hooks (regression)", async () => {
+    let called = false;
+    const { registry } = makeRegistry();
+    registry.services.set("svc-global", { id: "svc-global", enabled: true, globalHooks: ["phase-started"] });
+    registry.hookSubscribers.set("phase-started", [
+        { serviceId: "svc-global", handler: async () => { called = true; } },
+    ]);
+
+    const results = await registry.dispatchHook("phase-started", { sessionId: 1, phaseId: 2 }, {
+        enabledServiceIds: ["svc-a"],
+    });
+
+    assert.equal(called, false);
+    assert.deepEqual(results, []);
+});

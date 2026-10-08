@@ -627,3 +627,28 @@ test("queryRecentResults: does not select raw_payload or sanitized_payload", asy
     assert.ok(!sql.includes("raw_payload"));
     assert.ok(!sql.includes("sanitized_payload"));
 });
+
+// ─── hookName filter (#628) ──────────────────────────────────────────────────
+
+test("queryRecentJobs: hookName filter — WHERE clause present", async () => {
+    const db  = makeDbQueue([]);
+    const svc = new ExternalServiceJobsService({ dbQuery: db });
+
+    await svc.queryRecentJobs({ hookName: "case-created" });
+
+    const { sql, params } = db.calls[0];
+    assert.ok(sql.includes("hook_name = $1"));
+    assert.equal(params[0], "case-created");
+});
+
+test("queryRecentResults: hookName filter — WHERE clause present", async () => {
+    const db  = makeDbQueue([]);
+    const svc = new ExternalServiceJobsService({ dbQuery: db });
+
+    await svc.queryRecentResults({ serviceId: "svc-a", hookName: "callback-received" });
+
+    const { sql, params } = db.calls[0];
+    assert.ok(sql.includes("service_id = $1"));
+    assert.ok(sql.includes("hook_name = $2"));
+    assert.equal(params[1], "callback-received");
+});

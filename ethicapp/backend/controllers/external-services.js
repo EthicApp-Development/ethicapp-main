@@ -120,6 +120,7 @@ router.post("/external-services/callbacks", callbackAuthMiddleware, async (req, 
 
 export async function listJobs(params, jobsService) {
     const serviceId = typeof params?.serviceId === "string" ? params.serviceId.trim() || null : null;
+    const hookName  = typeof params?.hookName === "string" ? params.hookName.trim() || null : null;
     const sessionId = parseIntParam(params?.sessionId);
     const phaseId   = parseIntParam(params?.phaseId);
     const status    = typeof params?.status === "string" ? params.status.trim() || null : null;
@@ -127,7 +128,9 @@ export async function listJobs(params, jobsService) {
     const to        = parseDateParam(params?.to);
     const limit     = parseIntParam(params?.limit) ?? 50;
 
-    const jobs = await jobsService.queryRecentJobs({ serviceId, sessionId, phaseId, status, from, to, limit });
+    const jobs = await jobsService.queryRecentJobs({
+        serviceId, hookName, sessionId, phaseId, status, from, to, limit,
+    });
     return {
         status: 200,
         body:   { status: "ok", result: jobs },
@@ -159,6 +162,7 @@ export async function getJobDetail(jobId, jobsService) {
 
 export async function listResults(params, jobsService) {
     const serviceId = typeof params?.serviceId === "string" ? params.serviceId.trim() || null : null;
+    const hookName  = typeof params?.hookName === "string" ? params.hookName.trim() || null : null;
     const sessionId = parseIntParam(params?.sessionId);
     const phaseId   = parseIntParam(params?.phaseId);
     const status    = typeof params?.status === "string" ? params.status.trim() || null : null;
@@ -166,7 +170,9 @@ export async function listResults(params, jobsService) {
     const to        = parseDateParam(params?.to);
     const limit     = parseIntParam(params?.limit) ?? 50;
 
-    const results = await jobsService.queryRecentResults({ serviceId, sessionId, phaseId, status, from, to, limit });
+    const results = await jobsService.queryRecentResults({
+        serviceId, hookName, sessionId, phaseId, status, from, to, limit,
+    });
     return {
         status: 200,
         body:   { status: "ok", result: results },
