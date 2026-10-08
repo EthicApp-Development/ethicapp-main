@@ -27,6 +27,7 @@ import {
     pdfRenderJobSelectSql,
 } from "../helpers/pdf-render-jobs-helper.js";
 import { moveUploadedFile, pdfUpload, removeUploadedFile } from "../middleware/upload.js";
+import { buildCaseCreatedContext, dispatchCaseCreatedHook } from "../helpers/case-lifecycle-helper.js";
 
 const router = express.Router();
 const uploadsRoot = path.resolve(process.cwd(), uploadsPath);
@@ -752,6 +753,12 @@ router.post("/cases", pdfUpload, async (req, res) => {
         await replaceCaseTags(caseId, tagIds, req.session.uid);
 
         const renderJob = await enqueueCaseRenderSafely(createdCase);
+
+        // Fire-and-forget: the helper isolates adapter failures from this request.
+        dispatchCaseCreatedHook(buildCaseCreatedContext(createdCase, {
+            userId:         req.session.uid,
+            pdfRenderJobId: renderJob?.pdf_render_job_id ?? null,
+        }));
 
         return res.status(201).json({
             status: "ok",

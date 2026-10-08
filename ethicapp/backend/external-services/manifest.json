@@ -59,6 +59,23 @@
         "allowedClientIds": ["argumentation-tutor-api"],
         "requiredRoles": []
       }
+    },
+    {
+      "id": "case-analyst",
+      "description": "Skeleton adapter for the Case Analyst AI service; acknowledges newly created cases.",
+      "adapter": "./adapters/case-analyst.adapter.js",
+      "hooks": [
+        "case-created",
+        "callback-received"
+      ],
+      "globalHooks": [
+        "case-created"
+      ],
+      "enabled": true,
+      "callbackAuth": {
+        "allowedClientIds": ["case-analyst-api"],
+        "requiredRoles": []
+      }
     }
   ]
 }

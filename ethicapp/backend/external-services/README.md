@@ -113,6 +113,7 @@ failures are isolated from teacher and student requests.
 | `activity-finished` | `POST /activities/:id/finish` | Union of services enabled in any phase of the design | `sessionId`, `phaseId` (= last active), `startedPhaseId: null`, `endedPhaseId` |
 | `student-response-submitted` | Student response endpoints in `controllers/activities/activities-student.js` | Services enabled for the phase | `sessionId`, `phaseId`, `userId`, `questionId`, `designType`, `requestPayload`, `responsePayload` |
 | `chat-message-received` | `controllers/group-messages.js` after a group chat message is saved | Services enabled for the phase | `sessionId`, `phaseId`, `questionId`, `groupId`, `userId`, `parentId`, `content`, `savedMessage`, `notificationPayload`, `designType` |
+| `case-created` | `POST /cases` after the case, authors, tags, and render job are persisted (`helpers/case-lifecycle-helper.js`) | Global: services listing it in `globalHooks` | `caseId`, `caseUuid`, `userId` (creator), `title`, `pdfPath`, `languageCode`, `visibility`, `pdfRenderJobId` |
 | `callback-received` | `POST /external-services/callbacks` | Only the service named in the callback body | `serviceId`, `eventType`, `correlationId`, `eventId`, `requestPayload`, `rawBody`, `auth` |
 
 ### Hook enablement
@@ -127,8 +128,8 @@ dispatch site resolves the audience from the activity design:
 `design.phases[].externalServices.enabledServiceIds` (see
 `canonical-schemas/ethicapp-v1.schema.json`, `helpers/designs-helper.js`, and
 `helpers/activity-lifecycle-helper.js`). Teachers therefore opt a service into a
-phase when authoring the design. All hooks in the catalog above except
-`callback-received` are phase-scoped.
+phase when authoring the design. The activity, phase, response, and chat hooks
+in the catalog above are phase-scoped.
 
 **Global hooks (manifest opt-in).** Hooks that fire outside an activity (no
 session, phase, or design in scope) are dispatched with
@@ -138,6 +139,9 @@ manifest entry lists `hookName` in `globalHooks`. Opting in is an operator
 decision taken in the manifest, like `enabled`; there is no teacher-facing UI
 for it. `dispatchGlobalHook` delegates to `dispatchHook`, so jobs,
 `correlationId`, `callback(result)` handling, and error isolation are identical.
+
+`case-created` is the first global hook; the `case-analyst` adapter opts into
+it and is the reference implementation for this path.
 
 `globalHooks` is only consulted by `dispatchGlobalHook`. Listing a phase-scoped
 hook such as `phase-started` there has no effect, because the activity dispatch
@@ -299,6 +303,16 @@ facade path. For example, the Argumentation Tutor adapter uses:
 | Variable | Purpose |
 | --- | --- |
 | `AI_ADDITIONS_ARGUMENTATION_TUTOR_API_BASE_URL` | Argumentation Tutor API base URL. Defaults to `${AI_ADDITIONS_BASE_URL}/argumentation-tutor/api/v2`. |
+
+The Case Analyst adapter uses:
+
+| Variable | Purpose |
+| --- | --- |
+| `AI_ADDITIONS_CASE_ANALYST_API_BASE_URL` | Case Analyst API base URL. Defaults to `${AI_ADDITIONS_BASE_URL}/case-analyst/api/v1`. |
+
+The Case Analyst adapter is currently a skeleton: it builds the analysis
+request for every `case-created` hook and completes the job without calling
+the provider. Submission and result handling are the next increments.
 
 Argumentation Tutor completion is callback-driven. EthicApp submits the task and
 keeps the external-service job dispatched until the correlated `result` callback
