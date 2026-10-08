@@ -21,6 +21,55 @@ function isValidHookName(hookName) {
     return typeof hookName === "string" && HOOK_NAME_PATTERN.test(hookName);
 }
 
+function normalizeHooks(hooks, serviceId) {
+    if (!Array.isArray(hooks)) {
+        return [];
+    }
+
+    return hooks.filter(hookName => {
+        const isValid = isValidHookName(hookName);
+        if (!isValid) {
+            console.warn(`[external-services] Ignoring non-kebab-case hook "${hookName}" in ${serviceId}.`);
+        }
+        return isValid;
+    });
+}
+
+// Global hooks are the hooks a service opts into at manifest level, without an
+// activity-design opt-in. They are only consulted by dispatchGlobalHook(); every
+// entry must be kebab-case and must also be declared in `hooks`.
+function normalizeGlobalHooks(globalHooks, hooks, serviceId) {
+    if (!Array.isArray(globalHooks)) {
+        return [];
+    }
+
+    const normalized = [];
+
+    for (const hookName of globalHooks) {
+        if (!isValidHookName(hookName)) {
+            console.warn(
+                `[external-services] Ignoring non-kebab-case global hook "${hookName}" `
+                + `in ${serviceId}.`
+            );
+            continue;
+        }
+
+        if (!hooks.includes(hookName)) {
+            console.warn(
+                `[external-services] Ignoring global hook "${hookName}" in ${serviceId}: `
+                + "it is not declared in hooks."
+            );
+            continue;
+        }
+
+        if (!normalized.includes(hookName)) {
+            normalized.push(hookName);
+        }
+    }
+
+    return normalized;
+}
+
 function normalizeCapabilities(capabilities) {
     if (!capabilities || typeof capabilities !== "object" || Array.isArray(capabilities)) {
         return {};
@@ -72,18 +121,13 @@ export class ExternalServicesRegistry {
             return;
         }
 
+        const hooks = normalizeHooks(service.hooks, service.id);
+
         const normalizedService = {
-            id:          service.id,
-            description: service.description || "",
-            hooks:       Array.isArray(service.hooks)
-                ? service.hooks.filter(hookName => {
-                    const isValid = isValidHookName(hookName);
-                    if (!isValid) {
-                        console.warn(`[external-services] Ignoring non-kebab-case hook "${hookName}" in ${service.id}.`);
-                    }
-                    return isValid;
-                })
-                : [],
+            id:           service.id,
+            description:  service.description || "",
+            hooks,
+            globalHooks:  normalizeGlobalHooks(service.globalHooks, hooks, service.id),
             capabilities: normalizeCapabilities(service.capabilities),
             enabled:      service.enabled !== false,
             adapter:      service.adapter,
@@ -144,13 +188,29 @@ export class ExternalServicesRegistry {
     }
 
     listServices() {
-        return Array.from(this.services.values()).map(({ id, description, hooks, capabilities, enabled }) => ({
+        return Array.from(this.services.values()).map(({
             id,
             description,
             hooks,
+            globalHooks = [],
+            capabilities,
+            enabled,
+        }) => ({
+            id,
+            description,
+            hooks,
+            globalHooks,
             capabilities,
             enabled,
         }));
+    }
+
+    getGloballyEnabledServiceIds(hookName) {
+        return Array.from(this.services.values())
+            .filter(service => service.enabled
+                && Array.isArray(service.globalHooks)
+                && service.globalHooks.includes(hookName))
+            .map(service => service.id);
     }
 
     getServiceById(serviceId) {
@@ -258,6 +318,19 @@ export class ExternalServicesRegistry {
         return Promise.allSettled(selectedSubscribers.map(({ serviceId, handler }) =>
             this._dispatchOneHandler({ hookName, serviceId, handler, context, enabledServiceIds })
         ));
+    }
+
+    // Dispatches a design-independent hook to the services that opted into it
+    // through `globalHooks` in the manifest. Jobs, correlation ids, callback
+    // handling, and error isolation are identical to dispatchHook().
+    async dispatchGlobalHook(hookName, context) {
+        if (!this.initialized) {
+            await this.initialize();
+        }
+
+        return this.dispatchHook(hookName, context, {
+            enabledServiceIds: this.getGloballyEnabledServiceIds(hookName),
+        });
     }
 
     async dispatchServiceHook(hookName, serviceId, context) {
