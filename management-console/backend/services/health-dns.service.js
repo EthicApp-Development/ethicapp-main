@@ -2,29 +2,13 @@ import dns from 'node:dns';
 import { readFile } from 'node:fs/promises';
 import net from 'node:net';
 
+import { withTimeout } from '../helpers/with-timeout.js';
+import { createDedupedLookup, normalizeErrorCode, skippedResult } from './health-lookup.js';
+
 const DNS_CHECK_TIMEOUT_MS = 3000;
 const RESOLV_CONF_PATH = '/etc/resolv.conf';
 const EXT_SERVERS_PATTERN = /^#\s*ExtServers:\s*\[([^\]]*)\]/m;
 const HOST_SERVER_PATTERN = /^host\((.+)\)$/;
-
-function createTimeoutError() {
-  const error = new Error('DNS query timed out');
-  error.code = 'ETIMEOUT';
-  return error;
-}
-
-function withTimeout(promise, timeoutMs) {
-  let timer;
-  const timeout = new Promise((resolve, reject) => {
-    timer = setTimeout(() => reject(createTimeoutError()), timeoutMs);
-  });
-
-  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
-}
-
-function normalizeErrorCode(error) {
-  return typeof error?.code === 'string' && error.code ? error.code : 'EUNKNOWN';
-}
 
 // On user-defined networks (every docker compose project) the container only
 // sees Docker's embedded DNS at 127.0.0.11. Docker records the upstream
@@ -44,10 +28,6 @@ export function parseUpstreamServers(resolvConf) {
     .map((server) => HOST_SERVER_PATTERN.exec(server)?.[1] ?? server);
 }
 
-function skippedResult(host) {
-  return { ok: true, skipped: true, addresses: [host], latencyMs: 0, error: null };
-}
-
 export function createDnsHealthService({
   lookup = dns.promises.lookup,
   createResolver = (options) => new dns.promises.Resolver(options),
@@ -56,23 +36,7 @@ export function createDnsHealthService({
   now = Date.now,
   timeoutMs = DNS_CHECK_TIMEOUT_MS
 } = {}) {
-  // getaddrinfo runs on the libuv threadpool and cannot be cancelled. Reusing
-  // the pending lookup for a host keeps repeated runs during a DNS outage from
-  // piling up blocked threadpool work.
-  const pendingLookups = new Map();
-
-  function lookupAddresses(host) {
-    if (!pendingLookups.has(host)) {
-      const pending = Promise.resolve()
-        .then(() => lookup(host, { all: true }))
-        .then((entries) => entries.map((entry) => entry.address))
-        .finally(() => pendingLookups.delete(host));
-
-      pendingLookups.set(host, pending);
-    }
-
-    return pendingLookups.get(host);
-  }
+  const lookupAddresses = createDedupedLookup(lookup);
 
   // Each family is bounded on its own so an A answer survives a hung AAAA
   // query (and vice versa). The resolver is cancelled only after both have
