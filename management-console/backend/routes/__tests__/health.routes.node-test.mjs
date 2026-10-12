@@ -50,8 +50,8 @@ function createTestApp(router, { role = 'S' } = {}) {
   return app;
 }
 
-function postDns(baseUrl, { body = {}, csrfToken = CSRF_TOKEN } = {}) {
-  return fetch(`${baseUrl}/mng/api/health/dns`, {
+function postCheck(baseUrl, check, { body = {}, csrfToken = CSRF_TOKEN } = {}) {
+  return fetch(`${baseUrl}/mng/api/health/${check}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -77,6 +77,33 @@ function createFakeDnsService() {
           port,
           lookup: { ok: true, addresses: ['192.0.2.1'], latencyMs: 2, error: null },
           resolve: { ok: false, addresses: [], latencyMs: 3, error: 'ESERVFAIL' }
+        }))
+      };
+    }
+  };
+}
+
+function postDns(baseUrl, options) {
+  return postCheck(baseUrl, 'dns', options);
+}
+
+function createFakeConnectivityService() {
+  const calls = [];
+  return {
+    calls,
+    async checkTargets(targets) {
+      calls.push(targets);
+      return {
+        checkedAt: '2026-10-12T12:00:00.000Z',
+        deadlineExceeded: false,
+        targets: targets.map(({ label, host, port }) => ({
+          label,
+          host,
+          port,
+          reachable: false,
+          failedStage: 'tcp',
+          error: 'ECONNREFUSED',
+          stages: { dns: { ok: true }, tcp: { ok: false }, tls: null }
         }))
       };
     }
@@ -199,6 +226,71 @@ describe('management-console health routes', () => {
       const response = await postDns(baseUrl);
 
       assert.equal(response.status, 500);
+    });
+  });
+
+  describe('connectivity check', () => {
+    it('runs the connectivity check against the configured targets and ignores the body', async () => {
+      const connectivityHealthService = createFakeConnectivityService();
+      const router = createHealthRouter({
+        getHealthCheckTargetsService: () => configuredTargets,
+        dnsHealthService: createFakeDnsService(),
+        connectivityHealthService
+      });
+
+      await withServer(createTestApp(router), async (baseUrl) => {
+        const response = await postCheck(baseUrl, 'connectivity', {
+          body: { targets: [{ label: 'internal', host: 'postgresql', port: 5432 }] }
+        });
+
+        assert.equal(response.status, 200);
+        const report = await response.json();
+        assert.equal(report.deadlineExceeded, false);
+        assert.deepEqual(report.targets.map((target) => [target.label, target.failedStage, target.error]), [
+          ['smtp', 'tcp', 'ECONNREFUSED']
+        ]);
+        assert.deepEqual(connectivityHealthService.calls, [configuredTargets]);
+      });
+    });
+
+    it('keeps its cooldown independent from the DNS check', async () => {
+      const dnsHealthService = createFakeDnsService();
+      const connectivityHealthService = createFakeConnectivityService();
+      const router = createHealthRouter({
+        getHealthCheckTargetsService: () => configuredTargets,
+        dnsHealthService,
+        connectivityHealthService,
+        cooldownMs: 5000,
+        now: () => 0
+      });
+
+      await withServer(createTestApp(router), async (baseUrl) => {
+        await postDns(baseUrl);
+        await postCheck(baseUrl, 'connectivity');
+        await postCheck(baseUrl, 'connectivity');
+
+        assert.equal(dnsHealthService.calls.length, 1);
+        assert.equal(connectivityHealthService.calls.length, 1);
+      });
+    });
+
+    it('requires the management role and a CSRF token', async () => {
+      const connectivityHealthService = createFakeConnectivityService();
+      const router = createHealthRouter({
+        getHealthCheckTargetsService: () => configuredTargets,
+        dnsHealthService: createFakeDnsService(),
+        connectivityHealthService
+      });
+
+      await withServer(createTestApp(router, { role: 'P' }), async (baseUrl) => {
+        assert.equal((await postCheck(baseUrl, 'connectivity')).status, 403);
+      });
+
+      await withServer(createTestApp(router), async (baseUrl) => {
+        assert.equal((await postCheck(baseUrl, 'connectivity', { csrfToken: null })).status, 403);
+      });
+
+      assert.deepEqual(connectivityHealthService.calls, []);
     });
   });
 });
