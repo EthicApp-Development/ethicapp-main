@@ -232,6 +232,10 @@ the SMTP relay configured in `SMTP_HOST`/`SMTP_PORT` for `auth-backend` and the
 AI provider endpoints reached by external-service adapters. management-console
 does not receive `SMTP_HOST`, so the SMTP relay has to be listed explicitly.
 
+The diagnostics page (`/mng/diagnostics`) and how to read its DNS and
+connectivity results are described in
+[`health-diagnostics-runbook.md`](./health-diagnostics-runbook.md).
+
 ## Production Backups
 
 Host-level PostgreSQL and protected uploads backups are handled by

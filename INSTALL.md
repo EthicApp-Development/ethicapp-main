@@ -42,6 +42,11 @@ ref, and set the target values before the release is deployed. For example,
 see [`deploy/README.md`](./deploy/README.md#health-diagnostics-targets)) needs
 per-target values listing the external dependencies to check.
 
+When outbound email, AI features or other external integrations fail, use the
+management-console diagnostics page and
+[`deploy/health-diagnostics-runbook.md`](./deploy/health-diagnostics-runbook.md)
+to tell DNS failures from network or TLS problems.
+
 Pay special attention to `VITE_*` variables. They are public frontend variables, not secrets. Production images keep frontend bundles environment-neutral; each container writes its frontend `runtime-config.js` from runtime environment variables when it starts.
 
 ## reCAPTCHA Enterprise
