@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import ManagementLayout from '../components/layout/ManagementLayout.jsx';
+import DiagnosticsPage from '../pages/DiagnosticsPage.jsx';
 import InstitutionPage from '../pages/InstitutionPage.jsx';
 import ProfilePage from '../pages/ProfilePage.jsx';
 import UsersPage from '../pages/UsersPage.jsx';
@@ -31,6 +32,14 @@ const router = createBrowserRouter([
     element: (
       <ManagementLayout>
         <InstitutionPage />
+      </ManagementLayout>
+    )
+  },
+  {
+    path: '/diagnostics',
+    element: (
+      <ManagementLayout>
+        <DiagnosticsPage />
       </ManagementLayout>
     )
   },

@@ -6,6 +6,7 @@ export default {
   nav: {
     users: 'Users',
     institution: 'Institution',
+    diagnostics: 'Diagnostics',
     profile: 'Profile',
     logout: 'Log out',
     collapseSidebar: 'Collapse navigation',
@@ -138,6 +139,68 @@ export default {
       },
       actions: {
         changePassword: 'Change password'
+      }
+    },
+    diagnostics: {
+      heading: 'Health diagnostics',
+      description: 'Check whether this deployment can resolve and reach the external services it depends on.',
+      vantagePoint: 'Results show the network as seen from the management-console container. Services in the same docker compose project share its DNS configuration, so they usually see the same results; a service with its own DNS or network settings may differ.',
+      noTargets: 'No diagnostics targets are configured. Set {{variable}} on the management-console service to list the hosts to check.',
+      requestError: 'The check could not be run. Try again in a few seconds.',
+      running: 'Running check...',
+      lastRun: 'Last run: {{time}}',
+      actions: {
+        run: 'Run checks'
+      },
+      status: {
+        ok: 'OK',
+        failed: 'Failed',
+        skipped: 'Skipped'
+      },
+      columns: {
+        target: 'Target'
+      },
+      dns: {
+        heading: 'DNS resolution',
+        description: 'Resolves each target through the operating system resolver used by the applications and by querying the DNS servers directly.',
+        containerResolvers: 'Container resolvers',
+        upstreamResolvers: 'Upstream resolvers (Docker)',
+        upstreamUnknown: 'Not reported by Docker',
+        columns: {
+          lookup: 'System resolver',
+          resolve: 'DNS servers'
+        }
+      },
+      connectivity: {
+        heading: 'Outbound connectivity',
+        description: 'Opens a connection to each target and reports the first stage that fails: DNS, TCP or TLS.',
+        deadlineExceeded: 'The check reached its time limit before every target finished.',
+        failedAt: 'Failed at {{stage}}',
+        notRun: 'Not run',
+        certificate: 'Issued by {{issuer}}, valid until {{validTo}}',
+        columns: {
+          result: 'Result'
+        },
+        stages: {
+          dns: 'DNS',
+          tcp: 'TCP',
+          tls: 'TLS'
+        }
+      },
+      errorHints: {
+        ENOTFOUND: 'The name does not exist or the resolver could not find it.',
+        ETIMEOUT: 'No answer within the time limit.',
+        ESERVFAIL: 'The DNS server failed to answer the query.',
+        ECONNREFUSED: 'The host is reachable but nothing accepts connections on this port.',
+        ENETUNREACH: 'There is no network route to this address.',
+        EHOSTUNREACH: 'The host cannot be reached.',
+        ENODATA: 'The name exists but has no addresses.',
+        EDEADLINE: 'The overall time limit for the check was reached.',
+        CERT_HAS_EXPIRED: 'The server certificate has expired.',
+        ERR_TLS_CERT_ALTNAME_INVALID: 'The server certificate does not match this host name.',
+        DEPTH_ZERO_SELF_SIGNED_CERT: 'The server uses a self-signed certificate.',
+        SELF_SIGNED_CERT_IN_CHAIN: 'The certificate chain includes an untrusted self-signed certificate, which may indicate a TLS-intercepting proxy.',
+        UNABLE_TO_VERIFY_LEAF_SIGNATURE: 'The server certificate could not be verified against a trusted authority.'
       }
     },
     institution: {

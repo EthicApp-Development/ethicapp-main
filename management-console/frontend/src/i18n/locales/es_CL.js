@@ -6,6 +6,7 @@ export default {
   nav: {
     users: 'Usuarios',
     institution: 'Institución',
+    diagnostics: 'Diagnóstico',
     profile: 'Perfil',
     logout: 'Cerrar sesión',
     collapseSidebar: 'Colapsar navegación',
@@ -138,6 +139,68 @@ export default {
       },
       actions: {
         changePassword: 'Cambiar contraseña'
+      }
+    },
+    diagnostics: {
+      heading: 'Diagnóstico de salud',
+      description: 'Verifica si este despliegue puede resolver y alcanzar los servicios externos de los que depende.',
+      vantagePoint: 'Los resultados muestran la red vista desde el contenedor de management-console. Los servicios del mismo proyecto de docker compose comparten su configuración DNS, por lo que normalmente ven lo mismo; un servicio con DNS o red propios puede diferir.',
+      noTargets: 'No hay destinos de diagnóstico configurados. Define {{variable}} en el servicio management-console con los hosts a revisar.',
+      requestError: 'No fue posible ejecutar la revisión. Intenta de nuevo en unos segundos.',
+      running: 'Ejecutando revisión...',
+      lastRun: 'Última ejecución: {{time}}',
+      actions: {
+        run: 'Ejecutar revisiones'
+      },
+      status: {
+        ok: 'OK',
+        failed: 'Falló',
+        skipped: 'Omitido'
+      },
+      columns: {
+        target: 'Destino'
+      },
+      dns: {
+        heading: 'Resolución DNS',
+        description: 'Resuelve cada destino con el resolver del sistema operativo que usan las aplicaciones y consultando directamente a los servidores DNS.',
+        containerResolvers: 'Resolvers del contenedor',
+        upstreamResolvers: 'Resolvers de origen (Docker)',
+        upstreamUnknown: 'Docker no los informa',
+        columns: {
+          lookup: 'Resolver del sistema',
+          resolve: 'Servidores DNS'
+        }
+      },
+      connectivity: {
+        heading: 'Conectividad saliente',
+        description: 'Abre una conexión a cada destino e informa la primera etapa que falla: DNS, TCP o TLS.',
+        deadlineExceeded: 'La revisión alcanzó su tiempo límite antes de terminar con todos los destinos.',
+        failedAt: 'Falló en {{stage}}',
+        notRun: 'No ejecutada',
+        certificate: 'Emitido por {{issuer}}, válido hasta {{validTo}}',
+        columns: {
+          result: 'Resultado'
+        },
+        stages: {
+          dns: 'DNS',
+          tcp: 'TCP',
+          tls: 'TLS'
+        }
+      },
+      errorHints: {
+        ENOTFOUND: 'El nombre no existe o el resolver no lo encontró.',
+        ETIMEOUT: 'No hubo respuesta dentro del tiempo límite.',
+        ESERVFAIL: 'El servidor DNS no pudo responder la consulta.',
+        ECONNREFUSED: 'El host responde, pero nada acepta conexiones en este puerto.',
+        ENETUNREACH: 'No hay ruta de red hacia esta dirección.',
+        EHOSTUNREACH: 'No es posible alcanzar el host.',
+        ENODATA: 'El nombre existe, pero no tiene direcciones.',
+        EDEADLINE: 'Se alcanzó el tiempo límite total de la revisión.',
+        CERT_HAS_EXPIRED: 'El certificado del servidor expiró.',
+        ERR_TLS_CERT_ALTNAME_INVALID: 'El certificado del servidor no corresponde a este nombre de host.',
+        DEPTH_ZERO_SELF_SIGNED_CERT: 'El servidor usa un certificado autofirmado.',
+        SELF_SIGNED_CERT_IN_CHAIN: 'La cadena de certificados incluye un certificado autofirmado no confiable, lo que puede indicar un proxy que intercepta TLS.',
+        UNABLE_TO_VERIFY_LEAF_SIGNATURE: 'No fue posible verificar el certificado del servidor con una autoridad de confianza.'
       }
     },
     institution: {
