@@ -6,6 +6,10 @@ import { createDedupedLookup, normalizeErrorCode, skippedResult } from './health
 
 const STAGE_TIMEOUT_MS = 3000;
 const CONNECTIVITY_DEADLINE_MS = 10000;
+// Delay before racing the next resolved address while earlier attempts are
+// still pending, as in Happy Eyeballs (RFC 8305) and Node's
+// autoSelectFamilyAttemptTimeout default.
+const CONNECTION_ATTEMPT_DELAY_MS = 250;
 
 // Ports whose protocol starts with a TLS handshake. STARTTLS ports such as
 // 587 or 25 are checked up to the TCP stage only.
@@ -29,17 +33,21 @@ function summarizeCertificate(certificate) {
   };
 }
 
-// Resolves once `socket` emits `readyEvent`; rejects on socket error, stage
-// timeout or deadline abort. The socket is destroyed on every failure path,
-// and a permanent error listener stays attached so late errors on a socket
-// that is still open cannot crash the process.
+function abortReason(signal) {
+  return typeof signal.reason?.code === 'string' ? signal.reason : createDeadlineError();
+}
+
+// Resolves once `socket` emits `readyEvent`; rejects on socket error, timeout
+// or abort (with the signal's coded reason). The socket is destroyed on every
+// failure path, and a permanent error listener stays attached so late errors
+// on a socket that is still open cannot crash the process.
 function awaitSocket(socket, readyEvent, { timeoutMs, signal }) {
   return new Promise((resolve, reject) => {
     let settled = false;
     let timer = null;
 
     function onAbort() {
-      finish(createDeadlineError());
+      finish(abortReason(signal));
     }
 
     function finish(error) {
@@ -77,7 +85,8 @@ export function createConnectivityHealthService({
   tlsConnect = tls.connect,
   now = Date.now,
   stageTimeoutMs = STAGE_TIMEOUT_MS,
-  deadlineMs = CONNECTIVITY_DEADLINE_MS
+  deadlineMs = CONNECTIVITY_DEADLINE_MS,
+  attemptDelayMs = CONNECTION_ATTEMPT_DELAY_MS
 } = {}) {
   const lookupAddresses = createDedupedLookup(lookup);
 
@@ -101,44 +110,116 @@ export function createConnectivityHealthService({
     }
   }
 
-  // Containers often have no IPv6 route, so IPv4 addresses are tried first
-  // and the remaining addresses only while the stage budget lasts.
-  async function runTcpStage(addresses, port, signal) {
+  // Containers often have no IPv6 route, so IPv4 addresses go first. Attempts
+  // are staggered: the next address starts when the previous one fails or has
+  // not connected after `attemptDelayMs`, earlier attempts keep running, and
+  // the first connection wins. One stage timer bounds every attempt, so a
+  // silently dropping address cannot use up the budget for the others.
+  function runTcpStage(addresses, port, signal) {
     const startedAt = now();
+    const queue = orderIpv4First(addresses);
     const attempts = [];
+    const active = new Set();
+    const stageController = new AbortController();
+    const stageSignal = signal ? AbortSignal.any([signal, stageController.signal]) : stageController.signal;
 
-    for (const address of orderIpv4First(addresses)) {
-      const remainingMs = stageTimeoutMs - (now() - startedAt);
+    return new Promise((resolve) => {
+      let finished = false;
+      let nextAttemptTimer = null;
+      const stageTimer = setTimeout(() => stageController.abort(createTimeoutError()), stageTimeoutMs);
 
-      if (remainingMs <= 0) {
-        break;
+      function finish(socket, address) {
+        if (finished) {
+          return;
+        }
+
+        finished = true;
+        clearTimeout(stageTimer);
+        clearTimeout(nextAttemptTimer);
+
+        if (socket) {
+          resolve({
+            socket,
+            result: { ok: true, address, latencyMs: now() - startedAt, error: null, attempts }
+          });
+          return;
+        }
+
+        // The overall deadline outranks earlier per-address failures.
+        const errors = attempts.map((attempt) => attempt.error).filter(Boolean);
+        const error = errors.includes('EDEADLINE') ? 'EDEADLINE' : errors[0] ?? 'ETIMEOUT';
+
+        resolve({
+          socket: null,
+          result: { ok: false, address: null, latencyMs: now() - startedAt, error, attempts }
+        });
       }
 
-      const socket = createConnection({ host: address, port });
+      function startNextAttempt() {
+        clearTimeout(nextAttemptTimer);
 
-      try {
-        await awaitSocket(socket, 'connect', { timeoutMs: remainingMs, signal });
-        attempts.push({ address, error: null });
-        return {
-          socket,
-          result: { ok: true, address, latencyMs: now() - startedAt, error: null, attempts }
-        };
-      } catch (error) {
-        const code = normalizeErrorCode(error);
-        attempts.push({ address, error: code });
+        if (finished || stageSignal.aborted || queue.length === 0) {
+          return;
+        }
 
-        if (code === 'EDEADLINE') {
-          break;
+        const address = queue.shift();
+        const attempt = { address, outcome: 'pending', error: null };
+        const attemptController = new AbortController();
+        const entry = { attempt, attemptController };
+        const socket = createConnection({ host: address, port });
+
+        attempts.push(attempt);
+        active.add(entry);
+
+        awaitSocket(socket, 'connect', {
+          timeoutMs: stageTimeoutMs,
+          signal: AbortSignal.any([stageSignal, attemptController.signal])
+        }).then(() => {
+          active.delete(entry);
+
+          if (finished) {
+            attempt.outcome = 'abandoned';
+            socket.destroy();
+            return;
+          }
+
+          attempt.outcome = 'connected';
+
+          for (const other of active) {
+            other.attempt.outcome = 'abandoned';
+            other.attemptController.abort();
+          }
+
+          finish(socket, address);
+        }, (error) => {
+          active.delete(entry);
+
+          if (attempt.outcome === 'abandoned') {
+            return;
+          }
+
+          attempt.outcome = 'failed';
+          attempt.error = normalizeErrorCode(error);
+
+          if (queue.length > 0 && !stageSignal.aborted) {
+            startNextAttempt();
+          } else if (active.size === 0) {
+            finish(null);
+          }
+        });
+
+        if (queue.length > 0) {
+          nextAttemptTimer = setTimeout(startNextAttempt, attemptDelayMs);
         }
       }
-    }
 
-    const error = attempts.find((attempt) => attempt.error)?.error ?? 'ETIMEOUT';
+      if (queue.length === 0) {
+        finish(null);
+        return;
+      }
 
-    return {
-      socket: null,
-      result: { ok: false, address: null, latencyMs: now() - startedAt, error, attempts }
-    };
+      startNextAttempt();
+    });
   }
 
   async function runTlsStage(tcpSocket, host, signal) {
@@ -221,14 +302,14 @@ export function createConnectivityHealthService({
 
   async function checkTargets(targets) {
     const controller = new AbortController();
-    const deadline = setTimeout(() => controller.abort(), deadlineMs);
+    const deadline = setTimeout(() => controller.abort(createDeadlineError()), deadlineMs);
 
     try {
       const results = await Promise.all(targets.map((target) => checkTarget(target, controller.signal)));
 
       return {
         checkedAt: new Date(now()).toISOString(),
-        deadlineExceeded: results.some((result) => result.error === 'EDEADLINE'),
+        deadlineExceeded: controller.signal.aborted,
         targets: results
       };
     } finally {
@@ -239,4 +320,4 @@ export function createConnectivityHealthService({
   return { checkTargets };
 }
 
-export { CONNECTIVITY_DEADLINE_MS, IMPLICIT_TLS_PORTS, STAGE_TIMEOUT_MS };
+export { CONNECTION_ATTEMPT_DELAY_MS, CONNECTIVITY_DEADLINE_MS, IMPLICIT_TLS_PORTS, STAGE_TIMEOUT_MS };

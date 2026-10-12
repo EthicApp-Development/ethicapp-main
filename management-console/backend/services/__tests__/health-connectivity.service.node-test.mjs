@@ -64,14 +64,21 @@ function createFakeNetwork({ tcp = {}, tls = {}, certificate = null, protocol = 
   return { createConnection, tlsConnect, tcpSockets, tlsSockets };
 }
 
-function createService(network, { lookup, stageTimeoutMs = 50, deadlineMs = 1000 } = {}) {
+function createService(network, {
+  lookup,
+  stageTimeoutMs = 50,
+  deadlineMs = 1000,
+  attemptDelayMs = 250,
+  now = () => Date.parse('2026-10-12T12:00:00.000Z')
+} = {}) {
   return createConnectivityHealthService({
     lookup: lookup ?? (async () => [{ address: '192.0.2.10', family: 4 }]),
     createConnection: network.createConnection,
     tlsConnect: network.tlsConnect,
-    now: () => Date.parse('2026-10-12T12:00:00.000Z'),
+    now,
     stageTimeoutMs,
-    deadlineMs
+    deadlineMs,
+    attemptDelayMs
   });
 }
 
@@ -105,7 +112,7 @@ describe('management-console connectivity health service', () => {
           address: '192.0.2.10',
           latencyMs: 0,
           error: null,
-          attempts: [{ address: '192.0.2.10', error: null }]
+          attempts: [{ address: '192.0.2.10', outcome: 'connected', error: null }]
         },
         tls: {
           ok: true,
@@ -218,10 +225,93 @@ describe('management-console connectivity health service', () => {
     assert.equal(target.reachable, true);
     assert.equal(target.stages.tcp.address, '2001:db8::10');
     assert.deepEqual(target.stages.tcp.attempts, [
-      { address: '192.0.2.10', error: 'ENETUNREACH' },
-      { address: '2001:db8::10', error: null }
+      { address: '192.0.2.10', outcome: 'failed', error: 'ENETUNREACH' },
+      { address: '2001:db8::10', outcome: 'connected', error: null }
     ]);
     assert.ok(network.tcpSockets.every((socket) => socket.destroyed));
+  });
+
+  it('tries the next address while the first one hangs (P2 regression)', async () => {
+    const network = createFakeNetwork({ tcp: { '192.0.2.1': 'hang', '192.0.2.2': 'connect' } });
+    const service = createService(network, {
+      lookup: async () => [
+        { address: '192.0.2.1', family: 4 },
+        { address: '192.0.2.2', family: 4 }
+      ],
+      stageTimeoutMs: 100,
+      attemptDelayMs: 10,
+      // A real clock: a fixed one would never use up the stage budget.
+      now: Date.now
+    });
+
+    const [target] = (await service.checkTargets([{ label: 'relay', host: 'relay.example.org', port: 25 }])).targets;
+
+    assert.equal(target.reachable, true);
+    assert.equal(target.stages.tcp.address, '192.0.2.2');
+    assert.deepEqual(target.stages.tcp.attempts, [
+      { address: '192.0.2.1', outcome: 'abandoned', error: null },
+      { address: '192.0.2.2', outcome: 'connected', error: null }
+    ]);
+    assert.deepEqual(network.tcpSockets.map((socket) => socket.options.host), ['192.0.2.1', '192.0.2.2']);
+    assert.ok(network.tcpSockets.every((socket) => socket.destroyed));
+  });
+
+  it('reports EDEADLINE after an earlier TCP attempt failed (P3 regression)', async () => {
+    const network = createFakeNetwork({ tcp: { '192.0.2.1': 'ECONNREFUSED', '192.0.2.2': 'hang' } });
+    const service = createService(network, {
+      lookup: async () => [
+        { address: '192.0.2.1', family: 4 },
+        { address: '192.0.2.2', family: 4 }
+      ],
+      stageTimeoutMs: 100,
+      deadlineMs: 20
+    });
+
+    const report = await service.checkTargets([{ label: 'relay', host: 'relay.example.org', port: 25 }]);
+
+    assert.equal(report.deadlineExceeded, true);
+    assert.equal(report.targets[0].failedStage, 'tcp');
+    assert.equal(report.targets[0].error, 'EDEADLINE');
+    assert.ok(network.tcpSockets.every((socket) => socket.destroyed));
+  });
+
+  it('bounds every attempt by the stage timeout when all addresses hang', async () => {
+    const network = createFakeNetwork({ tcp: { '192.0.2.1': 'hang', '192.0.2.2': 'hang' } });
+    const service = createService(network, {
+      lookup: async () => [
+        { address: '192.0.2.1', family: 4 },
+        { address: '192.0.2.2', family: 4 }
+      ],
+      stageTimeoutMs: 40,
+      attemptDelayMs: 10
+    });
+
+    const startedAt = performance.now();
+    const [target] = (await service.checkTargets([{ label: 'relay', host: 'relay.example.org', port: 25 }])).targets;
+    const elapsedMs = performance.now() - startedAt;
+
+    assert.equal(target.error, 'ETIMEOUT');
+    assert.deepEqual(target.stages.tcp.attempts.map((attempt) => [attempt.outcome, attempt.error]), [
+      ['failed', 'ETIMEOUT'],
+      ['failed', 'ETIMEOUT']
+    ]);
+    assert.ok(network.tcpSockets.every((socket) => socket.destroyed));
+    assert.ok(elapsedMs < 500, `expected one stage budget for all attempts, took ${elapsedMs}ms`);
+  });
+
+  it('waits for the attempt delay before racing the next address', async () => {
+    const network = createFakeNetwork({ tcp: { '192.0.2.1': 'connect' } });
+    const service = createService(network, {
+      lookup: async () => [
+        { address: '192.0.2.1', family: 4 },
+        { address: '192.0.2.2', family: 4 }
+      ]
+    });
+
+    const [target] = (await service.checkTargets([{ label: 'relay', host: 'relay.example.org', port: 25 }])).targets;
+
+    assert.equal(target.stages.tcp.address, '192.0.2.1');
+    assert.deepEqual(network.tcpSockets.map((socket) => socket.options.host), ['192.0.2.1']);
   });
 
   it('reports the first attempt error when every address fails', async () => {
