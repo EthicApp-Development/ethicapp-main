@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0 --port 5175",
     "build": "vite build",
-    "preview": "vite preview --host 0.0.0.0 --port 4175"
+    "preview": "vite preview --host 0.0.0.0 --port 4175",
+    "test": "vitest run"
   },
   "dependencies": {
     "@simplewebauthn/browser": "^13.3.0",
@@ -19,6 +20,7 @@
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^5.1.0",
-    "vite": "^7.1.10"
+    "vite": "^7.1.10",
+    "vitest": "4.1.11"
   }
 }

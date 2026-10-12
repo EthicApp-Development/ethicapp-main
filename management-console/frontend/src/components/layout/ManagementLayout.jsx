@@ -24,6 +24,11 @@ function ManagementLayout({ children }) {
       label: t('nav.institution')
     },
     {
+      to: '/diagnostics',
+      icon: 'fa-stethoscope',
+      label: t('nav.diagnostics')
+    },
+    {
       to: '/profile',
       icon: 'fa-user-shield',
       label: t('nav.profile')
