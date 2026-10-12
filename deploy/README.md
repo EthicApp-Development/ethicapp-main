@@ -203,6 +203,35 @@ protected uploads volume used by `ethicapp`. Do not expose rendered PDF pages or
 manifests through NGINX/static mounts; they must stay behind authorization-aware
 application endpoints.
 
+## Health Diagnostics Targets
+
+`MNG_HEALTH_CHECK_TARGETS` is the allowlist used by the management-console
+health diagnostics to check DNS resolution and outbound connectivity. The
+console only contacts the hosts listed here; requests to the diagnostics API
+cannot add or change targets.
+
+The value is a comma-separated list of `label=host:port` entries:
+
+```text
+MNG_HEALTH_CHECK_TARGETS=smtp=smtp.gmail.com:465,openai=api.openai.com:443
+```
+
+| Rule | Detail |
+| --- | --- |
+| Label | Lowercase letters, digits and hyphens, up to 40 characters, unique per list. |
+| Host | Hostname or IP address, without scheme, credentials or path. Write IPv6 addresses as `[address]:port`. |
+| Port | Integer from 1 to 65535. |
+| Size | At most 20 entries. |
+
+Invalid, duplicate or excess entries are ignored and reported as warnings when
+the management-console starts. When the variable is unset or empty, no targets
+are checked.
+
+List the external dependencies whose failure would break the platform, such as
+the SMTP relay configured in `SMTP_HOST`/`SMTP_PORT` for `auth-backend` and the
+AI provider endpoints reached by external-service adapters. management-console
+does not receive `SMTP_HOST`, so the SMTP relay has to be listed explicitly.
+
 ## Production Backups
 
 Host-level PostgreSQL and protected uploads backups are handled by

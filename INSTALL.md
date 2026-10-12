@@ -34,6 +34,14 @@ move to the new tag while the other services stay pinned to their previous tags.
 The contract entry should point to the source ref whose `env.contract.yml`
 matches the environment files being rendered.
 
+When a change adds, renames or removes a variable in `deploy/env.contract.yml`,
+the deployment repository must refresh its copy of the contract for every
+target that deploys that change, update the manifest's `env_contract` source
+ref, and set the target values before the release is deployed. For example,
+`MNG_HEALTH_CHECK_TARGETS` (management-console health diagnostics allowlist,
+see [`deploy/README.md`](./deploy/README.md#health-diagnostics-targets)) needs
+per-target values listing the external dependencies to check.
+
 Pay special attention to `VITE_*` variables. They are public frontend variables, not secrets. Production images keep frontend bundles environment-neutral; each container writes its frontend `runtime-config.js` from runtime environment variables when it starts.
 
 ## reCAPTCHA Enterprise
