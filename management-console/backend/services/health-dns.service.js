@@ -13,13 +13,10 @@ function createTimeoutError() {
   return error;
 }
 
-function withTimeout(promise, timeoutMs, onTimeout) {
+function withTimeout(promise, timeoutMs) {
   let timer;
   const timeout = new Promise((resolve, reject) => {
-    timer = setTimeout(() => {
-      onTimeout?.();
-      reject(createTimeoutError());
-    }, timeoutMs);
+    timer = setTimeout(() => reject(createTimeoutError()), timeoutMs);
   });
 
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
@@ -77,8 +74,19 @@ export function createDnsHealthService({
     return pendingLookups.get(host);
   }
 
+  // Each family is bounded on its own so an A answer survives a hung AAAA
+  // query (and vice versa). The resolver is cancelled only after both have
+  // settled, so cancelling one family cannot rewrite the other's error code.
   async function resolveAddresses(resolver, host) {
-    const settled = await Promise.allSettled([resolver.resolve4(host), resolver.resolve6(host)]);
+    const settled = await Promise.allSettled([
+      withTimeout(resolver.resolve4(host), timeoutMs),
+      withTimeout(resolver.resolve6(host), timeoutMs)
+    ]);
+
+    if (settled.some((result) => result.reason?.code === 'ETIMEOUT')) {
+      resolver.cancel();
+    }
+
     const addresses = settled.flatMap((result) => (result.status === 'fulfilled' ? result.value : []));
 
     if (addresses.length > 0) {
@@ -93,11 +101,11 @@ export function createDnsHealthService({
     throw error;
   }
 
-  async function measure(query, onTimeout) {
+  async function measure(query) {
     const startedAt = now();
 
     try {
-      const addresses = await withTimeout(query(), timeoutMs, onTimeout);
+      const addresses = await query();
       return { ok: true, addresses, latencyMs: now() - startedAt, error: null };
     } catch (error) {
       return { ok: false, addresses: [], latencyMs: now() - startedAt, error: normalizeErrorCode(error) };
@@ -111,8 +119,8 @@ export function createDnsHealthService({
 
     const resolver = createResolver({ timeout: timeoutMs, tries: 1 });
     const [lookupResult, resolveResult] = await Promise.all([
-      measure(() => lookupAddresses(host)),
-      measure(() => resolveAddresses(resolver, host), () => resolver.cancel())
+      measure(() => withTimeout(lookupAddresses(host), timeoutMs)),
+      measure(() => resolveAddresses(resolver, host))
     ]);
 
     return { label, host, port, lookup: lookupResult, resolve: resolveResult };

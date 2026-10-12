@@ -171,6 +171,71 @@ describe('management-console DNS health service', () => {
     assert.ok(elapsedMs < 1000, `expected the check to finish near the timeout, took ${elapsedMs}ms`);
   });
 
+  for (const [answeredFamily, hungFamily, addresses] of [
+    ['resolve4', 'resolve6', ['192.0.2.1']],
+    ['resolve6', 'resolve4', ['2001:db8::1']]
+  ]) {
+    it(`keeps ${answeredFamily} addresses when ${hungFamily} times out`, async () => {
+      let rejectHungQuery;
+      const resolver = {
+        cancelled: false,
+        [answeredFamily]: async () => addresses,
+        [hungFamily]: () => new Promise((resolve, reject) => {
+          rejectHungQuery = reject;
+        }),
+        cancel() {
+          resolver.cancelled = true;
+          rejectHungQuery(dnsError('ECANCELLED'));
+        }
+      };
+      const service = createDnsHealthService({
+        lookup: async () => [{ address: addresses[0], family: 4 }],
+        createResolver: () => resolver,
+        getServers: () => [],
+        readResolvConf: async () => '',
+        now: () => 0,
+        timeoutMs: 20
+      });
+
+      const [target] = (await service.checkTargets([smtpTarget])).targets;
+
+      assert.deepEqual(target.resolve, { ok: true, addresses, latencyMs: 0, error: null });
+      assert.equal(resolver.cancelled, true);
+    });
+  }
+
+  it('reports ETIMEOUT when one family times out and the other has no data', async () => {
+    const { service, resolverFactory } = createService({
+      lookup: async () => [],
+      records: {
+        'smtp.gmail.com': {
+          resolve4: never,
+          resolve6: async () => {
+            throw dnsError('ENODATA');
+          }
+        }
+      },
+      timeoutMs: 20
+    });
+
+    const [target] = (await service.checkTargets([smtpTarget])).targets;
+
+    assert.equal(target.resolve.ok, false);
+    assert.equal(target.resolve.error, 'ETIMEOUT');
+    assert.equal(resolverFactory.created[0].cancelled, true);
+  });
+
+  it('does not cancel the resolver when no family timed out', async () => {
+    const { service, resolverFactory } = createService({
+      lookup: async () => [{ address: '142.250.0.108', family: 4 }],
+      records: { 'smtp.gmail.com': { resolve4: async () => ['142.250.0.108'], resolve6: async () => [] } }
+    });
+
+    await service.checkTargets([smtpTarget]);
+
+    assert.equal(resolverFactory.created[0].cancelled, false);
+  });
+
   it('reuses a pending lookup for the same host across runs', async () => {
     let lookupCalls = 0;
     let finishLookup;
