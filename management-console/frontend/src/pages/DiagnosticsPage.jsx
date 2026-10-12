@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Button, Card, Spinner } from 'react-bootstrap';
 
@@ -47,8 +48,33 @@ function DiagnosticsPage() {
     };
   }, [runChecks]);
 
-  const reports = [dnsState.report, connectivityState.report].filter(Boolean);
-  const noTargetsConfigured = reports.length > 0 && reports.every((report) => report.targets.length === 0);
+  return (
+    <DiagnosticsView
+      dnsState={dnsState}
+      connectivityState={connectivityState}
+      running={running}
+      onRun={runChecks}
+    />
+  );
+}
+
+const checkStateShape = PropTypes.shape({
+  loading: PropTypes.bool.isRequired,
+  error: PropTypes.string.isRequired,
+  report: PropTypes.shape({
+    targets: PropTypes.array.isRequired
+  })
+});
+
+// Presentational part of the page, kept free of hooks other than i18n so it
+// can be rendered with fixed check states in tests.
+export function DiagnosticsView({ dnsState, connectivityState, running, onRun }) {
+  const { t } = useI18n();
+  // Both checks read the same allowlist, so one empty report means nothing is
+  // configured. The notice is shown next to the check cards, never instead of
+  // them, so request errors from either check stay visible.
+  const noTargetsConfigured = [dnsState.report, connectivityState.report]
+    .some((report) => report && report.targets.length === 0);
 
   return (
     <>
@@ -62,7 +88,7 @@ function DiagnosticsPage() {
               </Card.Title>
               <Card.Text className="mb-0">{t('pages.diagnostics.description')}</Card.Text>
             </div>
-            <Button onClick={runChecks} disabled={running}>
+            <Button onClick={onRun} disabled={running}>
               {running ? (
                 <Spinner size="sm" className="me-2" />
               ) : (
@@ -82,29 +108,36 @@ function DiagnosticsPage() {
         <Alert variant="info">
           {t('pages.diagnostics.noTargets', { variable: TARGETS_VARIABLE })}
         </Alert>
-      ) : (
-        <>
-          <CheckCard
-            icon="fa-signs-post"
-            title={t('pages.diagnostics.dns.heading')}
-            description={t('pages.diagnostics.dns.description')}
-            state={dnsState}
-          >
-            {dnsState.report ? <DnsResults report={dnsState.report} /> : null}
-          </CheckCard>
+      ) : null}
 
-          <CheckCard
-            icon="fa-network-wired"
-            title={t('pages.diagnostics.connectivity.heading')}
-            description={t('pages.diagnostics.connectivity.description')}
-            state={connectivityState}
-          >
-            {connectivityState.report ? <ConnectivityResults report={connectivityState.report} /> : null}
-          </CheckCard>
-        </>
-      )}
+      <CheckCard
+        icon="fa-signs-post"
+        title={t('pages.diagnostics.dns.heading')}
+        description={t('pages.diagnostics.dns.description')}
+        state={dnsState}
+      >
+        {dnsState.report ? <DnsResults report={dnsState.report} /> : null}
+      </CheckCard>
+
+      <CheckCard
+        icon="fa-network-wired"
+        title={t('pages.diagnostics.connectivity.heading')}
+        description={t('pages.diagnostics.connectivity.description')}
+        state={connectivityState}
+      >
+        {connectivityState.report?.targets.length > 0 ? (
+          <ConnectivityResults report={connectivityState.report} />
+        ) : null}
+      </CheckCard>
     </>
   );
 }
+
+DiagnosticsView.propTypes = {
+  dnsState: checkStateShape.isRequired,
+  connectivityState: checkStateShape.isRequired,
+  running: PropTypes.bool.isRequired,
+  onRun: PropTypes.func.isRequired
+};
 
 export default DiagnosticsPage;

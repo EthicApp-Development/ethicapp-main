@@ -42,31 +42,34 @@ function DnsResults({ report }) {
 
   return (
     <>
-      <dl className="row small mb-3">
+      <dl className="row small mb-0">
         <dt className="col-sm-4">{t('pages.diagnostics.dns.containerResolvers')}</dt>
         <dd className="col-sm-8 text-break">{formatAddressList(report.servers)}</dd>
         <dt className="col-sm-4">{t('pages.diagnostics.dns.upstreamResolvers')}</dt>
         <dd className="col-sm-8 text-break">{upstreamServers}</dd>
       </dl>
 
-      <Table responsive className="align-middle mb-0">
-        <thead>
-          <tr>
-            <th>{t('pages.diagnostics.columns.target')}</th>
-            <th>{t('pages.diagnostics.dns.columns.lookup')}</th>
-            <th>{t('pages.diagnostics.dns.columns.resolve')}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {report.targets.map((target) => (
-            <tr key={target.label}>
-              <td><TargetCell target={target} /></td>
-              <td><ResolutionCell result={target.lookup} /></td>
-              <td><ResolutionCell result={target.resolve} /></td>
+      {/* Resolvers are useful even before any target is configured. */}
+      {report.targets.length > 0 ? (
+        <Table responsive className="align-middle mt-3 mb-0">
+          <thead>
+            <tr>
+              <th>{t('pages.diagnostics.columns.target')}</th>
+              <th>{t('pages.diagnostics.dns.columns.lookup')}</th>
+              <th>{t('pages.diagnostics.dns.columns.resolve')}</th>
             </tr>
-          ))}
-        </tbody>
-      </Table>
+          </thead>
+          <tbody>
+            {report.targets.map((target) => (
+              <tr key={target.label}>
+                <td><TargetCell target={target} /></td>
+                <td><ResolutionCell result={target.lookup} /></td>
+                <td><ResolutionCell result={target.resolve} /></td>
+              </tr>
+            ))}
+          </tbody>
+        </Table>
+      ) : null}
     </>
   );
 }
