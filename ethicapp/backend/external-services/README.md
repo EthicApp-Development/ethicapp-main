@@ -141,7 +141,13 @@ for it. `dispatchGlobalHook` delegates to `dispatchHook`, so jobs,
 `correlationId`, `callback(result)` handling, and error isolation are identical.
 
 `case-created` is the first global hook; the `case-analyst` adapter opts into
-it and is the reference implementation for this path.
+it and is the reference implementation for this path. The
+`argumentation-tutor-evidence-inventory` adapter opts into it as well (see
+"Evidence inventory" below).
+
+The design editor does not offer services whose `hooks` (apart from
+`callback-received`) are all global as per-phase options, because they never
+run inside an activity.
 
 `globalHooks` is only consulted by `dispatchGlobalHook`. Listing a phase-scoped
 hook such as `phase-started` there has no effect, because the activity dispatch
@@ -406,6 +412,42 @@ Argument submissions (`POST /sessions/{id}/arguments` and
 ATS already stores and returns `client_context` in the task status response,
 so the correlation ID is preserved for audit without further changes to the
 ATS provider.
+
+### Evidence inventory
+
+The `argumentation-tutor-evidence-inventory` adapter
+(`adapters/evidence-inventory.adapter.js`) subscribes to the global
+`case-created` hook. The case text exists only after the PDF render worker
+finishes, so the handler first waits for that render
+(`helpers/case-document-render-helper.js`, polling `pdf_render_jobs` for up to
+30 minutes) and skips the job when the render fails, is superseded, or times
+out. It then sends the case to `POST /evidence-inventories` of the
+Argumentation Tutor V2 API (same `AI_ADDITIONS_ARGUMENTATION_TUTOR_API_BASE_URL`
+as the ATS adapter). The body follows the tutor's
+`evidence-inventory-request/v1` JSON Schema and carries the job id in
+`clientContext.correlationId`:
+
+```json
+{
+  "schemaVersion": "evidence-inventory-request/v1",
+  "case": { "id": "42", "title": "...", "text": "...", "language": "es_CL" },
+  "clientContext": { "service": "ethicapp", "correlationId": "<correlationId>", "caseId": 42 }
+}
+```
+
+The tutor worker answers through the callback endpoint with serviceId
+`argumentation-tutor-evidence-inventory`, the same Keycloak client as ATS
+(`argumentation-tutor-api`), and an `evidence-inventory-result/v1` payload. The
+adapter keeps the job open after the request and stores the result in
+`case_evidence_inventories` only when the callback matches the latest
+generation of the case, so results of superseded requests are ignored.
+
+The teacher can request a new draft from the case page
+(`POST /cases/:id/evidence-inventory/generate`). That endpoint replays
+`case-created` with `dispatchHook(..., { enabledServiceIds: [<this service>] })`,
+so other `case-created` subscribers are not triggered again. PDF replacement,
+import, and duplication do not fire `case-created`; the teacher regenerates the
+inventory by hand in those cases.
 
 ## Adapter Guidelines
 
