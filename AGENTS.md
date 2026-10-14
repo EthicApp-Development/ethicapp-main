@@ -256,3 +256,12 @@ When adding/changing translatable features:
 3. Ensure API/email/user-flow messages are localized as applicable.
 4. Ensure locale inference/normalization follows the canonical rule above.
 5. If DB locale defaults or schema are touched, keep naming as `preferred_locale` and defaults aligned with the policy.
+
+## Agent Skills
+
+`.claude/settings.json` registers the `ethicapp-agent-skills` marketplace
+(`EthicApp-Development/ethicapp-agent-skills`, private) and enables the
+`ethicapp-security` plugin for anyone who clones and trusts this repository.
+Use `/ethicapp-security:dependency-vulnerabilities` for dependency
+vulnerability audits and fixes; the skill defers to this file for repository
+facts.

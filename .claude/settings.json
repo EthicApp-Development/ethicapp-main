@@ -1,0 +1,13 @@
+{
+  "extraKnownMarketplaces": {
+    "ethicapp-agent-skills": {
+      "source": {
+        "source": "github",
+        "repo": "EthicApp-Development/ethicapp-agent-skills"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "ethicapp-security@ethicapp-agent-skills": true
+  }
+}
