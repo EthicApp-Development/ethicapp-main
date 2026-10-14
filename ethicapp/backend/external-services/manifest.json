@@ -76,6 +76,23 @@
         "allowedClientIds": ["case-analyst-api"],
         "requiredRoles": []
       }
+    },
+    {
+      "id": "argumentation-tutor-evidence-inventory",
+      "description": "Drafts the evidence inventory of each new case through the Argumentation Tutor V2 API for teacher review.",
+      "adapter": "./adapters/evidence-inventory.adapter.js",
+      "hooks": [
+        "case-created",
+        "callback-received"
+      ],
+      "globalHooks": [
+        "case-created"
+      ],
+      "enabled": true,
+      "callbackAuth": {
+        "allowedClientIds": ["argumentation-tutor-api"],
+        "requiredRoles": []
+      }
     }
   ]
 }

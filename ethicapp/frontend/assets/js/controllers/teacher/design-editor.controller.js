@@ -57,7 +57,15 @@ export function DesignEditorController($scope, $translate, $timeout,
 
     vm.loadExternalServices = async function() {
         try {
-            vm.externalServices = await ExternalServicesCatalogService.getServices();
+            const services = await ExternalServicesCatalogService.getServices();
+            // Services that only listen to global hooks (for example
+            // case-created) run outside activities, so they are not phase options.
+            vm.externalServices = services.filter(service => {
+                const globalHooks = service.globalHooks || [];
+                return (service.hooks || []).some(hookName => {
+                    return hookName !== "callback-received" && !globalHooks.includes(hookName);
+                });
+            });
         } catch (error) {
             console.error("[DesignEditorController::loadExternalServices] Error loading external services.", error);
             vm.externalServices = [];
