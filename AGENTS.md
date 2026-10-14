@@ -260,7 +260,7 @@ When adding/changing translatable features:
 ## Agent Skills
 
 `.claude/settings.json` registers the `ethicapp-agent-skills` marketplace
-(`EthicApp-Development/ethicapp-agent-skills`, private) and enables the
+(`EthicApp-Development/ethicapp-agent-skills`, public) and enables the
 `ethicapp-security` plugin for anyone who clones and trusts this repository.
 Use `/ethicapp-security:dependency-vulnerabilities` for dependency
 vulnerability audits and fixes; the skill defers to this file for repository
