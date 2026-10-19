@@ -10,6 +10,12 @@ const DEFAULT_TTL_SECONDS = 24 * 60 * 60;
 // Per store operation. A request reads and then writes the session, so a
 // stalled Redis adds at most about twice this value.
 const DEFAULT_OPERATION_TIMEOUT_MS = 250;
+// After a failure, operations skip Redis for this long before one probe is let
+// through, so a degraded Redis receives no traffic beyond that probe.
+const DEFAULT_COOLDOWN_MS = 5000;
+// Hard cap on commands queued or awaiting a reply on the session connection.
+// Beyond it node-redis rejects new commands immediately ("The queue is full").
+const DEFAULT_MAX_PENDING_COMMANDS = 100;
 
 /**
  * Lifetime of a student-app session. connect-redis derives the Redis TTL from
@@ -31,16 +37,36 @@ export function resolveStudentSessionTtlSeconds(env = process.env) {
  * recovered. When the inner store errors or does not answer within
  * `timeoutMs`, reads behave as "no stored session" and writes are dropped.
  *
+ * A failure also opens a circuit: for `cooldownMs` operations return the
+ * fallback without reaching the inner store, then a single probe is let
+ * through and its outcome closes or reopens the circuit. A timeout
+ * additionally calls `onTimeout`, which lets the owner of the connection
+ * release the operations still waiting on it (see createStudentSessionStore).
+ * Together they keep the work retained by a stalled Redis bounded, not just
+ * request latency.
+ *
  * It deliberately never emits `disconnect`: express-session would then skip
  * creating req.session and every route would respond 401.
  */
 export class ResilientSessionStore extends session.Store {
-  constructor({ store, timeoutMs = DEFAULT_OPERATION_TIMEOUT_MS, logger = console }) {
+  constructor({
+    store,
+    timeoutMs = DEFAULT_OPERATION_TIMEOUT_MS,
+    cooldownMs = DEFAULT_COOLDOWN_MS,
+    onTimeout = () => {},
+    logger = console,
+    now = Date.now
+  }) {
     super();
     this.store = store;
     this.timeoutMs = timeoutMs;
+    this.cooldownMs = cooldownMs;
+    this.onTimeout = onTimeout;
     this.logger = logger;
+    this.now = now;
     this.degraded = false;
+    this.retryAt = 0;
+    this.probeInFlight = false;
   }
 
   get(sid, callback) {
@@ -60,6 +86,16 @@ export class ResilientSessionStore extends session.Store {
   }
 
   run(operation, callback, fallbackValue, invoke) {
+    let isProbe = false;
+    if (this.degraded) {
+      if (this.probeInFlight || this.now() < this.retryAt) {
+        setImmediate(() => callback?.(null, fallbackValue));
+        return;
+      }
+      this.probeInFlight = true;
+      isProbe = true;
+    }
+
     let settled = false;
 
     const finish = (error, value) => {
@@ -68,6 +104,9 @@ export class ResilientSessionStore extends session.Store {
       }
       settled = true;
       clearTimeout(timer);
+      if (isProbe) {
+        this.probeInFlight = false;
+      }
 
       if (error) {
         this.markDegraded(operation, error);
@@ -79,11 +118,10 @@ export class ResilientSessionStore extends session.Store {
       callback?.(null, value);
     };
 
-    const timer = setTimeout(
-      () => finish(new Error(`timed out after ${this.timeoutMs} ms`)),
-      this.timeoutMs
-    );
-    timer.unref?.();
+    const timer = setTimeout(() => {
+      finish(new Error(`timed out after ${this.timeoutMs} ms`));
+      this.notifyTimeout();
+    }, this.timeoutMs);
 
     try {
       invoke(finish);
@@ -92,7 +130,18 @@ export class ResilientSessionStore extends session.Store {
     }
   }
 
+  notifyTimeout() {
+    try {
+      Promise.resolve(this.onTimeout()).catch((error) => {
+        this.logger.error('[student-session] Releasing timed-out Redis operations failed:', error.message);
+      });
+    } catch (error) {
+      this.logger.error('[student-session] Releasing timed-out Redis operations failed:', error.message);
+    }
+  }
+
   markDegraded(operation, error) {
+    this.retryAt = this.now() + this.cooldownMs;
     if (!this.degraded) {
       this.degraded = true;
       this.logger.error(
@@ -111,11 +160,53 @@ export class ResilientSessionStore extends session.Store {
 }
 
 /**
+ * Drops a connection that stopped answering while still open and opens a new
+ * one. node-redis rejects every queued and in-flight command on disconnect, so
+ * the operations the session store gave up on are released instead of waiting
+ * for Redis indefinitely. Commands already transmitted may still be applied if
+ * Redis resumes; that is harmless because session content is re-derived from
+ * the auth headers on every request.
+ *
+ * While the new connection is not ready, `disableOfflineQueue` rejects
+ * commands immediately, so nothing accumulates during the reconnection.
+ * @param {import('redis').RedisClientType} client
+ * @param {Console} logger
+ * @returns {() => Promise<void>}
+ */
+export function createConnectionResetter(client, logger) {
+  let resetting = false;
+
+  return async function resetConnection() {
+    // Only a ready connection can hold commands that stalled; a client that is
+    // already reconnecting rejects commands without queueing them.
+    if (resetting || !client.isReady) {
+      return;
+    }
+
+    resetting = true;
+    logger.error('[student-session] Redis stopped answering; resetting the session connection.');
+    try {
+      await client.disconnect();
+    } catch (error) {
+      logger.error('[student-session] Redis disconnect failed:', error.message);
+    } finally {
+      resetting = false;
+    }
+
+    client.connect().catch((error) => {
+      logger.error('[student-session] Redis reconnection failed:', error.message);
+    });
+  };
+}
+
+/**
  * Builds the ethicapp-student session store on the application Redis.
  * @param {object} [options]
  * @param {Record<string, string | undefined>} [options.env]
  * @param {typeof createClient} [options.createRedisClient] Injectable for tests.
  * @param {number} [options.timeoutMs]
+ * @param {number} [options.cooldownMs]
+ * @param {number} [options.maxPendingCommands]
  * @param {Console} [options.logger]
  * @returns {ResilientSessionStore}
  */
@@ -123,12 +214,17 @@ export function createStudentSessionStore({
   env = process.env,
   createRedisClient = createClient,
   timeoutMs,
+  cooldownMs,
+  maxPendingCommands = DEFAULT_MAX_PENDING_COMMANDS,
   logger = console
 } = {}) {
   const client = createRedisClient({
     url: resolveApplicationRedisUrl(env),
     // Fail fast while disconnected instead of queueing session commands.
-    disableOfflineQueue: true
+    disableOfflineQueue: true,
+    // disableOfflineQueue does not apply to a connection that is open but not
+    // answering; this bounds the commands such a connection can retain.
+    commandsQueueMaxLength: maxPendingCommands
   });
 
   client.on('ready', () => {
@@ -150,6 +246,8 @@ export function createStudentSessionStore({
       ttl: resolveStudentSessionTtlSeconds(env)
     }),
     timeoutMs,
+    cooldownMs,
+    onTimeout: createConnectionResetter(client, logger),
     logger
   });
 }

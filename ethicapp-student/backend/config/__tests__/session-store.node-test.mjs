@@ -1,13 +1,17 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { setTimeout as delay } from 'node:timers/promises';
 import express from 'express';
 import session from 'express-session';
+import { createClient } from 'redis';
 import hydrateLegacySession from '../../middleware/hydrateLegacySession.js';
 import {
+  createConnectionResetter,
   createStudentSessionStore,
   resolveStudentSessionTtlSeconds,
   ResilientSessionStore
 } from '../session-store.js';
+import { startFakeRedisServer } from './fake-redis-server.mjs';
 
 function createLogger() {
   const entries = { log: [], error: [] };
@@ -106,7 +110,7 @@ test('synchronous throws from the inner store are contained', async () => {
 test('degradation and recovery are logged once each', async () => {
   const inner = createControlledStore('error');
   const logger = createLogger();
-  const store = new ResilientSessionStore({ store: inner, logger });
+  const store = new ResilientSessionStore({ store: inner, cooldownMs: 0, logger });
 
   await call(store, 'get', 'a');
   await call(store, 'get', 'b');
@@ -118,6 +122,133 @@ test('degradation and recovery are logged once each', async () => {
   assert.equal(logger.entries.error.length, 1);
   assert.match(logger.entries.error[0], /unavailable \(get: connection refused\)/);
   assert.deepEqual(logger.entries.log, ['[student-session] Redis session store recovered.']);
+});
+
+test('after a failure the inner store is skipped until the cooldown lets one probe through', async () => {
+  const inner = createControlledStore('error');
+  let clock = 1000;
+  const store = new ResilientSessionStore({
+    store: inner,
+    cooldownMs: 5000,
+    logger: createLogger(),
+    now: () => clock
+  });
+
+  await call(store, 'get', 'a');
+  assert.equal(inner.state.calls, 1);
+
+  inner.state.mode = 'ok';
+  inner.data.set('b', { uid: 44 });
+  assert.deepEqual(await call(store, 'get', 'b'), [null, null], 'short-circuited to the fallback');
+  assert.deepEqual(await call(store, 'set', 'b', { uid: 45 }), [null, undefined]);
+  assert.equal(inner.state.calls, 1);
+
+  clock += 5000;
+  assert.deepEqual(await call(store, 'get', 'b'), [null, { uid: 44 }], 'the probe reaches the store');
+  assert.equal(store.degraded, false);
+  assert.deepEqual(await call(store, 'get', 'b'), [null, { uid: 44 }]);
+  assert.equal(inner.state.calls, 3);
+});
+
+test('a failed probe reopens the circuit for another cooldown', async () => {
+  const inner = createControlledStore('error');
+  let clock = 0;
+  const store = new ResilientSessionStore({ store: inner, cooldownMs: 100, logger: createLogger(), now: () => clock });
+
+  await call(store, 'get', 'a');
+  clock = 100;
+  await call(store, 'get', 'a');
+  assert.equal(inner.state.calls, 2);
+
+  clock = 150;
+  await call(store, 'get', 'a');
+  assert.equal(inner.state.calls, 2, 'cooldown restarted at the failed probe');
+});
+
+test('only one probe reaches the inner store while it is in flight', async () => {
+  const inner = createControlledStore('error');
+  let clock = 0;
+  const store = new ResilientSessionStore({
+    store: inner,
+    timeoutMs: 20,
+    cooldownMs: 100,
+    logger: createLogger(),
+    now: () => clock
+  });
+
+  await call(store, 'get', 'a');
+  inner.state.mode = 'hang';
+  clock = 100;
+
+  await Promise.all(Array.from({ length: 10 }, (_, index) => call(store, 'get', `sid-${index}`)));
+  assert.equal(inner.state.calls, 2);
+});
+
+test('timeouts ask for the stalled operations to be released; fast errors do not', async () => {
+  const inner = createControlledStore('error');
+  let releases = 0;
+  const store = new ResilientSessionStore({
+    store: inner,
+    timeoutMs: 20,
+    cooldownMs: 0,
+    onTimeout: () => {
+      releases += 1;
+    },
+    logger: createLogger()
+  });
+
+  await call(store, 'get', 'a');
+  assert.equal(releases, 0);
+
+  inner.state.mode = 'hang';
+  await call(store, 'get', 'a');
+  assert.equal(releases, 1);
+});
+
+test('a failing release is logged and does not affect the request', async () => {
+  const logger = createLogger();
+  const store = new ResilientSessionStore({
+    store: createControlledStore('hang'),
+    timeoutMs: 20,
+    onTimeout: async () => {
+      throw new Error('boom');
+    },
+    logger
+  });
+
+  assert.deepEqual(await call(store, 'get', 'a'), [null, null]);
+  await delay(0);
+  assert.ok(logger.entries.error.some((entry) => /Releasing timed-out Redis operations failed: boom/.test(entry)));
+});
+
+function createFakeRedisClient() {
+  const client = {
+    isReady: true,
+    disconnects: 0,
+    connects: 0,
+    async disconnect() {
+      client.disconnects += 1;
+      client.isReady = false;
+      await delay(5);
+    },
+    connect() {
+      client.connects += 1;
+      return new Promise(() => {});
+    }
+  };
+  return client;
+}
+
+test('the connection resetter replaces a ready connection once, even when asked repeatedly', async () => {
+  const client = createFakeRedisClient();
+  const reset = createConnectionResetter(client, createLogger());
+
+  await Promise.all([reset(), reset(), reset()]);
+  assert.equal(client.disconnects, 1);
+  assert.equal(client.connects, 1);
+
+  await reset();
+  assert.equal(client.disconnects, 1, 'a reconnecting client is left alone');
 });
 
 test('resolveStudentSessionTtlSeconds defaults to the 24 h student idle timeout', () => {
@@ -145,7 +276,11 @@ test('createStudentSessionStore uses the application Redis with a fail-fast clie
     logger: createLogger()
   });
 
-  assert.deepEqual(created[0].options, { url: 'redis://redis.test:6379', disableOfflineQueue: true });
+  assert.deepEqual(created[0].options, {
+    url: 'redis://redis.test:6379',
+    disableOfflineQueue: true,
+    commandsQueueMaxLength: 100
+  });
   assert.ok(store instanceof ResilientSessionStore);
   assert.equal(store.store.prefix, 'custom:');
   assert.equal(store.store.ttl, 3600);
@@ -209,4 +344,120 @@ test('sessions persist across requests while Redis is healthy', async () => {
     assert.deepEqual(await second.json(), { uid: 44, role: 'A', visits: 2 });
     assert.equal(inner.data.size, 1);
   });
+});
+
+// Counts session commands issued through the real node-redis client that have
+// not settled yet: the work a stalled connection keeps alive.
+function trackPendingCommands(client, tracker) {
+  for (const method of ['get', 'set', 'expire', 'del']) {
+    const original = client[method].bind(client);
+    client[method] = (...args) => {
+      tracker.pending += 1;
+      return original(...args).finally(() => {
+        tracker.pending -= 1;
+      });
+    };
+  }
+}
+
+async function waitFor(condition, timeoutMs = 2000) {
+  const deadline = Date.now() + timeoutMs;
+  while (!condition()) {
+    if (Date.now() > deadline) {
+      throw new Error('condition not met in time');
+    }
+    await delay(5);
+  }
+}
+
+async function createStoreOnFakeRedis(t, options) {
+  const redis = await startFakeRedisServer();
+  const tracker = { pending: 0 };
+  const logger = createLogger();
+  let client;
+
+  const store = createStudentSessionStore({
+    env: { REDIS_SESSION_URL: `redis://127.0.0.1:${redis.port}` },
+    createRedisClient: (clientOptions) => {
+      client = createClient(clientOptions);
+      trackPendingCommands(client, tracker);
+      return client;
+    },
+    logger,
+    ...options
+  });
+
+  t.after(async () => {
+    await client.disconnect().catch(() => {});
+    await redis.close();
+  });
+  await waitFor(() => client.isReady);
+
+  return { redis, store, tracker, logger, client: () => client };
+}
+
+test('a connected Redis that stops answering retains bounded work and recovers', async (t) => {
+  const { redis, store, tracker, logger, client } = await createStoreOnFakeRedis(t, {
+    timeoutMs: 20,
+    cooldownMs: 50
+  });
+
+  assert.deepEqual(await call(store, 'set', 'sid-kept', { uid: 44 }), [null, null]);
+  assert.deepEqual(await call(store, 'get', 'sid-kept'), [null, { uid: 44 }]);
+
+  redis.stall();
+  const retained = [];
+  for (let batch = 0; batch < 5; batch += 1) {
+    const results = await Promise.all(Array.from({ length: 100 }, (_, index) => (
+      index % 2 === 0
+        ? call(store, 'set', `sid-${batch}-${index}`, { uid: index })
+        : call(store, 'get', `sid-${batch}-${index}`)
+    )));
+    assert.ok(results.every(([error]) => error === null), 'every request is served by the fallback');
+
+    // Longer than the cooldown, so every later batch includes a probe.
+    await delay(60);
+    retained.push({ client: tracker.pending, server: redis.heldOnOpenConnections() });
+  }
+
+  // Before the fix this grew by 100 per batch. Now the timed-out commands are
+  // released by the reset, and the replacement connection only holds the
+  // handshake it is waiting on (CLIENT SETINFO) while Redis is stalled.
+  for (const { client: pending, server: held } of retained) {
+    assert.equal(pending, 0);
+    assert.ok(held <= 2, `the open connection holds ${held} commands`);
+  }
+  assert.equal(
+    logger.entries.error.filter((entry) => /resetting the session connection/.test(entry)).length,
+    1
+  );
+
+  redis.resume();
+  await waitFor(() => client().isReady);
+  await delay(60);
+
+  assert.deepEqual(await call(store, 'get', 'sid-kept'), [null, { uid: 44 }], 'the probe reaches Redis again');
+  assert.equal(store.degraded, false);
+  assert.ok(logger.entries.log.includes('[student-session] Redis session store recovered.'));
+
+  assert.deepEqual(await call(store, 'set', 'sid-after', { uid: 45 }), [null, null]);
+  assert.deepEqual(await call(store, 'get', 'sid-after'), [null, { uid: 45 }]);
+});
+
+test('the session connection never holds more than maxPendingCommands', async (t) => {
+  const { redis, store, tracker } = await createStoreOnFakeRedis(t, {
+    timeoutMs: 200,
+    maxPendingCommands: 100
+  });
+
+  redis.stall();
+  const requests = Promise.all(Array.from({ length: 300 }, (_, index) => call(store, 'get', `sid-${index}`)));
+
+  // Commands beyond the cap are rejected at once instead of being queued.
+  await delay(50);
+  assert.equal(tracker.pending, 100);
+
+  await requests;
+  await delay(20);
+  assert.equal(tracker.pending, 0, 'the timeout releases the queued commands');
 });
