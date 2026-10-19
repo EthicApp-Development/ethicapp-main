@@ -18,12 +18,12 @@ const fakeAccess = {
 };
 const silentLogger = { warn: () => {}, error: () => {} };
 
-async function startServer() {
+async function startServer({ access = fakeAccess } = {}) {
     const httpServer = createServer();
     const io = new SocketIO(httpServer);
     const serverSockets = [];
-    const studentInit = createStudentSocketInit({ access: fakeAccess, logger: silentLogger });
-    const teacherInit = createTeacherSocketInit({ access: fakeAccess, logger: silentLogger });
+    const studentInit = createStudentSocketInit({ access, logger: silentLogger });
+    const teacherInit = createTeacherSocketInit({ access, logger: silentLogger });
 
     const namespaces = configureSocketServer(io, {
         sessionMiddleware: session({
@@ -162,6 +162,42 @@ for (const transport of ["polling", "websocket"]) {
             const notification = receivesWithin(client, "notification");
             client.emit("broadcastToSession", 57, "spoofed");
             assert.equal(await notification, false);
+        } finally {
+            client.close();
+            await server.close();
+        }
+    });
+
+    test(`[${transport}] a leave sent while a join is authorized is not undone`, async () => {
+        let releaseSession57;
+        const session57Check = new Promise((resolve) => {
+            releaseSession57 = resolve;
+        });
+        const server = await startServer({
+            access: {
+                ...fakeAccess,
+                isSessionParticipant: async (uid, sessionId) =>
+                    (sessionId === 57 ? session57Check : uid === 44 && sessionId === 58),
+            },
+        });
+        const client = connect(server, "/student", { userId: 44, role: "A", transport });
+        try {
+            await waitForConnection(client);
+
+            const join57 = client.emitWithAck("joinSession", 57);
+            client.emit("leaveSession", 57);
+            assert.deepEqual(await client.emitWithAck("joinSession", 58), { ok: true });
+            releaseSession57(true);
+
+            assert.deepEqual(await join57, { ok: false, error: "superseded" });
+
+            const rooms = server.serverSockets[0].rooms;
+            assert.ok(rooms.has("session-58"));
+            assert.ok(!rooms.has("session-57"), "abandoned session is not re-joined");
+
+            const abandoned = receivesWithin(client, "onEndSession");
+            server.studentNamespace.to("session-57").emit("onEndSession", { content: null });
+            assert.equal(await abandoned, false);
         } finally {
             client.close();
             await server.close();

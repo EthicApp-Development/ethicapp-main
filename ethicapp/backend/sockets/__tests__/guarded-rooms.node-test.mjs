@@ -113,3 +113,63 @@ test("joins without an acknowledgement callback still work", async () => {
     await socket.emit("leaveSession", 57);
     assert.equal(socket.rooms.size, 0);
 });
+
+function deferred() {
+    let resolve;
+    const promise = new Promise((resolvePromise) => {
+        resolve = resolvePromise;
+    });
+    return { promise, resolve };
+}
+
+test("a leave sent while the join is being authorized wins", async () => {
+    const socket = createFakeSocket();
+    const check = deferred();
+    register(socket, () => check.promise);
+
+    let ack;
+    const joining = socket.emit("joinSession", 57, (result) => {
+        ack = result;
+    });
+    await socket.emit("leaveSession", 57);
+    check.resolve(true);
+    await joining;
+
+    assert.equal(socket.rooms.size, 0);
+    assert.deepEqual(ack, { ok: false, error: "superseded" });
+});
+
+test("the latest join after a leave is applied once authorized", async () => {
+    const socket = createFakeSocket();
+    const checks = [deferred(), deferred()];
+    let call = 0;
+    register(socket, () => checks[call++].promise);
+
+    const acks = [];
+    const first = socket.emit("joinSession", 57, result => acks.push(["first", result]));
+    await socket.emit("leaveSession", 57);
+    const second = socket.emit("joinSession", 57, result => acks.push(["second", result]));
+
+    checks[1].resolve(true);
+    await second;
+    checks[0].resolve(true);
+    await first;
+
+    assert.deepEqual(Array.from(socket.rooms), ["session-57"]);
+    assert.deepEqual(acks, [["second", { ok: true }], ["first", { ok: false, error: "superseded" }]]);
+});
+
+test("pending joins of different rooms do not affect each other", async () => {
+    const socket = createFakeSocket();
+    const checks = new Map([[57, deferred()], [58, deferred()]]);
+    register(socket, id => checks.get(id).promise);
+
+    const joining57 = socket.emit("joinSession", 57);
+    const joining58 = socket.emit("joinSession", 58);
+    await socket.emit("leaveSession", 57);
+    checks.get(57).resolve(true);
+    checks.get(58).resolve(true);
+    await Promise.all([joining57, joining58]);
+
+    assert.deepEqual(Array.from(socket.rooms), ["session-58"]);
+});
