@@ -40,10 +40,10 @@ import { renderScripts } from "./helpers/views-helper.js";
 import redisClient from "./db/redis.js"; // Importar el módulo centralizado
 import { ErrorReply } from "redis";
 import {
-  hydrateLegacySession,
-  exposeLegacySession,
-  requireLegacyAuth
-} from './middleware/index.js';
+    hydrateLegacySession,
+    exposeLegacySession,
+    requireLegacyAuth
+} from "./middleware/index.js";
 
 let app = express();
 app.set("trust proxy", true); // i.e., trust headers from a reverse proxy

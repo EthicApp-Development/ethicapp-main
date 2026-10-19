@@ -48,11 +48,11 @@ const toTeacherNotifications = (socketNamespace) => {
 
         chatMessage: (sessionId, phaseId, questionId, groupId, message) => {
             socketNamespace.to(`session-${sessionId}`).emit("onChatMessage", { 
-                    phaseId,
-                    questionId,
-                    groupId,
-                    message
-                });
+                phaseId,
+                questionId,
+                groupId,
+                message
+            });
         },
 
         groupChatMessage: (groupId, message) => {

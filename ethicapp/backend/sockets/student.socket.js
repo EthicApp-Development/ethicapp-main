@@ -61,7 +61,7 @@ const toStudentsNotifications = (socketNamespace) => {
                 { content });
         },
 
-        endSession:  (sessionId, content) => {
+        endSession: (sessionId, content) => {
             socketNamespace.to(`session-${sessionId}`).emit("onEndSession", 
                 { content });
         },
