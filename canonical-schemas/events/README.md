@@ -28,7 +28,9 @@ notifications) without calling it directly.
   and Redis does not store it.
 - Consumers deduplicate by `id` and must be idempotent.
 - Publishers never fail the originating request because of a publish error;
-  they log it and continue.
+  they log it and continue. They connect at service startup, and a publish
+  issued before the first connection completes waits for it for a bounded time
+  (1 s by default); afterwards a disconnected publisher fails immediately.
 - Consumers ignore and log invalid envelopes, unknown types and unknown versions.
 
 This fits notifications whose state can be recovered from the database, such as
