@@ -6,8 +6,9 @@ import {
   normalizeDevice,
   normalizeSessionCode
 } from '../session-join.service.js';
+import { DomainEventPublisher } from '../domain-events/domain-event-publisher.js';
 
-const silentLogger = { info: () => {} };
+const silentLogger = { info: () => {}, warn: () => {}, error: () => {} };
 
 // In-memory stand-in for the sessions, sesusers and stages tables. Every query
 // yields to the event loop first, so concurrent joins interleave like real I/O.
@@ -174,4 +175,39 @@ test('every attempt writes one structured log line', async () => {
     { outcome: 'joined', sessionId: 57, uid: 44, code: 'k0021d' },
     { outcome: 'code_not_found', sessionId: null, uid: 44, code: 'zzzzzz' }
   ]);
+});
+
+test('a join is reported as joined when the notification cannot be published', async () => {
+  const database = createFakeDatabase({ sessions: [{ id: 57, code: 'k0021d' }] });
+  const throwingPublisher = {
+    publish: async () => {
+      throw new Error('unexpected publisher failure');
+    }
+  };
+
+  const result = await join(database, throwingPublisher);
+
+  assert.deepEqual(result, { outcome: JOIN_OUTCOMES.JOINED, sessionId: 57 });
+  assert.equal(database.inserted.length, 1);
+});
+
+test('a connected Redis that stops responding does not stall a stored join', async () => {
+  const database = createFakeDatabase({ sessions: [{ id: 57, code: 'k0021d' }] });
+  const warnings = [];
+  const stalledRedisClient = { isReady: true, publish: () => new Promise(() => {}) };
+  const publisher = new DomainEventPublisher({
+    redisClient: stalledRedisClient,
+    publishTimeoutMs: 30,
+    logger: { error: () => {} }
+  });
+
+  const start = Date.now();
+  const result = await join(database, publisher, {
+    logger: { info: () => {}, warn: (line) => warnings.push(line), error: () => {} }
+  });
+
+  assert.deepEqual(result, { outcome: JOIN_OUTCOMES.JOINED, sessionId: 57 });
+  assert.ok(Date.now() - start < 500, 'join resolves shortly after the publish timeout');
+  assert.equal(database.inserted.length, 1);
+  assert.equal(warnings.length, 1);
 });

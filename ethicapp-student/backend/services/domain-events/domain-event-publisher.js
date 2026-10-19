@@ -1,29 +1,53 @@
 import { createDomainEvent, getDomainEventChannel } from './domain-event-envelope.js';
 
 const DEFAULT_INITIAL_CONNECTION_TIMEOUT_MS = 1000;
+const DEFAULT_PUBLISH_TIMEOUT_MS = 500;
 const TIMED_OUT = Symbol('timed-out');
 
 /**
- * Publishes domain events on Redis pub/sub. Publishing never throws: a failure
- * is logged and reported as `false`, so the originating request is unaffected.
+ * Resolves with the promise's value, or with TIMED_OUT after `timeoutMs`.
+ * Rejections of `promise` propagate, including late ones being observed here,
+ * so an abandoned promise never becomes an unhandled rejection.
+ */
+async function raceWithTimeout(promise, timeoutMs) {
+  let timer;
+  const timeout = new Promise((resolve) => {
+    timer = setTimeout(() => resolve(TIMED_OUT), timeoutMs);
+    timer.unref?.();
+  });
+
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * Publishes domain events on Redis pub/sub. Publishing never throws and never
+ * waits without bound: a failure or timeout is logged and reported as `false`,
+ * so the originating request is unaffected.
  *
- * The Redis client is expected to run without an offline queue, so commands
- * fail fast while disconnected. To avoid losing events published right after
- * startup, publishing waits for the initial connection, but only once and for
- * at most `initialConnectionTimeoutMs`. After that, or after the initial
- * connection settles, a disconnected client fails immediately.
+ * - The Redis client is expected to run without an offline queue, so commands
+ *   fail fast while the client knows it is disconnected.
+ * - Publishes issued before the first connection completes wait for it once,
+ *   for at most `initialConnectionTimeoutMs`.
+ * - Each PUBLISH waits at most `publishTimeoutMs`, which covers a connection
+ *   that is still open but whose server stopped responding.
  */
 export class DomainEventPublisher {
   constructor({
     redisClient,
     initialConnection = null,
     initialConnectionTimeoutMs = DEFAULT_INITIAL_CONNECTION_TIMEOUT_MS,
+    publishTimeoutMs = DEFAULT_PUBLISH_TIMEOUT_MS,
     logger = console,
     now,
     generateId
   }) {
     this.redisClient = redisClient;
     this.initialConnectionTimeoutMs = initialConnectionTimeoutMs;
+    this.publishTimeoutMs = publishTimeoutMs;
     this.logger = logger;
     this.now = now;
     this.generateId = generateId;
@@ -47,14 +71,7 @@ export class DomainEventPublisher {
       return;
     }
 
-    let timer;
-    const timeout = new Promise((resolve) => {
-      timer = setTimeout(() => resolve(TIMED_OUT), this.initialConnectionTimeoutMs);
-      timer.unref?.();
-    });
-
-    const outcome = await Promise.race([pending, timeout]);
-    clearTimeout(timer);
+    const outcome = await raceWithTimeout(pending, this.initialConnectionTimeoutMs);
 
     if (outcome === TIMED_OUT && this.pendingInitialConnection === pending) {
       this.pendingInitialConnection = null;
@@ -69,7 +86,7 @@ export class DomainEventPublisher {
    * @param {string} type Kebab-case event type.
    * @param {number} version Event version.
    * @param {object} payload Event payload, validated against the known contract.
-   * @returns {Promise<boolean>} Whether the event was handed to Redis.
+   * @returns {Promise<boolean>} Whether Redis accepted the event in time.
    */
   async publish(type, version, payload) {
     const { event, errors } = createDomainEvent({
@@ -88,7 +105,18 @@ export class DomainEventPublisher {
     await this.waitForInitialConnection();
 
     try {
-      await this.redisClient.publish(getDomainEventChannel(type), JSON.stringify(event));
+      const publishing = Promise.resolve().then(() =>
+        this.redisClient.publish(getDomainEventChannel(type), JSON.stringify(event)));
+      const outcome = await raceWithTimeout(publishing, this.publishTimeoutMs);
+
+      if (outcome === TIMED_OUT) {
+        this.logger.error(
+          `[domain-events] Redis did not accept ${type} event ${event.id} ` +
+          `within ${this.publishTimeoutMs} ms; the event is dropped.`
+        );
+        return false;
+      }
+
       return true;
     } catch (error) {
       this.logger.error(`[domain-events] Could not publish ${type} event ${event.id}:`, error);

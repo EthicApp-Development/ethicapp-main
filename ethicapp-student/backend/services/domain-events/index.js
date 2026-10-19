@@ -17,6 +17,7 @@ export function resolveDomainEventRedisUrl(env = process.env) {
  * @param {Record<string, string | undefined>} [options.env]
  * @param {typeof createClient} [options.createRedisClient] Injectable for tests.
  * @param {number} [options.initialConnectionTimeoutMs]
+ * @param {number} [options.publishTimeoutMs]
  * @param {Console} [options.logger]
  * @returns {DomainEventPublisher}
  */
@@ -24,6 +25,7 @@ export function createDomainEventPublisher({
   env = process.env,
   createRedisClient = createClient,
   initialConnectionTimeoutMs,
+  publishTimeoutMs,
   logger = console
 } = {}) {
   const redisClient = createRedisClient({
@@ -49,6 +51,7 @@ export function createDomainEventPublisher({
     redisClient,
     initialConnection,
     initialConnectionTimeoutMs,
+    publishTimeoutMs,
     logger
   });
 }

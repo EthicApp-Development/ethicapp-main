@@ -83,6 +83,20 @@ async function insertMembership(query, { uid, sessionId, device }) {
   return result.rowCount > 0;
 }
 
+// The membership is already stored when this runs, so a notification failure
+// must never turn the join into an error. The publisher bounds its own wait.
+async function notifyParticipantJoined(publisher, logger, payload) {
+  try {
+    const published = await publisher.publish('session-participant-joined', 1, payload);
+
+    if (!published) {
+      logger.warn(`[join] Teacher notification not delivered for ${JSON.stringify(payload)}.`);
+    }
+  } catch (error) {
+    logger.error('[join] Teacher notification failed:', error);
+  }
+}
+
 /**
  * Joins a student to the session identified by `code`.
  *
@@ -111,11 +125,7 @@ export async function joinSessionByCode({ uid, code, device, query, publisher, l
     result = { outcome: JOIN_OUTCOMES.JOINING_CLOSED, sessionId: session.sesid };
   } else if (await insertMembership(query, { uid, sessionId: session.sesid, device })) {
     result = { outcome: JOIN_OUTCOMES.JOINED, sessionId: session.sesid };
-    await publisher.publish('session-participant-joined', 1, {
-      sessionId: session.sesid,
-      userId: uid,
-      device
-    });
+    await notifyParticipantJoined(publisher, logger, { sessionId: session.sesid, userId: uid, device });
   } else {
     result = { outcome: JOIN_OUTCOMES.ALREADY_JOINED, sessionId: session.sesid };
   }
