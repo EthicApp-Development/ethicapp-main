@@ -183,6 +183,8 @@ services:
     depends_on:
       flyway:
         condition: service_completed_successfully
+      redis:
+        condition: service_started
 
   management-console:
     build:

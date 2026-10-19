@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.ethicapp.local/events/domain-event-envelope-v1.schema.json",
+  "title": "EthicApp Domain Event Envelope",
+  "description": "Envelope for one-way domain events published by an EthicApp service on the application Redis pub/sub channel ethicapp:events:<type>.",
+  "type": "object",
+  "required": ["type", "version", "id", "occurredAt", "source", "payload"],
+  "additionalProperties": false,
+  "properties": {
+    "type": {
+      "description": "Kebab-case event name. Also selects the channel ethicapp:events:<type>.",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+    },
+    "version": {
+      "description": "Payload contract version for this event type.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "id": {
+      "description": "Unique event identifier, used for deduplication and log correlation.",
+      "type": "string",
+      "format": "uuid"
+    },
+    "occurredAt": {
+      "description": "Time the publisher recorded the event.",
+      "type": "string",
+      "format": "date-time"
+    },
+    "source": {
+      "description": "Kebab-case name of the publishing service.",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+    },
+    "payload": {
+      "description": "Event-specific data defined by the schema for type and version. Must not contain personal data.",
+      "type": "object"
+    }
+  }
+}

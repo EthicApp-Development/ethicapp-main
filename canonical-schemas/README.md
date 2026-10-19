@@ -4,6 +4,7 @@ This directory currently contains JSON Schemas for portable EthicApp objects.
 
 - `ethicapp-v1.schema.json`: legacy activity design schema.
 - `case-document-representation-v1.schema.json`: canonical representation of an ethical case document as metadata, source-format metadata, text content, and an ordered rendered-image sequence.
+- `events/`: domain-event envelope and per-event payload contracts for one-way notifications between services over the application Redis. See [`events/README.md`](events/README.md).
 - `tag-taxonomy-v1.schema.json`: portable controlled taxonomy for semantic tags used by ethical cases and activity designs, including domain-specific translations outside UI locale catalogs.
 
 ## Tag Taxonomy Notes

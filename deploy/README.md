@@ -189,7 +189,9 @@ new or edited JSON taxonomy files from the deployed release are upserted into
 and manages a different seed directory through `ETHICAPP_TAG_TAXONOMY_SEED_DIR`.
 
 Redis is role-specific in production. Use `REDIS_SESSION_*` for Express session
-storage and `REDIS_CACHE_*` for database-derived cache entries. Production
+storage and for the domain-event pub/sub channel that `ethicapp-student` uses to
+notify `ethicapp` (`canonical-schemas/events/README.md`), and `REDIS_CACHE_*` for
+database-derived cache entries. Production
 deployments should expose distinct service names, normally `redis-session` and
 `redis-cache`, and should not provide generic `REDIS_HOST`, `REDIS_PORT`, or
 `REDIS_URL` fallbacks. Development may map both roles to the same Redis instance.
