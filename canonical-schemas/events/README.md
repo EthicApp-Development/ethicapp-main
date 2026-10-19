@@ -31,6 +31,8 @@ notifications) without calling it directly.
   they log it and continue. They connect at service startup, and a publish
   issued before the first connection completes waits for it for a bounded time
   (1 s by default); afterwards a disconnected publisher fails immediately.
+  Each publish also waits at most 500 ms for Redis to accept it, so a server
+  that stops responding on an open connection cannot stall the request.
 - Consumers ignore and log invalid envelopes, unknown types and unknown versions.
 
 This fits notifications whose state can be recovered from the database, such as

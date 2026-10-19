@@ -23,6 +23,8 @@ const enUS = {
     joiningAction: 'Joining...',
     invalidCode: 'Enter a valid session code.',
     joinErrorFallback: 'Unable to join the session',
+    codeNotFound: 'No session matches this code. Check it and try again.',
+    joiningClosed: 'This session is no longer accepting participants. Ask your teacher.',
     alreadyJoined: 'You already joined this session. Redirecting...',
     joinedSuccess: 'You joined the session successfully. Redirecting...'
   },

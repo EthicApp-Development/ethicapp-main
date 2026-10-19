@@ -94,3 +94,45 @@ test('publish reports Redis failures as false without throwing', async () => {
   assert.equal(result, false);
   assert.equal(logger.errors.length, 1);
 });
+
+test('publish gives up after publishTimeoutMs when a connected Redis stops responding', async () => {
+  const logger = createSilentLogger();
+  const publisher = new DomainEventPublisher({
+    redisClient: { publish: () => new Promise(() => {}) },
+    publishTimeoutMs: 30,
+    logger
+  });
+
+  const start = Date.now();
+  const result = await publisher.publish('session-participant-joined', 1, { sessionId: 57, userId: 44, device: 'web' });
+
+  assert.equal(result, false);
+  assert.ok(Date.now() - start >= 25, 'waits for the publish timeout');
+  assert.ok(Date.now() - start < 500, 'does not wait for the stalled command');
+  assert.equal(logger.errors.length, 1);
+});
+
+test('a PUBLISH that fails after the timeout is not an unhandled rejection', async () => {
+  const unhandled = [];
+  const onUnhandled = (reason) => unhandled.push(reason);
+  process.on('unhandledRejection', onUnhandled);
+
+  try {
+    const publisher = new DomainEventPublisher({
+      redisClient: {
+        publish: () => new Promise((resolve, reject) => {
+          setTimeout(() => reject(new Error('Socket closed unexpectedly')), 40);
+        })
+      },
+      publishTimeoutMs: 10,
+      logger: createSilentLogger()
+    });
+
+    assert.equal(await publisher.publish('session-participant-joined', 1, { sessionId: 57, userId: 44, device: 'web' }), false);
+    await new Promise((resolve) => setTimeout(resolve, 80));
+
+    assert.deepEqual(unhandled, []);
+  } finally {
+    process.off('unhandledRejection', onUnhandled);
+  }
+});

@@ -23,6 +23,8 @@ const esCL = {
     joiningAction: 'Uniendo...',
     invalidCode: 'Ingresa un código de sesión válido.',
     joinErrorFallback: 'No fue posible unirse a la sesión',
+    codeNotFound: 'Ninguna sesión corresponde a este código. Revísalo e inténtalo de nuevo.',
+    joiningClosed: 'Esta sesión ya no admite nuevos participantes. Consulta a tu profesor.',
     alreadyJoined: 'Ya habías ingresado a esta sesión. Redirigiendo...',
     joinedSuccess: 'Te uniste a la sesión correctamente. Redirigiendo...'
   },

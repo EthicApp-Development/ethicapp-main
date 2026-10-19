@@ -1,31 +1,9 @@
 import { Router } from 'express';
 import { query } from '../config/database.js';
-import studentMessages from '../i18n/messages/student-messages.js';
-import { translateMessage } from '../i18n/locale.js';
+import { createSessionJoinRouter } from './session-join.routes.js';
+import { ensureStudentSession } from './student-route-helpers.js';
 
 const router = Router();
-
-function t(req, key) {
-  return translateMessage(req, key, studentMessages);
-}
-
-
-function ensureStudentSession(req, res) {
-  const uid = Number(req.session?.uid);
-  const role = req.session?.role;
-
-  if (!Number.isInteger(uid) || uid <= 0) {
-    res.status(401).json({ error: t(req, 'unauthenticated') });
-    return null;
-  }
-
-  if (role !== 'A') {
-    res.status(403).json({ error: t(req, 'unauthorizedStudent') });
-    return null;
-  }
-
-  return uid;
-}
 
 router.get('/session', (req, res) => {
   res.json({
@@ -82,90 +60,6 @@ router.get('/sessions', async (req, res, next) => {
   }
 });
 
-router.post('/sessions/join', async (req, res, next) => {
-  const uid = ensureStudentSession(req, res);
-
-  if (!uid) {
-    return;
-  }
-
-  const code = (req.body?.code ?? '').toLowerCase();
-  const { device } = req.body;
-
-  if (!code) {
-    return res.status(400).json({ error: t(req, 'sessionCodeRequired') });
-  }
-
-  console.log('[join] payload', {
-    uid,
-    code,
-    device: device ?? null
-  });
-
-  try {
-    const existingMembership = await query(
-      `
-        SELECT s.id AS sesid
-        FROM sesusers AS su
-        JOIN sessions AS s
-          ON s.id = su.sesid
-        WHERE su.uid = $1
-          AND s.code = $2
-        LIMIT 1
-      `,
-      [uid, code]
-    );
-
-    if (existingMembership.rowCount > 0) {
-      return res.status(200).json({
-        sesid: existingMembership.rows[0].sesid,
-        alreadyJoined: true
-      });
-    }
-
-    const result = await query(
-      `
-        INSERT INTO sesusers(uid, sesid, device)
-        SELECT $1::int AS uid,
-               id,
-               $2 AS device
-        FROM sessions
-        WHERE code = $3
-          AND NOT EXISTS (
-              SELECT su.sesid
-              FROM sesusers AS su,
-                   sessions AS s
-              WHERE su.uid = $1
-                AND s.code = $3
-                AND su.sesid = s.id
-          )
-          AND NOT EXISTS (
-              SELECT st.id
-              FROM stages AS st,
-                   sessions AS ss
-              WHERE st.sesid = ss.id
-                AND ss.code = $3
-                AND st.type = 'team'
-          )
-        RETURNING sesid
-      `,
-      [uid, device ?? null, code]
-    );
-
-    if (result.rowCount === 0) {
-      console.log('[join] no row inserted', { uid, code, device: device ?? null });
-      return res.status(404).json({
-        error: t(req, 'joinSessionUnavailable')
-      });
-    }
-
-    return res.status(201).json({
-      sesid: result.rows[0].sesid,
-      alreadyJoined: false
-    });
-  } catch (error) {
-    return next(error);
-  }
-});
+router.use(createSessionJoinRouter());
 
 export default router;
