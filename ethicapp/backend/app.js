@@ -10,8 +10,7 @@ import cookieParser from "cookie-parser";
 
 import assetVersions from "express-asset-versions";
 
-import session from "express-session";
-import { createLegacySessionStore } from "./db/session-redis.js";
+import { getLegacySessionMiddleware } from "./config/session.config.js";
 
 import teacherHome from "./controllers/teacher-home.js";
 import user_profile from "./controllers/users/user-profile.js";
@@ -103,21 +102,7 @@ app.use(express.static(path.join(__dirname, "../frontend")));
 
 // Set up cookies and session management
 app.use(cookieParser());
-app.use(session({
-    store:             createLegacySessionStore(),
-    name:              process.env.ETHICAPP_SESSION_COOKIE_NAME || "ethicapp.sid",
-    secret:            process.env.SESSION_SECRET || "legacy-dev-secret",
-    resave:            false,
-    saveUninitialized: false,
-    cookie:            {
-        httpOnly: true,
-        secure:   process.env.ETHICAPP_SESSION_COOKIE_SECURE
-            ? process.env.ETHICAPP_SESSION_COOKIE_SECURE === "true"
-            : process.env.NODE_ENV === "production",
-        sameSite: process.env.ETHICAPP_SESSION_COOKIE_SAMESITE || "lax",
-        maxAge:   Number(process.env.ETHICAPP_SESSION_COOKIE_MAX_AGE_MS || 24 * 60 * 60 * 1000),
-    },
-}));
+app.use(getLegacySessionMiddleware());
 
 app.use(hydrateLegacySession);
 app.use(exposeLegacySession);
