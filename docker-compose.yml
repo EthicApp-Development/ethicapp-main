@@ -162,6 +162,8 @@ services:
     environment:
       - NODE_ENV=development
       - ETHICAPP_STUDENT_NODE_PORT=8503
+      - REDIS_SESSION_HOST=redis
+      - REDIS_SESSION_PORT=6379
     volumes:
       - ./ethicapp-student:/app
       - ethicapp_student_backend_node_modules:/app/backend/node_modules

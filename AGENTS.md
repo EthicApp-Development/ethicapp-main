@@ -160,7 +160,7 @@ Production-oriented changes must stay aligned with the repository-owned deployme
 - The PDF render worker is production-relevant. Keep `PDF_RENDER_*` defaults aligned across `deploy/env.contract.yml`, `ethicapp/.env.example`, `docker-compose.yml`, and deployment notes when changing rendering behavior.
 - Rendered case-document images and manifests must stay in protected uploads storage and be served through authorization-aware application endpoints. Do not expose them through public static NGINX mounts.
 - Production Redis topology is role-specific:
-  - `REDIS_SESSION_*` is for Express session storage used by `ethicapp` and `auth-backend`, and for one-way domain events between services (`canonical-schemas/events/`). Never route application logic through `REDIS_CACHE_*`.
+  - `REDIS_SESSION_*` is for Express session storage used by `ethicapp`, `auth-backend` and `ethicapp-student`, and for one-way domain events between services (`canonical-schemas/events/`). Never route application logic through `REDIS_CACHE_*`.
   - `REDIS_CACHE_*` is for database-derived cache entries used by legacy `ethicapp`.
   - Production deployments must provide distinct Redis service DNS names, normally `redis-session` and `redis-cache`.
   - Development may map both roles to the same Redis service in the root local-development Compose file.

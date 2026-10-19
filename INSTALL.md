@@ -87,7 +87,7 @@ RECAPTCHA_VERIFY_URL=https://www.google.com/recaptcha/api/siteverify
 
 Production deployments use two Redis instances:
 
-- `redis-session`: Express session storage for `ethicapp` and `auth-backend`, and the domain-event channel from `ethicapp-student` to `ethicapp` (see `canonical-schemas/events/README.md`).
+- `redis-session`: Express session storage for `ethicapp`, `auth-backend` and `ethicapp-student`, and the domain-event channel from `ethicapp-student` to `ethicapp` (see `canonical-schemas/events/README.md`). If it is unavailable, `ethicapp-student` keeps serving requests with sessions rebuilt from the auth headers.
 - `redis-cache`: database-derived cache entries used by the legacy `ethicapp` application.
 
 Development keeps a single Redis instance. In development, both `REDIS_SESSION_*` and `REDIS_CACHE_*` point to the same `redis` service.
