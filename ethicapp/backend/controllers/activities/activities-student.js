@@ -182,9 +182,9 @@ router.post("/activities/:id/response", async (req, res) => {
             sessionId,
             phaseId,
             userId,
-            questionId: Number(questionId),
+            questionId:      Number(questionId),
             designType,
-            requestPayload: req.body,
+            requestPayload:  req.body,
             responsePayload: notificationData,
         });
 
@@ -289,10 +289,10 @@ async function submitSemanticDifferentialResponse({ phaseId, userId, questionId,
     });
 
     return {
-        type: "semantic_differential",
-        uid:  userId,
-        did:  questionId,
-        sel:  value,
+        type:    "semantic_differential",
+        uid:     userId,
+        did:     questionId,
+        sel:     value,
         comment: justification,
     };
 }
@@ -355,12 +355,12 @@ async function submitRankingResponse({ phaseId, userId, questionId, payload }) {
     });
 
     return {
-        type: "ranking",
-        uid:  userId,
+        type:  "ranking",
+        uid:   userId,
         items: [
             {
-                actorid: itemId,
-                orden: order,
+                actorid:     itemId,
+                orden:       order,
                 description: justification,
             },
         ],
