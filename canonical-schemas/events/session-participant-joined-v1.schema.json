@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.ethicapp.local/events/session-participant-joined-v1.schema.json",
+  "title": "Session Participant Joined (v1)",
+  "description": "A student became a participant of an activity session. Published by ethicapp-student; consumed by ethicapp to notify the teacher view in real time.",
+  "allOf": [
+    { "$ref": "domain-event-envelope-v1.schema.json" },
+    {
+      "type": "object",
+      "properties": {
+        "type": { "const": "session-participant-joined" },
+        "version": { "const": 1 },
+        "payload": {
+          "type": "object",
+          "required": ["sessionId", "userId", "device"],
+          "additionalProperties": false,
+          "properties": {
+            "sessionId": {
+              "description": "Activity session id (sessions.id).",
+              "type": "integer",
+              "minimum": 1
+            },
+            "userId": {
+              "description": "Participant user id (users.id). Consumers load any personal data they need from the database.",
+              "type": "integer",
+              "minimum": 1
+            },
+            "device": {
+              "description": "Client device label recorded with the membership.",
+              "type": ["string", "null"],
+              "maxLength": 64
+            }
+          }
+        }
+      }
+    }
+  ]
+}

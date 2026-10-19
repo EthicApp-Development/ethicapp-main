@@ -8,6 +8,7 @@ import http from "http";
 import debugLib from "debug";
 import { fileURLToPath } from "url";
 import { initializeSockets } from "./config/socket.config.js";
+import { startDomainEventSubscriber } from "./services/domain-events/index.js";
 
 const debug = debugLib("ethicapp:server");
 
@@ -26,6 +27,12 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
 
     // Initialize Socket.IO
     initializeSockets(server);
+
+    // Relay domain events from other services (for example ethicapp-student)
+    // to the Socket.IO namespaces. Failures never stop the web server.
+    startDomainEventSubscriber().catch((error) => {
+        console.error("[domain-events] Subscriber could not be started:", error);
+    });
 }
 
 /**
