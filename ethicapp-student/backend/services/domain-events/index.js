@@ -1,15 +1,8 @@
 import { createClient } from 'redis';
+import { resolveApplicationRedisUrl } from '../../config/redis.js';
 import { DomainEventPublisher } from './domain-event-publisher.js';
 
 let publisher = null;
-
-// Same Redis instance as Express sessions (application Redis); see #660 for the
-// planned REDIS_APP_* names.
-export function resolveDomainEventRedisUrl(env = process.env) {
-  const host = env.REDIS_SESSION_HOST || 'redis-session';
-  const port = env.REDIS_SESSION_PORT || '6379';
-  return env.REDIS_SESSION_URL || `redis://${host}:${port}`;
-}
 
 /**
  * Creates a publisher with its own Redis connection and starts connecting.
@@ -29,7 +22,7 @@ export function createDomainEventPublisher({
   logger = console
 } = {}) {
   const redisClient = createRedisClient({
-    url: resolveDomainEventRedisUrl(env),
+    url: resolveApplicationRedisUrl(env),
     // Fail fast while disconnected so publishing never stalls a request.
     disableOfflineQueue: true
   });
