@@ -63,7 +63,8 @@ test('factory configures a fail-fast client on the session Redis URL', () => {
 
   assert.deepEqual(fake.created[0].options, {
     url: 'redis://redis.test:6379',
-    disableOfflineQueue: true
+    disableOfflineQueue: true,
+    commandsQueueMaxLength: 100
   });
 });
 

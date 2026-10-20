@@ -2,6 +2,7 @@ import session from 'express-session';
 import { RedisStore } from 'connect-redis';
 import { createClient } from 'redis';
 import { resolveApplicationRedisUrl } from './redis.js';
+import { createConnectionResetter } from './redis-connection.js';
 
 const DEFAULT_PREFIX = 'ethicapp-student:sess:';
 // Matches the student idle timeout enforced by auth-backend
@@ -160,46 +161,6 @@ export class ResilientSessionStore extends session.Store {
 }
 
 /**
- * Drops a connection that stopped answering while still open and opens a new
- * one. node-redis rejects every queued and in-flight command on disconnect, so
- * the operations the session store gave up on are released instead of waiting
- * for Redis indefinitely. Commands already transmitted may still be applied if
- * Redis resumes; that is harmless because session content is re-derived from
- * the auth headers on every request.
- *
- * While the new connection is not ready, `disableOfflineQueue` rejects
- * commands immediately, so nothing accumulates during the reconnection.
- * @param {import('redis').RedisClientType} client
- * @param {Console} logger
- * @returns {() => Promise<void>}
- */
-export function createConnectionResetter(client, logger) {
-  let resetting = false;
-
-  return async function resetConnection() {
-    // Only a ready connection can hold commands that stalled; a client that is
-    // already reconnecting rejects commands without queueing them.
-    if (resetting || !client.isReady) {
-      return;
-    }
-
-    resetting = true;
-    logger.error('[student-session] Redis stopped answering; resetting the session connection.');
-    try {
-      await client.disconnect();
-    } catch (error) {
-      logger.error('[student-session] Redis disconnect failed:', error.message);
-    } finally {
-      resetting = false;
-    }
-
-    client.connect().catch((error) => {
-      logger.error('[student-session] Redis reconnection failed:', error.message);
-    });
-  };
-}
-
-/**
  * Builds the ethicapp-student session store on the application Redis.
  * @param {object} [options]
  * @param {Record<string, string | undefined>} [options.env]
@@ -247,7 +208,7 @@ export function createStudentSessionStore({
     }),
     timeoutMs,
     cooldownMs,
-    onTimeout: createConnectionResetter(client, logger),
+    onTimeout: createConnectionResetter(client, logger, 'student-session'),
     logger
   });
 }

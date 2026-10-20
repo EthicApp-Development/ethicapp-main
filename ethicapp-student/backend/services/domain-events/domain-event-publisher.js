@@ -1,3 +1,4 @@
+import { DisconnectsClientError } from 'redis';
 import { createDomainEvent, getDomainEventChannel } from './domain-event-envelope.js';
 
 const DEFAULT_INITIAL_CONNECTION_TIMEOUT_MS = 1000;
@@ -13,7 +14,6 @@ async function raceWithTimeout(promise, timeoutMs) {
   let timer;
   const timeout = new Promise((resolve) => {
     timer = setTimeout(() => resolve(TIMED_OUT), timeoutMs);
-    timer.unref?.();
   });
 
   try {
@@ -33,7 +33,10 @@ async function raceWithTimeout(promise, timeoutMs) {
  * - Publishes issued before the first connection completes wait for it once,
  *   for at most `initialConnectionTimeoutMs`.
  * - Each PUBLISH waits at most `publishTimeoutMs`, which covers a connection
- *   that is still open but whose server stopped responding.
+ *   that is still open but whose server stopped responding. The factory caps
+ *   pending commands and resets the dedicated connection on timeout. Commands
+ *   already transmitted may still be delivered late; false means unconfirmed
+ *   delivery, and the publisher does not retry automatically.
  */
 export class DomainEventPublisher {
   constructor({
@@ -41,6 +44,7 @@ export class DomainEventPublisher {
     initialConnection = null,
     initialConnectionTimeoutMs = DEFAULT_INITIAL_CONNECTION_TIMEOUT_MS,
     publishTimeoutMs = DEFAULT_PUBLISH_TIMEOUT_MS,
+    onTimeout = () => {},
     logger = console,
     now,
     generateId
@@ -48,6 +52,7 @@ export class DomainEventPublisher {
     this.redisClient = redisClient;
     this.initialConnectionTimeoutMs = initialConnectionTimeoutMs;
     this.publishTimeoutMs = publishTimeoutMs;
+    this.onTimeout = onTimeout;
     this.logger = logger;
     this.now = now;
     this.generateId = generateId;
@@ -61,6 +66,16 @@ export class DomainEventPublisher {
           this.pendingInitialConnection = null;
         }
       });
+    }
+  }
+
+  releaseTimedOutCommands() {
+    try {
+      Promise.resolve(this.onTimeout()).catch((error) => {
+        this.logger.error('[domain-events] Releasing timed-out Redis operations failed:', error.message);
+      });
+    } catch (error) {
+      this.logger.error('[domain-events] Releasing timed-out Redis operations failed:', error.message);
     }
   }
 
@@ -110,16 +125,26 @@ export class DomainEventPublisher {
       const outcome = await raceWithTimeout(publishing, this.publishTimeoutMs);
 
       if (outcome === TIMED_OUT) {
+        this.releaseTimedOutCommands();
         this.logger.error(
-          `[domain-events] Redis did not accept ${type} event ${event.id} ` +
-          `within ${this.publishTimeoutMs} ms; the event is dropped.`
+          `[domain-events] Redis did not confirm ${type} event ${event.id} ` +
+          `within ${this.publishTimeoutMs} ms; delivery is unknown and may occur late.`
         );
         return false;
       }
 
       return true;
     } catch (error) {
-      this.logger.error(`[domain-events] Could not publish ${type} event ${event.id}:`, error);
+      if (error instanceof DisconnectsClientError) {
+        // A reset also rejects peers of the command that timed out. Their
+        // commands may already be on the wire, so delivery is still unknown.
+        this.logger.error(
+          `[domain-events] Redis connection closed before confirming ${type} event ${event.id}; ` +
+          'delivery is unknown and may occur late.'
+        );
+      } else {
+        this.logger.error(`[domain-events] Could not publish ${type} event ${event.id}:`, error.message);
+      }
       return false;
     }
   }
