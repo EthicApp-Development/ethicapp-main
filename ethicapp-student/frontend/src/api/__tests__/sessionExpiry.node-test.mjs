@@ -73,3 +73,34 @@ test('currentStudentLocation only returns locations inside the student app', () 
   assert.equal(currentStudentLocation(undefined), null);
   assert.equal(buildSignInUrl(null), '/auth/login');
 });
+
+test('a later call naming a target replaces a fallback target without a second notice or redirect', () => {
+  const { flow, scheduled, redirects } = createFlow({ currentLocation: () => '/student/' });
+  let notifications = 0;
+  flow.subscribe(() => {
+    notifications += 1;
+  });
+
+  assert.equal(flow.start({ requestId: 'req-profile' }), true);
+  assert.equal(flow.start({ requestId: 'req-join', returnTo: '/student/?join=abc123' }), false);
+  scheduled[0].callback();
+
+  assert.deepEqual(flow.getSnapshot(), {
+    requestId: 'req-profile',
+    returnTo: '/student/?join=abc123',
+    signInUrl: '/auth/login?returnTo=%2Fstudent%2F%3Fjoin%3Dabc123'
+  });
+  assert.equal(scheduled.length, 1);
+  assert.deepEqual(redirects, ['/auth/login?returnTo=%2Fstudent%2F%3Fjoin%3Dabc123']);
+  assert.equal(notifications, 2, 'the notice re-renders with the new sign-in link');
+});
+
+test('a named target is not replaced by a later fallback or another named target', () => {
+  const { flow } = createFlow({ currentLocation: () => '/student/' });
+
+  flow.start({ returnTo: '/student/?join=abc123' });
+  flow.start({});
+  flow.start({ returnTo: '/student/?join=zzz999' });
+
+  assert.equal(flow.getSnapshot().returnTo, '/student/?join=abc123');
+});

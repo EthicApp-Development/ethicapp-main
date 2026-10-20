@@ -73,6 +73,43 @@ test('the expiry flow receives the return target named by the failed request', a
   assert.deepEqual(redirects, ['/auth/login?returnTo=%2Fstudent%2F%3Fjoin%3Dabc123']);
 });
 
+for (const firstToFail of ['profile', 'join']) {
+  test(`the join target survives a concurrent background 401 when the ${firstToFail} fails first`, async () => {
+    const releases = {};
+    const scheduled = [];
+    const redirects = [];
+    const expiryFlow = createSessionExpiryFlow({
+      redirect: (signInUrl) => redirects.push(signInUrl),
+      currentLocation: () => '/student/',
+      schedule: (callback, delayMs) => scheduled.push({ callback, delayMs })
+    });
+    const adapter = fakeAdapter(() => EXPIRED);
+    const client = installApiErrorInterceptors(axios.create({
+      // Each request waits until the test releases it, to control the order.
+      adapter: (config) => new Promise((resolve) => {
+        releases[config.url.includes('profile') ? 'profile' : 'join'] = resolve;
+      }).then(() => adapter(config))
+    }), { onExpired: (details) => expiryFlow.start(details) });
+
+    const profile = client.get('/users/profile');
+    const join = client.post('/student/api/sessions/join', { code: 'abc123' }, {
+      expiryReturnTo: '/student/?join=abc123'
+    });
+    await new Promise((resolve) => setImmediate(resolve));
+
+    const order = firstToFail === 'profile' ? ['profile', 'join'] : ['join', 'profile'];
+    for (const name of order) {
+      releases[name]();
+      await (name === 'profile' ? profile : join).catch(() => {});
+    }
+    scheduled.forEach(({ callback }) => callback());
+
+    assert.equal(expiryFlow.getSnapshot().returnTo, '/student/?join=abc123');
+    assert.equal(scheduled.length, 1);
+    assert.deepEqual(redirects, ['/auth/login?returnTo=%2Fstudent%2F%3Fjoin%3Dabc123']);
+  });
+}
+
 test('a 401 from an auth endpoint does not start the expiry flow', async () => {
   const { client, expiredCalls, redirects } = createClient(() => EXPIRED);
 

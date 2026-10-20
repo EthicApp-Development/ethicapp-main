@@ -31,22 +31,37 @@ export function createSessionExpiryFlow({
   delayMs = SESSION_EXPIRY_REDIRECT_DELAY_MS
 }) {
   let expiry = null;
+  // Whether the return target was named by a failed request rather than
+  // taken from the current location.
+  let explicitReturnTo = false;
   const listeners = new Set();
 
+  const update = (requestId, returnTo) => {
+    expiry = Object.freeze({ requestId, returnTo, signInUrl: buildSignInUrl(returnTo) });
+    listeners.forEach((listener) => listener());
+  };
+
   return {
-    /** Starts the flow; later calls are ignored. Returns whether this call started it. */
+    /**
+     * Starts the flow: one notice and one scheduled redirect, however many
+     * calls fail. A later call only matters when it names a return target and
+     * the current one was a fallback, so a join that fails after a background
+     * request still brings the student back to that join.
+     * Returns whether this call started the flow.
+     */
     start(details = {}) {
       if (expiry) {
+        if (details.returnTo && !explicitReturnTo) {
+          explicitReturnTo = true;
+          update(expiry.requestId, details.returnTo);
+        }
+
         return false;
       }
 
-      const returnTo = details.returnTo ?? currentLocation();
-      expiry = Object.freeze({
-        requestId: details.requestId ?? null,
-        returnTo,
-        signInUrl: buildSignInUrl(returnTo)
-      });
-      listeners.forEach((listener) => listener());
+      explicitReturnTo = Boolean(details.returnTo);
+      update(details.requestId ?? null, details.returnTo ?? currentLocation());
+      // Reads the snapshot when it fires, so a later explicit target applies.
       schedule(() => redirect(expiry.signInUrl), delayMs);
       return true;
     },
