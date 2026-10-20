@@ -1,15 +1,9 @@
 import { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import { legacyUserApi } from '../api/studentApi.js';
+import { localePreference } from '../i18n/localePreference.js';
+import { toStudentUser, USER_PLACEHOLDER } from './studentProfile.js';
 
 const StudentUserContext = createContext(null);
-
-const USER_PLACEHOLDER = {
-  id: null,
-  firstname: '',
-  lastname: '',
-  name: '',
-  email: ''
-};
 
 function StudentUserProvider({ children }) {
   const [user, setUser] = useState(USER_PLACEHOLDER);
@@ -20,14 +14,10 @@ function StudentUserProvider({ children }) {
 
     try {
       const { data } = await legacyUserApi.get('/users/profile');
-      const userData = data?.data ?? USER_PLACEHOLDER;
-      setUser({
-        id: userData.id ?? null,
-        firstname: userData.firstname ?? '',
-        lastname: userData.lastname ?? '',
-        name: userData.name ?? '',
-        email: userData.email ?? ''
-      });
+      const nextUser = toStudentUser(data);
+      setUser(nextUser);
+      // The saved account preference replaces the browser language for the whole app.
+      localePreference.setAccountLocale(nextUser.preferredLocale);
     } catch (_error) {
       setUser(USER_PLACEHOLDER);
     } finally {
