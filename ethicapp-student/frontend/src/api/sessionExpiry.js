@@ -1,12 +1,13 @@
-// What happens when an API call finds the session expired: one notice for the
-// student, then a redirect to sign-in, however many calls fail at once.
+// An expired session returns the student to manual session selection after
+// sign-in. Synchronous classroom activities require an explicit choice of
+// session rather than automatically reopening the previous activity or code.
 
 export const SIGN_IN_PATH = '/auth/login';
 export const SESSION_EXPIRY_REDIRECT_DELAY_MS = 2500;
 
 /**
  * @param {object} options
- * @param {() => void} options.redirect
+ * @param {(signInUrl: string) => void} options.redirect
  * @param {(callback: () => void, delayMs: number) => unknown} [options.schedule]
  * @param {number} [options.delayMs]
  */
@@ -19,15 +20,17 @@ export function createSessionExpiryFlow({
   const listeners = new Set();
 
   return {
-    /** Starts the flow; later calls are ignored. Returns whether this call started it. */
+    /** Starts one notice and one redirect to sign-in and manual session selection. */
     start(details = {}) {
       if (expiry) {
         return false;
       }
 
-      expiry = Object.freeze({ requestId: details.requestId ?? null });
+      expiry = Object.freeze({
+        requestId: details.requestId ?? null
+      });
       listeners.forEach((listener) => listener());
-      schedule(redirect, delayMs);
+      schedule(() => redirect(SIGN_IN_PATH), delayMs);
       return true;
     },
     getSnapshot() {
@@ -41,5 +44,5 @@ export function createSessionExpiryFlow({
 }
 
 export const sessionExpiryFlow = createSessionExpiryFlow({
-  redirect: () => window.location.assign(SIGN_IN_PATH)
+  redirect: (signInUrl) => window.location.assign(signInUrl)
 });

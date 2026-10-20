@@ -196,6 +196,25 @@ describe('Auth Routes', () => {
     assert.deepStrictEqual(updateCall.arguments[1], [1]);
   });
 
+  for (const [role, destination] of [['A', '/student'], ['P', '/home'], ['S', '/mng']]) {
+    for (const returnTo of [undefined, '/student/?join=abc123', '/student/sessions/57', 'https://evil.example/']) {
+      test(`POST /login - role ${role} keeps its landing page despite returnTo ${returnTo}`, async () => {
+        const hashedPassword = await bcrypt.hash('password123', 1);
+        dbMock.query.mock.mockImplementationOnce(() => Promise.resolve({
+          rowCount: 1,
+          rows: [createUser({ role, password_bcrypt: hashedPassword })]
+        }));
+
+        const res = await supertest(app)
+          .post('/login')
+          .send({ username: 'testuser', password: 'password123', returnTo });
+
+        assert.strictEqual(res.status, 200);
+        assert.strictEqual(res.body.redirectTo, destination);
+      });
+    }
+  }
+
   test('POST /register - missing fields are rejected before reCAPTCHA', async () => {
     const res = await supertest(app)
       .post('/register')

@@ -36,7 +36,7 @@ function fakeAdapter(answer) {
 function createClient(answer, axiosOptions = {}) {
   const redirects = [];
   const expiryFlow = createSessionExpiryFlow({
-    redirect: () => redirects.push('/auth/login'),
+    redirect: (signInUrl) => redirects.push(signInUrl),
     schedule: (callback) => callback()
   });
   const expiredCalls = [];
@@ -60,9 +60,54 @@ test('a 401 on a protected call starts the expiry flow once, however many calls 
   assert.deepEqual(results.map(({ status }) => status), ['rejected', 'rejected']);
   assert.equal(results[0].reason.response.status, 401, 'the caller still receives the original error');
   assert.equal(expiredCalls.length, 2);
-  assert.deepEqual(expiryFlow.getSnapshot(), { requestId: 'req-401' });
+  assert.equal(expiryFlow.getSnapshot().requestId, 'req-401');
+  assert.equal(redirects.length, 1);
+});
+
+test('a failed join returns to manual selection even with a stale request target', async () => {
+  const { client, expiredCalls, redirects } = createClient(() => EXPIRED, { baseURL: '/student/api/' });
+
+  await assert.rejects(client.post('sessions/join', { code: 'abc123' }, { expiryReturnTo: '/student/?join=abc123' }));
+
+  assert.deepEqual(expiredCalls, [{ requestId: 'req-401' }]);
   assert.deepEqual(redirects, ['/auth/login']);
 });
+
+for (const firstToFail of ['profile', 'join']) {
+  test(`manual selection is preserved when the ${firstToFail} request expires first`, async () => {
+    const releases = {};
+    const scheduled = [];
+    const redirects = [];
+    const expiryFlow = createSessionExpiryFlow({
+      redirect: (signInUrl) => redirects.push(signInUrl),
+      schedule: (callback, delayMs) => scheduled.push({ callback, delayMs })
+    });
+    const adapter = fakeAdapter(() => EXPIRED);
+    const client = installApiErrorInterceptors(axios.create({
+      // Each request waits until the test releases it, to control the order.
+      adapter: (config) => new Promise((resolve) => {
+        releases[config.url.includes('profile') ? 'profile' : 'join'] = resolve;
+      }).then(() => adapter(config))
+    }), { onExpired: (details) => expiryFlow.start(details) });
+
+    const profile = client.get('/users/profile');
+    const join = client.post('/student/api/sessions/join', { code: 'abc123' }, {
+      expiryReturnTo: '/student/?join=abc123'
+    });
+    await new Promise((resolve) => setImmediate(resolve));
+
+    const order = firstToFail === 'profile' ? ['profile', 'join'] : ['join', 'profile'];
+    for (const name of order) {
+      releases[name]();
+      await (name === 'profile' ? profile : join).catch(() => {});
+    }
+    scheduled.forEach(({ callback }) => callback());
+
+    assert.equal(expiryFlow.getSnapshot().requestId, 'req-401');
+    assert.equal(scheduled.length, 1);
+    assert.deepEqual(redirects, ['/auth/login']);
+  });
+}
 
 test('a 401 from an auth endpoint does not start the expiry flow', async () => {
   const { client, expiredCalls, redirects } = createClient(() => EXPIRED);
