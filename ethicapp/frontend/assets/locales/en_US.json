@@ -751,5 +751,7 @@
 	"teacher_group_chat_replying_to_label": "Replying to",
 	"teacher_group_chat_cancel_reply_label": "Cancel",
 	"loading": "Loading...",
-	"send": "Send"
+	"send": "Send",
+	"session_expired_notice": "Your session expired. Redirecting you to sign in...",
+	"session_expired_sign_in_now": "Sign in now"
 }

@@ -96,6 +96,7 @@
     ng-cloak
     ng-if="translationsLoaded"
     ng-controller="<%= typeof controller !== 'undefined' ? controller : 'VoidController' %>">
+  <session-expired-notice></session-expired-notice>
   <%- body %>
   </div>
   <%- typeof bottomScripts !== 'undefined' ? bottomScripts : '' %>
