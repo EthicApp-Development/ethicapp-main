@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import { useI18n } from '../app/providers.jsx';
-import { SIGN_IN_PATH, sessionExpiryFlow } from '../api/sessionExpiry.js';
+import { sessionExpiryFlow } from '../api/sessionExpiry.js';
 
 export default function SessionExpiredNotice() {
   const { t } = useI18n();
@@ -17,7 +17,7 @@ export default function SessionExpiredNotice() {
           <i className="fa-solid fa-spinner fa-spin" aria-hidden="true" />
           <span>{t('apiErrors.sessionExpired')}</span>
         </span>
-        <a className="btn btn-sm btn-warning" href={SIGN_IN_PATH}>{t('apiErrors.signInNow')}</a>
+        <a className="btn btn-sm btn-warning" href={expiry.signInUrl}>{t('apiErrors.signInNow')}</a>
       </div>
     </div>
   );

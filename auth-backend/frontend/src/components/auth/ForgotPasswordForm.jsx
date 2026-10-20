@@ -1,13 +1,16 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import TextField from '../common/TextField';
 import { forgotPassword } from '../../api/authApi';
 import RecaptchaField from '../common/RecaptchaField';
 import { recaptchaProvider, recaptchaSiteKey } from '../../config/env';
 import { useI18n } from '../../app/i18n-context';
+import { readReturnTo, withReturnTo } from '../../utils/returnTo';
 
 function ForgotPasswordForm() {
   const { t } = useI18n();
+  const [searchParams] = useSearchParams();
+  const returnTo = readReturnTo(searchParams);
 
   const [formData, setFormData] = useState({
     email: '',
@@ -74,7 +77,8 @@ function ForgotPasswordForm() {
 
       await forgotPassword({
         email: formData.email.trim(),
-        recaptcha_token: formData.recaptchaToken
+        recaptcha_token: formData.recaptchaToken,
+        ...(returnTo ? { returnTo } : {})
       });
 
       setSuccessMessage(t('forgotPassword.successMessage'));
@@ -159,7 +163,7 @@ function ForgotPasswordForm() {
       <hr className="auth-divider" />
 
       <p className="auth-footer">
-        <Link to="/login">{t('forgotPassword.backToLogin')}</Link>
+        <Link to={withReturnTo('/login', returnTo)}>{t('forgotPassword.backToLogin')}</Link>
       </p>
     </form>
   );

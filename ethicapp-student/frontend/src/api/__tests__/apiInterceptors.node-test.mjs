@@ -36,7 +36,7 @@ function fakeAdapter(answer) {
 function createClient(answer, axiosOptions = {}) {
   const redirects = [];
   const expiryFlow = createSessionExpiryFlow({
-    redirect: () => redirects.push('/auth/login'),
+    redirect: (signInUrl) => redirects.push(signInUrl),
     schedule: (callback) => callback()
   });
   const expiredCalls = [];
@@ -60,8 +60,17 @@ test('a 401 on a protected call starts the expiry flow once, however many calls 
   assert.deepEqual(results.map(({ status }) => status), ['rejected', 'rejected']);
   assert.equal(results[0].reason.response.status, 401, 'the caller still receives the original error');
   assert.equal(expiredCalls.length, 2);
-  assert.deepEqual(expiryFlow.getSnapshot(), { requestId: 'req-401' });
-  assert.deepEqual(redirects, ['/auth/login']);
+  assert.equal(expiryFlow.getSnapshot().requestId, 'req-401');
+  assert.equal(redirects.length, 1);
+});
+
+test('the expiry flow receives the return target named by the failed request', async () => {
+  const { client, expiredCalls, redirects } = createClient(() => EXPIRED, { baseURL: '/student/api/' });
+
+  await assert.rejects(client.post('sessions/join', { code: 'abc123' }, { expiryReturnTo: '/student/?join=abc123' }));
+
+  assert.deepEqual(expiredCalls, [{ requestId: 'req-401', returnTo: '/student/?join=abc123' }]);
+  assert.deepEqual(redirects, ['/auth/login?returnTo=%2Fstudent%2F%3Fjoin%3Dabc123']);
 });
 
 test('a 401 from an auth endpoint does not start the expiry flow', async () => {

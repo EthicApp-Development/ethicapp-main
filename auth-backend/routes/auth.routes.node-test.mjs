@@ -196,6 +196,32 @@ describe('Auth Routes', () => {
     assert.deepStrictEqual(updateCall.arguments[1], [1]);
   });
 
+  for (const [role, returnTo, expected] of [
+    ['A', '/student/?join=abc123', '/student/?join=abc123'],
+    ['A', 'https://evil.example/student/', '/student'],
+    ['A', '//evil.example/student/', '/student'],
+    ['A', '/\\evil.example/student/', '/student'],
+    ['A', '/student/..%2fmng/', '/student'],
+    ['A', '/mng/', '/student'],
+    ['P', '/student/?join=abc123', '/home'],
+    ['S', '/student/?join=abc123', '/mng']
+  ]) {
+    test(`POST /login - returnTo ${JSON.stringify(returnTo)} for role ${role} redirects to ${expected}`, async () => {
+      const hashedPassword = await bcrypt.hash('password123', 1);
+      dbMock.query.mock.mockImplementationOnce(() => Promise.resolve({
+        rowCount: 1,
+        rows: [createUser({ role, password_bcrypt: hashedPassword })]
+      }));
+
+      const res = await supertest(app)
+        .post('/login')
+        .send({ username: 'testuser', password: 'password123', returnTo });
+
+      assert.strictEqual(res.status, 200);
+      assert.strictEqual(res.body.redirectTo, expected);
+    });
+  }
+
   test('POST /register - missing fields are rejected before reCAPTCHA', async () => {
     const res = await supertest(app)
       .post('/register')
@@ -467,6 +493,62 @@ describe('Auth Routes', () => {
     assert.match(mailArgs.rawToken, /^[a-f0-9]{64}$/);
     assert.strictEqual(sha256Hex(mailArgs.rawToken), insertCall.arguments[1][1]);
     assert.strictEqual(mailArgs.preferredLocale, 'es_CL');
+    assert.strictEqual(mailArgs.returnTo, null);
+  });
+
+  for (const [returnTo, expected] of [['/student/?join=abc123', '/student/?join=abc123'], ['https://evil.example/', null]]) {
+    test(`POST /forgot - passes returnTo ${JSON.stringify(returnTo)} to the reset email as ${expected}`, async () => {
+      recaptchaMock.verifyRecaptchaToken.mock.mockImplementationOnce(() => Promise.resolve(true));
+      dbMock.query.mock.mockImplementation((queryStr) => (queryStr.includes('SELECT id, mail, active')
+        ? Promise.resolve({ rowCount: 1, rows: [{ id: 9, mail: 'person@example.com', active: true, email_confirmed: true }] })
+        : Promise.resolve({ rowCount: 0, rows: [] })));
+      mailMock.sendPasswordResetEmail.mock.mockImplementationOnce(() => Promise.resolve());
+
+      const res = await supertest(app)
+        .post('/forgot')
+        .send({ email: 'person@example.com', recaptcha_token: 'valid_token', returnTo });
+
+      assert.strictEqual(res.status, 200);
+      assert.strictEqual(mailMock.sendPasswordResetEmail.mock.calls[0].arguments[0].returnTo, expected);
+    });
+  }
+
+  for (const [returnTo, expected] of [['/student/?join=abc123', '/student/?join=abc123'], ['/mng/', null]]) {
+    test(`POST /register - passes returnTo ${JSON.stringify(returnTo)} to the confirmation email as ${expected}`, async () => {
+      recaptchaMock.verifyRecaptchaToken.mock.mockImplementationOnce(() => Promise.resolve(true));
+      dbMock.query.mock.mockImplementation((queryStr) => (queryStr.includes('INSERT INTO users')
+        ? Promise.resolve({ rowCount: 1, rows: [{ id: 42 }] })
+        : Promise.resolve({ rowCount: 0, rows: [] })));
+      mailMock.sendAccountConfirmationEmail.mock.mockImplementationOnce(() => Promise.resolve());
+
+      const res = await supertest(app)
+        .post('/register')
+        .send(validRegistrationPayload({ returnTo }));
+
+      assert.strictEqual(res.status, 201);
+      assert.strictEqual(mailMock.sendAccountConfirmationEmail.mock.calls[0].arguments[0].returnTo, expected);
+    });
+  }
+
+  test('GET /confirm-account - keeps a valid returnTo on every outcome and drops an invalid one', async () => {
+    dbMock.query.mock.mockImplementation((queryStr) => (queryStr.includes('FROM pass_reset pr')
+      ? Promise.resolve({ rowCount: 1, rows: [{ mail: 'pending@example.com' }] })
+      : Promise.resolve({ rowCount: 0, rows: [] })));
+
+    const confirmed = await supertest(app)
+      .get('/confirm-account/confirmation-token')
+      .query({ returnTo: '/student/?join=abc123' });
+    assert.strictEqual(confirmed.headers.location, '/auth/login?confirmed=1&returnTo=%2Fstudent%2F%3Fjoin%3Dabc123');
+
+    const missingToken = await supertest(app)
+      .get('/confirm-account')
+      .query({ returnTo: '/student/?join=abc123' });
+    assert.strictEqual(missingToken.headers.location, '/auth/login?confirmed=invalid&returnTo=%2Fstudent%2F%3Fjoin%3Dabc123');
+
+    const external = await supertest(app)
+      .get('/confirm-account/confirmation-token')
+      .query({ returnTo: '//evil.example/' });
+    assert.strictEqual(external.headers.location, '/auth/login?confirmed=1');
   });
 
   test('POST /reset-password - rejects invalid or expired tokens', async () => {

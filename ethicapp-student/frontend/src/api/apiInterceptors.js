@@ -25,18 +25,20 @@ function createHtmlResponseError(response) {
 
 /**
  * Adds the shared error handling to an Axios instance. Every failure still
- * reaches the caller; an expired session additionally calls `onExpired`.
+ * reaches the caller; an expired session additionally calls `onExpired`, with
+ * the request's `expiryReturnTo` config option as the place to come back to
+ * after signing in.
  * A successful response with an HTML body is turned into a failure, because
  * an API call only receives a page when the session was redirected away.
  * @param {import('axios').AxiosInstance} instance
- * @param {{ onExpired: (details: { requestId: string|null }) => void }} handlers
+ * @param {{ onExpired: (details: { requestId: string|null, returnTo: string|null }) => void }} handlers
  */
 export function installApiErrorInterceptors(instance, { onExpired }) {
   const handleError = (error) => {
     const { kind, requestId } = classifyApiError(error);
 
     if (kind === API_ERROR_KINDS.EXPIRED && !isAuthEndpoint(error?.config)) {
-      onExpired({ requestId });
+      onExpired({ requestId, returnTo: error?.config?.expiryReturnTo ?? null });
     }
 
     return Promise.reject(error);

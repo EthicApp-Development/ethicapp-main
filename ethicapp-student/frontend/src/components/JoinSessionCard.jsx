@@ -1,27 +1,27 @@
-import { useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { studentApi } from '../api/studentApi.js';
 import { withReference } from '../api/apiErrors.js';
 import { useI18n } from '../app/providers.jsx';
-import { interpretJoinError, interpretJoinResponse } from '../utils/joinSessionOutcome.js';
+import {
+  buildJoinReturnTo,
+  interpretJoinError,
+  interpretJoinResponse,
+  normalizeJoinCode
+} from '../utils/joinSessionOutcome.js';
 
 export default function JoinSessionCard({ disabled, onJoined }) {
   const { t } = useI18n();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [joinCode, setJoinCode] = useState('');
   const [joinBusy, setJoinBusy] = useState(false);
   const [joinFeedback, setJoinFeedback] = useState(null);
   // Set synchronously so a second Enter press before re-render cannot resubmit.
   const submittingRef = useRef(false);
+  const resumedJoinRef = useRef(false);
 
-  const handleJoinSession = async (event) => {
-    event.preventDefault();
-
+  const submitJoin = useCallback(async (code) => {
     if (submittingRef.current) {
-      return;
-    }
-
-    const normalizedCode = joinCode.trim().toLowerCase();
-    if (!normalizedCode) {
-      setJoinFeedback({ type: 'danger', message: t('joinSession.invalidCode') });
       return;
     }
 
@@ -32,7 +32,12 @@ export default function JoinSessionCard({ disabled, onJoined }) {
     let result;
     try {
       result = interpretJoinResponse(
-        await studentApi.post('sessions/join', { code: normalizedCode, device: 'web' })
+        await studentApi.post(
+          'sessions/join',
+          { code, device: 'web' },
+          // If the session expired, sign-in brings the student back here to finish this join.
+          { expiryReturnTo: buildJoinReturnTo(code) }
+        )
       );
     } catch (error) {
       result = interpretJoinError(error);
@@ -49,6 +54,40 @@ export default function JoinSessionCard({ disabled, onJoined }) {
       setJoinCode('');
       onJoined(result.sessionId, { alreadyJoined: result.kind === 'already_joined' });
     }
+  }, [onJoined, t]);
+
+  // /student/?join=<code> resumes a join interrupted by an expired session.
+  const pendingJoinCode = normalizeJoinCode(searchParams.get('join'));
+
+  useEffect(() => {
+    if (!pendingJoinCode || disabled || resumedJoinRef.current) {
+      return;
+    }
+
+    resumedJoinRef.current = true;
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      next.delete('join');
+      return next;
+    }, { replace: true });
+    setJoinCode(pendingJoinCode);
+    submitJoin(pendingJoinCode);
+  }, [disabled, pendingJoinCode, setSearchParams, submitJoin]);
+
+  const handleJoinSession = (event) => {
+    event.preventDefault();
+
+    if (submittingRef.current) {
+      return;
+    }
+
+    const normalizedCode = joinCode.trim().toLowerCase();
+    if (!normalizedCode) {
+      setJoinFeedback({ type: 'danger', message: t('joinSession.invalidCode') });
+      return;
+    }
+
+    submitJoin(normalizedCode);
   };
 
   return (

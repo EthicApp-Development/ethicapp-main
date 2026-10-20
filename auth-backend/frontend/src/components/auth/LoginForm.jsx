@@ -4,12 +4,14 @@ import { login } from '../../api/authApi';
 import { useI18n } from '../../app/i18n-context';
 import TextField from '../common/TextField';
 import PasswordField from './PasswordField';
+import { readReturnTo, withReturnTo } from '../../utils/returnTo';
 
 function LoginForm() {
   const { t } = useI18n();
   const [searchParams] = useSearchParams();
   const confirmationStatus = searchParams.get('confirmed') || '';
   const notice = searchParams.get('notice') || '';
+  const returnTo = readReturnTo(searchParams);
 
   const [formData, setFormData] = useState({
     username: '',
@@ -66,7 +68,8 @@ function LoginForm() {
 
       const response = await login({
         username: formData.username.trim(),
-        password: formData.password
+        password: formData.password,
+        ...(returnTo ? { returnTo } : {})
       });
 
       const redirectTo = response?.redirectTo || '/';
@@ -130,7 +133,7 @@ function LoginForm() {
           <label htmlFor="password" className="form-label mb-0">
             {t('login.passwordLabel')}
           </label>
-          <Link to="/forgot">{t('login.forgotPassword')}</Link>
+          <Link to={withReturnTo('/forgot', returnTo)}>{t('login.forgotPassword')}</Link>
         </div>
 
         <PasswordField

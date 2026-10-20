@@ -2,6 +2,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import ejs from 'ejs';
 import nodemailer from 'nodemailer';
+import { appendReturnTo } from './return-to.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -56,20 +57,25 @@ function resolvePreferredLocale(locale) {
   return SUPPORTED_LOCALES.has(normalizedLocale) ? normalizedLocale : DEFAULT_LOCALE;
 }
 
-function buildResetUrl(rawToken) {
+// returnTo, when valid, survives the email round trip so the user still
+// returns to an interrupted task (see services/return-to.js).
+function buildResetUrl(rawToken, returnTo) {
   const normalizedBaseUrl = AUTH_PUBLIC_URL.endsWith('/')
     ? AUTH_PUBLIC_URL.slice(0, -1)
     : AUTH_PUBLIC_URL;
 
-  return `${normalizedBaseUrl}/reset-password?token=${encodeURIComponent(rawToken)}`;
+  return appendReturnTo(`${normalizedBaseUrl}/reset-password?token=${encodeURIComponent(rawToken)}`, returnTo);
 }
 
-function buildAccountConfirmationUrl(rawToken) {
+function buildAccountConfirmationUrl(rawToken, returnTo) {
   const normalizedBaseUrl = AUTH_PUBLIC_URL.endsWith('/')
     ? AUTH_PUBLIC_URL.slice(0, -1)
     : AUTH_PUBLIC_URL;
 
-  return `${normalizedBaseUrl}/api/auth/confirm-account/${encodeURIComponent(rawToken)}`;
+  return appendReturnTo(
+    `${normalizedBaseUrl}/api/auth/confirm-account/${encodeURIComponent(rawToken)}`,
+    returnTo
+  );
 }
 
 function createTransporter() {
@@ -107,9 +113,9 @@ async function renderAccountConfirmationHtml({ preferredLocale, templateData }) 
   return ejs.renderFile(templatePath, templateData);
 }
 
-async function sendPasswordResetEmail({ to, rawToken, preferredLocale }) {
+async function sendPasswordResetEmail({ to, rawToken, preferredLocale, returnTo }) {
   const resolvedLocale = resolvePreferredLocale(preferredLocale);
-  const resetUrl = buildResetUrl(rawToken);
+  const resetUrl = buildResetUrl(rawToken, returnTo);
   const html = await renderForgotPasswordHtml({
     preferredLocale: resolvedLocale,
     templateData: {
@@ -133,9 +139,9 @@ async function sendPasswordResetEmail({ to, rawToken, preferredLocale }) {
   };
 }
 
-async function sendAccountConfirmationEmail({ to, rawToken, preferredLocale }) {
+async function sendAccountConfirmationEmail({ to, rawToken, preferredLocale, returnTo }) {
   const resolvedLocale = resolvePreferredLocale(preferredLocale);
-  const confirmationUrl = buildAccountConfirmationUrl(rawToken);
+  const confirmationUrl = buildAccountConfirmationUrl(rawToken, returnTo);
   const html = await renderAccountConfirmationHtml({
     preferredLocale: resolvedLocale,
     templateData: {

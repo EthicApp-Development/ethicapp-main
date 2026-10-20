@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { AxiosError, AxiosHeaders } from 'axios';
-import { interpretJoinError, interpretJoinResponse } from '../joinSessionOutcome.js';
+import {
+  buildJoinReturnTo,
+  normalizeJoinCode,
+  interpretJoinError,
+  interpretJoinResponse
+} from '../joinSessionOutcome.js';
 
 test('joined and already_joined responses carry the session id', () => {
   assert.deepEqual(interpretJoinResponse({ data: { status: 'joined', sesid: 57 } }), {
@@ -69,4 +74,15 @@ test('other failures fall back to the generic message', () => {
   ]) {
     assert.equal(interpretJoinError(error).messageKey, 'joinSession.joinErrorFallback');
   }
+});
+
+test('normalizeJoinCode applies the backend code rule', () => {
+  assert.equal(normalizeJoinCode(' K0010D '), 'k0010d');
+  for (const value of ['', 'abc-123', 'a'.repeat(17), '../x', null, undefined, 42]) {
+    assert.equal(normalizeJoinCode(value), null, String(value));
+  }
+});
+
+test('buildJoinReturnTo points sign-in back to the join', () => {
+  assert.equal(buildJoinReturnTo('abc123'), '/student/?join=abc123');
 });

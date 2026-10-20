@@ -1,13 +1,16 @@
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import AuthLayout from '../components/auth/AuthLayout';
 import LoginForm from '../components/auth/LoginForm';
 import CookieNoticeOverlay from '../components/common/CookieNoticeOverlay';
 import { useI18n } from '../app/i18n-context';
 import useCookieNotice from '../hooks/useCookieNotice';
+import { readReturnTo, withReturnTo } from '../utils/returnTo';
 
 function LoginPage() {
   const { isOpen, acceptNotice } = useCookieNotice();
   const { t } = useI18n();
+  const [searchParams] = useSearchParams();
+  const returnTo = readReturnTo(searchParams);
 
   return (
     <>
@@ -17,7 +20,7 @@ function LoginPage() {
         footer={
           <>
             <span>{t('login.noAccount')} </span>
-            <Link to="/register">{t('login.createAccount')}</Link>
+            <Link to={withReturnTo('/register', returnTo)}>{t('login.createAccount')}</Link>
           </>
         }
       >

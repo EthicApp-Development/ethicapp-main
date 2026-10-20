@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import PasswordField from './PasswordField';
 import TextField from '../common/TextField';
 import SelectField from '../common/SelectField';
@@ -8,11 +8,14 @@ import RecaptchaField from '../common/RecaptchaField';
 import { recaptchaProvider, recaptchaSiteKey } from '../../config/env';
 import { useI18n } from '../../app/i18n-context';
 import { useRegisterDraft } from '../../app/register-draft-context';
+import { readReturnTo, withReturnTo } from '../../utils/returnTo';
 
 function RegisterForm() {
   const { locale, t } = useI18n();
   const { draft, updateDraft, clearDraft } = useRegisterDraft();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const returnTo = readReturnTo(searchParams);
 
   const [recaptchaToken, setRecaptchaToken] = useState('');
   const [errors, setErrors] = useState({});
@@ -58,7 +61,7 @@ function RegisterForm() {
     }
 
     if (redirectCountdown <= 0) {
-      navigate('/login', { replace: true });
+      navigate(withReturnTo('/login', returnTo), { replace: true });
       return undefined;
     }
 
@@ -67,7 +70,7 @@ function RegisterForm() {
     }, 1000);
 
     return () => window.clearTimeout(countdownTimer);
-  }, [navigate, redirectCountdown]);
+  }, [navigate, redirectCountdown, returnTo]);
 
   function handleChange(event) {
     const { name, type, value, checked } = event.target;
@@ -166,7 +169,8 @@ function RegisterForm() {
         password: draft.password,
         password_confirmation: draft.password_confirmation,
         recaptcha_token: recaptchaToken,
-        preferred_locale: locale
+        preferred_locale: locale,
+        ...(returnTo ? { returnTo } : {})
       });
 
       clearDraft();
@@ -196,7 +200,7 @@ function RegisterForm() {
           {showPasswordRecoveryLink ? (
             <>
               {' '}
-              <Link className="alert-link" to="/forgot">
+              <Link className="alert-link" to={withReturnTo('/forgot', returnTo)}>
                 {t('register.recoverPasswordLink')}
               </Link>
             </>
@@ -380,7 +384,7 @@ function RegisterForm() {
 
       <p className="auth-footer">
         <span>{t('register.alreadyHaveAccount')} </span>
-        <Link to="/login">{t('register.signInLink')}</Link>
+        <Link to={withReturnTo('/login', returnTo)}>{t('register.signInLink')}</Link>
       </p>
     </form>
   );
