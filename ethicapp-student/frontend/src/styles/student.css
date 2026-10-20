@@ -43,6 +43,12 @@ body {
   --bs-btn-disabled-border-color: #8f99bf;
 }
 
+/* Above the topbar (1030) and the chat overlay (1060). */
+.session-expired-notice {
+  z-index: 1080;
+  width: min(100%, 640px);
+}
+
 .student-topbar {
   position: sticky;
   top: 0;

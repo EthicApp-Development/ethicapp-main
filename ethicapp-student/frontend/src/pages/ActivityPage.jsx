@@ -1,6 +1,6 @@
-import axios from 'axios';
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { Link, useOutletContext, useParams } from 'react-router-dom';
+import { describeApiError, withReference } from '../api/apiErrors.js';
 import { studentApi, legacyUserApi } from '../api/studentApi.js';
 import { useI18n } from '../app/providers.jsx';
 import ActivityTabsPanel from '../components/session-detail/ActivityTabsPanel.jsx';
@@ -160,11 +160,10 @@ export default function ActivityPage() {
         });
       })
       .catch((error) => {
-        const message = axios.isAxiosError(error)
-          ? (error.response?.data?.error ?? t('sessionDetail.loadErrorFallback'))
-          : t('sessionDetail.loadErrorFallback');
-
-        dispatch({ type: 'SESSIONS_LOAD_ERROR', payload: message });
+        dispatch({
+          type: 'SESSIONS_LOAD_ERROR',
+          payload: describeApiError(error, t, { fallbackKey: 'sessionDetail.loadErrorFallback' })
+        });
       });
   }, [session.isAuthenticated, sessionRefreshKey, t]);
 
@@ -228,11 +227,10 @@ export default function ActivityPage() {
           return;
         }
 
-        const message = axios.isAxiosError(error)
-          ? (error.response?.data?.error ?? t('sessionDetail.descriptorLoadErrorFallback'))
-          : t('sessionDetail.descriptorLoadErrorFallback');
-
-        dispatch({ type: 'DESCRIPTOR_LOAD_ERROR', payload: message });
+        dispatch({
+          type: 'DESCRIPTOR_LOAD_ERROR',
+          payload: describeApiError(error, t, { fallbackKey: 'sessionDetail.descriptorLoadErrorFallback' })
+        });
       });
 
     return () => {
@@ -351,11 +349,13 @@ export default function ActivityPage() {
           return;
         }
 
-        const message = axios.isAxiosError(error)
-          ? (error.response?.data?.message ?? t('sessionDetail.caseLoadErrorFallback'))
-          : t('sessionDetail.caseLoadErrorFallback');
-
-        dispatch({ type: 'CASE_LOAD_ERROR', payload: message });
+        dispatch({
+          type: 'CASE_LOAD_ERROR',
+          payload: describeApiError(error, t, {
+            fallbackKey: 'sessionDetail.caseLoadErrorFallback',
+            bodyField: 'message'
+          })
+        });
       });
 
     return () => {
@@ -399,7 +399,7 @@ export default function ActivityPage() {
     };
   }, [localState.caseDocument]);
 
-  useActivityRealtimeSync({
+  const { realtimeIssue } = useActivityRealtimeSync({
     session,
     selectedSession,
     currentPhaseIdRef,
@@ -580,6 +580,12 @@ export default function ActivityPage() {
               </Link>
             </div>
             <div className="card-body">
+              {realtimeIssue ? (
+                <div className="alert alert-warning py-2 mb-3" role="status">
+                  {withReference(t('apiErrors.realtimeUnavailable'), realtimeIssue.requestId, t)}
+                </div>
+              ) : null}
+
               {localState.loadingDescriptor ? <p className="text-muted mt-3 mb-0">{t('sessionDetail.loadingDescriptor')}</p> : null}
 
               {localState.descriptorError ? (
