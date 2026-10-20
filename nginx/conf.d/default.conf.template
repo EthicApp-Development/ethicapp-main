@@ -8,6 +8,41 @@ map $http_x_forwarded_proto $proxy_x_forwarded_proto {
     ''      $scheme;
 }
 
+# Classifies a request as a page navigation or an API call, so that auth and
+# upstream failures can answer API clients with JSON instead of HTML.
+# Sec-Fetch-Mode decides when present; Sec-Fetch-Dest and then Accept cover
+# clients that do not send it.
+map $http_accept $ethicapp_accept_request_kind {
+    default       api;
+    "~*text/html" navigation;
+}
+
+map $http_sec_fetch_dest $ethicapp_dest_request_kind {
+    ""       $ethicapp_accept_request_kind;
+    document navigation;
+    default  api;
+}
+
+map $http_sec_fetch_mode $ethicapp_request_kind {
+    ""       $ethicapp_dest_request_kind;
+    navigate navigation;
+    default  api;
+}
+
+# Keeps a well-formed request id set by a proxy in front of NGINX and
+# generates one otherwise. Sent to upstreams and returned to clients.
+map $http_x_request_id $ethicapp_request_id {
+    default                    $request_id;
+    "~^[A-Za-z0-9._-]{8,128}$" $http_x_request_id;
+}
+
+log_format ethicapp_edge '$remote_addr [$time_iso8601] "$request" $status $body_bytes_sent '
+                         'request_id=$ethicapp_request_id kind=$ethicapp_request_kind '
+                         'auth_status=$auth_check_status user_id=$auth_user_id '
+                         'upstream_status=$upstream_status upstream_time=$upstream_response_time '
+                         'request_time=$request_time forwarded_for="$http_x_forwarded_for" '
+                         'user_agent="$http_user_agent"';
+
 server {
     listen 80;
     server_name _;
@@ -21,6 +56,13 @@ server {
 
     absolute_redirect off;
     client_max_body_size 20m;
+
+    access_log /var/log/nginx/access.log ethicapp_edge;
+
+    # Inherited only by locations that declare no add_header or error_page of
+    # their own; protected locations repeat them.
+    add_header X-Request-Id $ethicapp_request_id always;
+    error_page 500 502 503 504 @upstream_unavailable;
 
     # ---------------------------------------
     # Shared public font assets
@@ -204,6 +246,7 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $proxy_x_forwarded_proto;
+        proxy_set_header X-Request-Id $ethicapp_request_id;
     }
 
     location = /auth/runtime-config.js {
@@ -211,10 +254,12 @@ server {
         proxy_pass http://$auth_backend;
         proxy_http_version 1.1;
         add_header Cache-Control "no-store";
+        add_header X-Request-Id $ethicapp_request_id always;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $proxy_x_forwarded_proto;
+        proxy_set_header X-Request-Id $ethicapp_request_id;
     }
 
     location ^~ /auth/ {
@@ -225,6 +270,7 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $proxy_x_forwarded_proto;
+        proxy_set_header X-Request-Id $ethicapp_request_id;
     }
 
     # ---------------------------------------
@@ -237,6 +283,7 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $proxy_x_forwarded_proto;
+        proxy_set_header X-Request-Id $ethicapp_request_id;
     }
 
     # ---------------------------------------
@@ -255,12 +302,14 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $proxy_x_forwarded_proto;
+        proxy_set_header X-Request-Id $ethicapp_request_id;
         proxy_set_header Cookie $http_cookie;
     }
 
     auth_request_set $auth_user_id $upstream_http_x_user_id;
     auth_request_set $auth_user_role $upstream_http_x_user_role;
     auth_request_set $auth_session_cookie $upstream_http_set_cookie;
+    auth_request_set $auth_check_status $upstream_status;
 
     # ---------------------------------------
     # Student app (protected)
@@ -269,16 +318,20 @@ server {
         proxy_pass http://$ethicapp_student_backend;
         proxy_http_version 1.1;
         add_header Cache-Control "no-store";
+        add_header X-Request-Id $ethicapp_request_id always;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $proxy_x_forwarded_proto;
+        proxy_set_header X-Request-Id $ethicapp_request_id;
     }
 
     location /student/api/ {
         auth_request /_auth_check;
         error_page 401 = @auth_redirect;
+        error_page 500 502 503 504 @upstream_unavailable;
         add_header Set-Cookie $auth_session_cookie always;
+        add_header X-Request-Id $ethicapp_request_id always;
 
         proxy_pass http://$ethicapp_student_backend;
         proxy_http_version 1.1;
@@ -286,6 +339,7 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $proxy_x_forwarded_proto;
+        proxy_set_header X-Request-Id $ethicapp_request_id;
 
         proxy_set_header X-User-Id $auth_user_id;
         proxy_set_header X-User-Role $auth_user_role;
@@ -294,7 +348,9 @@ server {
     location /student/ {
         auth_request /_auth_check;
         error_page 401 = @auth_redirect;
+        error_page 500 502 503 504 @upstream_unavailable;
         add_header Set-Cookie $auth_session_cookie always;
+        add_header X-Request-Id $ethicapp_request_id always;
 
         proxy_pass http://$ethicapp_student_backend;
         proxy_http_version 1.1;
@@ -304,6 +360,7 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $proxy_x_forwarded_proto;
+        proxy_set_header X-Request-Id $ethicapp_request_id;
 
         proxy_set_header X-User-Id $auth_user_id;
         proxy_set_header X-User-Role $auth_user_role;
@@ -315,7 +372,9 @@ server {
     location /public/ {
         auth_request /_auth_check;
         error_page 401 = @auth_redirect;
+        error_page 500 502 503 504 @upstream_unavailable;
         add_header Set-Cookie $auth_session_cookie always;
+        add_header X-Request-Id $ethicapp_request_id always;
 
         proxy_pass http://$ethicapp_backend;
         proxy_http_version 1.1;
@@ -323,6 +382,7 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $proxy_x_forwarded_proto;
+        proxy_set_header X-Request-Id $ethicapp_request_id;
 
         proxy_set_header X-User-Id $auth_user_id;
         proxy_set_header X-User-Role $auth_user_role;
@@ -331,7 +391,9 @@ server {
     location /uploads/ {
         auth_request /_auth_check;
         error_page 401 = @auth_redirect;
+        error_page 500 502 503 504 @upstream_unavailable;
         add_header Set-Cookie $auth_session_cookie always;
+        add_header X-Request-Id $ethicapp_request_id always;
 
         proxy_pass http://$ethicapp_backend;
         proxy_http_version 1.1;
@@ -339,6 +401,7 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $proxy_x_forwarded_proto;
+        proxy_set_header X-Request-Id $ethicapp_request_id;
 
         proxy_set_header X-User-Id $auth_user_id;
         proxy_set_header X-User-Role $auth_user_role;
@@ -350,7 +413,9 @@ server {
     location /socket.io/ {
         auth_request /_auth_check;
         error_page 401 = @auth_redirect;
+        error_page 500 502 503 504 @upstream_unavailable;
         add_header Set-Cookie $auth_session_cookie always;
+        add_header X-Request-Id $ethicapp_request_id always;
 
         proxy_pass http://$ethicapp_backend;
         proxy_http_version 1.1;
@@ -362,6 +427,7 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $proxy_x_forwarded_proto;
+        proxy_set_header X-Request-Id $ethicapp_request_id;
 
         proxy_set_header X-User-Id $auth_user_id;
         proxy_set_header X-User-Role $auth_user_role;
@@ -381,7 +447,9 @@ server {
         auth_request /_auth_check;
         error_page 401 = @auth_redirect;
         error_page 403 = @forbidden;
+        error_page 500 502 503 504 @upstream_unavailable;
         add_header Set-Cookie $auth_session_cookie always;
+        add_header X-Request-Id $ethicapp_request_id always;
 
         proxy_pass http://$management_console_backend;
         proxy_http_version 1.1;
@@ -389,6 +457,7 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $proxy_x_forwarded_proto;
+        proxy_set_header X-Request-Id $ethicapp_request_id;
 
         proxy_set_header X-User-Id $auth_user_id;
         proxy_set_header X-User-Role $auth_user_role;
@@ -404,6 +473,7 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $proxy_x_forwarded_proto;
+        proxy_set_header X-Request-Id $ethicapp_request_id;
     }
 
     # ---------------------------------------
@@ -412,7 +482,9 @@ server {
     location / {
         auth_request /_auth_check;
         error_page 401 = @auth_redirect;
+        error_page 500 502 503 504 @upstream_unavailable;
         add_header Set-Cookie $auth_session_cookie always;
+        add_header X-Request-Id $ethicapp_request_id always;
 
         proxy_pass http://$ethicapp_backend;
         proxy_http_version 1.1;
@@ -420,16 +492,65 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $proxy_x_forwarded_proto;
+        proxy_set_header X-Request-Id $ethicapp_request_id;
 
         proxy_set_header X-User-Id $auth_user_id;
         proxy_set_header X-User-Role $auth_user_role;
     }
 
+    # Missing or expired session. Page navigations go to sign-in; API calls get
+    # a JSON 401 they can act on, because browsers follow a redirect silently
+    # and would hand the login page HTML to the caller. Set-Cookie forwards the
+    # cookie that auth-backend clears when it expires a session.
     location @auth_redirect {
+        # Empty types: the URI extension (for example .png) must not set the
+        # Content-Type of the JSON body.
+        types { }
+        default_type application/json;
+        add_header Set-Cookie $auth_session_cookie always;
+        add_header X-Request-Id $ethicapp_request_id always;
+        add_header Cache-Control "no-store" always;
+
+        if ($ethicapp_request_kind = api) {
+            return 401 '{"status":"expired"}';
+        }
+
         return 302 /auth/login;
     }
 
+    # Errors generated by NGINX itself: an upstream that is down or times out,
+    # or an auth check that fails. Responses produced by an upstream pass
+    # through unchanged because proxy_intercept_errors stays off. error_page
+    # points here without "=", so the original 5xx status is kept whatever
+    # this location returns.
+    location @upstream_unavailable {
+        types { }
+        default_type application/json;
+        add_header Set-Cookie $auth_session_cookie always;
+        add_header X-Request-Id $ethicapp_request_id always;
+        add_header Cache-Control "no-store" always;
+
+        if ($ethicapp_request_kind = navigation) {
+            rewrite ^ /_errors/unavailable.html last;
+        }
+
+        return 200 '{"status":"unavailable"}';
+    }
+
+    # Readable page for navigations that hit @upstream_unavailable. The
+    # internal redirect keeps the original 5xx status.
+    location = /_errors/unavailable.html {
+        internal;
+        alias /usr/share/nginx/html/static/errors/unavailable.html;
+        add_header Set-Cookie $auth_session_cookie always;
+        add_header X-Request-Id $ethicapp_request_id always;
+        add_header Cache-Control "no-store" always;
+        sub_filter '__REQUEST_ID__' $ethicapp_request_id;
+        sub_filter_once off;
+    }
+
     location @forbidden {
+        add_header X-Request-Id $ethicapp_request_id always;
         return 403;
     }
 }
