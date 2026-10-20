@@ -10,10 +10,10 @@
  * commands immediately, so nothing accumulates during the reconnection.
  * @param {import('redis').RedisClientType} client
  * @param {Console} logger
- * @param {string} [label] Log prefix identifying the connection's owner.
+ * @param {string} label Log prefix identifying the connection's owner.
  * @returns {() => Promise<void>}
  */
-export function createConnectionResetter(client, logger, label = 'student-session') {
+export function createConnectionResetter(client, logger, label) {
   let resetting = false;
 
   return async function resetConnection() {

@@ -92,7 +92,9 @@ test('publish reports Redis failures as false without throwing', async () => {
   const result = await publisher.publish('session-participant-joined', 1, { sessionId: 57, userId: 44, device: null });
 
   assert.equal(result, false);
-  assert.equal(logger.errors.length, 1);
+  assert.deepEqual(logger.errors, [
+    `[domain-events] Could not publish session-participant-joined event ${FIXED_ID}: The client is closed`
+  ]);
 });
 
 test('publish gives up after publishTimeoutMs when a connected Redis stops responding', async () => {

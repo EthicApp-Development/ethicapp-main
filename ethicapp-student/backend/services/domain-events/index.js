@@ -37,12 +37,12 @@ export function createDomainEventPublisher({
   });
 
   redisClient.on('error', (error) => {
-    logger.error('[domain-events] Publisher Redis error:', error);
+    logger.error('[domain-events] Publisher Redis error:', error.message);
   });
 
   const initialConnection = redisClient.connect();
   initialConnection.catch((error) => {
-    logger.error('[domain-events] Publisher Redis connection could not be established:', error);
+    logger.error('[domain-events] Publisher Redis connection could not be established:', error.message);
   });
 
   return new DomainEventPublisher({

@@ -1,3 +1,4 @@
+import { DisconnectsClientError } from 'redis';
 import { createDomainEvent, getDomainEventChannel } from './domain-event-envelope.js';
 
 const DEFAULT_INITIAL_CONNECTION_TIMEOUT_MS = 1000;
@@ -134,7 +135,16 @@ export class DomainEventPublisher {
 
       return true;
     } catch (error) {
-      this.logger.error(`[domain-events] Could not publish ${type} event ${event.id}:`, error);
+      if (error instanceof DisconnectsClientError) {
+        // A reset also rejects peers of the command that timed out. Their
+        // commands may already be on the wire, so delivery is still unknown.
+        this.logger.error(
+          `[domain-events] Redis connection closed before confirming ${type} event ${event.id}; ` +
+          'delivery is unknown and may occur late.'
+        );
+      } else {
+        this.logger.error(`[domain-events] Could not publish ${type} event ${event.id}:`, error.message);
+      }
       return false;
     }
   }

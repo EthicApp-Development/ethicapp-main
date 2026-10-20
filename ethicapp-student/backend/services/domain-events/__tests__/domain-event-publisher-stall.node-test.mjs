@@ -56,15 +56,31 @@ test('repeated publishes during a connected Redis stall release pending work and
 
   redis.stall();
   for (let batch = 0; batch < 5; batch += 1) {
+    const logStart = errors.length;
     const results = await Promise.all(Array.from({ length: 100 }, () => (
       publisher.publish('session-participant-joined', 1, PAYLOAD)
     )));
     assert.ok(results.every((result) => result === false));
     await waitFor(() => tracker.pending === 0 && redis.heldOnOpenConnections() <= 2);
     assert.ok(redis.heldOnOpenConnections() <= 2, 'only the replacement handshake can remain pending');
+    const batchErrors = errors.slice(logStart);
+    if (batch === 0) {
+      assert.equal(
+        batchErrors.filter((entry) => /delivery is unknown and may occur late/.test(entry)).length,
+        100,
+        'every publish released by the reset has unknown delivery'
+      );
+      assert.ok(batchErrors.every((entry) => !entry.includes('Could not publish')));
+    } else {
+      assert.equal(
+        batchErrors.filter((entry) => /Could not publish/.test(entry)).length,
+        100,
+        'publishes submitted while reconnecting fail before transmission'
+      );
+      assert.ok(batchErrors.every((entry) => !entry.includes('delivery is unknown')));
+    }
   }
   assert.equal(tracker.resets, 1, 'one reset, with no resets while reconnecting');
-  assert.ok(errors.some((entry) => /delivery is unknown and may occur late/.test(entry)));
 
   redis.resume();
   await waitFor(() => client.isReady);

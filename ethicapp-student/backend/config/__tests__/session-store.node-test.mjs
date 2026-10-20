@@ -241,7 +241,7 @@ function createFakeRedisClient() {
 
 test('the connection resetter replaces a ready connection once, even when asked repeatedly', async () => {
   const client = createFakeRedisClient();
-  const reset = createConnectionResetter(client, createLogger());
+  const reset = createConnectionResetter(client, createLogger(), 'student-session');
 
   await Promise.all([reset(), reset(), reset()]);
   assert.equal(client.disconnects, 1);

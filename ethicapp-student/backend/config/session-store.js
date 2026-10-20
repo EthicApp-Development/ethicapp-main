@@ -208,7 +208,7 @@ export function createStudentSessionStore({
     }),
     timeoutMs,
     cooldownMs,
-    onTimeout: createConnectionResetter(client, logger),
+    onTimeout: createConnectionResetter(client, logger, 'student-session'),
     logger
   });
 }

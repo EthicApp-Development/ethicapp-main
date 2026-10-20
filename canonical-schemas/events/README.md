@@ -36,9 +36,11 @@ notifications) without calling it directly.
 - The student publisher caps its Redis connection at 100 pending commands and
   resets it when a publish times out, releasing queued and in-flight work.
   Commands fail immediately while the replacement connection is not ready.
-  A timeout means delivery is unknown: Redis may still apply commands already
-  transmitted before the reset and deliver those events late. The publisher
-  does not retry them automatically.
+  A timeout, or an in-flight publish rejected by the connection reset, means
+  delivery is unknown: Redis may still apply commands already transmitted
+  before the reset and deliver those events late. The publisher does not retry
+  them automatically. Publishes attempted while disconnected fail before
+  transmission and are logged as failures.
 - Consumers ignore and log invalid envelopes, unknown types and unknown versions.
 
 This fits notifications whose state can be recovered from the database, such as
