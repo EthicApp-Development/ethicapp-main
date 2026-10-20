@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useMemo, useState } from 'react';
-import axios from 'axios';
+import { describeApiError } from '../api/apiErrors.js';
 import { useI18n } from '../app/providers.jsx';
 import { legacyUserApi } from '../api/studentApi.js';
 
@@ -69,9 +69,7 @@ export function StudentActivityStateProvider({ children }) {
 
       return fullState;
     } catch (error) {
-      const message = axios.isAxiosError(error)
-        ? (error.response?.data?.error ?? t('errors.fullStateFallback'))
-        : t('errors.fullStateFallback');
+      const message = describeApiError(error, t, { fallbackKey: 'errors.fullStateFallback' });
 
       setStateBySession((prev) => ({ ...prev, [parsedSessionId]: null }));
       setErrorBySession((prev) => ({ ...prev, [parsedSessionId]: message }));
@@ -104,9 +102,7 @@ export function StudentActivityStateProvider({ children }) {
 
       return currentPhaseState;
     } catch (error) {
-      const message = axios.isAxiosError(error)
-        ? (error.response?.data?.error ?? t('errors.currentPhaseStateFallback'))
-        : t('errors.currentPhaseStateFallback');
+      const message = describeApiError(error, t, { fallbackKey: 'errors.currentPhaseStateFallback' });
 
       setErrorBySession((prev) => ({ ...prev, [parsedSessionId]: message }));
       throw error;

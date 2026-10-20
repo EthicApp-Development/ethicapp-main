@@ -160,6 +160,14 @@ const enUS = {
     description: 'The route you tried to open does not exist in the student module.',
     backHome: 'Go home'
   },
+  apiErrors: {
+    sessionExpired: 'Your session expired. Redirecting you to sign in...',
+    signInNow: 'Sign in now',
+    unavailable: 'EthicApp is temporarily unavailable. Try again in a moment.',
+    reference: '(Reference: {{requestId}})',
+    retry: 'Try again',
+    realtimeUnavailable: 'Live updates are paused. Reload the page if the activity does not advance.'
+  },
   errors: {
     invalidSessionId: 'Invalid sessionId',
     invalidUserId: 'Invalid userId',

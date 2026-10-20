@@ -161,6 +161,14 @@ const esCL = {
     description: 'La ruta que intentaste abrir no existe en el módulo de estudiante.',
     backHome: 'Ir al home'
   },
+  apiErrors: {
+    sessionExpired: 'Tu sesión expiró. Te estamos llevando a iniciar sesión...',
+    signInNow: 'Iniciar sesión ahora',
+    unavailable: 'EthicApp no está disponible por el momento. Vuelve a intentarlo en unos instantes.',
+    reference: '(Referencia: {{requestId}})',
+    retry: 'Reintentar',
+    realtimeUnavailable: 'Las actualizaciones en vivo están en pausa. Recarga la página si la actividad no avanza.'
+  },
   errors: {
     invalidSessionId: 'sessionId inválido',
     invalidUserId: 'userId inválido',

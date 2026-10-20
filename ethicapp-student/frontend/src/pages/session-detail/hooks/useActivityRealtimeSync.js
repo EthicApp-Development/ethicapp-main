@@ -1,5 +1,6 @@
-import { useEffect } from 'react';
-import { legacyUserApi } from '../../../api/studentApi.js';
+import { useEffect, useState } from 'react';
+import { legacyUserApi, studentApi } from '../../../api/studentApi.js';
+import { createRealtimeConnectionMonitor } from '../../../services/realtimeConnectionMonitor.js';
 import { getStudentSocket } from '../../../services/studentSocket.js';
 
 export function useActivityRealtimeSync({
@@ -16,6 +17,8 @@ export function useActivityRealtimeSync({
   setGroupContextByPhaseId,
   onExternalServiceResult
 }) {
+  const [realtimeIssue, setRealtimeIssue] = useState(null);
+
   useEffect(() => {
     if (!session.isAuthenticated || !selectedSession) {
       return;
@@ -24,6 +27,21 @@ export function useActivityRealtimeSync({
     let isUnmounted = false;
     let socket = null;
     const activeSessionId = Number(selectedSession.id);
+    const connectionMonitor = createRealtimeConnectionMonitor({
+      checkSession: () => studentApi.get('session'),
+      onIssue: (issue) => {
+        if (!isUnmounted) setRealtimeIssue(issue);
+      },
+      onRecovered: () => {
+        if (!isUnmounted) setRealtimeIssue(null);
+      }
+    });
+    const handleConnectError = () => {
+      connectionMonitor.handleConnectError();
+    };
+    const handleConnect = () => {
+      connectionMonitor.handleConnect();
+    };
 
     const handlePhaseTransition = (...payload) => {
       console.debug('[student socket] onPhaseTransition', { sessionId: activeSessionId, payload });
@@ -66,6 +84,8 @@ export function useActivityRealtimeSync({
         if (isUnmounted) return;
 
         socket = instance;
+        socket.on('connect_error', handleConnectError);
+        socket.on('connect', handleConnect);
         socket.emit('joinSession', activeSessionId);
         socket.emit('joinUser', session.uid);
         socket.on('onPhaseTransition', handlePhaseTransition);
@@ -76,11 +96,17 @@ export function useActivityRealtimeSync({
       })
       .catch((error) => {
         console.debug('[student socket] could not initialize websocket client', { sessionId: activeSessionId, error });
+        // Loading the client script from /socket.io/ fails the same way as a refused handshake.
+        handleConnectError();
       });
 
     return () => {
       isUnmounted = true;
+      setRealtimeIssue(null);
       if (!socket) return;
+
+      socket.off('connect_error', handleConnectError);
+      socket.off('connect', handleConnect);
 
       if (Number.isInteger(Number(currentGroupIdRef.current)) && Number(currentGroupIdRef.current) > 0) {
         socket.emit('leaveGroup', Number(currentGroupIdRef.current));
@@ -192,4 +218,6 @@ export function useActivityRealtimeSync({
     setGroupContextByPhaseId,
     setGroupIdByPhaseId
   ]);
+
+  return { realtimeIssue };
 }

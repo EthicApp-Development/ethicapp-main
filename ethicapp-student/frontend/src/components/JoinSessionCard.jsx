@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { studentApi } from '../api/studentApi.js';
+import { withReference } from '../api/apiErrors.js';
 import { useI18n } from '../app/providers.jsx';
 import { interpretJoinError, interpretJoinResponse } from '../utils/joinSessionOutcome.js';
 
@@ -37,7 +38,10 @@ export default function JoinSessionCard({ disabled, onJoined }) {
       result = interpretJoinError(error);
     }
 
-    setJoinFeedback({ type: result.succeeded ? 'success' : 'danger', message: t(result.messageKey) });
+    setJoinFeedback({
+      type: result.succeeded ? 'success' : 'danger',
+      message: withReference(t(result.messageKey), result.requestId, t)
+    });
     submittingRef.current = false;
     setJoinBusy(false);
 

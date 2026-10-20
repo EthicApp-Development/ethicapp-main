@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { useI18n } from '../app/providers.jsx';
+import { API_ERROR_KINDS, classifyApiError, describeApiError } from '../api/apiErrors.js';
 import { studentApi } from '../api/studentApi.js';
 import StudentTopbar from '../components/StudentTopbar.jsx';
 import { useStudentUser } from '../context/StudentUserContext.jsx';
@@ -16,6 +17,7 @@ export default function StudentLayout() {
   const [session, setSession] = useState(SESSION_PLACEHOLDER);
   const [loadingSession, setLoadingSession] = useState(true);
   const [sessionRefreshKey, setSessionRefreshKey] = useState(0);
+  const [sessionCheckError, setSessionCheckError] = useState('');
   const { user, loadingUser, refreshUser, clearUser } = useStudentUser();
 
   const userDisplayName = useMemo(() => {
@@ -48,12 +50,17 @@ export default function StudentLayout() {
         }
         setLoadingSession(false);
       })
-      .catch(() => {
+      .catch((error) => {
         setSession(SESSION_PLACEHOLDER);
         clearUser();
         setLoadingSession(false);
+
+        // An expired session is handled by the expiry notice and redirect.
+        if (classifyApiError(error).kind !== API_ERROR_KINDS.EXPIRED) {
+          setSessionCheckError(describeApiError(error, t, { fallbackKey: 'apiErrors.unavailable' }));
+        }
       });
-  }, [clearUser, refreshUser]);
+  }, [clearUser, refreshUser, t]);
 
   const handleLogout = () => {
     window.location.assign('/logout');
@@ -72,14 +79,23 @@ export default function StudentLayout() {
       />
 
       <main className="container py-4 py-md-5 flex-grow-1">
-        <Outlet
-          context={{
-            loadingSession,
-            session,
-            sessionRefreshKey,
-            onSessionJoined: handleSessionJoined
-          }}
-        />
+        {sessionCheckError ? (
+          <div className="alert alert-warning d-flex flex-wrap align-items-center gap-3" role="alert">
+            <span>{sessionCheckError}</span>
+            <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => window.location.reload()}>
+              {t('apiErrors.retry')}
+            </button>
+          </div>
+        ) : (
+          <Outlet
+            context={{
+              loadingSession,
+              session,
+              sessionRefreshKey,
+              onSessionJoined: handleSessionJoined
+            }}
+          />
+        )}
       </main>
     </div>
   );
