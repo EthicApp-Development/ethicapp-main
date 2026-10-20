@@ -13,6 +13,11 @@ import { TeacherGroupChatService } from "../../services/teacher-group-chat.servi
 import { TeacherToastService } from "../../services/teacher-toast.service.js";
 import UserProfileService from "../../services/user-profile.service.js";
 import SocketService from '../../services/socket.service.js';
+import {
+    SessionExpiryService,
+    sessionExpiredNoticeComponent,
+    sessionExpiryInterceptor
+} from "../../services/session-expiry.service.js";
 
 var app = angular.module("TeacherApp", ["ngSanitize",
     "ui.bootstrap", "timer", "ngFileUpload",
@@ -38,6 +43,14 @@ app.factory("ActivityStateService", ["$http", "TeacherSocketService", ActivitySt
     .factory("LanguageCatalogService", ["$http", "$translate", LanguageCatalogService])
     .factory("TagCatalogService", ["$http", "$translate", TagCatalogService]);
 app.service("toast", ["$rootScope", "$timeout", TeacherToastService]);
+
+// One notice and one redirect to sign-in when API calls find the session expired.
+app.service("SessionExpiryService", ["$timeout", "$window", SessionExpiryService]);
+app.factory("sessionExpiryInterceptor", ["$q", "SessionExpiryService", sessionExpiryInterceptor]);
+app.config(["$httpProvider", function($httpProvider) {
+    $httpProvider.interceptors.push("sessionExpiryInterceptor");
+}]);
+app.component("sessionExpiredNotice", sessionExpiredNoticeComponent);
 
 import { LocalesController } from "../../controllers/common/locales.controller.js";
 import { ActivityController } from "../../controllers/teacher/activity.controller.js";

@@ -2616,6 +2616,26 @@ h2{
     width: 100%;
 }
 
+/* Above the navigation, dialogs (ngDialog) and the workspace loading screen. */
+.session-expired-notice {
+    left: 50%;
+    max-width: calc(100% - 32px);
+    position: fixed;
+    top: 16px;
+    transform: translateX(-50%);
+    width: 640px;
+    z-index: 10050;
+}
+
+.session-expired-notice .alert {
+    align-items: center;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 0;
+}
+
 .teacher-toast-alert {
     border: 1px solid #8bbf8f;
     box-shadow: none;
