@@ -31,12 +31,13 @@ function parseCommand(buffer) {
 }
 
 /**
- * Minimal Redis stand-in for GET/SET/EXPIRE/DEL. `stall()` keeps every
+ * Minimal Redis stand-in for GET/SET/EXPIRE/DEL/PUBLISH. `stall()` keeps every
  * connection open but stops replying, like a Redis process paused with
  * SIGSTOP; `resume()` then applies and answers the held commands in order.
  */
 export async function startFakeRedisServer() {
   const data = new Map();
+  const published = [];
   const sockets = new Set();
   let held = [];
   let stalled = false;
@@ -47,6 +48,9 @@ export async function startFakeRedisServer() {
         const value = data.get(args[0]);
         return value === undefined ? `$-1${CRLF}` : `$${Buffer.byteLength(value)}${CRLF}${value}${CRLF}`;
       }
+      case 'PUBLISH':
+        published.push({ channel: args[0], message: args[1] });
+        return `:1${CRLF}`;
       case 'SET':
         data.set(args[0], args[1]);
         return `+OK${CRLF}`;
@@ -84,6 +88,7 @@ export async function startFakeRedisServer() {
 
   return {
     port: server.address().port,
+    published,
     stall() {
       stalled = true;
     },

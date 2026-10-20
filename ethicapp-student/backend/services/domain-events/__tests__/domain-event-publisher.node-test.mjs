@@ -136,3 +136,24 @@ test('a PUBLISH that fails after the timeout is not an unhandled rejection', asy
     process.off('unhandledRejection', onUnhandled);
   }
 });
+
+for (const asynchronous of [false, true]) {
+  test(`a ${asynchronous ? 'rejected' : 'throwing'} timeout reset cannot fail the originating request`, async () => {
+    const logger = createSilentLogger();
+    const publisher = new DomainEventPublisher({
+      redisClient: { publish: () => new Promise(() => {}) },
+      publishTimeoutMs: 10,
+      onTimeout: () => {
+        if (asynchronous) {
+          return Promise.reject(new Error('reset failed'));
+        }
+        throw new Error('reset failed');
+      },
+      logger
+    });
+
+    assert.equal(await publisher.publish('session-participant-joined', 1, { sessionId: 57, userId: 44, device: 'web' }), false);
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.ok(logger.errors.some((entry) => /Releasing timed-out Redis operations failed: reset failed/.test(entry)));
+  });
+}

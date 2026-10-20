@@ -1,5 +1,6 @@
 import { createClient } from 'redis';
 import { resolveApplicationRedisUrl } from '../../config/redis.js';
+import { createConnectionResetter } from '../../config/redis-connection.js';
 import { DomainEventPublisher } from './domain-event-publisher.js';
 
 let publisher = null;
@@ -11,6 +12,7 @@ let publisher = null;
  * @param {typeof createClient} [options.createRedisClient] Injectable for tests.
  * @param {number} [options.initialConnectionTimeoutMs]
  * @param {number} [options.publishTimeoutMs]
+ * @param {number} [options.maxPendingCommands]
  * @param {Console} [options.logger]
  * @returns {DomainEventPublisher}
  */
@@ -19,12 +21,15 @@ export function createDomainEventPublisher({
   createRedisClient = createClient,
   initialConnectionTimeoutMs,
   publishTimeoutMs,
+  maxPendingCommands = 100,
   logger = console
 } = {}) {
   const redisClient = createRedisClient({
     url: resolveApplicationRedisUrl(env),
     // Fail fast while disconnected so publishing never stalls a request.
-    disableOfflineQueue: true
+    disableOfflineQueue: true,
+    // Also bound commands on an open connection that stops answering.
+    commandsQueueMaxLength: maxPendingCommands
   });
 
   redisClient.on('ready', () => {
@@ -45,6 +50,7 @@ export function createDomainEventPublisher({
     initialConnection,
     initialConnectionTimeoutMs,
     publishTimeoutMs,
+    onTimeout: createConnectionResetter(redisClient, logger, 'domain-events'),
     logger
   });
 }

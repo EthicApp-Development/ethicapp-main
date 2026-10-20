@@ -6,11 +6,11 @@ import session from 'express-session';
 import { createClient } from 'redis';
 import hydrateLegacySession from '../../middleware/hydrateLegacySession.js';
 import {
-  createConnectionResetter,
   createStudentSessionStore,
   resolveStudentSessionTtlSeconds,
   ResilientSessionStore
 } from '../session-store.js';
+import { createConnectionResetter } from '../redis-connection.js';
 import { startFakeRedisServer } from './fake-redis-server.mjs';
 
 function createLogger() {
@@ -417,6 +417,8 @@ test('a connected Redis that stops answering retains bounded work and recovers',
 
     // Longer than the cooldown, so every later batch includes a probe.
     await delay(60);
+    // Closing the peer socket is asynchronous, especially under Docker load.
+    await waitFor(() => tracker.pending === 0 && redis.heldOnOpenConnections() <= 2);
     retained.push({ client: tracker.pending, server: redis.heldOnOpenConnections() });
   }
 
@@ -428,7 +430,7 @@ test('a connected Redis that stops answering retains bounded work and recovers',
     assert.ok(held <= 2, `the open connection holds ${held} commands`);
   }
   assert.equal(
-    logger.entries.error.filter((entry) => /resetting the session connection/.test(entry)).length,
+    logger.entries.error.filter((entry) => /resetting the connection/.test(entry)).length,
     1
   );
 

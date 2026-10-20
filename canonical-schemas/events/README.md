@@ -33,6 +33,12 @@ notifications) without calling it directly.
   (1 s by default); afterwards a disconnected publisher fails immediately.
   Each publish also waits at most 500 ms for Redis to accept it, so a server
   that stops responding on an open connection cannot stall the request.
+- The student publisher caps its Redis connection at 100 pending commands and
+  resets it when a publish times out, releasing queued and in-flight work.
+  Commands fail immediately while the replacement connection is not ready.
+  A timeout means delivery is unknown: Redis may still apply commands already
+  transmitted before the reset and deliver those events late. The publisher
+  does not retry them automatically.
 - Consumers ignore and log invalid envelopes, unknown types and unknown versions.
 
 This fits notifications whose state can be recovered from the database, such as
