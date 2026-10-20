@@ -24,6 +24,7 @@
     "psql": "./scripts/docker-psql.sh",
     "anonymization:maintenance": "./scripts/student-anonymization-maintenance.sh",
     "build:ethicapp-assets": "./scripts/build-ethicapp-assets.sh",
+    "test:nginx-edge": "./scripts/test-nginx-edge.sh",
     "publish:ghcr": "./scripts/ghcr-build-push.sh"
   },
   "devDependencies": {

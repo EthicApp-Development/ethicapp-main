@@ -63,6 +63,8 @@ Purpose:
 
 These tests should be a separate CI/release step, not part of service Dockerfile builds.
 
+`npm run test:nginx-edge` (`scripts/test-nginx-edge.sh`) is a first check of this kind. It builds the `nginx` image, runs it with both the production template and `dev.conf` against stub upstreams on a private Docker network, and verifies how the edge answers missing sessions, outages, and request ids. It needs Docker but none of the application services.
+
 ## 2. Docker Image Build Policy
 
 Some service Dockerfiles include a `backend-test` stage that runs lightweight backend tests before building the final runtime image.

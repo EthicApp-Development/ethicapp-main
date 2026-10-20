@@ -95,7 +95,10 @@ logger.token("utc-date", function () {
     return new Date().toISOString();
 });
 
-app.use(logger("[:utc-date | EthicApp] :method :url :status - :response-time ms"));
+// request_id matches the X-Request-Id that NGINX logs for the same request.
+app.use(logger(
+    "[:utc-date | EthicApp] :method :url :status - :response-time ms request_id=:req[x-request-id]"
+));
 
 // Static path for frontend files
 app.use(express.static(path.join(__dirname, "../frontend")));

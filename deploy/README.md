@@ -160,6 +160,33 @@ production config also preserves the `auth_request` session-renewal behavior:
 protected routes read `Set-Cookie` from the auth check response and propagate it
 back to the browser so sliding sessions continue to work in production.
 
+## NGINX Error Responses and Request Correlation
+
+NGINX classifies each request as a page navigation or an API call. It uses
+`Sec-Fetch-Mode: navigate`, then `Sec-Fetch-Dest: document`, then an `Accept`
+header containing `text/html`; every other request counts as an API call. The
+classification only changes how NGINX answers errors it produces itself:
+
+| Situation | Page navigation | API call |
+| --- | --- | --- |
+| Missing or expired session on a protected route | `302` to `/auth/login` | `401` with `{"status":"expired"}` |
+| Upstream down or timed out, or auth check failed (`500`, `502`, `503`, `504`) | Readable "temporarily unavailable" page, same status | `{"status":"unavailable"}`, same status |
+
+Errors returned by the applications themselves pass through unchanged. When
+`auth-backend` expires a session, NGINX also forwards the `Set-Cookie` that
+clears the auth cookie, on both the redirect and the JSON `401`.
+
+Every response carries an `X-Request-Id` header. NGINX keeps a well-formed
+`X-Request-Id` set by a proxy in front of it (8 to 128 characters from
+`A-Z a-z 0-9 . _ -`) and generates one otherwise. It forwards the id to every
+upstream, and the unavailable page shows it as a reference users can report.
+
+Access log lines use the `ethicapp_edge` format, which includes `request_id`,
+the request classification, the auth check status, the user id, the upstream
+status, and upstream and total response times. `ethicapp` logs the same
+`request_id`, so an edge line can be joined with the application line for the
+same request. No environment variables are involved.
+
 ## Student Anonymization
 
 Periodic student data anonymization is documented in
