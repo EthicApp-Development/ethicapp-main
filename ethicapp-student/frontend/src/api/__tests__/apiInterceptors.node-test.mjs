@@ -64,23 +64,22 @@ test('a 401 on a protected call starts the expiry flow once, however many calls 
   assert.equal(redirects.length, 1);
 });
 
-test('the expiry flow receives the return target named by the failed request', async () => {
+test('a failed join returns to manual selection even with a stale request target', async () => {
   const { client, expiredCalls, redirects } = createClient(() => EXPIRED, { baseURL: '/student/api/' });
 
   await assert.rejects(client.post('sessions/join', { code: 'abc123' }, { expiryReturnTo: '/student/?join=abc123' }));
 
-  assert.deepEqual(expiredCalls, [{ requestId: 'req-401', returnTo: '/student/?join=abc123' }]);
-  assert.deepEqual(redirects, ['/auth/login?returnTo=%2Fstudent%2F%3Fjoin%3Dabc123']);
+  assert.deepEqual(expiredCalls, [{ requestId: 'req-401' }]);
+  assert.deepEqual(redirects, ['/auth/login']);
 });
 
 for (const firstToFail of ['profile', 'join']) {
-  test(`the join target survives a concurrent background 401 when the ${firstToFail} fails first`, async () => {
+  test(`manual selection is preserved when the ${firstToFail} request expires first`, async () => {
     const releases = {};
     const scheduled = [];
     const redirects = [];
     const expiryFlow = createSessionExpiryFlow({
       redirect: (signInUrl) => redirects.push(signInUrl),
-      currentLocation: () => '/student/',
       schedule: (callback, delayMs) => scheduled.push({ callback, delayMs })
     });
     const adapter = fakeAdapter(() => EXPIRED);
@@ -104,9 +103,9 @@ for (const firstToFail of ['profile', 'join']) {
     }
     scheduled.forEach(({ callback }) => callback());
 
-    assert.equal(expiryFlow.getSnapshot().returnTo, '/student/?join=abc123');
+    assert.equal(expiryFlow.getSnapshot().requestId, 'req-401');
     assert.equal(scheduled.length, 1);
-    assert.deepEqual(redirects, ['/auth/login?returnTo=%2Fstudent%2F%3Fjoin%3Dabc123']);
+    assert.deepEqual(redirects, ['/auth/login']);
   });
 }
 

@@ -2,24 +2,6 @@ import { API_ERROR_KINDS, classifyApiError, isOutage } from '../api/apiErrors.js
 
 // Maps responses of POST /student/api/sessions/join to UI outcomes.
 
-// Same rule as normalizeSessionCode in the ethicapp-student backend.
-const SESSION_CODE_PATTERN = /^[a-z0-9]{1,16}$/;
-
-/** Trimmed, lower-cased session code, or null when it cannot be one. */
-export function normalizeJoinCode(rawCode) {
-  if (typeof rawCode !== 'string') {
-    return null;
-  }
-
-  const code = rawCode.trim().toLowerCase();
-  return SESSION_CODE_PATTERN.test(code) ? code : null;
-}
-
-/** Where sign-in should send the student back to complete this join. */
-export function buildJoinReturnTo(code) {
-  return `/student/?join=${encodeURIComponent(code)}`;
-}
-
 export const JOIN_RESULT_KINDS = Object.freeze({
   JOINED: 'joined',
   ALREADY_JOINED: 'already_joined',

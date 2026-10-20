@@ -144,3 +144,21 @@ PR descriptions should state:
 - whether image build guardrails passed,
 - whether database-integrated behavior was covered by automated integration tests or only manually verified,
 - any remaining test gaps or residual risk.
+
+## 7. Student Re-authentication Smoke Check
+
+EthicApp activities are synchronous. After re-authentication, students should
+explicitly choose their current classroom session rather than automatically
+rejoin an activity from an earlier request.
+
+For browser verification through the Compose stack:
+
+1. Expire a signed-in student's auth session while the join form or an activity
+   is open, then make a protected API call. Check that the expiry notice and
+   its sign-in link lead to login without a previous code or activity target.
+2. Sign in. Check that the student home page shows an empty code field and the
+   sessions list, without submitting a join or opening a previous activity.
+3. Enter the classroom code and submit, or select a session from the list.
+   Check that this explicit action opens the chosen session.
+4. Open `/student/?join=<valid-code>`. Check that the old query parameter does
+   not prefill or automatically submit the join form.

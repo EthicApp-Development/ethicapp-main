@@ -3,13 +3,11 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import PasswordField from './PasswordField';
 import { resetPassword } from '../../api/authApi';
 import { useI18n } from '../../app/i18n-context';
-import { readReturnTo, withReturnTo } from '../../utils/returnTo';
 
 function ResetPasswordForm() {
   const { t } = useI18n();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const returnTo = readReturnTo(searchParams);
 
   const token = searchParams.get('token') || '';
 
@@ -96,7 +94,7 @@ function ResetPasswordForm() {
       setSuccessMessage(t('resetPassword.successMessage'));
 
       setTimeout(() => {
-        navigate(withReturnTo('/login', returnTo), { replace: true });
+        navigate('/login', { replace: true });
       }, 1500);
     } catch (error) {
       const message =
@@ -183,7 +181,7 @@ function ResetPasswordForm() {
       <hr className="auth-divider" />
 
       <p className="auth-footer">
-        <Link to={withReturnTo('/login', returnTo)}>{t('resetPassword.backToLogin')}</Link>
+        <Link to="/login">{t('resetPassword.backToLogin')}</Link>
       </p>
     </form>
   );

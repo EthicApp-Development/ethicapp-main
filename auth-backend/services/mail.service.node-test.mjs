@@ -78,21 +78,3 @@ test('sendPasswordResetEmail rejects partial SMTP authentication config', async 
 
   assert.equal(createTransportMock.mock.calls.length, 0);
 });
-
-test('reset and confirmation links carry a valid returnTo and drop an invalid one', async () => {
-  process.env.AUTH_PUBLIC_URL = 'https://ethicapp.test/auth/';
-
-  const { buildResetUrl, buildAccountConfirmationUrl } = await importMailService('return-to-links');
-
-  assert.equal(buildResetUrl('t1'), 'https://ethicapp.test/auth/reset-password?token=t1');
-  assert.equal(
-    buildResetUrl('t1', '/student/?join=abc123'),
-    'https://ethicapp.test/auth/reset-password?token=t1&returnTo=%2Fstudent%2F%3Fjoin%3Dabc123'
-  );
-  assert.equal(buildResetUrl('t1', '//evil.example/'), 'https://ethicapp.test/auth/reset-password?token=t1');
-  assert.equal(
-    buildAccountConfirmationUrl('c1', '/student/?join=abc123'),
-    'https://ethicapp.test/auth/api/auth/confirm-account/c1?returnTo=%2Fstudent%2F%3Fjoin%3Dabc123'
-  );
-  assert.equal(buildAccountConfirmationUrl('c1', '/mng/'), 'https://ethicapp.test/auth/api/auth/confirm-account/c1');
-});

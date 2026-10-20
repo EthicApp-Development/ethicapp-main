@@ -15,7 +15,6 @@ import authMessages from '../i18n/messages/auth-messages.js';
 import { inferPreferredLocaleFromRequest, normalizePreferredLocale, translateMessage } from '../i18n/locale.js';
 import { csrfTokenHandler } from '../middleware/csrfProtection.js';
 import { initializeSessionPolicy } from '../middleware/sessionPolicy.js';
-import { appendReturnTo, resolvePostLoginRedirect, sanitizeReturnTo } from '../services/return-to.js';
 
 const router = express.Router();
 
@@ -42,6 +41,13 @@ function sha256Hex(value) {
 
 function generateResetToken() {
   return crypto.randomBytes(32).toString('hex');
+}
+
+function getPostLoginRedirect(role) {
+  if (role === 'A') return '/student';
+  if (role === 'P') return '/home';
+  if (role === 'S') return '/mng';
+  return '/login';
 }
 
 function isUniqueViolation(err) {
@@ -369,7 +375,7 @@ router.post('/login', async (req, res, next) => {
 
         initializeSessionPolicy(req, user.role, Date.now(), Number(user.session_version || 1));
 
-        const redirectTo = resolvePostLoginRedirect(user.role, req.body.returnTo);
+        const redirectTo = getPostLoginRedirect(user.role);
         const sendLoginResponse = () => res.json({
           message: t(req, 'loginSuccess'),
           redirectTo
@@ -960,8 +966,7 @@ router.post('/register', async (req, res) => {
       await mailService.sendAccountConfirmationEmail({
         to: email,
         rawToken: rawConfirmationToken,
-        preferredLocale,
-        returnTo: sanitizeReturnTo(req.body.returnTo)
+        preferredLocale
       });
     } catch (mailErr) {
       console.error('ACCOUNT CONFIRMATION EMAIL ERROR:', mailErr);
@@ -998,13 +1003,11 @@ router.post('/register', async (req, res) => {
 });
 
 router.get(['/confirm-account', '/confirm-account/:token'], async (req, res) => {
-  const loginUrl = (confirmed) => appendReturnTo(`/auth/login?confirmed=${confirmed}`, req.query.returnTo);
-
   try {
     const token = (req.params.token || req.query.token || '').trim();
 
     if (!token) {
-      return res.redirect(loginUrl('invalid'));
+      return res.redirect('/auth/login?confirmed=invalid');
     }
 
     const tokenDigest = sha256Hex(token);
@@ -1023,14 +1026,14 @@ router.get(['/confirm-account', '/confirm-account/:token'], async (req, res) => 
     );
 
     if (confirmationResult.rowCount === 0) {
-      return res.redirect(loginUrl('invalid'));
+      return res.redirect('/auth/login?confirmed=invalid');
     }
 
     const confirmationRequest = confirmationResult.rows[0];
     const email = confirmationRequest.mail;
 
     if (confirmationRequest.email_confirmed === true) {
-      return res.redirect(loginUrl('1'));
+      return res.redirect('/auth/login?confirmed=1');
     }
 
     await db.query('BEGIN');
@@ -1052,10 +1055,10 @@ router.get(['/confirm-account', '/confirm-account/:token'], async (req, res) => 
       throw txErr;
     }
 
-    return res.redirect(loginUrl('1'));
+    return res.redirect('/auth/login?confirmed=1');
   } catch (err) {
     console.error('CONFIRM ACCOUNT ERROR:', err);
-    return res.redirect(loginUrl('error'));
+    return res.redirect('/auth/login?confirmed=error');
   }
 });
 
@@ -1337,8 +1340,7 @@ router.post('/forgot', async (req, res) => {
     await mailService.sendPasswordResetEmail({
       to: user.mail,
       rawToken,
-      preferredLocale,
-      returnTo: sanitizeReturnTo(req.body.returnTo)
+      preferredLocale
     });
 
     return res.json(genericResponse);
