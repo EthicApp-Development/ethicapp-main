@@ -5,8 +5,7 @@ import * as config from "../../config/database.config.js";
 import * as rpg2 from "../../db/rest-pg-2.js";
 import * as DesignTypes from "../../../common/modules/design-types.js";
 import * as StatusCodes from "../../../common/modules/session-status.js";
-import { requireRole, requireOwnershipOrRole } from "../../helpers/auth-helper.js";
-import * as StudentActivityStatusHelper from "../../helpers/student-activity-state-helper.js";
+import { requireRole } from "../../helpers/auth-helper.js";
 
 const router = express.Router();
 
@@ -84,43 +83,6 @@ router.get("/activities/:session_id/descriptor", async (req, res) => {
     } catch (err) {
         console.error(`Error fetching activity descriptor for session_id: ${session_id}`, err);
         return res.status(500).json({ error: "Internal server error" });
-    }
-});
-
-router.get('/activities/:session_id/users/:user_id/peer_responses', async (req, res) => {
-    try {
-        const sessionId = Number(req.params.session_id);
-        const userId = Number(req.params.user_id);
-
-        if (isNaN(sessionId) || isNaN(userId)) {
-            return res.status(400).json({ error: 'Invalid session_id or user_id' });
-        }
-
-        if (!requireOwnershipOrRole(req, res, userId, 'P')) {
-            return;
-        }
-
-        const { phases } = req.body;
-        if (!Array.isArray(phases) || phases.length === 0) {
-            return res.status(400).json({ error: 'Phases must be a non-empty array' });
-        }
-
-        const designType = await getDesignTypeBySessionId(sessionId);
-        if (!designType) {
-            return res.status(404).json({ error: 'Design type not found for the given session' });
-        }
-
-        const updatedPhases = await StudentActivityStatusHelper.getCachedStudentActivityPeerResponses(
-            designType,
-            sessionId,
-            userId,
-            phases
-        );
-
-        return res.status(200).json({ status: 'ok', phases: updatedPhases });
-    } catch (error) {
-        console.error('Error in /activities/:session_id/users/:user_id/peer_responses:', error);
-        return res.status(500).json({ error: 'Internal server error' });
     }
 });
 
