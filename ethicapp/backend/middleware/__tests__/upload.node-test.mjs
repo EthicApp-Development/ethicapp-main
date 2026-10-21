@@ -155,11 +155,14 @@ describe("upload middleware", () => {
             });
 
             assert.equal(response.status, 400);
-            assert.deepEqual(await response.json(), {
-                status:  "err",
-                message: "Unexpected field",
-                code:    "UNEXPECTED_FILE_FIELD",
-            });
+            // The message is multer's own text, which changes between releases
+            // ("Unexpected field" up to 2.1, "Unexpected file field" in 2.4);
+            // clients rely on the stable code.
+            const body = await response.json();
+            assert.equal(body.status, "err");
+            assert.equal(body.code, "UNEXPECTED_FILE_FIELD");
+            assert.equal(typeof body.message, "string");
+            assert.ok(body.message.length > 0);
         });
 
         await assertTemporaryUploadsClean();
