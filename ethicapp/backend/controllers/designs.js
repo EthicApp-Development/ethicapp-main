@@ -967,7 +967,8 @@ router.patch("/designs/:id/lock", async (req, res) => {
             sqlParams: [rpg2.param("plain", designId)],
         });
 
-        if (!design) {
+        // singleSQL returns {} when no row matches.
+        if (!design?.id) {
             return res.status(404).json({ status: "err", message: "Design not found" });
         }
 
