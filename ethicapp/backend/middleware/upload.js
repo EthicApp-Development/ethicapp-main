@@ -9,9 +9,17 @@ const PDF_MIME_TYPES = new Set(["application/pdf"]);
 const IMAGE_MIME_TYPES = new Set(["image/png", "image/jpeg", "image/jpg"]);
 const uploadsRoot = path.resolve(process.cwd(), uploadsPath);
 const temporaryUploadsRoot = path.join(uploadsRoot, "tmp");
+// Temporary directories created for each request, so a failed upload can prune them.
+const temporaryDirectoriesByRequest = new WeakMap();
 
 function sanitizeFilename(filename) {
     return path.basename(filename || "upload").replace(/[^\w.-]/g, "_");
+}
+
+function trackTemporaryDirectory(req, directory) {
+    const directories = temporaryDirectoriesByRequest.get(req) || [];
+    directories.push(directory);
+    temporaryDirectoriesByRequest.set(req, directories);
 }
 
 function createStorage() {
@@ -21,6 +29,9 @@ function createStorage() {
             const destination = path.join(temporaryUploadsRoot, uploadId, file.fieldname);
 
             fs.mkdir(destination, { recursive: true }, (error) => {
+                if (!error) {
+                    trackTemporaryDirectory(req, destination);
+                }
                 callback(error, destination);
             });
         },
@@ -57,9 +68,9 @@ function getUploadErrorCode(error) {
 
 function createUpload(allowedMimeTypes) {
     return multer({
-        storage: createStorage(),
+        storage:    createStorage(),
         fileFilter: createFileFilter(allowedMimeTypes),
-        limits: {
+        limits:     {
             fileSize: MAX_UPLOAD_SIZE_BYTES,
         },
     });
@@ -67,16 +78,20 @@ function createUpload(allowedMimeTypes) {
 
 function withUpload(uploadMiddleware) {
     return (req, res, next) => {
-        uploadMiddleware(req, res, (error) => {
+        uploadMiddleware(req, res, async (error) => {
             if (!error) {
                 return next();
             }
 
+            // multer has already removed any file it wrote; its directories remain.
+            const directories = temporaryDirectoriesByRequest.get(req) || [];
+            await Promise.all(directories.map(pruneEmptyTemporaryDirectories));
+
             const status = error.status || (error instanceof multer.MulterError ? 400 : 500);
             return res.status(status).json({
-                status: "err",
+                status:  "err",
                 message: error.message || "File upload failed.",
-                code: getUploadErrorCode(error),
+                code:    getUploadErrorCode(error),
             });
         });
     };
@@ -101,11 +116,14 @@ export async function moveUploadedFile(uploadedFile, publicPath) {
         throw new Error("Missing uploaded file path.");
     }
 
+    const sourcePath = path.resolve(uploadedFile.path);
     const destination = path.join(uploadsRoot, getRelativeUploadPath(publicPath));
     await fs.promises.mkdir(path.dirname(destination), { recursive: true });
     await fs.promises.rm(destination, { force: true });
-    await fs.promises.rename(uploadedFile.path, destination);
+    await fs.promises.rename(sourcePath, destination);
     uploadedFile.path = destination;
+
+    await pruneEmptyTemporaryDirectories(path.dirname(sourcePath));
 
     return publicPath;
 }
