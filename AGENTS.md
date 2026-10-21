@@ -160,9 +160,9 @@ Production-oriented changes must stay aligned with the repository-owned deployme
 - The PDF render worker is production-relevant. Keep `PDF_RENDER_*` defaults aligned across `deploy/env.contract.yml`, `ethicapp/.env.example`, `docker-compose.yml`, and deployment notes when changing rendering behavior.
 - Rendered case-document images and manifests must stay in protected uploads storage and be served through authorization-aware application endpoints. Do not expose them through public static NGINX mounts.
 - Production Redis topology is role-specific:
-  - `REDIS_SESSION_*` is for Express session storage used by `ethicapp`, `auth-backend` and `ethicapp-student`, and for one-way domain events between services (`canonical-schemas/events/`). Never route application logic through `REDIS_CACHE_*`.
+  - `REDIS_APP_*` is the application Redis: Express session storage used by `ethicapp`, `auth-backend` and `ethicapp-student`, one-way domain events between services (`canonical-schemas/events/`), and other application state that must not be evicted as cache. Never route application logic through `REDIS_CACHE_*`. Its eviction policy is `volatile-ttl`, so any new key type must state whether it carries a TTL.
   - `REDIS_CACHE_*` is for database-derived cache entries used by legacy `ethicapp`.
-  - Production deployments must provide distinct Redis service DNS names, normally `redis-session` and `redis-cache`.
+  - Production deployments must provide distinct Redis service DNS names, normally `redis-app` and `redis-cache`.
   - Development may map both roles to the same Redis service in the root local-development Compose file.
   - Keep Redis memory defaults and eviction policies in sync across `.env.example`, `deploy/env.contract.yml`, and `INSTALL.md`.
 - Do not add generic `REDIS_HOST`, `REDIS_PORT`, or `REDIS_URL` production fallbacks; prefer role-specific Redis variables.

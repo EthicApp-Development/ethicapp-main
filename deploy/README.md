@@ -69,8 +69,8 @@ legacy-compatible services, not the preferred production setting.
 
 Browser authentication uses opaque, Redis-backed Express sessions issued by
 `auth-backend`. The browser receives only the signed `auth.sid` cookie; session
-contents remain server-side in the session Redis store. Production deployments
-should use `REDIS_SESSION_*` for this Redis role and keep it separate from
+contents remain server-side in the application Redis. Production deployments
+should use `REDIS_APP_*` for this Redis role and keep it separate from
 `REDIS_CACHE_*`.
 
 `auth-backend` enforces role-aware idle and absolute timeouts:
@@ -215,15 +215,29 @@ new or edited JSON taxonomy files from the deployed release are upserted into
 `ETHICAPP_SEED_TAG_TAXONOMIES=true` in production unless the deployment mounts
 and manages a different seed directory through `ETHICAPP_TAG_TAXONOMY_SEED_DIR`.
 
-Redis is role-specific in production. Use `REDIS_SESSION_*` for Express session
-storage and for the domain-event pub/sub channel that `ethicapp-student` uses to
-notify `ethicapp` (`canonical-schemas/events/README.md`), and `REDIS_CACHE_*` for
-database-derived cache entries. Production
-deployments should expose distinct service names, normally `redis-session` and
-`redis-cache`, and should not provide generic `REDIS_HOST`, `REDIS_PORT`, or
-`REDIS_URL` fallbacks. Development may map both roles to the same Redis instance.
-The default production memory limits are `REDIS_SESSION_MAXMEMORY=128mb` and
+Redis is role-specific in production. Use `REDIS_APP_*` for the application
+Redis: Express session storage, the domain-event pub/sub channel that
+`ethicapp-student` uses to notify `ethicapp` (`canonical-schemas/events/README.md`),
+and other application state that must not be evicted as cache. Use
+`REDIS_CACHE_*` for database-derived cache entries. Production deployments should
+expose distinct service names, normally `redis-app` and `redis-cache`, and should
+not provide generic `REDIS_HOST`, `REDIS_PORT`, or `REDIS_URL` fallbacks.
+Development may map both roles to the same Redis instance. The default
+production memory limits are `REDIS_APP_MAXMEMORY=128mb` and
 `REDIS_CACHE_MAXMEMORY=256mb`.
+
+### Migrating from `REDIS_SESSION_*`
+
+`REDIS_APP_*` replaces `REDIS_SESSION_*` (#660). The old names are not part of
+the contract and the services no longer read them, so a deployment adopting this
+release must rename them in the same change:
+
+1. Rename `REDIS_SESSION_HOST`, `REDIS_SESSION_PORT`, `REDIS_SESSION_URL`,
+   `REDIS_SESSION_MAXMEMORY` and `REDIS_SESSION_MAXMEMORY_POLICY` to their
+   `REDIS_APP_*` equivalents in the environment values.
+2. Rename the Redis service to `redis-app`, or add `redis-app` as a network alias
+   of the existing `redis-session` service. Keeping the same data volume means no
+   data migration: existing sessions survive the rename.
 
 The PDF render worker is a separate process that uses the same `ethicapp` image.
 Deploy it as its own service with `ETHICAPP_PROCESS_ROLE=pdf-render-worker`,

@@ -50,7 +50,7 @@ function createFakeRedisFactory({ connectDelayMs = 20, connects = true } = {}) {
 
 function createPublisher(fake, options = {}) {
   return createDomainEventPublisher({
-    env: { REDIS_SESSION_URL: 'redis://redis.test:6379' },
+    env: { REDIS_APP_URL: 'redis://redis.test:6379' },
     createRedisClient: fake.factory,
     logger: silentLogger,
     ...options

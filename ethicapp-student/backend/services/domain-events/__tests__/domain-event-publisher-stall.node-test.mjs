@@ -21,7 +21,7 @@ async function createPublisher(t, options = {}) {
   const errors = [];
   let client;
   const publisher = createDomainEventPublisher({
-    env: { REDIS_SESSION_URL: `redis://127.0.0.1:${redis.port}` },
+    env: { REDIS_APP_URL: `redis://127.0.0.1:${redis.port}` },
     publishTimeoutMs: 100,
     initialConnectionTimeoutMs: 100,
     logger: { log() {}, error: (...args) => errors.push(args.join(' ')) },

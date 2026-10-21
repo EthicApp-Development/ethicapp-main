@@ -1,13 +1,11 @@
 import { createClient } from 'redis';
 import RedisStore from 'connect-redis';
 import { getDefaultAuthSessionTtlSeconds } from '../middleware/sessionPolicy.js';
+import { resolveApplicationRedisUrl } from './application-redis.js';
 
+// Auth sessions live on the application Redis (REDIS_APP_*).
 function createSessionRedisClient() {
-  const host = process.env.REDIS_SESSION_HOST || 'redis-session';
-  const port = process.env.REDIS_SESSION_PORT || '6379';
-  const url = process.env.REDIS_SESSION_URL || `redis://${host}:${port}`;
-
-  const client = createClient({ url });
+  const client = createClient({ url: resolveApplicationRedisUrl() });
 
   client.on('connect', () => {
     console.log('[auth-session] Connected to Redis.');

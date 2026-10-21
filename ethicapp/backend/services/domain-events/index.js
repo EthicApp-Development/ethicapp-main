@@ -1,7 +1,7 @@
 import { createClient } from "redis";
 import * as config from "../../config/database.config.js";
 import * as rpg2 from "../../db/rest-pg-2.js";
-import { resolveSessionRedisUrl } from "../../db/session-redis.js";
+import { resolveApplicationRedisUrl } from "../../db/application-redis.js";
 import * as socketConfig from "../../config/socket.config.js";
 import { DomainEventSubscriber } from "./domain-event-subscriber.js";
 import {
@@ -29,7 +29,7 @@ function notifyTeachers(sessionId, participant) {
  * @returns {Promise<DomainEventSubscriber>}
  */
 export async function startDomainEventSubscriber({ env = process.env, logger = console } = {}) {
-    const redisClient = createClient({ url: resolveSessionRedisUrl(env) });
+    const redisClient = createClient({ url: resolveApplicationRedisUrl(env) });
 
     redisClient.on("ready", () => {
         logger.log("[domain-events] Subscriber connected to Redis.");
