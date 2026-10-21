@@ -39,7 +39,7 @@ test("getAuthorizedUpload authorizes an ethical case document only when metadata
                     "/assets/uploads/cases/7/case.pdf",
                 ]);
                 assert.equal(sqlParams[1], 12);
-                assert.equal(sqlParams[2], "A");
+                assert.equal(sqlParams.length, 3);
                 return [{ id: 7, pdf_path: "/uploads/cases/7/case.pdf" }];
             }
 
@@ -75,8 +75,8 @@ test("getAuthorizedUpload authorizes rendered case document images through case 
         { uid: 12, role: "P" },
         async ({ sql, sqlParams }) => {
             if (sql.includes("FROM ethical_cases c")) {
-                assert.equal(sqlParams[3], 7);
-                assert.match(sql, /c\.pdf_path = ANY\(\$1\) OR c\.id = \$4/);
+                assert.equal(sqlParams[2], 7);
+                assert.match(sql, /c\.pdf_path = ANY\(\$1\) OR c\.id = \$3/);
                 return [{ id: 7, pdf_path: "/uploads/cases/7/case.pdf" }];
             }
 
@@ -85,6 +85,22 @@ test("getAuthorizedUpload authorizes rendered case document images through case 
     );
 
     assert.deepEqual(authorized, { id: 7, pdf_path: "/uploads/cases/7/case.pdf" });
+});
+
+test("case document access does not depend on the session role", async () => {
+    for (const role of ["A", "P", "S"]) {
+        await getAuthorizedUpload(
+            "cases/7/case.pdf",
+            { uid: 12, role },
+            async ({ sql, sqlParams }) => {
+                if (sql.includes("FROM ethical_cases c")) {
+                    assert.doesNotMatch(sql, /'A'|'P'|'S'/);
+                    assert.ok(!sqlParams.includes(role));
+                }
+                return [];
+            }
+        );
+    }
 });
 
 test("getAuthorizedUpload allows authenticated users to read registered profile avatars", async () => {

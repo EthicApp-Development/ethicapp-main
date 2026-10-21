@@ -6,7 +6,6 @@ import path from "path";
 import * as config from "../config/database.config.js";
 import { uploadsPath } from "../config/uploads.config.js";
 import * as rpg2 from "../db/rest-pg-2.js";
-import { hasTheUserRoleById } from '../helpers/users-helper.js';
 import { requireRole } from "../helpers/auth-helper.js";
 import {
     CASE_DEFAULT_LICENSE,
@@ -382,13 +381,11 @@ router.get("/designs/:id", async (req, res) => {
                   AND (
                     creator = $2
                     OR visibility = 'public'
-                    OR $3 = 'A'
                   )
             `,
             sqlParams: [
                 rpg2.param("plain", designId),
                 rpg2.param("plain", req.session?.uid || null),
-                rpg2.param("plain", req.session?.role || ""),
             ],
         });
 
@@ -543,8 +540,7 @@ router.patch("/designs/:id", async (req, res) => {
             return res.status(404).json({ status: "err", message: "Design not found" });
         }
 
-        const isAdmin = await hasTheUserRoleById(sessionUid, 'A');
-        if (!isAdmin && !sameId(sessionUid, existingDesign.creator)) {
+        if (!sameId(sessionUid, existingDesign.creator)) {
             return res.status(403).json({ status: "err", message: "Forbidden: You do not have permission to update this design." });
         }
 
@@ -662,8 +658,7 @@ router.get("/users/:id/designs", async (req, res) => {
         }
 
         // Check if the user is allowed to access this data
-        const isAdmin = await hasTheUserRoleById(sessionUid, 'A');
-        if (!sameId(sessionUid, userId) && !isAdmin) {
+        if (!sameId(sessionUid, userId)) {
             return res.status(403).json({ status: "err", message: "Forbidden" });
         }
 
@@ -864,8 +859,7 @@ router.patch("/designs/:id/toggle_public", async (req, res) => {
                 return res.status(404).json({ status: "err", message: "Design not found" });
             }
 
-            const isAdmin = await hasTheUserRoleById(sessionUid, 'A');
-            if (!isAdmin && !sameId(sessionUid, design.creator)) {
+            if (!sameId(sessionUid, design.creator)) {
                 await client.query("ROLLBACK");
                 return res.status(403).json({ status: "err", message: "Forbidden: You do not have permission to publish this design." });
             }
@@ -1003,8 +997,7 @@ router.patch("/designs/:id/archive", async (req, res) => {
             return res.status(404).json({ status: "err", message: "Design not found" });
         }
 
-        const isAdmin = await hasTheUserRoleById(sessionUid, 'A');
-        if (!isAdmin && !sameId(sessionUid, design.creator)) {
+        if (!sameId(sessionUid, design.creator)) {
             return res.status(403).json({ status: "err", message: "Forbidden: You do not have permission to archive this design." });
         }
 
@@ -1202,8 +1195,7 @@ router.delete("/designs/:id", async (req, res) => {
         }
 
         // Check if the user is an admin or the creator of the design
-        const isAdmin = await hasTheUserRoleById(sessionUid, 'A');
-        if (!isAdmin && !sameId(sessionUid, design.creator)) {
+        if (!sameId(sessionUid, design.creator)) {
             return res.status(403).json({ status: "err", message: "Forbidden: You do not have permission to delete this design." });
         }
 
@@ -1293,8 +1285,7 @@ router.get("/designs/:id/case", async (req, res) => {
                 LEFT JOIN ethical_cases c ON c.id = d.case_id
                 WHERE d.id = $1
                   AND (
-                    $3 = 'A'
-                    OR d.creator = $2
+                    d.creator = $2
                     OR d.visibility = 'public'
                     OR EXISTS (
                         SELECT 1
@@ -1316,7 +1307,6 @@ router.get("/designs/:id/case", async (req, res) => {
             sqlParams: [
                 rpg2.param("plain", designId),
                 rpg2.param("plain", req.session.uid),
-                rpg2.param("plain", req.session.role || ""),
             ],
         });
 

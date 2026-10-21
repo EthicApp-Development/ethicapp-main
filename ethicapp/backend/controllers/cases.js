@@ -405,7 +405,7 @@ async function getUniqueCaseCopyTitle(client, userId, baseTitle, languageCode) {
     return buildLocalizedCopyTitle(baseTitle, languageCode, Date.now());
 }
 
-async function getReadableCaseWithDocumentProcessing(caseId, userId, role = "") {
+async function getReadableCaseWithDocumentProcessing(caseId, userId) {
     return rpg2.singleSQL({
         dbcon: config.dbconnString,
         sql: `
@@ -417,8 +417,6 @@ async function getReadableCaseWithDocumentProcessing(caseId, userId, role = "") 
             ${pdfRenderJobJoinSql}
             WHERE c.id = $1
               AND (
-                $3 = 'A'
-                OR
                 c.creator = $2
                 OR c.visibility = 'public'
                 OR EXISTS (
@@ -448,7 +446,6 @@ async function getReadableCaseWithDocumentProcessing(caseId, userId, role = "") 
         sqlParams: [
             rpg2.param("plain", caseId),
             rpg2.param("plain", userId),
-            rpg2.param("plain", role || ""),
         ],
     });
 }
@@ -581,7 +578,7 @@ router.get("/cases/:id/download-link", async (req, res) => {
     }
 
     try {
-        const caseObj = await getReadableCaseWithDocumentProcessing(caseId, req.session.uid, req.session.role);
+        const caseObj = await getReadableCaseWithDocumentProcessing(caseId, req.session.uid);
 
         if (!caseObj || !caseObj.id) {
             return res.status(404).json({ status: "err", message: "Case not found." });
@@ -611,7 +608,7 @@ router.get("/cases/:id/document-processing", async (req, res) => {
     }
 
     try {
-        const caseObj = await getReadableCaseWithDocumentProcessing(caseId, req.session.uid, req.session.role);
+        const caseObj = await getReadableCaseWithDocumentProcessing(caseId, req.session.uid);
 
         if (!caseObj || !caseObj.id) {
             return res.status(404).json({ status: "err", message: "Case not found." });
@@ -645,7 +642,7 @@ router.get("/cases/:id", async (req, res) => {
     }
 
     try {
-        const caseObj = await getReadableCaseWithDocumentProcessing(caseId, req.session.uid, req.session.role);
+        const caseObj = await getReadableCaseWithDocumentProcessing(caseId, req.session.uid);
 
         if (!caseObj || !caseObj.id) {
             return res.status(404).json({ status: "err", message: "Case not found." });
