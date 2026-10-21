@@ -64,11 +64,15 @@ function createFakeNetwork({ tcp = {}, tls = {}, certificate = null, protocol = 
   return { createConnection, tlsConnect, tcpSockets, tlsSockets };
 }
 
+// Generous defaults: the fake network answers on the next tick, so these only
+// bound tests that do not exercise timing, and must not trip on a slow host
+// (image builds run this suite under amd64 emulation, files in parallel).
+// Tests about timeouts and deadlines pass their own small values.
 function createService(network, {
   lookup,
-  stageTimeoutMs = 50,
-  deadlineMs = 1000,
-  attemptDelayMs = 250,
+  stageTimeoutMs = 2000,
+  deadlineMs = 5000,
+  attemptDelayMs = 1000,
   now = () => Date.parse('2026-10-12T12:00:00.000Z')
 } = {}) {
   return createConnectivityHealthService({
