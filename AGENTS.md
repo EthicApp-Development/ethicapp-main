@@ -7,8 +7,8 @@ This file defines working expectations for humans and coding agents operating in
 This repository is a multi-project workspace. Important areas:
 
 - `ethicapp/`: legacy EthicApp application (AngularJS 1.8 + Express).
-  - Includes deprecated/aging student features.
   - Includes currently used teacher-facing features.
+  - Serves the backend API, Socket.IO namespaces and protected uploads that `ethicapp-student` uses; it no longer has a student UI of its own.
   - Includes admin-user functionality.
 - `auth-backend/`: authentication app/service (login, logout, sign-up, password recovery, password change).
 - `ethicapp-student/`: new student-focused application under active development (Vite + React 19 (JS) + Express).
