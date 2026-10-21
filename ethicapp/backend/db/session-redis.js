@@ -1,20 +1,10 @@
 import { createClient } from "redis";
 import RedisStore from "connect-redis";
+import { resolveApplicationRedisUrl } from "./application-redis.js";
 
-/**
- * Resolves the URL of the Redis instance shared by Express sessions and
- * cross-service domain events.
- * @param {Record<string, string | undefined>} env Environment variables.
- * @returns {string} Redis connection URL.
- */
-export function resolveSessionRedisUrl(env = process.env) {
-    const host = env.REDIS_SESSION_HOST || "redis-session";
-    const port = env.REDIS_SESSION_PORT || "6379";
-    return env.REDIS_SESSION_URL || `redis://${host}:${port}`;
-}
-
+// Express sessions live on the application Redis (REDIS_APP_*).
 function createSessionRedisClient() {
-    const client = createClient({ url: resolveSessionRedisUrl() });
+    const client = createClient({ url: resolveApplicationRedisUrl() });
 
     client.on("connect", () => {
         console.log("[legacy-session] Connected to Redis.");

@@ -268,7 +268,7 @@ test('createStudentSessionStore uses the application Redis with a fail-fast clie
 
   const store = createStudentSessionStore({
     env: {
-      REDIS_SESSION_URL: 'redis://redis.test:6379',
+      REDIS_APP_URL: 'redis://redis.test:6379',
       ETHICAPP_STUDENT_SESSION_REDIS_PREFIX: 'custom:',
       ETHICAPP_STUDENT_SESSION_TTL_SECONDS: '3600'
     },
@@ -286,7 +286,7 @@ test('createStudentSessionStore uses the application Redis with a fail-fast clie
   assert.equal(store.store.ttl, 3600);
 
   const defaults = createStudentSessionStore({ env: {}, createRedisClient: fakeCreateClient, logger: createLogger() });
-  assert.equal(created[1].options.url, 'redis://redis-session:6379');
+  assert.equal(created[1].options.url, 'redis://redis-app:6379');
   assert.equal(defaults.store.prefix, 'ethicapp-student:sess:');
   assert.equal(defaults.store.ttl, 86400);
 });
@@ -377,7 +377,7 @@ async function createStoreOnFakeRedis(t, options) {
   let client;
 
   const store = createStudentSessionStore({
-    env: { REDIS_SESSION_URL: `redis://127.0.0.1:${redis.port}` },
+    env: { REDIS_APP_URL: `redis://127.0.0.1:${redis.port}` },
     createRedisClient: (clientOptions) => {
       client = createClient(clientOptions);
       trackPendingCommands(client, tracker);

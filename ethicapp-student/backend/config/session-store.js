@@ -180,7 +180,7 @@ export function createStudentSessionStore({
   logger = console
 } = {}) {
   const client = createRedisClient({
-    url: resolveApplicationRedisUrl(env),
+    url: resolveApplicationRedisUrl(env, logger),
     // Fail fast while disconnected instead of queueing session commands.
     disableOfflineQueue: true,
     // disableOfflineQueue does not apply to a connection that is open but not

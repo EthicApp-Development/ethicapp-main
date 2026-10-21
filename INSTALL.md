@@ -87,16 +87,16 @@ RECAPTCHA_VERIFY_URL=https://www.google.com/recaptcha/api/siteverify
 
 Production deployments use two Redis instances:
 
-- `redis-session`: Express session storage for `ethicapp`, `auth-backend` and `ethicapp-student`, and the domain-event channel from `ethicapp-student` to `ethicapp` (see `canonical-schemas/events/README.md`). If it is unavailable, `ethicapp-student` keeps serving requests with sessions rebuilt from the auth headers.
+- `redis-app` (the application Redis): Express session storage for `ethicapp`, `auth-backend` and `ethicapp-student`, the domain-event channel from `ethicapp-student` to `ethicapp` (see `canonical-schemas/events/README.md`), and other application state that must not be evicted as cache. If it is unavailable, `ethicapp-student` keeps serving requests with sessions rebuilt from the auth headers.
 - `redis-cache`: database-derived cache entries used by the legacy `ethicapp` application.
 
-Development keeps a single Redis instance. In development, both `REDIS_SESSION_*` and `REDIS_CACHE_*` point to the same `redis` service.
+Development keeps a single Redis instance. In development, both `REDIS_APP_*` and `REDIS_CACHE_*` point to the same `redis` service.
 
 Use role-specific variables in deployment environments:
 
 ```bash
-REDIS_SESSION_HOST=redis-session
-REDIS_SESSION_PORT=6379
+REDIS_APP_HOST=redis-app
+REDIS_APP_PORT=6379
 REDIS_CACHE_HOST=redis-cache
 REDIS_CACHE_PORT=6379
 ```
@@ -104,11 +104,26 @@ REDIS_CACHE_PORT=6379
 Set Redis container memory limits through the Compose environment:
 
 ```bash
-REDIS_SESSION_MAXMEMORY=128mb
-REDIS_SESSION_MAXMEMORY_POLICY=volatile-ttl
+REDIS_APP_MAXMEMORY=128mb
+REDIS_APP_MAXMEMORY_POLICY=volatile-ttl
 REDIS_CACHE_MAXMEMORY=256mb
 REDIS_CACHE_MAXMEMORY_POLICY=allkeys-lru
 ```
+
+The application Redis keeps the `volatile-ttl` eviction policy: keys with a TTL,
+such as sessions, can be evicted under memory pressure, and keys without a TTL
+are never evicted. Any new application key type must state whether it carries a
+TTL.
+
+`REDIS_APP_*` replaces the earlier `REDIS_SESSION_*` names (#660). For one
+release, services still read `REDIS_SESSION_*` when no `REDIS_APP_*` variable is
+set, and log a deprecation warning at startup. `REDIS_SESSION_*` will be removed
+in the first release after production deployments adopt `REDIS_APP_*`.
+
+To migrate a deployment, rename the variables and either rename the Redis
+service to `redis-app` or give the existing service a `redis-app` alias. No data
+migration is needed: existing sessions survive while both names point to the
+same instance.
 
 Do not use generic `REDIS_HOST`, `REDIS_PORT`, or `REDIS_URL` values in production. The services resolve Redis by role-specific variables only, which avoids accidentally routing session traffic and cache traffic to the same Docker DNS name.
 

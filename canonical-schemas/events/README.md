@@ -7,8 +7,8 @@ notifications) without calling it directly.
 
 ## Transport
 
-- Redis pub/sub on the application Redis (today `REDIS_SESSION_*`; renamed to
-  `REDIS_APP_*` by #660). Never on the cache Redis (`REDIS_CACHE_*`).
+- Redis pub/sub on the application Redis (`REDIS_APP_*`). Never on the cache
+  Redis (`REDIS_CACHE_*`).
 - One channel per event type: `ethicapp:events:<type>`.
 - Messages are JSON envelopes validated against
   [`domain-event-envelope-v1.schema.json`](domain-event-envelope-v1.schema.json).
