@@ -944,15 +944,37 @@ router.patch("/designs/:id/toggle_public", async (req, res) => {
 });
 
 router.patch("/designs/:id/lock", async (req, res) => {
+    if (!requireRole(req, res, "P")) {
+        return;
+    }
+
     try {
-        const designId = req.params.id;
+        const sessionUid = req.session.uid;
+        const designId = parseInt(req.params.id, 10);
 
         // Validate input
         if (!designId) {
             return res.status(400).json({ status: "err", message: "Design ID is required" });
         }
 
-        // Execute SQL to toggle the locked field
+        const design = await rpg2.singleSQL({
+            dbcon: config.dbconnString,
+            sql: `
+                SELECT id, creator
+                FROM designs
+                WHERE id = $1;
+            `,
+            sqlParams: [rpg2.param("plain", designId)],
+        });
+
+        if (!design) {
+            return res.status(404).json({ status: "err", message: "Design not found" });
+        }
+
+        if (!sameId(sessionUid, design.creator)) {
+            return res.status(403).json({ status: "err", message: "Forbidden: You do not have permission to lock this design." });
+        }
+
         await rpg2.execSQL({
             dbcon: config.dbconnString,
             sql: `
@@ -960,7 +982,7 @@ router.patch("/designs/:id/lock", async (req, res) => {
                 SET locked = true
                 WHERE id = $1;
             `,
-            sqlParams: [designId],
+            sqlParams: [rpg2.param("plain", designId)],
         });
 
         return res.json({ status: "ok", message: "Design locked successfully" });
