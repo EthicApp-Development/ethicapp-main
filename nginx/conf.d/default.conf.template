@@ -394,6 +394,13 @@ server {
         proxy_set_header X-User-Role $auth_user_role;
     }
 
+    # ethicapp's /api/admin/ (teacher impersonation) is called only by
+    # management-console over the internal network, after its own step-up
+    # check. It is never served at the edge.
+    location ^~ /api/admin/ {
+        return 404;
+    }
+
     # ---------------------------------------
     # Todo lo demás: EthicApp protegido
     # ---------------------------------------
