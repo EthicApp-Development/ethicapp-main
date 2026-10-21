@@ -52,26 +52,19 @@ async function pathExists(filePath) {
     }
 }
 
-async function listFiles(directory) {
+async function listEntries(directory) {
     if (!(await pathExists(directory))) {
         return [];
     }
 
-    const entries = await fs.promises.readdir(directory, { withFileTypes: true });
-    const nestedEntries = await Promise.all(entries.map(async (entry) => {
-        const entryPath = path.join(directory, entry.name);
-        if (entry.isDirectory()) {
-            return listFiles(entryPath);
-        }
-        return [entryPath];
-    }));
-
-    return nestedEntries.flat();
+    const entries = await fs.promises.readdir(directory, { recursive: true });
+    return entries.sort();
 }
 
+// Files and per-upload directories alike must be gone; only the tmp root may remain.
 async function assertTemporaryUploadsClean() {
-    const temporaryFiles = await listFiles(path.join(uploadRoot, "tmp"));
-    assert.deepEqual(temporaryFiles, []);
+    const temporaryEntries = await listEntries(path.join(uploadRoot, "tmp"));
+    assert.deepEqual(temporaryEntries, []);
 }
 
 before(async () => {
@@ -102,7 +95,7 @@ describe("upload middleware", () => {
         await withServer(app, async (baseUrl) => {
             const response = await fetch(`${baseUrl}/upload`, {
                 method: "POST",
-                body: buildForm("pdf", "not a pdf", "sample.txt", "text/plain"),
+                body:   buildForm("pdf", "not a pdf", "sample.txt", "text/plain"),
             });
 
             assert.equal(response.status, 400);
@@ -127,7 +120,7 @@ describe("upload middleware", () => {
             const oversizedPdf = Buffer.alloc((5 * 1024 * 1024) + 1, "a");
             const response = await fetch(`${baseUrl}/upload`, {
                 method: "POST",
-                body: buildForm("pdf", oversizedPdf, "large.pdf", "application/pdf"),
+                body:   buildForm("pdf", oversizedPdf, "large.pdf", "application/pdf"),
             });
 
             assert.equal(response.status, 400);
@@ -151,7 +144,7 @@ describe("upload middleware", () => {
         await withServer(app, async (baseUrl) => {
             const response = await fetch(`${baseUrl}/upload`, {
                 method: "POST",
-                body: buildForm("file", "%PDF-1.4", "sample.pdf", "application/pdf"),
+                body:   buildForm("file", "%PDF-1.4", "sample.pdf", "application/pdf"),
             });
 
             assert.equal(response.status, 400);
@@ -163,6 +156,29 @@ describe("upload middleware", () => {
             assert.equal(body.code, "UNEXPECTED_FILE_FIELD");
             assert.equal(typeof body.message, "string");
             assert.ok(body.message.length > 0);
+        });
+
+        await assertTemporaryUploadsClean();
+    });
+
+    it("cleans up a file already written when a second file arrives for the field", async () => {
+        const app = createApp((testApp) => {
+            testApp.post("/upload", pdfUpload, (req, res) => {
+                res.status(200).json({ ok: true });
+            });
+        });
+
+        await withServer(app, async (baseUrl) => {
+            const form = buildForm("pdf", "%PDF-1.4", "first.pdf", "application/pdf");
+            form.append("pdf", new Blob(["%PDF-1.4"], { type: "application/pdf" }), "second.pdf");
+            const response = await fetch(`${baseUrl}/upload`, {
+                method: "POST",
+                body:   form,
+            });
+
+            assert.equal(response.status, 400);
+            const body = await response.json();
+            assert.equal(body.code, "UNEXPECTED_FILE_FIELD");
         });
 
         await assertTemporaryUploadsClean();
@@ -181,12 +197,12 @@ describe("upload middleware", () => {
         await withServer(app, async (baseUrl) => {
             const response = await fetch(`${baseUrl}/upload`, {
                 method: "POST",
-                body: buildForm("pdf", "%PDF-1.4", "sample.pdf", "application/pdf"),
+                body:   buildForm("pdf", "%PDF-1.4", "sample.pdf", "application/pdf"),
             });
 
             assert.equal(response.status, 401);
             assert.deepEqual(await response.json(), {
-                status: "err",
+                status:  "err",
                 message: "Unauthorized",
             });
         });
@@ -206,13 +222,13 @@ describe("upload middleware", () => {
         await withServer(app, async (baseUrl) => {
             const response = await fetch(`${baseUrl}/upload`, {
                 method: "POST",
-                body: buildForm("pdf", "%PDF-1.4", "sample.pdf", "application/pdf"),
+                body:   buildForm("pdf", "%PDF-1.4", "sample.pdf", "application/pdf"),
             });
 
             assert.equal(response.status, 200);
             assert.deepEqual(await response.json(), {
                 status: "ok",
-                path: "/uploads/cases/123/case.pdf",
+                path:   "/uploads/cases/123/case.pdf",
             });
         });
 
@@ -231,7 +247,7 @@ describe("upload middleware", () => {
         await withServer(app, async (baseUrl) => {
             const response = await fetch(`${baseUrl}/upload`, {
                 method: "POST",
-                body: buildForm("pdf", "%PDF-1.4", "sample.pdf", "application/pdf"),
+                body:   buildForm("pdf", "%PDF-1.4", "sample.pdf", "application/pdf"),
             });
 
             assert.equal(response.status, 400);
