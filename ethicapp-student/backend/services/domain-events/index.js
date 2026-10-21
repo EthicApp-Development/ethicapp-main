@@ -25,7 +25,7 @@ export function createDomainEventPublisher({
   logger = console
 } = {}) {
   const redisClient = createRedisClient({
-    url: resolveApplicationRedisUrl(env, logger),
+    url: resolveApplicationRedisUrl(env),
     // Fail fast while disconnected so publishing never stalls a request.
     disableOfflineQueue: true,
     // Also bound commands on an open connection that stops answering.

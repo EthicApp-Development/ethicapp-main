@@ -228,13 +228,9 @@ production memory limits are `REDIS_APP_MAXMEMORY=128mb` and
 
 ### Migrating from `REDIS_SESSION_*`
 
-`REDIS_APP_*` replaces `REDIS_SESSION_*` (#660). The old names are deprecated in
-`deploy/env.contract.yml` and still read for one release: a service that finds
-no `REDIS_APP_*` variable falls back to `REDIS_SESSION_*` and logs a deprecation
-warning at startup. When any `REDIS_APP_*` variable is set, the `REDIS_SESSION_*`
-group is ignored entirely; the two groups are never mixed.
-
-Operator steps:
+`REDIS_APP_*` replaces `REDIS_SESSION_*` (#660). The old names are not part of
+the contract and the services no longer read them, so a deployment adopting this
+release must rename them in the same change:
 
 1. Rename `REDIS_SESSION_HOST`, `REDIS_SESSION_PORT`, `REDIS_SESSION_URL`,
    `REDIS_SESSION_MAXMEMORY` and `REDIS_SESSION_MAXMEMORY_POLICY` to their
@@ -242,9 +238,6 @@ Operator steps:
 2. Rename the Redis service to `redis-app`, or add `redis-app` as a network alias
    of the existing `redis-session` service. Keeping the same data volume means no
    data migration: existing sessions survive the rename.
-3. Remove the old names once every service runs a release that reads
-   `REDIS_APP_*`. They will be removed from the contract in the first release
-   after production deployments adopt `REDIS_APP_*`.
 
 The PDF render worker is a separate process that uses the same `ethicapp` image.
 Deploy it as its own service with `ETHICAPP_PROCESS_ROLE=pdf-render-worker`,

@@ -115,15 +115,11 @@ such as sessions, can be evicted under memory pressure, and keys without a TTL
 are never evicted. Any new application key type must state whether it carries a
 TTL.
 
-`REDIS_APP_*` replaces the earlier `REDIS_SESSION_*` names (#660). For one
-release, services still read `REDIS_SESSION_*` when no `REDIS_APP_*` variable is
-set, and log a deprecation warning at startup. `REDIS_SESSION_*` will be removed
-in the first release after production deployments adopt `REDIS_APP_*`.
-
-To migrate a deployment, rename the variables and either rename the Redis
-service to `redis-app` or give the existing service a `redis-app` alias. No data
-migration is needed: existing sessions survive while both names point to the
-same instance.
+`REDIS_APP_*` replaces the earlier `REDIS_SESSION_*` names (#660), which are no
+longer read. To migrate a deployment, rename the variables and either rename the
+Redis service to `redis-app` or give the existing service a `redis-app` alias.
+No data migration is needed: existing sessions survive while the new name points
+to the same instance.
 
 Do not use generic `REDIS_HOST`, `REDIS_PORT`, or `REDIS_URL` values in production. The services resolve Redis by role-specific variables only, which avoids accidentally routing session traffic and cache traffic to the same Docker DNS name.
 

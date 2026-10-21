@@ -161,7 +161,6 @@ Production-oriented changes must stay aligned with the repository-owned deployme
 - Rendered case-document images and manifests must stay in protected uploads storage and be served through authorization-aware application endpoints. Do not expose them through public static NGINX mounts.
 - Production Redis topology is role-specific:
   - `REDIS_APP_*` is the application Redis: Express session storage used by `ethicapp`, `auth-backend` and `ethicapp-student`, one-way domain events between services (`canonical-schemas/events/`), and other application state that must not be evicted as cache. Never route application logic through `REDIS_CACHE_*`. Its eviction policy is `volatile-ttl`, so any new key type must state whether it carries a TTL.
-  - `REDIS_SESSION_*` is the deprecated name of the application Redis (#660). Services fall back to it for one release with a startup warning; do not use it in new code or configuration.
   - `REDIS_CACHE_*` is for database-derived cache entries used by legacy `ethicapp`.
   - Production deployments must provide distinct Redis service DNS names, normally `redis-app` and `redis-cache`.
   - Development may map both roles to the same Redis service in the root local-development Compose file.

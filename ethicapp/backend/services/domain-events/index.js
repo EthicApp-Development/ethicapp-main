@@ -29,7 +29,7 @@ function notifyTeachers(sessionId, participant) {
  * @returns {Promise<DomainEventSubscriber>}
  */
 export async function startDomainEventSubscriber({ env = process.env, logger = console } = {}) {
-    const redisClient = createClient({ url: resolveApplicationRedisUrl(env, logger) });
+    const redisClient = createClient({ url: resolveApplicationRedisUrl(env) });
 
     redisClient.on("ready", () => {
         logger.log("[domain-events] Subscriber connected to Redis.");
