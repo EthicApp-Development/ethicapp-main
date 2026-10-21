@@ -86,16 +86,15 @@ function getCaseIdFromRenderedDocumentPath(relativePath) {
     return Number.isSafeInteger(caseId) && caseId > 0 ? caseId : null;
 }
 
-async function findCaseDocument(relativePath, uid, role, query) {
+async function findCaseDocument(relativePath, uid, query) {
     const renderedCaseId = getCaseIdFromRenderedDocumentPath(relativePath);
 
     return queryOne(`
         SELECT c.id, c.pdf_path
         FROM ethical_cases c
-        WHERE (c.pdf_path = ANY($1) OR c.id = $4)
+        WHERE (c.pdf_path = ANY($1) OR c.id = $3)
           AND (
-            $3 = 'A'
-            OR c.creator = $2
+            c.creator = $2
             OR c.visibility = 'public'
             OR EXISTS (
                 SELECT 1
@@ -121,7 +120,7 @@ async function findCaseDocument(relativePath, uid, role, query) {
             )
           )
         LIMIT 1;
-    `, [publicPathCandidates(relativePath), uid, role, renderedCaseId], query);
+    `, [publicPathCandidates(relativePath), uid, renderedCaseId], query);
 }
 
 async function findProfileImage(relativePath, query) {
@@ -142,9 +141,8 @@ export async function getAuthorizedUpload(relativePath, session, query = rpg2.ex
         return null;
     }
 
-    const role = session?.role || "";
     const resolvers = [
-        () => findCaseDocument(relativePath, uid, role, query),
+        () => findCaseDocument(relativePath, uid, query),
         () => findProfileImage(relativePath, query),
     ];
 
