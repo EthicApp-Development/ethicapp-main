@@ -78,8 +78,8 @@ test("manifest: no service declares the removed capabilities key", () => {
 // ─── Manifests per environment (#738) ────────────────────────────────────────
 
 const MANIFESTS = {
-    "manifest.json":             ["argumentation-tutor-system", "polyadic-devils-advocate"],
-    "manifest.staging.json":     [
+    "manifest.json":         ["argumentation-tutor-system", "polyadic-devils-advocate"],
+    "manifest.staging.json": [
         "argumentation-tutor-system",
         "case-analyst",
         "polyadic-devils-advocate",
