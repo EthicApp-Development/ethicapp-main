@@ -7,6 +7,7 @@ import defaultAiAdditionsClient from "../../services/ai-additions-client.service
 import {
     buildArgumentClientContext,
     buildFeedbackPayloadFromExternalResult,
+    createAtsSession,
 } from "./ats-feedback.utils.js";
 
 export {
@@ -212,39 +213,31 @@ async function resolveQuestionText(context) {
     return normalizeText(row?.title);
 }
 
+// Returns `{ sessionId, creation }`; `creation` is set only for the call that
+// created the phase's session, and null when it already existed.
 async function getOrCreateAtsSession(context) {
     const cacheKey = phaseCacheKey(context);
     const cachedSessionId = atsSessionByPhase.get(cacheKey);
 
     if (cachedSessionId) {
-        return cachedSessionId;
+        return { sessionId: cachedSessionId, creation: null };
     }
 
     const inflightCreation = atsSessionCreationByPhase.get(cacheKey);
     if (inflightCreation) {
-        return inflightCreation;
+        return { sessionId: (await inflightCreation).sessionId, creation: null };
     }
 
     const creationPromise = (async () => {
         const metadata = await resolveSessionMetadata(context);
-
-        const response = await fetchAtsJson("/sessions", {
-            method: "POST",
-            body:   {
-                case_id:    metadata.caseId,
-                case_title: metadata.caseTitle,
-                case_text:  metadata.caseText,
-                question:   metadata.question,
-            },
+        const created = await createAtsSession({
+            metadata,
+            serviceConfiguration: context.serviceConfiguration,
+            request:              body => fetchAtsJson("/sessions", { method: "POST", body }),
         });
 
-        const sessionId = normalizeText(response?.session_id);
-        if (!sessionId) {
-            throw new Error("ATS did not return a session_id.");
-        }
-
-        atsSessionByPhase.set(cacheKey, sessionId);
-        return sessionId;
+        atsSessionByPhase.set(cacheKey, created.sessionId);
+        return created;
     })();
 
     atsSessionCreationByPhase.set(cacheKey, creationPromise);
@@ -278,7 +271,7 @@ async function deleteAtsSession(atsSessionId) {
 
 
 async function submitArgumentToAts(context, responseText, groupId) {
-    const atsSessionId = await getOrCreateAtsSession(context);
+    const { sessionId: atsSessionId, creation } = await getOrCreateAtsSession(context);
 
     const response = await fetchAtsJson(`/sessions/${encodeURIComponent(atsSessionId)}/arguments`, {
         method: "POST",
@@ -299,6 +292,7 @@ async function submitArgumentToAts(context, responseText, groupId) {
         taskId,
         mode:                   "arguments",
         revisedArgumentPreview: responseText,
+        sessionCreation:        creation,
     };
 }
 
@@ -312,7 +306,7 @@ function isMissingPreviousAnalysisError(error) {
 }
 
 async function submitArgumentComparisonToAts(context, responseText, groupId) {
-    const atsSessionId = await getOrCreateAtsSession(context);
+    const { sessionId: atsSessionId, creation } = await getOrCreateAtsSession(context);
 
     try {
         const response = await fetchAtsJson(`/sessions/${encodeURIComponent(atsSessionId)}/arguments/compare`, {
@@ -335,6 +329,7 @@ async function submitArgumentComparisonToAts(context, responseText, groupId) {
             mode:                   "compare",
             initialArgumentPreview: normalizeText(response?.initial_argument_preview),
             revisedArgumentPreview: responseText,
+            sessionCreation:        creation,
         };
     } catch (error) {
         if (!isMissingPreviousAnalysisError(error)) {
@@ -393,8 +388,11 @@ async function processStudentResponse({ context, callback }) {
     }
 
     const groupId = await resolveGroupId(context);
-    await submitArgumentWithFlow(context, responseText, groupId);
+    const submission = await submitArgumentWithFlow(context, responseText, groupId);
     incrementSubmissionCount(context);
+    // The handler's result carries the tutor's session creation report
+    // (`sessionCreation`, #736) for #737 to record.
+    return submission;
 }
 
 async function processPhaseEnded({ context, callback }) {
@@ -477,7 +475,7 @@ export async function register({ subscribe, publishStudentResult, aiAdditionsCli
 
     subscribe("student-response-submitted", async (context, { callback }) => {
         try {
-            await processStudentResponse({ context, callback });
+            return await processStudentResponse({ context, callback });
         } catch (error) {
             await callback({
                 hook:   "student-response-submitted",

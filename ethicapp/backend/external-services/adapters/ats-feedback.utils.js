@@ -216,3 +216,68 @@ export function buildFeedbackPayloadFromExternalResult(requestPayload, fallbackC
         },
     };
 }
+
+/**
+ * The body of POST /sessions (#736). The only setting sent is the configured
+ * `llm_tier` (#734); the deprecated `model` is not sent, and new designs are
+ * not offered it (#733). An unset tier takes the tutor's default.
+ */
+export function buildAtsSessionPayload(metadata, serviceConfiguration = {}) {
+    const body = {
+        case_id:    metadata.caseId,
+        case_title: metadata.caseTitle,
+        case_text:  metadata.caseText,
+        question:   metadata.question,
+    };
+
+    const llmTier = normalizeText(serviceConfiguration?.llm_tier);
+    if (llmTier) {
+        body.llm_tier = llmTier;
+    }
+    return body;
+}
+
+/**
+ * Creates a tutor session and returns `{ sessionId, creation }`, where
+ * `creation` is the tutor's lifecycle report for #737: `{ llmTier, model,
+ * warnings, degraded, configurationRejected }`. The tutor answers 400 when a
+ * configured value fails its format rules; the session is then created once
+ * more with the tutor's defaults and `configurationRejected` says so.
+ * @param {(body: object) => Promise<object>} request POST /sessions
+ */
+export async function createAtsSession({ metadata, serviceConfiguration = {}, request }) {
+    const body = buildAtsSessionPayload(metadata, serviceConfiguration);
+    let response;
+    let configurationRejected = false;
+    let rejection = null;
+
+    try {
+        response = await request(body);
+    } catch (error) {
+        if (Number(error?.statusCode) !== 400 || !body.llm_tier) {
+            throw error;
+        }
+        console.warn("[ats-feedback] The tutor rejected the configured settings; "
+            + "creating the session with its defaults.", error.responseBody ?? error);
+        configurationRejected = true;
+        rejection = error.responseBody ?? null;
+        response = await request(buildAtsSessionPayload(metadata));
+    }
+
+    const sessionId = normalizeText(response?.session_id);
+    if (!sessionId) {
+        throw new Error("ATS did not return a session_id.");
+    }
+
+    return {
+        sessionId,
+        creation: {
+            llmTier:  response?.llm_tier ?? null,
+            model:    response?.model ?? null,
+            warnings: Array.isArray(response?.warnings) ? response.warnings : [],
+            degraded: response?.degraded === true,
+            configurationRejected,
+            ...(configurationRejected ? { rejection } : {}),
+        },
+    };
+}
