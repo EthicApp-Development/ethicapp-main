@@ -7,6 +7,7 @@ import * as config from "../config/database.config.js";
 import { uploadsPath } from "../config/uploads.config.js";
 import * as rpg2 from "../db/rest-pg-2.js";
 import { requireRole } from "../helpers/auth-helper.js";
+import { buildDesignCopyDocument } from "../helpers/design-copy.js";
 import {
     CASE_DEFAULT_LICENSE,
     DEFAULT_LANGUAGE_CODE,
@@ -1006,19 +1007,15 @@ router.post("/designs/:id/duplicate", async (req, res) => {
                 return res.status(403).json({ status: "err", message: "Forbidden: You cannot clone a private design you do not own." });
             }
 
-            const { id, ...designNoId } = design.design;
-            designNoId.public = false;
-            designNoId.visibility = PRIVATE_VISIBILITY;
-            designNoId.locked = false;
-            designNoId.metainfo = {
-                ...(designNoId.metainfo || {}),
+            const designNoId = buildDesignCopyDocument(design.design, {
                 title: await getUniqueDesignCopyTitle(
                     client,
                     sessionUid,
                     getDesignTitle(design.design),
                     design.case_language_code || design.language_code
                 ),
-            };
+                visibility: PRIVATE_VISIBILITY,
+            });
 
             const copiedCaseId = design.case_id
                 ? await copyCaseForUser(client, design.case_id, sessionUid, PRIVATE_VISIBILITY)

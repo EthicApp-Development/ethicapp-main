@@ -1,6 +1,7 @@
 import designEditActions from "../../helpers/phase-edition-helpers.js";
 import * as phaseValidationHelpers from "../../helpers/phase-validation-helpers.js"
 import accordionStateHelpers from "../../helpers/accordeon-state-helpers.js"
+import { normalizeExternalServicesConfig } from "../../helpers/phase-external-services.js";
 
 export function DesignEditorController($scope, $translate, $timeout,
     $routeParams, DesignStateService, DesignCatalogService, CasesCatalogService,
@@ -162,12 +163,7 @@ export function DesignEditorController($scope, $translate, $timeout,
     };    
 
     vm.initExternalServicesConfig = function(phase) {
-        if (!phase.externalServices) {
-            phase.externalServices = { enabledServiceIds: [] };
-        }
-        if (!Array.isArray(phase.externalServices.enabledServiceIds)) {
-            phase.externalServices.enabledServiceIds = [];
-        }
+        normalizeExternalServicesConfig(phase);
     };
 
     vm.isExternalServiceEnabled = function(phase, serviceId) {
