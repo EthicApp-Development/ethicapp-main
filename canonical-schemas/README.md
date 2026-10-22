@@ -7,6 +7,15 @@ This directory currently contains JSON Schemas for portable EthicApp objects.
 - `events/`: domain-event envelope and per-event payload contracts for one-way notifications between services over the application Redis. See [`events/README.md`](events/README.md).
 - `tag-taxonomy-v1.schema.json`: portable controlled taxonomy for semantic tags used by ethical cases and activity designs, including domain-specific translations outside UI locale catalogs.
 
+## Tests
+
+`npm run test:schemas` (repository root) validates documents against these schemas. `__tests__/ethicapp-v1.schema.node-test.mjs` checks every canonical seed design in `database/seeds/canonical-activities/manifest.json`, plus the external service `configurations` rules. Run it whenever a schema or a seed changes.
+
+## Design Notes
+
+- **External service configurations (#729).** `phases[].externalServices.configurations` maps each external service manifest id to that phase's settings: an object whose keys are capability descriptor field keys and whose values are scalars (string, number, boolean or null). A configuration for a service that is not in `enabledServiceIds` is kept but ignored, so turning a service off and on keeps the teacher's values. Designs with only `enabledServiceIds`, or without `externalServices`, stay valid.
+- **`grouping_algorithm`** is `"random"` for grouped phases and `null` where the editor does not group, such as individual phases.
+
 ## Tag Taxonomy Notes
 
 `tag-taxonomy-v1.schema.json` is meant for curated or AI-assisted taxonomy generation before loading tags into the database. It keeps tag labels, descriptions, and localized search keywords in the taxonomy payload itself, avoiding pollution of frontend UI translation files.

@@ -77,8 +77,9 @@
           "minimum": 1
         },
         "grouping_algorithm": {
-          "type": "string",
-          "enum": ["random"]
+          "description": "How team phases form groups. The design editor stores null for phases without grouping, such as individual phases.",
+          "type": ["string", "null"],
+          "enum": ["random", null]
         },
         "prevPhasesResponse": {
           "type": "array",
@@ -106,9 +107,23 @@
             "minLength": 1
           },
           "uniqueItems": true
+        },
+        "configurations": {
+          "description": "Per-service settings for this phase, keyed by external service manifest id. Each value maps capability descriptor field keys to scalar values. A configuration for a service that is not in enabledServiceIds is kept but ignored, so turning the service off and on keeps the teacher's values.",
+          "type": "object",
+          "propertyNames": { "minLength": 1 },
+          "additionalProperties": { "$ref": "#/$defs/externalServiceConfiguration" }
         }
       },
       "additionalProperties": true
+    },
+
+    "externalServiceConfiguration": {
+      "type": "object",
+      "propertyNames": { "minLength": 1 },
+      "additionalProperties": {
+        "type": ["string", "number", "boolean", "null"]
+      }
     },
 
     "semanticDifferentialPhase": {
