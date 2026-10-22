@@ -12,9 +12,6 @@
         "callback-received"
       ],
       "scopes": ["response", "chat"],
-      "capabilities": {
-        "processesStudentResponses": true
-      },
       "enabled": true
     },
     {
@@ -62,9 +59,6 @@
       "descriptor": {
         "serviceId": "argumentation-tutor",
         "path": "/argumentation-tutor/api/capabilities"
-      },
-      "capabilities": {
-        "processesStudentResponses": true
       },
       "enabled": true,
       "callbackAuth": {

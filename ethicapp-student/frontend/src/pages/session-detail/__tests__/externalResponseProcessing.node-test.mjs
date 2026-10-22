@@ -29,17 +29,17 @@ test('buildResponseProcessingServicesByPhase selects enabled response-processing
     {
       id: 'reviewer-a',
       enabled: true,
-      capabilities: { processesStudentResponses: true }
+      scopes: ['response']
     },
     {
       id: 'reviewer-b',
       enabled: true,
-      capabilities: { processesStudentResponses: true }
+      scopes: ['response', 'chat']
     },
     {
       id: 'chat-only',
       enabled: true,
-      capabilities: { processesStudentResponses: false }
+      scopes: ['chat']
     }
   ];
 
@@ -52,13 +52,13 @@ test('buildResponseProcessingServicesByPhase selects enabled response-processing
   );
 });
 
-test('buildResponseProcessingServicesByPhase ignores disabled services and services without capability', () => {
+test('buildResponseProcessingServicesByPhase ignores disabled services and services without the response scope', () => {
   const phases = [{ id: 10, number: 1 }];
   const design = {
     phases: [
       {
         externalServices: {
-          enabledServiceIds: ['reviewer-a', 'reviewer-b', 'reviewer-c']
+          enabledServiceIds: ['reviewer-a', 'reviewer-b', 'reviewer-c', 'legacy-capability']
         }
       }
     ]
@@ -67,16 +67,22 @@ test('buildResponseProcessingServicesByPhase ignores disabled services and servi
     {
       id: 'reviewer-a',
       enabled: false,
-      capabilities: { processesStudentResponses: true }
+      scopes: ['response']
     },
     {
       id: 'reviewer-b',
-      enabled: true,
-      capabilities: {}
+      enabled: true
     },
     {
       id: 'reviewer-c',
       enabled: true,
+      scopes: ['response']
+    },
+    {
+      // The old flag alone no longer marks a response processor.
+      id: 'legacy-capability',
+      enabled: true,
+      scopes: ['chat'],
       capabilities: { processesStudentResponses: true }
     }
   ];

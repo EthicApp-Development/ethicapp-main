@@ -67,3 +67,10 @@ test("manifest: AI services declare their capability descriptor", async () => {
         );
     }
 });
+
+// Response processing follows the `response` scope; the old key is gone (#726).
+test("manifest: no service declares the removed capabilities key", () => {
+    for (const service of manifest.services) {
+        assert.equal(Object.hasOwn(service, "capabilities"), false, service.id);
+    }
+});

@@ -786,3 +786,37 @@ test("getServiceDescriptor: returns a copy of the link, or null", () => {
     assert.equal(registry.getServiceDescriptor("svc-a"), null);
     assert.equal(registry.getServiceDescriptor("unknown"), null);
 });
+
+// ─── capabilities (removed in favor of the response scope, #726) ─────────────
+
+test("registerService: ignores the deprecated capabilities key with one warning", async () => {
+    const { registry } = makeRegistry();
+
+    const { warnings } = await captureWarnings(() => registry.registerService({
+        id:           "svc-legacy",
+        adapter:      "./adapters/not-imported.adapter.js",
+        hooks:        ["student-response-submitted"],
+        scopes:       ["response"],
+        capabilities: { processesStudentResponses: true },
+        enabled:      false,
+    }, "/nonexistent/manifest.json"));
+
+    assert.equal(Object.hasOwn(registry.services.get("svc-legacy"), "capabilities"), false);
+    assert.equal(warnings.length, 1);
+    assert.ok(warnings[0].includes("svc-legacy"));
+    assert.ok(warnings[0].includes("capabilities"));
+});
+
+test("registerService: no capabilities warning when the key is absent", async () => {
+    const { registry } = makeRegistry();
+
+    const { warnings } = await captureWarnings(() => registry.registerService({
+        id:      "svc-current",
+        adapter: "./adapters/not-imported.adapter.js",
+        hooks:   ["student-response-submitted"],
+        scopes:  ["response"],
+        enabled: false,
+    }, "/nonexistent/manifest.json"));
+
+    assert.deepEqual(warnings, []);
+});

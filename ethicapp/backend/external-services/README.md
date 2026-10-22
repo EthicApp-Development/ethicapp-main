@@ -25,8 +25,9 @@ Each manifest entry describes one service:
   "hooks": ["student-response-submitted", "phase-ended", "callback-received"],
   "globalHooks": [],
   "scopes": ["response"],
-  "capabilities": {
-    "processesStudentResponses": true
+  "descriptor": {
+    "serviceId": "argumentation-tutor",
+    "path": "/argumentation-tutor/api/capabilities"
   },
   "enabled": true,
   "callbackAuth": {
@@ -46,8 +47,8 @@ Each manifest entry describes one service:
 | `scopes` | no | Where the service operates: `case` (case documents), `response` (student responses) or `chat` (group chat). Defaults to `[]`. Unknown values are dropped with a warning and duplicates are removed. Screens list services by scope (see "Listing services"), so an entry without scopes appears in none of them; `__tests__/manifest.node-test.mjs` requires at least one. |
 | `ui` | no | `{ component }`: the kebab-case name of the EthicApp frontend component that will show the service's analysis in the case view. Defaults to `{ component: null }`; other names are dropped with a warning. The texts come from the adapter, not from the manifest (see "UI translations"). |
 | `descriptor` | no | `{ serviceId, path }`: the capability descriptor the service's AI backend publishes (#687). `serviceId` is the descriptor's `service.id`, which may differ from `id`: ids are mapped, not renamed, so stored designs, chat agents and jobs keep the manifest id. `path` is the descriptor route relative to `AI_ADDITIONS_BASE_URL`, for example `/polyadic-agent/api/capabilities`; it must be an absolute path without host, query or `..` segments. An invalid block is dropped with a warning. `GET /external-services` exposes only `descriptor.serviceId`; the route stays internal (`getServiceDescriptor()`). |
-| `capabilities` | no | Normalized to `{ processesStudentResponses: boolean }`; any other key is discarded. Exposed through `GET /external-services`. |
-| `enabled` | no | Defaults to `true`. Disabled services stay listed but their adapter is never imported. |
+| `capabilities` | — | Removed (#726). Entries that still declare it log a deprecation warning and the key is ignored. A service that processes student responses declares the `response` scope instead; the student app shows the processing state for those services. |
+| `enabled` | no | Defaults to `true`. Disabled services stay registered, and appear in the student activity descriptor with `enabled: false`, but `GET /external-services` does not list them and their adapter is never imported. |
 | `callbackAuth` | no | Inbound callback authorization. See below. |
 
 When `callbackAuth` is present, EthicApp verifies that the authenticated Keycloak
@@ -64,7 +65,7 @@ warning and never receive hooks.
 
 ```js
 export async function register({
-    service,                 // normalized manifest entry (id, description, hooks, globalHooks, scopes, ui, capabilities, enabled, adapter, callbackAuth)
+    service,                 // normalized manifest entry (id, description, hooks, globalHooks, scopes, ui, descriptor, enabled, adapter, callbackAuth)
     subscribe,               // (hookName, handler) => void
     publishStudentResult,    // (payload) => Promise<boolean>
     publishGroupChatMessage, // (payload) => Promise<{ savedMessage, notificationPayload } | null>
@@ -476,8 +477,8 @@ When implementing a new adapter:
    needs. Only hooks listed in the Hook Catalog are dispatched; subscribing to
    an unknown name is silently inert.
 3. Add a service entry to `manifest.json` with the same hook list, including
-   `callbackAuth` if the service posts inbound callbacks and `capabilities` if
-   the service processes student responses.
+   `callbackAuth` if the service posts inbound callbacks and the `response`
+   scope if the service processes student responses.
 4. Use `aiAdditionsClient.requestJson()` for AI Additions HTTP calls and forward
    `context.correlationId` in outbound requests.
 5. Keep service-specific URL configuration under an `AI_ADDITIONS_<SERVICE>_*`
