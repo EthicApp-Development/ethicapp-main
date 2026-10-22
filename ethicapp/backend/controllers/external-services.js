@@ -90,10 +90,18 @@ function normalizeLocale(value) {
     return /^es(?:[-_]|$)/iu.test(String(value || "").trim()) ? "es_CL" : "en_US";
 }
 
-// The teacher's stored `preferred_locale`, or else the first language of the
-// request's Accept-Language header (#728).
-export function resolveTeacherLocale({ preferredLocale, acceptedLanguages = [] }) {
-    if (typeof preferredLocale === "string" && preferredLocale.trim()) {
+function hasText(value) {
+    return typeof value === "string" && value.trim().length > 0;
+}
+
+// The language for descriptor text: the `locale` the teacher UI sends with the
+// language it is showing (#745); without it, the teacher's stored
+// `preferred_locale`, or else the first language of Accept-Language (#728).
+export function resolveTeacherLocale({ requestedLocale, preferredLocale, acceptedLanguages = [] }) {
+    if (hasText(requestedLocale)) {
+        return normalizeLocale(requestedLocale);
+    }
+    if (hasText(preferredLocale)) {
         return normalizeLocale(preferredLocale);
     }
 
@@ -212,6 +220,11 @@ async function loadPreferredLocale(userId) {
 }
 
 async function teacherLocale(req) {
+    const requestedLocale = typeof req.query.locale === "string" ? req.query.locale : null;
+    if (hasText(requestedLocale)) {
+        return resolveTeacherLocale({ requestedLocale });
+    }
+
     return resolveTeacherLocale({
         preferredLocale:   await loadPreferredLocale(req.session.uid),
         acceptedLanguages: req.acceptsLanguages(),

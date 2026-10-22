@@ -199,9 +199,12 @@ When the descriptor cannot be fetched, `available` is `false`, `name` and
 `usesLlm` are `null`, and the service is still listed, so stored selections
 stay visible. The fields themselves come only from the next endpoint.
 
-The teacher's locale is their `preferred_locale`, or the first language of
-`Accept-Language` when it is empty, normalized with the canonical rule
-(`es_*` → `es_CL`, else `en_US`).
+Descriptor text follows the language the teacher UI is showing (#745). The
+design editor sends it as `locale` (`ExternalServicesCatalogService`, which
+caches listings per UI language). Without `locale`, the teacher's
+`preferred_locale` is used, or the first language of `Accept-Language` when it
+is empty. All of them are normalized with the canonical rule (`es_*` →
+`es_CL`, else `en_US`); both endpoints accept the parameter.
 
 ### Instance configuration
 
