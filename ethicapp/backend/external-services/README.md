@@ -46,7 +46,7 @@ Each manifest entry describes one service:
 | `globalHooks` | no | Hooks the service opts into at manifest level, without an activity-design opt-in. Defaults to `[]`. Each name must be kebab-case and must also appear in `hooks`; other entries are dropped with a warning and duplicates are removed. Only consulted by `dispatchGlobalHook()` (see "Hook enablement"). Exposed through `GET /external-services`. |
 | `scopes` | no | Where the service operates: `case` (case documents), `response` (student responses) or `chat` (group chat). Defaults to `[]`. Unknown values are dropped with a warning and duplicates are removed. Screens list services by scope (see "Listing services"), so an entry without scopes appears in none of them; `__tests__/manifest.node-test.mjs` requires at least one. |
 | `ui` | no | `{ component }`: the kebab-case name of the EthicApp frontend component that will show the service's analysis in the case view. Defaults to `{ component: null }`; other names are dropped with a warning. The texts come from the adapter, not from the manifest (see "UI translations"). |
-| `descriptor` | no | `{ serviceId, path }`: the capability descriptor the service's AI backend publishes (#687). `serviceId` is the descriptor's `service.id`, which may differ from `id`: ids are mapped, not renamed, so stored designs, chat agents and jobs keep the manifest id. `path` is the descriptor route relative to `AI_ADDITIONS_BASE_URL`, for example `/polyadic-agent/api/capabilities`; it must be an absolute path without host, query or `..` segments. An invalid block is dropped with a warning. `GET /external-services` exposes only `descriptor.serviceId`; the route stays internal (`getServiceDescriptor()`). |
+| `descriptor` | no | `{ serviceId, path }`: the capability descriptor the service's AI backend publishes (#687). `serviceId` is the descriptor's `service.id`, which may differ from `id`: ids are mapped, not renamed, so stored designs, chat agents and jobs keep the manifest id. `path` is the descriptor route relative to `AI_ADDITIONS_BASE_URL`, for example `/polyadic-agent/api/capabilities`; it must be an absolute path without host, query or `..` segments. An invalid block is dropped with a warning. `GET /external-services` exposes `descriptor.serviceId` and a summary (see "Listing services"); the route stays internal (`getServiceDescriptor()`). |
 | `capabilities` | — | Removed (#726). Entries that still declare it log a deprecation warning and the key is ignored. A service that processes student responses declares the `response` scope instead; the student app shows the processing state for those services. |
 | `enabled` | no | Defaults to `true`. Disabled services stay registered, and appear in the student activity descriptor with `enabled: false`, but `GET /external-services` does not list them and their adapter is never imported. |
 | `callbackAuth` | no | Inbound callback authorization. See below. |
@@ -187,6 +187,52 @@ Each entry carries `ui: { component, translations }`, where `translations` is
 the result of `getServiceUiTranslations()` or `null`. The design editor asks for
 `?scope=response&scope=chat`, so services that only work on cases are not
 offered as phase options.
+
+Each entry also carries `descriptor`: `null` when the service declares no
+capability descriptor, otherwise a summary in the teacher's locale (#728):
+
+```json
+"descriptor": { "serviceId": "polyadic-agent", "available": true, "name": "Polyadic Agents", "usesLlm": true }
+```
+
+When the descriptor cannot be fetched, `available` is `false`, `name` and
+`usesLlm` are `null`, and the service is still listed, so stored selections
+stay visible. The fields themselves come only from the next endpoint.
+
+The teacher's locale is their `preferred_locale`, or the first language of
+`Accept-Language` when it is empty, normalized with the canonical rule
+(`es_*` → `es_CL`, else `en_US`).
+
+### Instance configuration
+
+`GET /external-services/:id/instance-configuration` (role `P`) returns the
+instance configuration the service's capability descriptor advertises, in the
+teacher's locale, for the design editor (#728):
+
+```json
+{
+  "status": "ok",
+  "result": {
+    "serviceId": "polyadic-devils-advocate",
+    "available": true,
+    "stale": false,
+    "name": "Polyadic Agents",
+    "usesLlm": true,
+    "locale": "es_CL",
+    "fields": [{ "key": "llm_tier", "type": "enum", "required": false, "default": "basic", "label": "Language Model Tier", "...": "..." }]
+  }
+}
+```
+
+- `serviceId` is the manifest id; `fields` follow the normalized shape
+  described in "Capability descriptors". `stale: true` means the service is
+  unavailable and these are the last fields fetched from it.
+- When the descriptor cannot be fetched or is invalid, it answers `200` with
+  `{ "serviceId": "...", "available": false, "reason": "unreachable" }`.
+- It answers `404` for unknown or disabled services and for services without a
+  descriptor.
+- `runtime_configuration`, adapter and descriptor paths, callback settings and
+  credentials are never returned.
 
 ### Handler signature
 
