@@ -74,3 +74,62 @@ test("manifest: no service declares the removed capabilities key", () => {
         assert.equal(Object.hasOwn(service, "capabilities"), false, service.id);
     }
 });
+
+// ─── Manifests per environment (#738) ────────────────────────────────────────
+
+const MANIFESTS = {
+    "manifest.json":         ["argumentation-tutor-system", "polyadic-devils-advocate"],
+    "manifest.staging.json": [
+        "argumentation-tutor-system",
+        "case-analyst",
+        "polyadic-devils-advocate",
+    ],
+    "manifest.development.json": [
+        "argumentation-tutor-system",
+        "case-analyst",
+        "mock-ai-response-review",
+        "mock-chat-agent",
+        "polyadic-devils-advocate",
+    ],
+};
+
+async function readManifest(name) {
+    return JSON.parse(await fs.readFile(new URL(`../${name}`, import.meta.url), "utf8"));
+}
+
+function enabledIds(manifestData) {
+    return manifestData.services
+        .filter(service => service.enabled)
+        .map(service => service.id)
+        .sort();
+}
+
+test("manifests: each environment enables its services (production: Polyadic, tutor)", async () => {
+    for (const [name, expected] of Object.entries(MANIFESTS)) {
+        assert.deepEqual(enabledIds(await readManifest(name)), expected, name);
+    }
+});
+
+test("manifests: every service restricts who may post its callbacks", async () => {
+    for (const name of Object.keys(MANIFESTS)) {
+        for (const service of (await readManifest(name)).services) {
+            assert.ok(
+                Array.isArray(service.callbackAuth?.allowedClientIds)
+                    && service.callbackAuth.allowedClientIds.length > 0,
+                `${name}: ${service.id} has no callbackAuth.allowedClientIds`
+            );
+        }
+    }
+});
+
+test("manifests: environments differ only in which services are enabled", async () => {
+    const withoutEnabled = manifestData => manifestData.services
+        .map(service => ({ ...service, enabled: undefined }));
+    const reference = withoutEnabled(await readManifest("manifest.json"));
+
+    for (const name of Object.keys(MANIFESTS)) {
+        assert.deepEqual(withoutEnabled(await readManifest(name)), reference,
+            `${name} must match manifest.json except for "enabled"`);
+    }
+});
+

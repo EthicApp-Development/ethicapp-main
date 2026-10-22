@@ -28,6 +28,22 @@ The contract distinguishes:
 
 All `VITE_*` variables are public frontend variables. They must never contain secrets.
 
+## External Services Manifest
+
+`EXTERNAL_SERVICES_MANIFEST` selects which external-service adapters the
+`ethicapp` container enables (#738). The image ships three manifests:
+
+- default (variable unset): `/app/backend/external-services/manifest.json`,
+  Polyadic Agents and the Argumentation Tutor. Use it in production.
+- `/app/backend/external-services/manifest.staging.json`: the same plus Case
+  Analyst. Set it in staging targets.
+- `/app/backend/external-services/manifest.development.json`: everything,
+  including the mock adapters. Local development only; it needs
+  `external-mock-service`.
+
+Designs keep the ids of services a target disables; they are neither offered
+in the editor nor dispatched.
+
 ## reCAPTCHA Enterprise
 
 The recommended reCAPTCHA provider for `auth-backend` and `management-console`
