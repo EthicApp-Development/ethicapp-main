@@ -17,6 +17,8 @@ const __dirname = path.dirname(__filename);
 const DEFAULT_MANIFEST_PATH = path.join(__dirname, "../external-services/manifest.json");
 const HOOK_NAME_PATTERN = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/u;
 
+export const SERVICE_SCOPES = Object.freeze(["case", "response", "chat"]);
+
 function isValidHookName(hookName) {
     return typeof hookName === "string" && HOOK_NAME_PATTERN.test(hookName);
 }
@@ -64,6 +66,33 @@ function normalizeGlobalHooks(globalHooks, hooks, serviceId) {
 
         if (!normalized.includes(hookName)) {
             normalized.push(hookName);
+        }
+    }
+
+    return normalized;
+}
+
+// Scopes declare where a service operates: `case` (case documents), `response`
+// (student responses) and `chat` (group chat). Screens that list services filter
+// by scope instead of guessing from hooks.
+function normalizeScopes(scopes, serviceId) {
+    if (!Array.isArray(scopes)) {
+        return [];
+    }
+
+    const normalized = [];
+
+    for (const scope of scopes) {
+        if (!SERVICE_SCOPES.includes(scope)) {
+            console.warn(
+                `[external-services] Ignoring unknown scope "${scope}" in ${serviceId}: `
+                + `expected one of ${SERVICE_SCOPES.join(", ")}.`
+            );
+            continue;
+        }
+
+        if (!normalized.includes(scope)) {
+            normalized.push(scope);
         }
     }
 
@@ -128,6 +157,7 @@ export class ExternalServicesRegistry {
             description:  service.description || "",
             hooks,
             globalHooks:  normalizeGlobalHooks(service.globalHooks, hooks, service.id),
+            scopes:       normalizeScopes(service.scopes, service.id),
             capabilities: normalizeCapabilities(service.capabilities),
             enabled:      service.enabled !== false,
             adapter:      service.adapter,
@@ -193,6 +223,7 @@ export class ExternalServicesRegistry {
             description,
             hooks,
             globalHooks = [],
+            scopes = [],
             capabilities,
             enabled,
         }) => ({
@@ -200,6 +231,7 @@ export class ExternalServicesRegistry {
             description,
             hooks,
             globalHooks,
+            scopes,
             capabilities,
             enabled,
         }));

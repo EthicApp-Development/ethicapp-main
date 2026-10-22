@@ -640,3 +640,54 @@ test("dispatchHook: never consults globalHooks for activity hooks (regression)",
     assert.equal(called, false);
     assert.deepEqual(results, []);
 });
+
+// ─── scopes (where a service operates, #648) ─────────────────────────────────
+
+test("registerService: keeps known scopes once and warns about each unknown one", async () => {
+    const { registry } = makeRegistry();
+
+    const { warnings } = await captureWarnings(() => registry.registerService({
+        id:      "svc-scoped",
+        adapter: "./adapters/not-imported.adapter.js",
+        hooks:   ["case-created"],
+        scopes:  ["case", "Case", "chat", "case", 7],
+        enabled: false,
+    }, "/nonexistent/manifest.json"));
+
+    assert.deepEqual(registry.services.get("svc-scoped").scopes, ["case", "chat"]);
+    assert.equal(warnings.length, 2, "one warning per dropped entry");
+    assert.ok(warnings[0].includes("\"Case\""));
+    assert.ok(warnings[1].includes("\"7\""));
+});
+
+test("registerService: scopes defaults to [] when absent or not an array", async () => {
+    const { registry } = makeRegistry();
+
+    await registry.registerService({
+        id:      "svc-plain",
+        adapter: "./adapters/not-imported.adapter.js",
+        hooks:   ["phase-started"],
+        enabled: false,
+    }, "/nonexistent/manifest.json");
+    await registry.registerService({
+        id:      "svc-string",
+        adapter: "./adapters/not-imported.adapter.js",
+        hooks:   ["case-created"],
+        scopes:  "case",
+        enabled: false,
+    }, "/nonexistent/manifest.json");
+
+    assert.deepEqual(registry.services.get("svc-plain").scopes, []);
+    assert.deepEqual(registry.services.get("svc-string").scopes, []);
+});
+
+test("listServices: exposes scopes and defaults it to [] for legacy entries", () => {
+    const { registry } = makeRegistry();
+    registry.services.set("svc-scoped", {
+        id: "svc-scoped", enabled: true, hooks: ["case-created"], scopes: ["case"],
+    });
+
+    const listed = registry.listServices();
+    assert.deepEqual(listed.find(s => s.id === "svc-scoped").scopes, ["case"]);
+    assert.deepEqual(listed.find(s => s.id === "svc-a").scopes, []);
+});
