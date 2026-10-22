@@ -34,8 +34,15 @@
                     <i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
                     <strong>{{ 'service_settings_retired_title' | translate }}</strong>
                     {{ 'service_settings_retired_help' | translate }}
+                    <button
+                        type="button"
+                        class="btn btn-link btn-xs phase-external-service-details-toggle"
+                        ng-click="service.showDetails = !service.showDetails"
+                        aria-expanded="{{ service.showDetails ? 'true' : 'false' }}">
+                        {{ (service.showDetails ? 'service_summary_hide_details' : 'service_summary_show_details') | translate }}
+                    </button>
                 </p>
-                <ul class="list-unstyled">
+                <ul class="list-unstyled phase-external-service-raw" ng-if="service.showDetails">
                     <li ng-repeat="setting in service.retiredFields track by setting.key">
                         <code>{{ setting.key }}</code>: {{ setting.text }}
                     </li>
@@ -47,8 +54,17 @@
             <p class="help-block service-configuration-lifecycle" role="status">
                 <i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
                 {{ (service.status === 'unavailable' ? 'service_summary_unavailable' : 'service_summary_not_available') | translate }}
+                <button
+                    ng-if="service.storedRows.length > 0"
+                    type="button"
+                    class="btn btn-link btn-xs phase-external-service-details-toggle"
+                    ng-click="service.showDetails = !service.showDetails"
+                    aria-expanded="{{ service.showDetails ? 'true' : 'false' }}">
+                    {{ (service.showDetails ? 'service_summary_hide_details' : 'service_summary_show_details') | translate }}
+                </button>
             </p>
-            <ul class="list-unstyled phase-external-service-stored" ng-if="service.storedRows.length > 0">
+            <ul class="list-unstyled phase-external-service-stored phase-external-service-raw"
+                ng-if="service.storedRows.length > 0 && service.showDetails">
                 <li ng-repeat="setting in service.storedRows track by setting.key">
                     <code>{{ setting.key }}</code>: {{ setting.text }}
                 </li>
@@ -59,7 +75,17 @@
         </div>
 
         <div ng-if="service.status === 'no_settings' && service.storedRows.length > 0">
-            <ul class="list-unstyled phase-external-service-stored">
+            <p class="help-block">
+                <button
+                    type="button"
+                    class="btn btn-link btn-xs phase-external-service-details-toggle"
+                    ng-click="service.showDetails = !service.showDetails"
+                    aria-expanded="{{ service.showDetails ? 'true' : 'false' }}">
+                    {{ (service.showDetails ? 'service_summary_hide_details' : 'service_summary_show_details') | translate }}
+                </button>
+            </p>
+            <ul class="list-unstyled phase-external-service-stored phase-external-service-raw"
+                ng-if="service.showDetails">
                 <li ng-repeat="setting in service.storedRows track by setting.key">
                     <code>{{ setting.key }}</code>: {{ setting.text }}
                 </li>
