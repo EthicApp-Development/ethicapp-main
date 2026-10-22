@@ -126,6 +126,37 @@ function normalizeText(value) {
     return typeof value === "string" ? value.trim() : "";
 }
 
+const DESCRIPTOR_SERVICE_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*$/u;
+
+// `descriptor` links a service to the capability descriptor its AI service
+// publishes (#687, #725). `serviceId` is the descriptor's `service.id`, which may
+// differ from the manifest id: ids are mapped, not renamed, so stored designs and
+// jobs keep theirs. `path` is the descriptor route, relative to
+// AI_ADDITIONS_BASE_URL: an absolute path without host, query or `..` segments.
+function normalizeDescriptor(descriptor, serviceId) {
+    if (descriptor === undefined || descriptor === null) {
+        return null;
+    }
+
+    const descriptorServiceId = normalizeText(descriptor?.serviceId);
+    const descriptorPath      = normalizeText(descriptor?.path);
+    const isValidPath = descriptorPath.startsWith("/")
+        && !descriptorPath.startsWith("//")
+        && !/[\s?#\\]/u.test(descriptorPath)
+        && !descriptorPath.split("/").includes("..");
+
+    if (!DESCRIPTOR_SERVICE_ID_PATTERN.test(descriptorServiceId) || !isValidPath) {
+        console.warn(
+            `[external-services] Ignoring invalid descriptor in ${serviceId}: expected `
+            + "{ serviceId, path } with an id and an absolute path relative to "
+            + "AI_ADDITIONS_BASE_URL."
+        );
+        return null;
+    }
+
+    return { serviceId: descriptorServiceId, path: descriptorPath };
+}
+
 // Adapters provide their own texts through getUiTranslations(): a label, a
 // description and an optional case-view tab title for every UI locale. Returns
 // null when a locale lacks the label or the description.
@@ -231,6 +262,7 @@ export class ExternalServicesRegistry {
             globalHooks:  normalizeGlobalHooks(service.globalHooks, hooks, service.id),
             scopes:       normalizeScopes(service.scopes, service.id),
             ui:           normalizeUi(service.ui, service.id),
+            descriptor:   normalizeDescriptor(service.descriptor, service.id),
             capabilities: normalizeCapabilities(service.capabilities),
             enabled:      service.enabled !== false,
             adapter:      service.adapter,
@@ -309,6 +341,7 @@ export class ExternalServicesRegistry {
             globalHooks = [],
             scopes = [],
             ui = { component: null },
+            descriptor = null,
             capabilities,
             enabled,
         }) => ({
@@ -318,9 +351,18 @@ export class ExternalServicesRegistry {
             globalHooks,
             scopes,
             ui,
+            // Only the descriptor id leaves the registry; the route stays internal.
+            descriptor: descriptor ? { serviceId: descriptor.serviceId } : null,
             capabilities,
             enabled,
         }));
+    }
+
+    // The capability descriptor link of a registered service, or null when it
+    // is unknown or declares none.
+    getServiceDescriptor(serviceId) {
+        const descriptor = this.services.get(serviceId)?.descriptor;
+        return descriptor ? { ...descriptor } : null;
     }
 
     // Asks the adapter for its UI texts. Valid texts are kept for ten minutes.

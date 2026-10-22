@@ -682,3 +682,107 @@ test("listServices: exposes scopes and defaults it to [] for legacy entries", ()
     assert.deepEqual(listed.find(s => s.id === "svc-scoped").scopes, ["case"]);
     assert.deepEqual(listed.find(s => s.id === "svc-a").scopes, []);
 });
+
+// ─── descriptor (capability descriptor link, #725) ───────────────────────────
+
+test("registerService: keeps a valid descriptor link", async () => {
+    const { registry } = makeRegistry();
+
+    await registry.registerService({
+        id:         "svc-described",
+        adapter:    "./adapters/not-imported.adapter.js",
+        hooks:      ["phase-started"],
+        descriptor: { serviceId: " polyadic-agent ", path: "/polyadic-agent/api/capabilities" },
+        enabled:    false,
+    }, "/nonexistent/manifest.json");
+
+    assert.deepEqual(registry.services.get("svc-described").descriptor, {
+        serviceId: "polyadic-agent",
+        path:      "/polyadic-agent/api/capabilities",
+    });
+});
+
+test("registerService: descriptor is null when absent", async () => {
+    const { registry } = makeRegistry();
+
+    await registry.registerService({
+        id:      "svc-plain",
+        adapter: "./adapters/not-imported.adapter.js",
+        hooks:   ["phase-started"],
+        enabled: false,
+    }, "/nonexistent/manifest.json");
+
+    assert.equal(registry.services.get("svc-plain").descriptor, null);
+});
+
+test("registerService: drops an invalid descriptor link with a warning", async () => {
+    const invalid = [
+        "polyadic-agent",
+        {},
+        { serviceId: "polyadic-agent" },
+        { path: "/polyadic-agent/api/capabilities" },
+        { serviceId: "", path: "/x/api/capabilities" },
+        { serviceId: "has space", path: "/x/api/capabilities" },
+        { serviceId: "svc", path: "x/api/capabilities" },
+        { serviceId: "svc", path: "https://evil.example/api/capabilities" },
+        { serviceId: "svc", path: "//evil.example/api/capabilities" },
+        { serviceId: "svc", path: "/x/../admin" },
+        { serviceId: "svc", path: "/x/api/capabilities?debug=1" },
+        { serviceId: "svc", path: "/x/api/capa bilities" },
+    ];
+
+    for (const descriptor of invalid) {
+        const { registry } = makeRegistry();
+        const { warnings } = await captureWarnings(() => registry.registerService({
+            id:      "svc-invalid",
+            adapter: "./adapters/not-imported.adapter.js",
+            hooks:   ["phase-started"],
+            descriptor,
+            enabled: false,
+        }, "/nonexistent/manifest.json"));
+
+        const label = JSON.stringify(descriptor);
+        assert.equal(registry.services.get("svc-invalid").descriptor, null, label);
+        assert.equal(warnings.length, 1, label);
+        assert.ok(warnings[0].includes("svc-invalid"));
+    }
+});
+
+test("listServices: exposes the descriptor id but not its route", () => {
+    const { registry } = makeRegistry();
+    registry.services.set("svc-described", {
+        id:         "svc-described",
+        enabled:    true,
+        hooks:      ["phase-started"],
+        descriptor: {
+            serviceId: "argumentation-tutor",
+            path:      "/argumentation-tutor/api/capabilities",
+        },
+    });
+
+    const listed = registry.listServices();
+
+    assert.deepEqual(
+        listed.find(s => s.id === "svc-described").descriptor,
+        { serviceId: "argumentation-tutor" },
+    );
+    assert.equal(listed.find(s => s.id === "svc-a").descriptor, null);
+});
+
+test("getServiceDescriptor: returns a copy of the link, or null", () => {
+    const { registry } = makeRegistry();
+    const descriptor = {
+        serviceId: "argumentation-tutor",
+        path:      "/argumentation-tutor/api/capabilities",
+    };
+    registry.services.set("svc-described", {
+        id: "svc-described", enabled: true, hooks: [], descriptor,
+    });
+
+    const link = registry.getServiceDescriptor("svc-described");
+    link.path = "/changed";
+
+    assert.deepEqual(registry.getServiceDescriptor("svc-described"), descriptor);
+    assert.equal(registry.getServiceDescriptor("svc-a"), null);
+    assert.equal(registry.getServiceDescriptor("unknown"), null);
+});

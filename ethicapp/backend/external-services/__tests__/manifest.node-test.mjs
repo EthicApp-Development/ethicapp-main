@@ -42,3 +42,28 @@ test("manifest: every case-scoped service provides UI translations", async () =>
         );
     }
 });
+
+// The AI services publish their configuration through capability descriptors,
+// under ids that differ from the manifest ids (#725).
+test("manifest: AI services declare their capability descriptor", async () => {
+    const registry = new ExternalServicesRegistry({ jobsService: {} });
+    const expected = {
+        "polyadic-devils-advocate": {
+            serviceId: "polyadic-agent",
+            path:      "/polyadic-agent/api/capabilities",
+        },
+        "argumentation-tutor-system": {
+            serviceId: "argumentation-tutor",
+            path:      "/argumentation-tutor/api/capabilities",
+        },
+    };
+
+    for (const service of manifest.services) {
+        await registry.registerService({ ...service, enabled: false }, fileURLToPath(manifestUrl));
+        assert.deepEqual(
+            registry.getServiceDescriptor(service.id),
+            expected[service.id] ?? null,
+            service.id,
+        );
+    }
+});

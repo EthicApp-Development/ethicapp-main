@@ -39,6 +39,10 @@
         "activity-finished"
       ],
       "scopes": ["chat"],
+      "descriptor": {
+        "serviceId": "polyadic-agent",
+        "path": "/polyadic-agent/api/capabilities"
+      },
       "enabled": true,
       "callbackAuth": {
         "allowedClientIds": ["polyadic-agent-api"],
@@ -55,6 +59,10 @@
         "callback-received"
       ],
       "scopes": ["response"],
+      "descriptor": {
+        "serviceId": "argumentation-tutor",
+        "path": "/argumentation-tutor/api/capabilities"
+      },
       "capabilities": {
         "processesStudentResponses": true
       },

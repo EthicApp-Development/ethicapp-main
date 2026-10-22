@@ -44,6 +44,9 @@ Each manifest entry declares:
   list services by scope.
 - `ui`: `{ component }`, the EthicApp component that will show the service's
   analysis in the case view.
+- `descriptor`: `{ serviceId, path }`, the capability descriptor that the AI
+  service publishes (`GET <path>` under `AI_ADDITIONS_BASE_URL`). `serviceId` is
+  the descriptor's own id, mapped to the manifest `id` instead of renamed.
 - `enabled`: whether the adapter should be loaded.
 
 Hook names are standardized as kebab-case identifiers. New adapters should use
