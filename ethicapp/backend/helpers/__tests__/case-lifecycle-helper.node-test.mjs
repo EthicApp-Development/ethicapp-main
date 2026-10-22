@@ -7,6 +7,11 @@ import {
     resolveCaseAnalysisServiceIds,
 } from "../case-lifecycle-helper.js";
 
+const RESERVED_JOB_IDS = [
+    "c1d2e3f4-0000-4000-8000-000000000021",
+    "c1d2e3f4-0000-4000-8000-000000000022",
+];
+
 const CREATED_CASE = {
     id:            "42",
     case_uuid:     "0f1e2d3c-0000-4000-8000-000000000042",
@@ -40,7 +45,7 @@ test("buildCaseCreatedContext: nulls missing or invalid ids and defaults", () =>
     assert.equal(context.title, null);
 });
 
-test("dispatchCaseCreatedHook: dispatches case-created only to the chosen services", async () => {
+test("dispatchCaseCreatedHook: dispatches only the reservations, under their job ids", async () => {
     const calls = [];
     const registry = {
         dispatchHook: async (hookName, context, options) => {
@@ -48,21 +53,28 @@ test("dispatchCaseCreatedHook: dispatches case-created only to the chosen servic
             return [{ status: "fulfilled", value: undefined }];
         },
     };
+    const reservations = [
+        { service_id: "svc-case", job_id: RESERVED_JOB_IDS[0], status: "requested" },
+        { service_id: "svc-other", job_id: RESERVED_JOB_IDS[1], status: "requested" },
+    ];
 
-    const outcomes = await dispatchCaseCreatedHook(
-        { caseId: 42 },
-        { serviceIds: ["svc-case"], registry }
-    );
+    const outcomes = await dispatchCaseCreatedHook({ caseId: 42 }, { reservations, registry });
 
     assert.deepEqual(calls, [{
         hookName: CASE_CREATED_HOOK,
         context:  { caseId: 42 },
-        options:  { enabledServiceIds: ["svc-case"] },
+        options:  {
+            enabledServiceIds: ["svc-case", "svc-other"],
+            jobIds:            {
+                "svc-case":  RESERVED_JOB_IDS[0],
+                "svc-other": RESERVED_JOB_IDS[1],
+            },
+        },
     }]);
     assert.equal(outcomes.length, 1);
 });
 
-test("dispatchCaseCreatedHook: dispatches nothing without chosen services", async () => {
+test("dispatchCaseCreatedHook: dispatches nothing without reservations", async () => {
     let dispatched = false;
     const registry = {
         dispatchHook: async () => {
@@ -73,7 +85,7 @@ test("dispatchCaseCreatedHook: dispatches nothing without chosen services", asyn
 
     assert.deepEqual(await dispatchCaseCreatedHook({ caseId: 42 }, { registry }), []);
     assert.deepEqual(
-        await dispatchCaseCreatedHook({ caseId: 42 }, { serviceIds: [], registry }),
+        await dispatchCaseCreatedHook({ caseId: 42 }, { reservations: [], registry }),
         []
     );
     assert.equal(dispatched, false);
@@ -89,10 +101,10 @@ test("dispatchCaseCreatedHook: swallows registry errors and returns []", async (
             dispatchHook: async () => { throw new Error("registry down"); },
         };
 
-        const outcomes = await dispatchCaseCreatedHook(
-            { caseId: 42 },
-            { serviceIds: ["svc-case"], registry }
-        );
+        const outcomes = await dispatchCaseCreatedHook({ caseId: 42 }, {
+            reservations: [{ service_id: "svc-case", job_id: RESERVED_JOB_IDS[0] }],
+            registry,
+        });
 
         assert.deepEqual(outcomes, []);
         assert.equal(logged.length, 1);

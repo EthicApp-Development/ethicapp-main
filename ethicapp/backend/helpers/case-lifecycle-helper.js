@@ -89,27 +89,34 @@ export function buildCaseCreatedContext(
 }
 
 /**
- * Dispatches `case-created` to the services the teacher chose for the case.
- * Without chosen services nothing is dispatched. Errors are logged and
- * swallowed so adapter failures never affect the case creation request.
+ * Dispatches `case-created` for the generations reserved in `case_analyses`:
+ * each reserved service receives the hook under the job id of its reservation,
+ * which its adapter then starts. Without reservations nothing is dispatched.
+ * Errors are logged and swallowed so adapter failures never affect the
+ * request that reserved the generations.
  *
  * @param {Object} context - Context from buildCaseCreatedContext().
  * @param {Object} [options]
- * @param {string[]} [options.serviceIds] - Services chosen for the case.
+ * @param {Array<{service_id: string, job_id: string}>} [options.reservations] -
+ *     Rows from insertRequestedCaseAnalyses() or reserveCaseAnalysisGeneration().
  * @param {Object} [options.registry] - Registry override for tests.
  * @returns {Promise<Array>} Settled handler outcomes, or [] when nothing ran.
  */
 export async function dispatchCaseCreatedHook(
     context,
-    { serviceIds = [], registry = externalServicesRegistry } = {}
+    { reservations = [], registry = externalServicesRegistry } = {}
 ) {
-    if (serviceIds.length === 0) {
+    if (reservations.length === 0) {
         return [];
     }
+
+    const serviceIds = reservations.map(row => row.service_id);
+    const jobIds = Object.fromEntries(reservations.map(row => [row.service_id, row.job_id]));
 
     try {
         return await registry.dispatchHook(CASE_CREATED_HOOK, context, {
             enabledServiceIds: serviceIds,
+            jobIds,
         });
     } catch (error) {
         console.error("[external-services] Error dispatching case-created hook.", error);

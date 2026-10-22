@@ -102,7 +102,7 @@ test("case-created: fails the analysis with the render outcome when there is no 
     assert.equal(results[0].status, "failed");
 });
 
-test("case-created: skips cases that did not choose the service, without waiting", async () => {
+test("case-created: skips generations that are no longer reserved, without waiting", async () => {
     const { caseAnalyses, calls } = makeCaseAnalyses({ processing: null });
     const { handler, waited } = await registerAdapter({
         caseAnalyses,

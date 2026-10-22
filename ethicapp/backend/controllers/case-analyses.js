@@ -5,6 +5,7 @@ import { requireRole } from "../helpers/auth-helper.js";
 import {
     getCaseAnalysis,
     listCaseAnalyses,
+    reserveCaseAnalysisGeneration,
     saveReviewedCaseAnalysis,
 } from "../helpers/case-analyses-helper.js";
 import {
@@ -20,8 +21,6 @@ import externalServicesRegistry from "../services/external-services.service.js";
  * the teacher and must not be exposed to students or to other teachers browsing
  * public cases. Students get 403 from requireRole and other teachers get 404.
  */
-
-const router = express.Router();
 
 function parseCaseId(id) {
     const caseId = Number(id);
@@ -64,20 +63,21 @@ async function isServiceEnabled(serviceId) {
     return externalServicesRegistry.hasEnabledService(serviceId);
 }
 
-// A new generation replays case-created for one service only, so the other
-// services chosen for the case are not triggered again.
-function dispatchGeneration(caseRow, serviceId) {
+// A new generation replays case-created for the reserved service only, so the
+// other services chosen for the case are not triggered again.
+function dispatchGeneration(caseRow, reservation) {
     return dispatchCaseCreatedHook(buildCaseCreatedContext(caseRow, {
         userId:         caseRow.creator,
         pdfRenderJobId: caseRow.pdf_render_job_id ?? null,
-    }), { serviceIds: [serviceId] });
+    }), { reservations: [reservation] });
 }
 
 const defaultDependencies = {
     getOwnedCase,
-    listAnalyses: listCaseAnalyses,
-    getAnalysis:  getCaseAnalysis,
-    saveReviewed: saveReviewedCaseAnalysis,
+    listAnalyses:      listCaseAnalyses,
+    getAnalysis:       getCaseAnalysis,
+    saveReviewed:      saveReviewedCaseAnalysis,
+    reserveGeneration: reserveCaseAnalysisGeneration,
     getValidator,
     isServiceEnabled,
     getCaseText,
@@ -215,8 +215,8 @@ export async function saveCaseAnalysisForOwner({
 }
 
 /**
- * Requests a new generation from one chosen service. It also recovers requests
- * lost before they started, for example while waiting for the PDF render.
+ * Requests a new generation from one chosen service. It also recovers stale
+ * generations, for example ones lost while waiting for the PDF render.
  */
 export async function generateCaseAnalysisForOwner({
     caseId,
@@ -242,14 +242,17 @@ export async function generateCaseAnalysisForOwner({
         );
     }
 
-    if (row.status === "processing" && row.is_stale !== true) {
+    // The reservation is a single conditional update, so of two concurrent
+    // requests only one is accepted, and edits are refused from now on.
+    const reservation = await dependencies.reserveGeneration({ caseId, serviceId });
+    if (!reservation) {
         return analysisProcessing();
     }
 
     // Fire-and-forget: the adapter records its progress in the analysis row.
-    dependencies.dispatchGeneration(caseRow, serviceId);
+    dependencies.dispatchGeneration(caseRow, reservation);
 
-    return okResponse(serializeCaseAnalysis(row), 202);
+    return okResponse(serializeCaseAnalysis(reservation), 202);
 }
 
 async function sendResult(res, resultPromise, errorMessage) {
@@ -278,37 +281,47 @@ function teacherCaseRoute(handler, errorMessage) {
     };
 }
 
-router.get("/cases/:id/analyses", teacherCaseRoute(
-    ({ caseId, userId }) => listCaseAnalysesForOwner({ caseId, userId }),
-    "Failed to load the case analyses"
-));
+// `dependencies` replaces the database and registry access in tests.
+export function createCaseAnalysesRouter(dependencies = defaultDependencies) {
+    const router = express.Router();
 
-router.get("/cases/:id/analyses/:serviceId", teacherCaseRoute(
-    ({ req, caseId, userId }) => getCaseAnalysisForOwner({
-        caseId,
-        serviceId: req.params.serviceId,
-        userId,
-    }),
-    "Failed to load the case analysis"
-));
+    router.get("/cases/:id/analyses", teacherCaseRoute(
+        ({ caseId, userId }) => listCaseAnalysesForOwner({ caseId, userId, dependencies }),
+        "Failed to load the case analyses"
+    ));
 
-router.put("/cases/:id/analyses/:serviceId", teacherCaseRoute(
-    ({ req, caseId, userId }) => saveCaseAnalysisForOwner({
-        caseId,
-        serviceId: req.params.serviceId,
-        userId,
-        document:  req.body?.document,
-    }),
-    "Failed to save the case analysis"
-));
+    router.get("/cases/:id/analyses/:serviceId", teacherCaseRoute(
+        ({ req, caseId, userId }) => getCaseAnalysisForOwner({
+            caseId,
+            serviceId: req.params.serviceId,
+            userId,
+            dependencies,
+        }),
+        "Failed to load the case analysis"
+    ));
 
-router.post("/cases/:id/analyses/:serviceId/generate", teacherCaseRoute(
-    ({ req, caseId, userId }) => generateCaseAnalysisForOwner({
-        caseId,
-        serviceId: req.params.serviceId,
-        userId,
-    }),
-    "Failed to request the case analysis"
-));
+    router.put("/cases/:id/analyses/:serviceId", teacherCaseRoute(
+        ({ req, caseId, userId }) => saveCaseAnalysisForOwner({
+            caseId,
+            serviceId: req.params.serviceId,
+            userId,
+            document:  req.body?.document,
+            dependencies,
+        }),
+        "Failed to save the case analysis"
+    ));
 
-export default router;
+    router.post("/cases/:id/analyses/:serviceId/generate", teacherCaseRoute(
+        ({ req, caseId, userId }) => generateCaseAnalysisForOwner({
+            caseId,
+            serviceId: req.params.serviceId,
+            userId,
+            dependencies,
+        }),
+        "Failed to request the case analysis"
+    ));
+
+    return router;
+}
+
+export default createCaseAnalysesRouter();

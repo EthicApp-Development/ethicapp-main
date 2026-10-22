@@ -1,4 +1,3 @@
-import { randomUUID } from "crypto";
 import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath, pathToFileURL } from "url";
@@ -188,17 +187,17 @@ function normalizeCapabilities(capabilities) {
 // functions, bound to their own service id.
 function createCaseAnalysesAccess(store, serviceId) {
     return {
-        // A dispatch whose job row could not be created has no correlation id,
-        // so a local id identifies the generation. Adapters use the returned
-        // jobId for complete() and fail(), and as the correlation id they send.
+        // Generations are reserved before they are dispatched, under the job
+        // id of the dispatch, so this only starts that reservation. Returns
+        // null when it is no longer current, and the adapter skips the work.
+        // Adapters use the returned jobId for complete() and fail().
         async markProcessing({ caseId, jobId }) {
-            const generationJobId = jobId || randomUUID();
-            const analysis = await store.markCaseAnalysisProcessing({
-                caseId,
-                serviceId,
-                jobId: generationJobId,
-            });
-            return analysis ? { ...analysis, jobId: generationJobId } : null;
+            if (!jobId) {
+                return null;
+            }
+
+            const analysis = await store.markCaseAnalysisProcessing({ caseId, serviceId, jobId });
+            return analysis ? { ...analysis, jobId } : null;
         },
         complete: ({ jobId, documentSchema, document }) =>
             store.completeCaseAnalysis({ serviceId, jobId, documentSchema, document }),

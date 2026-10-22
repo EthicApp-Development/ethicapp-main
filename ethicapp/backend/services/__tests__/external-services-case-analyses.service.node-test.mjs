@@ -9,7 +9,6 @@ import { received, validateCaseAnalysisDocument } from "./fixtures/case-analysis
 // manifest file itself is never read.
 const FIXTURES_MANIFEST = fileURLToPath(new URL("./fixtures/manifest.json", import.meta.url));
 const JOB_ID            = "e1f2a3b4-0000-4000-8000-000000000041";
-const UUID_PATTERN      = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // Records the calls that the bound functions make to the case analyses store.
 function makeStore({ processingRow = { status: "processing" } } = {}) {
@@ -79,17 +78,15 @@ test("caseAnalyses.markProcessing: returns the analysis with the generation's jo
     );
 });
 
-test("caseAnalyses.markProcessing: uses a local job id when the dispatch has none", async () => {
+test("caseAnalyses.markProcessing: null without a job id, since nothing was reserved", async () => {
     const { store, calls } = makeStore();
     await registerCaseTool(store);
 
-    const analysis = await received.caseAnalyses.markProcessing({ caseId: 7, jobId: null });
-
-    assert.match(analysis.jobId, UUID_PATTERN);
-    assert.equal(calls[0].args.jobId, analysis.jobId);
+    assert.equal(await received.caseAnalyses.markProcessing({ caseId: 7, jobId: null }), null);
+    assert.equal(calls.length, 0);
 });
 
-test("caseAnalyses.markProcessing: null when the service was not chosen for the case", async () => {
+test("caseAnalyses.markProcessing: null when the job is no longer the reserved one", async () => {
     const { store } = makeStore({ processingRow: null });
     await registerCaseTool(store);
 

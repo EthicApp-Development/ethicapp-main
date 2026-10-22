@@ -764,7 +764,8 @@ router.post("/cases", pdfUpload, async (req, res) => {
         });
         await replaceCaseAuthors(caseId, authors);
         await replaceCaseTags(caseId, tagIds, req.session.uid);
-        await insertRequestedCaseAnalyses({
+        // Each chosen analysis is reserved for its first generation, dispatched below.
+        const reservations = await insertRequestedCaseAnalyses({
             caseId,
             serviceIds: analysisChoice.serviceIds,
             userId:     req.session.uid,
@@ -776,7 +777,7 @@ router.post("/cases", pdfUpload, async (req, res) => {
         dispatchCaseCreatedHook(buildCaseCreatedContext(createdCase, {
             userId:         req.session.uid,
             pdfRenderJobId: renderJob?.pdf_render_job_id ?? null,
-        }), { serviceIds: analysisChoice.serviceIds });
+        }), { reservations });
 
         return res.status(201).json({
             status: "ok",

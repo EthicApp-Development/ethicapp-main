@@ -5,14 +5,22 @@ import * as rpg2 from "../db/rest-pg-2.js";
  * Persistence of case analyses (see V17__case_analyses.sql): the current
  * result of each service chosen for a case.
  *
- * Updates that come from adapters are conditional on the job of the latest
- * generation, so results of superseded generations never overwrite newer
- * state, and teacher edits are not mixed with a running generation.
+ * A generation is reserved before it is dispatched: one conditional update
+ * marks the row 'requested' under a new job id, so concurrent requests cannot
+ * both be accepted and teacher edits are refused until the generation ends.
+ * Updates that come from adapters are conditional on that job id, so results
+ * of superseded generations never overwrite newer state.
  */
 
 // A generation that has not answered within this window is considered lost:
 // the teacher may save edits or request a new generation again.
-export const STALE_PROCESSING_INTERVAL = "15 minutes";
+export const STALE_GENERATION_INTERVAL = "15 minutes";
+
+const IN_FLIGHT_STATUSES = "status IN ('requested', 'processing')";
+
+// Rows whose generation may still deliver a result.
+const GENERATION_IN_FLIGHT = `(${IN_FLIGHT_STATUSES}
+    AND updated_at >= now() - interval '${STALE_GENERATION_INTERVAL}')`;
 
 const summaryColumns = `
     case_id,
@@ -25,8 +33,14 @@ const summaryColumns = `
     generated_at,
     reviewed_at,
     updated_at,
-    (status = 'processing'
-        AND updated_at < now() - interval '${STALE_PROCESSING_INTERVAL}') AS is_stale
+    (${IN_FLIGHT_STATUSES}
+        AND updated_at < now() - interval '${STALE_GENERATION_INTERVAL}') AS is_stale
+`;
+
+// The job id lets the caller dispatch the generation it reserved.
+const reservationColumns = `
+    ${summaryColumns},
+    job_id
 `;
 
 const analysisColumns = `
@@ -52,7 +66,9 @@ async function queryOne(sql, sqlParams, query) {
 
 /**
  * Records the services a teacher chose when creating a case, one 'requested'
- * row each. Choices that already exist are left as they are.
+ * row each, already reserved for the first generation under a new job id.
+ * Choices that already exist are left as they are, so only the returned rows
+ * are reserved.
  */
 export async function insertRequestedCaseAnalyses(
     { caseId, serviceIds, userId },
@@ -63,11 +79,11 @@ export async function insertRequestedCaseAnalyses(
     }
 
     return queryRows(`
-        INSERT INTO case_analyses (case_id, service_id, requested_by)
-        SELECT $1, service_id, $3
+        INSERT INTO case_analyses (case_id, service_id, job_id, requested_by)
+        SELECT $1, service_id, gen_random_uuid(), $3
         FROM unnest($2::text[]) AS service_id
         ON CONFLICT (case_id, service_id) DO NOTHING
-        RETURNING ${summaryColumns};
+        RETURNING ${reservationColumns};
     `, [caseId, serviceIds, userId], query);
 }
 
@@ -91,9 +107,33 @@ export async function getCaseAnalysis({ caseId, serviceId }, query = rpg2.execSQ
 }
 
 /**
- * Starts a generation: records the job whose result will apply. The previous
- * document is kept until that result arrives. Returns null when the service
- * was not chosen for the case.
+ * Reserves a new generation under a new job id, which becomes the only job
+ * whose result applies. The previous document is kept until that result
+ * arrives. Returns null while another generation is in flight (unless it is
+ * stale), and when the service was not chosen for the case.
+ */
+export async function reserveCaseAnalysisGeneration(
+    { caseId, serviceId },
+    query = rpg2.execSQL
+) {
+    return queryOne(`
+        UPDATE case_analyses
+        SET status = 'requested',
+            job_id = gen_random_uuid(),
+            error_code = NULL,
+            error_message = NULL,
+            updated_at = now()
+        WHERE case_id = $1
+          AND service_id = $2
+          AND NOT ${GENERATION_IN_FLIGHT}
+        RETURNING ${reservationColumns};
+    `, [caseId, serviceId], query);
+}
+
+/**
+ * Starts the reserved generation of the given job. Returns null when that job
+ * is no longer the reserved one: a newer generation or a teacher edit replaced
+ * it, or it already started.
  */
 export async function markCaseAnalysisProcessing(
     { caseId, serviceId, jobId },
@@ -102,12 +142,11 @@ export async function markCaseAnalysisProcessing(
     return queryOne(`
         UPDATE case_analyses
         SET status = 'processing',
-            job_id = $3::uuid,
-            error_code = NULL,
-            error_message = NULL,
             updated_at = now()
         WHERE case_id = $1
           AND service_id = $2
+          AND job_id = $3::uuid
+          AND status = 'requested'
         RETURNING ${summaryColumns};
     `, [caseId, serviceId, jobId], query);
 }
@@ -162,8 +201,9 @@ export async function failCaseAnalysis(
 
 /**
  * Stores a document edited by the teacher. Returns null while a generation is
- * in flight (unless it is stale), so a late result cannot be mixed with the
- * edits, and when the service was not chosen for the case.
+ * in flight, from its reservation until its result (unless it is stale), so an
+ * accepted generation cannot replace the edits; also when the service was not
+ * chosen for the case. Dropping the job id discards any stale generation.
  */
 export async function saveReviewedCaseAnalysis(
     { caseId, serviceId, documentSchema, document, userId },
@@ -182,8 +222,7 @@ export async function saveReviewedCaseAnalysis(
             updated_at = now()
         WHERE case_id = $1
           AND service_id = $2
-          AND (status <> 'processing'
-               OR updated_at < now() - interval '${STALE_PROCESSING_INTERVAL}')
+          AND NOT ${GENERATION_IN_FLIGHT}
         RETURNING ${summaryColumns};
     `, [caseId, serviceId, documentSchema, JSON.stringify(document), userId], query);
 }

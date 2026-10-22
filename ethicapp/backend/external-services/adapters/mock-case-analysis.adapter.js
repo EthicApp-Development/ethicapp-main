@@ -89,7 +89,7 @@ async function processCaseCreated({ context, callback, caseAnalyses, waitForCase
         await callback({
             hook:   CASE_CREATED_HOOK,
             status: "skipped",
-            reason: "The service was not chosen for this case.",
+            reason: "The generation is no longer the one reserved for the case.",
         });
         return;
     }
