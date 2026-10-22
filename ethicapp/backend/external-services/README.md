@@ -185,9 +185,10 @@ in the catalog above are phase-scoped.
 
 **Case hooks (case creation opt-in).** `case-created` reaches the services the
 teacher chose when creating the case (`analysisServiceIds`, see "Case
-Analyses"): `dispatchCaseCreatedHook(context, { serviceIds })` passes them as
-`enabledServiceIds`. A case created without a choice dispatches nothing, and
-editing the case never changes the choice.
+Analyses"): `dispatchCaseCreatedHook(context, { reservations })` passes the
+services of the reserved analyses as `enabledServiceIds`, with their job ids as
+`jobIds`. A case created without a choice dispatches nothing, and editing the
+case never changes the choice.
 
 **Global hooks (manifest opt-in).** Hooks that fire outside an activity and
 need no teacher choice are dispatched with
@@ -233,7 +234,10 @@ them.
 
 Each `dispatchHook()` invocation creates one row per subscriber in
 `external_service_jobs` (status `pending` then `dispatched`) and passes its id
-as `jobId` and `correlationId` in the handler context.
+as `jobId` and `correlationId` in the handler context. A caller that reserved
+work under a job id beforehand passes `jobIds` (service id to job id) in the
+dispatch options: the job is created under that id, and the handler receives
+it even when the row cannot be created.
 
 Adapters report outcomes by calling the `callback(result)` function passed to
 the handler. `result.status` drives the job status:
@@ -314,39 +318,53 @@ Teachers choose the services when they create a case: `POST /cases` accepts
 `analysisServiceIds`, a JSON array of service ids, like `tag_ids`. Each id must
 name an enabled service with the `case` scope; otherwise, or when the value is
 not such a list, the request answers `400 CASE_ANALYSIS_SERVICE_INVALID` before
-the PDF is stored. Each chosen service gets a `requested` row, and
-`case-created` is dispatched to the chosen services only. Editing, importing,
-or duplicating a case never changes or requests analyses.
+the PDF is stored. Each chosen service gets a `requested` row, already reserved
+for its first generation, and `case-created` is dispatched to those services
+only, under the reserved job ids. Editing, importing, or duplicating a case
+never changes or requests analyses.
 
 ### Statuses
 
 | Status | Meaning |
 | --- | --- |
-| `requested` | Chosen at creation; no generation has started. |
-| `processing` | A generation is in flight; `job_id` identifies it. |
+| `requested` | A generation is reserved under `job_id` and its adapter has not started it. |
+| `processing` | The adapter started the reserved generation. |
 | `ready` | `document` holds the latest result. |
 | `failed` | The latest generation failed and there is no document. |
 
 A new generation keeps the previous document until its result arrives. A failed
 generation keeps an existing document (the status stays `ready`) and records
-`error_code` and `error_message`. A generation still `processing` after 15
-minutes is stale: the teacher can save edits or generate again.
+`error_code` and `error_message`.
+
+### Reserving generations
+
+A generation is reserved before it is dispatched: one conditional `UPDATE`
+(`reserveCaseAnalysisGeneration()` in `helpers/case-analyses-helper.js`) marks
+the row `requested` under a new `job_id`, unless a generation is already in
+flight. `POST /cases` inserts the rows already reserved. Because the check and
+the reservation are one statement, of two concurrent requests only one is
+accepted, and no edit is accepted between the response and the adapter start.
+
+A generation is in flight while it is `requested` or `processing`: new
+generations and teacher edits answer `409` until its result arrives. One with
+no update for 15 minutes is stale: the teacher can save edits or generate
+again, and the stale job can no longer start or store its result.
 
 ### Recording results from an adapter
 
 `register()` receives `caseAnalyses`, bound to the adapter's own service:
 
-- `markProcessing({ caseId, jobId })` starts a generation and returns the
-  analysis with its `jobId`, or `null` when the service was not chosen for the
-  case (the adapter should then skip it). When the dispatch has no `jobId`
-  because its job row could not be created, a local id is used: use the
-  returned `jobId` from then on, also as the correlation id sent to the service.
+- `markProcessing({ caseId, jobId })` starts the generation reserved under
+  `jobId`, the `jobId` of the hook context, and returns the analysis. It returns
+  `null` when that generation is no longer the reserved one (a newer generation
+  or a teacher edit replaced it, or it already started) or the context has no
+  `jobId`; the adapter must then skip the work.
 - `complete({ jobId, documentSchema, document })` stores the document, which
   replaces the previous one and its review.
 - `fail({ jobId, errorCode, errorMessage })` records a failed generation.
 
-`complete` and `fail` only apply to the current generation; results of
-superseded jobs are ignored and return `null`.
+`complete` and `fail` only apply to a generation started with `markProcessing`;
+results of superseded jobs are ignored and return `null`.
 
 `case-created` fires before the PDF worker extracts the case text. Adapters that
 need it wait with `waitForCaseDocumentText(caseId)` from
@@ -372,8 +390,8 @@ teachers `404 CASE_NOT_FOUND`. Services not chosen for the case answer
 | --- | --- |
 | `GET /cases/:id/analyses` | The chosen services with status and timestamps, without documents. |
 | `GET /cases/:id/analyses/:serviceId` | One analysis with its document. |
-| `PUT /cases/:id/analyses/:serviceId` | Body `{ document }`, validated by the adapter. Answers `405 CASE_ANALYSIS_NOT_EDITABLE` without a validator, `400 CASE_ANALYSIS_DOCUMENT_INVALID` with `details`, and `409 CASE_ANALYSIS_PROCESSING` during a fresh generation. Records `reviewed_at` and `reviewed_by`. |
-| `POST /cases/:id/analyses/:serviceId/generate` | Replays `case-created` for that service only and answers `202`. Answers `409` during a fresh generation and `503 CASE_ANALYSIS_SERVICE_DISABLED` when the service is disabled. It also recovers requests that never started. |
+| `PUT /cases/:id/analyses/:serviceId` | Body `{ document }`, validated by the adapter. Answers `405 CASE_ANALYSIS_NOT_EDITABLE` without a validator, `400 CASE_ANALYSIS_DOCUMENT_INVALID` with `details`, and `409 CASE_ANALYSIS_PROCESSING` while a generation is in flight. Records `reviewed_at` and `reviewed_by`. |
+| `POST /cases/:id/analyses/:serviceId/generate` | Reserves a new generation, replays `case-created` for that service only, and answers `202` with the reserved analysis. Answers `409 CASE_ANALYSIS_PROCESSING` while a generation is in flight and `503 CASE_ANALYSIS_SERVICE_DISABLED` when the service is disabled. It also recovers stale generations. |
 
 `mock-case-analysis` (`adapters/mock-case-analysis.adapter.js`) is the reference
 implementation: it runs in the web process, counts the words of the case, and

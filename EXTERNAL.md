@@ -207,7 +207,9 @@ This keeps phase and response hooks scoped to services selected by the teacher.
 `case-created` follows the same rule for cases: it reaches only the services the
 teacher chose when creating the case (`analysisServiceIds` in `POST /cases`).
 They store their results in `case_analyses`, which the case creator reads,
-edits and regenerates through `/cases/:id/analyses`.
+edits and regenerates through `/cases/:id/analyses`. Each generation is reserved
+in `case_analyses` before it is dispatched, so concurrent generations and
+teacher edits cannot overlap it.
 
 Current event hooks:
 
