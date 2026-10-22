@@ -19,6 +19,7 @@ const files = {
     "assets/css/styles.scss":                "$x: 1;",
     "assets/js/dist/teacher-admin.js":       "bundle",
     "assets/js/dist/teacher-admin.js.map":   "{}",
+    "assets/css/dist/assets-bundle.css.map": "{}",
     "assets/js/services/secret.service.js":  "source",
     "assets/js/common-ethicapp-deps.js":     "source",
     "assets/images/cards/create-case.jpg":   "jpg",
@@ -33,8 +34,20 @@ const files = {
     "assets/uploads/abc/pdf/case.pdf":       "pdf",
 };
 
-let server;
+const servers = [];
 let baseUrl;
+let productionBaseUrl;
+
+async function startServer(options) {
+    const app = express();
+    mountStaticAssets(app, assetsRoot, options);
+    app.use((req, res) => res.status(404).send("not found"));
+
+    const server = app.listen(0, "127.0.0.1");
+    await new Promise((resolve) => server.once("listening", resolve));
+    servers.push(server);
+    return `http://127.0.0.1:${server.address().port}`;
+}
 
 before(async () => {
     for (const [relativePath, content] of Object.entries(files)) {
@@ -43,22 +56,17 @@ before(async () => {
         await fs.promises.writeFile(filePath, content);
     }
 
-    const app = express();
-    mountStaticAssets(app, assetsRoot);
-    app.use((req, res) => res.status(404).send("not found"));
-
-    server = app.listen(0, "127.0.0.1");
-    await new Promise((resolve) => server.once("listening", resolve));
-    baseUrl = `http://127.0.0.1:${server.address().port}`;
+    baseUrl = await startServer({ sourceMaps: true });
+    productionBaseUrl = await startServer({ sourceMaps: false });
 });
 
 after(async () => {
-    await new Promise((resolve) => server.close(resolve));
+    await Promise.all(servers.map((server) => new Promise((resolve) => server.close(resolve))));
     await fs.promises.rm(frontendRoot, { recursive: true, force: true });
 });
 
-async function statusOf(urlPath) {
-    const response = await fetch(`${baseUrl}${urlPath}`);
+async function statusOf(urlPath, base = baseUrl) {
+    const response = await fetch(`${base}${urlPath}`);
     await response.arrayBuffer();
     return response.status;
 }
@@ -102,5 +110,18 @@ describe("static assets", () => {
         ]) {
             assert.equal(await statusOf(urlPath), 404, urlPath);
         }
+    });
+
+    it("serves source maps only when enabled, as outside production", async () => {
+        const maps = [
+            "/assets/js/dist/teacher-admin.js.map",
+            "/assets/css/dist/assets-bundle.css.map",
+        ];
+        for (const urlPath of maps) {
+            assert.equal(await statusOf(urlPath), 200, urlPath);
+            assert.equal(await statusOf(urlPath, productionBaseUrl), 404, urlPath);
+        }
+        assert.equal(await statusOf("/assets/js/dist/teacher-admin.js", productionBaseUrl), 200);
+        assert.equal(await statusOf("/assets/css/dist/assets-bundle.css", productionBaseUrl), 200);
     });
 });

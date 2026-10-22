@@ -6,11 +6,12 @@ const IMAGE_EXTENSIONS = [".svg", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".ic
 
 // The only parts of frontend/assets the teacher UI loads, and the file types
 // each may serve. Everything else (package files, raw sources, uploads left
-// in the tree, dotfiles) stays private.
+// in the tree, dotfiles) stays private. Source maps are added outside
+// production only (#187).
 export const PUBLIC_ASSET_DIRECTORIES = [
     // assets-bundle.css @imports the sibling stylesheets at runtime.
-    { directory: "css", extensions: [".css", ".map"] },
-    { directory: "js/dist", extensions: [".js", ".map"] },
+    { directory: "css", extensions: [".css"], sourceMaps: true },
+    { directory: "js/dist", extensions: [".js"], sourceMaps: true },
     { directory: "images", extensions: IMAGE_EXTENSIONS },
     { directory: "static/views", extensions: [".html"] },
     { directory: "locales", extensions: [".json"] },
@@ -43,10 +44,14 @@ function serveExtensions(root, extensions) {
  * relative to /home.
  * @param {import("express").Express} app
  * @param {string} assetsRoot absolute path of frontend/assets
+ * @param {{ sourceMaps?: boolean }} [options] serve .map files; defaults to
+ *   true outside production
  */
-export function mountStaticAssets(app, assetsRoot) {
-    for (const { directory, extensions } of PUBLIC_ASSET_DIRECTORIES) {
-        app.use(`/assets/${directory}`, serveExtensions(path.join(assetsRoot, directory), extensions));
+export function mountStaticAssets(app, assetsRoot,
+    { sourceMaps = process.env.NODE_ENV !== "production" } = {}) {
+    for (const { directory, extensions, sourceMaps: hasMaps } of PUBLIC_ASSET_DIRECTORIES) {
+        const allowed = sourceMaps && hasMaps ? [...extensions, ".map"] : extensions;
+        app.use(`/assets/${directory}`, serveExtensions(path.join(assetsRoot, directory), allowed));
     }
 
     app.use("/static/views", serveExtensions(path.join(assetsRoot, "static/views"), [".html"]));
