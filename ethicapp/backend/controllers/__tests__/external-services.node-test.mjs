@@ -307,16 +307,31 @@ function listedIds(body) {
     return body.result.map(({ id }) => id);
 }
 
-test("listExternalServices: no scope lists every service, disabled ones included", async () => {
+test("listExternalServices: no scope lists every enabled service and no disabled one", async () => {
     const { status, body } = await listExternalServices({
         scope:    undefined,
         registry: makeListingRegistry(),
     });
 
     assert.equal(status, 200);
-    assert.deepEqual(listedIds(body), [
-        "case-tool", "chat-tool", "review-tool", "disabled-case", "unscoped",
-    ]);
+    assert.deepEqual(listedIds(body), ["case-tool", "chat-tool", "review-tool", "unscoped"]);
+});
+
+test("listExternalServices: an empty list when every service is disabled", async () => {
+    const registry = {
+        ...makeListingRegistry(),
+        listServices: () => [
+            { id: "chat-tool",   enabled: false, scopes: ["chat"] },
+            { id: "review-tool", enabled: false, scopes: ["response", "chat"] },
+        ],
+    };
+
+    for (const scope of [undefined, ["response", "chat"]]) {
+        const { status, body } = await listExternalServices({ scope, registry });
+
+        assert.equal(status, 200);
+        assert.deepEqual(body.result, [], `scope ${JSON.stringify(scope)}`);
+    }
 });
 
 test("listExternalServices: a scope lists only the enabled services that declare it", async () => {

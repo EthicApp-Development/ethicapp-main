@@ -123,13 +123,22 @@ export async function getUiTranslations() {
 
 ### Listing services
 
-`GET /external-services` (role `P`) returns the registered services without
-their adapter paths or callback settings:
+`GET /external-services` (role `P`) returns the enabled services without their
+adapter paths or callback settings. Disabled services (`"enabled": false`) are
+never listed:
 
-- Without `scope`, it returns every registered service, disabled ones included.
+- Without `scope`, it returns every enabled service.
 - With `scope`, it returns only the enabled services that declare at least one
   of the requested scopes. The parameter can be repeated
   (`?scope=response&scope=chat`). An unknown or empty scope answers `400`.
+
+The student activity descriptor still includes every registered service with
+its `enabled` flag (`listServices()`); the student app ignores disabled ones.
+
+A design keeps the ids it stores in `phases[].externalServices.enabledServiceIds`
+when a service is disabled. The design editor neither shows nor drops them, so
+re-enabling the service restores the teacher's choice. While disabled, the
+service has no hook subscribers, so nothing is dispatched to it.
 
 Each entry carries `ui: { component, translations }`, where `translations` is
 the result of `getServiceUiTranslations()` or `null`. The design editor asks for
