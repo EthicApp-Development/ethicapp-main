@@ -83,9 +83,10 @@ export async function processCallback({ serviceId, eventType, correlationId, eve
     }
 }
 
-// With `scope` (one value or several), only enabled services that declare at
-// least one of those scopes are listed. Without it, every registered service is.
-// Each service carries the UI translations its adapter provides, or null.
+// Only enabled services are listed (#686): disabled ones are not offered to
+// teachers. With `scope` (one value or several), the list is narrowed to the
+// services that declare at least one of those scopes. Each service carries the
+// UI translations its adapter provides, or null.
 export async function listExternalServices({ scope, registry }) {
     const scopes = scope === undefined ? [] : [scope].flat();
 
@@ -97,11 +98,9 @@ export async function listExternalServices({ scope, registry }) {
     }
 
     await registry.initialize();
-    const listed = registry.listServices();
-    const services = scopes.length === 0
-        ? listed
-        : listed.filter(service => service.enabled
-            && service.scopes.some(serviceScope => scopes.includes(serviceScope)));
+    const services = registry.listServices().filter(service => service.enabled
+        && (scopes.length === 0
+            || service.scopes.some(serviceScope => scopes.includes(serviceScope))));
 
     const result = await Promise.all(services.map(async service => ({
         ...service,
