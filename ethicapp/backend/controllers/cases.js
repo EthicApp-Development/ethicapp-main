@@ -568,7 +568,7 @@ router.get("/cases/search", async (req, res) => {
 });
 
 router.get("/cases/:id/download-link", async (req, res) => {
-    if (!requireRole(req, res, ["P", "A", "S"])) {
+    if (!requireRole(req, res, ["P", "A"])) {
         return;
     }
 
@@ -598,7 +598,7 @@ router.get("/cases/:id/download-link", async (req, res) => {
 });
 
 router.get("/cases/:id/document-processing", async (req, res) => {
-    if (!requireRole(req, res, ["P", "A", "S"])) {
+    if (!requireRole(req, res, ["P", "A"])) {
         return;
     }
 
@@ -632,7 +632,7 @@ router.get("/cases/:id/document-processing", async (req, res) => {
 });
 
 router.get("/cases/:id", async (req, res) => {
-    if (!requireRole(req, res, ["P", "A", "S"])) {
+    if (!requireRole(req, res, ["P", "A"])) {
         return;
     }
 

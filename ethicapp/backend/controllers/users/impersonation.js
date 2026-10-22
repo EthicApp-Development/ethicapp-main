@@ -74,35 +74,4 @@ router.post('/api/admin/impersonation/professor/:id', async (req, res) => {
   }
 });
 
-router.post('/api/admin/impersonation/stop', (req, res) => {
-  try {
-    if (!req.session?.uid) {
-      return res.status(401).json({ error: 'Unauthenticated' });
-    }
-
-    if (!isAuthorizedSuperAdmin(req)) {
-      return res.status(403).json({ error: 'Forbidden' });
-    }
-
-    if (!req.session.impersonating) {
-      return res.status(200).json({ ok: true, redirectTo: '/home' });
-    }
-
-    req.session.uid = req.session.authUid;
-    req.session.role = req.session.authRole;
-    req.session.impersonating = false;
-
-    return req.session.save((error) => {
-      if (error) {
-        return res.status(500).json({ error: 'Unable to stop impersonation' });
-      }
-
-      return res.status(200).json({ ok: true, redirectTo: '/home' });
-    });
-  } catch (error) {
-    console.error('IMPERSONATION STOP ERROR:', error);
-    return res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
 export default router;
