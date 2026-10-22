@@ -647,96 +647,6 @@ router.put("/designs/:id", async (req, res) => {
     }
 });
 
-router.get("/users/:id/designs", async (req, res) => {
-    try {
-        const userId = req.params.id; // Extract user ID from the path
-        const sessionUid = req.session?.uid; // Get session user ID
-
-        // Validate session
-        if (!sessionUid) {
-            return res.status(401).json({ status: "err", message: "Unauthorized" });
-        }
-
-        // Check if the user is allowed to access this data
-        if (!sameId(sessionUid, userId)) {
-            return res.status(403).json({ status: "err", message: "Forbidden" });
-        }
-
-        // Execute SQL to fetch the designs
-        const designs = await rpg2.execSQL({
-            dbcon: config.dbconnString,
-            sql: `
-                SELECT d.id, d.design, d.public, d.visibility, d.locked, d.archived, d.license_code,
-                       d.language_code,
-                       d.attribution_text, d.original_design_id, d.imported_from_design_id,
-                       d.source_design_title, d.source_design_author, d.source_design_license_code,
-                       d.is_editable_copy,
-                       d.case_id,
-                       c.title AS case_title,
-                       c.author_firstname AS case_author_firstname,
-                       c.author_lastname AS case_author_lastname,
-                       c.author_email AS case_author_email,
-                       c.visibility AS case_visibility,
-                       c.license_code AS case_license_code,
-                       c.language_code AS case_language_code,
-                       c.archived AS case_archived,
-                       c.attribution_text AS case_attribution_text,
-                       c.original_case_id AS case_original_case_id,
-                       c.imported_from_case_id AS case_imported_from_case_id,
-                       c.source_case_title AS case_source_case_title,
-                       c.source_case_author AS case_source_case_author,
-                       c.source_case_license_code AS case_source_case_license_code,
-                       c.is_editable_copy AS case_is_editable_copy,
-                       c.rights_status AS case_rights_status,
-                       c.license_notes AS case_license_notes,
-                       c.permission_statement AS case_permission_statement,
-                       c.commercial_source AS case_commercial_source,
-                       COALESCE((
-                           SELECT json_agg(json_build_object(
-                               'id', t.id,
-                               'code', t.code,
-                               'label', COALESCE(tt.label, fallback_tt.label, t.code),
-                               'description', COALESCE(tt.description, fallback_tt.description),
-                               'categoryCode', tc.code,
-                               'categoryLabel', COALESCE(tct.label, fallback_tct.label, tc.code)
-                           ) ORDER BY tc.sort_order, t.sort_order, t.id)
-                           FROM designs_tags dt
-                           INNER JOIN tags t ON t.id = dt.tag_id
-                           INNER JOIN tag_categories tc ON tc.id = t.category_id
-                           LEFT JOIN tag_translations tt
-                               ON tt.tag_id = t.id
-                              AND tt.locale = d.language_code
-                           LEFT JOIN tag_translations fallback_tt
-                               ON fallback_tt.tag_id = t.id
-                              AND fallback_tt.locale = 'en_US'
-                           LEFT JOIN tag_category_translations tct
-                               ON tct.category_id = tc.id
-                              AND tct.locale = d.language_code
-                           LEFT JOIN tag_category_translations fallback_tct
-                               ON fallback_tct.category_id = tc.id
-                              AND fallback_tct.locale = 'en_US'
-                           WHERE dt.design_id = d.id
-                       ), '[]'::json) AS tags,
-                       TRUE AS user_owned
-                FROM designs d
-                LEFT JOIN ethical_cases c ON c.id = d.case_id
-                WHERE d.creator = $1
-                ORDER BY d.id DESC;
-            `,
-            sqlParams: [userId], // Pass the user ID as a parameter
-        });
-
-        // Transform the result into the desired format
-        const result = designs.map(normalizeDesignRow);
-
-        // Return the formatted designs
-        return res.json({ status: "ok", result });
-    } catch (err) {
-        console.error("Error in /users/:id/designs:", err);
-        return res.status(500).json({ status: "err", message: "Internal Server Error" });
-    }
-});
-
 router.get("/designs", async (req, res) => {
     try {
         // Validate session
@@ -1277,7 +1187,7 @@ router.get('/designs/:id/valid', async (req, res) => {
 });
 
 router.get("/designs/:id/case", async (req, res) => {
-    if (!requireRole(req, res, ["P", "A", "S"])) {
+    if (!requireRole(req, res, ["P", "A"])) {
         return;
     }
 

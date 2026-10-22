@@ -33,9 +33,6 @@ function TeacherRouter($routeProvider) {
         .when('/profile', {
             templateUrl: 'static/views/teacher/profile.html',
         })  
-        .when('/users', {
-            templateUrl: 'static/views/teacher/users.html',
-        })
         .when('/cases', {
             templateUrl: 'static/views/teacher/cases.index.html',
         })

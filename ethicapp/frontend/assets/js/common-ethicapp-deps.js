@@ -5,7 +5,6 @@ import 'angular-sanitize';
 import 'angular-translate';
 import 'angular-translate-loader-static-files';
 import 'angular-timer';
-import 'ng-dialog';
 import 'angular-tablesort';
 import 'ng-file-upload';
 import 'checklist-model';

@@ -32,7 +32,6 @@ import protectedUploads from "./controllers/protected-uploads.js";
 
 import fs from "fs";
 
-import i18n from "i18n";
 import path from "path";
 import { fileURLToPath } from "url";
 import expressLayouts from "express-ejs-layouts";
@@ -53,16 +52,6 @@ app.set("trust proxy", 1);
 // Configure assets 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-i18n.configure({
-    locales:        ["es_CL", "en_US"],
-    directory:      path.join(__dirname, "locales"),
-    defaultLocale:  "en_US",
-    queryParameter: "lang",
-    objectNotation: true,
-});
-
-app.use(i18n.init);
 
 //const allowedOrigins = process.env.ALLOWED_ORIGINS.split(",");
 const corsOptions = {
