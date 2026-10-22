@@ -2,6 +2,7 @@ import designEditActions from "../../helpers/phase-edition-helpers.js";
 import * as phaseValidationHelpers from "../../helpers/phase-validation-helpers.js"
 import accordionStateHelpers from "../../helpers/accordeon-state-helpers.js"
 import { normalizeExternalServicesConfig } from "../../helpers/phase-external-services.js";
+import { designSaveErrorMessageKey } from "../../helpers/design-save-errors.js";
 
 export function DesignEditorController($scope, $translate, $timeout,
     $routeParams, DesignStateService, DesignCatalogService, CasesCatalogService,
@@ -301,7 +302,7 @@ export function DesignEditorController($scope, $translate, $timeout,
             });
         } catch (error) {
             $scope.$applyAsync(() => {
-                $translate("save_design_failure").then((result) => {
+                $translate(designSaveErrorMessageKey(error)).then((result) => {
                     toast.create({
                         timeout: 5 * 1000,
                         message: result,
