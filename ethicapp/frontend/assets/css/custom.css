@@ -87,6 +87,11 @@ body {
     width: 152px;
 }
 
+.teacher-admin-return-form {
+    display: inline-flex;
+    margin: 0;
+}
+
 .teacher-admin-return {
     white-space: nowrap;
 }
