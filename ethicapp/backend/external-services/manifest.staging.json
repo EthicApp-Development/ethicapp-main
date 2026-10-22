@@ -1,0 +1,96 @@
+{
+  "services": [
+    {
+      "id": "mock-ai-response-review",
+      "description": "PoC adapter that simulates an AI service reviewing student responses.",
+      "adapter": "./adapters/mock-ai-response-review.adapter.js",
+      "hooks": [
+        "student-response-submitted",
+        "phase-started",
+        "phase-ended",
+        "chat-message-received",
+        "callback-received"
+      ],
+      "scopes": ["response", "chat"],
+      "enabled": false,
+      "callbackAuth": {
+        "allowedClientIds": ["ethicapp-external-mock"],
+        "requiredRoles": []
+      }
+    },
+    {
+      "id": "mock-chat-agent",
+      "description": "PoC adapter that simulates a chat agent replying to group chat messages.",
+      "adapter": "./adapters/mock-chat-agent.adapter.js",
+      "hooks": [
+        "chat-message-received"
+      ],
+      "scopes": ["chat"],
+      "enabled": false,
+      "callbackAuth": {
+        "allowedClientIds": ["ethicapp-external-mock"],
+        "requiredRoles": []
+      }
+    },
+    {
+      "id": "polyadic-devils-advocate",
+      "description": "Bridge adapter that connects EthicApp group chats to the Polyadic Agents Devil's Advocate pipeline.",
+      "adapter": "./adapters/polyadic-bridge.adapter.js",
+      "hooks": [
+        "chat-message-received",
+        "phase-started",
+        "phase-ended",
+        "callback-received",
+        "activity-finished"
+      ],
+      "scopes": ["chat"],
+      "descriptor": {
+        "serviceId": "polyadic-agent",
+        "path": "/polyadic-agent/api/capabilities"
+      },
+      "enabled": true,
+      "callbackAuth": {
+        "allowedClientIds": ["polyadic-agent-api"],
+        "requiredRoles": []
+      }
+    },
+    {
+      "id": "argumentation-tutor-system",
+      "description": "ATS integration using Keycloak-protected V2 endpoints for argument feedback in student chat overlay.",
+      "adapter": "./adapters/ats-feedback.adapter.js",
+      "hooks": [
+        "student-response-submitted",
+        "phase-ended",
+        "callback-received"
+      ],
+      "scopes": ["response"],
+      "descriptor": {
+        "serviceId": "argumentation-tutor",
+        "path": "/argumentation-tutor/api/capabilities"
+      },
+      "enabled": true,
+      "callbackAuth": {
+        "allowedClientIds": ["argumentation-tutor-api"],
+        "requiredRoles": []
+      }
+    },
+    {
+      "id": "case-analyst",
+      "description": "Skeleton adapter for the Case Analyst AI service; acknowledges newly created cases.",
+      "adapter": "./adapters/case-analyst.adapter.js",
+      "hooks": [
+        "case-created",
+        "callback-received"
+      ],
+      "globalHooks": [
+        "case-created"
+      ],
+      "scopes": ["case"],
+      "enabled": true,
+      "callbackAuth": {
+        "allowedClientIds": ["case-analyst-api"],
+        "requiredRoles": []
+      }
+    }
+  ]
+}

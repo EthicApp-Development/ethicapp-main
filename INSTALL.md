@@ -184,6 +184,14 @@ external-service adapters. Publish it with the full image set so deployment
 manifests can pin it, but deploy it only when mock integrations are
 intentionally enabled.
 
+The `ethicapp` image ships three external-services manifests (#738). The
+default, `manifest.json`, enables only Polyadic Agents and the Argumentation
+Tutor, which is what production should run. Staging sets
+`EXTERNAL_SERVICES_MANIFEST=/app/backend/external-services/manifest.staging.json`
+to also enable Case Analyst. `manifest.development.json`, used by the local
+Compose stack, enables the mock adapters too; deploy `external-mock-service`
+only with it.
+
 `postgres` and `redis` are not built by this repository. Use the official images
 and pin the desired versions in the deployment repository.
 

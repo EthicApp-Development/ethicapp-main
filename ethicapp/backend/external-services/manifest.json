@@ -12,7 +12,11 @@
         "callback-received"
       ],
       "scopes": ["response", "chat"],
-      "enabled": true
+      "enabled": false,
+      "callbackAuth": {
+        "allowedClientIds": ["ethicapp-external-mock"],
+        "requiredRoles": []
+      }
     },
     {
       "id": "mock-chat-agent",
@@ -22,7 +26,11 @@
         "chat-message-received"
       ],
       "scopes": ["chat"],
-      "enabled": true
+      "enabled": false,
+      "callbackAuth": {
+        "allowedClientIds": ["ethicapp-external-mock"],
+        "requiredRoles": []
+      }
     },
     {
       "id": "polyadic-devils-advocate",
@@ -78,7 +86,7 @@
         "case-created"
       ],
       "scopes": ["case"],
-      "enabled": true,
+      "enabled": false,
       "callbackAuth": {
         "allowedClientIds": ["case-analyst-api"],
         "requiredRoles": []

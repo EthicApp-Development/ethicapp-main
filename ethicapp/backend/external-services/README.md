@@ -13,6 +13,26 @@ shared AI Additions client instead of negotiating Keycloak tokens themselves.
 At startup, the registry reads `manifest.json` from this directory, or the path
 configured through `EXTERNAL_SERVICES_MANIFEST`.
 
+### Manifests per environment
+
+Three manifests ship with the image (#738). They list the same services and
+differ only in `enabled`; `__tests__/manifest.node-test.mjs` keeps them in sync.
+
+| Manifest | Enabled services | Used by |
+| --- | --- | --- |
+| `manifest.json` (default) | `polyadic-devils-advocate`, `argumentation-tutor-system` | production |
+| `manifest.staging.json` | the above plus `case-analyst` | staging (`EXTERNAL_SERVICES_MANIFEST=/app/backend/external-services/manifest.staging.json`) |
+| `manifest.development.json` | all, including the mock adapters | the root `docker-compose.yml` |
+
+When you add or change a service, edit the entry identically in all three and
+set `enabled` per environment. Designs keep the ids of disabled services; the
+editor does not offer them and nothing is dispatched to them (#686), so seeded
+activities that reference the mocks still load where the mocks are disabled.
+
+Every service declares `callbackAuth`. The mock adapters never receive HTTP
+callbacks (they call the mock service synchronously), so they accept only
+`ethicapp-external-mock`, a client id that no environment provisions.
+
 ### Manifest entries
 
 Each manifest entry describes one service:
@@ -667,9 +687,10 @@ When implementing a new adapter:
 2. Export a named `register()` function and subscribe to the hooks the service
    needs. Only hooks listed in the Hook Catalog are dispatched; subscribing to
    an unknown name is silently inert.
-3. Add a service entry to `manifest.json` with the same hook list, including
-   `callbackAuth` if the service posts inbound callbacks and the `response`
-   scope if the service processes student responses.
+3. Add a service entry to `manifest.json`, `manifest.staging.json` and
+   `manifest.development.json` with the same hook list, `callbackAuth`, and the
+   `response` scope if the service processes student responses. Set `enabled`
+   per environment (see "Manifests per environment").
 4. Use `aiAdditionsClient.requestJson()` for AI Additions HTTP calls and forward
    `context.correlationId` in outbound requests.
 5. Keep service-specific URL configuration under an `AI_ADDITIONS_<SERVICE>_*`
