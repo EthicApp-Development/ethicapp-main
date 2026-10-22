@@ -1,12 +1,26 @@
-export function ExternalServicesCatalogService($http) {
-    // One cached listing per requested set of scopes.
-    const servicesByScopes = new Map();
+// The design editor's client for the external services API. Every request
+// carries the language the teacher UI is showing (`locale`, #745), so service
+// names and descriptor labels match the rest of the screen.
+export function ExternalServicesCatalogService($http, LanguageCatalogService) {
+    // One cached listing per UI language and requested set of scopes.
+    const servicesByKey = new Map();
+
+    function currentLocale() {
+        return LanguageCatalogService?.getCurrentUiLanguageCode?.() || "en_US";
+    }
+
+    function cacheKey(scopes, locale) {
+        return `${locale}|${scopes.join(",")}`;
+    }
 
     const service = {
         async loadServices(scopes = []) {
-            const response = await $http.get("/external-services", { params: { scope: scopes } });
+            const locale = currentLocale();
+            const response = await $http.get("/external-services", {
+                params: { scope: scopes, locale },
+            });
             if (response.data?.status === "ok" && Array.isArray(response.data.result)) {
-                servicesByScopes.set(scopes.join(","), response.data.result);
+                servicesByKey.set(cacheKey(scopes, locale), response.data.result);
                 return response.data.result;
             }
 
@@ -14,12 +28,27 @@ export function ExternalServicesCatalogService($http) {
         },
 
         async getServices({ scopes = [], reload = false } = {}) {
-            const cacheKey = scopes.join(",");
-            if (reload || !servicesByScopes.has(cacheKey)) {
+            const key = cacheKey(scopes, currentLocale());
+            if (reload || !servicesByKey.has(key)) {
                 return service.loadServices(scopes);
             }
 
-            return servicesByScopes.get(cacheKey);
+            return servicesByKey.get(key);
+        },
+
+        // The instance configuration a service's capability descriptor
+        // advertises (#728). `available: false` when the service cannot be
+        // reached; the request rejects with 404 for services without one.
+        async getInstanceConfiguration(serviceId) {
+            const response = await $http.get(
+                `/external-services/${encodeURIComponent(serviceId)}/instance-configuration`,
+                { params: { locale: currentLocale() } }
+            );
+            if (response.data?.status === "ok" && response.data.result) {
+                return response.data.result;
+            }
+
+            throw new Error("Unexpected instance configuration response format.");
         },
     };
 

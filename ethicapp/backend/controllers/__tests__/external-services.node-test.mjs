@@ -598,3 +598,20 @@ test("resolveTeacherLocale: preferred_locale, then Accept-Language, canonical ru
         assert.equal(resolveTeacherLocale(input), expected, JSON.stringify(input));
     }
 });
+
+test("resolveTeacherLocale: the UI's locale wins over the stored and browser ones", () => {
+    const cases = [
+        [{ requestedLocale: "es_CL", preferredLocale: "en_US", acceptedLanguages: ["en"] },
+            "es_CL"],
+        [{ requestedLocale: "en_US", preferredLocale: "es_CL", acceptedLanguages: ["es"] },
+            "en_US"],
+        [{ requestedLocale: "es", preferredLocale: "en_US" }, "es_CL"],
+        [{ requestedLocale: "fr_FR", preferredLocale: "es_CL" }, "en_US"],
+        [{ requestedLocale: "  ", preferredLocale: "es_CL" }, "es_CL"],
+        [{ requestedLocale: null, acceptedLanguages: ["es-CL"] }, "es_CL"],
+    ];
+
+    for (const [input, expected] of cases) {
+        assert.equal(resolveTeacherLocale(input), expected, JSON.stringify(input));
+    }
+});
