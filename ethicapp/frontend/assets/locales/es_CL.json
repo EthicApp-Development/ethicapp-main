@@ -217,6 +217,7 @@
 	"design_unarchive_success": "Diseño restaurado",
 	"design_archive_error": "No se pudo actualizar el estado de archivo del diseño.",
 	"save_design_failure": "Hubo un error al guardar el diseño. Inténtalo nuevamente en unos minutos.",	
+	"save_design_locked": "Este diseño ya se usó en una actividad y no se puede editar. Duplícalo para hacer cambios.",
 	"error_no_phases_defined" : "El diseño actual no tiene fases. Agrega al menos una fase para crear un diseño que se pueda utilizar con EthicApp.",
 	"other_phase_errors_title" : "Errores generales",
 	"error_phase_instructions_required" : "Si esta fase presenta instrucciones, el texto de instrucciones no puede estar vacío.",

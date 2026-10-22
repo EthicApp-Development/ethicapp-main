@@ -267,8 +267,10 @@ let DesignCatalogService = ($rootScope, $http) => {
                     throw new Error("Failed to update design");
                 }
             } catch (error) {
+                // Callers tell the teacher why the save failed (#730), so the
+                // rejection, with its status and error code, reaches them.
                 console.error(`Error updating design with id '${designId}':`, error);
-                return false;
+                throw error;
             }
         },
 

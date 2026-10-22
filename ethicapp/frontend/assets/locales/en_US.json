@@ -224,6 +224,7 @@
 	"design_unarchive_success": "Design restored",
 	"design_archive_error": "Could not update the design archive status.",
 	"save_design_failure": "Failed to save the design. Please try again in a few minutes.",
+	"save_design_locked": "This design is used by an activity and can no longer be edited. Duplicate it to make changes.",
 	"error_no_phases_defined" : "The current design has no phases. Try adding a phase to create a working design for EthicApp.",
 	"other_phase_errors_title" : "General errors",
 	"error_phase_instructions_required" : "If instructions are enabled for this phase, the instructions text cannot be empty.",

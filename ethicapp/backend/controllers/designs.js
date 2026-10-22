@@ -9,6 +9,11 @@ import * as rpg2 from "../db/rest-pg-2.js";
 import { requireRole } from "../helpers/auth-helper.js";
 import { buildDesignCopyDocument } from "../helpers/design-copy.js";
 import {
+    designLockedRefusal,
+    designUpdateRefusal,
+    UPDATE_UNLOCKED_DESIGN_SQL,
+} from "../helpers/design-update.js";
+import {
     CASE_DEFAULT_LICENSE,
     DEFAULT_LANGUAGE_CODE,
     DESIGN_DEFAULT_LICENSE,
@@ -530,19 +535,16 @@ router.patch("/designs/:id", async (req, res) => {
         const existingDesign = await rpg2.singleSQL({
             dbcon: config.dbconnString,
             sql: `
-                SELECT id, creator, visibility, license_code, attribution_text, language_code
+                SELECT id, creator, locked, visibility, license_code, attribution_text, language_code
                 FROM designs
                 WHERE id = $1
             `,
             sqlParams: [rpg2.param("plain", designId)],
         });
 
-        if (!existingDesign) {
-            return res.status(404).json({ status: "err", message: "Design not found" });
-        }
-
-        if (!sameId(sessionUid, existingDesign.creator)) {
-            return res.status(403).json({ status: "err", message: "Forbidden: You do not have permission to update this design." });
+        const refusal = designUpdateRefusal(existingDesign, sessionUid);
+        if (refusal) {
+            return res.status(refusal.status).json(refusal.body);
         }
 
         let {id, ...designNoId} = design;
@@ -572,20 +574,10 @@ router.patch("/designs/:id", async (req, res) => {
             }
         }
 
-        // Update the design
-        await rpg2.singleSQL({
+        // Update the design unless it was locked in the meantime
+        const updated = await rpg2.singleSQL({
             dbcon: config.dbconnString,
-            sql: `
-                UPDATE designs
-                SET design = $1,
-                    case_id = $2,
-                    visibility = $4,
-                    public = $5,
-                    license_code = $6,
-                    attribution_text = $7,
-                    language_code = $8
-                WHERE id = $3
-            `,
+            sql: UPDATE_UNLOCKED_DESIGN_SQL,
             sqlParams: [
                 rpg2.param("plain", designNoId),
                 rpg2.param("plain", caseId),
@@ -597,53 +589,15 @@ router.patch("/designs/:id", async (req, res) => {
                 rpg2.param("plain", normalizeLanguageCode(languageCode ?? languageCodeSnake, existingDesign.language_code || DEFAULT_LANGUAGE_CODE)),
             ],
         });
+        if (!updated?.id) {
+            const locked = designLockedRefusal();
+            return res.status(locked.status).json(locked.body);
+        }
         await replaceDesignTags(designId, parsedTagIds, sessionUid);
 
         return res.json({ status: "ok", message: "Design updated successfully" });
     } catch (err) {
         console.error("Error in /designs/:id PATCH:", err);
-        return res.status(500).json({ status: "err", message: "Internal Server Error" });
-    }
-});
-
-router.put("/designs/:id", async (req, res) => {
-    try {
-        const sessionUid = req.session?.uid; // Get the user ID from the session
-        const designId = req.params.id; // Get the design ID from the path
-        const updatedDesign = req.body.design; // Get the updated design from the request body
-
-        // Validate session
-        if (!sessionUid) {
-            return res.status(401).json({ status: "err", message: "Unauthorized" });
-        }
-
-        // Validate input
-        if (!designId || !updatedDesign) {
-            return res.status(400).json({ status: "err", message: "Design ID and updated design data are required" });
-        }
-
-        let {id, ...designNoId} = JSON.parse(updatedDesign);
-        designNoId = JSON.stringify(designNoId);
-
-        // Execute SQL to update the design
-        const result = await singleSQL({
-            dbcon: pass.dbcon,
-            sql: `
-                UPDATE designs
-                SET design = $1
-                WHERE creator = $2 AND id = $3
-            `,
-            sqlParams: [designNoId, sessionUid, designId],
-        });
-
-        // Check if the update was successful
-        if (result) {
-            return res.json({ status: "ok" });
-        } else {
-            return res.status(404).json({ status: "err", message: "Design not found or not owned by the user" });
-        }
-    } catch (err) {
-        console.error("Error in /designs/:id PUT endpoint:", err);
         return res.status(500).json({ status: "err", message: "Internal Server Error" });
     }
 });
