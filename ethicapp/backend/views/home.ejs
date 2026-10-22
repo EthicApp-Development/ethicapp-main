@@ -25,9 +25,11 @@
         <img src="/images/logos/ethicapp-logo.svg" class="teacher-topbar-logo" alt="EthicApp">
       </a>
       <% if (impersonating && authRole === 'S') { %>
-      <a href="/mng/users" class="btn btn-danger btn-sm teacher-admin-return">
-        {{'back_to_management_console' | translate}}
-      </a>
+      <form method="post" action="/api/admin/impersonation/stop" class="teacher-admin-return-form">
+        <button type="submit" class="btn btn-danger btn-sm teacher-admin-return">
+          {{'back_to_management_console' | translate}}
+        </button>
+      </form>
       <% } %>
     </div>
 
