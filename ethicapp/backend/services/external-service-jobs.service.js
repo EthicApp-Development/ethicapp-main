@@ -95,6 +95,16 @@ export class ExternalServiceJobsService {
         );
     }
 
+    // Stores what the AI service reported when the job instantiated it (#737).
+    async recordInstantiationReport(jobId, report) {
+        await this._db(
+            `UPDATE external_service_jobs
+             SET instantiation_report = $2::jsonb, updated_at = now()
+             WHERE id = $1`,
+            [jobId, JSON.stringify(report)]
+        );
+    }
+
     async recordProviderReference(jobId, providerReference) {
         await this._db(
             `UPDATE external_service_jobs

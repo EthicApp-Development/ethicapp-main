@@ -481,17 +481,41 @@ export async function register({
         }
     }
 
-    // Polyadic's lifecycle report for each created room, for the job result (#737).
+    // Polyadic's lifecycle report for each created room, for the job result.
     function roomReports(rooms) {
-        return rooms.map(({ roomName, warnings, degraded, configurationRejected }) => ({
+        return rooms.map(({ roomName, warnings, degraded, configurationRejected, rejection }) => ({
             room: roomName,
             warnings,
             degraded,
             configurationRejected,
+            ...(configurationRejected ? { rejection: rejection ?? null } : {}),
         }));
     }
 
-    subscribe("phase-started", async (context, { callback }) => {
+    // One instantiation report per job (#737): every room's warnings, tagged
+    // with their room, and whether any room ran degraded or without its settings.
+    async function reportRooms(rooms, reportInstantiation) {
+        if (rooms.length === 0 || typeof reportInstantiation !== "function") {
+            return;
+        }
+        const warnings = rooms.flatMap(room => room.warnings
+            .map(warning => ({ ...warning, room: room.roomName })));
+        // Per room, the state without repeating its warnings.
+        const roomStates = roomReports(rooms).map(report => {
+            const state = { ...report };
+            delete state.warnings;
+            return state;
+        });
+
+        await reportInstantiation({
+            warnings,
+            degraded:              rooms.some(room => room.degraded),
+            configurationRejected: rooms.some(room => room.configurationRejected),
+            rooms:                 roomStates,
+        });
+    }
+
+    subscribe("phase-started", async (context, { callback, reportInstantiation }) => {
         const { sessionId, phaseId, serviceConfiguration } = context;
         const teamIds = await dependencies.getTeamIdsForPhase(sessionId, phaseId);
         const topicData = await buildTopicForPhase(sessionId, phaseId);
@@ -507,6 +531,7 @@ export async function register({
         }
 
         phaseRooms.set(getPhaseRoomsKey(sessionId, phaseId), createdRooms);
+        await reportRooms(created, reportInstantiation);
 
         await callback({
             serviceId: service.id,
@@ -521,7 +546,7 @@ export async function register({
         });
     });
 
-    subscribe("chat-message-received", async (context, { callback }) => {
+    subscribe("chat-message-received", async (context, { callback, reportInstantiation }) => {
         const {
             sessionId, phaseId, groupId, questionId, userId, correlationId, serviceConfiguration,
         } = context;
@@ -569,6 +594,7 @@ export async function register({
 
             phaseCreatedRooms.add(createdRoom.roomName);
             createdReport = roomReports([createdRoom])[0];
+            await reportRooms([createdRoom], reportInstantiation);
         } else {
             rememberRoomContext(roomName, sessionId, phaseId, groupId, questionId);
         }

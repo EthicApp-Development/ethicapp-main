@@ -16,6 +16,7 @@ function createHarness({ dependencies = {}, respond = null } = {}) {
     const subscribers = new Map();
     const requests = [];
     const callbacks = [];
+    const reports = [];
     const publishedMessages = [];
 
     const client = {
@@ -48,6 +49,7 @@ function createHarness({ dependencies = {}, respond = null } = {}) {
         subscribers,
         requests,
         callbacks,
+        reports,
         publishedMessages,
         async initialize() {
             await register({
@@ -70,6 +72,10 @@ function createHarness({ dependencies = {}, respond = null } = {}) {
                 callback: async result => {
                     callbacks.push(result);
                     return result;
+                },
+                reportInstantiation: async report => {
+                    reports.push(report);
+                    return report;
                 },
             });
         },
@@ -698,5 +704,59 @@ test("without a configuration a 400 is not retried", async () => {
 
     assert.equal(sessionBodies(harness).length, 1);
     assert.equal(harness.callbacks.at(-1).payload.roomsCreated, 0);
+});
+
+// ─── Instantiation report (#737) ─────────────────────────────────────────────
+
+test("phase-started reports every room's warnings once per job", async () => {
+    const warning = { field: "model", verdict: "deprecated" };
+    const harness = createHarness({
+        dependencies: { getTeamIdsForPhase: async () => [301, 302] },
+        respond:      (pathname) => (pathname.includes("g301")
+            ? { status: "created", warnings: [warning], degraded: false }
+            : { status: "created", warnings: [], degraded: true }),
+    });
+    await harness.initialize();
+
+    await harness.dispatch("phase-started", { sessionId: 11, phaseId: 22 });
+
+    assert.equal(harness.reports.length, 1);
+    const [report] = harness.reports;
+    assert.deepEqual(report.warnings, [{ ...warning, room: "ethicapp-s11-p22-g301" }]);
+    assert.equal(report.degraded, true);
+    assert.equal(report.configurationRejected, false);
+    assert.deepEqual(report.rooms.map(room => room.room),
+        ["ethicapp-s11-p22-g301", "ethicapp-s11-p22-g302"]);
+});
+
+test("no instantiation report when no room is created", async () => {
+    const harness = createHarness({ dependencies: { getTeamIdsForPhase: async () => [] } });
+    await harness.initialize();
+
+    await harness.dispatch("phase-started", { sessionId: 11, phaseId: 22 });
+
+    assert.deepEqual(harness.reports, []);
+});
+
+test("chat-message-received reports the room it creates", async () => {
+    const harness = createHarness({
+        dependencies: { getTeamIdsForPhase: async () => [] },
+        respond:      (pathname) => (pathname.endsWith("/sessions")
+            ? { status: "created", warnings: [], degraded: false }
+            : { status: "ok" }),
+    });
+    await harness.initialize();
+
+    await harness.dispatch("chat-message-received", {
+        sessionId:     11,
+        phaseId:       22,
+        groupId:       301,
+        userId:        9001,
+        correlationId: "corr-737",
+        content:       "Hola",
+    });
+
+    assert.equal(harness.reports.length, 1);
+    assert.deepEqual(harness.reports[0].rooms.map(room => room.room), ["ethicapp-s11-p22-g301"]);
 });
 

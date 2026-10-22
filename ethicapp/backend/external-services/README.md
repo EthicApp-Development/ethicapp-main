@@ -288,7 +288,7 @@ shows the `errors` of a `400` next to their fields.
 
 ### Handler signature
 
-Every hook handler receives `(context, { callback })`:
+Every hook handler receives `(context, { callback, reportInstantiation })`:
 
 - `context` is the object built by the dispatch site plus registry-injected
   fields. For hooks dispatched through `dispatchHook()` the registry adds
@@ -307,6 +307,9 @@ Every hook handler receives `(context, { callback })`:
   payload; unset keys mean "service default".
 - `callback(result)` records the adapter outcome against the job (see
   "Jobs and `callback(result)`" below).
+- `reportInstantiation(report)` stores what an AI service reported when the
+  adapter created a room or session for this job (see "Instantiation reports"
+  below). It is only passed to handlers run by `dispatchHook()`.
 
 Phase hooks are dispatched through `helpers/external-service-dispatch.js`
 (`dispatchPhaseHook(hookName, context)`), which reads the phase's enabled
@@ -412,6 +415,40 @@ posts its result. Jobs and results are queryable through
 `GET /external-services/results` (roles `P` and `A`). The list endpoints accept
 `serviceId`, `hookName`, `sessionId`, `phaseId`, `status`, `from`, `to`, and
 `limit` query filters.
+
+### Instantiation reports
+
+When an adapter creates a room or session, the AI service reports its
+lifecycle verdicts on the settings it received (#133): deprecated values it
+still accepts, retired values it substituted, unsupported fields that put it in
+degraded mode. The adapter passes that report to `reportInstantiation(report)`,
+and the registry stores it in `external_service_jobs.instantiation_report`
+(jsonb, migration V17, #737) on the job that triggered the creation. It does not
+change the job status, so asynchronous jobs can report before they complete.
+
+```json
+{
+  "warnings": [
+    { "field": "model", "verdict": "deprecated", "suggested_field": "llm_tier",
+      "suggested_value": "basic", "message": "model is deprecated; use llm_tier instead",
+      "room": "ethicapp-s12-p34-g5" }
+  ],
+  "degraded": false,
+  "configurationRejected": false,
+  "rooms": [{ "room": "ethicapp-s12-p34-g5", "degraded": false, "configurationRejected": false }]
+}
+```
+
+- `warnings`, `degraded` and `configurationRejected` (the service refused the
+  configured settings and the adapter fell back to defaults) are always
+  present. Other keys are adapter-specific: Polyadic adds `rooms` (one entry per
+  room; `rejection` holds the service's error when settings were refused) and
+  tags each warning with its `room`. The Argumentation Tutor adds `llmTier` and
+  the resolved `model`.
+- A report with warnings, degraded mode or rejected settings is also logged as
+  one `[external-services] Instantiation report.` line with its job id.
+- `NULL` means the job instantiated nothing. Teachers do not see these reports
+  yet.
 
 ## Inbound Callbacks
 

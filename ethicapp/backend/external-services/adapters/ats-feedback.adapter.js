@@ -376,7 +376,7 @@ async function publishFeedbackToStudent({ context, feedbackPayload, status, publ
     });
 }
 
-async function processStudentResponse({ context, callback }) {
+async function processStudentResponse({ context, callback, reportInstantiation }) {
     const responseText = extractResponseText(context);
     if (!responseText) {
         await callback({
@@ -390,8 +390,11 @@ async function processStudentResponse({ context, callback }) {
     const groupId = await resolveGroupId(context);
     const submission = await submitArgumentWithFlow(context, responseText, groupId);
     incrementSubmissionCount(context);
-    // The handler's result carries the tutor's session creation report
-    // (`sessionCreation`, #736) for #737 to record.
+    // The response that created the phase's tutor session records the tutor's
+    // report on its job (#737); the job completes later, with the tutor's callback.
+    if (submission?.sessionCreation && typeof reportInstantiation === "function") {
+        await reportInstantiation(submission.sessionCreation);
+    }
     return submission;
 }
 
@@ -473,9 +476,9 @@ async function processExternalResult({ context, callback, publishStudentResult }
 export async function register({ subscribe, publishStudentResult, aiAdditionsClient: providedAiAdditionsClient }) {
     aiAdditionsClient = providedAiAdditionsClient || defaultAiAdditionsClient;
 
-    subscribe("student-response-submitted", async (context, { callback }) => {
+    subscribe("student-response-submitted", async (context, { callback, reportInstantiation }) => {
         try {
-            return await processStudentResponse({ context, callback });
+            return await processStudentResponse({ context, callback, reportInstantiation });
         } catch (error) {
             await callback({
                 hook:   "student-response-submitted",
