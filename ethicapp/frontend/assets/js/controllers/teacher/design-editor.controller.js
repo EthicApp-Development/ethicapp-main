@@ -6,7 +6,7 @@ import { designSaveErrorMessageKey } from "../../helpers/design-save-errors.js";
 
 export function DesignEditorController($scope, $translate, $timeout,
     $routeParams, DesignStateService, DesignCatalogService, CasesCatalogService,
-    LanguageCatalogService, ExternalServicesCatalogService, toast) {
+    LanguageCatalogService, ExternalServicesCatalogService, toast, $rootScope) {
 
     const vm = this;
     vm.designId = 0;
@@ -20,6 +20,15 @@ export function DesignEditorController($scope, $translate, $timeout,
     vm.associatedCase = null;
     vm.externalServices = [];
     vm.languages = [];
+
+    // External service settings (#732). The design as last loaded or saved is
+    // what the server compares against (#731); errors are tracked per phase
+    // object, so they follow phases when they move.
+    let storedDesign = null;
+    const storedConfigurationsByService = new Map();
+    const serviceSettingErrorCounts = new Map();
+    const serverServiceErrors = new Map();
+    const NO_SERVER_ERRORS = Object.freeze([]);
     
     vm.init = async function() {
         vm.languages = await LanguageCatalogService.getLanguages();
@@ -49,6 +58,7 @@ export function DesignEditorController($scope, $translate, $timeout,
             });
 
             await DesignStateService.setDesign(designId, designObj);
+            vm.rememberStoredDesign();
             await vm.loadExternalServices();
             await vm.loadAssociatedCase();
 
@@ -70,6 +80,90 @@ export function DesignEditorController($scope, $translate, $timeout,
             $scope.$applyAsync();
         }
     };
+
+    vm.rememberStoredDesign = function() {
+        storedDesign = vm.design ? JSON.parse(JSON.stringify(vm.design)) : null;
+        storedConfigurationsByService.clear();
+    };
+
+    // This service's configurations in the stored design, one per phase.
+    vm.storedConfigurationsFor = function(serviceId) {
+        if (!storedConfigurationsByService.has(serviceId)) {
+            const configurations = (storedDesign?.phases || [])
+                .map(phase => phase?.externalServices?.configurations?.[serviceId])
+                .filter(configuration => configuration && typeof configuration === "object");
+            storedConfigurationsByService.set(serviceId, configurations);
+        }
+        return storedConfigurationsByService.get(serviceId);
+    };
+
+    vm.setServiceSettingErrors = function(phase, serviceId, count) {
+        if (!serviceSettingErrorCounts.has(phase)) {
+            serviceSettingErrorCounts.set(phase, new Map());
+        }
+        serviceSettingErrorCounts.get(phase).set(serviceId, count);
+        if (vm.design) {
+            vm.design.valid = vm.isDesignValid();
+        }
+    };
+
+    vm.hasServiceSettingErrors = function() {
+        const phases = new Set(vm.design?.phases || []);
+        for (const [phase, counts] of serviceSettingErrorCounts) {
+            if (!phases.has(phase)) {
+                continue;
+            }
+            for (const [serviceId, count] of counts) {
+                if (count > 0 && vm.isExternalServiceEnabled(phase, serviceId)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    };
+
+    vm.serverErrorsFor = function(phase, serviceId) {
+        return serverServiceErrors.get(phase)?.[serviceId] || NO_SERVER_ERRORS;
+    };
+
+    // Field errors from a 400 INVALID_SERVICE_CONFIGURATION (#731).
+    vm.applyServerServiceErrors = function(errors) {
+        serverServiceErrors.clear();
+        for (const error of errors || []) {
+            const phase = vm.design?.phases?.[error.phaseIndex];
+            if (!phase) {
+                continue;
+            }
+            const byService = serverServiceErrors.get(phase) || {};
+            byService[error.serviceId] = [...(byService[error.serviceId] || []), error];
+            serverServiceErrors.set(phase, byService);
+        }
+    };
+
+    function serviceTranslations(service) {
+        const language = LanguageCatalogService.getCurrentUiLanguageCode();
+        return service?.ui?.translations?.[language] || null;
+    }
+
+    vm.serviceLabel = function(service) {
+        return serviceTranslations(service)?.label || service?.descriptor?.name || service?.id;
+    };
+
+    vm.serviceDescription = function(service) {
+        return serviceTranslations(service)?.description || service?.description || "";
+    };
+
+    vm.serviceUsesLlm = function(service) {
+        return service?.descriptor?.usesLlm === true;
+    };
+
+    // Service names, descriptions and settings follow the UI language (#745).
+    const stopLanguageListener = $rootScope.$on("$translateChangeEnd", () => {
+        if (vm.design) {
+            vm.loadExternalServices();
+        }
+    });
+    $scope.$on("$destroy", stopLanguageListener);
 
     vm.loadAssociatedCase = async function() {
         vm.associatedCase = null;
@@ -286,7 +380,13 @@ export function DesignEditorController($scope, $translate, $timeout,
             }
 
             vm.runValidations({ showToast: false });
+            if (vm.hasServiceSettingErrors()) {
+                vm.showSaveErrorToast("save_design_invalid_service_settings");
+                return;
+            }
             await DesignCatalogService.updateDesign(vm.designId, vm.design);
+            serverServiceErrors.clear();
+            vm.rememberStoredDesign();
 
             $scope.$applyAsync(() => {
                 $translate("save_design_success").then((result) => {
@@ -301,21 +401,28 @@ export function DesignEditorController($scope, $translate, $timeout,
                 });
             });
         } catch (error) {
-            $scope.$applyAsync(() => {
-                $translate(designSaveErrorMessageKey(error)).then((result) => {
-                    toast.create({
-                        timeout: 5 * 1000,
-                        message: result,
-                        className: 'alert-danger',
-                        dismissible: false,
-                        containerClass: 'design-editor-toast-container',
-                        defaultToastClass: 'toast',
-                        insertFromTop: true
-                    });
-                });
-            });
+            if (error?.data?.code === "INVALID_SERVICE_CONFIGURATION") {
+                $scope.$applyAsync(() => vm.applyServerServiceErrors(error.data.errors));
+            }
+            vm.showSaveErrorToast(designSaveErrorMessageKey(error));
             console.error(error);
         }
+    };
+
+    vm.showSaveErrorToast = function(translationKey) {
+        $scope.$applyAsync(() => {
+            $translate(translationKey).then((result) => {
+                toast.create({
+                    timeout: 5 * 1000,
+                    message: result,
+                    className: 'alert-danger',
+                    dismissible: false,
+                    containerClass: 'design-editor-toast-container',
+                    defaultToastClass: 'toast',
+                    insertFromTop: true
+                });
+            });
+        });
     };
 
     vm.handleValidationResult = function (result) {
@@ -411,6 +518,9 @@ export function DesignEditorController($scope, $translate, $timeout,
         }
         if (vm.validationErrors.phases && Object.keys(vm.validationErrors.phases).length > 0) {
             // console.debug("[isDesignValid] The design has phase errors.");
+            valid = false;
+        }
+        if (vm.hasServiceSettingErrors()) {
             valid = false;
         }
 

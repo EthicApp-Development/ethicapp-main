@@ -162,7 +162,7 @@ app.controller("ErrorController",
 app.controller("DesignEditorController", 
     ["$scope", "$translate", "$timeout", "$routeParams", "DesignStateService",
         "DesignCatalogService", "CasesCatalogService", "LanguageCatalogService",
-        "ExternalServicesCatalogService", "toast", DesignEditorController]);
+        "ExternalServicesCatalogService", "toast", "$rootScope", DesignEditorController]);
 app.controller("VoidController", [VoidController]);
 app.controller("ProfileController", ["$scope", "$translate", "toast", "UserProfileService", "LanguageCatalogService", ProfileController]);
 
@@ -204,6 +204,8 @@ import { designDescriptionComponent } from "../../components/design-description.
 import rankingItemEditorComponent from "../../components/ranking-item-editor.component.js";
 import sdItemEditorComponent from "../../components/sd-item-editor.component.js";
 import groupingModeSelectorComponent from "../../components/grouping-mode-selector.component.js";
+import serviceConfigurationFormComponent
+    from "../../components/service-configuration-form.component.js";
 import previousPhasesSelectorComponent from "../../components/previous-phases-selector.component.js";
 import numericInputWithSpinbuttonComponent from "../../components/numeric-input-with-spinbutton.component.js";
 import phaseMoverComponent from "../../components/phase-mover.component.js";
@@ -226,6 +228,7 @@ import teacherToastComponent from "../../components/teacher-toast.component.js";
 app.component('activityDescription', activityDescriptionComponent);
 app.component('designDescription', designDescriptionComponent);
 app.component('groupingModeSelector', groupingModeSelectorComponent);
+app.component("serviceConfigurationForm", serviceConfigurationFormComponent);
 app.component('previousPhasesSelector', previousPhasesSelectorComponent);
 app.component('numericInputWithSpinbutton', numericInputWithSpinbuttonComponent);
 app.component('phaseMover', phaseMoverComponent);

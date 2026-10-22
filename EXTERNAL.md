@@ -463,6 +463,27 @@ When a teacher enables a service for a phase, the service id is added to
 of the design JSON. Per-service settings go in `configurations` (see "Design
 Schema"); turning a service off keeps them.
 
+Settings form (#732): when an enabled service has a capability descriptor, the
+editor shows its fields below the service, in the UI language
+(`components/service-configuration-form.component.js`,
+`fragments/service-configuration-form.template.html`,
+`helpers/service-configuration-form.js`):
+
+- one control per field: a select for `enum`, a number input for `integer` and
+  `number`, a checkbox for `boolean`, a text input or textarea for `text`;
+  grouped by `group`, ordered by `order`, with the description as help text;
+- defaults show as placeholders; only values the teacher sets are stored, and
+  "Use default" removes a value;
+- deprecated fields and enum values are offered only while a design stores
+  them;
+- values are checked as the teacher types with the server's rules
+  (`common/modules/service-configuration-rules.js`); errors block saving, and
+  the server's field errors (#731) show next to their fields;
+- when the service does not respond, a notice lists the stored values, which
+  are kept unchanged;
+- locked designs show the settings read-only;
+- services that use a language model carry a notice.
+
 The student frontend listens for `onExternalServiceResult` in:
 
 ```text
