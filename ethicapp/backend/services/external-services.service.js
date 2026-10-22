@@ -194,6 +194,20 @@ function withTimeout(promise, timeoutMs) {
     return Promise.race([promise, timeout]).finally(() => clearTimeout(timeoutId));
 }
 
+// An instantiation report with its common keys normalized, or null when there
+// is nothing to record (#737).
+function normalizeInstantiationReport(report) {
+    if (report === null || typeof report !== "object" || Array.isArray(report)) {
+        return null;
+    }
+    return {
+        ...report,
+        warnings:              Array.isArray(report.warnings) ? report.warnings : [],
+        degraded:              report.degraded === true,
+        configurationRejected: report.configurationRejected === true,
+    };
+}
+
 // The settings a phase stores for one service (#734): a copy, so a handler
 // cannot change the design, or {} for hooks without a phase or settings.
 function serviceConfigurationFor(serviceConfigurations, serviceId) {
@@ -522,6 +536,12 @@ export class ExternalServicesRegistry {
                     result,
                     context: serviceContext,
                 }),
+                reportInstantiation: report => this.recordInstantiationReport({
+                    hookName,
+                    serviceId,
+                    jobId,
+                    report,
+                }),
             });
         } catch (err) {
             if (jobId) {
@@ -634,6 +654,38 @@ export class ExternalServicesRegistry {
         }));
 
         return { resultRecord, outcomes };
+    }
+
+    // Stores on the job what an AI service reported when an adapter created a
+    // room or session for it (#737): `{ warnings, degraded,
+    // configurationRejected, ...details }`. It does not change the job status.
+    // Warnings, degraded mode and rejected settings are also logged.
+    async recordInstantiationReport({ hookName, serviceId, jobId, report }) {
+        const normalized = normalizeInstantiationReport(report);
+        if (!normalized) {
+            return null;
+        }
+
+        if (jobId) {
+            await this._jobsService
+                .recordInstantiationReport(jobId, normalized)
+                .catch(err => console.error(
+                    "[external-services] Failed to store an instantiation report.", err));
+        }
+
+        const worthLogging = normalized.warnings.length > 0 || normalized.degraded
+            || normalized.configurationRejected;
+        if (worthLogging) {
+            console.warn("[external-services] Instantiation report.", JSON.stringify({
+                serviceId,
+                hookName,
+                jobId:                 jobId ?? null,
+                degraded:              normalized.degraded,
+                configurationRejected: normalized.configurationRejected,
+                warnings:              normalized.warnings,
+            }));
+        }
+        return normalized;
     }
 
     async recordCallbackResult({ hookName, serviceId, result, context }) {
