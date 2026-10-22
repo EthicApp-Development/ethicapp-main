@@ -2912,3 +2912,8 @@ tr.group-summary {
 .service-configuration-stored {
     margin: 6px 0 0;
 }
+
+.service-configuration-lifecycle,
+.service-configuration-retired .help-block {
+    color: #8a6d3b;
+}

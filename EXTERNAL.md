@@ -476,6 +476,13 @@ editor shows its fields below the service, in the UI language
   "Use default" removes a value;
 - deprecated fields and enum values are offered only while a design stores
   them;
+- lifecycle notices (#733) for stored values, matching the server's save
+  warnings (#731): a deprecated field or value says so and offers a switch to
+  its `superseded_by` replacement; a retired enum value stays visible in the
+  select, flagged with the default the service applies instead; a value that
+  breaks a current rule says the service may refuse it; settings the
+  descriptor no longer defines are listed with a "Remove" button. Notices never
+  block saving;
 - values are checked as the teacher types with the server's rules
   (`common/modules/service-configuration-rules.js`); errors block saving, and
   the server's field errors (#731) show next to their fields;
