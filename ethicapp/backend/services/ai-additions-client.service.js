@@ -213,6 +213,7 @@ export class AiAdditionsClient {
         headers = {},
         baseUrl = this.getBaseUrl(),
         authenticated = true,
+        timeoutMs = this.getHttpTimeoutMs(),
     } = {}) {
         const execute = async () => {
             const requestHeaders = {
@@ -228,6 +229,7 @@ export class AiAdditionsClient {
                 method,
                 headers: requestHeaders,
                 body: body == null ? null : JSON.stringify(body),
+                timeoutMs,
             });
         };
 

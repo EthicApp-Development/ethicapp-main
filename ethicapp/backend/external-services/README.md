@@ -123,6 +123,47 @@ export async function getUiTranslations() {
   `__tests__/manifest.node-test.mjs` requires every case-scoped manifest entry
   to provide valid translations.
 
+### Capability descriptors
+
+`services/capability-descriptors.service.js` fetches the capability descriptor a
+service links with `descriptor` (#687, #727) and returns the settings EthicApp
+may store per activity. Callers use the registry:
+
+```js
+const configuration = await externalServicesRegistry
+    .getServiceInstanceConfiguration("polyadic-devils-advocate", "es_CL");
+```
+
+- **Result.** `null` for unknown or disabled services and for services without a
+  descriptor. Otherwise `{ available: true, stale, descriptorServiceId, name,
+  usesLlm, locale, fields }`, or `{ available: false, reason }` with `reason`
+  `unreachable` (network error, timeout, HTTP error), `invalid_descriptor`,
+  `unsupported_contract_version` or `service_id_mismatch`. It never throws, and
+  it never touches stored configurations.
+- **Fetching.** `GET descriptor.path` through `aiAdditionsClient.requestJson`
+  (Keycloak token, one retry after `401`) with a 5 s timeout and
+  `Accept-Language`: `es-CL` for Spanish locales, `en-US` otherwise. Until
+  ethicapp-ai-additions#180 lands, the services answer in English.
+- **Validation.** A hand-written check equivalent to
+  `shared/schemas/capability-descriptor.v1.schema.json` in ethicapp-ai-additions:
+  `contract_version` must be `"1"` and `service.id` must equal
+  `descriptor.serviceId`. Unknown keys are ignored. An unusable or repeated
+  instance field is dropped with a warning instead of rejecting the descriptor.
+  `runtime_configuration` is checked but never returned: it belongs to the
+  service.
+- **Fields.** Each field is normalized to `{ key, type, required, default,
+  label, description, group, order, status, supersededBy, validation }`.
+  `validation` depends on the type: `{ entries }` for `enum` (each entry
+  `{ value, label, status, supersededBy }`), `{ minimum, maximum, step }` for
+  `integer` and `number`, `{ maxLength, pattern, multiline }` for `text`, and
+  `{}` for `boolean`. Deprecated fields and entries are kept, so stored values
+  can still be shown.
+- **Cache.** In memory, per process, keyed by service and descriptor locale.
+  A valid descriptor is kept for ten minutes. After a failure the result is
+  kept for a minute before asking again; if an earlier fetch succeeded, its
+  fields are served meanwhile with `stale: true`. Concurrent calls share one
+  request. Nothing is stored in Redis.
+
 ### Listing services
 
 `GET /external-services` (role `P`) returns the enabled services without their

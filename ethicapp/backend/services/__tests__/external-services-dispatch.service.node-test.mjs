@@ -787,6 +787,53 @@ test("getServiceDescriptor: returns a copy of the link, or null", () => {
     assert.equal(registry.getServiceDescriptor("unknown"), null);
 });
 
+// ─── getServiceInstanceConfiguration (capability descriptors, #727) ──────────
+
+function makeDescriptorsStub(result) {
+    const calls = [];
+    return {
+        calls,
+        getInstanceConfiguration: async (serviceId, locale) => {
+            calls.push({ serviceId, locale });
+            return result;
+        },
+    };
+}
+
+test("getServiceInstanceConfiguration: delegates enabled services to the descriptor client", async () => {
+    const descriptors = makeDescriptorsStub({ available: true, fields: [] });
+    const registry = new ExternalServicesRegistry({
+        jobsService:           makeJobsServiceStub(),
+        capabilityDescriptors: descriptors,
+    });
+    registry.services.set("svc-described", { id: "svc-described", enabled: true });
+
+    const configuration = await registry.getServiceInstanceConfiguration("svc-described", "es_CL");
+
+    assert.deepEqual(configuration, { available: true, fields: [] });
+    assert.deepEqual(descriptors.calls, [{ serviceId: "svc-described", locale: "es_CL" }]);
+});
+
+test("getServiceInstanceConfiguration: null for unknown and disabled services", async () => {
+    const descriptors = makeDescriptorsStub({ available: true, fields: [] });
+    const registry = new ExternalServicesRegistry({
+        jobsService:           makeJobsServiceStub(),
+        capabilityDescriptors: descriptors,
+    });
+    registry.services.set("svc-off", { id: "svc-off", enabled: false });
+
+    assert.equal(await registry.getServiceInstanceConfiguration("svc-off", "en_US"), null);
+    assert.equal(await registry.getServiceInstanceConfiguration("unknown", "en_US"), null);
+    assert.equal(descriptors.calls.length, 0);
+});
+
+test("getServiceInstanceConfiguration: the default client follows the manifest link", async () => {
+    const { registry } = makeRegistry();
+
+    assert.equal(await registry.getServiceInstanceConfiguration("svc-a", "en_US"), null,
+        "a service without a descriptor link has no instance configuration");
+});
+
 // ─── capabilities (removed in favor of the response scope, #726) ─────────────
 
 test("registerService: ignores the deprecated capabilities key with one warning", async () => {

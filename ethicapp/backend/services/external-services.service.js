@@ -6,6 +6,7 @@ import * as rpg2 from "../db/rest-pg-2.js";
 import { saveChatMessage } from "../helpers/chat-helper.js";
 import { studentNotifications, teacherNotifications } from "../config/socket.config.js";
 import aiAdditionsClient from "./ai-additions-client.service.js";
+import { CapabilityDescriptorsClient } from "./capability-descriptors.service.js";
 import {
     externalServiceJobsService,
     JOB_STATUS,
@@ -198,6 +199,7 @@ export class ExternalServicesRegistry {
         jobsService,
         now = () => Date.now(),
         uiTranslationsTimeoutMs = UI_TRANSLATIONS_TIMEOUT_MS,
+        capabilityDescriptors,
     } = {}) {
         this.initialized      = false;
         this.services         = new Map();
@@ -208,6 +210,12 @@ export class ExternalServicesRegistry {
         this.uiTranslationsCache      = new Map();
         this._now                     = now;
         this._uiTranslationsTimeoutMs = uiTranslationsTimeoutMs;
+
+        this._capabilityDescriptors = capabilityDescriptors ?? new CapabilityDescriptorsClient({
+            getDescriptorLink: serviceId => this.getServiceDescriptor(serviceId),
+            requestJson:       (pathname, options) => aiAdditionsClient.requestJson(pathname, options),
+            now,
+        });
     }
 
     async initialize(manifestPath = process.env.EXTERNAL_SERVICES_MANIFEST || DEFAULT_MANIFEST_PATH) {
@@ -357,6 +365,18 @@ export class ExternalServicesRegistry {
     getServiceDescriptor(serviceId) {
         const descriptor = this.services.get(serviceId)?.descriptor;
         return descriptor ? { ...descriptor } : null;
+    }
+
+    // The normalized instance configuration that an enabled service's capability
+    // descriptor advertises, in the descriptor locale for `locale` (#727). Null for
+    // unknown or disabled services and for services without a descriptor;
+    // `{ available: false, reason }` when the descriptor cannot be fetched.
+    async getServiceInstanceConfiguration(serviceId, locale) {
+        if (!this.services.get(serviceId)?.enabled) {
+            return null;
+        }
+
+        return this._capabilityDescriptors.getInstanceConfiguration(serviceId, locale);
     }
 
     // Asks the adapter for its UI texts. Valid texts are kept for ten minutes.
