@@ -24,6 +24,7 @@ Each manifest entry describes one service:
   "adapter": "./adapters/ats-feedback.adapter.js",
   "hooks": ["student-response-submitted", "phase-ended", "callback-received"],
   "globalHooks": [],
+  "scopes": ["response"],
   "capabilities": {
     "processesStudentResponses": true
   },
@@ -39,9 +40,11 @@ Each manifest entry describes one service:
 | --- | --- | --- |
 | `id` | yes | Service identifier. Used as `serviceId` everywhere (jobs, callbacks, chat agent identity, design-level enablement). |
 | `adapter` | yes | Module path resolved relative to the manifest file. |
-| `description` | no | Defaults to an empty string. |
+| `description` | no | Defaults to an empty string. The texts meant for case screens come from the adapter instead (see "UI translations"). |
 | `hooks` | no | Declarative list of the hooks the adapter subscribes to. Non-kebab-case names are dropped with a warning. The registry does not enforce that `subscribe()` calls match this list; it is exposed through `GET /external-services` for operators and the teacher UI, so keep it in sync with the adapter. |
 | `globalHooks` | no | Hooks the service opts into at manifest level, without an activity-design opt-in. Defaults to `[]`. Each name must be kebab-case and must also appear in `hooks`; other entries are dropped with a warning and duplicates are removed. Only consulted by `dispatchGlobalHook()` (see "Hook enablement"). Exposed through `GET /external-services`. |
+| `scopes` | no | Where the service operates: `case` (case documents), `response` (student responses) or `chat` (group chat). Defaults to `[]`. Unknown values are dropped with a warning and duplicates are removed. Screens list services by scope (see "Listing services"), so an entry without scopes appears in none of them; `__tests__/manifest.node-test.mjs` requires at least one. |
+| `ui` | no | `{ component }`: the kebab-case name of the EthicApp frontend component that will show the service's analysis in the case view. Defaults to `{ component: null }`; other names are dropped with a warning. The texts come from the adapter, not from the manifest (see "UI translations"). |
 | `capabilities` | no | Normalized to `{ processesStudentResponses: boolean }`; any other key is discarded. Exposed through `GET /external-services`. |
 | `enabled` | no | Defaults to `true`. Disabled services stay listed but their adapter is never imported. |
 | `callbackAuth` | no | Inbound callback authorization. See below. |
@@ -60,7 +63,7 @@ warning and never receive hooks.
 
 ```js
 export async function register({
-    service,                 // normalized manifest entry (id, description, hooks, globalHooks, capabilities, enabled, adapter, callbackAuth)
+    service,                 // normalized manifest entry (id, description, hooks, globalHooks, scopes, ui, capabilities, enabled, adapter, callbackAuth)
     subscribe,               // (hookName, handler) => void
     publishStudentResult,    // (payload) => Promise<boolean>
     publishGroupChatMessage, // (payload) => Promise<{ savedMessage, notificationPayload } | null>
@@ -79,12 +82,59 @@ including `globalHooks`.
 dependency injection (for example `polyadicBridgeDependencies` in the Polyadic
 adapter). The registry never passes them, so they must have safe defaults.
 
-Adapters may also export pure helpers for testing; only `register` is part of the
-registry contract. The adapter should subscribe only to hooks it handles.
+Adapters may also export pure helpers for testing; only `register` and the
+optional `getUiTranslations` (see "UI translations") are part of the registry
+contract. The adapter should subscribe only to hooks it handles.
 
 Hook names are part of the adapter interface and must use kebab-case
 (`/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/`). Subscriptions and manifest entries with
 other names are ignored with a warning.
+
+### UI translations
+
+Each service owns the texts teachers read about it, and its adapter obtains
+them. An adapter may export `getUiTranslations()`:
+
+```js
+export async function getUiTranslations() {
+    return {
+        es_CL: { label: "Analista de casos", description: "...", tabTitle: "Retroalimentación del caso" },
+        en_US: { label: "Case Analyst", description: "...", tabTitle: "Case feedback" },
+    };
+}
+```
+
+- Both UI locales, `es_CL` and `en_US` (see the i18n policy in `AGENTS.md`),
+  need a non-empty `label` and `description`. `tabTitle`, the title of the
+  service's tab in the case view, is optional and becomes `null` when missing.
+  Texts are trimmed; other locales and keys are dropped.
+- When the service publishes its own texts, the adapter asks the service for
+  them, for example through `aiAdditionsClient`. Otherwise it returns
+  constants, as `case-analyst` does until Case Analyst publishes them.
+- The registry calls it through `getServiceUiTranslations(serviceId)` with a
+  3 s timeout. Valid texts are kept in memory for ten minutes. After a timeout,
+  an error or an invalid result, it logs a warning and keeps the previous texts
+  (or `null`) for a minute before asking again, so an unavailable service does
+  not slow down every listing. Nothing is stored in Redis.
+- At startup, a case-scoped service whose adapter does not export it is
+  reported with a warning; case screens will fall back to its id.
+  `__tests__/manifest.node-test.mjs` requires every case-scoped manifest entry
+  to provide valid translations.
+
+### Listing services
+
+`GET /external-services` (role `P`) returns the registered services without
+their adapter paths or callback settings:
+
+- Without `scope`, it returns every registered service, disabled ones included.
+- With `scope`, it returns only the enabled services that declare at least one
+  of the requested scopes. The parameter can be repeated
+  (`?scope=response&scope=chat`). An unknown or empty scope answers `400`.
+
+Each entry carries `ui: { component, translations }`, where `translations` is
+the result of `getServiceUiTranslations()` or `null`. The design editor asks for
+`?scope=response&scope=chat`, so services that only work on cases are not
+offered as phase options.
 
 ### Handler signature
 
