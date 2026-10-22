@@ -8,5 +8,5 @@ export async function register({ caseAnalyses }) {
 }
 
 export function validateCaseAnalysisDocument(document) {
-    return document;
+    return { document };
 }

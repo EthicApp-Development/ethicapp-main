@@ -25,6 +25,7 @@ import externalServices from "./controllers/external-services.js";
 import groups from "./controllers/groups.js";
 import group_messages from "./controllers/group-messages.js";
 import cases from "./controllers/cases.js";
+import caseAnalyses from "./controllers/case-analyses.js";
 import externalServicesRegistry from "./services/external-services.service.js";
 import tags from "./controllers/tags.js";
 import institutionBranding from "./controllers/institution-branding.js";
@@ -138,6 +139,7 @@ app.use("/", requireLegacyAuth, groups);
 app.use("/", requireLegacyAuth, designs);
 app.use("/", requireLegacyAuth, group_messages);
 app.use("/", requireLegacyAuth, cases);
+app.use("/", requireLegacyAuth, caseAnalyses);
 app.use("/", requireLegacyAuth, tags);
 app.use("/", requireLegacyAuth, institutionBranding);
 
