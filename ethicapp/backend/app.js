@@ -35,6 +35,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import expressLayouts from "express-ejs-layouts";
+import { mountStaticAssets } from "./config/static-assets.js";
 import { renderScripts } from "./helpers/views-helper.js";
 import redisClient from "./db/redis.js"; // Importar el módulo centralizado
 import { ErrorReply } from "redis";
@@ -63,9 +64,9 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-// Asset handling
+// Asset handling: only the public asset directories are served (#706).
 const assetPath = path.join(__dirname, "../frontend/assets");
-app.use(express.static(assetPath));
+mountStaticAssets(app, assetPath);
 app.use(assetVersions("/assets", assetPath));
 
 // view engine setup
@@ -88,9 +89,6 @@ logger.token("utc-date", function () {
 app.use(logger(
     "[:utc-date | EthicApp] :method :url :status - :response-time ms request_id=:req[x-request-id]"
 ));
-
-// Static path for frontend files
-app.use(express.static(path.join(__dirname, "../frontend")));
 
 // Set up cookies and session management
 app.use(cookieParser());
