@@ -755,5 +755,13 @@
 	"loading": "Cargando...",
 	"send": "Enviar",
 	"session_expired_notice": "Tu sesión expiró. Te estamos llevando a iniciar sesión...",
-	"session_expired_sign_in_now": "Iniciar sesión ahora"
+	"session_expired_sign_in_now": "Iniciar sesión ahora",
+	"actors_label": "Actores",
+	"actor_name_label": "Actor",
+	"comment_exists_tooltip": "Esta respuesta incluye un comentario",
+	"comment_note_legend": "El estudiante agregó un comentario",
+	"faulty_design": "Este diseño tiene errores y no se puede lanzar.",
+	"justify": "Justificar",
+	"preparing_dashboard": "Preparando el dashboard de la actividad...",
+	"remove": "Quitar"
 }
