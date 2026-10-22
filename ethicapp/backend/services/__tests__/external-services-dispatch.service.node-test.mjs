@@ -867,3 +867,65 @@ test("registerService: no capabilities warning when the key is absent", async ()
 
     assert.deepEqual(warnings, []);
 });
+
+// ─── serviceConfiguration (per-phase settings, #734) ─────────────────────────
+
+function captureContexts(registry, hookName, serviceIds) {
+    const contexts = {};
+    registry.hookSubscribers.set(hookName, serviceIds.map(serviceId => ({
+        serviceId,
+        handler: async (ctx) => { contexts[serviceId] = ctx; },
+    })));
+    return contexts;
+}
+
+test("dispatchHook: each handler receives its own serviceConfiguration", async () => {
+    const { registry } = makeRegistry();
+    registry.services.set("svc-b", { id: "svc-b", enabled: true });
+    const contexts = captureContexts(registry, "phase-started", ["svc-a", "svc-b"]);
+    const serviceConfigurations = { "svc-a": { llm_tier: "advanced" } };
+
+    await registry.dispatchHook("phase-started", { sessionId: 1, phaseId: 2 }, {
+        enabledServiceIds: ["svc-a", "svc-b"],
+        serviceConfigurations,
+    });
+
+    assert.deepEqual(contexts["svc-a"].serviceConfiguration, { llm_tier: "advanced" });
+    assert.deepEqual(contexts["svc-b"].serviceConfiguration, {}, "no stored configuration");
+
+    contexts["svc-a"].serviceConfiguration.llm_tier = "basic";
+    assert.equal(serviceConfigurations["svc-a"].llm_tier, "advanced", "handlers get a copy");
+});
+
+test("dispatchHook: serviceConfiguration is {} when absent or not an object", async () => {
+    const { registry } = makeRegistry();
+    const contexts = captureContexts(registry, "phase-started", ["svc-a"]);
+
+    await registry.dispatchHook("phase-started", {}, { enabledServiceIds: ["svc-a"] });
+    assert.deepEqual(contexts["svc-a"].serviceConfiguration, {});
+
+    await registry.dispatchHook("phase-started", {}, {
+        enabledServiceIds:     ["svc-a"],
+        serviceConfigurations: { "svc-a": ["not", "an", "object"] },
+    });
+    assert.deepEqual(contexts["svc-a"].serviceConfiguration, {});
+});
+
+test("dispatchGlobalHook: hooks without a phase get an empty serviceConfiguration", async () => {
+    const { registry } = makeRegistry();
+    registry.services.set("svc-a", { id: "svc-a", enabled: true, globalHooks: ["case-created"] });
+    const contexts = captureContexts(registry, "case-created", ["svc-a"]);
+
+    await registry.dispatchGlobalHook("case-created", { caseId: 9 });
+
+    assert.deepEqual(contexts["svc-a"].serviceConfiguration, {});
+});
+
+test("dispatchServiceHook: callbacks get an empty serviceConfiguration", async () => {
+    const { registry } = makeRegistry();
+    const contexts = captureContexts(registry, "callback-received", ["svc-a"]);
+
+    await registry.dispatchServiceHook("callback-received", "svc-a", { phaseId: 2 });
+
+    assert.deepEqual(contexts["svc-a"].serviceConfiguration, {});
+});

@@ -194,6 +194,15 @@ function withTimeout(promise, timeoutMs) {
     return Promise.race([promise, timeout]).finally(() => clearTimeout(timeoutId));
 }
 
+// The settings a phase stores for one service (#734): a copy, so a handler
+// cannot change the design, or {} for hooks without a phase or settings.
+function serviceConfigurationFor(serviceConfigurations, serviceId) {
+    const configuration = serviceConfigurations?.[serviceId];
+    const isObject = configuration !== null && typeof configuration === "object"
+        && !Array.isArray(configuration);
+    return isObject ? { ...configuration } : {};
+}
+
 export class ExternalServicesRegistry {
     constructor({
         jobsService,
@@ -475,7 +484,9 @@ export class ExternalServicesRegistry {
         }
     }
 
-    async _dispatchOneHandler({ hookName, serviceId, handler, context, enabledServiceIds }) {
+    async _dispatchOneHandler({
+        hookName, serviceId, handler, context, enabledServiceIds, serviceConfigurations,
+    }) {
         const job = await this._jobsService.createJob({
             serviceId,
             hookName,
@@ -492,8 +503,9 @@ export class ExternalServicesRegistry {
             ...context,
             serviceId,
             jobId,
-            correlationId:     jobId,
-            enabledServiceIds: Array.from(enabledServiceIds),
+            correlationId:        jobId,
+            enabledServiceIds:    Array.from(enabledServiceIds),
+            serviceConfiguration: serviceConfigurationFor(serviceConfigurations, serviceId),
         };
 
         if (jobId) {
@@ -521,6 +533,9 @@ export class ExternalServicesRegistry {
         }
     }
 
+    // Runs the handlers of `options.enabledServiceIds` for `hookName`. Each
+    // handler's context carries `serviceConfiguration`, its entry in
+    // `options.serviceConfigurations` (the phase's settings, #734) or {}.
     async dispatchHook(hookName, context, options = {}) {
         if (!this.initialized) {
             await this.initialize();
@@ -533,9 +548,12 @@ export class ExternalServicesRegistry {
 
         const subscribers = this.hookSubscribers.get(hookName) || [];
         const selectedSubscribers = subscribers.filter(({ serviceId }) => enabledServiceIds.has(serviceId));
+        const serviceConfigurations = options.serviceConfigurations || {};
 
         return Promise.allSettled(selectedSubscribers.map(({ serviceId, handler }) =>
-            this._dispatchOneHandler({ hookName, serviceId, handler, context, enabledServiceIds })
+            this._dispatchOneHandler({
+                hookName, serviceId, handler, context, enabledServiceIds, serviceConfigurations,
+            })
         ));
     }
 
@@ -589,9 +607,11 @@ export class ExternalServicesRegistry {
             const serviceContext = {
                 ...context,
                 serviceId,
-                jobId:       resultRecord?.job_id      ?? null,
-                resultId:    resultRecord?.id          ?? null,
-                isDuplicate: resultRecord?.is_duplicate ?? false,
+                jobId:                resultRecord?.job_id      ?? null,
+                resultId:             resultRecord?.id          ?? null,
+                isDuplicate:          resultRecord?.is_duplicate ?? false,
+                // Callbacks are not tied to a phase design (#734).
+                serviceConfiguration: {},
             };
 
             try {

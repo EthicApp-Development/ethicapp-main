@@ -9,7 +9,8 @@ import { requireRole } from "../../helpers/auth-helper.js";
 import { studentNotifications } from "../../config/socket.config.js";
 import redisClient from "../../db/redis.js";
 import { getDesignTypeBySessionId } from "./activities-common.js";
-import { getPhaseDesignByPhaseId, getEnabledExternalServiceIdsBySessionId } from "../../helpers/designs-helper.js";
+import { getEnabledExternalServiceIdsBySessionId } from "../../helpers/designs-helper.js";
+import { dispatchPhaseHook } from "../../helpers/external-service-dispatch.js";
 import { shouldDispatchActivityStarted } from "../../helpers/activity-lifecycle-helper.js";
 import externalServicesRegistry from "../../services/external-services.service.js";
 
@@ -469,30 +470,6 @@ async function dispatchActivityFinishedHook(sessionId, context) {
     }
 }
 
-async function dispatchPhaseHook(hookName, context) {
-    const phaseDesign = await getPhaseDesignByPhaseId(context.phaseId);
-    const enabledServiceIds = getEnabledExternalServiceIds(phaseDesign);
-
-    if (enabledServiceIds.length === 0) {
-        return;
-    }
-
-    await externalServicesRegistry.dispatchHook(hookName, context, {
-        enabledServiceIds,
-    });
-}
-
-function getEnabledExternalServiceIds(phaseDesign) {
-    const enabledServiceIds = phaseDesign?.externalServices?.enabledServiceIds;
-
-    if (!Array.isArray(enabledServiceIds)) {
-        return [];
-    }
-
-    return enabledServiceIds
-        .map(serviceId => String(serviceId).trim())
-        .filter(Boolean);
-}
 
 router.post("/activities/:session_id/finish", async (req, res) => {
     if (!requireRole(req, res, "P")) {

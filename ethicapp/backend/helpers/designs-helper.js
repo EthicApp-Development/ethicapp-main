@@ -1,6 +1,6 @@
 import * as config from "../config/database.config.js";
 import * as rpg2 from "../db/rest-pg-2.js";
-import { unionEnabledServiceIds } from "./activity-lifecycle-helper.js";
+import { phaseExternalServices, unionEnabledServiceIds } from "./phase-external-services.js";
 
 /**
  * Fetches a design from the "designs" table by its ID.
@@ -212,3 +212,13 @@ export async function getEnabledExternalServiceIdsBySessionId(sessionId) {
     return unionEnabledServiceIds(designResult?.design?.phases);
 }
 
+
+/**
+ * The external services enabled for a phase and their stored configurations,
+ * read from the activity's design when the hook is dispatched (#734).
+ * @param {number} phaseId
+ * @returns {Promise<{ enabledServiceIds: string[], configurations: Object<string, object> }>}
+ */
+export async function getPhaseExternalServices(phaseId) {
+    return phaseExternalServices(await getPhaseDesignByPhaseId(phaseId));
+}
