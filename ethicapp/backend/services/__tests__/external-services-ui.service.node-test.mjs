@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { ExternalServicesRegistry } from "../external-services.service.js";
+import { captureWarnings } from "./capture-warnings.mjs";
 
 // registerService() resolves adapter paths against the manifest path; the
 // manifest file itself is never read.
@@ -10,24 +11,22 @@ const TEN_MINUTES_MS    = 10 * 60 * 1000;
 const ONE_MINUTE_MS     = 60 * 1000;
 
 const TRANSLATIONS = {
-    es_CL: { label: "Herramienta de casos", description: "Analiza el caso.", tabTitle: "Análisis" },
-    en_US: { label: "Case tool", description: "Analyses the case.", tabTitle: "Analysis" },
+    es_CL: {
+        label:       "Case tool (es_CL)",
+        description: "Analyses the case (es_CL).",
+        tabTitle:    "Analysis (es_CL)",
+    },
+    en_US: {
+        label:       "Case tool",
+        description: "Analyses the case.",
+        tabTitle:    "Analysis",
+    },
 };
 
 function makeRegistry(options = {}) {
     const registry = new ExternalServicesRegistry({ jobsService: {}, ...options });
     registry.initialized = true;
     return registry;
-}
-
-function captureWarnings(fn) {
-    const warnings     = [];
-    const originalWarn = console.warn;
-    console.warn = (...args) => { warnings.push(args.join(" ")); };
-    return Promise.resolve()
-        .then(fn)
-        .then(result => ({ result, warnings }))
-        .finally(() => { console.warn = originalWarn; });
 }
 
 // ─── ui.component (manifest) ─────────────────────────────────────────────────
@@ -106,18 +105,22 @@ test("registerService: warns only for case-scoped adapters without translations"
 test("getServiceUiTranslations: trims texts, keeps UI locales, defaults tabTitle", async () => {
     const registry = makeRegistry();
     registry.uiTranslationProviders.set("svc-case", async () => ({
-        es_CL: { label: "  Herramienta de casos ", description: "Analiza el caso." },
+        es_CL: { label: "  Case tool (es_CL) ", description: "Analyses the case (es_CL)." },
         en_US: {
             label:       "Case tool",
             description: "Analyses the case.",
             tabTitle:    "Analysis",
             extra:       true,
         },
-        fr_FR: { label: "Outil", description: "Analyse le cas." },
+        fr_FR: { label: "Case tool (fr_FR)", description: "Analyses the case (fr_FR)." },
     }));
 
     assert.deepEqual(await registry.getServiceUiTranslations("svc-case"), {
-        es_CL: { label: "Herramienta de casos", description: "Analiza el caso.", tabTitle: null },
+        es_CL: {
+            label:       "Case tool (es_CL)",
+            description: "Analyses the case (es_CL).",
+            tabTitle:    null,
+        },
         en_US: { label: "Case tool", description: "Analyses the case.", tabTitle: "Analysis" },
     });
 });
@@ -126,7 +129,7 @@ test("getServiceUiTranslations: null when a locale lacks a label or a descriptio
     const invalidTranslations = [
         { es_CL: TRANSLATIONS.es_CL },
         { ...TRANSLATIONS, en_US: { label: "Case tool", description: " " } },
-        { ...TRANSLATIONS, es_CL: { description: "Analiza el caso." } },
+        { ...TRANSLATIONS, es_CL: { description: "Analyses the case (es_CL)." } },
         null,
     ];
 

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { ExternalServicesRegistry } from "../external-services.service.js";
 import { JOB_STATUS, RESULT_STATUS } from "../external-service-jobs.service.js";
+import { captureWarnings } from "./capture-warnings.mjs";
 
 const JOB_UUID    = "b1c2d3e4-0000-4000-8000-000000000011";
 const RESULT_UUID = "b1c2d3e4-0000-4000-8000-000000000012";
@@ -482,16 +483,6 @@ test("recordCallbackResult: returns an entry with hookName, serviceId, and resul
 });
 
 // ─── globalHooks (manifest-level opt-in, #628) ───────────────────────────────
-
-function captureWarnings(fn) {
-    const warnings     = [];
-    const originalWarn = console.warn;
-    console.warn = (...args) => { warnings.push(args.join(" ")); };
-    return Promise.resolve()
-        .then(fn)
-        .then(result => ({ result, warnings }))
-        .finally(() => { console.warn = originalWarn; });
-}
 
 test("registerService: normalizes globalHooks (kebab-case, declared in hooks, de-duplicated)", async () => {
     const { registry } = makeRegistry();

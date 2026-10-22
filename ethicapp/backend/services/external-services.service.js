@@ -18,7 +18,7 @@ const DEFAULT_MANIFEST_PATH = path.join(__dirname, "../external-services/manifes
 const HOOK_NAME_PATTERN = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/u;
 
 export const SERVICE_SCOPES = Object.freeze(["case", "response", "chat"]);
-export const UI_LOCALES = Object.freeze(["es_CL", "en_US"]);
+const UI_LOCALES = Object.freeze(["es_CL", "en_US"]);
 
 const UI_TRANSLATIONS_TIMEOUT_MS = 3000;
 const UI_TRANSLATIONS_TTL_MS     = 10 * 60 * 1000;

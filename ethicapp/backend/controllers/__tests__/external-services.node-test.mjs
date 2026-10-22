@@ -353,8 +353,8 @@ test("listExternalServices: 400 when any scope is unknown or empty", async () =>
 
 test("listExternalServices: each listed service carries its UI translations or null", async () => {
     const translations = {
-        es_CL: { label: "Herramienta de casos", description: "Analiza el caso.", tabTitle: null },
-        en_US: { label: "Case tool", description: "Analyses the case.", tabTitle: null },
+        es_CL: { label: "Case tool (es_CL)", description: "Analyses the case (es_CL)." },
+        en_US: { label: "Case tool", description: "Analyses the case." },
     };
     const registry = {
         ...makeListingRegistry(),
