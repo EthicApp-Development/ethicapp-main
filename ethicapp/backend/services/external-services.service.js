@@ -484,8 +484,16 @@ export class ExternalServicesRegistry {
         }
     }
 
-    async _dispatchOneHandler({ hookName, serviceId, handler, context, enabledServiceIds }) {
+    async _dispatchOneHandler({
+        hookName,
+        serviceId,
+        handler,
+        context,
+        enabledServiceIds,
+        presetJobId = null,
+    }) {
         const job = await this._jobsService.createJob({
+            id:         presetJobId,
             serviceId,
             hookName,
             sessionId:  context.sessionId  ?? null,
@@ -495,7 +503,9 @@ export class ExternalServicesRegistry {
             userId:     context.userId     ?? null,
         }).catch(() => null);
 
-        const jobId = job?.id ?? null;
+        // A preset id keeps identifying the work even when its job row could
+        // not be created.
+        const jobId = job?.id ?? presetJobId;
 
         const serviceContext = {
             ...context,
@@ -530,6 +540,8 @@ export class ExternalServicesRegistry {
         }
     }
 
+    // `options.jobIds` maps service ids to job ids chosen by the caller, for
+    // work it reserved before dispatching. The other services get a new id.
     async dispatchHook(hookName, context, options = {}) {
         if (!this.initialized) {
             await this.initialize();
@@ -540,11 +552,19 @@ export class ExternalServicesRegistry {
             return [];
         }
 
+        const jobIds = options.jobIds || {};
         const subscribers = this.hookSubscribers.get(hookName) || [];
         const selectedSubscribers = subscribers.filter(({ serviceId }) => enabledServiceIds.has(serviceId));
 
         return Promise.allSettled(selectedSubscribers.map(({ serviceId, handler }) =>
-            this._dispatchOneHandler({ hookName, serviceId, handler, context, enabledServiceIds })
+            this._dispatchOneHandler({
+                hookName,
+                serviceId,
+                handler,
+                context,
+                enabledServiceIds,
+                presetJobId: Object.hasOwn(jobIds, serviceId) ? jobIds[serviceId] : null,
+            })
         ));
     }
 

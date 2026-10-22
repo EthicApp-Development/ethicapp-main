@@ -46,7 +46,10 @@ export class ExternalServiceJobsService {
         this._db = dbQuery || poolQuery;
     }
 
+    // `id` lets the caller choose the job id in advance, for work it has
+    // already reserved under that id; without it the database generates one.
     async createJob({
+        id              = null,
         serviceId,
         hookName,
         sessionId       = null,
@@ -58,17 +61,18 @@ export class ExternalServiceJobsService {
     }) {
         const rows = await this._db(
             `INSERT INTO external_service_jobs
-                 (service_id, hook_name, status,
+                 (id, service_id, hook_name, status,
                   session_id, phase_id, question_id, group_id, user_id,
                   outbound_payload)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+             VALUES (COALESCE($10::uuid, gen_random_uuid()),
+                     $1, $2, $3, $4, $5, $6, $7, $8, $9)
              RETURNING id, service_id, hook_name, status,
                        session_id, phase_id, question_id, group_id, user_id,
                        created_at`,
             [
                 serviceId, hookName, JOB_STATUS.PENDING,
                 sessionId, phaseId, questionId, groupId, userId,
-                outboundPayload,
+                outboundPayload, id,
             ]
         );
         return rows[0] || null;

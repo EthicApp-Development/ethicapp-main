@@ -53,6 +53,18 @@ test("createJob: inserts with pending status and returns first row", async () =>
     assert.equal(params[4], 20);
 });
 
+test("createJob: inserts the caller's id, or lets the database generate one", async () => {
+    const db  = makeDbQueue([{ id: JOB_UUID }], [{ id: RESULT_UUID }]);
+    const svc = new ExternalServiceJobsService({ dbQuery: db });
+
+    await svc.createJob({ id: JOB_UUID, serviceId: "svc", hookName: "hook" });
+    await svc.createJob({ serviceId: "svc", hookName: "hook" });
+
+    assert.ok(db.calls[0].sql.includes("COALESCE($10::uuid, gen_random_uuid())"));
+    assert.equal(db.calls[0].params[9], JOB_UUID);
+    assert.equal(db.calls[1].params[9], null);
+});
+
 test("createJob: returns null when db returns empty rows", async () => {
     const db  = makeDbQueue([]);
     const svc = new ExternalServiceJobsService({ dbQuery: db });
