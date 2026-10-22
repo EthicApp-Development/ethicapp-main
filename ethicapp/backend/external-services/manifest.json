@@ -72,9 +72,6 @@
         "case-created",
         "callback-received"
       ],
-      "globalHooks": [
-        "case-created"
-      ],
       "scopes": ["case"],
       "enabled": true,
       "callbackAuth": {

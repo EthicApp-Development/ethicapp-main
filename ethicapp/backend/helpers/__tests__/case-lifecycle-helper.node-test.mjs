@@ -4,6 +4,7 @@ import {
     CASE_CREATED_HOOK,
     buildCaseCreatedContext,
     dispatchCaseCreatedHook,
+    resolveCaseAnalysisServiceIds,
 } from "../case-lifecycle-helper.js";
 
 const CREATED_CASE = {
@@ -39,21 +40,43 @@ test("buildCaseCreatedContext: nulls missing or invalid ids and defaults", () =>
     assert.equal(context.title, null);
 });
 
-test("dispatchCaseCreatedHook: dispatches case-created through dispatchGlobalHook", async () => {
+test("dispatchCaseCreatedHook: dispatches case-created only to the chosen services", async () => {
     const calls = [];
     const registry = {
-        dispatchGlobalHook: async (hookName, context) => {
-            calls.push({ hookName, context });
+        dispatchHook: async (hookName, context, options) => {
+            calls.push({ hookName, context, options });
             return [{ status: "fulfilled", value: undefined }];
         },
     };
 
-    const outcomes = await dispatchCaseCreatedHook({ caseId: 42 }, { registry });
+    const outcomes = await dispatchCaseCreatedHook(
+        { caseId: 42 },
+        { serviceIds: ["svc-case"], registry }
+    );
 
-    assert.equal(calls.length, 1);
-    assert.equal(calls[0].hookName, CASE_CREATED_HOOK);
-    assert.deepEqual(calls[0].context, { caseId: 42 });
+    assert.deepEqual(calls, [{
+        hookName: CASE_CREATED_HOOK,
+        context:  { caseId: 42 },
+        options:  { enabledServiceIds: ["svc-case"] },
+    }]);
     assert.equal(outcomes.length, 1);
+});
+
+test("dispatchCaseCreatedHook: dispatches nothing without chosen services", async () => {
+    let dispatched = false;
+    const registry = {
+        dispatchHook: async () => {
+            dispatched = true;
+            return [];
+        },
+    };
+
+    assert.deepEqual(await dispatchCaseCreatedHook({ caseId: 42 }, { registry }), []);
+    assert.deepEqual(
+        await dispatchCaseCreatedHook({ caseId: 42 }, { serviceIds: [], registry }),
+        []
+    );
+    assert.equal(dispatched, false);
 });
 
 test("dispatchCaseCreatedHook: swallows registry errors and returns []", async () => {
@@ -63,14 +86,82 @@ test("dispatchCaseCreatedHook: swallows registry errors and returns []", async (
 
     try {
         const registry = {
-            dispatchGlobalHook: async () => { throw new Error("registry down"); },
+            dispatchHook: async () => { throw new Error("registry down"); },
         };
 
-        const outcomes = await dispatchCaseCreatedHook({ caseId: 42 }, { registry });
+        const outcomes = await dispatchCaseCreatedHook(
+            { caseId: 42 },
+            { serviceIds: ["svc-case"], registry }
+        );
 
         assert.deepEqual(outcomes, []);
         assert.equal(logged.length, 1);
     } finally {
         console.error = originalError;
+    }
+});
+
+// ─── resolveCaseAnalysisServiceIds ───────────────────────────────────────────
+
+function makeCaseRegistry(caseServiceIds) {
+    const registry = {
+        initialized:                  false,
+        initialize:                   async () => { registry.initialized = true; },
+        getEnabledServiceIdsForScope: scope => (scope === "case" ? caseServiceIds : []),
+    };
+    return registry;
+}
+
+test("resolveCaseAnalysisServiceIds: no choice is valid and skips the registry", async () => {
+    for (const value of [undefined, null, "", "[]"]) {
+        const registry = makeCaseRegistry(["svc-case"]);
+
+        const choice = await resolveCaseAnalysisServiceIds(value, { registry });
+
+        assert.deepEqual(choice, { serviceIds: [], valid: true }, JSON.stringify(value));
+        assert.equal(registry.initialized, false);
+    }
+});
+
+test("resolveCaseAnalysisServiceIds: accepts enabled case services once, trimmed", async () => {
+    const registry = makeCaseRegistry(["svc-case", "svc-other-case"]);
+    const chosen = JSON.stringify(["svc-case", " svc-case ", "svc-other-case"]);
+
+    assert.deepEqual(
+        await resolveCaseAnalysisServiceIds(chosen, { registry }),
+        { serviceIds: ["svc-case", "svc-other-case"], valid: true }
+    );
+    assert.deepEqual(
+        await resolveCaseAnalysisServiceIds(["svc-case"], { registry }),
+        { serviceIds: ["svc-case"], valid: true }
+    );
+});
+
+test("resolveCaseAnalysisServiceIds: rejects ids that are not enabled case services", async () => {
+    const registry = makeCaseRegistry(["svc-case"]);
+
+    const choice = await resolveCaseAnalysisServiceIds(
+        JSON.stringify(["svc-case", "svc-chat"]),
+        { registry }
+    );
+
+    assert.equal(choice.valid, false);
+    assert.equal(registry.initialized, true);
+});
+
+test("resolveCaseAnalysisServiceIds: rejects values that are not a JSON list of ids", async () => {
+    const registry = makeCaseRegistry(["svc-case"]);
+    const invalidValues = [
+        "svc-case",
+        JSON.stringify({ id: "svc-case" }),
+        JSON.stringify([1]),
+        JSON.stringify([""]),
+        JSON.stringify(["svc-case", null]),
+    ];
+
+    for (const value of invalidValues) {
+        const choice = await resolveCaseAnalysisServiceIds(value, { registry });
+
+        assert.equal(choice.valid, false, value);
     }
 });

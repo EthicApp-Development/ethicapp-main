@@ -27,7 +27,12 @@ import {
     pdfRenderJobSelectSql,
 } from "../helpers/pdf-render-jobs-helper.js";
 import { moveUploadedFile, pdfUpload, removeUploadedFile } from "../middleware/upload.js";
-import { buildCaseCreatedContext, dispatchCaseCreatedHook } from "../helpers/case-lifecycle-helper.js";
+import {
+    buildCaseCreatedContext,
+    dispatchCaseCreatedHook,
+    resolveCaseAnalysisServiceIds,
+} from "../helpers/case-lifecycle-helper.js";
+import { insertRequestedCaseAnalyses } from "../helpers/case-analyses-helper.js";
 
 const router = express.Router();
 const uploadsRoot = path.resolve(process.cwd(), uploadsPath);
@@ -699,6 +704,17 @@ router.post("/cases", pdfUpload, async (req, res) => {
         });
     }
 
+    // Analyses are chosen only here: editing the case never changes them.
+    const analysisChoice = await resolveCaseAnalysisServiceIds(req.body.analysisServiceIds);
+    if (!analysisChoice.valid) {
+        await removeUploadedFile(req.file);
+        return res.status(400).json({
+            status:  "err",
+            message: "Each analysis service must be an enabled case-scoped service.",
+            code:    "CASE_ANALYSIS_SERVICE_INVALID",
+        });
+    }
+
     const normalizedLicenseCode = normalizeLicenseCode(licenseCode ?? licenseCodeCamel, CASE_DEFAULT_LICENSE);
     const normalizedRightsStatus = normalizeRightsStatus(rightsStatus ?? rightsStatusCamel);
     const normalizedVisibility = normalizeVisibility(visibility);
@@ -748,6 +764,11 @@ router.post("/cases", pdfUpload, async (req, res) => {
         });
         await replaceCaseAuthors(caseId, authors);
         await replaceCaseTags(caseId, tagIds, req.session.uid);
+        await insertRequestedCaseAnalyses({
+            caseId,
+            serviceIds: analysisChoice.serviceIds,
+            userId:     req.session.uid,
+        });
 
         const renderJob = await enqueueCaseRenderSafely(createdCase);
 
@@ -755,7 +776,7 @@ router.post("/cases", pdfUpload, async (req, res) => {
         dispatchCaseCreatedHook(buildCaseCreatedContext(createdCase, {
             userId:         req.session.uid,
             pdfRenderJobId: renderJob?.pdf_render_job_id ?? null,
-        }));
+        }), { serviceIds: analysisChoice.serviceIds });
 
         return res.status(201).json({
             status: "ok",
