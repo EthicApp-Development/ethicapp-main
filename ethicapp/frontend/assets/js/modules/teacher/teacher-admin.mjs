@@ -22,7 +22,7 @@ import {
 var app = angular.module("TeacherApp", ["ngSanitize",
     "ui.bootstrap", "timer", "ngFileUpload",
     "tableSort", "pascalprecht.translate",
-    "ngRoute", "checklist-model", "ngDialog", "toggle-switch",
+    "ngRoute", "checklist-model", "toggle-switch",
     'ngAnimate']
 );
 
@@ -164,26 +164,6 @@ app.controller("DesignEditorController",
         "ExternalServicesCatalogService", "toast", DesignEditorController]);
 app.controller("VoidController", [VoidController]);
 app.controller("ProfileController", ["$scope", "$translate", "toast", "UserProfileService", "LanguageCatalogService", ProfileController]);
-
-app.service("DialogService", function(ngDialog) {
-    this.openDialog = function() {
-        ngDialog.open({
-            template:        "views/templates/teacher/warning-dialog.html",
-            controller:      "DialogCtrl",
-            className:       "ngdialog-theme-default",
-            closeByDocument: true
-        });
-    };
-  
-    this.closeDialog = function() {
-        ngDialog.close();
-    };
-});
-
-app.controller("DialogCtrl", function($scope, DialogService) {
-    $scope.openDialog = DialogService.openDialog;
-    $scope.closeDialog = DialogService.closeDialog;
-});
 
 import { connectedUsersDirective, ConnectedUsersDirectiveController } from "../../directives/connected-users.directive.js";
 import { activityControlsDirective } from "../../directives/activity-controls.directive.js";

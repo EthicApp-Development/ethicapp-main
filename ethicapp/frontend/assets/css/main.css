@@ -251,18 +251,6 @@ a:hover{
     height: auto;
 }
 
-.top-bar-mini-admin-inspection{
-    border-top: #d62828 solid 2px;
-}
-
-.admin-inspection-legend{
-    margin-right: 0.75rem;
-    margin-left: 0.75rem;
-    font-size: 1.5rem;
-    color: #d62828;
-    font-weight: 600;
-}
-
 .side-panel{
     padding: 8px 24px;
     background: #e2e2e2;
@@ -795,14 +783,6 @@ td.clickable:hover{
     display: block;
     margin: 2px auto;
     text-align: center;
-}
-
-
-@media screen and (min-width: 1096px) {
-    .admin-container{
-        padding-left: 10%;
-        padding-right: 10%;
-    }
 }
 
 .question-content{
@@ -2310,7 +2290,7 @@ h2{
     width: 100%;
 }
 
-/* Above the navigation, dialogs (ngDialog) and the workspace loading screen. */
+/* Above the navigation and the workspace loading screen. */
 .session-expired-notice {
     left: 50%;
     max-width: calc(100% - 32px);
