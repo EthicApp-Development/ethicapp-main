@@ -1,8 +1,14 @@
+import { randomUUID } from "crypto";
 import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath, pathToFileURL } from "url";
 import { dbconnString } from "../config/database.config.js";
 import * as rpg2 from "../db/rest-pg-2.js";
+import {
+    completeCaseAnalysis,
+    failCaseAnalysis,
+    markCaseAnalysisProcessing,
+} from "../helpers/case-analyses-helper.js";
 import { saveChatMessage } from "../helpers/chat-helper.js";
 import { studentNotifications, teacherNotifications } from "../config/socket.config.js";
 import aiAdditionsClient from "./ai-additions-client.service.js";
@@ -23,6 +29,12 @@ const UI_LOCALES = Object.freeze(["es_CL", "en_US"]);
 const UI_TRANSLATIONS_TIMEOUT_MS = 3000;
 const UI_TRANSLATIONS_TTL_MS     = 10 * 60 * 1000;
 const UI_TRANSLATIONS_RETRY_MS   = 60 * 1000;
+
+const DEFAULT_CASE_ANALYSES_STORE = Object.freeze({
+    markCaseAnalysisProcessing,
+    completeCaseAnalysis,
+    failCaseAnalysis,
+});
 
 function isValidHookName(hookName) {
     return typeof hookName === "string" && HOOK_NAME_PATTERN.test(hookName);
@@ -172,9 +184,33 @@ function normalizeCapabilities(capabilities) {
     };
 }
 
+// Case-scoped adapters record the progress of their analyses through these
+// functions, bound to their own service id.
+function createCaseAnalysesAccess(store, serviceId) {
+    return {
+        // A dispatch whose job row could not be created has no correlation id,
+        // so a local id identifies the generation. Adapters use the returned
+        // jobId for complete() and fail(), and as the correlation id they send.
+        async markProcessing({ caseId, jobId }) {
+            const generationJobId = jobId || randomUUID();
+            const analysis = await store.markCaseAnalysisProcessing({
+                caseId,
+                serviceId,
+                jobId: generationJobId,
+            });
+            return analysis ? { ...analysis, jobId: generationJobId } : null;
+        },
+        complete: ({ jobId, documentSchema, document }) =>
+            store.completeCaseAnalysis({ serviceId, jobId, documentSchema, document }),
+        fail: ({ jobId, errorCode, errorMessage }) =>
+            store.failCaseAnalysis({ serviceId, jobId, errorCode, errorMessage }),
+    };
+}
+
 export class ExternalServicesRegistry {
     constructor({
         jobsService,
+        caseAnalysesStore = DEFAULT_CASE_ANALYSES_STORE,
         now = () => Date.now(),
         uiTranslationsTimeoutMs = UI_TRANSLATIONS_TIMEOUT_MS,
     } = {}) {
@@ -187,6 +223,9 @@ export class ExternalServicesRegistry {
         this.uiTranslationsCache      = new Map();
         this._now                     = now;
         this._uiTranslationsTimeoutMs = uiTranslationsTimeoutMs;
+
+        this.caseAnalysisValidators = new Map();
+        this._caseAnalysesStore     = caseAnalysesStore;
     }
 
     async initialize(manifestPath = process.env.EXTERNAL_SERVICES_MANIFEST || DEFAULT_MANIFEST_PATH) {
@@ -257,6 +296,8 @@ export class ExternalServicesRegistry {
         const register = adapterModule.register || adapterModule.default?.register;
         const getUiTranslations = adapterModule.getUiTranslations
             || adapterModule.default?.getUiTranslations;
+        const validateCaseAnalysisDocument = adapterModule.validateCaseAnalysisDocument
+            || adapterModule.default?.validateCaseAnalysisDocument;
 
         if (typeof getUiTranslations === "function") {
             this.uiTranslationProviders.set(normalizedService.id, getUiTranslations);
@@ -267,10 +308,19 @@ export class ExternalServicesRegistry {
             );
         }
 
+        if (typeof validateCaseAnalysisDocument === "function") {
+            this.caseAnalysisValidators.set(normalizedService.id, validateCaseAnalysisDocument);
+        }
+
         if (typeof register !== "function") {
             console.warn(`[external-services] Adapter ${service.adapter} does not export register().`);
             return;
         }
+
+        const caseAnalyses = createCaseAnalysesAccess(
+            this._caseAnalysesStore,
+            normalizedService.id
+        );
 
         await register({
             service:   normalizedService,
@@ -280,6 +330,7 @@ export class ExternalServicesRegistry {
             publishStudentResult:    payload => this.publishStudentResult(normalizedService.id, payload),
             publishGroupChatMessage: payload => this.publishGroupChatMessage(normalizedService.id, payload),
             aiAdditionsClient,
+            caseAnalyses,
         });
     }
 
@@ -374,6 +425,20 @@ export class ExternalServicesRegistry {
                 && Array.isArray(service.globalHooks)
                 && service.globalHooks.includes(hookName))
             .map(service => service.id);
+    }
+
+    getEnabledServiceIdsForScope(scope) {
+        return Array.from(this.services.values())
+            .filter(service => service.enabled
+                && Array.isArray(service.scopes)
+                && service.scopes.includes(scope))
+            .map(service => service.id);
+    }
+
+    // The adapter's optional validateCaseAnalysisDocument(), which checks
+    // teacher edits of its analyses, or null when it accepts none.
+    getCaseAnalysisValidator(serviceId) {
+        return this.caseAnalysisValidators.get(serviceId) || null;
     }
 
     getServiceById(serviceId) {
