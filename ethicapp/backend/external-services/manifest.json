@@ -11,6 +11,7 @@
         "chat-message-received",
         "callback-received"
       ],
+      "scopes": ["response", "chat"],
       "capabilities": {
         "processesStudentResponses": true
       },
@@ -23,6 +24,7 @@
       "hooks": [
         "chat-message-received"
       ],
+      "scopes": ["chat"],
       "enabled": true
     },
     {
@@ -36,6 +38,7 @@
         "callback-received",
         "activity-finished"
       ],
+      "scopes": ["chat"],
       "enabled": true,
       "callbackAuth": {
         "allowedClientIds": ["polyadic-agent-api"],
@@ -51,6 +54,7 @@
         "phase-ended",
         "callback-received"
       ],
+      "scopes": ["response"],
       "capabilities": {
         "processesStudentResponses": true
       },
@@ -71,6 +75,7 @@
       "globalHooks": [
         "case-created"
       ],
+      "scopes": ["case"],
       "enabled": true,
       "callbackAuth": {
         "allowedClientIds": ["case-analyst-api"],

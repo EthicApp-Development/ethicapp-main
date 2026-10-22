@@ -57,7 +57,10 @@ export function DesignEditorController($scope, $translate, $timeout,
 
     vm.loadExternalServices = async function() {
         try {
-            vm.externalServices = await ExternalServicesCatalogService.getServices();
+            // Phases offer the services that work on student responses or group chats.
+            vm.externalServices = await ExternalServicesCatalogService.getServices({
+                scopes: ["response", "chat"],
+            });
         } catch (error) {
             console.error("[DesignEditorController::loadExternalServices] Error loading external services.", error);
             vm.externalServices = [];

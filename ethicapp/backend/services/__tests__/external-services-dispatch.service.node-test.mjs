@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { ExternalServicesRegistry } from "../external-services.service.js";
 import { JOB_STATUS, RESULT_STATUS } from "../external-service-jobs.service.js";
+import { captureWarnings } from "./capture-warnings.mjs";
 
 const JOB_UUID    = "b1c2d3e4-0000-4000-8000-000000000011";
 const RESULT_UUID = "b1c2d3e4-0000-4000-8000-000000000012";
@@ -483,16 +484,6 @@ test("recordCallbackResult: returns an entry with hookName, serviceId, and resul
 
 // ─── globalHooks (manifest-level opt-in, #628) ───────────────────────────────
 
-function captureWarnings(fn) {
-    const warnings     = [];
-    const originalWarn = console.warn;
-    console.warn = (...args) => { warnings.push(args.join(" ")); };
-    return Promise.resolve()
-        .then(fn)
-        .then(result => ({ result, warnings }))
-        .finally(() => { console.warn = originalWarn; });
-}
-
 test("registerService: normalizes globalHooks (kebab-case, declared in hooks, de-duplicated)", async () => {
     const { registry } = makeRegistry();
 
@@ -639,4 +630,55 @@ test("dispatchHook: never consults globalHooks for activity hooks (regression)",
 
     assert.equal(called, false);
     assert.deepEqual(results, []);
+});
+
+// ─── scopes (where a service operates, #648) ─────────────────────────────────
+
+test("registerService: keeps known scopes once and warns about each unknown one", async () => {
+    const { registry } = makeRegistry();
+
+    const { warnings } = await captureWarnings(() => registry.registerService({
+        id:      "svc-scoped",
+        adapter: "./adapters/not-imported.adapter.js",
+        hooks:   ["case-created"],
+        scopes:  ["case", "Case", "chat", "case", 7],
+        enabled: false,
+    }, "/nonexistent/manifest.json"));
+
+    assert.deepEqual(registry.services.get("svc-scoped").scopes, ["case", "chat"]);
+    assert.equal(warnings.length, 2, "one warning per dropped entry");
+    assert.ok(warnings[0].includes("\"Case\""));
+    assert.ok(warnings[1].includes("\"7\""));
+});
+
+test("registerService: scopes defaults to [] when absent or not an array", async () => {
+    const { registry } = makeRegistry();
+
+    await registry.registerService({
+        id:      "svc-plain",
+        adapter: "./adapters/not-imported.adapter.js",
+        hooks:   ["phase-started"],
+        enabled: false,
+    }, "/nonexistent/manifest.json");
+    await registry.registerService({
+        id:      "svc-string",
+        adapter: "./adapters/not-imported.adapter.js",
+        hooks:   ["case-created"],
+        scopes:  "case",
+        enabled: false,
+    }, "/nonexistent/manifest.json");
+
+    assert.deepEqual(registry.services.get("svc-plain").scopes, []);
+    assert.deepEqual(registry.services.get("svc-string").scopes, []);
+});
+
+test("listServices: exposes scopes and defaults it to [] for legacy entries", () => {
+    const { registry } = makeRegistry();
+    registry.services.set("svc-scoped", {
+        id: "svc-scoped", enabled: true, hooks: ["case-created"], scopes: ["case"],
+    });
+
+    const listed = registry.listServices();
+    assert.deepEqual(listed.find(s => s.id === "svc-scoped").scopes, ["case"]);
+    assert.deepEqual(listed.find(s => s.id === "svc-a").scopes, []);
 });

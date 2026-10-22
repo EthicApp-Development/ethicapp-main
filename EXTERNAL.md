@@ -40,6 +40,10 @@ Each manifest entry declares:
 - `description`: teacher-facing description.
 - `adapter`: ESM module path relative to the manifest.
 - `hooks`: hook names supported by the service.
+- `scopes`: where the service operates: `case`, `response` or `chat`. Screens
+  list services by scope.
+- `ui`: `{ component }`, the EthicApp component that will show the service's
+  analysis in the case view.
 - `enabled`: whether the adapter should be loaded.
 
 Hook names are standardized as kebab-case identifiers. New adapters should use
@@ -67,6 +71,12 @@ export async function register({
 
 The `aiAdditionsClient` parameter is the only place adapters should obtain
 Keycloak-protected access to AI Additions.
+
+Adapters may also export `getUiTranslations()`, which returns the texts
+teachers read about the service: a label, a description and a case-view tab
+title in `es_CL` and `en_US`. The service owns those texts and the adapter
+obtains them. See "UI translations" in
+`ethicapp/backend/external-services/README.md`.
 
 Current registry implementation:
 
@@ -413,10 +423,11 @@ service is unavailable.
 
 ## Frontend Architecture
 
-The teacher design editor loads the available services from:
+The teacher design editor loads the services that work on student responses or
+group chats from:
 
 ```text
-GET /external-services
+GET /external-services?scope=response&scope=chat
 ```
 
 Frontend service:

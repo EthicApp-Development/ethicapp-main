@@ -1,25 +1,25 @@
 export function ExternalServicesCatalogService($http) {
-    const service = {
-        services: [],
-        hasLoadedServices: false,
+    // One cached listing per requested set of scopes.
+    const servicesByScopes = new Map();
 
-        async loadServices() {
-            const response = await $http.get("/external-services");
+    const service = {
+        async loadServices(scopes = []) {
+            const response = await $http.get("/external-services", { params: { scope: scopes } });
             if (response.data?.status === "ok" && Array.isArray(response.data.result)) {
-                service.services = response.data.result;
-                service.hasLoadedServices = true;
-                return service.services;
+                servicesByScopes.set(scopes.join(","), response.data.result);
+                return response.data.result;
             }
 
             throw new Error("Unexpected external services response format.");
         },
 
-        async getServices(reload = false) {
-            if (reload || !service.hasLoadedServices) {
-                await service.loadServices();
+        async getServices({ scopes = [], reload = false } = {}) {
+            const cacheKey = scopes.join(",");
+            if (reload || !servicesByScopes.has(cacheKey)) {
+                return service.loadServices(scopes);
             }
 
-            return service.services;
+            return servicesByScopes.get(cacheKey);
         },
     };
 
