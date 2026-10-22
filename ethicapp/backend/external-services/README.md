@@ -281,8 +281,10 @@ never block a save:
 | `not_validated` | The configuration was stored without validation (`field` is `null`). | `reason`: `unreachable`, `invalid_descriptor`, `unsupported_contract_version`, `service_id_mismatch`, or `no_descriptor` (unknown, disabled, or no descriptor) |
 
 The descriptors are read in English through the descriptor cache, so a save
-adds at most one request per service. Until the configuration form exists
-(#732), the editor shows one translated message for a `400` with this code.
+adds at most one request per service. The design editor's settings form (#732)
+applies the same rules as the teacher types (they live in
+`ethicapp/common/modules/service-configuration-rules.js`, shared by both) and
+shows the `errors` of a `400` next to their fields.
 
 ### Handler signature
 

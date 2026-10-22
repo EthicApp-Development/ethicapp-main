@@ -2882,3 +2882,33 @@ tr.group-summary {
         padding: 8px;
     }
 }
+
+/* External service settings in the design editor (#732). */
+.external-service-option {
+    margin-bottom: 10px;
+}
+
+.external-service-llm-notice {
+    margin: -6px 0 6px 20px;
+}
+
+.service-configuration-form {
+    border-left: 3px solid #ddd;
+    margin: 0 0 10px 20px;
+    padding-left: 12px;
+}
+
+.service-configuration-form .service-configuration-group {
+    border-bottom: none;
+    font-size: 13px;
+    font-weight: bold;
+    margin-bottom: 6px;
+}
+
+.service-configuration-form .form-group {
+    max-width: 480px;
+}
+
+.service-configuration-stored {
+    margin: 6px 0 0;
+}
