@@ -292,11 +292,26 @@ Every hook handler receives `(context, { callback })`:
 
 - `context` is the object built by the dispatch site plus registry-injected
   fields. For hooks dispatched through `dispatchHook()` the registry adds
-  `serviceId`, `jobId`, `correlationId` (equal to `jobId`), and
-  `enabledServiceIds`. For `callback-received` it adds `serviceId`, `jobId`
-  (the correlated job, if any), `resultId`, and `isDuplicate`.
+  `serviceId`, `jobId`, `correlationId` (equal to `jobId`),
+  `enabledServiceIds` and `serviceConfiguration`. For `callback-received` it
+  adds `serviceId`, `jobId` (the correlated job, if any), `resultId`,
+  `isDuplicate` and `serviceConfiguration: {}`.
+- `context.serviceConfiguration` (#734) is the settings object the design
+  stores for this service in the hook's phase
+  (`phases[n].externalServices.configurations[serviceId]`, validated against
+  the service's capability descriptor on save, #731): descriptor field keys to
+  scalars, holding only what the teacher set. It is `{}` when nothing is
+  stored and for hooks without a phase (`case-created`, `activity-finished`,
+  `callback-received`). It is read from the design when the hook fires and is
+  a copy, so changing it has no effect. Adapters map it into the AI service's
+  payload; unset keys mean "service default".
 - `callback(result)` records the adapter outcome against the job (see
   "Jobs and `callback(result)`" below).
+
+Phase hooks are dispatched through `helpers/external-service-dispatch.js`
+(`dispatchPhaseHook(hookName, context)`), which reads the phase's enabled
+services and their settings with `getPhaseExternalServices(phaseId)`
+(`helpers/designs-helper.js`, built on `helpers/phase-external-services.js`).
 
 Handlers run concurrently with `Promise.allSettled`; a throwing handler marks
 its job as `failed` and never affects other services or the originating HTTP

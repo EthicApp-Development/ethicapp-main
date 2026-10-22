@@ -201,6 +201,13 @@ EthicApp dispatches hooks only to services enabled in the phase design:
 The registry accepts `enabledServiceIds` and filters subscribers by service id.
 This keeps phase and response hooks scoped to services selected by the teacher.
 
+Each handler also receives `context.serviceConfiguration` (#734): the settings
+the phase stores for that service in
+`externalServices.configurations[serviceId]` (see "Design Schema"), or `{}`
+when there are none or the hook has no phase. Adapters pass these values to
+the AI service when they create rooms or sessions; a key that is not set means
+the service default.
+
 Current event hooks:
 
 - `student-response-submitted`: dispatched when a student submits a supported

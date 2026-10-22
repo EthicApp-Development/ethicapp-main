@@ -7,8 +7,7 @@ import * as config from "../../config/database.config.js";
 import * as rpg2 from "../../db/rest-pg-2.js";
 import { teacherNotifications } from "../../config/socket.config.js";
 import { getDesignTypeBySessionId } from "./activities-common.js";
-import { getPhaseDesignByPhaseId } from "../../helpers/designs-helper.js";
-import externalServicesRegistry from "../../services/external-services.service.js";
+import { dispatchPhaseHook } from "../../helpers/external-service-dispatch.js";
 
 const router = express.Router();
 
@@ -209,31 +208,10 @@ const responseSubmissionHandlers = {
 
 async function dispatchStudentResponseHook(context) {
     try {
-        const phaseDesign = await getPhaseDesignByPhaseId(context.phaseId);
-        const enabledServiceIds = getEnabledExternalServiceIds(phaseDesign);
-
-        if (enabledServiceIds.length === 0) {
-            return;
-        }
-
-        await externalServicesRegistry.dispatchHook("student-response-submitted", context, {
-            enabledServiceIds,
-        });
+        await dispatchPhaseHook("student-response-submitted", context);
     } catch (error) {
         console.error("[external-services] Error dispatching student response hook.", error);
     }
-}
-
-function getEnabledExternalServiceIds(phaseDesign) {
-    const enabledServiceIds = phaseDesign?.externalServices?.enabledServiceIds;
-
-    if (!Array.isArray(enabledServiceIds)) {
-        return [];
-    }
-
-    return enabledServiceIds
-        .map(serviceId => String(serviceId).trim())
-        .filter(Boolean);
 }
 
 async function submitSemanticDifferentialResponse({ phaseId, userId, questionId, payload }) {
