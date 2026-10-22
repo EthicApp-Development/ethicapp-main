@@ -35,13 +35,14 @@ export function phaseServiceConfiguration(phase, serviceId) {
 }
 
 /**
- * A service's name in `language`: its UI translation (#723), else its
- * descriptor name, else its id.
+ * A service's friendly name in `language`: its UI translation (#723), else its
+ * descriptor name, else null. Without one, the view shows a generic name and
+ * keeps the technical id under "Show details".
  */
-export function serviceDisplayName(service, serviceId, language) {
+export function serviceDisplayName(service, language) {
     return service?.ui?.translations?.[language]?.label
         || service?.descriptor?.name
-        || serviceId;
+        || null;
 }
 
 function enumLabel(field, value) {

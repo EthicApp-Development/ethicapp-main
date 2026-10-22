@@ -25,11 +25,15 @@ function PhaseExternalServicesSummaryController($scope, $rootScope, ExternalServ
     async function describeService(serviceId, listing, language) {
         const configuration = phaseServiceConfiguration(vm.phase, serviceId);
         const listed = listing?.find(service => service.id === serviceId) ?? null;
+        const storedRows = storedSettingRows(configuration);
+        const name = serviceDisplayName(listed, language);
         const base = {
             id:         serviceId,
-            name:       serviceDisplayName(listed, serviceId, language),
+            name,
             usesLlm:    listed?.descriptor?.usesLlm === true,
-            storedRows: storedSettingRows(configuration),
+            storedRows,
+            // Without a friendly name, the technical id is a detail too.
+            hasDetails: !name || storedRows.length > 0,
         };
 
         if (!listing) {
@@ -51,10 +55,9 @@ function PhaseExternalServicesSummaryController($scope, $rootScope, ExternalServ
             }
 
             const summary = summarizeServiceSettings(result.fields || [], configuration);
-            const name = listed.ui?.translations?.[language]?.label || result.name || base.name;
             return {
                 ...base,
-                name,
+                name:          base.name || result.name || null,
                 usesLlm:       result.usesLlm === true,
                 status:        "ready",
                 stale:         result.stale === true,

@@ -8,11 +8,13 @@ import {
     buildArgumentClientContext,
     buildFeedbackPayloadFromExternalResult,
     createAtsSession,
+    getUiTranslations,
 } from "./ats-feedback.utils.js";
 
 export {
     buildArgumentClientContext,
     buildFeedbackPayloadFromExternalResult,
+    getUiTranslations,
 };
 
 const DEFAULT_ATS_BASE_PATH = "/argumentation-tutor/api/v2";

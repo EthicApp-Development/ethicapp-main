@@ -133,3 +133,29 @@ test("manifests: environments differ only in which services are enabled", async 
     }
 });
 
+// Production services name themselves even when their AI service does not
+// respond (#757). The tutor adapter cannot be imported in tests (it loads the
+// database and Redis), so its translations are read from its utils module.
+test("manifest: production AI services provide UI translations", async () => {
+    const registry = new ExternalServicesRegistry({ jobsService: {} });
+    const adapters = {
+        "polyadic-devils-advocate":   "./adapters/polyadic-bridge.adapter.js",
+        "argumentation-tutor-system": "./adapters/ats-feedback.utils.js",
+    };
+    const originalWarn = console.warn;
+    console.warn = () => {};
+
+    try {
+        for (const [serviceId, adapter] of Object.entries(adapters)) {
+            const service = manifest.services.find(entry => entry.id === serviceId);
+            await registry.registerService({ ...service, adapter }, fileURLToPath(manifestUrl));
+
+            const translations = await registry.getServiceUiTranslations(serviceId);
+            assert.ok(translations, `${serviceId} provides no valid es_CL and en_US translations`);
+            assert.notEqual(translations.es_CL.label, translations.en_US.label, serviceId);
+        }
+    } finally {
+        console.warn = originalWarn;
+    }
+});
+

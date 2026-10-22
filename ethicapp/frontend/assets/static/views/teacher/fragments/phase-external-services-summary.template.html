@@ -5,7 +5,11 @@
     </p>
 
     <div class="phase-external-service" ng-repeat="service in $ctrl.services track by service.id">
-        <p class="phase-external-service-name"><strong>{{ service.name }}</strong></p>
+        <p class="phase-external-service-name">
+            <strong>{{ service.name || ((service.status === 'not_available'
+                ? 'service_summary_unavailable_service_name'
+                : 'service_summary_unnamed_service') | translate) }}</strong>
+        </p>
         <p class="help-block external-service-llm-notice" ng-if="service.usesLlm">
             {{ 'external_services_llm_notice' | translate }}
         </p>
@@ -50,12 +54,13 @@
             </div>
         </div>
 
-        <div ng-if="service.status === 'unavailable' || service.status === 'not_available'">
-            <p class="help-block service-configuration-lifecycle" role="status">
+        <div ng-if="service.status !== 'ready'">
+            <p class="help-block service-configuration-lifecycle" role="status"
+                ng-if="service.status === 'unavailable' || service.status === 'not_available'">
                 <i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
                 {{ (service.status === 'unavailable' ? 'service_summary_unavailable' : 'service_summary_not_available') | translate }}
                 <button
-                    ng-if="service.storedRows.length > 0"
+                    ng-if="service.hasDetails"
                     type="button"
                     class="btn btn-link btn-xs phase-external-service-details-toggle"
                     ng-click="service.showDetails = !service.showDetails"
@@ -63,33 +68,30 @@
                     {{ (service.showDetails ? 'service_summary_hide_details' : 'service_summary_show_details') | translate }}
                 </button>
             </p>
+            <p class="help-block" ng-if="service.status === 'no_settings' && service.hasDetails">
+                <button
+                    ng-if="service.hasDetails"
+                    type="button"
+                    class="btn btn-link btn-xs phase-external-service-details-toggle"
+                    ng-click="service.showDetails = !service.showDetails"
+                    aria-expanded="{{ service.showDetails ? 'true' : 'false' }}">
+                    {{ (service.showDetails ? 'service_summary_hide_details' : 'service_summary_show_details') | translate }}
+                </button>
+            </p>
+            <!-- Technical data, only on request: the service id when it has no
+                 friendly name, and the stored settings as key: value. -->
             <ul class="list-unstyled phase-external-service-stored phase-external-service-raw"
-                ng-if="service.storedRows.length > 0 && service.showDetails">
+                ng-if="service.hasDetails && service.showDetails">
+                <li ng-if="!service.name">
+                    {{ 'service_summary_service_id' | translate }}: <code>{{ service.id }}</code>
+                </li>
                 <li ng-repeat="setting in service.storedRows track by setting.key">
                     <code>{{ setting.key }}</code>: {{ setting.text }}
                 </li>
             </ul>
-            <p class="help-block" ng-if="service.storedRows.length === 0">
+            <p class="help-block" ng-if="service.status !== 'no_settings' && service.storedRows.length === 0">
                 {{ 'service_summary_uses_defaults' | translate }}
             </p>
-        </div>
-
-        <div ng-if="service.status === 'no_settings' && service.storedRows.length > 0">
-            <p class="help-block">
-                <button
-                    type="button"
-                    class="btn btn-link btn-xs phase-external-service-details-toggle"
-                    ng-click="service.showDetails = !service.showDetails"
-                    aria-expanded="{{ service.showDetails ? 'true' : 'false' }}">
-                    {{ (service.showDetails ? 'service_summary_hide_details' : 'service_summary_show_details') | translate }}
-                </button>
-            </p>
-            <ul class="list-unstyled phase-external-service-stored phase-external-service-raw"
-                ng-if="service.showDetails">
-                <li ng-repeat="setting in service.storedRows track by setting.key">
-                    <code>{{ setting.key }}</code>: {{ setting.text }}
-                </li>
-            </ul>
         </div>
     </div>
     <hr>

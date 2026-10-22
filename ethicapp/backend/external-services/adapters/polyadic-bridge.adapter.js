@@ -3,6 +3,23 @@ import * as config from "../../config/database.config.js";
 import defaultAiAdditionsClient from "../../services/ai-additions-client.service.js";
 
 const DEFAULT_POLYADIC_BASE_PATH = "/polyadic-agent/api";
+
+// The texts teachers read about this service (#723), available even when
+// Polyadic does not respond (#757).
+const UI_TRANSLATIONS = {
+    es_CL: {
+        label:       "Agentes de discusión (Polyadic)",
+        description: "Agentes de IA que participan en el chat de cada grupo y guían la discusión.",
+    },
+    en_US: {
+        label:       "Discussion agents (Polyadic)",
+        description: "AI agents that join each group's chat and guide the discussion.",
+    },
+};
+
+export async function getUiTranslations() {
+    return UI_TRANSLATIONS;
+}
 const DEFAULT_PIPELINE_TYPE = "abogado-del-diablo";
 const CHAT_AGENT_IDENTITIES = new Set(["conversationguide", "orientador"]);
 

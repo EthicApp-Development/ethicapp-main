@@ -68,16 +68,17 @@ describe("phase external services summary (#757)", () => {
         assert.deepEqual(phaseEnabledServiceIds(undefined), []);
     });
 
-    it("names a service by its UI translation, then its descriptor, then its id", () => {
+    it("names a service by its UI translation, then its descriptor, else not at all", () => {
         const translated = {
             ui:         { translations: { es_CL: { label: "Analista" } } },
             descriptor: { name: "Case Analyst" },
         };
 
-        assert.equal(serviceDisplayName(translated, "case-analyst", "es_CL"), "Analista");
-        assert.equal(serviceDisplayName(translated, "case-analyst", "en_US"), "Case Analyst");
-        assert.equal(serviceDisplayName({ descriptor: null }, "mock", "es_CL"), "mock");
-        assert.equal(serviceDisplayName(undefined, "unknown", "es_CL"), "unknown");
+        assert.equal(serviceDisplayName(translated, "es_CL"), "Analista");
+        assert.equal(serviceDisplayName(translated, "en_US"), "Case Analyst");
+        assert.equal(serviceDisplayName({ descriptor: null }, "es_CL"), null);
+        assert.equal(serviceDisplayName(undefined, "es_CL"), null,
+            "a disabled or unknown service has no friendly name");
     });
 
     it("shows stored values in readable form", () => {
