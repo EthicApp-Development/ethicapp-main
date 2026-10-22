@@ -520,6 +520,14 @@ editor shows its fields below the service, in the UI language
 - locked designs show the settings read-only;
 - services that use a language model carry a notice.
 
+The design and activity views show the same settings read-only (#757):
+`components/phase-external-services-summary.component.js` lists, below each
+phase that enables services, each service's name and its settings in the UI
+language, with defaults marked and the editor's lifecycle notices. When a
+service does not respond, or is not available in the installation, the view
+shows a notice and the stored settings as `key: value`. Phases without
+services show nothing.
+
 The student frontend listens for `onExternalServiceResult` in:
 
 ```text

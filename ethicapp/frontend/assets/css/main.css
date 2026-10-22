@@ -2917,3 +2917,16 @@ tr.group-summary {
 .service-configuration-retired .help-block {
     color: #8a6d3b;
 }
+
+/* External services in the design and activity views (#757). */
+.phase-external-services-summary .phase-external-service {
+    margin-bottom: 12px;
+}
+
+.phase-external-services-summary .phase-external-service-name {
+    margin-bottom: 2px;
+}
+
+.phase-external-services-summary .phase-external-service-settings .help-block {
+    margin: 2px 0 4px;
+}

@@ -1,3 +1,20 @@
+// The texts teachers read about this service (#723), available even when the
+// tutor does not respond (#757).
+const UI_TRANSLATIONS = {
+    es_CL: {
+        label:       "Tutor de argumentación",
+        description: "Analiza los argumentos de cada estudiante y le entrega retroalimentación.",
+    },
+    en_US: {
+        label:       "Argumentation tutor",
+        description: "Analyzes each student's arguments and gives them feedback.",
+    },
+};
+
+export async function getUiTranslations() {
+    return UI_TRANSLATIONS;
+}
+
 export function buildArgumentClientContext(context, groupId) {
     return {
         service:       "ethicapp",

@@ -123,4 +123,60 @@ describe("ExternalServicesCatalogService", () => {
         await assert.rejects(service.getInstanceConfiguration("svc-a"),
             /Unexpected instance configuration response format/);
     });
+
+    it("shares one listing request between concurrent callers (#757)", async () => {
+        const { service, requests } = createService();
+
+        const [first, second] = await Promise.all([
+            service.getServices({ scopes: [] }),
+            service.getServices({ scopes: [] }),
+        ]);
+
+        assert.equal(requests.length, 1);
+        assert.equal(first, second);
+    });
+
+    it("reuses an instance configuration for read-only views, per UI language", async () => {
+        let clock = 0;
+        const requests = [];
+        const language = { current: "es_CL" };
+        const service = ExternalServicesCatalogService({
+            get: async (url, config) => {
+                requests.push(config.params.locale);
+                return { data: { status: "ok", result: { serviceId: "svc", available: true } } };
+            },
+        }, { getCurrentUiLanguageCode: () => language.current }, () => clock);
+
+        await service.getInstanceConfiguration("svc", { reuse: true });
+        await service.getInstanceConfiguration("svc", { reuse: true });
+        await service.getInstanceConfiguration("svc");
+        assert.deepEqual(requests, ["es_CL", "es_CL"], "the editor's call still asks");
+
+        language.current = "en_US";
+        await service.getInstanceConfiguration("svc", { reuse: true });
+        clock = 60 * 1000 + 1;
+        language.current = "es_CL";
+        await service.getInstanceConfiguration("svc", { reuse: true });
+
+        assert.deepEqual(requests, ["es_CL", "es_CL", "en_US", "es_CL"]);
+    });
+
+    it("does not share a failed instance configuration request", async () => {
+        let calls = 0;
+        const service = ExternalServicesCatalogService({
+            get: async () => {
+                calls += 1;
+                if (calls === 1) {
+                    throw Object.assign(new Error("HTTP 502"), { status: 502 });
+                }
+                return { data: { status: "ok", result: { available: true } } };
+            },
+        });
+
+        await assert.rejects(service.getInstanceConfiguration("svc", { reuse: true }), /HTTP 502/u);
+        const retried = await service.getInstanceConfiguration("svc", { reuse: true });
+        assert.deepEqual(retried, { available: true });
+        assert.equal(calls, 2);
+    });
 });
+
