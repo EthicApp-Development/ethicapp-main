@@ -117,6 +117,15 @@ Current Argumentation Tutor adapter:
 ethicapp/backend/external-services/adapters/ats-feedback.adapter.js
 ```
 
+It creates one tutor session per EthicApp session and phase, on the first
+student response. When the phase configures `llm_tier`
+(`context.serviceConfiguration`, #734), the creation request sends it (#736);
+otherwise the tutor uses its default tier. The deprecated `model` is not sent.
+The tutor's `llm_tier`, resolved `model`, `warnings` and `degraded` come back
+in the `student-response-submitted` handler's result as `sessionCreation`. If
+the tutor rejects the configured tier (400), the session is created with its
+defaults and reported with `configurationRejected: true`.
+
 Current Polyadic Agents bridge adapter:
 
 ```text

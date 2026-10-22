@@ -2,8 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
     buildArgumentClientContext,
+    buildAtsSessionPayload,
     buildFeedbackPayloadFromAtsStatus,
     buildFeedbackPayloadFromExternalResult,
+    createAtsSession,
 } from "../ats-feedback.utils.js";
 
 // ─── buildArgumentClientContext ───────────────────────────────────────────────
@@ -105,3 +107,110 @@ test("buildFeedbackPayloadFromExternalResult maps submitted_argument into argume
     assert.equal(payload.argumentPreview, "External callback submitted text.");
     assert.equal(payload.meta.userId, 40);
 });
+
+// ─── Session creation with the configured LLM tier (#736) ───────────────────
+
+const METADATA = Object.freeze({
+    caseId:    51,
+    caseTitle: "Caso Sebastián",
+    caseText:  "Case text.",
+    question:  "Should Sebastián report the error?",
+});
+
+test("buildAtsSessionPayload sends no tier without a configuration", () => {
+    for (const configuration of [undefined, {}, { llm_tier: null }, { llm_tier: "  " }]) {
+        assert.deepEqual(buildAtsSessionPayload(METADATA, configuration), {
+            case_id:    51,
+            case_title: "Caso Sebastián",
+            case_text:  "Case text.",
+            question:   "Should Sebastián report the error?",
+        }, JSON.stringify(configuration));
+    }
+});
+
+test("buildAtsSessionPayload sends the configured llm_tier, never model", () => {
+    const body = buildAtsSessionPayload(METADATA, { llm_tier: "advanced", model: "gpt-4.1" });
+
+    assert.equal(body.llm_tier, "advanced");
+    assert.equal(Object.hasOwn(body, "model"), false);
+});
+
+test("createAtsSession passes the tutor's warnings and degraded mode through", async () => {
+    const bodies = [];
+    const warning = { field: "llm_tier", verdict: "substituted", message: "x" };
+
+    const created = await createAtsSession({
+        metadata:             METADATA,
+        serviceConfiguration: { llm_tier: "advanced" },
+        request:              async (body) => {
+            bodies.push(body);
+            return {
+                session_id: "ats-1", llm_tier:   "advanced", model:      "gpt-4.1",
+                warnings:   [warning], degraded:   true,
+            };
+        },
+    });
+
+    assert.equal(bodies[0].llm_tier, "advanced");
+    assert.deepEqual(created, {
+        sessionId: "ats-1",
+        creation:  {
+            llmTier:               "advanced",
+            model:                 "gpt-4.1",
+            warnings:              [warning],
+            degraded:              true,
+            configurationRejected: false,
+        },
+    });
+});
+
+test("createAtsSession retries with the tutor's defaults when the tier is rejected", async () => {
+    const bodies = [];
+    const rejection = { error: "Invalid instance configuration", errors: { llm_tier: "bad" } };
+    const originalWarn = console.warn;
+    console.warn = () => {};
+
+    try {
+        const created = await createAtsSession({
+            metadata:             METADATA,
+            serviceConfiguration: { llm_tier: 7 },
+            request:              async (body) => {
+                bodies.push(body);
+                if (bodies.length === 1) {
+                    const error = new Error("HTTP 400");
+                    error.statusCode = 400;
+                    error.responseBody = rejection;
+                    throw error;
+                }
+                return { session_id: "ats-2", llm_tier: "basic", warnings: [], degraded: false };
+            },
+        });
+
+        assert.equal(bodies[0].llm_tier, "7");
+        assert.equal(Object.hasOwn(bodies[1], "llm_tier"), false);
+        assert.equal(created.creation.configurationRejected, true);
+        assert.deepEqual(created.creation.rejection, rejection);
+        assert.equal(created.creation.llmTier, "basic");
+    } finally {
+        console.warn = originalWarn;
+    }
+});
+
+test("createAtsSession does not retry other failures", async () => {
+    let calls = 0;
+    const failing = async () => {
+        calls += 1;
+        const error = new Error("HTTP 400");
+        error.statusCode = 400;
+        throw error;
+    };
+
+    await assert.rejects(createAtsSession({ metadata: METADATA, request: failing }), /HTTP 400/u);
+    assert.equal(calls, 1, "no configured tier, no retry");
+
+    await assert.rejects(createAtsSession({
+        metadata: METADATA,
+        request:  async () => ({ warnings: [] }),
+    }), /did not return a session_id/u);
+});
+
