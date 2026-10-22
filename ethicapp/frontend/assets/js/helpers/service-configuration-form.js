@@ -68,10 +68,20 @@ export function controlKind(field) {
     }
 }
 
-/** Enum entries to offer: active ones, plus a deprecated one while it is stored. */
-export function enumOptions(field, storedValue) {
-    return (field.validation?.entries || [])
+/**
+ * Enum entries to offer: active ones, plus a deprecated one while it is
+ * stored. A stored value the descriptor no longer lists (retired, #733) is
+ * offered as `{ value, label, status: "retired" }` so the select can show it;
+ * `retiredLabel(value)` names it.
+ */
+export function enumOptions(field, storedValue, retiredLabel = value => String(value)) {
+    const entries = field.validation?.entries || [];
+    const options = entries
         .filter(entry => entry.status !== "deprecated" || entry.value === storedValue);
+    if (!isUnset(storedValue) && !entries.some(entry => entry.value === storedValue)) {
+        options.push({ value: storedValue, label: retiredLabel(storedValue), status: "retired" });
+    }
+    return options;
 }
 
 /** Human-readable default, for placeholders and the "default" select option. */
@@ -195,4 +205,75 @@ export function errorParameters(field) {
         step:      validation.step,
         maxLength: validation.maxLength,
     };
+}
+
+function replacementField(fields, field) {
+    const replacement = fields.find(candidate => candidate.key === field.supersededBy
+        && candidate.status !== "deprecated");
+    return replacement ? { kind: "field", key: replacement.key, label: replacement.label } : null;
+}
+
+function replacementValue(field, entry) {
+    const replacement = (field.validation?.entries || []).find(candidate =>
+        candidate.value === entry.supersededBy && candidate.status !== "deprecated");
+    return replacement
+        ? { kind: "value", value: replacement.value, label: replacement.label }
+        : null;
+}
+
+/**
+ * Lifecycle notices for the stored values of a service's configuration (#733),
+ * matching the warnings the server returns on save (#731):
+ * - `deprecated_field`: the field is deprecated (`replacement`: the field that
+ *   supersedes it, when the descriptor has it);
+ * - `deprecated_value`: the enum value is deprecated (`replacement`: the value
+ *   that supersedes it);
+ * - `retired_value`: the enum no longer lists the value; the service uses the
+ *   field default instead (`defaultText`);
+ * - `no_longer_valid`: the value breaks a current rule (`reason`, an error code).
+ * Fields the descriptor no longer defines come back in `retiredFields`.
+ * @returns {{ byField: object, retiredFields: { key: string, value: * }[] }}
+ */
+export function settingNotices(fields, configuration = {}) {
+    const byField = {};
+    const known = new Set(fields.map(field => field.key));
+
+    for (const field of fields) {
+        const value = configuration[field.key];
+        if (isUnset(value)) {
+            continue;
+        }
+
+        if (field.status === "deprecated") {
+            byField[field.key] = {
+                kind:        "deprecated_field",
+                replacement: replacementField(fields, field),
+            };
+            continue;
+        }
+
+        const entry = field.type === "enum"
+            ? (field.validation?.entries || []).find(candidate => candidate.value === value)
+            : null;
+        if (entry?.status === "deprecated") {
+            byField[field.key] = {
+                kind:        "deprecated_value",
+                replacement: replacementValue(field, entry),
+            };
+            continue;
+        }
+
+        const code = fieldValueProblem(field, value);
+        if (code === "not_in_enum") {
+            byField[field.key] = { kind: "retired_value", defaultText: defaultText(field) };
+        } else if (code) {
+            byField[field.key] = { kind: "no_longer_valid", reason: code };
+        }
+    }
+
+    const retiredFields = Object.entries(configuration)
+        .filter(([key, value]) => !known.has(key) && !isUnset(value))
+        .map(([key, value]) => ({ key, value }));
+
+    return { byField, retiredFields };
 }

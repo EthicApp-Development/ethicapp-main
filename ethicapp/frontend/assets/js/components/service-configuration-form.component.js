@@ -13,6 +13,7 @@ import {
     errorParameters,
     readControlValue,
     setConfigurationValue,
+    settingNotices,
 } from "../helpers/service-configuration-form.js";
 
 function ServiceConfigurationFormController($scope, $rootScope, $translate,
@@ -28,10 +29,12 @@ function ServiceConfigurationFormController($scope, $rootScope, $translate,
     vm.errors = {};
     vm.errorParams = {};
     vm.storedEntries = [];
+    vm.notices = { byField: {}, retiredFields: [] };
     vm.idPrefix = `service-setting-${$scope.$id}`;
 
     let serverErrorsByField = {};
     let defaultLabel = $translate.instant("service_settings_default");
+    let retiredSuffix = $translate.instant("service_setting_retired_option");
     let loadSequence = 0;
     let stopListening = null;
 
@@ -50,6 +53,7 @@ function ServiceConfigurationFormController($scope, $rootScope, $translate,
     vm.validate = function() {
         const stored = vm.storedConfigurations || [];
         vm.errors = configurationErrors(vm.fields, currentConfiguration(), stored);
+        vm.notices = settingNotices(vm.fields, currentConfiguration());
         reportErrors();
     };
 
@@ -67,7 +71,8 @@ function ServiceConfigurationFormController($scope, $rootScope, $translate,
             const shown = kind === "number" && typeof value !== "number" ? undefined : value;
             vm.values[field.key] = shown;
             if (kind === "select") {
-                vm.options[field.key] = enumOptions(field, value);
+                const retiredLabel = retired => `${retired} (${retiredSuffix})`;
+                vm.options[field.key] = enumOptions(field, value, retiredLabel);
             }
             vm.errorParams[field.key] = errorParameters(field);
         }
@@ -160,9 +165,36 @@ function ServiceConfigurationFormController($scope, $rootScope, $translate,
         vm.refresh();
     };
 
+    // Lifecycle notices (#733) for values the teacher did not just break.
+    vm.noticeFor = function(field) {
+        return vm.errorFor(field) ? null : vm.notices.byField[field.key] || null;
+    };
+
+    // Switches a deprecated field to the field that supersedes it (dropping the
+    // stored value), or a deprecated enum value to the value that supersedes it.
+    vm.applyReplacement = function(field, replacement) {
+        if (replacement.kind === "value") {
+            vm.values[field.key] = replacement.value;
+            store(field, replacement.value);
+        } else {
+            store(field, undefined);
+        }
+        vm.refresh();
+    };
+
+    vm.removeRetired = function(key) {
+        setConfigurationValue(configurations(), vm.serviceId, key, undefined);
+        vm.refresh();
+    };
+
+    vm.formatValue = function(value) {
+        return JSON.stringify(value);
+    };
+
     vm.$onInit = function() {
         stopListening = $rootScope.$on("$translateChangeEnd", () => {
             defaultLabel = $translate.instant("service_settings_default");
+            retiredSuffix = $translate.instant("service_setting_retired_option");
             vm.load();
         });
         vm.load();

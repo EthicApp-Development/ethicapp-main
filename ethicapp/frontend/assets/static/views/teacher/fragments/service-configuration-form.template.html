@@ -96,6 +96,22 @@
                 <p class="help-block service-configuration-error" role="alert" ng-if="$ctrl.errorFor(field)">
                     {{ ('service_setting_error_' + $ctrl.errorFor(field)) | translate:$ctrl.errorParams[field.key] }}
                 </p>
+                <p class="help-block service-configuration-lifecycle" role="status" ng-if="$ctrl.noticeFor(field)">
+                    <span class="glyphicon glyphicon-warning-sign" aria-hidden="true"></span>
+                    {{ ('service_setting_notice_' + $ctrl.noticeFor(field).kind) | translate }}<span
+                        ng-if="$ctrl.noticeFor(field).kind === 'retired_value' && $ctrl.noticeFor(field).defaultText">: {{ $ctrl.noticeFor(field).defaultText }}</span><span
+                        ng-if="$ctrl.noticeFor(field).kind === 'retired_value' && !$ctrl.noticeFor(field).defaultText">.</span>
+                    <span ng-if="$ctrl.noticeFor(field).kind === 'no_longer_valid'">
+                        {{ ('service_setting_error_' + $ctrl.noticeFor(field).reason) | translate:$ctrl.errorParams[field.key] }}
+                    </span>
+                </p>
+                <button
+                    type="button"
+                    class="btn btn-default btn-xs"
+                    ng-if="$ctrl.noticeFor(field).replacement && !$ctrl.readOnly"
+                    ng-click="$ctrl.applyReplacement(field, $ctrl.noticeFor(field).replacement)">
+                    {{ 'service_setting_switch_to' | translate }} «{{ $ctrl.noticeFor(field).replacement.label }}»
+                </button>
                 <button
                     type="button"
                     class="btn btn-default btn-xs"
@@ -105,5 +121,25 @@
                 </button>
             </div>
         </fieldset>
+
+        <div class="service-configuration-retired" role="status" ng-if="$ctrl.notices.retiredFields.length > 0">
+            <p class="help-block">
+                <span class="glyphicon glyphicon-warning-sign" aria-hidden="true"></span>
+                <strong>{{ 'service_settings_retired_title' | translate }}</strong>
+                {{ 'service_settings_retired_help' | translate }}
+            </p>
+            <ul class="list-unstyled">
+                <li ng-repeat="setting in $ctrl.notices.retiredFields track by setting.key">
+                    <code>{{ setting.key }}</code>: {{ $ctrl.formatValue(setting.value) }}
+                    <button
+                        type="button"
+                        class="btn btn-default btn-xs"
+                        ng-if="!$ctrl.readOnly"
+                        ng-click="$ctrl.removeRetired(setting.key)">
+                        {{ 'service_settings_remove' | translate }}
+                    </button>
+                </li>
+            </ul>
+        </div>
     </div>
 </div>

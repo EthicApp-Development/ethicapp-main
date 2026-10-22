@@ -10,6 +10,7 @@ import {
     errorParameters,
     readControlValue,
     setConfigurationValue,
+    settingNotices,
 } from "../service-configuration-form.js";
 
 // Normalized descriptor fields, as GET /external-services/:id/instance-configuration returns them.
@@ -155,4 +156,70 @@ describe("service configuration form (#732)", () => {
             { minimum: 300, maximum: 7200, step: 60, maxLength: undefined });
         assert.equal(errorParameters(NICKNAME).maxLength, 10);
     });
+
+    it("offers a stored retired enum value so the select can show it (#733)", () => {
+        const options = enumOptions(TIER, "turbo", value => `${value} (retired)`);
+
+        assert.deepEqual(options.at(-1),
+            { value: "turbo", label: "turbo (retired)", status: "retired" });
+        assert.equal(enumOptions(TIER, undefined).some(entry => entry.status === "retired"), false);
+    });
 });
+
+describe("lifecycle notices (#733)", () => {
+    it("has nothing to say about current values or unset deprecated fields", () => {
+        const current = { llm_tier: "advanced", session_duration_seconds: 900 };
+        assert.deepEqual(settingNotices(FIELDS, current),
+            { byField: {}, retiredFields: [] });
+        assert.deepEqual(settingNotices(FIELDS, {}), { byField: {}, retiredFields: [] });
+    });
+
+    it("flags a stored deprecated field and offers the field that replaces it", () => {
+        const { byField } = settingNotices(FIELDS, { model: "gpt-4o-mini" });
+
+        assert.deepEqual(byField.model, {
+            kind:        "deprecated_field",
+            replacement: { kind: "field", key: "llm_tier", label: "llm_tier" },
+        });
+    });
+
+    it("offers no replacement when the descriptor does not have it", () => {
+        const orphan = { ...MODEL, supersededBy: "retired_field" };
+
+        assert.deepEqual(settingNotices([orphan], { model: "gpt-4o-mini" }).byField.model,
+            { kind: "deprecated_field", replacement: null });
+    });
+
+    it("flags a stored deprecated enum value and offers its replacement", () => {
+        const { byField } = settingNotices(FIELDS, { llm_tier: "legacy" });
+
+        assert.deepEqual(byField.llm_tier, {
+            kind:        "deprecated_value",
+            replacement: { kind: "value", value: "basic", label: "Básico" },
+        });
+    });
+
+    it("flags a retired enum value with the default the service applies", () => {
+        const { byField } = settingNotices(FIELDS, { llm_tier: "turbo" });
+
+        assert.deepEqual(byField.llm_tier, { kind: "retired_value", defaultText: "Básico" });
+    });
+
+    it("flags a stored value that breaks a current rule", () => {
+        const { byField } = settingNotices(FIELDS, { session_duration_seconds: 120 });
+
+        assert.deepEqual(byField.session_duration_seconds,
+            { kind: "no_longer_valid", reason: "below_minimum" });
+    });
+
+    it("lists stored settings the descriptor no longer defines", () => {
+        const stored = { idioma: "english", old_flag: true, gone: null };
+        const { retiredFields } = settingNotices(FIELDS, stored);
+
+        assert.deepEqual(retiredFields, [
+            { key: "idioma", value: "english" },
+            { key: "old_flag", value: true },
+        ]);
+    });
+});
+
