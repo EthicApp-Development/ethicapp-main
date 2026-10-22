@@ -8,6 +8,7 @@ import {
     insertRequestedCaseAnalyses,
     listCaseAnalyses,
     markCaseAnalysisProcessing,
+    releaseUnstartedCaseAnalysis,
     reserveCaseAnalysisGeneration,
     saveReviewedCaseAnalysis,
     STALE_GENERATION_INTERVAL,
@@ -140,6 +141,29 @@ test("markCaseAnalysisProcessing: null when the job is no longer the reserved on
         await markCaseAnalysisProcessing({ caseId: 7, serviceId: "svc-a", jobId: JOB_ID }, query),
         null
     );
+});
+
+test("releaseUnstartedCaseAnalysis: fails only a reservation its job never started", async () => {
+    const { query, calls } = makeQuery([{ status: "failed" }]);
+
+    const row = await releaseUnstartedCaseAnalysis(
+        { caseId: 7, serviceId: "svc-a", jobId: JOB_ID },
+        query
+    );
+
+    assert.deepEqual(row, { status: "failed" });
+    assert.deepEqual(calls[0].sqlParams, [
+        7,
+        "svc-a",
+        JOB_ID,
+        "generation-not-started",
+        "The analysis service did not start the generation.",
+    ]);
+    assert.match(calls[0].sql, /CASE WHEN document IS NULL THEN 'failed' ELSE 'ready' END/);
+    assert.ok(calls[0].sql.includes(
+        "WHERE case_id = $1 AND service_id = $2 AND job_id = $3::uuid AND status = 'requested'"
+    ));
+    assert.doesNotMatch(calls[0].sql, /document =|job_id = NULL/);
 });
 
 test("completeCaseAnalysis: conditions the update on the job and clears the review", async () => {

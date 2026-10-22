@@ -34,6 +34,13 @@ const RENDER_FAILURES = {
     "timeout":       "The case document was not rendered in time.",
 };
 
+// Recorded when a started generation fails for another reason, such as a
+// database error while storing the result.
+const UNEXPECTED_FAILURE = {
+    errorCode:    "adapter-error",
+    errorMessage: "The mock case analysis failed unexpectedly.",
+};
+
 export function buildMockCaseAnalysis(text) {
     const normalizedText = String(text ?? "").replace(/\s+/gu, " ").trim();
 
@@ -94,22 +101,37 @@ async function processCaseCreated({ context, callback, caseAnalyses, waitForCase
         return;
     }
 
-    const outcome = await waitForCaseDocumentText(context.caseId);
+    try {
+        const outcome = await waitForCaseDocumentText(context.caseId);
 
-    if (outcome.status !== "ready") {
-        const errorMessage = RENDER_FAILURES[outcome.status]
-            ?? "The case document is not available.";
-        await caseAnalyses.fail({ jobId: analysis.jobId, errorCode: outcome.status, errorMessage });
-        await callback({ hook: CASE_CREATED_HOOK, status: "failed", error: errorMessage });
-        return;
+        if (outcome.status !== "ready") {
+            const errorMessage = RENDER_FAILURES[outcome.status]
+                ?? "The case document is not available.";
+            await caseAnalyses.fail({
+                jobId:     analysis.jobId,
+                errorCode: outcome.status,
+                errorMessage,
+            });
+            await callback({ hook: CASE_CREATED_HOOK, status: "failed", error: errorMessage });
+            return;
+        }
+
+        await caseAnalyses.complete({
+            jobId:          analysis.jobId,
+            documentSchema: MOCK_CASE_ANALYSIS_SCHEMA,
+            document:       buildMockCaseAnalysis(outcome.text),
+        });
+        await callback({ hook: CASE_CREATED_HOOK, status: "completed", caseId: context.caseId });
+    } catch (error) {
+        // The generation started, so it is failed here rather than left
+        // 'processing' until it is stale. register() reports the error.
+        await caseAnalyses.fail({ jobId: analysis.jobId, ...UNEXPECTED_FAILURE })
+            .catch(failError => console.warn(
+                "[mock-case-analysis] Could not record the failed generation.",
+                failError
+            ));
+        throw error;
     }
-
-    await caseAnalyses.complete({
-        jobId:          analysis.jobId,
-        documentSchema: MOCK_CASE_ANALYSIS_SCHEMA,
-        document:       buildMockCaseAnalysis(outcome.text),
-    });
-    await callback({ hook: CASE_CREATED_HOOK, status: "completed", caseId: context.caseId });
 }
 
 export async function register({

@@ -16,6 +16,10 @@ import * as rpg2 from "../db/rest-pg-2.js";
 // the teacher may save edits or request a new generation again.
 export const STALE_GENERATION_INTERVAL = "15 minutes";
 
+// Recorded on a reservation that its adapter did not start.
+const NOT_STARTED_ERROR_CODE    = "generation-not-started";
+const NOT_STARTED_ERROR_MESSAGE = "The analysis service did not start the generation.";
+
 const IN_FLIGHT_STATUSES = "status IN ('requested', 'processing')";
 
 // Rows whose generation may still deliver a result.
@@ -149,6 +153,30 @@ export async function markCaseAnalysisProcessing(
           AND status = 'requested'
         RETURNING ${summaryColumns};
     `, [caseId, serviceId, jobId], query);
+}
+
+/**
+ * Releases a reservation that its adapter did not start, so it does not block
+ * the analysis until it is stale. It ends like a failed generation: an
+ * existing document is kept (the status returns to 'ready') and the error
+ * records why. Returns null when the reservation was started or replaced.
+ */
+export async function releaseUnstartedCaseAnalysis(
+    { caseId, serviceId, jobId },
+    query = rpg2.execSQL
+) {
+    return queryOne(`
+        UPDATE case_analyses
+        SET status = CASE WHEN document IS NULL THEN 'failed' ELSE 'ready' END,
+            error_code = $4,
+            error_message = $5,
+            updated_at = now()
+        WHERE case_id = $1
+          AND service_id = $2
+          AND job_id = $3::uuid
+          AND status = 'requested'
+        RETURNING ${summaryColumns};
+    `, [caseId, serviceId, jobId, NOT_STARTED_ERROR_CODE, NOT_STARTED_ERROR_MESSAGE], query);
 }
 
 /**

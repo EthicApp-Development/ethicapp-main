@@ -10,13 +10,17 @@ import {
 const JOB_ID = "f1a2b3c4-0000-4000-8000-000000000051";
 
 // Records the calls the adapter makes to its bound case analyses functions.
-function makeCaseAnalyses({ processing = { status: "processing", jobId: JOB_ID }, complete } = {}) {
+function makeCaseAnalyses({
+    processing = { status: "processing", jobId: JOB_ID },
+    markProcessing,
+    complete,
+} = {}) {
     const calls = [];
     const caseAnalyses = {
-        markProcessing: async args => {
+        markProcessing: markProcessing ?? (async args => {
             calls.push({ name: "markProcessing", args });
             return processing;
-        },
+        }),
         complete: complete ?? (async args => {
             calls.push({ name: "complete", args });
             return { status: "ready" };
@@ -116,8 +120,8 @@ test("case-created: skips generations that are no longer reserved, without waiti
     assert.equal(results[0].status, "skipped");
 });
 
-test("case-created: reports a failed job when the result cannot be stored", async () => {
-    const { caseAnalyses } = makeCaseAnalyses({
+test("case-created: fails the started generation when its result cannot be stored", async () => {
+    const { caseAnalyses, calls } = makeCaseAnalyses({
         complete: async () => { throw new Error("database unavailable"); },
     });
     const { handler } = await registerAdapter({
@@ -127,11 +131,36 @@ test("case-created: reports a failed job when the result cannot be stored", asyn
 
     const results = await runCaseCreated(handler);
 
+    assert.deepEqual(calls.at(-1), {
+        name: "fail",
+        args: {
+            jobId:        JOB_ID,
+            errorCode:    "adapter-error",
+            errorMessage: "The mock case analysis failed unexpectedly.",
+        },
+    });
     assert.deepEqual(results, [{
         hook:   "case-created",
         status: "failed",
         error:  "database unavailable",
     }]);
+});
+
+test("case-created: leaves a generation it could not start to the dispatcher", async () => {
+    const { caseAnalyses, calls } = makeCaseAnalyses({
+        markProcessing: async () => { throw new Error("database unavailable"); },
+    });
+    const { handler, waited } = await registerAdapter({
+        caseAnalyses,
+        renderOutcome: { status: "ready", text: "Text." },
+    });
+
+    const results = await runCaseCreated(handler);
+
+    // Nothing started, so nothing is failed here: the dispatch releases it.
+    assert.deepEqual(calls, []);
+    assert.deepEqual(waited, []);
+    assert.equal(results[0].status, "failed");
 });
 
 // ─── documents ───────────────────────────────────────────────────────────────

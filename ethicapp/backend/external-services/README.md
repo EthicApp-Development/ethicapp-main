@@ -286,10 +286,10 @@ in the catalog above are phase-scoped.
 
 **Case hooks (case creation opt-in).** `case-created` reaches the services the
 teacher chose when creating the case (`analysisServiceIds`, see "Case
-Analyses"): `dispatchCaseCreatedHook(context, { reservations })` passes the
-services of the reserved analyses as `enabledServiceIds`, with their job ids as
-`jobIds`. A case created without a choice dispatches nothing, and editing the
-case never changes the choice.
+Analyses"): `dispatchCaseCreatedHook(context, { reservations })` dispatches each
+reserved analysis to its service only (`enabledServiceIds`), under the job id of
+its reservation (`jobIds`). A case created without a choice dispatches nothing,
+and editing the case never changes the choice.
 
 **Global hooks (manifest opt-in).** Hooks that fire outside an activity and
 need no teacher choice are dispatched with
@@ -451,21 +451,32 @@ generations and teacher edits answer `409` until its result arrives. One with
 no update for 15 minutes is stale: the teacher can save edits or generate
 again, and the stale job can no longer start or store its result.
 
+The adapter starts its reservation before its `case-created` handler settles.
+Once a service's dispatch settles, a reservation still `requested` under its
+job is released (`releaseUnstartedCaseAnalysis()`): the service has no
+handler, the dispatch failed, or the handler failed or returned before starting
+it. The release ends the generation like a failed one, with `error_code`
+`generation-not-started`, so new generations and edits are accepted again
+right away instead of after 15 minutes.
+
 ### Recording results from an adapter
 
 `register()` receives `caseAnalyses`, bound to the adapter's own service:
 
 - `markProcessing({ caseId, jobId })` starts the generation reserved under
-  `jobId`, the `jobId` of the hook context, and returns the analysis. It returns
-  `null` when that generation is no longer the reserved one (a newer generation
-  or a teacher edit replaced it, or it already started) or the context has no
-  `jobId`; the adapter must then skip the work.
+  `jobId`, the `jobId` of the hook context, and returns the analysis. Await it
+  before the `case-created` handler settles; a reservation not started by then
+  is released. It returns `null` when that generation is no longer the reserved
+  one (a newer generation or a teacher edit replaced it, or it already started)
+  or the context has no `jobId`; the adapter must then skip the work.
 - `complete({ jobId, documentSchema, document })` stores the document, which
   replaces the previous one and its review.
 - `fail({ jobId, errorCode, errorMessage })` records a failed generation.
 
 `complete` and `fail` only apply to a generation started with `markProcessing`;
-results of superseded jobs are ignored and return `null`.
+results of superseded jobs are ignored and return `null`. An adapter that hits
+an unexpected error after starting a generation calls `fail`, as the mock does,
+so the analysis does not stay `processing` until it is stale.
 
 `case-created` fires before the PDF worker extracts the case text. Adapters that
 need it wait with `waitForCaseDocumentText(caseId)` from

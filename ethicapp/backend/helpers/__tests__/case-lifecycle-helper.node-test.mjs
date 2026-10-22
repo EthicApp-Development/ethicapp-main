@@ -45,7 +45,40 @@ test("buildCaseCreatedContext: nulls missing or invalid ids and defaults", () =>
     assert.equal(context.title, null);
 });
 
-test("dispatchCaseCreatedHook: dispatches only the reservations, under their job ids", async () => {
+const RESERVATIONS = [
+    { case_id: 42, service_id: "svc-case", job_id: RESERVED_JOB_IDS[0], status: "requested" },
+    { case_id: 42, service_id: "svc-other", job_id: RESERVED_JOB_IDS[1], status: "requested" },
+];
+
+// Records the reservations released, in the order they are released.
+function makeRelease({ error = null } = {}) {
+    const released = [];
+    const releaseReservation = async args => {
+        released.push(args);
+        if (error) {
+            throw error;
+        }
+        return null;
+    };
+
+    return { released, releaseReservation };
+}
+
+async function withCapturedErrors(fn) {
+    const originalError = console.error;
+    const logged = [];
+    console.error = (...args) => { logged.push(args); };
+
+    try {
+        await fn();
+    } finally {
+        console.error = originalError;
+    }
+
+    return logged;
+}
+
+test("dispatchCaseCreatedHook: one dispatch per reservation, then its release", async () => {
     const calls = [];
     const registry = {
         dispatchHook: async (hookName, context, options) => {
@@ -53,28 +86,101 @@ test("dispatchCaseCreatedHook: dispatches only the reservations, under their job
             return [{ status: "fulfilled", value: undefined }];
         },
     };
-    const reservations = [
-        { service_id: "svc-case", job_id: RESERVED_JOB_IDS[0], status: "requested" },
-        { service_id: "svc-other", job_id: RESERVED_JOB_IDS[1], status: "requested" },
-    ];
+    const { released, releaseReservation } = makeRelease();
 
-    const outcomes = await dispatchCaseCreatedHook({ caseId: 42 }, { reservations, registry });
+    const outcomes = await dispatchCaseCreatedHook({ caseId: 42 }, {
+        reservations: RESERVATIONS,
+        registry,
+        releaseReservation,
+    });
 
-    assert.deepEqual(calls, [{
+    assert.deepEqual(calls, RESERVATIONS.map(({ service_id: serviceId, job_id: jobId }) => ({
         hookName: CASE_CREATED_HOOK,
         context:  { caseId: 42 },
-        options:  {
-            enabledServiceIds: ["svc-case", "svc-other"],
-            jobIds:            {
-                "svc-case":  RESERVED_JOB_IDS[0],
-                "svc-other": RESERVED_JOB_IDS[1],
-            },
-        },
-    }]);
-    assert.equal(outcomes.length, 1);
+        options:  { enabledServiceIds: [serviceId], jobIds: { [serviceId]: jobId } },
+    })));
+    // The release only changes a reservation that its adapter did not start.
+    assert.deepEqual(released, [
+        { caseId: 42, serviceId: "svc-case", jobId: RESERVED_JOB_IDS[0] },
+        { caseId: 42, serviceId: "svc-other", jobId: RESERVED_JOB_IDS[1] },
+    ]);
+    assert.equal(outcomes.length, 2);
 });
 
-test("dispatchCaseCreatedHook: dispatches nothing without reservations", async () => {
+test("dispatchCaseCreatedHook: releases each reservation when its handler settles", async () => {
+    let finishSlowHandler;
+    const slowHandler = new Promise(resolve => { finishSlowHandler = resolve; });
+    const registry = {
+        dispatchHook: async (hookName, context, { enabledServiceIds }) => {
+            if (enabledServiceIds[0] === "svc-other") {
+                await slowHandler;
+            }
+            return [{ status: "fulfilled", value: undefined }];
+        },
+    };
+    const { released, releaseReservation } = makeRelease();
+
+    const dispatched = dispatchCaseCreatedHook({ caseId: 42 }, {
+        reservations: RESERVATIONS,
+        registry,
+        releaseReservation,
+    });
+    await new Promise(resolve => setImmediate(resolve));
+
+    assert.deepEqual(released.map(({ serviceId }) => serviceId), ["svc-case"]);
+
+    finishSlowHandler();
+    await dispatched;
+
+    assert.deepEqual(released.map(({ serviceId }) => serviceId), ["svc-case", "svc-other"]);
+});
+
+test("dispatchCaseCreatedHook: releases after a dispatch error or without a handler", async () => {
+    const registry = {
+        dispatchHook: async (hookName, context, { enabledServiceIds }) => {
+            if (enabledServiceIds[0] === "svc-case") {
+                throw new Error("registry down");
+            }
+            // svc-other has no case-created handler.
+            return [];
+        },
+    };
+    const { released, releaseReservation } = makeRelease();
+    let outcomes;
+
+    const logged = await withCapturedErrors(async () => {
+        outcomes = await dispatchCaseCreatedHook({ caseId: 42 }, {
+            reservations: RESERVATIONS,
+            registry,
+            releaseReservation,
+        });
+    });
+
+    assert.deepEqual(outcomes, []);
+    assert.deepEqual(released.map(({ serviceId }) => serviceId).sort(), ["svc-case", "svc-other"]);
+    assert.equal(logged.length, 1);
+});
+
+test("dispatchCaseCreatedHook: logs and swallows release errors", async () => {
+    const registry = {
+        dispatchHook: async () => [{ status: "fulfilled", value: undefined }],
+    };
+    const { releaseReservation } = makeRelease({ error: new Error("database down") });
+    let outcomes;
+
+    const logged = await withCapturedErrors(async () => {
+        outcomes = await dispatchCaseCreatedHook({ caseId: 42 }, {
+            reservations: [RESERVATIONS[0]],
+            registry,
+            releaseReservation,
+        });
+    });
+
+    assert.equal(outcomes.length, 1);
+    assert.equal(logged.length, 1);
+});
+
+test("dispatchCaseCreatedHook: dispatches and releases nothing without reservations", async () => {
     let dispatched = false;
     const registry = {
         dispatchHook: async () => {
@@ -82,35 +188,22 @@ test("dispatchCaseCreatedHook: dispatches nothing without reservations", async (
             return [];
         },
     };
+    const { released, releaseReservation } = makeRelease();
 
-    assert.deepEqual(await dispatchCaseCreatedHook({ caseId: 42 }, { registry }), []);
     assert.deepEqual(
-        await dispatchCaseCreatedHook({ caseId: 42 }, { reservations: [], registry }),
+        await dispatchCaseCreatedHook({ caseId: 42 }, { registry, releaseReservation }),
+        []
+    );
+    assert.deepEqual(
+        await dispatchCaseCreatedHook({ caseId: 42 }, {
+            reservations: [],
+            registry,
+            releaseReservation,
+        }),
         []
     );
     assert.equal(dispatched, false);
-});
-
-test("dispatchCaseCreatedHook: swallows registry errors and returns []", async () => {
-    const originalError = console.error;
-    const logged = [];
-    console.error = (...args) => { logged.push(args); };
-
-    try {
-        const registry = {
-            dispatchHook: async () => { throw new Error("registry down"); },
-        };
-
-        const outcomes = await dispatchCaseCreatedHook({ caseId: 42 }, {
-            reservations: [{ service_id: "svc-case", job_id: RESERVED_JOB_IDS[0] }],
-            registry,
-        });
-
-        assert.deepEqual(outcomes, []);
-        assert.equal(logged.length, 1);
-    } finally {
-        console.error = originalError;
-    }
+    assert.deepEqual(released, []);
 });
 
 // ─── resolveCaseAnalysisServiceIds ───────────────────────────────────────────
