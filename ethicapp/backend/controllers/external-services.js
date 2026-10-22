@@ -1,6 +1,6 @@
 import express from "express";
 import { requireRole } from "../helpers/auth-helper.js";
-import externalServicesRegistry from "../services/external-services.service.js";
+import externalServicesRegistry, { SERVICE_SCOPES } from "../services/external-services.service.js";
 import { callbackAuthMiddleware } from "../middleware/external-services-callback-auth.middleware.js";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -83,6 +83,33 @@ export async function processCallback({ serviceId, eventType, correlationId, eve
     }
 }
 
+// With `scope` (one value or several), only enabled services that declare at
+// least one of those scopes are listed. Without it, every registered service is.
+export async function listExternalServices({ scope, registry }) {
+    const scopes = scope === undefined ? [] : [scope].flat();
+
+    if (scopes.some(value => !SERVICE_SCOPES.includes(value))) {
+        return {
+            status: 400,
+            body:   { status: "err", error: `scope must be one of: ${SERVICE_SCOPES.join(", ")}.` },
+        };
+    }
+
+    await registry.initialize();
+    const services = registry.listServices();
+
+    return {
+        status: 200,
+        body:   {
+            status: "ok",
+            result: scopes.length === 0
+                ? services
+                : services.filter(service => service.enabled
+                    && service.scopes.some(serviceScope => scopes.includes(serviceScope))),
+        },
+    };
+}
+
 router.post("/external-services/callbacks", callbackAuthMiddleware, async (req, res) => {
     const serviceId     = typeof req.body?.serviceId === "string" ? req.body.serviceId.trim() : "";
     const eventType     = typeof req.body?.eventType === "string" ? req.body.eventType.trim() : "result";
@@ -109,11 +136,12 @@ router.get("/external-services", async (req, res) => {
         return;
     }
 
-    await externalServicesRegistry.initialize();
-    return res.json({
-        status: "ok",
-        result: externalServicesRegistry.listServices(),
+    const { status, body } = await listExternalServices({
+        scope:    req.query.scope,
+        registry: externalServicesRegistry,
     });
+
+    return res.status(status).json(body);
 });
 
 export default router;

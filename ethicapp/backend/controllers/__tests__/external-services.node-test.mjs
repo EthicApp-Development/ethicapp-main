@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { processCallback } from "../external-services.js";
+import { listExternalServices, processCallback } from "../external-services.js";
 
 const JOB_UUID    = "c1d2e3f4-0000-4000-8000-000000000021";
 const RESULT_UUID = "c1d2e3f4-0000-4000-8000-000000000022";
@@ -285,4 +285,67 @@ test("processCallback: 500 on unexpected dispatchServiceHook error", async () =>
 
     assert.equal(status, 500);
     assert.equal(body.status, "err");
+});
+
+// ─── listExternalServices ────────────────────────────────────────────────────
+
+function makeListingRegistry() {
+    return {
+        initialize:   async () => {},
+        listServices: () => [
+            { id: "case-tool",     enabled: true,  scopes: ["case"] },
+            { id: "chat-tool",     enabled: true,  scopes: ["chat"] },
+            { id: "review-tool",   enabled: true,  scopes: ["response", "chat"] },
+            { id: "disabled-case", enabled: false, scopes: ["case"] },
+            { id: "unscoped",      enabled: true,  scopes: [] },
+        ],
+    };
+}
+
+function listedIds(body) {
+    return body.result.map(({ id }) => id);
+}
+
+test("listExternalServices: no scope lists every service, disabled ones included", async () => {
+    const { status, body } = await listExternalServices({
+        scope:    undefined,
+        registry: makeListingRegistry(),
+    });
+
+    assert.equal(status, 200);
+    assert.deepEqual(listedIds(body), [
+        "case-tool", "chat-tool", "review-tool", "disabled-case", "unscoped",
+    ]);
+});
+
+test("listExternalServices: a scope lists only the enabled services that declare it", async () => {
+    const { status, body } = await listExternalServices({
+        scope:    "case",
+        registry: makeListingRegistry(),
+    });
+
+    assert.equal(status, 200);
+    assert.deepEqual(listedIds(body), ["case-tool"]);
+});
+
+test("listExternalServices: several scopes list each matching service once", async () => {
+    const { status, body } = await listExternalServices({
+        scope:    ["response", "chat"],
+        registry: makeListingRegistry(),
+    });
+
+    assert.equal(status, 200);
+    assert.deepEqual(listedIds(body), ["chat-tool", "review-tool"]);
+});
+
+test("listExternalServices: 400 when any scope is unknown or empty", async () => {
+    for (const scope of ["cases", "", ["case", "bogus"]]) {
+        const { status, body } = await listExternalServices({
+            scope,
+            registry: makeListingRegistry(),
+        });
+
+        assert.equal(status, 400, `scope ${JSON.stringify(scope)}`);
+        assert.equal(body.status, "err");
+    }
 });
