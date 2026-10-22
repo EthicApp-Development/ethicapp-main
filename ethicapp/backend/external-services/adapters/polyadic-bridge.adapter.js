@@ -233,11 +233,12 @@ const AGENT_NICKNAMES = {
 };
 const DEFAULT_AGENT_NICKNAME = AGENT_NICKNAMES.es_CL;
 
-const CONVERSATION_LANGUAGES = {
-    en_US: "English",
-    es_CL: "español",
+// Polyadic's `locale` (#735; replaces the deprecated `idioma` alias).
+const POLYADIC_LOCALES = {
+    en_US: "en-US",
+    es_CL: "es-CL",
 };
-const DEFAULT_CONVERSATION_LANGUAGE = CONVERSATION_LANGUAGES.es_CL;
+const DEFAULT_POLYADIC_LOCALE = POLYADIC_LOCALES.es_CL;
 
 function isEnglishLanguageCode(languageCode) {
     return normalizeText(languageCode).toLowerCase().startsWith("en");
@@ -252,13 +253,58 @@ export function resolveAgentNickname(languageCode) {
     return isEnglishLanguageCode(normalized) ? AGENT_NICKNAMES.en_US : DEFAULT_AGENT_NICKNAME;
 }
 
-export function resolveConversationLanguage(languageCode) {
+export function resolvePolyadicLocale(languageCode) {
     const normalized = normalizeText(languageCode);
-    if (CONVERSATION_LANGUAGES[normalized]) {
-        return CONVERSATION_LANGUAGES[normalized];
+    if (POLYADIC_LOCALES[normalized]) {
+        return POLYADIC_LOCALES[normalized];
     }
 
-    return isEnglishLanguageCode(normalized) ? CONVERSATION_LANGUAGES.en_US : DEFAULT_CONVERSATION_LANGUAGE;
+    return isEnglishLanguageCode(normalized) ? POLYADIC_LOCALES.en_US : DEFAULT_POLYADIC_LOCALE;
+}
+
+function isPlainObject(value) {
+    return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+// The configured settings to send: set values only. `prompt_inicial` is the
+// adapter's own and never comes from a configuration.
+function configuredSettings(serviceConfiguration) {
+    const settings = {};
+    if (!isPlainObject(serviceConfiguration)) {
+        return settings;
+    }
+    for (const [key, value] of Object.entries(serviceConfiguration)) {
+        if (key !== "prompt_inicial" && value !== undefined && value !== null) {
+            settings[key] = value;
+        }
+    }
+    return settings;
+}
+
+/**
+ * The body of POST /rooms/:room/sessions (#735). EthicApp's defaults come
+ * first: the deployment pipeline (AI_ADDITIONS_POLYADIC_AGENTS_PIPELINE_TYPE),
+ * and the guide nickname and `locale` from the design language. The phase's
+ * configured settings (#734), validated against the capability descriptor on
+ * save (#731), replace them and add any other instance field (`llm_tier`,
+ * `session_duration_seconds`, ...). Fields left unset take Polyadic's defaults.
+ * @param {{ topic?: string, agentNickname?: string, locale?: string,
+ *   serviceConfiguration?: object, pipelineType?: string }} options
+ */
+export function buildPolyadicSessionPayload({
+    topic,
+    agentNickname,
+    locale,
+    serviceConfiguration = {},
+    pipelineType = getPipelineType(),
+} = {}) {
+    return {
+        prompt_inicial: topic || "EthicApp discussion",
+        pipeline_type:  pipelineType,
+        agent_nickname: agentNickname || DEFAULT_AGENT_NICKNAME,
+        locale:         locale || DEFAULT_POLYADIC_LOCALE,
+        ...configuredSettings(serviceConfiguration),
+    };
 }
 
 export function resolvePolyadicUsername(identity, userId) {
@@ -298,19 +344,46 @@ async function requestPolyadicJson(pathname, { method = "GET", body = null } = {
     });
 }
 
-async function ensurePolyadicSession(roomName, topic, agentNickname, idioma) {
-    await requestPolyadicJson(`/rooms/${encodeURIComponent(roomName)}/sessions`, {
-        method: "POST",
-        body:   {
-            prompt_inicial: topic || "EthicApp discussion",
-            pipeline_type:  getPipelineType(),
-            agent_nickname: agentNickname || DEFAULT_AGENT_NICKNAME,
-            idioma:         idioma || DEFAULT_CONVERSATION_LANGUAGE,
-        },
-    });
+function creationOutcome(response, extra = {}) {
+    return {
+        warnings: Array.isArray(response?.warnings) ? response.warnings : [],
+        degraded: response?.degraded === true,
+        ...extra,
+    };
+}
 
-    console.info(`[polyadic-bridge] Polyadic session ready for ${roomName}.`);
-    return true;
+/**
+ * Creates the Polyadic session of a room and returns Polyadic's lifecycle
+ * report, `{ warnings, degraded, configurationRejected }` (#735, recorded by
+ * #737). Polyadic answers 400 when a configured value fails its format rules,
+ * which a design saved before a rule tightened can still hold (#731 accepts it
+ * with a warning). The room is then created once more without the configured
+ * settings, so the group still gets its agent, and `configurationRejected` says so.
+ */
+async function ensurePolyadicSession(roomName, { topic, agentNickname, locale, serviceConfiguration }) {
+    const path = `/rooms/${encodeURIComponent(roomName)}/sessions`;
+    const body = buildPolyadicSessionPayload({ topic, agentNickname, locale, serviceConfiguration });
+
+    try {
+        const response = await requestPolyadicJson(path, { method: "POST", body });
+        console.info(`[polyadic-bridge] Polyadic session ready for ${roomName}.`);
+        return creationOutcome(response, { configurationRejected: false });
+    } catch (error) {
+        const hasConfiguration = Object.keys(configuredSettings(serviceConfiguration)).length > 0;
+        if (Number(error?.statusCode) !== 400 || !hasConfiguration) {
+            throw error;
+        }
+
+        console.warn(`[polyadic-bridge] Polyadic rejected the configured settings for ${roomName}; `
+            + "creating the session with EthicApp's defaults.", error.responseBody ?? error);
+        const fallback = buildPolyadicSessionPayload({ topic, agentNickname, locale });
+        const response = await requestPolyadicJson(path, { method: "POST", body: fallback });
+        console.info(`[polyadic-bridge] Polyadic session ready for ${roomName} without configured settings.`);
+        return creationOutcome(response, {
+            configurationRejected: true,
+            rejection:             error.responseBody ?? null,
+        });
+    }
 }
 
 async function closePolyadicSession(roomName) {
@@ -366,13 +439,13 @@ export async function register({
             const languageCode = await dependencies.getSessionLanguageCode(sessionId);
             return {
                 agentNickname: resolveAgentNickname(languageCode),
-                idioma:        resolveConversationLanguage(languageCode),
+                locale:        resolvePolyadicLocale(languageCode),
             };
         } catch (error) {
             console.warn(`[polyadic-bridge] Unable to resolve conversation language for session ${sessionId}; using defaults.`, error);
             return {
                 agentNickname: DEFAULT_AGENT_NICKNAME,
-                idioma:        DEFAULT_CONVERSATION_LANGUAGE,
+                locale:        DEFAULT_POLYADIC_LOCALE,
             };
         }
     }
@@ -382,23 +455,25 @@ export async function register({
         const question = await dependencies.getFirstQuestionForPhase(phaseId);
         const questionText = formatQuestionText(question);
         const fallbackTopic = `EthicApp session ${sessionId} phase ${phaseId}`;
-        const { agentNickname, idioma } = await resolveSessionLanguageContext(sessionId);
+        const { agentNickname, locale } = await resolveSessionLanguageContext(sessionId);
 
         return {
             questionId: question?.id ?? null,
             topic:      composeTopic(caseText || fallbackTopic, questionText),
             agentNickname,
-            idioma,
+            locale,
         };
     }
 
-    async function createRoom({ sessionId, phaseId, groupId, questionId, topic, agentNickname, idioma }) {
+    // Returns `{ roomName, warnings, degraded, configurationRejected }`, or
+    // null when the room could not be created.
+    async function createRoom({ sessionId, phaseId, groupId, questionId, ...sessionOptions }) {
         const roomName = getRoomName(sessionId, phaseId, groupId);
         rememberRoomContext(roomName, sessionId, phaseId, groupId, questionId);
 
         try {
-            await ensurePolyadicSession(roomName, topic, agentNickname, idioma);
-            return roomName;
+            const outcome = await ensurePolyadicSession(roomName, sessionOptions);
+            return { roomName, ...outcome };
         } catch (error) {
             roomContext.delete(roomName);
             console.warn(`[polyadic-bridge] Failed to create polyadic room ${roomName}.`, error);
@@ -406,16 +481,28 @@ export async function register({
         }
     }
 
+    // Polyadic's lifecycle report for each created room, for the job result (#737).
+    function roomReports(rooms) {
+        return rooms.map(({ roomName, warnings, degraded, configurationRejected }) => ({
+            room: roomName,
+            warnings,
+            degraded,
+            configurationRejected,
+        }));
+    }
+
     subscribe("phase-started", async (context, { callback }) => {
-        const { sessionId, phaseId } = context;
+        const { sessionId, phaseId, serviceConfiguration } = context;
         const teamIds = await dependencies.getTeamIdsForPhase(sessionId, phaseId);
-        const { questionId, topic, agentNickname, idioma } = await buildTopicForPhase(sessionId, phaseId);
+        const topicData = await buildTopicForPhase(sessionId, phaseId);
         const createdRooms = new Set();
+        const created = [];
 
         for (const groupId of teamIds) {
-            const roomName = await createRoom({ sessionId, phaseId, groupId, questionId, topic, agentNickname, idioma });
-            if (roomName) {
-                createdRooms.add(roomName);
+            const room = await createRoom({ sessionId, phaseId, groupId, ...topicData, serviceConfiguration });
+            if (room) {
+                createdRooms.add(room.roomName);
+                created.push(room);
             }
         }
 
@@ -429,12 +516,15 @@ export async function register({
                 sessionId,
                 phaseId,
                 roomsCreated: createdRooms.size,
+                rooms:        roomReports(created),
             },
         });
     });
 
     subscribe("chat-message-received", async (context, { callback }) => {
-        const { sessionId, phaseId, groupId, questionId, userId, correlationId } = context;
+        const {
+            sessionId, phaseId, groupId, questionId, userId, correlationId, serviceConfiguration,
+        } = context;
         const content = normalizeText(context.content);
         const roomName = getRoomName(sessionId, phaseId, groupId);
         const phaseRoomsKey = getPhaseRoomsKey(sessionId, phaseId);
@@ -455,16 +545,16 @@ export async function register({
             phaseRooms.set(phaseRoomsKey, phaseCreatedRooms);
         }
 
+        let createdReport = null;
         if (!phaseCreatedRooms.has(roomName)) {
             const topicData = await buildTopicForPhase(sessionId, phaseId);
             const createdRoom = await createRoom({
                 sessionId,
                 phaseId,
                 groupId,
-                questionId:    questionId ?? topicData.questionId,
-                topic:         topicData.topic,
-                agentNickname: topicData.agentNickname,
-                idioma:        topicData.idioma,
+                ...topicData,
+                questionId: questionId ?? topicData.questionId,
+                serviceConfiguration,
             });
 
             if (!createdRoom) {
@@ -477,7 +567,8 @@ export async function register({
                 return;
             }
 
-            phaseCreatedRooms.add(createdRoom);
+            phaseCreatedRooms.add(createdRoom.roomName);
+            createdReport = roomReports([createdRoom])[0];
         } else {
             rememberRoomContext(roomName, sessionId, phaseId, groupId, questionId);
         }
@@ -496,7 +587,13 @@ export async function register({
                 serviceId: service.id,
                 hook:      "chat-message-received",
                 status:    "completed",
-                payload:   { sessionId, phaseId, groupId, forwarded: true },
+                payload:   {
+                    sessionId,
+                    phaseId,
+                    groupId,
+                    forwarded: true,
+                    ...(createdReport ? { roomCreated: createdReport } : {}),
+                },
             });
         } catch (error) {
             console.warn(`[polyadic-bridge] Failed to forward message to ${roomName}.`, error);

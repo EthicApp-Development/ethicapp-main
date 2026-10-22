@@ -1,17 +1,18 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+    buildPolyadicSessionPayload,
     composeTopic,
     formatQuestionText,
     getRoomName,
     parseRoomName,
     register,
     resolveAgentNickname,
-    resolveConversationLanguage,
+    resolvePolyadicLocale,
     resolvePolyadicUsername,
 } from "../polyadic-bridge.adapter.js";
 
-function createHarness({ dependencies = {} } = {}) {
+function createHarness({ dependencies = {}, respond = null } = {}) {
     const subscribers = new Map();
     const requests = [];
     const callbacks = [];
@@ -23,7 +24,7 @@ function createHarness({ dependencies = {} } = {}) {
         },
         async requestJson(pathname, options) {
             requests.push({ pathname, options });
-            return { status: "ok" };
+            return respond ? respond(pathname, options, requests.length) : { status: "ok" };
         },
     };
 
@@ -427,20 +428,17 @@ test("resolveAgentNickname falls back by language prefix and defaults to @agente
     assert.equal(resolveAgentNickname(null), "@agente");
 });
 
-test("resolveConversationLanguage returns the LLM-facing language name per language code", () => {
-    assert.equal(resolveConversationLanguage("en_US"), "English");
-    assert.equal(resolveConversationLanguage("es_CL"), "español");
+test("resolvePolyadicLocale maps design languages to Polyadic locales, defaulting to es-CL", () => {
+    assert.equal(resolvePolyadicLocale("en_US"), "en-US");
+    assert.equal(resolvePolyadicLocale("es_CL"), "es-CL");
+    assert.equal(resolvePolyadicLocale("en_GB"), "en-US");
+    assert.equal(resolvePolyadicLocale("es_ES"), "es-CL");
+    assert.equal(resolvePolyadicLocale("pt_BR"), "es-CL");
+    assert.equal(resolvePolyadicLocale(""), "es-CL");
+    assert.equal(resolvePolyadicLocale(null), "es-CL");
 });
 
-test("resolveConversationLanguage falls back by language prefix and defaults to español", () => {
-    assert.equal(resolveConversationLanguage("en_GB"), "English");
-    assert.equal(resolveConversationLanguage("es_ES"), "español");
-    assert.equal(resolveConversationLanguage("pt_BR"), "español");
-    assert.equal(resolveConversationLanguage(""), "español");
-    assert.equal(resolveConversationLanguage(null), "español");
-});
-
-test("phase-started creates rooms with the localized agent nickname and idioma (en_US)", async () => {
+test("phase-started creates rooms with the localized agent nickname and locale (en_US)", async () => {
     const harness = createHarness({
         dependencies: {
             getTeamIdsForPhase:     async () => [301],
@@ -453,10 +451,11 @@ test("phase-started creates rooms with the localized agent nickname and idioma (
 
     const sessionRequest = harness.requests.find(r => r.pathname.endsWith("/sessions"));
     assert.equal(sessionRequest.options.body.agent_nickname, "@agent");
-    assert.equal(sessionRequest.options.body.idioma, "English");
+    assert.equal(sessionRequest.options.body.locale, "en-US");
+    assert.equal(Object.hasOwn(sessionRequest.options.body, "idioma"), false);
 });
 
-test("chat-message-received creates a missing room with the localized agent nickname and idioma (es_CL)", async () => {
+test("chat-message-received creates a missing room with the localized agent nickname and locale (es_CL)", async () => {
     const harness = createHarness({
         dependencies: {
             getTeamIdsForPhase:     async () => [],
@@ -472,10 +471,11 @@ test("chat-message-received creates a missing room with the localized agent nick
 
     const sessionRequest = harness.requests.find(r => r.pathname.endsWith("/sessions"));
     assert.equal(sessionRequest.options.body.agent_nickname, "@agente");
-    assert.equal(sessionRequest.options.body.idioma, "español");
+    assert.equal(sessionRequest.options.body.locale, "es-CL");
+    assert.equal(Object.hasOwn(sessionRequest.options.body, "idioma"), false);
 });
 
-test("phase-started falls back to default nickname and idioma when language resolution fails", async () => {
+test("phase-started falls back to default nickname and locale when language resolution fails", async () => {
     const harness = createHarness({
         dependencies: {
             getTeamIdsForPhase:     async () => [301],
@@ -490,7 +490,7 @@ test("phase-started falls back to default nickname and idioma when language reso
 
     const sessionRequest = harness.requests.find(r => r.pathname.endsWith("/sessions"));
     assert.equal(sessionRequest.options.body.agent_nickname, "@agente");
-    assert.equal(sessionRequest.options.body.idioma, "español");
+    assert.equal(sessionRequest.options.body.locale, "es-CL");
 });
 
 test("phase room tracking is scoped by session and phase", async () => {
@@ -515,3 +515,188 @@ test("phase room tracking is scoped by session and phase", async () => {
     );
     assert.equal(harness.callbacks.at(-1).payload.roomsClosed, 1);
 });
+
+// ─── Configured settings (#735) ──────────────────────────────────────────────
+
+function sessionBodies(harness) {
+    return harness.requests
+        .filter(request => request.pathname.endsWith("/sessions"))
+        .map(request => request.options.body);
+}
+
+test("buildPolyadicSessionPayload: EthicApp defaults without a configuration", () => {
+    assert.deepEqual(buildPolyadicSessionPayload({
+        topic:         "Topic",
+        agentNickname: "@agent",
+        locale:        "en-US",
+        pipelineType:  "abogado-del-diablo",
+    }), {
+        prompt_inicial: "Topic",
+        pipeline_type:  "abogado-del-diablo",
+        agent_nickname: "@agent",
+        locale:         "en-US",
+    });
+});
+
+test("buildPolyadicSessionPayload: configured settings replace and extend the defaults", () => {
+    const payload = buildPolyadicSessionPayload({
+        topic:                "Topic",
+        agentNickname:        "@agente",
+        locale:               "es-CL",
+        pipelineType:         "abogado-del-diablo",
+        serviceConfiguration: {
+            pipeline_type:            "toulmin",
+            agent_nickname:           "Sofía",
+            llm_tier:                 "advanced",
+            session_duration_seconds: 900,
+            locale:                   "en-US",
+            prompt_inicial:           "ignored",
+            unset:                    null,
+        },
+    });
+
+    assert.deepEqual(payload, {
+        prompt_inicial:           "Topic",
+        pipeline_type:            "toulmin",
+        agent_nickname:           "Sofía",
+        locale:                   "en-US",
+        llm_tier:                 "advanced",
+        session_duration_seconds: 900,
+    });
+});
+
+test("buildPolyadicSessionPayload: pipeline_type precedence, configuration then deployment", () => {
+    const original = process.env.AI_ADDITIONS_POLYADIC_AGENTS_PIPELINE_TYPE;
+    try {
+        process.env.AI_ADDITIONS_POLYADIC_AGENTS_PIPELINE_TYPE = "standard";
+        assert.equal(buildPolyadicSessionPayload({}).pipeline_type, "standard");
+        const configured = { serviceConfiguration: { pipeline_type: "noAI" } };
+        assert.equal(buildPolyadicSessionPayload(configured).pipeline_type, "noAI");
+
+        delete process.env.AI_ADDITIONS_POLYADIC_AGENTS_PIPELINE_TYPE;
+        assert.equal(buildPolyadicSessionPayload({}).pipeline_type, "abogado-del-diablo");
+    } finally {
+        if (original === undefined) {
+            delete process.env.AI_ADDITIONS_POLYADIC_AGENTS_PIPELINE_TYPE;
+        } else {
+            process.env.AI_ADDITIONS_POLYADIC_AGENTS_PIPELINE_TYPE = original;
+        }
+    }
+});
+
+test("phase-started sends the phase's configured settings", async () => {
+    const harness = createHarness({ dependencies: { getTeamIdsForPhase: async () => [301] } });
+    await harness.initialize();
+
+    await harness.dispatch("phase-started", {
+        sessionId:            11,
+        phaseId:              22,
+        serviceConfiguration: {
+            pipeline_type:            "toulmin",
+            llm_tier:                 "advanced",
+            session_duration_seconds: 900,
+        },
+    });
+
+    const [body] = sessionBodies(harness);
+    assert.equal(body.pipeline_type, "toulmin");
+    assert.equal(body.llm_tier, "advanced");
+    assert.equal(body.session_duration_seconds, 900);
+    assert.equal(body.locale, "es-CL");
+    assert.equal(body.agent_nickname, "@agente");
+});
+
+test("chat-message-received sends the configured settings for a missing room", async () => {
+    const harness = createHarness({ dependencies: { getTeamIdsForPhase: async () => [] } });
+    await harness.initialize();
+
+    await harness.dispatch("chat-message-received", {
+        sessionId:            11,
+        phaseId:              22,
+        groupId:              301,
+        userId:               9001,
+        correlationId:        "corr-735",
+        content:              "Hola",
+        serviceConfiguration: { agent_nickname: "Sofía" },
+    });
+
+    assert.equal(sessionBodies(harness)[0].agent_nickname, "Sofía");
+});
+
+test("phase-started reports Polyadic's warnings and degraded mode per room", async () => {
+    const warning = {
+        field:   "model",
+        verdict: "deprecated",
+        message: "model is deprecated; use llm_tier instead",
+    };
+    const harness = createHarness({
+        dependencies: { getTeamIdsForPhase: async () => [301, 302] },
+        respond:      (pathname) => (pathname.includes("g301")
+            ? { status: "created", warnings: [warning], degraded: false }
+            : { status: "created", warnings: [], degraded: true }),
+    });
+    await harness.initialize();
+
+    await harness.dispatch("phase-started", { sessionId: 11, phaseId: 22 });
+
+    assert.deepEqual(harness.callbacks.at(-1).payload.rooms, [
+        {
+            room:                  "ethicapp-s11-p22-g301",
+            warnings:              [warning],
+            degraded:              false,
+            configurationRejected: false,
+        },
+        {
+            room:                  "ethicapp-s11-p22-g302",
+            warnings:              [],
+            degraded:              true,
+            configurationRejected: false,
+        },
+    ]);
+});
+
+test("a rejected configuration falls back to EthicApp's defaults and is reported", async () => {
+    const rejection = { detail: { errors: { session_duration_seconds: "below minimum" } } };
+    const harness = createHarness({
+        dependencies: { getTeamIdsForPhase: async () => [301] },
+        respond:      (pathname, options, count) => {
+            if (count === 1) {
+                const error = new Error("HTTP 400");
+                error.statusCode = 400;
+                error.responseBody = rejection;
+                throw error;
+            }
+            return { status: "created", warnings: [], degraded: false };
+        },
+    });
+    await harness.initialize();
+
+    await harness.dispatch("phase-started", {
+        sessionId: 11, phaseId: 22, serviceConfiguration: { session_duration_seconds: 120 },
+    });
+
+    const [first, second] = sessionBodies(harness);
+    assert.equal(first.session_duration_seconds, 120);
+    assert.equal(Object.hasOwn(second, "session_duration_seconds"), false);
+    const payload = harness.callbacks.at(-1).payload;
+    assert.equal(payload.roomsCreated, 1);
+    assert.equal(payload.rooms[0].configurationRejected, true);
+});
+
+test("without a configuration a 400 is not retried", async () => {
+    const harness = createHarness({
+        dependencies: { getTeamIdsForPhase: async () => [301] },
+        respond:      () => {
+            const error = new Error("HTTP 400");
+            error.statusCode = 400;
+            throw error;
+        },
+    });
+    await harness.initialize();
+
+    await harness.dispatch("phase-started", { sessionId: 11, phaseId: 22 });
+
+    assert.equal(sessionBodies(harness).length, 1);
+    assert.equal(harness.callbacks.at(-1).payload.roomsCreated, 0);
+});
+
