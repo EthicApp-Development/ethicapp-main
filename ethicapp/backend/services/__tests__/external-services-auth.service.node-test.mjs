@@ -64,11 +64,12 @@ test("authorizeCallbackCaller: allows caller with required realm role", () => {
     );
 });
 
-test("listServices exposes response-processing capabilities", () => {
+test("listServices does not expose the removed capabilities key", () => {
     externalServicesRegistry.services.set("test-response-processor", {
         id:           "test-response-processor",
         description:  "test service",
         hooks:        ["student-response-submitted"],
+        scopes:       ["response"],
         capabilities: { processesStudentResponses: true },
         enabled:      true,
         adapter:      "./test-adapter.js",
@@ -79,5 +80,6 @@ test("listServices exposes response-processing capabilities", () => {
         .listServices()
         .find(({ id }) => id === "test-response-processor");
 
-    assert.deepEqual(service?.capabilities, { processesStudentResponses: true });
+    assert.deepEqual(service?.scopes, ["response"]);
+    assert.equal(Object.hasOwn(service, "capabilities"), false);
 });

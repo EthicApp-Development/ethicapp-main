@@ -193,16 +193,6 @@ function withTimeout(promise, timeoutMs) {
     return Promise.race([promise, timeout]).finally(() => clearTimeout(timeoutId));
 }
 
-function normalizeCapabilities(capabilities) {
-    if (!capabilities || typeof capabilities !== "object" || Array.isArray(capabilities)) {
-        return {};
-    }
-
-    return {
-        processesStudentResponses: capabilities.processesStudentResponses === true,
-    };
-}
-
 export class ExternalServicesRegistry {
     constructor({
         jobsService,
@@ -255,6 +245,13 @@ export class ExternalServicesRegistry {
 
         const hooks = normalizeHooks(service.hooks, service.id);
 
+        if (service.capabilities !== undefined) {
+            console.warn(
+                `[external-services] Ignoring deprecated "capabilities" in ${service.id}: `
+                + "response processing now follows the \"response\" scope (#726)."
+            );
+        }
+
         const normalizedService = {
             id:           service.id,
             description:  service.description || "",
@@ -263,7 +260,6 @@ export class ExternalServicesRegistry {
             scopes:       normalizeScopes(service.scopes, service.id),
             ui:           normalizeUi(service.ui, service.id),
             descriptor:   normalizeDescriptor(service.descriptor, service.id),
-            capabilities: normalizeCapabilities(service.capabilities),
             enabled:      service.enabled !== false,
             adapter:      service.adapter,
             callbackAuth: service.callbackAuth && typeof service.callbackAuth === "object"
@@ -342,7 +338,6 @@ export class ExternalServicesRegistry {
             scopes = [],
             ui = { component: null },
             descriptor = null,
-            capabilities,
             enabled,
         }) => ({
             id,
@@ -353,7 +348,6 @@ export class ExternalServicesRegistry {
             ui,
             // Only the descriptor id leaves the registry; the route stays internal.
             descriptor: descriptor ? { serviceId: descriptor.serviceId } : null,
-            capabilities,
             enabled,
         }));
     }
