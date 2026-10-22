@@ -63,7 +63,8 @@ export async function register({
   subscribe,
   publishStudentResult,
   publishGroupChatMessage,
-  aiAdditionsClient
+  aiAdditionsClient,
+  caseAnalyses
 }) {
   // Subscribe to hooks here.
 }
@@ -77,6 +78,11 @@ teachers read about the service: a label, a description and a case-view tab
 title in `es_CL` and `en_US`. The service owns those texts and the adapter
 obtains them. See "UI translations" in
 `ethicapp/backend/external-services/README.md`.
+
+Case-scoped adapters record their results through `caseAnalyses`
+(`markProcessing`, `complete` and `fail`, bound to their service) and may export
+`validateCaseAnalysisDocument()` to accept teacher edits. See "Case Analyses"
+in the same README.
 
 Current registry implementation:
 
@@ -197,6 +203,11 @@ EthicApp dispatches hooks only to services enabled in the phase design:
 
 The registry accepts `enabledServiceIds` and filters subscribers by service id.
 This keeps phase and response hooks scoped to services selected by the teacher.
+
+`case-created` follows the same rule for cases: it reaches only the services the
+teacher chose when creating the case (`analysisServiceIds` in `POST /cases`).
+They store their results in `case_analyses`, which the case creator reads,
+edits and regenerates through `/cases/:id/analyses`.
 
 Current event hooks:
 
