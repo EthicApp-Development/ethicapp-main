@@ -508,5 +508,13 @@
 	"loading": "Loading...",
 	"send": "Send",
 	"session_expired_notice": "Your session expired. Redirecting you to sign in...",
-	"session_expired_sign_in_now": "Sign in now"
+	"session_expired_sign_in_now": "Sign in now",
+	"actors_label": "Actors",
+	"actor_name_label": "Actor",
+	"comment_exists_tooltip": "This response includes a comment",
+	"comment_note_legend": "The student added a comment",
+	"dashboard_questions_mobile_legend": "R: Range; JR: Justification required; WM: Word minimum",
+	"faulty_design": "This design has errors and cannot be launched.",
+	"preparing_dashboard": "Preparing the activity dashboard...",
+	"remove": "Remove"
 }
