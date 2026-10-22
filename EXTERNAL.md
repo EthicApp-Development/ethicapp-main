@@ -154,9 +154,22 @@ on translating EthicApp hook context into service-specific requests.
 
 The Polyadic Agents bridge uses `AI_ADDITIONS_POLYADIC_AGENTS_API_BASE_URL`,
 defaulting to `${AI_ADDITIONS_BASE_URL}/polyadic-agent/api`, and creates one
-Polyadic REST room per EthicApp session/phase/group. Its default pipeline type is
-`abogado-del-diablo`, configurable through
-`AI_ADDITIONS_POLYADIC_AGENTS_PIPELINE_TYPE`.
+Polyadic REST room per EthicApp session/phase/group. When it creates a room's
+session (#735) it sends:
+
+- the phase's configured settings (`context.serviceConfiguration`, #734), such
+  as `pipeline_type`, `llm_tier`, `session_duration_seconds` or
+  `agent_nickname`;
+- for settings the phase does not configure, EthicApp's defaults: the pipeline
+  from `AI_ADDITIONS_POLYADIC_AGENTS_PIPELINE_TYPE` (default
+  `abogado-del-diablo`), and the guide nickname and `locale` (`es-CL` or
+  `en-US`) from the design language. The deprecated `idioma` is no longer sent.
+
+Anything still unset takes Polyadic's defaults. Polyadic's `warnings` and
+`degraded` flags come back per room in the `phase-started` job result
+(`payload.rooms`). If Polyadic rejects the configured settings (400, a value a
+newer rule no longer accepts), the room is created again with EthicApp's
+defaults and reported with `configurationRejected: true`.
 
 Polyadic callbacks target the unified callback endpoint:
 
