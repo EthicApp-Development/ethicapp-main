@@ -9,6 +9,21 @@ const DEFAULT_CASE_ANALYST_BASE_PATH = "/case-analyst/api/v1";
 const CASE_CREATED_HOOK      = "case-created";
 const CALLBACK_RECEIVED_HOOK = "callback-received";
 
+// Case Analyst does not publish translated texts yet, so this adapter
+// provides them until the service does.
+const UI_TRANSLATIONS = {
+    es_CL: {
+        label:       "Analista de casos",
+        description: "Evalúa cómo está escrito el caso y entrega retroalimentación a su autor.",
+        tabTitle:    "Retroalimentación del caso",
+    },
+    en_US: {
+        label:       "Case Analyst",
+        description: "Evaluates how the case is written and gives feedback to its author.",
+        tabTitle:    "Case feedback",
+    },
+};
+
 let aiAdditionsClient = defaultAiAdditionsClient;
 
 function normalizeText(value) {
@@ -28,6 +43,10 @@ function toPositiveInteger(value) {
 export function getCaseAnalystBaseUrl(client = aiAdditionsClient) {
     return normalizeText(process.env.AI_ADDITIONS_CASE_ANALYST_API_BASE_URL)
         || client.buildServiceUrl(DEFAULT_CASE_ANALYST_BASE_PATH);
+}
+
+export async function getUiTranslations() {
+    return UI_TRANSLATIONS;
 }
 
 /**
