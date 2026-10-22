@@ -730,3 +730,188 @@ test("listServices: exposes scopes and defaults it to [] for legacy entries", ()
     assert.deepEqual(listed.find(s => s.id === "svc-scoped").scopes, ["case"]);
     assert.deepEqual(listed.find(s => s.id === "svc-a").scopes, []);
 });
+
+// ─── descriptor (capability descriptor link, #725) ───────────────────────────
+
+test("registerService: keeps a valid descriptor link", async () => {
+    const { registry } = makeRegistry();
+
+    await registry.registerService({
+        id:         "svc-described",
+        adapter:    "./adapters/not-imported.adapter.js",
+        hooks:      ["phase-started"],
+        descriptor: { serviceId: " polyadic-agent ", path: "/polyadic-agent/api/capabilities" },
+        enabled:    false,
+    }, "/nonexistent/manifest.json");
+
+    assert.deepEqual(registry.services.get("svc-described").descriptor, {
+        serviceId: "polyadic-agent",
+        path:      "/polyadic-agent/api/capabilities",
+    });
+});
+
+test("registerService: descriptor is null when absent", async () => {
+    const { registry } = makeRegistry();
+
+    await registry.registerService({
+        id:      "svc-plain",
+        adapter: "./adapters/not-imported.adapter.js",
+        hooks:   ["phase-started"],
+        enabled: false,
+    }, "/nonexistent/manifest.json");
+
+    assert.equal(registry.services.get("svc-plain").descriptor, null);
+});
+
+test("registerService: drops an invalid descriptor link with a warning", async () => {
+    const invalid = [
+        "polyadic-agent",
+        {},
+        { serviceId: "polyadic-agent" },
+        { path: "/polyadic-agent/api/capabilities" },
+        { serviceId: "", path: "/x/api/capabilities" },
+        { serviceId: "has space", path: "/x/api/capabilities" },
+        { serviceId: "svc", path: "x/api/capabilities" },
+        { serviceId: "svc", path: "https://evil.example/api/capabilities" },
+        { serviceId: "svc", path: "//evil.example/api/capabilities" },
+        { serviceId: "svc", path: "/x/../admin" },
+        { serviceId: "svc", path: "/x/api/capabilities?debug=1" },
+        { serviceId: "svc", path: "/x/api/capa bilities" },
+    ];
+
+    for (const descriptor of invalid) {
+        const { registry } = makeRegistry();
+        const { warnings } = await captureWarnings(() => registry.registerService({
+            id:      "svc-invalid",
+            adapter: "./adapters/not-imported.adapter.js",
+            hooks:   ["phase-started"],
+            descriptor,
+            enabled: false,
+        }, "/nonexistent/manifest.json"));
+
+        const label = JSON.stringify(descriptor);
+        assert.equal(registry.services.get("svc-invalid").descriptor, null, label);
+        assert.equal(warnings.length, 1, label);
+        assert.ok(warnings[0].includes("svc-invalid"));
+    }
+});
+
+test("listServices: exposes the descriptor id but not its route", () => {
+    const { registry } = makeRegistry();
+    registry.services.set("svc-described", {
+        id:         "svc-described",
+        enabled:    true,
+        hooks:      ["phase-started"],
+        descriptor: {
+            serviceId: "argumentation-tutor",
+            path:      "/argumentation-tutor/api/capabilities",
+        },
+    });
+
+    const listed = registry.listServices();
+
+    assert.deepEqual(
+        listed.find(s => s.id === "svc-described").descriptor,
+        { serviceId: "argumentation-tutor" },
+    );
+    assert.equal(listed.find(s => s.id === "svc-a").descriptor, null);
+});
+
+test("getServiceDescriptor: returns a copy of the link, or null", () => {
+    const { registry } = makeRegistry();
+    const descriptor = {
+        serviceId: "argumentation-tutor",
+        path:      "/argumentation-tutor/api/capabilities",
+    };
+    registry.services.set("svc-described", {
+        id: "svc-described", enabled: true, hooks: [], descriptor,
+    });
+
+    const link = registry.getServiceDescriptor("svc-described");
+    link.path = "/changed";
+
+    assert.deepEqual(registry.getServiceDescriptor("svc-described"), descriptor);
+    assert.equal(registry.getServiceDescriptor("svc-a"), null);
+    assert.equal(registry.getServiceDescriptor("unknown"), null);
+});
+
+// ─── getServiceInstanceConfiguration (capability descriptors, #727) ──────────
+
+function makeDescriptorsStub(result) {
+    const calls = [];
+    return {
+        calls,
+        getInstanceConfiguration: async (serviceId, locale) => {
+            calls.push({ serviceId, locale });
+            return result;
+        },
+    };
+}
+
+test("getServiceInstanceConfiguration: delegates enabled services to the descriptor client", async () => {
+    const descriptors = makeDescriptorsStub({ available: true, fields: [] });
+    const registry = new ExternalServicesRegistry({
+        jobsService:           makeJobsServiceStub(),
+        capabilityDescriptors: descriptors,
+    });
+    registry.services.set("svc-described", { id: "svc-described", enabled: true });
+
+    const configuration = await registry.getServiceInstanceConfiguration("svc-described", "es_CL");
+
+    assert.deepEqual(configuration, { available: true, fields: [] });
+    assert.deepEqual(descriptors.calls, [{ serviceId: "svc-described", locale: "es_CL" }]);
+});
+
+test("getServiceInstanceConfiguration: null for unknown and disabled services", async () => {
+    const descriptors = makeDescriptorsStub({ available: true, fields: [] });
+    const registry = new ExternalServicesRegistry({
+        jobsService:           makeJobsServiceStub(),
+        capabilityDescriptors: descriptors,
+    });
+    registry.services.set("svc-off", { id: "svc-off", enabled: false });
+
+    assert.equal(await registry.getServiceInstanceConfiguration("svc-off", "en_US"), null);
+    assert.equal(await registry.getServiceInstanceConfiguration("unknown", "en_US"), null);
+    assert.equal(descriptors.calls.length, 0);
+});
+
+test("getServiceInstanceConfiguration: the default client follows the manifest link", async () => {
+    const { registry } = makeRegistry();
+
+    assert.equal(await registry.getServiceInstanceConfiguration("svc-a", "en_US"), null,
+        "a service without a descriptor link has no instance configuration");
+});
+
+// ─── capabilities (removed in favor of the response scope, #726) ─────────────
+
+test("registerService: ignores the deprecated capabilities key with one warning", async () => {
+    const { registry } = makeRegistry();
+
+    const { warnings } = await captureWarnings(() => registry.registerService({
+        id:           "svc-legacy",
+        adapter:      "./adapters/not-imported.adapter.js",
+        hooks:        ["student-response-submitted"],
+        scopes:       ["response"],
+        capabilities: { processesStudentResponses: true },
+        enabled:      false,
+    }, "/nonexistent/manifest.json"));
+
+    assert.equal(Object.hasOwn(registry.services.get("svc-legacy"), "capabilities"), false);
+    assert.equal(warnings.length, 1);
+    assert.ok(warnings[0].includes("svc-legacy"));
+    assert.ok(warnings[0].includes("capabilities"));
+});
+
+test("registerService: no capabilities warning when the key is absent", async () => {
+    const { registry } = makeRegistry();
+
+    const { warnings } = await captureWarnings(() => registry.registerService({
+        id:      "svc-current",
+        adapter: "./adapters/not-imported.adapter.js",
+        hooks:   ["student-response-submitted"],
+        scopes:  ["response"],
+        enabled: false,
+    }, "/nonexistent/manifest.json"));
+
+    assert.deepEqual(warnings, []);
+});

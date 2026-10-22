@@ -37,7 +37,8 @@ app.factory("ActivityStateService", ["$http", "TeacherSocketService", ActivitySt
     .factory("DesignCatalogService", ["$rootScope", "$http", DesignCatalogService])
     .factory("DesignPublicationService", ["$uibModal", "DesignCatalogService", "CasesCatalogService", DesignPublicationService])
     .factory("DesignStateService", ["$rootScope", "$http", DesignStateService])
-    .factory("ExternalServicesCatalogService", ["$http", ExternalServicesCatalogService])
+    .factory("ExternalServicesCatalogService",
+        ["$http", "LanguageCatalogService", ExternalServicesCatalogService])
     .factory("UserProfileService", ["$http", "$rootScope", "Upload", UserProfileService])
     .factory("CasesCatalogService", ["$rootScope", "$http", CasesCatalogService])
     .factory("LanguageCatalogService", ["$http", "$translate", LanguageCatalogService])

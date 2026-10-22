@@ -32,6 +32,8 @@ Examples of appropriate guardrail assertions:
 
 These tests are intentionally not a substitute for database integration coverage.
 
+Canonical schemas (`canonical-schemas/`) have their own guardrail tests at the repository root: `npm run test:schemas` validates example and seed documents against the JSON Schemas with `@cfworker/json-schema`. They run on the host, not during image builds, because no image ships the schemas.
+
 ### 1.2. Integration Regression Tests
 
 Integration regression tests are a planned second layer for development and CI.

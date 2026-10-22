@@ -25,8 +25,9 @@ Each manifest entry describes one service:
   "hooks": ["student-response-submitted", "phase-ended", "callback-received"],
   "globalHooks": [],
   "scopes": ["response"],
-  "capabilities": {
-    "processesStudentResponses": true
+  "descriptor": {
+    "serviceId": "argumentation-tutor",
+    "path": "/argumentation-tutor/api/capabilities"
   },
   "enabled": true,
   "callbackAuth": {
@@ -45,8 +46,9 @@ Each manifest entry describes one service:
 | `globalHooks` | no | Hooks the service opts into at manifest level, without an activity-design opt-in. Defaults to `[]`. Each name must be kebab-case and must also appear in `hooks`; other entries are dropped with a warning and duplicates are removed. Only consulted by `dispatchGlobalHook()` (see "Hook enablement"). Exposed through `GET /external-services`. |
 | `scopes` | no | Where the service operates: `case` (case documents), `response` (student responses) or `chat` (group chat). Defaults to `[]`. Unknown values are dropped with a warning and duplicates are removed. Screens list services by scope (see "Listing services"), so an entry without scopes appears in none of them; `__tests__/manifest.node-test.mjs` requires at least one. |
 | `ui` | no | `{ component }`: the kebab-case name of the EthicApp frontend component that will show the service's analysis in the case view. Defaults to `{ component: null }`; other names are dropped with a warning. The texts come from the adapter, not from the manifest (see "UI translations"). |
-| `capabilities` | no | Normalized to `{ processesStudentResponses: boolean }`; any other key is discarded. Exposed through `GET /external-services`. |
-| `enabled` | no | Defaults to `true`. Disabled services stay listed but their adapter is never imported. |
+| `descriptor` | no | `{ serviceId, path }`: the capability descriptor the service's AI backend publishes (#687). `serviceId` is the descriptor's `service.id`, which may differ from `id`: ids are mapped, not renamed, so stored designs, chat agents and jobs keep the manifest id. `path` is the descriptor route relative to `AI_ADDITIONS_BASE_URL`, for example `/polyadic-agent/api/capabilities`; it must be an absolute path without host, query or `..` segments. An invalid block is dropped with a warning. `GET /external-services` exposes `descriptor.serviceId` and a summary (see "Listing services"); the route stays internal (`getServiceDescriptor()`). |
+| `capabilities` | — | Removed (#726). Entries that still declare it log a deprecation warning and the key is ignored. A service that processes student responses declares the `response` scope instead; the student app shows the processing state for those services. |
+| `enabled` | no | Defaults to `true`. Disabled services stay registered, and appear in the student activity descriptor with `enabled: false`, but `GET /external-services` does not list them and their adapter is never imported. |
 | `callbackAuth` | no | Inbound callback authorization. See below. |
 
 When `callbackAuth` is present, EthicApp verifies that the authenticated Keycloak
@@ -63,7 +65,7 @@ warning and never receive hooks.
 
 ```js
 export async function register({
-    service,                 // normalized manifest entry (id, description, hooks, globalHooks, scopes, ui, capabilities, enabled, adapter, callbackAuth)
+    service,                 // normalized manifest entry (id, description, hooks, globalHooks, scopes, ui, descriptor, enabled, adapter, callbackAuth)
     subscribe,               // (hookName, handler) => void
     publishStudentResult,    // (payload) => Promise<boolean>
     publishGroupChatMessage, // (payload) => Promise<{ savedMessage, notificationPayload } | null>
@@ -123,20 +125,119 @@ export async function getUiTranslations() {
   `__tests__/manifest.node-test.mjs` requires every case-scoped manifest entry
   to provide valid translations.
 
+### Capability descriptors
+
+`services/capability-descriptors.service.js` fetches the capability descriptor a
+service links with `descriptor` (#687, #727) and returns the settings EthicApp
+may store per activity. Callers use the registry:
+
+```js
+const configuration = await externalServicesRegistry
+    .getServiceInstanceConfiguration("polyadic-devils-advocate", "es_CL");
+```
+
+- **Result.** `null` for unknown or disabled services and for services without a
+  descriptor. Otherwise `{ available: true, stale, descriptorServiceId, name,
+  usesLlm, locale, fields }`, or `{ available: false, reason }` with `reason`
+  `unreachable` (network error, timeout, HTTP error), `invalid_descriptor`,
+  `unsupported_contract_version` or `service_id_mismatch`. It never throws, and
+  it never touches stored configurations.
+- **Fetching.** `GET descriptor.path` through `aiAdditionsClient.requestJson`
+  (Keycloak token, one retry after `401`) with a 5 s timeout and
+  `Accept-Language`: `es-CL` for Spanish locales, `en-US` otherwise. Until
+  ethicapp-ai-additions#180 lands, the services answer in English.
+- **Validation.** A hand-written check equivalent to
+  `shared/schemas/capability-descriptor.v1.schema.json` in ethicapp-ai-additions:
+  `contract_version` must be `"1"` and `service.id` must equal
+  `descriptor.serviceId`. Unknown keys are ignored. An unusable or repeated
+  instance field is dropped with a warning instead of rejecting the descriptor.
+  `runtime_configuration` is checked but never returned: it belongs to the
+  service.
+- **Fields.** Each field is normalized to `{ key, type, required, default,
+  label, description, group, order, status, supersededBy, validation }`.
+  `validation` depends on the type: `{ entries }` for `enum` (each entry
+  `{ value, label, status, supersededBy }`), `{ minimum, maximum, step }` for
+  `integer` and `number`, `{ maxLength, pattern, multiline }` for `text`, and
+  `{}` for `boolean`. Deprecated fields and entries are kept, so stored values
+  can still be shown.
+- **Cache.** In memory, per process, keyed by service and descriptor locale.
+  A valid descriptor is kept for ten minutes. After a failure the result is
+  kept for a minute before asking again; if an earlier fetch succeeded, its
+  fields are served meanwhile with `stale: true`. Concurrent calls share one
+  request. Nothing is stored in Redis.
+
 ### Listing services
 
-`GET /external-services` (role `P`) returns the registered services without
-their adapter paths or callback settings:
+`GET /external-services` (role `P`) returns the enabled services without their
+adapter paths or callback settings. Disabled services (`"enabled": false`) are
+never listed:
 
-- Without `scope`, it returns every registered service, disabled ones included.
+- Without `scope`, it returns every enabled service.
 - With `scope`, it returns only the enabled services that declare at least one
   of the requested scopes. The parameter can be repeated
   (`?scope=response&scope=chat`). An unknown or empty scope answers `400`.
+
+The student activity descriptor still includes every registered service with
+its `enabled` flag (`listServices()`); the student app ignores disabled ones.
+
+A design keeps the ids it stores in `phases[].externalServices.enabledServiceIds`
+when a service is disabled. The design editor neither shows nor drops them, so
+re-enabling the service restores the teacher's choice. While disabled, the
+service has no hook subscribers, so nothing is dispatched to it.
 
 Each entry carries `ui: { component, translations }`, where `translations` is
 the result of `getServiceUiTranslations()` or `null`. The design editor asks for
 `?scope=response&scope=chat`, so services that only work on cases are not
 offered as phase options.
+
+Each entry also carries `descriptor`: `null` when the service declares no
+capability descriptor, otherwise a summary in the teacher's locale (#728):
+
+```json
+"descriptor": { "serviceId": "polyadic-agent", "available": true, "name": "Polyadic Agents", "usesLlm": true }
+```
+
+When the descriptor cannot be fetched, `available` is `false`, `name` and
+`usesLlm` are `null`, and the service is still listed, so stored selections
+stay visible. The fields themselves come only from the next endpoint.
+
+Descriptor text follows the language the teacher UI is showing (#745). The
+design editor sends it as `locale` (`ExternalServicesCatalogService`, which
+caches listings per UI language). Without `locale`, the teacher's
+`preferred_locale` is used, or the first language of `Accept-Language` when it
+is empty. All of them are normalized with the canonical rule (`es_*` →
+`es_CL`, else `en_US`); both endpoints accept the parameter.
+
+### Instance configuration
+
+`GET /external-services/:id/instance-configuration` (role `P`) returns the
+instance configuration the service's capability descriptor advertises, in the
+teacher's locale, for the design editor (#728):
+
+```json
+{
+  "status": "ok",
+  "result": {
+    "serviceId": "polyadic-devils-advocate",
+    "available": true,
+    "stale": false,
+    "name": "Polyadic Agents",
+    "usesLlm": true,
+    "locale": "es_CL",
+    "fields": [{ "key": "llm_tier", "type": "enum", "required": false, "default": "basic", "label": "Language Model Tier", "...": "..." }]
+  }
+}
+```
+
+- `serviceId` is the manifest id; `fields` follow the normalized shape
+  described in "Capability descriptors". `stale: true` means the service is
+  unavailable and these are the last fields fetched from it.
+- When the descriptor cannot be fetched or is invalid, it answers `200` with
+  `{ "serviceId": "...", "available": false, "reason": "unreachable" }`.
+- It answers `404` for unknown or disabled services and for services without a
+  descriptor.
+- `runtime_configuration`, adapter and descriptor paths, callback settings and
+  credentials are never returned.
 
 ### Handler signature
 
@@ -571,8 +672,8 @@ When implementing a new adapter:
    needs. Only hooks listed in the Hook Catalog are dispatched; subscribing to
    an unknown name is silently inert.
 3. Add a service entry to `manifest.json` with the same hook list, including
-   `callbackAuth` if the service posts inbound callbacks and `capabilities` if
-   the service processes student responses.
+   `callbackAuth` if the service posts inbound callbacks and the `response`
+   scope if the service processes student responses.
 4. Use `aiAdditionsClient.requestJson()` for AI Additions HTTP calls and forward
    `context.correlationId` in outbound requests.
 5. Keep service-specific URL configuration under an `AI_ADDITIONS_<SERVICE>_*`

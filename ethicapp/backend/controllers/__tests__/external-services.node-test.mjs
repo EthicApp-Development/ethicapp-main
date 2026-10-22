@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { listExternalServices, processCallback } from "../external-services.js";
+import {
+    getExternalServiceInstanceConfiguration,
+    listExternalServices,
+    processCallback,
+    resolveTeacherLocale,
+} from "../external-services.js";
 
 const JOB_UUID    = "c1d2e3f4-0000-4000-8000-000000000021";
 const RESULT_UUID = "c1d2e3f4-0000-4000-8000-000000000022";
@@ -307,16 +312,31 @@ function listedIds(body) {
     return body.result.map(({ id }) => id);
 }
 
-test("listExternalServices: no scope lists every service, disabled ones included", async () => {
+test("listExternalServices: no scope lists every enabled service and no disabled one", async () => {
     const { status, body } = await listExternalServices({
         scope:    undefined,
         registry: makeListingRegistry(),
     });
 
     assert.equal(status, 200);
-    assert.deepEqual(listedIds(body), [
-        "case-tool", "chat-tool", "review-tool", "disabled-case", "unscoped",
-    ]);
+    assert.deepEqual(listedIds(body), ["case-tool", "chat-tool", "review-tool", "unscoped"]);
+});
+
+test("listExternalServices: an empty list when every service is disabled", async () => {
+    const registry = {
+        ...makeListingRegistry(),
+        listServices: () => [
+            { id: "chat-tool",   enabled: false, scopes: ["chat"] },
+            { id: "review-tool", enabled: false, scopes: ["response", "chat"] },
+        ],
+    };
+
+    for (const scope of [undefined, ["response", "chat"]]) {
+        const { status, body } = await listExternalServices({ scope, registry });
+
+        assert.equal(status, 200);
+        assert.deepEqual(body.result, [], `scope ${JSON.stringify(scope)}`);
+    }
 });
 
 test("listExternalServices: a scope lists only the enabled services that declare it", async () => {
@@ -371,4 +391,227 @@ test("listExternalServices: each listed service carries its UI translations or n
         { id: "case-tool", ui: { component: "tool-panel", translations } },
         { id: "chat-tool", ui: { component: null, translations: null } },
     ]);
+});
+
+// ─── descriptor summary and instance configuration (#728) ────────────────────
+
+const BASIC_ENTRY = Object.freeze({
+    value: "basic", label: "Basic", status: "active", supersededBy: null,
+});
+
+const FIELDS = Object.freeze([{
+    key:          "llm_tier",
+    type:         "enum",
+    required:     false,
+    default:      "basic",
+    label:        "Language Model Tier",
+    description:  null,
+    group:        null,
+    order:        1,
+    status:       "active",
+    supersededBy: null,
+    validation:   { entries: [BASIC_ENTRY] },
+}]);
+
+const UNAVAILABLE = Object.freeze({ available: false, reason: "unreachable" });
+
+function availableConfiguration(overrides = {}) {
+    return {
+        available:           true,
+        stale:               false,
+        descriptorServiceId: "polyadic-agent",
+        name:                "Polyadic Agents",
+        usesLlm:             true,
+        locale:              "es-CL",
+        fields:              FIELDS,
+        ...overrides,
+    };
+}
+
+function describedService(id, descriptorServiceId) {
+    return {
+        id,
+        enabled:    true,
+        scopes:     ["chat"],
+        descriptor: descriptorServiceId ? { serviceId: descriptorServiceId } : null,
+    };
+}
+
+function makeDescribedRegistry(configurations) {
+    const calls = [];
+    return {
+        calls,
+        initialize:                      async () => {},
+        getServiceUiTranslations:        async () => null,
+        getServiceInstanceConfiguration: async (serviceId, locale) => {
+            calls.push({ serviceId, locale });
+            return configurations[serviceId] ?? null;
+        },
+        listServices: () => [
+            describedService("described-up", "polyadic-agent"),
+            describedService("described-down", "argumentation-tutor"),
+            describedService("plain", null),
+        ],
+    };
+}
+
+function getConfiguration(registry, serviceId, locale) {
+    return getExternalServiceInstanceConfiguration({ serviceId, registry, locale });
+}
+
+test("listExternalServices: summarizes descriptors in the teacher's locale", async () => {
+    const registry = makeDescribedRegistry({
+        "described-up":   availableConfiguration(),
+        "described-down": UNAVAILABLE,
+    });
+
+    const { status, body } = await listExternalServices({
+        scope:  "chat",
+        registry,
+        locale: "es_CL",
+    });
+
+    assert.equal(status, 200);
+    assert.deepEqual(body.result.map(({ id, descriptor }) => ({ id, descriptor })), [
+        {
+            id:         "described-up",
+            descriptor: {
+                serviceId: "polyadic-agent",
+                available: true,
+                name:      "Polyadic Agents",
+                usesLlm:   true,
+            },
+        },
+        {
+            id:         "described-down",
+            descriptor: {
+                serviceId: "argumentation-tutor",
+                available: false,
+                name:      null,
+                usesLlm:   null,
+            },
+        },
+        { id: "plain", descriptor: null },
+    ]);
+    assert.deepEqual(registry.calls, [
+        { serviceId: "described-up", locale: "es_CL" },
+        { serviceId: "described-down", locale: "es_CL" },
+    ]);
+});
+
+test("listExternalServices: the summary leaks no descriptor internals", async () => {
+    const registry = makeDescribedRegistry({
+        "described-up": availableConfiguration({ path: "/polyadic-agent/api/capabilities" }),
+    });
+
+    const { body } = await listExternalServices({ scope: "chat", registry, locale: "en_US" });
+    const serialized = JSON.stringify(body);
+
+    assert.equal(serialized.includes("/api/capabilities"), false);
+    assert.equal(serialized.includes("llm_tier"), false, "fields come only from the endpoint");
+});
+
+test("instance configuration: returns the fields of an available descriptor", async () => {
+    const registry = makeDescribedRegistry({ "described-up": availableConfiguration() });
+
+    const { status, body } = await getConfiguration(registry, "described-up", "es_CL");
+
+    assert.equal(status, 200);
+    assert.deepEqual(body, {
+        status: "ok",
+        result: {
+            serviceId: "described-up",
+            available: true,
+            stale:     false,
+            name:      "Polyadic Agents",
+            usesLlm:   true,
+            locale:    "es_CL",
+            fields:    FIELDS,
+        },
+    });
+    assert.deepEqual(registry.calls, [{ serviceId: "described-up", locale: "es_CL" }]);
+});
+
+test("instance configuration: keeps internals and runtime settings out", async () => {
+    const registry = makeDescribedRegistry({
+        "described-up": availableConfiguration({
+            path:                 "/polyadic-agent/api/capabilities",
+            runtimeConfiguration: { fields: [{ key: "room_id" }] },
+            adapter:              "./adapters/polyadic.adapter.js",
+            callbackAuth:         { mode: "keycloak" },
+        }),
+    });
+
+    const { body } = await getConfiguration(registry, "described-up", "en_US");
+    const internals = /room_id|api\/capabilities|adapter|callback|descriptorServiceId/u;
+
+    assert.deepEqual(Object.keys(body.result).sort(),
+        ["available", "fields", "locale", "name", "serviceId", "stale", "usesLlm"]);
+    assert.equal(internals.test(JSON.stringify(body)), false);
+});
+
+test("instance configuration: reports a stale descriptor", async () => {
+    const registry = makeDescribedRegistry({
+        "described-up": availableConfiguration({ stale: true }),
+    });
+
+    const { body } = await getConfiguration(registry, "described-up", "en_US");
+
+    assert.equal(body.result.available, true);
+    assert.equal(body.result.stale, true);
+});
+
+test("instance configuration: 200 with available false when unavailable", async () => {
+    const registry = makeDescribedRegistry({ "described-down": UNAVAILABLE });
+
+    const { status, body } = await getConfiguration(registry, "described-down", "en_US");
+
+    assert.equal(status, 200);
+    assert.deepEqual(body.result,
+        { serviceId: "described-down", available: false, reason: "unreachable" });
+});
+
+test("instance configuration: 404 for unknown, disabled and undescribed services", async () => {
+    // The registry answers null for all three (getServiceInstanceConfiguration).
+    const registry = makeDescribedRegistry({});
+
+    for (const serviceId of ["unknown", "disabled-service", "plain"]) {
+        const { status, body } = await getConfiguration(registry, serviceId, "en_US");
+        assert.equal(status, 404, serviceId);
+        assert.equal(body.status, "err");
+    }
+});
+
+test("resolveTeacherLocale: preferred_locale, then Accept-Language, canonical rule", () => {
+    const cases = [
+        [{ preferredLocale: "es_CL", acceptedLanguages: ["en-US"] }, "es_CL"],
+        [{ preferredLocale: "en_US", acceptedLanguages: ["es-CL"] }, "en_US"],
+        [{ preferredLocale: "es-AR" }, "es_CL"],
+        [{ preferredLocale: "pt_BR" }, "en_US"],
+        [{ preferredLocale: null, acceptedLanguages: ["es-CL", "en"] }, "es_CL"],
+        [{ preferredLocale: "", acceptedLanguages: ["*", "es"] }, "es_CL"],
+        [{ preferredLocale: null, acceptedLanguages: ["fr", "es"] }, "en_US"],
+        [{ preferredLocale: null, acceptedLanguages: [] }, "en_US"],
+    ];
+
+    for (const [input, expected] of cases) {
+        assert.equal(resolveTeacherLocale(input), expected, JSON.stringify(input));
+    }
+});
+
+test("resolveTeacherLocale: the UI's locale wins over the stored and browser ones", () => {
+    const cases = [
+        [{ requestedLocale: "es_CL", preferredLocale: "en_US", acceptedLanguages: ["en"] },
+            "es_CL"],
+        [{ requestedLocale: "en_US", preferredLocale: "es_CL", acceptedLanguages: ["es"] },
+            "en_US"],
+        [{ requestedLocale: "es", preferredLocale: "en_US" }, "es_CL"],
+        [{ requestedLocale: "fr_FR", preferredLocale: "es_CL" }, "en_US"],
+        [{ requestedLocale: "  ", preferredLocale: "es_CL" }, "es_CL"],
+        [{ requestedLocale: null, acceptedLanguages: ["es-CL"] }, "es_CL"],
+    ];
+
+    for (const [input, expected] of cases) {
+        assert.equal(resolveTeacherLocale(input), expected, JSON.stringify(input));
+    }
 });

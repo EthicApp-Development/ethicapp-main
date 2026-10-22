@@ -44,6 +44,9 @@ Each manifest entry declares:
   list services by scope.
 - `ui`: `{ component }`, the EthicApp component that will show the service's
   analysis in the case view.
+- `descriptor`: `{ serviceId, path }`, the capability descriptor that the AI
+  service publishes (`GET <path>` under `AI_ADDITIONS_BASE_URL`). `serviceId` is
+  the descriptor's own id, mapped to the manifest `id` instead of renamed.
 - `enabled`: whether the adapter should be loaded.
 
 Hook names are standardized as kebab-case identifiers. New adapters should use
@@ -456,19 +459,22 @@ ethicapp/frontend/assets/js/controllers/teacher/design-editor.controller.js
 ethicapp/frontend/assets/static/views/teacher/design.edit.html
 ```
 
-The editor initializes each phase with:
+The editor initializes each phase with
+(`frontend/assets/js/helpers/phase-external-services.js`):
 
 ```json
 {
   "externalServices": {
-    "enabledServiceIds": []
+    "enabledServiceIds": [],
+    "configurations": {}
   }
 }
 ```
 
 When a teacher enables a service for a phase, the service id is added to
 `phase.externalServices.enabledServiceIds`. That configuration is saved as part
-of the design JSON.
+of the design JSON. Per-service settings go in `configurations` (see "Design
+Schema"); turning a service off keeps them.
 
 The student frontend listens for `onExternalServiceResult` in:
 
@@ -511,11 +517,28 @@ by an allowlist or signed component bundle policy before production use.
 The design schema allows phase-level external service configuration:
 
 ```text
-design-schema/ethicapp-v1.schema.json
+canonical-schemas/ethicapp-v1.schema.json
 ```
 
-`externalServices.enabledServiceIds` is optional and contains unique service ids.
-Older designs without `externalServices` remain valid.
+```json
+"externalServices": {
+  "enabledServiceIds": ["polyadic-devils-advocate"],
+  "configurations": {
+    "polyadic-devils-advocate": { "pipeline_type": "devilsAdvocate", "llm_tier": "basic" }
+  }
+}
+```
+
+- `enabledServiceIds` is optional and contains unique service ids.
+- `configurations` is optional (#729). Its keys are manifest service ids; each
+  value maps capability descriptor field keys to scalar values (string, number,
+  boolean or null). A configuration for a service that is not in
+  `enabledServiceIds` is kept but ignored, so turning the service off and on
+  again keeps the teacher's values. Duplicating a design copies it.
+- Older designs without `externalServices`, or without `configurations`,
+  remain valid.
+
+`npm run test:schemas` validates the schema rules and the canonical seeds.
 
 ## Inbound Callback Authentication
 

@@ -11,6 +11,7 @@ import {
 import { saveChatMessage } from "../helpers/chat-helper.js";
 import { studentNotifications, teacherNotifications } from "../config/socket.config.js";
 import aiAdditionsClient from "./ai-additions-client.service.js";
+import { CapabilityDescriptorsClient } from "./capability-descriptors.service.js";
 import {
     externalServiceJobsService,
     JOB_STATUS,
@@ -137,6 +138,37 @@ function normalizeText(value) {
     return typeof value === "string" ? value.trim() : "";
 }
 
+const DESCRIPTOR_SERVICE_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*$/u;
+
+// `descriptor` links a service to the capability descriptor its AI service
+// publishes (#687, #725). `serviceId` is the descriptor's `service.id`, which may
+// differ from the manifest id: ids are mapped, not renamed, so stored designs and
+// jobs keep theirs. `path` is the descriptor route, relative to
+// AI_ADDITIONS_BASE_URL: an absolute path without host, query or `..` segments.
+function normalizeDescriptor(descriptor, serviceId) {
+    if (descriptor === undefined || descriptor === null) {
+        return null;
+    }
+
+    const descriptorServiceId = normalizeText(descriptor?.serviceId);
+    const descriptorPath      = normalizeText(descriptor?.path);
+    const isValidPath = descriptorPath.startsWith("/")
+        && !descriptorPath.startsWith("//")
+        && !/[\s?#\\]/u.test(descriptorPath)
+        && !descriptorPath.split("/").includes("..");
+
+    if (!DESCRIPTOR_SERVICE_ID_PATTERN.test(descriptorServiceId) || !isValidPath) {
+        console.warn(
+            `[external-services] Ignoring invalid descriptor in ${serviceId}: expected `
+            + "{ serviceId, path } with an id and an absolute path relative to "
+            + "AI_ADDITIONS_BASE_URL."
+        );
+        return null;
+    }
+
+    return { serviceId: descriptorServiceId, path: descriptorPath };
+}
+
 // Adapters provide their own texts through getUiTranslations(): a label, a
 // description and an optional case-view tab title for every UI locale. Returns
 // null when a locale lacks the label or the description.
@@ -173,16 +205,6 @@ function withTimeout(promise, timeoutMs) {
     return Promise.race([promise, timeout]).finally(() => clearTimeout(timeoutId));
 }
 
-function normalizeCapabilities(capabilities) {
-    if (!capabilities || typeof capabilities !== "object" || Array.isArray(capabilities)) {
-        return {};
-    }
-
-    return {
-        processesStudentResponses: capabilities.processesStudentResponses === true,
-    };
-}
-
 // Case-scoped adapters record the progress of their analyses through these
 // functions, bound to their own service id.
 function createCaseAnalysesAccess(store, serviceId) {
@@ -212,6 +234,7 @@ export class ExternalServicesRegistry {
         caseAnalysesStore = DEFAULT_CASE_ANALYSES_STORE,
         now = () => Date.now(),
         uiTranslationsTimeoutMs = UI_TRANSLATIONS_TIMEOUT_MS,
+        capabilityDescriptors,
     } = {}) {
         this.initialized      = false;
         this.services         = new Map();
@@ -225,6 +248,12 @@ export class ExternalServicesRegistry {
 
         this.caseAnalysisValidators = new Map();
         this._caseAnalysesStore     = caseAnalysesStore;
+
+        this._capabilityDescriptors = capabilityDescriptors ?? new CapabilityDescriptorsClient({
+            getDescriptorLink: serviceId => this.getServiceDescriptor(serviceId),
+            requestJson:       (pathname, options) => aiAdditionsClient.requestJson(pathname, options),
+            now,
+        });
     }
 
     async initialize(manifestPath = process.env.EXTERNAL_SERVICES_MANIFEST || DEFAULT_MANIFEST_PATH) {
@@ -262,6 +291,13 @@ export class ExternalServicesRegistry {
 
         const hooks = normalizeHooks(service.hooks, service.id);
 
+        if (service.capabilities !== undefined) {
+            console.warn(
+                `[external-services] Ignoring deprecated "capabilities" in ${service.id}: `
+                + "response processing now follows the \"response\" scope (#726)."
+            );
+        }
+
         const normalizedService = {
             id:           service.id,
             description:  service.description || "",
@@ -269,7 +305,7 @@ export class ExternalServicesRegistry {
             globalHooks:  normalizeGlobalHooks(service.globalHooks, hooks, service.id),
             scopes:       normalizeScopes(service.scopes, service.id),
             ui:           normalizeUi(service.ui, service.id),
-            capabilities: normalizeCapabilities(service.capabilities),
+            descriptor:   normalizeDescriptor(service.descriptor, service.id),
             enabled:      service.enabled !== false,
             adapter:      service.adapter,
             callbackAuth: service.callbackAuth && typeof service.callbackAuth === "object"
@@ -359,7 +395,7 @@ export class ExternalServicesRegistry {
             globalHooks = [],
             scopes = [],
             ui = { component: null },
-            capabilities,
+            descriptor = null,
             enabled,
         }) => ({
             id,
@@ -368,9 +404,29 @@ export class ExternalServicesRegistry {
             globalHooks,
             scopes,
             ui,
-            capabilities,
+            // Only the descriptor id leaves the registry; the route stays internal.
+            descriptor: descriptor ? { serviceId: descriptor.serviceId } : null,
             enabled,
         }));
+    }
+
+    // The capability descriptor link of a registered service, or null when it
+    // is unknown or declares none.
+    getServiceDescriptor(serviceId) {
+        const descriptor = this.services.get(serviceId)?.descriptor;
+        return descriptor ? { ...descriptor } : null;
+    }
+
+    // The normalized instance configuration that an enabled service's capability
+    // descriptor advertises, in the descriptor locale for `locale` (#727). Null for
+    // unknown or disabled services and for services without a descriptor;
+    // `{ available: false, reason }` when the descriptor cannot be fetched.
+    async getServiceInstanceConfiguration(serviceId, locale) {
+        if (!this.services.get(serviceId)?.enabled) {
+            return null;
+        }
+
+        return this._capabilityDescriptors.getInstanceConfiguration(serviceId, locale);
     }
 
     // Asks the adapter for its UI texts. Valid texts are kept for ten minutes.

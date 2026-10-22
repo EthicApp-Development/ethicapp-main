@@ -4,10 +4,13 @@ function normalizeServiceId(serviceId) {
   return typeof serviceId === 'string' ? serviceId.trim() : '';
 }
 
+// A service processes student responses when it declares the `response` scope
+// (ethicapp-main #726, which replaced `capabilities.processesStudentResponses`).
 export function serviceProcessesStudentResponses(service) {
   return service?.enabled !== false
     && normalizeServiceId(service?.id).length > 0
-    && service?.capabilities?.processesStudentResponses === true;
+    && Array.isArray(service?.scopes)
+    && service.scopes.includes('response');
 }
 
 export function buildResponseProcessingServiceCatalog(services) {

@@ -25,9 +25,11 @@
     "anonymization:maintenance": "./scripts/student-anonymization-maintenance.sh",
     "build:ethicapp-assets": "./scripts/build-ethicapp-assets.sh",
     "test:nginx-edge": "./scripts/test-nginx-edge.sh",
+    "test:schemas": "node --test \"canonical-schemas/**/*.node-test.mjs\"",
     "publish:ghcr": "./scripts/ghcr-build-push.sh"
   },
   "devDependencies": {
+    "@cfworker/json-schema": "^4.1.1",
     "eslint": "^8.57.1",
     "eslint-plugin-angular": "^4.1.0",
     "htmlhint": "^1.9.2",

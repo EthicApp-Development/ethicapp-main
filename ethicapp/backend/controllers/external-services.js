@@ -1,4 +1,6 @@
 import express from "express";
+import * as config from "../config/database.config.js";
+import { execSQL, param } from "../db/rest-pg-2.js";
 import { requireRole } from "../helpers/auth-helper.js";
 import externalServicesRegistry, { SERVICE_SCOPES } from "../services/external-services.service.js";
 import { callbackAuthMiddleware } from "../middleware/external-services-callback-auth.middleware.js";
@@ -83,10 +85,51 @@ export async function processCallback({ serviceId, eventType, correlationId, eve
     }
 }
 
-// With `scope` (one value or several), only enabled services that declare at
-// least one of those scopes are listed. Without it, every registered service is.
-// Each service carries the UI translations its adapter provides, or null.
-export async function listExternalServices({ scope, registry }) {
+// Canonical locale rule (AGENTS.md): Spanish only when the locale is Spanish.
+function normalizeLocale(value) {
+    return /^es(?:[-_]|$)/iu.test(String(value || "").trim()) ? "es_CL" : "en_US";
+}
+
+function hasText(value) {
+    return typeof value === "string" && value.trim().length > 0;
+}
+
+// The language for descriptor text: the `locale` the teacher UI sends with the
+// language it is showing (#745); without it, the teacher's stored
+// `preferred_locale`, or else the first language of Accept-Language (#728).
+export function resolveTeacherLocale({ requestedLocale, preferredLocale, acceptedLanguages = [] }) {
+    if (hasText(requestedLocale)) {
+        return normalizeLocale(requestedLocale);
+    }
+    if (hasText(preferredLocale)) {
+        return normalizeLocale(preferredLocale);
+    }
+
+    return normalizeLocale(acceptedLanguages.find(language => language !== "*"));
+}
+
+// What the listing tells the design editor about a service's capability
+// descriptor: its id, whether it can be fetched now, and its name and LLM use.
+function summarizeDescriptor(service, configuration) {
+    if (!service.descriptor) {
+        return null;
+    }
+
+    const available = configuration?.available === true;
+    return {
+        serviceId: service.descriptor.serviceId,
+        available,
+        name:      available ? configuration.name : null,
+        usesLlm:   available ? configuration.usesLlm : null,
+    };
+}
+
+// Only enabled services are listed (#686): disabled ones are not offered to
+// teachers. With `scope` (one value or several), the list is narrowed to the
+// services that declare at least one of those scopes. Each service carries the
+// UI translations its adapter provides, or null, and a summary of its capability
+// descriptor in `locale` (#728), or null when it declares none.
+export async function listExternalServices({ scope, registry, locale = "en_US" }) {
     const scopes = scope === undefined ? [] : [scope].flat();
 
     if (scopes.some(value => !SERVICE_SCOPES.includes(value))) {
@@ -97,24 +140,95 @@ export async function listExternalServices({ scope, registry }) {
     }
 
     await registry.initialize();
-    const listed = registry.listServices();
-    const services = scopes.length === 0
-        ? listed
-        : listed.filter(service => service.enabled
-            && service.scopes.some(serviceScope => scopes.includes(serviceScope)));
+    const services = registry.listServices().filter(service => service.enabled
+        && (scopes.length === 0
+            || service.scopes.some(serviceScope => scopes.includes(serviceScope))));
 
-    const result = await Promise.all(services.map(async service => ({
-        ...service,
-        ui: {
-            ...service.ui,
-            translations: await registry.getServiceUiTranslations(service.id),
-        },
-    })));
+    const result = await Promise.all(services.map(async (service) => {
+        const [translations, configuration] = await Promise.all([
+            registry.getServiceUiTranslations(service.id),
+            service.descriptor
+                ? registry.getServiceInstanceConfiguration(service.id, locale)
+                : null,
+        ]);
+
+        return {
+            ...service,
+            ui:         { ...service.ui, translations },
+            descriptor: summarizeDescriptor(service, configuration),
+        };
+    }));
 
     return {
         status: 200,
         body:   { status: "ok", result },
     };
+}
+
+// The instance configuration a service's capability descriptor advertises, for
+// the design editor (#728). 404 for unknown or disabled services and services
+// without a descriptor; `available: false` when the descriptor cannot be
+// fetched. The service's runtime configuration and its routes stay internal.
+export async function getExternalServiceInstanceConfiguration({
+    serviceId,
+    registry,
+    locale = "en_US",
+}) {
+    await registry.initialize();
+    const configuration = await registry.getServiceInstanceConfiguration(serviceId, locale);
+
+    if (!configuration) {
+        return {
+            status: 404,
+            body:   {
+                status: "err",
+                error:  "Unknown external service or no instance configuration.",
+            },
+        };
+    }
+
+    const result = configuration.available
+        ? {
+            serviceId,
+            available: true,
+            stale:     configuration.stale === true,
+            name:      configuration.name,
+            usesLlm:   configuration.usesLlm,
+            locale:    normalizeLocale(configuration.locale),
+            fields:    configuration.fields,
+        }
+        : { serviceId, available: false, reason: configuration.reason };
+
+    return {
+        status: 200,
+        body:   { status: "ok", result },
+    };
+}
+
+async function loadPreferredLocale(userId) {
+    try {
+        const rows = await execSQL({
+            dbcon:     config.dbconnString,
+            sql:       "SELECT preferred_locale FROM users WHERE id = $1 LIMIT 1",
+            sqlParams: [param("plain", userId)],
+        });
+        return rows[0]?.preferred_locale ?? null;
+    } catch (error) {
+        console.warn("[external-services] Could not read the teacher's preferred locale.", error);
+        return null;
+    }
+}
+
+async function teacherLocale(req) {
+    const requestedLocale = typeof req.query.locale === "string" ? req.query.locale : null;
+    if (hasText(requestedLocale)) {
+        return resolveTeacherLocale({ requestedLocale });
+    }
+
+    return resolveTeacherLocale({
+        preferredLocale:   await loadPreferredLocale(req.session.uid),
+        acceptedLanguages: req.acceptsLanguages(),
+    });
 }
 
 router.post("/external-services/callbacks", callbackAuthMiddleware, async (req, res) => {
@@ -146,6 +260,21 @@ router.get("/external-services", async (req, res) => {
     const { status, body } = await listExternalServices({
         scope:    req.query.scope,
         registry: externalServicesRegistry,
+        locale:   await teacherLocale(req),
+    });
+
+    return res.status(status).json(body);
+});
+
+router.get("/external-services/:id/instance-configuration", async (req, res) => {
+    if (!requireRole(req, res, "P")) {
+        return;
+    }
+
+    const { status, body } = await getExternalServiceInstanceConfiguration({
+        serviceId: req.params.id,
+        registry:  externalServicesRegistry,
+        locale:    await teacherLocale(req),
     });
 
     return res.status(status).json(body);
