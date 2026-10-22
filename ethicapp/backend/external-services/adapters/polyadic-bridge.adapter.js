@@ -8,11 +8,11 @@ const DEFAULT_POLYADIC_BASE_PATH = "/polyadic-agent/api";
 // Polyadic does not respond (#757).
 const UI_TRANSLATIONS = {
     es_CL: {
-        label:       "Agentes de discusión (Polyadic)",
+        label:       "Agentes de discusión",
         description: "Agentes de IA que participan en el chat de cada grupo y guían la discusión.",
     },
     en_US: {
-        label:       "Discussion agents (Polyadic)",
+        label:       "Discussion agents",
         description: "AI agents that join each group's chat and guide the discussion.",
     },
 };
