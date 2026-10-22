@@ -3,6 +3,11 @@ import path from "path";
 import { fileURLToPath, pathToFileURL } from "url";
 import { dbconnString } from "../config/database.config.js";
 import * as rpg2 from "../db/rest-pg-2.js";
+import {
+    completeCaseAnalysis,
+    failCaseAnalysis,
+    markCaseAnalysisProcessing,
+} from "../helpers/case-analyses-helper.js";
 import { saveChatMessage } from "../helpers/chat-helper.js";
 import { studentNotifications, teacherNotifications } from "../config/socket.config.js";
 import aiAdditionsClient from "./ai-additions-client.service.js";
@@ -24,6 +29,12 @@ const UI_LOCALES = Object.freeze(["es_CL", "en_US"]);
 const UI_TRANSLATIONS_TIMEOUT_MS = 3000;
 const UI_TRANSLATIONS_TTL_MS     = 10 * 60 * 1000;
 const UI_TRANSLATIONS_RETRY_MS   = 60 * 1000;
+
+const DEFAULT_CASE_ANALYSES_STORE = Object.freeze({
+    markCaseAnalysisProcessing,
+    completeCaseAnalysis,
+    failCaseAnalysis,
+});
 
 function isValidHookName(hookName) {
     return typeof hookName === "string" && HOOK_NAME_PATTERN.test(hookName);
@@ -194,9 +205,33 @@ function withTimeout(promise, timeoutMs) {
     return Promise.race([promise, timeout]).finally(() => clearTimeout(timeoutId));
 }
 
+// Case-scoped adapters record the progress of their analyses through these
+// functions, bound to their own service id.
+function createCaseAnalysesAccess(store, serviceId) {
+    return {
+        // Generations are reserved before they are dispatched, under the job
+        // id of the dispatch, so this only starts that reservation. Returns
+        // null when it is no longer current, and the adapter skips the work.
+        // Adapters use the returned jobId for complete() and fail().
+        async markProcessing({ caseId, jobId }) {
+            if (!jobId) {
+                return null;
+            }
+
+            const analysis = await store.markCaseAnalysisProcessing({ caseId, serviceId, jobId });
+            return analysis ? { ...analysis, jobId } : null;
+        },
+        complete: ({ jobId, documentSchema, document }) =>
+            store.completeCaseAnalysis({ serviceId, jobId, documentSchema, document }),
+        fail: ({ jobId, errorCode, errorMessage }) =>
+            store.failCaseAnalysis({ serviceId, jobId, errorCode, errorMessage }),
+    };
+}
+
 export class ExternalServicesRegistry {
     constructor({
         jobsService,
+        caseAnalysesStore = DEFAULT_CASE_ANALYSES_STORE,
         now = () => Date.now(),
         uiTranslationsTimeoutMs = UI_TRANSLATIONS_TIMEOUT_MS,
         capabilityDescriptors,
@@ -210,6 +245,9 @@ export class ExternalServicesRegistry {
         this.uiTranslationsCache      = new Map();
         this._now                     = now;
         this._uiTranslationsTimeoutMs = uiTranslationsTimeoutMs;
+
+        this.caseAnalysisValidators = new Map();
+        this._caseAnalysesStore     = caseAnalysesStore;
 
         this._capabilityDescriptors = capabilityDescriptors ?? new CapabilityDescriptorsClient({
             getDescriptorLink: serviceId => this.getServiceDescriptor(serviceId),
@@ -293,6 +331,8 @@ export class ExternalServicesRegistry {
         const register = adapterModule.register || adapterModule.default?.register;
         const getUiTranslations = adapterModule.getUiTranslations
             || adapterModule.default?.getUiTranslations;
+        const validateCaseAnalysisDocument = adapterModule.validateCaseAnalysisDocument
+            || adapterModule.default?.validateCaseAnalysisDocument;
 
         if (typeof getUiTranslations === "function") {
             this.uiTranslationProviders.set(normalizedService.id, getUiTranslations);
@@ -303,10 +343,19 @@ export class ExternalServicesRegistry {
             );
         }
 
+        if (typeof validateCaseAnalysisDocument === "function") {
+            this.caseAnalysisValidators.set(normalizedService.id, validateCaseAnalysisDocument);
+        }
+
         if (typeof register !== "function") {
             console.warn(`[external-services] Adapter ${service.adapter} does not export register().`);
             return;
         }
+
+        const caseAnalyses = createCaseAnalysesAccess(
+            this._caseAnalysesStore,
+            normalizedService.id
+        );
 
         await register({
             service:   normalizedService,
@@ -316,6 +365,7 @@ export class ExternalServicesRegistry {
             publishStudentResult:    payload => this.publishStudentResult(normalizedService.id, payload),
             publishGroupChatMessage: payload => this.publishGroupChatMessage(normalizedService.id, payload),
             aiAdditionsClient,
+            caseAnalyses,
         });
     }
 
@@ -432,6 +482,20 @@ export class ExternalServicesRegistry {
             .map(service => service.id);
     }
 
+    getEnabledServiceIdsForScope(scope) {
+        return Array.from(this.services.values())
+            .filter(service => service.enabled
+                && Array.isArray(service.scopes)
+                && service.scopes.includes(scope))
+            .map(service => service.id);
+    }
+
+    // The adapter's optional validateCaseAnalysisDocument(), which checks
+    // teacher edits of its analyses, or null when it accepts none.
+    getCaseAnalysisValidator(serviceId) {
+        return this.caseAnalysisValidators.get(serviceId) || null;
+    }
+
     getServiceById(serviceId) {
         return this.services.get(serviceId) || null;
     }
@@ -475,8 +539,16 @@ export class ExternalServicesRegistry {
         }
     }
 
-    async _dispatchOneHandler({ hookName, serviceId, handler, context, enabledServiceIds }) {
+    async _dispatchOneHandler({
+        hookName,
+        serviceId,
+        handler,
+        context,
+        enabledServiceIds,
+        presetJobId = null,
+    }) {
         const job = await this._jobsService.createJob({
+            id:         presetJobId,
             serviceId,
             hookName,
             sessionId:  context.sessionId  ?? null,
@@ -486,7 +558,9 @@ export class ExternalServicesRegistry {
             userId:     context.userId     ?? null,
         }).catch(() => null);
 
-        const jobId = job?.id ?? null;
+        // A preset id keeps identifying the work even when its job row could
+        // not be created.
+        const jobId = job?.id ?? presetJobId;
 
         const serviceContext = {
             ...context,
@@ -521,6 +595,8 @@ export class ExternalServicesRegistry {
         }
     }
 
+    // `options.jobIds` maps service ids to job ids chosen by the caller, for
+    // work it reserved before dispatching. The other services get a new id.
     async dispatchHook(hookName, context, options = {}) {
         if (!this.initialized) {
             await this.initialize();
@@ -531,11 +607,19 @@ export class ExternalServicesRegistry {
             return [];
         }
 
+        const jobIds = options.jobIds || {};
         const subscribers = this.hookSubscribers.get(hookName) || [];
         const selectedSubscribers = subscribers.filter(({ serviceId }) => enabledServiceIds.has(serviceId));
 
         return Promise.allSettled(selectedSubscribers.map(({ serviceId, handler }) =>
-            this._dispatchOneHandler({ hookName, serviceId, handler, context, enabledServiceIds })
+            this._dispatchOneHandler({
+                hookName,
+                serviceId,
+                handler,
+                context,
+                enabledServiceIds,
+                presetJobId: Object.hasOwn(jobIds, serviceId) ? jobIds[serviceId] : null,
+            })
         ));
     }
 

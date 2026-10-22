@@ -1,10 +1,65 @@
 import externalServicesRegistry from "../services/external-services.service.js";
+import { releaseUnstartedCaseAnalysis } from "./case-analyses-helper.js";
 
 export const CASE_CREATED_HOOK = "case-created";
 
 function toPositiveInteger(value) {
     const number = Number(value);
     return Number.isInteger(number) && number > 0 ? number : null;
+}
+
+// The services chosen for a new case arrive as a JSON array of service ids, like
+// tag_ids. Returns null when the value is not such a list.
+function parseServiceIds(value) {
+    if (value === undefined || value === null || value === "") {
+        return [];
+    }
+
+    let parsed = value;
+    if (typeof value === "string") {
+        try {
+            parsed = JSON.parse(value);
+        } catch {
+            return null;
+        }
+    }
+
+    if (!Array.isArray(parsed) || !parsed.every(id => typeof id === "string" && id.trim())) {
+        return null;
+    }
+
+    return Array.from(new Set(parsed.map(id => id.trim())));
+}
+
+/**
+ * Resolves the analysis services a teacher chose when creating a case. Each id
+ * must name an enabled service with the `case` scope; a value that is not a
+ * list of ids is invalid too.
+ *
+ * @param {unknown} value - The `analysisServiceIds` field of the request.
+ * @param {Object} [options]
+ * @param {Object} [options.registry] - Registry override for tests.
+ * @returns {Promise<{serviceIds: string[], valid: boolean}>} The chosen ids.
+ */
+export async function resolveCaseAnalysisServiceIds(
+    value,
+    { registry = externalServicesRegistry } = {}
+) {
+    const serviceIds = parseServiceIds(value);
+    if (serviceIds === null) {
+        return { serviceIds: [], valid: false };
+    }
+
+    if (serviceIds.length === 0) {
+        return { serviceIds, valid: true };
+    }
+
+    await registry.initialize();
+    const availableServiceIds = registry.getEnabledServiceIdsForScope("case");
+    return {
+        serviceIds,
+        valid: serviceIds.every(serviceId => availableServiceIds.includes(serviceId)),
+    };
 }
 
 /**
@@ -35,23 +90,60 @@ export function buildCaseCreatedContext(
 }
 
 /**
- * Dispatches `case-created` to the services that opted into it through
- * `globalHooks` in the manifest. Errors are logged and swallowed so adapter
- * failures never affect the case creation request.
+ * Dispatches `case-created` for the generations reserved in `case_analyses`:
+ * each reserved service receives the hook under the job id of its reservation,
+ * which its adapter starts before its handler settles. Without reservations
+ * nothing is dispatched. Errors are logged and swallowed so adapter failures
+ * never affect the request that reserved the generations.
+ *
+ * Once a service's dispatch settles, its reservation is released if it was not
+ * started: the service has no handler, the dispatch failed, or the handler
+ * failed or returned before starting it. Otherwise it would block the analysis
+ * until it is stale.
  *
  * @param {Object} context - Context from buildCaseCreatedContext().
  * @param {Object} [options]
+ * @param {Array<{case_id: number, service_id: string, job_id: string}>} [options.reservations] -
+ *     Rows from insertRequestedCaseAnalyses() or reserveCaseAnalysisGeneration().
  * @param {Object} [options.registry] - Registry override for tests.
- * @returns {Promise<Array>} Settled handler outcomes, or [] on failure.
+ * @param {Function} [options.releaseReservation] - Release override for tests.
+ * @returns {Promise<Array>} Settled handler outcomes, or [] when nothing ran.
  */
 export async function dispatchCaseCreatedHook(
     context,
-    { registry = externalServicesRegistry } = {}
+    {
+        reservations = [],
+        registry = externalServicesRegistry,
+        releaseReservation = releaseUnstartedCaseAnalysis,
+    } = {}
 ) {
+    // One dispatch per reservation, so each is released as soon as its own
+    // handler settles rather than after the slowest one.
+    const outcomes = await Promise.all(reservations.map(reservation =>
+        dispatchReservation(context, reservation, { registry, releaseReservation })
+    ));
+
+    return outcomes.flat();
+}
+
+async function dispatchReservation(context, reservation, { registry, releaseReservation }) {
+    const { case_id: caseId, service_id: serviceId, job_id: jobId } = reservation;
+    let outcomes = [];
+
     try {
-        return await registry.dispatchGlobalHook(CASE_CREATED_HOOK, context);
+        outcomes = await registry.dispatchHook(CASE_CREATED_HOOK, context, {
+            enabledServiceIds: [serviceId],
+            jobIds:            { [serviceId]: jobId },
+        });
     } catch (error) {
         console.error("[external-services] Error dispatching case-created hook.", error);
-        return [];
     }
+
+    try {
+        await releaseReservation({ caseId, serviceId, jobId });
+    } catch (error) {
+        console.error(`[external-services] Could not release the ${serviceId} reservation.`, error);
+    }
+
+    return outcomes;
 }

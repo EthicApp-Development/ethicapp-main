@@ -70,6 +70,7 @@ export async function register({
     publishStudentResult,    // (payload) => Promise<boolean>
     publishGroupChatMessage, // (payload) => Promise<{ savedMessage, notificationPayload } | null>
     aiAdditionsClient,       // shared AI Additions HTTP client
+    caseAnalyses,            // markProcessing/complete/fail for this service's case analyses
 }) {
     subscribe("student-response-submitted", async (context, { callback }) => {
         // Adapter logic.
@@ -85,7 +86,8 @@ dependency injection (for example `polyadicBridgeDependencies` in the Polyadic
 adapter). The registry never passes them, so they must have safe defaults.
 
 Adapters may also export pure helpers for testing; only `register` and the
-optional `getUiTranslations` (see "UI translations") are part of the registry
+optional `getUiTranslations` (see "UI translations") and
+`validateCaseAnalysisDocument` (see "Case Analyses") are part of the registry
 contract. The adapter should subscribe only to hooks it handles.
 
 Hook names are part of the adapter interface and must use kebab-case
@@ -313,7 +315,7 @@ failures are isolated from teacher and student requests.
 | `activity-finished` | `POST /activities/:id/finish` | Union of services enabled in any phase of the design | `sessionId`, `phaseId` (= last active), `startedPhaseId: null`, `endedPhaseId` |
 | `student-response-submitted` | Student response endpoints in `controllers/activities/activities-student.js` | Services enabled for the phase | `sessionId`, `phaseId`, `userId`, `questionId`, `designType`, `requestPayload`, `responsePayload` |
 | `chat-message-received` | `controllers/group-messages.js` after a group chat message is saved | Services enabled for the phase | `sessionId`, `phaseId`, `questionId`, `groupId`, `userId`, `parentId`, `content`, `savedMessage`, `notificationPayload`, `designType` |
-| `case-created` | `POST /cases` after the case, authors, tags, and render job are persisted (`helpers/case-lifecycle-helper.js`) | Global: services listing it in `globalHooks` | `caseId`, `caseUuid`, `userId` (creator), `title`, `pdfPath`, `languageCode`, `visibility`, `pdfRenderJobId` |
+| `case-created` | `POST /cases` after the case, authors, tags, analyses, and render job are persisted, and `POST /cases/:id/analyses/:serviceId/generate` (`helpers/case-lifecycle-helper.js`) | Services chosen for the case when it was created; generate reaches one of them | `caseId`, `caseUuid`, `userId` (creator), `title`, `pdfPath`, `languageCode`, `visibility`, `pdfRenderJobId` |
 | `callback-received` | `POST /external-services/callbacks` | Only the service named in the callback body | `serviceId`, `eventType`, `correlationId`, `eventId`, `requestPayload`, `rawBody`, `auth` |
 
 ### Hook enablement
@@ -321,7 +323,7 @@ failures are isolated from teacher and student requests.
 Hooks are not broadcast to every registered adapter. `dispatchHook(hookName,
 context, { enabledServiceIds })` only invokes subscribers whose `serviceId` is in
 `enabledServiceIds`, and returns immediately when that list is empty. There are
-two ways to resolve that audience:
+three ways to resolve that audience:
 
 **Phase-scoped hooks (activity design opt-in).** For activity hooks the
 dispatch site resolves the audience from the activity design:
@@ -331,8 +333,15 @@ dispatch site resolves the audience from the activity design:
 phase when authoring the design. The activity, phase, response, and chat hooks
 in the catalog above are phase-scoped.
 
-**Global hooks (manifest opt-in).** Hooks that fire outside an activity (no
-session, phase, or design in scope) are dispatched with
+**Case hooks (case creation opt-in).** `case-created` reaches the services the
+teacher chose when creating the case (`analysisServiceIds`, see "Case
+Analyses"): `dispatchCaseCreatedHook(context, { reservations })` dispatches each
+reserved analysis to its service only (`enabledServiceIds`), under the job id of
+its reservation (`jobIds`). A case created without a choice dispatches nothing,
+and editing the case never changes the choice.
+
+**Global hooks (manifest opt-in).** Hooks that fire outside an activity and
+need no teacher choice are dispatched with
 `registry.dispatchGlobalHook(hookName, context)`. Its audience is
 `registry.getGloballyEnabledServiceIds(hookName)`: every enabled service whose
 manifest entry lists `hookName` in `globalHooks`. Opting in is an operator
@@ -340,15 +349,15 @@ decision taken in the manifest, like `enabled`; there is no teacher-facing UI
 for it. `dispatchGlobalHook` delegates to `dispatchHook`, so jobs,
 `correlationId`, `callback(result)` handling, and error isolation are identical.
 
-`case-created` is the first global hook; the `case-analyst` adapter opts into
-it and is the reference implementation for this path.
+No hook uses this path today: `case-created` did until the services became a
+choice of each case (#649).
 
 `globalHooks` is only consulted by `dispatchGlobalHook`. Listing a phase-scoped
 hook such as `phase-started` there has no effect, because the activity dispatch
 sites never read it.
 
-Jobs created by global hooks have `session_id`, `phase_id`, `question_id`, and
-`group_id` set to `NULL`. Use the `hookName` filter of
+Jobs created by case and global hooks have `session_id`, `phase_id`,
+`question_id`, and `group_id` set to `NULL`. Use the `hookName` filter of
 `GET /external-services/jobs` and `GET /external-services/results` to find
 them.
 
@@ -375,7 +384,10 @@ them.
 
 Each `dispatchHook()` invocation creates one row per subscriber in
 `external_service_jobs` (status `pending` then `dispatched`) and passes its id
-as `jobId` and `correlationId` in the handler context.
+as `jobId` and `correlationId` in the handler context. A caller that reserved
+work under a job id beforehand passes `jobIds` (service id to job id) in the
+dispatch options: the job is created under that id, and the handler receives
+it even when the row cannot be created.
 
 Adapters report outcomes by calling the `callback(result)` function passed to
 the handler. `result.status` drives the job status:
@@ -442,6 +454,109 @@ The registry provides two helper publishers to adapters:
   `external_service_agents` by `serviceId`. Returns
   `{ savedMessage, notificationPayload }` or `null` when the payload is
   incomplete or the message could not be saved.
+
+## Case Analyses
+
+Case-scoped services analyse case documents. Their results live in
+`case_analyses` (`database/migrations/V17__case_analyses.sql`): one row per case
+and chosen service, holding the current result. Raw callbacks still go to
+`external_service_results`.
+
+### Choosing services
+
+Teachers choose the services when they create a case: `POST /cases` accepts
+`analysisServiceIds`, a JSON array of service ids, like `tag_ids`. Each id must
+name an enabled service with the `case` scope; otherwise, or when the value is
+not such a list, the request answers `400 CASE_ANALYSIS_SERVICE_INVALID` before
+the PDF is stored. Each chosen service gets a `requested` row, already reserved
+for its first generation, and `case-created` is dispatched to those services
+only, under the reserved job ids. Editing, importing, or duplicating a case
+never changes or requests analyses.
+
+### Statuses
+
+| Status | Meaning |
+| --- | --- |
+| `requested` | A generation is reserved under `job_id` and its adapter has not started it. |
+| `processing` | The adapter started the reserved generation. |
+| `ready` | `document` holds the latest result. |
+| `failed` | The latest generation failed and there is no document. |
+
+A new generation keeps the previous document until its result arrives. A failed
+generation keeps an existing document (the status stays `ready`) and records
+`error_code` and `error_message`.
+
+### Reserving generations
+
+A generation is reserved before it is dispatched: one conditional `UPDATE`
+(`reserveCaseAnalysisGeneration()` in `helpers/case-analyses-helper.js`) marks
+the row `requested` under a new `job_id`, unless a generation is already in
+flight. `POST /cases` inserts the rows already reserved. Because the check and
+the reservation are one statement, of two concurrent requests only one is
+accepted, and no edit is accepted between the response and the adapter start.
+
+A generation is in flight while it is `requested` or `processing`: new
+generations and teacher edits answer `409` until its result arrives. One with
+no update for 15 minutes is stale: the teacher can save edits or generate
+again, and the stale job can no longer start or store its result.
+
+The adapter starts its reservation before its `case-created` handler settles.
+Once a service's dispatch settles, a reservation still `requested` under its
+job is released (`releaseUnstartedCaseAnalysis()`): the service has no
+handler, the dispatch failed, or the handler failed or returned before starting
+it. The release ends the generation like a failed one, with `error_code`
+`generation-not-started`, so new generations and edits are accepted again
+right away instead of after 15 minutes.
+
+### Recording results from an adapter
+
+`register()` receives `caseAnalyses`, bound to the adapter's own service:
+
+- `markProcessing({ caseId, jobId })` starts the generation reserved under
+  `jobId`, the `jobId` of the hook context, and returns the analysis. Await it
+  before the `case-created` handler settles; a reservation not started by then
+  is released. It returns `null` when that generation is no longer the reserved
+  one (a newer generation or a teacher edit replaced it, or it already started)
+  or the context has no `jobId`; the adapter must then skip the work.
+- `complete({ jobId, documentSchema, document })` stores the document, which
+  replaces the previous one and its review.
+- `fail({ jobId, errorCode, errorMessage })` records a failed generation.
+
+`complete` and `fail` only apply to a generation started with `markProcessing`;
+results of superseded jobs are ignored and return `null`. An adapter that hits
+an unexpected error after starting a generation calls `fail`, as the mock does,
+so the analysis does not stay `processing` until it is stale.
+
+`case-created` fires before the PDF worker extracts the case text. Adapters that
+need it wait with `waitForCaseDocumentText(caseId)` from
+`helpers/case-document-render-helper.js`, which returns `ready` with the text,
+or `no-document`, `render-failed`, `superseded`, or `timeout`. The wait runs in
+the web process: a restart drops it and leaves the analysis `processing` until
+it is stale, and generating again recovers it.
+
+### Teacher edits
+
+An adapter may export
+`validateCaseAnalysisDocument(document, { caseId, languageCode, getCaseText })`.
+It returns `{ document, documentSchema }` with the document to store, or
+`{ errors }`. Services without it accept no edits.
+
+### API
+
+Only the case creator can use these endpoints: students get `403` and other
+teachers `404 CASE_NOT_FOUND`. Services not chosen for the case answer
+`404 CASE_ANALYSIS_NOT_FOUND`.
+
+| Endpoint | Description |
+| --- | --- |
+| `GET /cases/:id/analyses` | The chosen services with status and timestamps, without documents. |
+| `GET /cases/:id/analyses/:serviceId` | One analysis with its document. |
+| `PUT /cases/:id/analyses/:serviceId` | Body `{ document }`, validated by the adapter. Answers `405 CASE_ANALYSIS_NOT_EDITABLE` without a validator, `400 CASE_ANALYSIS_DOCUMENT_INVALID` with `details`, and `409 CASE_ANALYSIS_PROCESSING` while a generation is in flight. Records `reviewed_at` and `reviewed_by`. |
+| `POST /cases/:id/analyses/:serviceId/generate` | Reserves a new generation, replays `case-created` for that service only, and answers `202` with the reserved analysis. Answers `409 CASE_ANALYSIS_PROCESSING` while a generation is in flight and `503 CASE_ANALYSIS_SERVICE_DISABLED` when the service is disabled. It also recovers stale generations. |
+
+`mock-case-analysis` (`adapters/mock-case-analysis.adapter.js`) is the reference
+implementation: it runs in the web process, counts the words of the case, and
+stores an excerpt.
 
 ## AI Additions Authentication
 
@@ -511,8 +626,9 @@ The Case Analyst adapter uses:
 | `AI_ADDITIONS_CASE_ANALYST_API_BASE_URL` | Case Analyst API base URL. Defaults to `${AI_ADDITIONS_BASE_URL}/case-analyst/api/v1`. |
 
 The Case Analyst adapter is currently a skeleton: it builds the analysis
-request for every `case-created` hook and completes the job without calling
-the provider. Submission and result handling are the next increments.
+request for every case that chose it and completes the job without calling the
+provider or recording a case analysis. Submission and result handling are the
+next increments.
 
 Argumentation Tutor completion is callback-driven. EthicApp submits the task and
 keeps the external-service job dispatched until the correlated `result` callback
