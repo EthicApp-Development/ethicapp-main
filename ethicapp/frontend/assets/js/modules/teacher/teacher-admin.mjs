@@ -206,6 +206,8 @@ import sdItemEditorComponent from "../../components/sd-item-editor.component.js"
 import groupingModeSelectorComponent from "../../components/grouping-mode-selector.component.js";
 import serviceConfigurationFormComponent
     from "../../components/service-configuration-form.component.js";
+import phaseExternalServicesSummaryComponent
+    from "../../components/phase-external-services-summary.component.js";
 import previousPhasesSelectorComponent from "../../components/previous-phases-selector.component.js";
 import numericInputWithSpinbuttonComponent from "../../components/numeric-input-with-spinbutton.component.js";
 import phaseMoverComponent from "../../components/phase-mover.component.js";
@@ -229,6 +231,7 @@ app.component('activityDescription', activityDescriptionComponent);
 app.component('designDescription', designDescriptionComponent);
 app.component('groupingModeSelector', groupingModeSelectorComponent);
 app.component("serviceConfigurationForm", serviceConfigurationFormComponent);
+app.component("phaseExternalServicesSummary", phaseExternalServicesSummaryComponent);
 app.component('previousPhasesSelector', previousPhasesSelectorComponent);
 app.component('numericInputWithSpinbutton', numericInputWithSpinbuttonComponent);
 app.component('phaseMover', phaseMoverComponent);

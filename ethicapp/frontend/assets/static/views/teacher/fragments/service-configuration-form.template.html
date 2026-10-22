@@ -97,7 +97,7 @@
                     {{ ('service_setting_error_' + $ctrl.errorFor(field)) | translate:$ctrl.errorParams[field.key] }}
                 </p>
                 <p class="help-block service-configuration-lifecycle" role="status" ng-if="$ctrl.noticeFor(field)">
-                    <span class="glyphicon glyphicon-warning-sign" aria-hidden="true"></span>
+                    <i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
                     {{ ('service_setting_notice_' + $ctrl.noticeFor(field).kind) | translate }}<span
                         ng-if="$ctrl.noticeFor(field).kind === 'retired_value' && $ctrl.noticeFor(field).defaultText">: {{ $ctrl.noticeFor(field).defaultText }}</span><span
                         ng-if="$ctrl.noticeFor(field).kind === 'retired_value' && !$ctrl.noticeFor(field).defaultText">.</span>
@@ -124,7 +124,7 @@
 
         <div class="service-configuration-retired" role="status" ng-if="$ctrl.notices.retiredFields.length > 0">
             <p class="help-block">
-                <span class="glyphicon glyphicon-warning-sign" aria-hidden="true"></span>
+                <i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
                 <strong>{{ 'service_settings_retired_title' | translate }}</strong>
                 {{ 'service_settings_retired_help' | translate }}
             </p>
