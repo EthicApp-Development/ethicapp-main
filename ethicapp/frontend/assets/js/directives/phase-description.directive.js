@@ -76,7 +76,12 @@ const phaseDescriptionDirective = function() {
                 return templateUrl;
             };            
         },
+        // Every phase description lists the phase's external services and their
+        // settings (#757): the design view, and the activity's design and
+        // progress tabs.
         template: '<div ng-include="ctrl.getTemplateUrl()"></div>'
+            + '<phase-external-services-summary ng-if="ctrl.phaseDetails"'
+            + ' phase="ctrl.phaseDetails"></phase-external-services-summary>'
     };
 };
 
