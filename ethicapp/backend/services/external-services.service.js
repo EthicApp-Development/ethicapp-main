@@ -18,6 +18,11 @@ const DEFAULT_MANIFEST_PATH = path.join(__dirname, "../external-services/manifes
 const HOOK_NAME_PATTERN = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/u;
 
 export const SERVICE_SCOPES = Object.freeze(["case", "response", "chat"]);
+export const UI_LOCALES = Object.freeze(["es_CL", "en_US"]);
+
+const UI_TRANSLATIONS_TIMEOUT_MS = 3000;
+const UI_TRANSLATIONS_TTL_MS     = 10 * 60 * 1000;
+const UI_TRANSLATIONS_RETRY_MS   = 60 * 1000;
 
 function isValidHookName(hookName) {
     return typeof hookName === "string" && HOOK_NAME_PATTERN.test(hookName);
@@ -99,6 +104,64 @@ function normalizeScopes(scopes, serviceId) {
     return normalized;
 }
 
+// `ui.component` names the EthicApp frontend component that shows the service's
+// analysis in the case view. It follows the same kebab-case rule as hook names.
+function normalizeUi(ui, serviceId) {
+    const component = ui?.component ?? null;
+    const isValid   = component === null
+        || (typeof component === "string" && HOOK_NAME_PATTERN.test(component));
+
+    if (!isValid) {
+        console.warn(
+            `[external-services] Ignoring non-kebab-case ui.component "${component}" `
+            + `in ${serviceId}.`
+        );
+        return { component: null };
+    }
+
+    return { component };
+}
+
+function normalizeText(value) {
+    return typeof value === "string" ? value.trim() : "";
+}
+
+// Adapters provide their own texts through getUiTranslations(): a label, a
+// description and an optional case-view tab title for every UI locale. Returns
+// null when a locale lacks the label or the description.
+function normalizeUiTranslations(translations) {
+    const normalized = {};
+
+    for (const locale of UI_LOCALES) {
+        const label       = normalizeText(translations?.[locale]?.label);
+        const description = normalizeText(translations?.[locale]?.description);
+
+        if (!label || !description) {
+            return null;
+        }
+
+        normalized[locale] = {
+            label,
+            description,
+            tabTitle: normalizeText(translations[locale].tabTitle) || null,
+        };
+    }
+
+    return normalized;
+}
+
+function withTimeout(promise, timeoutMs) {
+    let timeoutId;
+    const timeout = new Promise((resolve, reject) => {
+        timeoutId = setTimeout(
+            () => reject(new Error(`timed out after ${timeoutMs} ms`)),
+            timeoutMs
+        );
+    });
+
+    return Promise.race([promise, timeout]).finally(() => clearTimeout(timeoutId));
+}
+
 function normalizeCapabilities(capabilities) {
     if (!capabilities || typeof capabilities !== "object" || Array.isArray(capabilities)) {
         return {};
@@ -110,11 +173,20 @@ function normalizeCapabilities(capabilities) {
 }
 
 export class ExternalServicesRegistry {
-    constructor({ jobsService } = {}) {
+    constructor({
+        jobsService,
+        now = () => Date.now(),
+        uiTranslationsTimeoutMs = UI_TRANSLATIONS_TIMEOUT_MS,
+    } = {}) {
         this.initialized      = false;
         this.services         = new Map();
         this.hookSubscribers  = new Map();
         this._jobsService     = jobsService ?? externalServiceJobsService;
+
+        this.uiTranslationProviders   = new Map();
+        this.uiTranslationsCache      = new Map();
+        this._now                     = now;
+        this._uiTranslationsTimeoutMs = uiTranslationsTimeoutMs;
     }
 
     async initialize(manifestPath = process.env.EXTERNAL_SERVICES_MANIFEST || DEFAULT_MANIFEST_PATH) {
@@ -158,6 +230,7 @@ export class ExternalServicesRegistry {
             hooks,
             globalHooks:  normalizeGlobalHooks(service.globalHooks, hooks, service.id),
             scopes:       normalizeScopes(service.scopes, service.id),
+            ui:           normalizeUi(service.ui, service.id),
             capabilities: normalizeCapabilities(service.capabilities),
             enabled:      service.enabled !== false,
             adapter:      service.adapter,
@@ -182,6 +255,17 @@ export class ExternalServicesRegistry {
         const adapterUrl = new URL(service.adapter, pathToFileURL(path.resolve(manifestPath)));
         const adapterModule = await import(adapterUrl.href);
         const register = adapterModule.register || adapterModule.default?.register;
+        const getUiTranslations = adapterModule.getUiTranslations
+            || adapterModule.default?.getUiTranslations;
+
+        if (typeof getUiTranslations === "function") {
+            this.uiTranslationProviders.set(normalizedService.id, getUiTranslations);
+        } else if (normalizedService.scopes.includes("case")) {
+            console.warn(
+                `[external-services] Adapter ${service.adapter} exports no getUiTranslations(), `
+                + `so case screens will show the id of ${normalizedService.id}.`
+            );
+        }
 
         if (typeof register !== "function") {
             console.warn(`[external-services] Adapter ${service.adapter} does not export register().`);
@@ -224,6 +308,7 @@ export class ExternalServicesRegistry {
             hooks,
             globalHooks = [],
             scopes = [],
+            ui = { component: null },
             capabilities,
             enabled,
         }) => ({
@@ -232,9 +317,55 @@ export class ExternalServicesRegistry {
             hooks,
             globalHooks,
             scopes,
+            ui,
             capabilities,
             enabled,
         }));
+    }
+
+    // Asks the adapter for its UI texts. Valid texts are kept for ten minutes.
+    // After a failure the previous texts (or null) are kept for a minute, so an
+    // unavailable service does not slow down every listing.
+    async getServiceUiTranslations(serviceId) {
+        const provider = this.uiTranslationProviders.get(serviceId);
+        if (!provider) {
+            return null;
+        }
+
+        const cached = this.uiTranslationsCache.get(serviceId);
+        if (cached && cached.expiresAt > this._now()) {
+            return cached.translations;
+        }
+
+        try {
+            const translations = normalizeUiTranslations(await withTimeout(
+                Promise.resolve().then(() => provider()),
+                this._uiTranslationsTimeoutMs
+            ));
+
+            if (!translations) {
+                const locales = UI_LOCALES.join(" and ");
+                throw new Error(`expected a label and a description in ${locales}`);
+            }
+
+            this.uiTranslationsCache.set(serviceId, {
+                translations,
+                expiresAt: this._now() + UI_TRANSLATIONS_TTL_MS,
+            });
+            return translations;
+        } catch (error) {
+            console.warn(
+                `[external-services] UI translations of ${serviceId} are unavailable: `
+                + error.message
+            );
+
+            const previous = cached?.translations ?? null;
+            this.uiTranslationsCache.set(serviceId, {
+                translations: previous,
+                expiresAt:    this._now() + UI_TRANSLATIONS_RETRY_MS,
+            });
+            return previous;
+        }
     }
 
     getGloballyEnabledServiceIds(hookName) {

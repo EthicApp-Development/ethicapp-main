@@ -85,6 +85,7 @@ export async function processCallback({ serviceId, eventType, correlationId, eve
 
 // With `scope` (one value or several), only enabled services that declare at
 // least one of those scopes are listed. Without it, every registered service is.
+// Each service carries the UI translations its adapter provides, or null.
 export async function listExternalServices({ scope, registry }) {
     const scopes = scope === undefined ? [] : [scope].flat();
 
@@ -96,17 +97,23 @@ export async function listExternalServices({ scope, registry }) {
     }
 
     await registry.initialize();
-    const services = registry.listServices();
+    const listed = registry.listServices();
+    const services = scopes.length === 0
+        ? listed
+        : listed.filter(service => service.enabled
+            && service.scopes.some(serviceScope => scopes.includes(serviceScope)));
+
+    const result = await Promise.all(services.map(async service => ({
+        ...service,
+        ui: {
+            ...service.ui,
+            translations: await registry.getServiceUiTranslations(service.id),
+        },
+    })));
 
     return {
         status: 200,
-        body:   {
-            status: "ok",
-            result: scopes.length === 0
-                ? services
-                : services.filter(service => service.enabled
-                    && service.scopes.some(serviceScope => scopes.includes(serviceScope))),
-        },
+        body:   { status: "ok", result },
     };
 }
 

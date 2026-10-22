@@ -291,8 +291,9 @@ test("processCallback: 500 on unexpected dispatchServiceHook error", async () =>
 
 function makeListingRegistry() {
     return {
-        initialize:   async () => {},
-        listServices: () => [
+        initialize:               async () => {},
+        getServiceUiTranslations: async () => null,
+        listServices:             () => [
             { id: "case-tool",     enabled: true,  scopes: ["case"] },
             { id: "chat-tool",     enabled: true,  scopes: ["chat"] },
             { id: "review-tool",   enabled: true,  scopes: ["response", "chat"] },
@@ -348,4 +349,26 @@ test("listExternalServices: 400 when any scope is unknown or empty", async () =>
         assert.equal(status, 400, `scope ${JSON.stringify(scope)}`);
         assert.equal(body.status, "err");
     }
+});
+
+test("listExternalServices: each listed service carries its UI translations or null", async () => {
+    const translations = {
+        es_CL: { label: "Herramienta de casos", description: "Analiza el caso.", tabTitle: null },
+        en_US: { label: "Case tool", description: "Analyses the case.", tabTitle: null },
+    };
+    const registry = {
+        ...makeListingRegistry(),
+        listServices: () => [
+            { id: "case-tool", enabled: true, scopes: ["case"], ui: { component: "tool-panel" } },
+            { id: "chat-tool", enabled: true, scopes: ["chat"], ui: { component: null } },
+        ],
+        getServiceUiTranslations: async id => (id === "case-tool" ? translations : null),
+    };
+
+    const { body } = await listExternalServices({ scope: undefined, registry });
+
+    assert.deepEqual(body.result.map(({ id, ui }) => ({ id, ui })), [
+        { id: "case-tool", ui: { component: "tool-panel", translations } },
+        { id: "chat-tool", ui: { component: null, translations: null } },
+    ]);
 });
