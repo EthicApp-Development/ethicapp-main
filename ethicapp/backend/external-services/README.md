@@ -237,6 +237,53 @@ teacher's locale, for the design editor (#728):
 - `runtime_configuration`, adapter and descriptor paths, callback settings and
   credentials are never returned.
 
+### Configuration validation
+
+`POST /designs` and `PATCH /designs/:id` validate each phase's
+`externalServices.configurations` (#729) against the services' capability
+descriptors before saving (#731, `services/service-configuration-validation.service.js`).
+Only services listed in that phase's `enabledServiceIds` are checked;
+configurations of other services are kept as they are.
+
+Each value is checked for its field's `type`, enum membership, `minimum`,
+`maximum` and `step`, `max_length` and `pattern`, and every `required` field
+needs a value. Keys the descriptor does not define are errors. `null` means
+"use the service default".
+
+A save with errors answers `400`:
+
+```json
+{
+  "status": "err",
+  "code": "INVALID_SERVICE_CONFIGURATION",
+  "message": "Some external service settings are not valid.",
+  "errors": [
+    { "phaseIndex": 0, "serviceId": "polyadic-devils-advocate", "field": "llm_tier", "code": "not_in_enum", "value": "premium" }
+  ],
+  "warnings": []
+}
+```
+
+- `phaseIndex` is the 0-based index in `design.phases`; `serviceId` is the
+  manifest id; `field` is the descriptor field key.
+- Error `code`: `invalid_type`, `not_in_enum`, `below_minimum`,
+  `above_maximum`, `step_mismatch`, `too_long`, `pattern_mismatch`,
+  `required`, `unknown_field`.
+
+A successful save answers `{ "status": "ok", ..., "warnings": [...] }`. Warnings
+never block a save:
+
+| `code` | Meaning | Extra keys |
+| --- | --- | --- |
+| `deprecated_field` | The field is deprecated. | `value`, `supersededBy` (field key) |
+| `deprecated_value` | The enum value is deprecated. | `value`, `supersededBy` (value) |
+| `no_longer_accepted` | The stored design already had this problem (same service, field, `reason` and value): the service retired the field or value, or tightened a limit. The teacher did not introduce it, so it does not block the save; the service warns or substitutes at instantiation. | `reason` (an error code), `value` |
+| `not_validated` | The configuration was stored without validation (`field` is `null`). | `reason`: `unreachable`, `invalid_descriptor`, `unsupported_contract_version`, `service_id_mismatch`, or `no_descriptor` (unknown, disabled, or no descriptor) |
+
+The descriptors are read in English through the descriptor cache, so a save
+adds at most one request per service. Until the configuration form exists
+(#732), the editor shows one translated message for a `400` with this code.
+
 ### Handler signature
 
 Every hook handler receives `(context, { callback })`:

@@ -13,6 +13,11 @@ import {
     designUpdateRefusal,
     UPDATE_UNLOCKED_DESIGN_SQL,
 } from "../helpers/design-update.js";
+import externalServicesRegistry from "../services/external-services.service.js";
+import {
+    invalidConfigurationResponse,
+    validateDesignServiceConfigurations,
+} from "../services/service-configuration-validation.service.js";
 import {
     CASE_DEFAULT_LICENSE,
     DEFAULT_LANGUAGE_CODE,
@@ -36,6 +41,29 @@ const MAX_SEMANTIC_TAGS = 5;
 
 function sameId(left, right) {
     return Number(left) === Number(right);
+}
+
+function parseStoredDesign(value) {
+    if (typeof value !== "string") {
+        return value ?? null;
+    }
+    try {
+        return JSON.parse(value);
+    } catch {
+        return null;
+    }
+}
+
+// Validates the design's external service configurations against the services'
+// capability descriptors (#731). Problems already present in `storedDesign`
+// come back as warnings.
+function validateServiceConfigurations(design, storedDesign = null) {
+    return validateDesignServiceConfigurations({
+        design,
+        storedDesign,
+        getInstanceConfiguration: (serviceId, locale) =>
+            externalServicesRegistry.getServiceInstanceConfiguration(serviceId, locale),
+    });
 }
 
 function parseTagIds(value) {
@@ -440,6 +468,12 @@ router.post("/designs", async (req, res) => {
         }
 
         let { id, ...designNoId } = design;
+        const configurationCheck = await validateServiceConfigurations(designNoId);
+        if (configurationCheck.errors.length > 0) {
+            const invalid = invalidConfigurationResponse(configurationCheck);
+            return res.status(invalid.status).json(invalid.body);
+        }
+
         const nextVisibility = normalizeVisibility(visibility);
         if (nextVisibility === PUBLIC_VISIBILITY && caseId) {
             const associatedCase = await rpg2.singleSQL({
@@ -488,7 +522,7 @@ router.post("/designs", async (req, res) => {
         // Check if the design was successfully created
         if (result && result.id) {
             await replaceDesignTags(result.id, parsedTagIds, sessionUid);
-            return res.json({ status: "ok", id: result.id });
+            return res.json({ status: "ok", id: result.id, warnings: configurationCheck.warnings });
         } else {
             return res.status(500).json({ status: "err", message: "Failed to create design." });
         }
@@ -535,7 +569,8 @@ router.patch("/designs/:id", async (req, res) => {
         const existingDesign = await rpg2.singleSQL({
             dbcon: config.dbconnString,
             sql: `
-                SELECT id, creator, locked, visibility, license_code, attribution_text, language_code
+                SELECT id, creator, locked, design, visibility, license_code,
+                       attribution_text, language_code
                 FROM designs
                 WHERE id = $1
             `,
@@ -545,6 +580,15 @@ router.patch("/designs/:id", async (req, res) => {
         const refusal = designUpdateRefusal(existingDesign, sessionUid);
         if (refusal) {
             return res.status(refusal.status).json(refusal.body);
+        }
+
+        const configurationCheck = await validateServiceConfigurations(
+            design,
+            parseStoredDesign(existingDesign.design)
+        );
+        if (configurationCheck.errors.length > 0) {
+            const invalid = invalidConfigurationResponse(configurationCheck);
+            return res.status(invalid.status).json(invalid.body);
         }
 
         let {id, ...designNoId} = design;
@@ -595,7 +639,11 @@ router.patch("/designs/:id", async (req, res) => {
         }
         await replaceDesignTags(designId, parsedTagIds, sessionUid);
 
-        return res.json({ status: "ok", message: "Design updated successfully" });
+        return res.json({
+            status:   "ok",
+            message:  "Design updated successfully",
+            warnings: configurationCheck.warnings,
+        });
     } catch (err) {
         console.error("Error in /designs/:id PATCH:", err);
         return res.status(500).json({ status: "err", message: "Internal Server Error" });
