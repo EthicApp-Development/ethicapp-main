@@ -2930,3 +2930,8 @@ tr.group-summary {
 .phase-external-services-summary .phase-external-service-settings .help-block {
     margin: 2px 0 4px;
 }
+
+/* Teacher-written text keeps the line breaks it was typed with (#761). */
+.text-line-breaks {
+    white-space: pre-line;
+}

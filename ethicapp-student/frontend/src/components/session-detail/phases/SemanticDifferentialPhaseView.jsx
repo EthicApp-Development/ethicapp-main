@@ -247,7 +247,8 @@ export default function SemanticDifferentialPhaseView({
 
       {phaseInstructions.trim().length > 0 ? (
         <div className="alert alert-secondary mb-0" role="note">
-          <strong>{t('sessionDetail.instructionsLabel')}:</strong> {phaseInstructions}
+          <strong>{t('sessionDetail.instructionsLabel')}:</strong>{' '}
+          <span className="text-line-breaks">{phaseInstructions.trim()}</span>
         </div>
       ) : null}
       {isExternalResponseProcessing ? (

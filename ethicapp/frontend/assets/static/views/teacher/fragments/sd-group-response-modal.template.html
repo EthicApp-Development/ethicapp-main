@@ -13,9 +13,8 @@
             <strong>{{ 'item_label' | translate }} {{ $index + 1 }}</strong>
         </div>
         <div class="panel-body">
-            <p>
-                {{ question.text || ('no_response' | translate) }}
-            </p>
+            <!-- Inline on purpose: with pre-line, template newlines would show. -->
+            <p class="text-line-breaks">{{ question.text.trim() || ('no_response' | translate) }}</p>
 
             <div ng-if="$ctrl.getQuestionResponses(question).length === 0">
                 <p class="text-muted">{{ 'no_response' | translate }}</p>
