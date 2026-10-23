@@ -126,3 +126,61 @@ test("grouping_algorithm accepts random and the editor's null, nothing else", ()
     assertInvalid(designWithPhase(seedPhase({ grouping_algorithm: "alphabetical" })),
         "alphabetical");
 });
+
+// ─── Text content types (#762) ───────────────────────────────────────────────
+
+function sdPhaseWithContentTypes({ instructions, question }) {
+    const phase = seedPhase();
+    if (instructions !== undefined) {
+        phase.instructionsContentType = instructions;
+    }
+    if (question !== undefined) {
+        phase.questions = phase.questions.map(item => ({ ...item, q_text_content_type: question }));
+    }
+    return designWithPhase(phase);
+}
+
+function rankingDesign(phaseOverrides = {}) {
+    const [seed] = readSeedDesigns();
+    const basePhase = structuredClone(seed.design.phases[0]);
+    delete basePhase.questions;
+    const role = name => ({
+        wc:                                    0,
+        name,
+        type:                                  "order",
+        justification_required:                false,
+        justification_minimum_length_required: false,
+    });
+    return {
+        ...structuredClone(seed.design),
+        type:   "ranking",
+        phases: [{ ...basePhase, roles: [role("A"), role("B")], ...phaseOverrides }],
+    };
+}
+
+test("texts without a content type stay valid", () => {
+    const phase = seedPhase();
+    assert.equal(phase.instructionsContentType, undefined);
+    assert.equal(phase.questions[0].q_text_content_type, undefined);
+    assertValid(designWithPhase(phase));
+    assertValid(rankingDesign(), "ranking");
+});
+
+test("instructions and SD questions accept text/plain and text/markdown", () => {
+    for (const contentType of ["text/plain", "text/markdown"]) {
+        assertValid(sdPhaseWithContentTypes({ instructions: contentType, question: contentType }),
+            contentType);
+        assertValid(rankingDesign({ instructionsContentType: contentType }),
+            `ranking ${contentType}`);
+    }
+});
+
+test("content types reject any other value", () => {
+    for (const contentType of ["text/html", "markdown", "", null, 1]) {
+        const label = JSON.stringify(contentType);
+        assertInvalid(sdPhaseWithContentTypes({ instructions: contentType }),
+            `instructions ${label}`);
+        assertInvalid(sdPhaseWithContentTypes({ question: contentType }), `q_text ${label}`);
+        assertInvalid(rankingDesign({ instructionsContentType: contentType }), `ranking ${label}`);
+    }
+});
