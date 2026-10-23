@@ -11,7 +11,7 @@
     <hr>
     <div ng-if="ctrl.phaseDetails.instructions && ctrl.phaseDetails.instructions.trim().length > 0">
         <h4>{{ 'phase_instructions_title' | translate }}</h4>
-        <p style="white-space: pre-line;">{{ ctrl.phaseDetails.instructions }}</p>
+        <p class="text-line-breaks">{{ ctrl.phaseDetails.instructions.trim() }}</p>
     </div>
     <hr>
     <h4>{{ 'questions_title_text' | translate }}</h4>
@@ -37,7 +37,7 @@
         </thead>
         <tbody>
             <tr ng-repeat="question in ctrl.phaseQuestions">
-                <td class="dashboard-phase-question-text-col">{{ question.text }}</td>
+                <td class="dashboard-phase-question-text-col text-line-breaks">{{ question.text.trim() }}</td>
                 <td class="dashboard-phase-left-pole-col">{{ question.leftPole }}</td>
                 <td class="dashboard-phase-right-pole-col">{{ question.rightPole }}</td>
                 <td class="dashboard-phase-range-col">1-{{ question.range }}</td>
