@@ -90,6 +90,8 @@ The elements allowed are:
 - `p`, `ul`, `ol`, `li`, `strong`, `em` and `br`;
 - the only attribute is `start` on `ol`, always an integer.
 
+A list item with a single paragraph, nested lists aside, shows that paragraph's content directly in its `li`, as CommonMark renders tight lists. Items with several paragraphs keep their `p` elements.
+
 Combined with raw HTML being disabled, a text cannot inject markup, scripts or URLs.
 
 ## Using the Fixtures
