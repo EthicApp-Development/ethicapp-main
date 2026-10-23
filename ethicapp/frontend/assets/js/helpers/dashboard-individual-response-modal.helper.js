@@ -19,6 +19,11 @@ function normalizeQuestion(question, index) {
             || question?.title
             || question?.label
             || null,
+        // How to read the text (#765): a missing value means text/plain.
+        contentType: question?.contentType
+            || question?.q_text_content_type
+            || question?.titleContentType
+            || null,
         leftPole: question?.leftPole
             || question?.left_pole
             || question?.l_pole

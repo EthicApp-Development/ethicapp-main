@@ -208,6 +208,7 @@ import serviceConfigurationFormComponent
     from "../../components/service-configuration-form.component.js";
 import phaseExternalServicesSummaryComponent
     from "../../components/phase-external-services-summary.component.js";
+import richTextComponent from "../../components/rich-text.component.js";
 import previousPhasesSelectorComponent from "../../components/previous-phases-selector.component.js";
 import numericInputWithSpinbuttonComponent from "../../components/numeric-input-with-spinbutton.component.js";
 import phaseMoverComponent from "../../components/phase-mover.component.js";
@@ -232,6 +233,7 @@ app.component('designDescription', designDescriptionComponent);
 app.component('groupingModeSelector', groupingModeSelectorComponent);
 app.component("serviceConfigurationForm", serviceConfigurationFormComponent);
 app.component("phaseExternalServicesSummary", phaseExternalServicesSummaryComponent);
+app.component("richText", richTextComponent);
 app.component('previousPhasesSelector', previousPhasesSelectorComponent);
 app.component('numericInputWithSpinbutton', numericInputWithSpinbuttonComponent);
 app.component('phaseMover', phaseMoverComponent);

@@ -7,12 +7,13 @@ let designTransformers = {
 
 function transformSemanticDifferentialPhase(ctrl) {
     ctrl.phaseQuestions = ctrl.phaseDetails.questions.map(q => ({
-        text: q.q_text,
-        leftPole: q.ans_format.l_pole,
-        rightPole: q.ans_format.r_pole,
-        range: q.ans_format.values,
-        justificationRequired: q.ans_format.just_required,
-        minJustificationLength: q.ans_format.min_just_length
+        text:                   q.q_text,
+        contentType:            q.q_text_content_type,
+        leftPole:               q.ans_format.l_pole,
+        rightPole:              q.ans_format.r_pole,
+        range:                  q.ans_format.values,
+        justificationRequired:  q.ans_format.just_required,
+        minJustificationLength: q.ans_format.min_just_length,
     }));
 }
 
