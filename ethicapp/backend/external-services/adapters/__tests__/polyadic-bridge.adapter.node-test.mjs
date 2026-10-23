@@ -760,3 +760,21 @@ test("chat-message-received reports the room it creates", async () => {
     assert.deepEqual(harness.reports[0].rooms.map(room => room.room), ["ethicapp-s11-p22-g301"]);
 });
 
+
+// ─── Plain question text (#768) ─────────────────────────────────────────────
+
+test("formatQuestionText sends Markdown questions as plain text", () => {
+    assert.equal(formatQuestionText({
+        title:            "**¿Qué harías?**\\\nPiensa en *Sebastián*.",
+        titleContentType: "text/markdown",
+        tleft:            "Lo ayudo",
+        tright:           "No lo ayudo",
+    }), "¿Qué harías?\nPiensa en Sebastián. | Lo ayudo vs. No lo ayudo");
+});
+
+test("formatQuestionText leaves questions without a Markdown content type as they were", () => {
+    for (const titleContentType of [undefined, null, "text/plain"]) {
+        const question = { title: "**literal**", titleContentType, tleft: "A", tright: "B" };
+        assert.equal(formatQuestionText(question), "**literal** | A vs. B");
+    }
+});

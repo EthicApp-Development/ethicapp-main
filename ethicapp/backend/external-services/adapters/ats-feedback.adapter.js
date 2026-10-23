@@ -8,7 +8,10 @@ import {
     buildArgumentClientContext,
     buildFeedbackPayloadFromExternalResult,
     createAtsSession,
+    differentialQuestionText,
     getUiTranslations,
+    phaseInstructionsText,
+    questionTextFromPhaseDesign,
 } from "./ats-feedback.utils.js";
 
 export {
@@ -118,8 +121,8 @@ async function resolveSessionMetadata(context) {
     const sessionDescription = normalizeText(sessionRow?.descr);
     const caseData = await resolveCaseData(context.sessionId);
     const phaseDesign = await getPhaseDesignByPhaseId(context.phaseId);
-    const phaseInstructions = normalizeText(phaseDesign?.instructions);
-    const questionFromDesign = resolveQuestionTextFromPhaseDesign(phaseDesign);
+    const phaseInstructions = phaseInstructionsText(phaseDesign);
+    const questionFromDesign = questionTextFromPhaseDesign(phaseDesign);
     const questionText = questionFromDesign || await resolveQuestionText(context);
 
     const caseText = caseData.rawText || sessionDescription || phaseInstructions || questionText || "Ethical discussion prompt.";
@@ -154,22 +157,6 @@ async function resolveCaseData(sessionId) {
     }
 }
 
-function resolveQuestionTextFromPhaseDesign(phaseDesign) {
-    const questions = Array.isArray(phaseDesign?.questions) ? phaseDesign.questions : [];
-    if (questions.length === 0) {
-        return "";
-    }
-
-    for (const question of questions) {
-        const questionText = normalizeText(question?.q_text);
-        if (questionText) {
-            return questionText;
-        }
-    }
-
-    return "";
-}
-
 async function resolveQuestionText(context) {
     const questionId = Number(context?.questionId);
     const phaseId = Number(context?.phaseId);
@@ -200,7 +187,7 @@ async function resolveQuestionText(context) {
     const row = await rpg2.singleSQL({
         dbcon: config.dbconnString,
         sql:   `
-            SELECT title
+            SELECT title, title_content_type
             FROM differential
             WHERE id = $1
               AND stageid = $2
@@ -212,7 +199,7 @@ async function resolveQuestionText(context) {
         ],
     });
 
-    return normalizeText(row?.title);
+    return differentialQuestionText(row);
 }
 
 // Returns `{ sessionId, creation }`; `creation` is set only for the call that
