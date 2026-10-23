@@ -4,15 +4,16 @@ export const itemBuilders = {
         return phase.questions.map((question, index) => {
             const content = question.ans_format;
             return {
-                name:       question.q_text,
-                tleft:      content.l_pole,
-                tright:     content.r_pole,
-                num:        content.values,
-                orden:      index + 1,
-                justify:    content.just_required,
-                stageId:    stageId,
-                sessionId:  sessionId,
-                wordCount:  content.min_just_length,
+                name:             question.q_text,
+                titleContentType: question.q_text_content_type,
+                tleft:            content.l_pole,
+                tright:           content.r_pole,
+                num:              content.values,
+                orden:            index + 1,
+                justify:          content.just_required,
+                stageId:          stageId,
+                sessionId:        sessionId,
+                wordCount:        content.min_just_length,
             };
         });
     },
@@ -20,11 +21,11 @@ export const itemBuilders = {
         // Map the roles into payload objects and return the array
         return phase.roles.map(role => {
             return {
-                name:       role.name,
-                jorder:     role.type === "order",
-                justified:  role.type != null,
-                wordCount:  role.wc,
-                stageId:    stageId,
+                name:      role.name,
+                jorder:    role.type === "order",
+                justified: role.type != null,
+                wordCount: role.wc,
+                stageId:   stageId,
             };
         });
     },
