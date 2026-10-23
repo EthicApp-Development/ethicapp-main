@@ -147,6 +147,11 @@ Each sub-issue:
   - Notes, optional.
 - **Linking.** It is linked to the epic as a GitHub sub-issue, in addition to the checklist.
 
+A PR that implements a sub-issue:
+
+- **Title.** It carries the same saga prefix as its sub-issue: `[Epic <epic number> · <NN>/<total>] <title>`, for example `[Epic 760 · 03/08] Carry text content types into activity phases and student payloads`.
+- **Body.** It starts with `Part of epic #<epic number>. Closes #<sub-issue number>.`, followed by the PR description sections above.
+
 Issues are written in English. A PR merged into a branch other than the default branch does not close its issue automatically. Close the issue by hand, with a comment naming the PR and the merge commit, and check its line in the epic.
 
 ## 5) Constraints and do-not rules
