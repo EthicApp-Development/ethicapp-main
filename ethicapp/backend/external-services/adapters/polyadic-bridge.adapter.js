@@ -1,6 +1,7 @@
 import * as rpg2 from "../../db/rest-pg-2.js";
 import * as config from "../../config/database.config.js";
 import defaultAiAdditionsClient from "../../services/ai-additions-client.service.js";
+import { plainTextOf } from "../../helpers/rich-text-helper.js";
 
 const DEFAULT_POLYADIC_BASE_PATH = "/polyadic-agent/api";
 
@@ -145,7 +146,7 @@ async function getParticipantIdentity(groupId, userId) {
 async function getFirstQuestionForPhase(phaseId) {
     const rows = await rpg2.execSQL({
         sql: `
-            SELECT d.id AS question_id, d.title, d.tleft, d.tright
+            SELECT d.id AS question_id, d.title, d.title_content_type, d.tleft, d.tright
             FROM differential AS d
             WHERE d.stageid = $1
             ORDER BY d.orden, d.id
@@ -160,10 +161,11 @@ async function getFirstQuestionForPhase(phaseId) {
     }
 
     return {
-        id:     Number(rows[0].question_id),
-        title:  normalizeText(rows[0].title),
-        tleft:  normalizeText(rows[0].tleft),
-        tright: normalizeText(rows[0].tright),
+        id:               Number(rows[0].question_id),
+        title:            normalizeText(rows[0].title),
+        titleContentType: rows[0].title_content_type,
+        tleft:            normalizeText(rows[0].tleft),
+        tright:           normalizeText(rows[0].tright),
     };
 }
 
@@ -183,7 +185,8 @@ export function formatQuestionText(question) {
     }
 
     const parts = [];
-    const title = normalizeText(question.title);
+    // Markdown questions reach Polyadic as plain text (#768).
+    const title = normalizeText(plainTextOf(question.title, question.titleContentType));
     const left = normalizeText(question.tleft);
     const right = normalizeText(question.tright);
 

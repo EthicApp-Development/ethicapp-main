@@ -6,6 +6,9 @@ import {
     buildFeedbackPayloadFromAtsStatus,
     buildFeedbackPayloadFromExternalResult,
     createAtsSession,
+    differentialQuestionText,
+    phaseInstructionsText,
+    questionTextFromPhaseDesign,
 } from "../ats-feedback.utils.js";
 
 // ─── buildArgumentClientContext ───────────────────────────────────────────────
@@ -214,3 +217,35 @@ test("createAtsSession does not retry other failures", async () => {
     }), /did not return a session_id/u);
 });
 
+
+// ─── Plain texts (#768) ─────────────────────────────────────────────────────
+
+test("the tutor receives Markdown instructions and questions as plain text", () => {
+    const phaseDesign = {
+        instructions:            "**Lee** el caso:\n\n- responde\n- justifica",
+        instructionsContentType: "text/markdown",
+        questions:               [
+            { q_text: "  " },
+            { q_text: "*¿Qué harías?*", q_text_content_type: "text/markdown" },
+        ],
+    };
+
+    assert.equal(phaseInstructionsText(phaseDesign), "Lee el caso:\n\n- responde\n- justifica");
+    assert.equal(questionTextFromPhaseDesign(phaseDesign), "¿Qué harías?");
+    assert.equal(
+        differentialQuestionText({ title: "**Uno**", title_content_type: "text/markdown" }), "Uno"
+    );
+});
+
+test("texts without a Markdown content type reach the tutor as before", () => {
+    const phaseDesign = { instructions: "  **Lee**  ", questions: [{ q_text: " *uno* " }] };
+
+    assert.equal(phaseInstructionsText(phaseDesign), "**Lee**");
+    assert.equal(questionTextFromPhaseDesign(phaseDesign), "*uno*");
+    assert.equal(
+        differentialQuestionText({ title: "**Uno**", title_content_type: null }), "**Uno**"
+    );
+    assert.equal(phaseInstructionsText(null), "");
+    assert.equal(questionTextFromPhaseDesign({ questions: "invalid" }), "");
+    assert.equal(differentialQuestionText(undefined), "");
+});

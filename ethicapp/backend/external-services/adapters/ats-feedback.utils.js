@@ -1,3 +1,5 @@
+import { plainTextOf } from "../../helpers/rich-text-helper.js";
+
 // The texts teachers read about this service (#723), available even when the
 // tutor does not respond (#757).
 const UI_TRANSLATIONS = {
@@ -232,6 +234,31 @@ export function buildFeedbackPayloadFromExternalResult(requestPayload, fallbackC
             userId:     Number(payloadRoot.userId) || fallbackContext?.userId || null,
         },
     };
+}
+
+/** The phase's instructions as the tutor receives them: plain text (#768). */
+export function phaseInstructionsText(phaseDesign) {
+    const { instructions, instructionsContentType } = phaseDesign ?? {};
+    return normalizeText(plainTextOf(instructions, instructionsContentType));
+}
+
+/** The phase's first non-empty question, as plain text (#768), or "". */
+export function questionTextFromPhaseDesign(phaseDesign) {
+    const questions = Array.isArray(phaseDesign?.questions) ? phaseDesign.questions : [];
+    for (const question of questions) {
+        const questionText = normalizeText(
+            plainTextOf(question?.q_text, question?.q_text_content_type)
+        );
+        if (questionText) {
+            return questionText;
+        }
+    }
+    return "";
+}
+
+/** A semantic differential row's question (`differential.title`), as plain text (#768). */
+export function differentialQuestionText(row) {
+    return normalizeText(plainTextOf(row?.title, row?.title_content_type));
 }
 
 /**
