@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.ethicapp.local/rich-text/rich-text-tree-v1.schema.json",
+  "title": "EthicApp Rich Text Tree",
+  "description": "Normalized structure of a teacher-written text (#762), as renderers produce it from a text and its content type. See README.md in this directory for the parsing and normalization rules.",
+  "type": "array",
+  "items": { "$ref": "#/$defs/block" },
+
+  "$defs": {
+    "block": {
+      "oneOf": [
+        { "$ref": "#/$defs/paragraph" },
+        { "$ref": "#/$defs/list" }
+      ]
+    },
+
+    "paragraph": {
+      "type": "object",
+      "required": ["type", "children"],
+      "properties": {
+        "type": { "const": "paragraph" },
+        "children": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/inline" }
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "list": {
+      "description": "A bulleted list (ordered: false, start: null) or a numbered list (ordered: true, start: the first item's number). Whether the source list was tight or loose is not recorded.",
+      "type": "object",
+      "required": ["type", "ordered", "start", "items"],
+      "properties": {
+        "type": { "const": "list" },
+        "ordered": { "type": "boolean" },
+        "start": { "type": ["integer", "null"], "minimum": 0 },
+        "items": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/listItem" }
+        }
+      },
+      "additionalProperties": false,
+      "if": { "properties": { "ordered": { "const": true } } },
+      "then": { "properties": { "start": { "type": "integer" } } },
+      "else": { "properties": { "start": { "type": "null" } } }
+    },
+
+    "listItem": {
+      "description": "A list item holds blocks, so it can contain paragraphs and nested lists. An empty item has no children.",
+      "type": "object",
+      "required": ["type", "children"],
+      "properties": {
+        "type": { "const": "listItem" },
+        "children": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/block" }
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "inline": {
+      "oneOf": [
+        { "$ref": "#/$defs/text" },
+        { "$ref": "#/$defs/strong" },
+        { "$ref": "#/$defs/emphasis" },
+        { "$ref": "#/$defs/break" }
+      ]
+    },
+
+    "text": {
+      "description": "Literal text, shown as is. Adjacent text nodes are always merged, so two never follow each other.",
+      "type": "object",
+      "required": ["type", "value"],
+      "properties": {
+        "type": { "const": "text" },
+        "value": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
+
+    "strong": {
+      "type": "object",
+      "required": ["type", "children"],
+      "properties": {
+        "type": { "const": "strong" },
+        "children": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/inline" }
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "emphasis": {
+      "type": "object",
+      "required": ["type", "children"],
+      "properties": {
+        "type": { "const": "emphasis" },
+        "children": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/inline" }
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "break": {
+      "description": "A line break inside a paragraph.",
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": { "const": "break" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

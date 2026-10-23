@@ -1,0 +1,1274 @@
+{
+  "description": "Conformance cases for teacher-written rich text (#762). Every renderer must turn each input, with its contentType (missing means text/plain), into exactly this tree and this plainText. See README.md in this directory.",
+  "version": 1,
+  "cases": [
+    {
+      "name": "plain: line breaks and a blank line, trimmed",
+      "contentType": "text/plain",
+      "input": "  \nPrimera línea.\nSegunda línea.\n\nTercera, tras una línea vacía.  \n",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "value": "Primera línea."
+            },
+            {
+              "type": "break"
+            },
+            {
+              "type": "text",
+              "value": "Segunda línea."
+            }
+          ]
+        },
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "value": "Tercera, tras una línea vacía."
+            }
+          ]
+        }
+      ],
+      "plainText": "  \nPrimera línea.\nSegunda línea.\n\nTercera, tras una línea vacía.  \n"
+    },
+    {
+      "name": "plain: Markdown characters are never interpreted",
+      "contentType": "text/plain",
+      "input": "**no** es negrita, *ni* cursiva\n- no es una lista\n1. tampoco\n# ni un título\n<b>ni HTML</b>",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "value": "**no** es negrita, *ni* cursiva"
+            },
+            {
+              "type": "break"
+            },
+            {
+              "type": "text",
+              "value": "- no es una lista"
+            },
+            {
+              "type": "break"
+            },
+            {
+              "type": "text",
+              "value": "1. tampoco"
+            },
+            {
+              "type": "break"
+            },
+            {
+              "type": "text",
+              "value": "# ni un título"
+            },
+            {
+              "type": "break"
+            },
+            {
+              "type": "text",
+              "value": "<b>ni HTML</b>"
+            }
+          ]
+        }
+      ],
+      "plainText": "**no** es negrita, *ni* cursiva\n- no es una lista\n1. tampoco\n# ni un título\n<b>ni HTML</b>"
+    },
+    {
+      "name": "plain: several blank lines separate one paragraph",
+      "contentType": "text/plain",
+      "input": "Uno.\n\n\n\nDos.",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "value": "Uno."
+            }
+          ]
+        },
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "value": "Dos."
+            }
+          ]
+        }
+      ],
+      "plainText": "Uno.\n\n\n\nDos."
+    },
+    {
+      "name": "plain: CRLF line endings",
+      "contentType": "text/plain",
+      "input": "Uno\r\nDos\r\n\r\nTres",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "value": "Uno"
+            },
+            {
+              "type": "break"
+            },
+            {
+              "type": "text",
+              "value": "Dos"
+            }
+          ]
+        },
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "value": "Tres"
+            }
+          ]
+        }
+      ],
+      "plainText": "Uno\r\nDos\r\n\r\nTres"
+    },
+    {
+      "name": "missing content type means text/plain",
+      "input": "**Línea** uno\nLínea dos",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "value": "**Línea** uno"
+            },
+            {
+              "type": "break"
+            },
+            {
+              "type": "text",
+              "value": "Línea dos"
+            }
+          ]
+        }
+      ],
+      "plainText": "**Línea** uno\nLínea dos"
+    },
+    {
+      "name": "unknown content type means text/plain",
+      "contentType": "text/html",
+      "input": "<b>negrita</b>\n*cursiva*",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "value": "<b>negrita</b>"
+            },
+            {
+              "type": "break"
+            },
+            {
+              "type": "text",
+              "value": "*cursiva*"
+            }
+          ]
+        }
+      ],
+      "plainText": "<b>negrita</b>\n*cursiva*"
+    },
+    {
+      "name": "plain: empty",
+      "contentType": "text/plain",
+      "input": "",
+      "tree": [],
+      "plainText": ""
+    },
+    {
+      "name": "plain: whitespace only",
+      "contentType": "text/plain",
+      "input": " \n\t\n ",
+      "tree": [],
+      "plainText": " \n\t\n "
+    },
+    {
+      "name": "markdown: empty",
+      "contentType": "text/markdown",
+      "input": "",
+      "tree": [],
+      "plainText": ""
+    },
+    {
+      "name": "markdown: whitespace only",
+      "contentType": "text/markdown",
+      "input": "  \n \n",
+      "tree": [],
+      "plainText": ""
+    },
+    {
+      "name": "paragraphs",
+      "contentType": "text/markdown",
+      "input": "Primer párrafo.\n\nSegundo párrafo.",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "value": "Primer párrafo."
+            }
+          ]
+        },
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "value": "Segundo párrafo."
+            }
+          ]
+        }
+      ],
+      "plainText": "Primer párrafo.\n\nSegundo párrafo."
+    },
+    {
+      "name": "hard break with a backslash, as the editor writes it",
+      "contentType": "text/markdown",
+      "input": "Primera línea\\\nSegunda línea",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "value": "Primera línea"
+            },
+            {
+              "type": "break"
+            },
+            {
+              "type": "text",
+              "value": "Segunda línea"
+            }
+          ]
+        }
+      ],
+      "plainText": "Primera línea\nSegunda línea"
+    },
+    {
+      "name": "hard break with two trailing spaces",
+      "contentType": "text/markdown",
+      "input": "Primera línea  \nSegunda línea",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "value": "Primera línea"
+            },
+            {
+              "type": "break"
+            },
+            {
+              "type": "text",
+              "value": "Segunda línea"
+            }
+          ]
+        }
+      ],
+      "plainText": "Primera línea\nSegunda línea"
+    },
+    {
+      "name": "soft line break becomes a space",
+      "contentType": "text/markdown",
+      "input": "Primera línea\nsigue en la misma",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "value": "Primera línea sigue en la misma"
+            }
+          ]
+        }
+      ],
+      "plainText": "Primera línea sigue en la misma"
+    },
+    {
+      "name": "a backslash at the end of a paragraph is literal",
+      "contentType": "text/markdown",
+      "input": "Fin\\",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "value": "Fin\\"
+            }
+          ]
+        }
+      ],
+      "plainText": "Fin\\"
+    },
+    {
+      "name": "bold and italic, with both delimiters",
+      "contentType": "text/markdown",
+      "input": "Texto **fuerte**, *énfasis*, __también fuerte__ y _también énfasis_.",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "value": "Texto "
+            },
+            {
+              "type": "strong",
+              "children": [
+                {
+                  "type": "text",
+                  "value": "fuerte"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "value": ", "
+            },
+            {
+              "type": "emphasis",
+              "children": [
+                {
+                  "type": "text",
+                  "value": "énfasis"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "value": ", "
+            },
+            {
+              "type": "strong",
+              "children": [
+                {
+                  "type": "text",
+                  "value": "también fuerte"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "value": " y "
+            },
+            {
+              "type": "emphasis",
+              "children": [
+                {
+                  "type": "text",
+                  "value": "también énfasis"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "value": "."
+            }
+          ]
+        }
+      ],
+      "plainText": "Texto fuerte, énfasis, también fuerte y también énfasis."
+    },
+    {
+      "name": "bold and italic nested",
+      "contentType": "text/markdown",
+      "input": "***ambos*** y **fuerte con *énfasis* dentro**",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "emphasis",
+              "children": [
+                {
+                  "type": "strong",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "ambos"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "value": " y "
+            },
+            {
+              "type": "strong",
+              "children": [
+                {
+                  "type": "text",
+                  "value": "fuerte con "
+                },
+                {
+                  "type": "emphasis",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "énfasis"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "value": " dentro"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "plainText": "ambos y fuerte con énfasis dentro"
+    },
+    {
+      "name": "intraword underscores are not emphasis",
+      "contentType": "text/markdown",
+      "input": "una_variable_con_guiones y 2 * 3 = 6",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "value": "una_variable_con_guiones y 2 * 3 = 6"
+            }
+          ]
+        }
+      ],
+      "plainText": "una_variable_con_guiones y 2 * 3 = 6"
+    },
+    {
+      "name": "escaped Markdown characters",
+      "contentType": "text/markdown",
+      "input": "\\*no es cursiva\\*, \\# no es título, 1\\. no es lista",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "value": "*no es cursiva*, # no es título, 1. no es lista"
+            }
+          ]
+        }
+      ],
+      "plainText": "*no es cursiva*, # no es título, 1. no es lista"
+    },
+    {
+      "name": "bulleted list",
+      "contentType": "text/markdown",
+      "input": "- uno\n- dos\n- tres",
+      "tree": [
+        {
+          "type": "list",
+          "ordered": false,
+          "start": null,
+          "items": [
+            {
+              "type": "listItem",
+              "children": [
+                {
+                  "type": "paragraph",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "uno"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "listItem",
+              "children": [
+                {
+                  "type": "paragraph",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "dos"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "listItem",
+              "children": [
+                {
+                  "type": "paragraph",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "tres"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "plainText": "- uno\n- dos\n- tres"
+    },
+    {
+      "name": "numbered list starting at 1",
+      "contentType": "text/markdown",
+      "input": "1. uno\n2. dos",
+      "tree": [
+        {
+          "type": "list",
+          "ordered": true,
+          "start": 1,
+          "items": [
+            {
+              "type": "listItem",
+              "children": [
+                {
+                  "type": "paragraph",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "uno"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "listItem",
+              "children": [
+                {
+                  "type": "paragraph",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "dos"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "plainText": "1. uno\n2. dos"
+    },
+    {
+      "name": "numbered list keeps its start",
+      "contentType": "text/markdown",
+      "input": "3. tres\n4. cuatro",
+      "tree": [
+        {
+          "type": "list",
+          "ordered": true,
+          "start": 3,
+          "items": [
+            {
+              "type": "listItem",
+              "children": [
+                {
+                  "type": "paragraph",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "tres"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "listItem",
+              "children": [
+                {
+                  "type": "paragraph",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "cuatro"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "plainText": "3. tres\n4. cuatro"
+    },
+    {
+      "name": "nested lists",
+      "contentType": "text/markdown",
+      "input": "1. uno\n   - a\n   - b\n2. dos",
+      "tree": [
+        {
+          "type": "list",
+          "ordered": true,
+          "start": 1,
+          "items": [
+            {
+              "type": "listItem",
+              "children": [
+                {
+                  "type": "paragraph",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "uno"
+                    }
+                  ]
+                },
+                {
+                  "type": "list",
+                  "ordered": false,
+                  "start": null,
+                  "items": [
+                    {
+                      "type": "listItem",
+                      "children": [
+                        {
+                          "type": "paragraph",
+                          "children": [
+                            {
+                              "type": "text",
+                              "value": "a"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "listItem",
+                      "children": [
+                        {
+                          "type": "paragraph",
+                          "children": [
+                            {
+                              "type": "text",
+                              "value": "b"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "listItem",
+              "children": [
+                {
+                  "type": "paragraph",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "dos"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "plainText": "1. uno\n   - a\n   - b\n2. dos"
+    },
+    {
+      "name": "paragraph followed by a list",
+      "contentType": "text/markdown",
+      "input": "Instrucciones:\n\n- lee el caso\n- responde",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "value": "Instrucciones:"
+            }
+          ]
+        },
+        {
+          "type": "list",
+          "ordered": false,
+          "start": null,
+          "items": [
+            {
+              "type": "listItem",
+              "children": [
+                {
+                  "type": "paragraph",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "lee el caso"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "listItem",
+              "children": [
+                {
+                  "type": "paragraph",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "responde"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "plainText": "Instrucciones:\n\n- lee el caso\n- responde"
+    },
+    {
+      "name": "a bulleted list interrupts a paragraph",
+      "contentType": "text/markdown",
+      "input": "Lee:\n- el caso\n- la pregunta",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "value": "Lee:"
+            }
+          ]
+        },
+        {
+          "type": "list",
+          "ordered": false,
+          "start": null,
+          "items": [
+            {
+              "type": "listItem",
+              "children": [
+                {
+                  "type": "paragraph",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "el caso"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "listItem",
+              "children": [
+                {
+                  "type": "paragraph",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "la pregunta"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "plainText": "Lee:\n\n- el caso\n- la pregunta"
+    },
+    {
+      "name": "a numbered list interrupts a paragraph only from 1",
+      "contentType": "text/markdown",
+      "input": "Paso\n2. no es una lista",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "value": "Paso 2. no es una lista"
+            }
+          ]
+        }
+      ],
+      "plainText": "Paso 2. no es una lista"
+    },
+    {
+      "name": "list item with a hard break and emphasis",
+      "contentType": "text/markdown",
+      "input": "- **uno**\\\n  sigue\n- *dos*",
+      "tree": [
+        {
+          "type": "list",
+          "ordered": false,
+          "start": null,
+          "items": [
+            {
+              "type": "listItem",
+              "children": [
+                {
+                  "type": "paragraph",
+                  "children": [
+                    {
+                      "type": "strong",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "uno"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "break"
+                    },
+                    {
+                      "type": "text",
+                      "value": "sigue"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "listItem",
+              "children": [
+                {
+                  "type": "paragraph",
+                  "children": [
+                    {
+                      "type": "emphasis",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "dos"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "plainText": "- uno\n  sigue\n- dos"
+    },
+    {
+      "name": "loose list items keep one paragraph each",
+      "contentType": "text/markdown",
+      "input": "- uno\n\n- dos",
+      "tree": [
+        {
+          "type": "list",
+          "ordered": false,
+          "start": null,
+          "items": [
+            {
+              "type": "listItem",
+              "children": [
+                {
+                  "type": "paragraph",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "uno"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "listItem",
+              "children": [
+                {
+                  "type": "paragraph",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "dos"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "plainText": "- uno\n- dos"
+    },
+    {
+      "name": "empty list item",
+      "contentType": "text/markdown",
+      "input": "- uno\n-\n- tres",
+      "tree": [
+        {
+          "type": "list",
+          "ordered": false,
+          "start": null,
+          "items": [
+            {
+              "type": "listItem",
+              "children": [
+                {
+                  "type": "paragraph",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "uno"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "listItem",
+              "children": []
+            },
+            {
+              "type": "listItem",
+              "children": [
+                {
+                  "type": "paragraph",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "tres"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "plainText": "- uno\n-\n- tres"
+    },
+    {
+      "name": "entities are decoded into text",
+      "contentType": "text/markdown",
+      "input": "&lt;b&gt; &amp; &copy;",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "value": "<b> & ©"
+            }
+          ]
+        }
+      ],
+      "plainText": "<b> & ©"
+    },
+    {
+      "name": "disabled: ATX heading",
+      "contentType": "text/markdown",
+      "input": "# Título **fuerte**",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "value": "# Título "
+            },
+            {
+              "type": "strong",
+              "children": [
+                {
+                  "type": "text",
+                  "value": "fuerte"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "plainText": "# Título fuerte"
+    },
+    {
+      "name": "disabled: setext heading",
+      "contentType": "text/markdown",
+      "input": "Título\n===",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "value": "Título ==="
+            }
+          ]
+        }
+      ],
+      "plainText": "Título ==="
+    },
+    {
+      "name": "disabled: thematic break",
+      "contentType": "text/markdown",
+      "input": "uno\n\n---\n\ndos",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "value": "uno"
+            }
+          ]
+        },
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "value": "---"
+            }
+          ]
+        },
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "value": "dos"
+            }
+          ]
+        }
+      ],
+      "plainText": "uno\n\n---\n\ndos"
+    },
+    {
+      "name": "disabled: block quote",
+      "contentType": "text/markdown",
+      "input": "> una cita",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "value": "> una cita"
+            }
+          ]
+        }
+      ],
+      "plainText": "> una cita"
+    },
+    {
+      "name": "disabled: inline code",
+      "contentType": "text/markdown",
+      "input": "usa `código` aquí",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "value": "usa `código` aquí"
+            }
+          ]
+        }
+      ],
+      "plainText": "usa `código` aquí"
+    },
+    {
+      "name": "disabled: fenced code",
+      "contentType": "text/markdown",
+      "input": "```\nx = 1\n```",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "value": "``` x = 1 ```"
+            }
+          ]
+        }
+      ],
+      "plainText": "``` x = 1 ```"
+    },
+    {
+      "name": "disabled: indented code",
+      "contentType": "text/markdown",
+      "input": "    con sangría",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "value": "con sangría"
+            }
+          ]
+        }
+      ],
+      "plainText": "con sangría"
+    },
+    {
+      "name": "disabled: links, autolinks and images",
+      "contentType": "text/markdown",
+      "input": "[sitio](https://example.org), <https://example.org> e ![imagen](x.png)",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "value": "[sitio](https://example.org), <https://example.org> e ![imagen](x.png)"
+            }
+          ]
+        }
+      ],
+      "plainText": "[sitio](https://example.org), <https://example.org> e ![imagen](x.png)"
+    },
+    {
+      "name": "disabled: link reference definition",
+      "contentType": "text/markdown",
+      "input": "[a]: https://example.org\n\n[a]",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "value": "[a]: https://example.org"
+            }
+          ]
+        },
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "value": "[a]"
+            }
+          ]
+        }
+      ],
+      "plainText": "[a]: https://example.org\n\n[a]"
+    },
+    {
+      "name": "disabled: table syntax is not CommonMark",
+      "contentType": "text/markdown",
+      "input": "| a | b |\n| - | - |",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "value": "| a | b | | - | - |"
+            }
+          ]
+        }
+      ],
+      "plainText": "| a | b | | - | - |"
+    },
+    {
+      "name": "injection: HTML block",
+      "contentType": "text/markdown",
+      "input": "<script>alert(1)</script>",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "value": "<script>alert(1)</script>"
+            }
+          ]
+        }
+      ],
+      "plainText": "<script>alert(1)</script>"
+    },
+    {
+      "name": "injection: inline HTML with an event handler",
+      "contentType": "text/markdown",
+      "input": "hola <img src=x onerror=\"alert(1)\"> **mundo**",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "value": "hola <img src=x onerror=\"alert(1)\"> "
+            },
+            {
+              "type": "strong",
+              "children": [
+                {
+                  "type": "text",
+                  "value": "mundo"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "plainText": "hola <img src=x onerror=\"alert(1)\"> mundo"
+    },
+    {
+      "name": "injection: javascript link",
+      "contentType": "text/markdown",
+      "input": "[clic](javascript:alert(1))",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "value": "[clic](javascript:alert(1))"
+            }
+          ]
+        }
+      ],
+      "plainText": "[clic](javascript:alert(1))"
+    },
+    {
+      "name": "injection: HTML in plain text",
+      "contentType": "text/plain",
+      "input": "<script>alert(1)</script>",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "value": "<script>alert(1)</script>"
+            }
+          ]
+        }
+      ],
+      "plainText": "<script>alert(1)</script>"
+    }
+  ]
+}
