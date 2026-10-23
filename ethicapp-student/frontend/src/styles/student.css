@@ -190,9 +190,14 @@ body {
   color: #b35a00;
 }
 
-/* Teacher-written text keeps the line breaks it was typed with (#761). */
-.text-line-breaks {
-  white-space: pre-line;
+/* Teacher-written rich text (#766): block content with no trailing margin. */
+.rich-text > :last-child {
+  margin-bottom: 0;
+}
+
+.rich-text ul,
+.rich-text ol {
+  padding-left: 1.5rem;
 }
 
 .external-service-result {
