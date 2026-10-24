@@ -1,13 +1,20 @@
 // Builds DOM nodes from a rich text tree (#765). Text only ever goes into text
 // nodes, and the only attribute set is an integer `start` on numbered lists,
 // as canonical-schemas/rich-text/README.md requires.
+//
+// Until the teacher views get links and the video facade (#785), a link shows
+// its text only and a video its title in a paragraph, so no text is lost.
 
 const BLOCK_ELEMENTS = { paragraph: "p" };
 const INLINE_ELEMENTS = { strong: "strong", emphasis: "em" };
 
 function appendNodes(document, parent, nodes) {
     for (const node of nodes) {
-        parent.appendChild(buildNode(document, node));
+        if (node.type === "link") {
+            appendNodes(document, parent, node.children);
+        } else {
+            parent.appendChild(buildNode(document, node));
+        }
     }
     return parent;
 }
@@ -48,6 +55,11 @@ function buildNode(document, node) {
     }
     if (node.type === "list") {
         return buildList(document, node);
+    }
+    if (node.type === "video") {
+        const paragraph = document.createElement("p");
+        paragraph.appendChild(document.createTextNode(node.title));
+        return paragraph;
     }
     const tag = BLOCK_ELEMENTS[node.type] || INLINE_ELEMENTS[node.type];
     if (!tag) {

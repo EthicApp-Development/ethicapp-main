@@ -3,8 +3,9 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import { Validator } from "@cfworker/json-schema";
 
-// The rich text contract (#762): the fixtures every renderer is tested against.
-const TREE_SCHEMA_URL = new URL("../rich-text/rich-text-tree-v1.schema.json", import.meta.url);
+// The rich text contract (#762, version 2 in #784): the fixtures every renderer
+// is tested against.
+const TREE_SCHEMA_URL = new URL("../rich-text/rich-text-tree-v2.schema.json", import.meta.url);
 const FIXTURES_URL = new URL("../rich-text/fixtures.json", import.meta.url);
 
 const treeSchema = JSON.parse(readFileSync(TREE_SCHEMA_URL, "utf8"));
@@ -14,6 +15,12 @@ const CONTENT_TYPES = new Set(["text/plain", "text/markdown"]);
 const FIXTURE_KEYS = ["name", "contentType", "input", "tree", "plainText"];
 const SUBSET_NODE_TYPES = [
     "paragraph", "bulletList", "orderedList", "listItem", "text", "strong", "emphasis", "break",
+    "link", "video",
+];
+const VIDEO_URL_FORMS = [
+    "www.youtube.com/watch", "youtube.com/watch", "m.youtube.com/watch", "music.youtube.com/watch",
+    "youtu.be/", "www.youtu.be/", "youtube.com/embed/", "youtube.com/shorts/",
+    "youtube.com/live/", "youtube.com/v/", "youtube-nocookie.com/embed/",
 ];
 
 const isMarkdown = fixture => fixture.contentType === "text/markdown";
@@ -23,7 +30,7 @@ function eachInlineRun(blocks, visit) {
     for (const block of blocks) {
         if (block.type === "paragraph") {
             visitInline(block.children, visit);
-        } else {
+        } else if (block.type === "list") {
             for (const item of block.items) {
                 eachInlineRun(item.children, visit);
             }
@@ -61,7 +68,7 @@ function describeErrors(result) {
 }
 
 test("the fixtures file is versioned and its cases are well formed", () => {
-    assert.equal(fixtures.version, 1);
+    assert.equal(fixtures.version, 2);
     assert.ok(Array.isArray(fixtures.cases) && fixtures.cases.length > 0);
 
     const names = new Set();
@@ -130,21 +137,83 @@ test("no plain-text line ends with whitespace", () => {
     }
 });
 
+test("every YouTube URL form has a video case", () => {
+    const videoInputs = fixtures.cases
+        .filter(fixture => isMarkdown(fixture)
+            && fixture.tree.some(block => block.type === "video"))
+        .map(fixture => fixture.input);
+    for (const form of VIDEO_URL_FORMS) {
+        assert.ok(videoInputs.some(input => input.includes(`//${form}`)
+            || input.includes(`.${form}`)), `no video case for ${form}`);
+    }
+});
+
+test("the plain text of a video names it with its canonical URL", () => {
+    for (const fixture of fixtures.cases.filter(isMarkdown)) {
+        for (const block of fixture.tree.filter(candidate => candidate.type === "video")) {
+            const url = `https://www.youtube.com/watch?v=${block.videoId}`;
+            const line = block.title === url ? `Video: ${url}` : `Video: ${block.title} (${url})`;
+            assert.ok(fixture.plainText.split("\n").includes(line), `${fixture.name}: ${line}`);
+        }
+    }
+});
+
+const textNode = value => ({ type: "text", value });
+const linkNode = (href, extra = {}) => ({
+    type: "link", href, children: [textNode("x")], ...extra,
+});
+const videoNode = (extra = {}) => ({
+    type: "video", provider: "youtube", videoId: "M7lc1UVf-VE", title: "El caso", ...extra,
+});
+
+test("the tree schema accepts links and videos where the contract allows them", () => {
+    const strong = { type: "strong", children: [textNode("b")] };
+    const link = { ...linkNode("https://example.org/a?b=1#c"), children: [textNode("a "), strong] };
+    const tree = [
+        { type: "paragraph", children: [{ type: "emphasis", children: [link] }] },
+        videoNode(),
+    ];
+    const result = treeValidator.validate(tree);
+    assert.equal(result.valid, true, describeErrors(result));
+});
+
 test("the tree schema rejects nodes and attributes outside the subset", () => {
     const item = { type: "listItem", children: [] };
     const paragraph = children => [{ type: "paragraph", children }];
-    const link = { type: "link", children: [{ type: "text", value: "x" }] };
-    const list = (ordered, start) => [{ type: "list", ordered, start, items: [item] }];
-    const invalid = {
-        "numbered list without start": list(true, null),
-        "bulleted list with start":    list(false, 2),
-        "HTML node":                   [{ type: "html", value: "<b>" }],
-        "link node":                   paragraph([link]),
-        "attribute on a text node":    paragraph([{ type: "text", value: "x", href: "y" }]),
-        "empty paragraph":             paragraph([]),
-        "empty text node":             paragraph([{ type: "text", value: "" }]),
-    };
-    for (const [label, tree] of Object.entries(invalid)) {
+    const list = (ordered, start, items = [item]) => [{ type: "list", ordered, start, items }];
+    const nestedLink = { type: "strong", children: [linkNode("https://example.org/b")] };
+    const invalid = [
+        ["numbered list without start", list(true, null)],
+        ["bulleted list with start", list(false, 2)],
+        ["HTML node", [{ type: "html", value: "<b>" }]],
+        ["image node", paragraph([{ type: "image", src: "https://example.org/a.png" }])],
+        ["attribute on a text node", paragraph([{ type: "text", value: "x", href: "y" }])],
+        ["empty paragraph", paragraph([])],
+        ["empty text node", paragraph([textNode("")])],
+        ["link without href", paragraph([{ type: "link", children: [textNode("x")] }])],
+        ["link without text", paragraph([{ ...linkNode("https://example.org"), children: [] }])],
+        ["javascript link", paragraph([linkNode("javascript:alert(1)")])],
+        ["data link", paragraph([linkNode("data:text/html,x")])],
+        ["mailto link", paragraph([linkNode("mailto:a@example.org")])],
+        ["relative link", paragraph([linkNode("/caso")])],
+        ["link without a host", paragraph([linkNode("https://")])],
+        ["quote in an href", paragraph([linkNode("https://example.org/\"onclick=\"x")])],
+        ["space in an href", paragraph([linkNode("https://example.org/a b")])],
+        ["link with a title", paragraph([linkNode("https://example.org", { title: "t" })])],
+        ["link inside a link", paragraph([linkNode("https://example.org", {
+            children: [nestedLink],
+        })])],
+        ["video inside a paragraph", paragraph([videoNode()])],
+        ["video inside a list item", list(false, null, [{ ...item, children: [videoNode()] }])],
+        ["video with a short id", [videoNode({ videoId: "M7lc1UVf" })]],
+        ["video with a URL as id", [videoNode({ videoId: "https://youtu.be/M7lc1UVf-VE" })]],
+        ["video from another provider", [videoNode({ provider: "vimeo" })]],
+        ["video with a URL", [videoNode({ url: "https://youtu.be/M7lc1UVf-VE" })]],
+        ["video with an untrimmed title", [videoNode({ title: " El caso" })]],
+        ["video with a title on two lines", [videoNode({ title: "El\ncaso" })]],
+        ["video with an empty title", [videoNode({ title: "" })]],
+    ];
+    for (const [label, tree] of invalid) {
         assert.equal(treeValidator.validate(tree).valid, false, label);
     }
 });

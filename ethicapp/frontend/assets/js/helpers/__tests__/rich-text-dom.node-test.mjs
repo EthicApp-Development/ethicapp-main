@@ -94,6 +94,15 @@ describe("rich text DOM in the teacher views (#765)", () => {
             "<p>&lt;img src=x onerror=\"alert(1)\"&gt;</p>");
     });
 
+    it("shows links as their text and videos as their title until #785", () => {
+        const source = "Lee [el **caso**](https://example.org) y <https://example.org/b>"
+            + "\n\n[El <video>](https://youtu.be/M7lc1UVf-VE)";
+        assert.equal(serialize(render(source, "text/markdown")),
+            "<p>Lee el <strong>caso</strong> y https://example.org/b</p><p>El &lt;video&gt;</p>");
+        assert.equal(serialize(render("- [uno](https://example.org)", "text/markdown")),
+            "<ul><li>uno</li></ul>");
+    });
+
     it("renders nothing for empty text or a missing tree", () => {
         assert.equal(serialize(render("", "text/markdown")), "");
         assert.equal(serialize(buildRichTextFragment(fakeDocument, undefined)), "");

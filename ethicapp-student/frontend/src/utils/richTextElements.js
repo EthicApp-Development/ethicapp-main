@@ -2,11 +2,14 @@
 // canonical-schemas/rich-text/README.md requires: text only as text children,
 // and an integer `start` on numbered lists as the only attribute. `h` is
 // React's createElement, injected so the mapping is testable without React.
+//
+// Until the student views get links and the video facade (#786), a link shows
+// its text only and a video its title in a paragraph, so no text is lost.
 
 const INLINE_ELEMENTS = { strong: 'strong', emphasis: 'em' };
 
 function renderNodes(nodes, h) {
-  return nodes.map((node) => renderNode(node, h));
+  return nodes.flatMap((node) => (node.type === 'link' ? renderNodes(node.children, h) : [renderNode(node, h)]));
 }
 
 // An item with a single paragraph, nested lists aside, shows that paragraph's
@@ -36,6 +39,8 @@ function renderNode(node, h) {
       return h('p', null, ...renderNodes(node.children, h));
     case 'list':
       return renderList(node, h);
+    case 'video':
+      return h('p', null, node.title);
     default:
       return INLINE_ELEMENTS[node.type]
         ? h(INLINE_ELEMENTS[node.type], null, ...renderNodes(node.children, h))
