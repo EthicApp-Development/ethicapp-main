@@ -2945,3 +2945,72 @@ tr.group-summary {
 .rich-text ol {
     padding-left: 1.5em;
 }
+
+/* Rich text editor (#767): a toolbar over an editable area styled as a form
+   control. The .ProseMirror rules are the editor's required base styles,
+   from prosemirror-view/style/prosemirror.css (MIT). */
+.ProseMirror {
+    position: relative;
+    overflow-wrap: break-word;
+    white-space: pre-wrap;
+    white-space: break-spaces;
+    font-variant-ligatures: none;
+    font-feature-settings: "liga" 0;
+}
+
+.rich-text-editor .ProseMirror li {
+    position: relative;
+}
+
+.ProseMirror-hideselection *::selection {
+    background: transparent;
+}
+
+.ProseMirror-hideselection {
+    caret-color: transparent;
+}
+
+.ProseMirror-selectednode {
+    outline: 2px solid #8cf;
+}
+
+img.ProseMirror-separator {
+    display: inline !important;
+    margin: 0 !important;
+    border: none !important;
+}
+
+.rich-text-editor-toolbar {
+    margin-bottom: 4px;
+}
+
+.rich-text-editor .rich-text-editor-content {
+    height: auto;
+    min-height: 5.5em;
+}
+
+.rich-text-editor .rich-text-editor-content p {
+    margin-bottom: 6px;
+}
+
+.rich-text-editor .rich-text-editor-content > :last-child {
+    margin-bottom: 0;
+}
+
+.rich-text-editor .rich-text-editor-content ul,
+.rich-text-editor .rich-text-editor-content ol {
+    margin-bottom: 6px;
+    padding-left: 1.5em;
+}
+
+.rich-text-editor .rich-text-editor-content.is-empty::before {
+    position: absolute;
+    color: #999;
+    content: attr(data-placeholder);
+    pointer-events: none;
+}
+
+.rich-text-editor-invalid .rich-text-editor-content {
+    border: 1px solid #ffc107;
+    background-color: #fff3cd;
+}

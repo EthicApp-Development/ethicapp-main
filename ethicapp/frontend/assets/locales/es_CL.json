@@ -552,5 +552,11 @@
 	"faulty_design": "Este diseño tiene errores y no se puede lanzar.",
 	"justify": "Justificar",
 	"preparing_dashboard": "Preparando el dashboard de la actividad...",
-	"remove": "Quitar"
+	"remove": "Quitar",
+	"rich_text_toolbar_label": "Formato del texto",
+	"rich_text_bold": "Negrita",
+	"rich_text_italic": "Cursiva",
+	"rich_text_bullet_list": "Lista con viñetas",
+	"rich_text_numbered_list": "Lista numerada",
+	"rich_text_clear_formatting": "Quitar formato"
 }

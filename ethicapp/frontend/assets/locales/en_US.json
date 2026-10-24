@@ -552,5 +552,11 @@
 	"dashboard_questions_mobile_legend": "R: Range; JR: Justification required; WM: Word minimum",
 	"faulty_design": "This design has errors and cannot be launched.",
 	"preparing_dashboard": "Preparing the activity dashboard...",
-	"remove": "Remove"
+	"remove": "Remove",
+	"rich_text_toolbar_label": "Text formatting",
+	"rich_text_bold": "Bold",
+	"rich_text_italic": "Italic",
+	"rich_text_bullet_list": "Bulleted list",
+	"rich_text_numbered_list": "Numbered list",
+	"rich_text_clear_formatting": "Clear formatting"
 }
