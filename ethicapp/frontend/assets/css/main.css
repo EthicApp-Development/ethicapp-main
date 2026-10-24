@@ -2245,6 +2245,7 @@ h2{
 }
 
 .case-videos-meta {
+    align-items: center;
     display: flex;
     flex-wrap: wrap;
     font-size: 90%;
@@ -3295,6 +3296,7 @@ img.ProseMirror-separator {
 }
 
 .rich-text-editor-video-meta {
+    align-items: center;
     display: flex;
     flex-wrap: wrap;
     font-size: 90%;
