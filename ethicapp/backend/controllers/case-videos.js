@@ -6,6 +6,7 @@
 
 import express from "express";
 import { requireRole } from "../helpers/auth-helper.js";
+import { createSlidingWindowThrottle } from "../helpers/sliding-window-throttle.js";
 import {
     canonicalYoutubeUrl,
     youtubeVideoId,
@@ -16,8 +17,6 @@ import youtubeVideoMetadata, {
     videoAvailability,
 } from "../services/youtube-video-metadata.service.js";
 
-export const PREVIEW_LIMIT_PER_WINDOW = 30;
-export const PREVIEW_WINDOW_MS = 60000;
 const MAX_URL_LENGTH = 2048;
 
 // Error responses of POST /cases/videos/preview. `code` is what clients map to
@@ -52,54 +51,6 @@ export const PREVIEW_ERRORS = Object.freeze({
         message: "Too many video lookups. Try again in a minute.",
     },
 });
-
-/**
- * An in-process sliding-window limiter: at most `limit` hits per key within
- * `windowMs`. `tryAcquire(key)` records a hit and returns
- * `{ allowed, retryAfterMs }`.
- */
-export function createSlidingWindowThrottle({
-    limit = PREVIEW_LIMIT_PER_WINDOW,
-    windowMs = PREVIEW_WINDOW_MS,
-    now = () => Date.now(),
-} = {}) {
-    const hitsByKey = new Map();
-    let lastSweepAt = now();
-
-    function recentHits(key, currentTime) {
-        const hits = (hitsByKey.get(key) ?? []).filter((at) => currentTime - at < windowMs);
-        if (hits.length > 0) {
-            hitsByKey.set(key, hits);
-        } else {
-            hitsByKey.delete(key);
-        }
-        return hits;
-    }
-
-    // Forgets keys with no recent hits, so idle teachers do not accumulate.
-    function sweep(currentTime) {
-        if (currentTime - lastSweepAt < windowMs) {
-            return;
-        }
-        lastSweepAt = currentTime;
-        for (const key of [...hitsByKey.keys()]) {
-            recentHits(key, currentTime);
-        }
-    }
-
-    function tryAcquire(key) {
-        const currentTime = now();
-        sweep(currentTime);
-        const hits = recentHits(key, currentTime);
-        if (hits.length >= limit) {
-            return { allowed: false, retryAfterMs: windowMs - (currentTime - hits[0]) };
-        }
-        hitsByKey.set(key, [...hits, currentTime]);
-        return { allowed: true, retryAfterMs: 0 };
-    }
-
-    return { tryAcquire };
-}
 
 function previewError(res, code) {
     const { status, message } = PREVIEW_ERRORS[code];
