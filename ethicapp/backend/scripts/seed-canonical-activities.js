@@ -23,6 +23,7 @@ import {
     normalizeVisibility,
 } from "../helpers/sharing-policy-helper.js";
 import { parseCaseVideoIds, replaceCaseVideos } from "../helpers/case-videos.js";
+import { parseCaseDocuments, replaceCaseDocuments } from "../helpers/case-documents.js";
 
 function getCaseLicenseCode(activity) {
     return normalizeLicenseCode(
@@ -136,6 +137,24 @@ async function upsertCaseVideos(pool, caseId, caseData) {
     }
 
     await replaceCaseVideos(pool, caseId, parsed.ids);
+}
+
+// The optional `documents` of a seed case: Google document URLs, in order
+// (#792). Absent leaves the case's documents as they are. Seeds are not checked
+// on Google: they carry the canonical URLs of documents a case already held
+// where they were exported, so each URL keeps the product checked then.
+async function upsertCaseDocuments(pool, caseId, caseData) {
+    if (caseData?.documents === undefined) {
+        return;
+    }
+
+    const parsed = parseCaseDocuments(caseData.documents);
+    if (!parsed.ok) {
+        const fields = JSON.stringify(parsed.body.fields);
+        throw new Error(`Invalid documents for seed case "${caseData.title}": ${fields}`);
+    }
+
+    await replaceCaseDocuments(pool, caseId, parsed.documents);
 }
 
 async function readManifest(manifestPath) {
@@ -285,6 +304,7 @@ async function upsertCase(pool, activity, ownerId, manifestDir) {
 
         await upsertCaseAuthors(pool, caseId, activity.case);
         await upsertCaseVideos(pool, caseId, activity.case);
+        await upsertCaseDocuments(pool, caseId, activity.case);
         return updated.rows[0];
     }
 
@@ -321,6 +341,7 @@ async function upsertCase(pool, activity, ownerId, manifestDir) {
 
     await upsertCaseAuthors(pool, inserted.rows[0].id, activity.case);
     await upsertCaseVideos(pool, inserted.rows[0].id, activity.case);
+    await upsertCaseDocuments(pool, inserted.rows[0].id, activity.case);
     return inserted.rows[0];
 }
 

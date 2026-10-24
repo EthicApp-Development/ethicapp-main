@@ -14,6 +14,11 @@ import {
     normalizeCaseVideoSummaries,
 } from "../helpers/case-videos.js";
 import {
+    caseDocumentsJsonSql,
+    copyCaseDocuments,
+    normalizeCaseDocumentSummaries,
+} from "../helpers/case-documents.js";
+import {
     designLockedRefusal,
     designUpdateRefusal,
     UPDATE_UNLOCKED_DESIGN_SQL,
@@ -398,6 +403,7 @@ async function copyCaseForUser(client, sourceCaseId, userId, visibility = PRIVAT
     `, [caseId, sourceCase.id, userId]);
 
     await copyCaseVideos(client, sourceCase.id, caseId);
+    await copyCaseDocuments(client, sourceCase.id, caseId);
 
     return inserted.rows[0].id;
 }
@@ -1220,7 +1226,8 @@ router.get("/designs/:id/case", async (req, res) => {
                        c.permission_statement,
                        c.commercial_source,
                        c.language_code,
-                       ${caseVideosJsonSql("c")} AS videos
+                       ${caseVideosJsonSql("c")} AS videos,
+                       ${caseDocumentsJsonSql("c")} AS documents
                 FROM designs d
                 LEFT JOIN ethical_cases c ON c.id = d.case_id
                 WHERE d.id = $1
@@ -1259,6 +1266,7 @@ router.get("/designs/:id/case", async (req, res) => {
         }
 
         const videos = normalizeCaseVideoSummaries(result.videos);
+        const documents = normalizeCaseDocumentSummaries(result.documents);
 
         return res.status(200).json({
             status: "ok",
@@ -1276,6 +1284,7 @@ router.get("/designs/:id/case", async (req, res) => {
                 permissionStatement: result.permission_statement,
                 commercialSource: result.commercial_source,
                 videos,
+                documents,
             },
         });
     } catch (err) {
