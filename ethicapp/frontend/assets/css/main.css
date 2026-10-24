@@ -2142,7 +2142,9 @@ h2{
     display: inline-block;
 }
 
-.phase-editor-item-heading a {
+/* The accordion's own links; links in teacher-written rich text keep the
+   normal link look and focus ring (#785). */
+.phase-editor-item-heading a:not(.rich-text a) {
     text-decoration: none;
     color: inherit;
 }
@@ -2171,12 +2173,12 @@ h2{
     text-decoration: none;
 }
 
-.phase-editor-item-heading a:hover {
+.phase-editor-item-heading a:not(.rich-text a):hover {
     text-decoration: none;
     color: #0056b3;
 }
 
-.phase-editor-item-heading a:focus {
+.phase-editor-item-heading a:not(.rich-text a):focus {
     outline: none;
 }
 
@@ -3033,6 +3035,119 @@ tr.group-summary {
 .rich-text ul,
 .rich-text ol {
     padding-left: 1.5em;
+}
+
+/* Videos in rich text (#785): a click-to-load facade over a generic EthicApp
+   placeholder, which the YouTube player replaces in the same 16:9 box. */
+.rich-text-video {
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    margin-bottom: 10px;
+    border-radius: 4px;
+    background-color: #14205f;
+}
+
+.rich-text-video-facade,
+.rich-text-video-player {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+}
+
+.rich-text-video-facade {
+    position: relative;
+    padding: 0;
+    background: linear-gradient(135deg, #2649ec, #14205f);
+    color: #fff;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.rich-text-video-facade:focus-visible {
+    outline: 3px solid #ffbf47;
+    outline-offset: -3px;
+}
+
+.rich-text-video-placeholder {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.rich-text-video-play {
+    position: relative;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background-color: rgb(0 0 0 / 55%);
+    transition: background-color 0.15s;
+}
+
+.rich-text-video-play::before {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    border-width: 11px 0 11px 18px;
+    border-style: solid;
+    border-color: transparent transparent transparent #fff;
+    content: "";
+    transform: translate(-35%, -50%);
+}
+
+.rich-text-video-facade:hover .rich-text-video-play,
+.rich-text-video-facade:focus-visible .rich-text-video-play {
+    background-color: rgb(0 0 0 / 80%);
+}
+
+.rich-text-video-caption {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    padding: 24px 12px 10px;
+    background: linear-gradient(transparent, rgb(0 0 0 / 70%));
+}
+
+.rich-text-video-title {
+    display: -webkit-box;
+    overflow: hidden;
+    font-weight: bold;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+.rich-text-video-details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 10px;
+    font-size: 12px;
+}
+
+.rich-text-video-source {
+    font-weight: bold;
+}
+
+/* A video the case reports as removed, private or not embeddable. */
+.rich-text-video-unavailable {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 10px;
+    padding: 10px 12px;
+    border: 1px solid #faebcc;
+    border-radius: 4px;
+    background-color: #fcf8e3;
+    overflow-wrap: anywhere;
+}
+
+.rich-text-video-notice {
+    color: #8a6d3b;
 }
 
 /* Rich text editor (#767): a toolbar over an editable area styled as a form

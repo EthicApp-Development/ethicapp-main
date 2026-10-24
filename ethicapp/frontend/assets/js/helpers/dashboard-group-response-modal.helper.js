@@ -58,6 +58,7 @@ function createModalController() {
 
         $ctrl.group = data.group;
         $ctrl.phaseData = data.phaseData;
+        $ctrl.caseVideos = data.caseVideos;
         $ctrl.groupChatService = data.groupChatService;
         $ctrl.canUseLiveChat = data.canUseLiveChat === true;
         $ctrl.responses = data.responses || [];
@@ -213,6 +214,7 @@ function createModalController() {
     }];
 }
 
+// `caseVideos`: the activity case's videos (#785), for the videos in questions.
 export function openSemanticDifferentialGroupResponseModal(
     $uibModal,
     groupChatService,
@@ -220,7 +222,8 @@ export function openSemanticDifferentialGroupResponseModal(
     phaseData,
     responses,
     chatMessages,
-    canUseLiveChat = false
+    canUseLiveChat = false,
+    caseVideos = null
 ) {
     if (!group || !phaseData) {
         return null;
@@ -234,7 +237,10 @@ export function openSemanticDifferentialGroupResponseModal(
         controllerAs: "$ctrl",
         controller: createModalController(),
         resolve: {
-            data: () => ({ groupChatService, group, phaseData, responses, chatMessages, canUseLiveChat }),
+            data: () => ({
+                groupChatService, group, phaseData, responses, chatMessages, canUseLiveChat,
+                caseVideos,
+            }),
         },
     });
 }

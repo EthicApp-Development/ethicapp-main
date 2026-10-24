@@ -12,7 +12,8 @@
     <div ng-if="ctrl.phaseDetails.instructions && ctrl.phaseDetails.instructions.trim().length > 0">
         <h4>{{ 'phase_instructions_title' | translate }}</h4>
         <rich-text text="ctrl.phaseDetails.instructions"
-            content-type="ctrl.phaseDetails.instructionsContentType"></rich-text>
+            content-type="ctrl.phaseDetails.instructionsContentType"
+            videos="ctrl.caseVideos"></rich-text>
     </div>
     <hr>
     <h4>{{ 'questions_title_text' | translate }}</h4>
@@ -39,7 +40,8 @@
         <tbody>
             <tr ng-repeat="question in ctrl.phaseQuestions">
                 <td class="dashboard-phase-question-text-col">
-                    <rich-text text="question.text" content-type="question.contentType"></rich-text>
+                    <rich-text text="question.text" content-type="question.contentType"
+                        videos="ctrl.caseVideos"></rich-text>
                 </td>
                 <td class="dashboard-phase-left-pole-col">{{ question.leftPole }}</td>
                 <td class="dashboard-phase-right-pole-col">{{ question.rightPole }}</td>

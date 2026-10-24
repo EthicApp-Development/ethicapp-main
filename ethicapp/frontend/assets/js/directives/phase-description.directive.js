@@ -29,8 +29,11 @@ const phaseDescriptionDirective = function() {
     return {
         restrict: 'E',
         scope: {
-            phaseNumber: '<',
-            designObject: '<'
+            phaseNumber:  "<",
+            designObject: "<",
+            // The case's videos (#785), when the view has the case: durations
+            // and availability for the videos in the texts.
+            caseVideos:   "<",
         },
         bindToController: true,
         controllerAs: 'ctrl',
