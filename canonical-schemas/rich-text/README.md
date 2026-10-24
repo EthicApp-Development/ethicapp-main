@@ -105,6 +105,23 @@ Read the file relative to the test module, for example `new URL("../../../../can
 
 **How the fixtures were made.** The trees were generated with `markdown-it` 15 in its `zero` preset, with only the subset's rules enabled (`list`, `emphasis`, `newline`, `escape`, `entity`) and `html: false`. Each one was then reviewed against the rules above. A renderer may use any CommonMark-compliant parser, as long as it passes every case.
 
+## How the Editor Writes Markdown
+
+The design editor (#767, `ethicapp/frontend/assets/js/helpers/rich-text-markdown.js`) loads text through the same parser as the views, and writes it back as follows. Its tests check that every fixture survives a round trip (load, write, parse to the same tree), plus thousands of random documents.
+
+- **Breaks and escapes.**
+  - Line breaks are a backslash at the end of the line.
+  - Every Markdown character written as text is escaped, and `-`, `+`, `=` and `1.` are escaped at the start of a line.
+  - Whitespace at a mark's edges moves outside its delimiters.
+- **Emphasis.**
+  - Bold is `**…**` and italic `*…*`.
+  - When two marks are open at once, they use different delimiter characters (`*` and `_`). A mark reopening right after another closes also switches character, so delimiter runs never merge.
+  - Where a delimiter run would not count under CommonMark's flanking rules, for example `**¿qué?**` followed by a letter, the letter next to it is written as a character reference (`&#97;`). The reference reads back as the same letter.
+- **Lists.**
+  - Two consecutive lists of the same kind switch markers (`-` and `*`, `.` and `)`), so they do not merge.
+  - Inside a list item, a nested list follows its paragraph on the next line when CommonMark allows it, which keeps the list tight.
+- **Empty content.** Blank paragraphs, breaks at paragraph edges and documents with no visible text are dropped; the last ones are saved as `""`.
+
 ## Extending the Subset
 
 Later stages may enable more CommonMark constructs, such as links or headings. Enabling one changes how existing `text/markdown` that happens to contain its syntax renders. Therefore:

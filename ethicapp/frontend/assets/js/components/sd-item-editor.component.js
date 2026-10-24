@@ -13,6 +13,13 @@ function SDItemEditController() {
         }
     };
     
+    // The editor reports text/markdown (#767).
+    vm.setQuestionText = function(text, contentType) {
+        vm.question.q_text = text;
+        vm.question.q_text_content_type = contentType;
+        vm.validateItem();
+    };
+
     vm.validateItem = function() {
         vm.normalizeJustificationSettings();
 
