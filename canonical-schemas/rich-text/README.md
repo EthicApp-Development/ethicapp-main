@@ -126,7 +126,7 @@ Renderers build elements from the tree, never from the source text, and put `tex
 
 The elements allowed are:
 - `p`, `ul`, `ol`, `li`, `strong`, `em` and `br`. The only attribute is `start` on `ol`, always an integer.
-- `a` for a `link`, with exactly these attributes: `href` from the tree, `target="_blank"` and `rel="noopener noreferrer"`.
+- `a` for a `link`, with exactly these attributes: `href` from the tree, `target="_blank"` and `rel="noopener noreferrer"`. After the link's text, the view may add a visually hidden element holding its localized "opens in a new tab" hint, with only the class that hides it.
 - The video facade for a `video` (teacher views in #785, student views in #786). Before activation, it shows the title, a generic EthicApp placeholder image and an indication that the video comes from YouTube, and it requests nothing from YouTube or Google. On activation it inserts an `iframe` whose `src` is `youtubeEmbedUrl(videoId)` (`https://www.youtube-nocookie.com/embed/<id>?playsinline=1&rel=0`), built by EthicApp from the id. Each view defines the facade's own elements; none of them carries a URL taken from the text.
 
 A list item with a single paragraph, nested lists aside, shows that paragraph's content directly in its `li`, as CommonMark renders tight lists. Items with several paragraphs keep their `p` elements.
