@@ -49,6 +49,7 @@
                 <div class="col-md-12">
                     <design-error-summary
                         validation-errors="dec.validationErrors"
+                        video-warnings="dec.videoWarnings"
                         scroll-to="dec.scrollToPhase(phaseKey)">
                     </design-error-summary>
                 </div>
@@ -204,6 +205,7 @@
                                                 question="item"
                                                 question-number="$index+1"
                                                 show-separator="false"
+                                                case-videos="dec.caseVideos"
                                                 validate-callback="dec.handleValidationResult(result)">
                                                 <div class="row">
                                                     <div class="col-xs-6">

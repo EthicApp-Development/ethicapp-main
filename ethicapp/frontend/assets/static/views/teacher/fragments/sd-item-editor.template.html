@@ -8,6 +8,7 @@
                 label="{{ 'questionText' | translate }}"
                 placeholder="{{ 'title' | translate }}"
                 invalid="!$ctrl.question.q_text"
+                videos="$ctrl.caseVideos"
                 on-change="$ctrl.setQuestionText(text, contentType)">
             </rich-text-editor>
         </div>

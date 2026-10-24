@@ -1,0 +1,61 @@
+<div class="modal-header">
+    <button type="button" class="close" ng-click="$ctrl.cancel()" aria-label="{{ 'cancel' | translate }}">
+        <span aria-hidden="true">&times;</span>
+    </button>
+    <h4 id="caseVideoPickerTitle" class="modal-title">{{ 'rich_text_editor_video_dialog_title' | translate }}</h4>
+</div>
+<div class="modal-body">
+    <p id="caseVideoPickerHelp" class="help-block">{{ 'rich_text_editor_video_dialog_help' | translate }}</p>
+    <ul class="case-videos-list case-video-picker-list" aria-labelledby="caseVideoPickerTitle" aria-describedby="caseVideoPickerHelp">
+        <li class="case-videos-entry case-video-picker-entry"
+            ng-repeat="choice in $ctrl.choices track by choice.videoId"
+            ng-class="{ 'is-unavailable': !choice.selectable }"
+            data-video-id="{{ choice.videoId }}">
+            <div class="case-videos-item">
+                <div class="case-videos-item-body">
+                    <strong id="{{ 'caseVideoPickerTitle-' + choice.videoId }}" class="case-videos-title">{{ choice.title }}</strong>
+                    <div class="text-muted case-videos-meta">
+                        <span class="label label-default">{{ 'case_videos_source_youtube' | translate }}</span>
+                        <span ng-if="choice.duration">{{ 'case_videos_duration' | translate }}: {{ choice.duration }}</span>
+                        <span ng-if="choice.channelTitle">{{ 'case_videos_channel' | translate }}: {{ choice.channelTitle }}</span>
+                        <span ng-if="choice.hasMetadata && !choice.noticeKey">{{ 'rich_text_editor_video_available' | translate }}</span>
+                    </div>
+                    <p id="{{ 'caseVideoPickerNotice-' + choice.videoId }}" class="text-warning case-videos-notice" ng-if="choice.noticeKey">
+                        <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+                        {{ choice.noticeKey | translate }}
+                        <span ng-if="!choice.selectable">{{ 'rich_text_editor_video_not_selectable' | translate }}</span>
+                    </p>
+                    <p
+                        id="{{ 'caseVideoPickerDescription-' + choice.videoId }}"
+                        class="case-videos-description"
+                        ng-class="{ 'is-collapsed': $ctrl.isCollapsed(choice) }"
+                        ng-if="choice.description">{{ choice.description }}</p>
+                    <button
+                        type="button"
+                        class="btn btn-link btn-sm case-videos-description-toggle"
+                        ng-if="choice.description && choice.longDescription"
+                        ng-click="$ctrl.toggleDescription(choice)"
+                        aria-controls="{{ 'caseVideoPickerDescription-' + choice.videoId }}"
+                        aria-expanded="{{ $ctrl.isCollapsed(choice) ? 'false' : 'true' }}">
+                        {{ ($ctrl.isCollapsed(choice) ? 'case_videos_show_more' : 'case_videos_show_less') | translate }}
+                    </button>
+                </div>
+                <div class="case-videos-item-actions">
+                    <button
+                        type="button"
+                        class="btn btn-default btn-sm case-video-picker-choose"
+                        data-video-id="{{ choice.videoId }}"
+                        ng-click="$ctrl.choose(choice)"
+                        ng-disabled="!choice.selectable"
+                        aria-label="{{ ('rich_text_editor_video_choose' | translate) + ': ' + choice.title }}"
+                        ng-attr-aria-describedby="{{ choice.noticeKey ? 'caseVideoPickerNotice-' + choice.videoId : undefined }}">
+                        <i class="fa-solid fa-plus" aria-hidden="true"></i> {{ 'rich_text_editor_video_choose' | translate }}
+                    </button>
+                </div>
+            </div>
+        </li>
+    </ul>
+</div>
+<div class="modal-footer">
+    <button type="button" class="btn btn-default btn-sm case-video-picker-cancel" ng-click="$ctrl.cancel()">{{ 'cancel' | translate }}</button>
+</div>

@@ -607,5 +607,18 @@
 	"rich_text_italic": "Italic",
 	"rich_text_bullet_list": "Bulleted list",
 	"rich_text_numbered_list": "Numbered list",
-	"rich_text_clear_formatting": "Clear formatting"
+	"rich_text_clear_formatting": "Clear formatting",
+	"rich_text_editor_video_insert": "Insert a case video",
+	"rich_text_editor_video_dialog_title": "Insert a case video",
+	"rich_text_editor_video_dialog_help": "Choose one of the case's videos. Students see it in the question and play it there.",
+	"rich_text_editor_video_choose": "Insert",
+	"rich_text_editor_video_available": "Available",
+	"rich_text_editor_video_metadata_missing": "YouTube could not be reached, so only the video's id is shown. You can insert it: its title will be the id until you change it.",
+	"rich_text_editor_video_not_selectable": "It cannot be inserted.",
+	"rich_text_editor_video_card_label": "Case video",
+	"rich_text_editor_video_title_label": "Video title",
+	"rich_text_editor_video_remove": "Remove video",
+	"rich_text_editor_video_not_in_case": "This video is not one of the case's videos. It still plays, but you may want to remove it or add it to the case.",
+	"design_video_warnings_title": "Warnings",
+	"design_video_not_in_case": "Phase {{phase}}, question {{question}}: this video is not one of the case's videos:"
 }

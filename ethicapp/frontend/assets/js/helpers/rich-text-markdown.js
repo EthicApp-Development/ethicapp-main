@@ -4,15 +4,18 @@
 // the CommonMark subset of canonical-schemas/rich-text/README.md:
 // - hard breaks are a backslash at the end of the line;
 // - every Markdown character written as text is escaped, so the text keeps
-//   its meaning if more CommonMark constructs are enabled later.
+//   its meaning if more CommonMark constructs are enabled later;
+// - a video (#787) is its own paragraph holding only a link to it.
 
 import { parseRichText } from "./rich-text.js";
+import {
+    canonicalYoutubeUrl, isYoutubeVideoId,
+} from "../../../../common/modules/youtube-urls.js";
 
 // ─── Loading ────────────────────────────────────────────────────────────────
 
-// The editor has no links or videos yet (#787): a link loads as its text, with
-// its marks, and a video as a paragraph with its title. Saving such a text
-// writes them back as plain text.
+// The editor has no links: a link loads as its text, with its marks, so saving
+// it writes plain text. Videos load as video nodes (#787).
 function inlineNodes(schema, nodes, marks = []) {
     return nodes.flatMap(node => {
         if (node.type === "text") {
@@ -35,7 +38,7 @@ function blockNodes(schema, blocks) {
             return schema.nodes.paragraph.create(null, inlineNodes(schema, block.children));
         }
         if (block.type === "video") {
-            return schema.nodes.paragraph.create(null, schema.text(block.title));
+            return schema.nodes.video.create({ videoId: block.videoId, title: block.title });
         }
         const items = block.items.map(item => {
             const children = blockNodes(schema, item.children);
@@ -327,6 +330,22 @@ function serializeParagraph(paragraph) {
     return output.trim();
 }
 
+/**
+ * A video as Markdown: a link to its canonical URL, with its title on one
+ * line as the escaped link text. An empty title writes the URL as the text,
+ * which reads back as the title, since the contract titles a video that has
+ * no link text with its URL. A node with a malformed id, which the schema's
+ * parsing never makes, keeps only its title as plain text.
+ */
+export function videoMarkdown(videoId, title) {
+    const oneLine = String(title ?? "").replace(/\s+/gu, " ").trim();
+    if (!isYoutubeVideoId(videoId)) {
+        return escapeText(oneLine, true);
+    }
+    const url = canonicalYoutubeUrl(videoId);
+    return `[${escapeText(oneLine || url, false)}](${url})`;
+}
+
 function indentContinuation(text, width) {
     const indent = " ".repeat(width);
     return text.split("\n")
@@ -365,8 +384,10 @@ function serializeBlocks(container, { inListItem = false } = {}) {
     container.forEach(node => {
         const isParagraph = node.type.name === "paragraph";
         let text;
-        if (isParagraph) {
-            text = serializeParagraph(node);
+        if (isParagraph || node.type.name === "video") {
+            text = isParagraph
+                ? serializeParagraph(node)
+                : videoMarkdown(node.attrs.videoId, node.attrs.title);
             if (!text) {
                 return;
             }
@@ -387,9 +408,17 @@ function serializeBlocks(container, { inListItem = false } = {}) {
     return output;
 }
 
-/** The document as text/markdown; "" when it holds no visible text. */
+function hasVideo(doc) {
+    let found = false;
+    doc.forEach(node => {
+        found ||= node.type.name === "video";
+    });
+    return found;
+}
+
+/** The document as text/markdown; "" when it holds no visible text or video. */
 export function markdownFromDoc(doc) {
-    if (!doc.textContent.trim()) {
+    if (!doc.textContent.trim() && !hasVideo(doc)) {
         return "";
     }
     return serializeBlocks(doc);

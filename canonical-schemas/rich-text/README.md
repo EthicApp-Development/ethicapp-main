@@ -87,7 +87,7 @@ Raw HTML is never interpreted, which is one half of the injection rule below.
 - `title` is the link's text on one line: emphasis is dropped, breaks and runs of whitespace become single spaces, and the ends are trimmed. For an autolink, it is the URL.
 - **The link stays a link** when the paragraph holds anything else (a sentence, a second link), when the link is inside emphasis, and inside list items. A video is a full-width block, so it is made only from paragraphs at the top level of the text.
 
-Text written by the editor never turns into a link: it escapes `[`, `]`, `<` and `>` (#767), and bare URLs are not links.
+Text written by the editor never turns into a link: it escapes `[`, `]`, `<` and `>` (#767), and bare URLs are not links. The only links the editor writes are the video paragraphs it inserts (#787), described in [How the Editor Writes Markdown](#how-the-editor-writes-markdown).
 
 ## The Tree
 
@@ -161,8 +161,13 @@ The design editor (#767, `ethicapp/frontend/assets/js/helpers/rich-text-markdown
 - **Lists.**
   - Two consecutive lists of the same kind switch markers (`-` and `*`, `.` and `)`), so they do not merge.
   - Inside a list item, a nested list follows its paragraph on the next line when CommonMark allows it, which keeps the list tight.
-- **Empty content.** Blank paragraphs, breaks at paragraph edges and documents with no visible text are dropped; the last ones are saved as `""`.
-- **Links and videos, until #787.** The editor has no links or videos yet. It loads a link as its text, marks kept, and a video as a paragraph with its title, so saving such a text writes them back as plain, escaped text. Its fixture round trip therefore compares against each tree with links and videos flattened that way, and its random documents include link syntax, which must stay text.
+- **Empty content.** Blank paragraphs, breaks at paragraph edges and documents with no visible text or video are dropped; the last ones are saved as `""`.
+- **Videos (#787).** A `video` block loads as a video node, shown as a card, and the editor can insert one of the case's videos. It is written as its own paragraph holding only a link to the canonical watch URL: `[title](https://www.youtube.com/watch?v=<id>)`.
+  - The title is written on one line, with runs of whitespace as single spaces and the ends trimmed, and escaped like any text, so brackets, backslashes and emphasis characters stay literal.
+  - An empty title is written as the URL itself, `[https://www.youtube.com/watch?v=<id>](https://www.youtube.com/watch?v=<id>)`, which reads back with the URL as its title. A view therefore never shows an empty video title.
+  - Videos are top-level blocks only, as in the tree: the editor inserts one at the cursor in a top-level paragraph, or after the list that holds the cursor.
+- **Links.** The editor has no links. It loads a link as its text, marks kept, so saving such a text writes it back as plain, escaped text.
+- **Its tests.** The fixture round trip compares against each tree with links flattened that way and videos kept. The random documents include link syntax, which must stay text, and top-level videos whose titles mix Markdown characters, brackets, backslashes, whitespace, URLs and empty strings.
 
 ## Extending the Subset
 
