@@ -6,6 +6,7 @@ import { useI18n } from '../app/providers.jsx';
 import ActivityTabsPanel from '../components/session-detail/ActivityTabsPanel.jsx';
 import SessionMetadata from '../components/session-detail/SessionMetadata.jsx';
 import WaitingStatePanel from '../components/session-detail/WaitingStatePanel.jsx';
+import { CaseVideosProvider } from '../context/CaseVideosContext.jsx';
 import { useStudentActivityState } from '../context/StudentActivityStateContext.jsx';
 import { useActivityRealtimeSync } from './session-detail/hooks/useActivityRealtimeSync.js';
 import { usePhaseResponseSubmission } from './session-detail/hooks/usePhaseResponseSubmission.js';
@@ -613,7 +614,7 @@ export default function ActivityPage() {
               ) : null}
 
               {!shouldShowWaitingScreen && !activityStateError && tabEntries.length > 0 ? (
-                <>
+                <CaseVideosProvider videos={localState.caseDocument?.videos}>
                   {isSessionFinished ? (
                     <div className="alert alert-warning mt-3 mb-0" role="alert">
                       {t('sessionDetail.activityFinished')}
@@ -638,7 +639,7 @@ export default function ActivityPage() {
                     onDismissExternalResult={onDismissExternalResult}
                     userId={session.uid}
                   />
-                </>
+                </CaseVideosProvider>
               ) : null}
             </div>
           </article>
