@@ -323,6 +323,50 @@ body {
   color: #6c757d;
 }
 
+/* Complementary material (#788): the case's videos below the case document,
+   one full-width column on phones and as many columns as fit on wider
+   screens. The facades keep the video rules above. */
+.case-material {
+  margin-top: 1.5rem;
+}
+
+.case-material__heading {
+  margin-bottom: 0.75rem;
+}
+
+.case-material__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+  gap: 1.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.case-material__item {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.case-material__source {
+  font-weight: 600;
+}
+
+.case-material__description {
+  margin-bottom: 0;
+  white-space: pre-line;
+}
+
+/* About four lines of Bootstrap's 1.5 line height. */
+.case-material__description.is-collapsed {
+  max-height: 6em;
+  overflow: hidden;
+}
+
+.case-material__toggle {
+  margin-top: 0.25rem;
+}
+
 .external-service-result {
   background: #f8fbff;
 }

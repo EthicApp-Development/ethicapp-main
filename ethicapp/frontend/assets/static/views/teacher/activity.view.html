@@ -73,6 +73,7 @@
                                      ng-class="{active: dc.isCaseTabSelected()}"
                                      ng-if="dc.hasAssociatedCaseTab()">
                                     <case-document-viewer case-item="dc.associatedCase" frameless="true"></case-document-viewer>
+                                    <case-video-material case-item="dc.associatedCase"></case-video-material>
                                 </div>
                                 <div role="tabpanel" class="tab-pane" style="margin-bottom: 2em; padding:1em; border-bottom: 1px solid #ddd; border-left: 1px solid #ddd; border-right: 1px solid #ddd;"
                                      ng-class="{active: dc.isPhaseTabSelected(phase)}"
