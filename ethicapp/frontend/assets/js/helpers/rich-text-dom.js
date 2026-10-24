@@ -3,7 +3,8 @@
 // as canonical-schemas/rich-text/README.md requires:
 // - links (#785) keep the tree's http or https href and open in a new tab;
 // - videos (#785) show a click-to-load facade built from the video id only,
-//   which requests nothing from YouTube or Google until it is activated.
+//   which requests nothing from YouTube or Google until it is activated. The
+//   case views (#788) build the same facade for the case's own videos.
 
 import {
     canonicalYoutubeUrl, isYoutubeVideoId, youtubeEmbedUrl,
@@ -71,9 +72,9 @@ function buildLinkElement(document, href) {
     return link;
 }
 
-function appendNewTabNotice(document, link, context) {
+function appendNewTabNotice(document, link, labels) {
     link.appendChild(document.createTextNode(" "));
-    link.appendChild(element(document, "span", "sr-only", context.labels.opensInNewTab));
+    link.appendChild(element(document, "span", "sr-only", labels.opensInNewTab));
     return link;
 }
 
@@ -83,7 +84,7 @@ function buildLink(document, node, context) {
     }
     const link = appendNodes(document, buildLinkElement(document, node.href), node.children,
         context);
-    return appendNewTabNotice(document, link, context);
+    return appendNewTabNotice(document, link, context.labels);
 }
 
 // The case's data for a video: its metadata, or null when the view has no
@@ -93,11 +94,11 @@ function videoMetadata(context, videoId) {
     return video?.metadata || null;
 }
 
-function buildVideoFacade(document, node, metadata, context) {
+function buildVideoFacade(document, { videoId, title, metadata }, labels) {
     const button = element(document, "button", VIDEO_FACADE_CLASS);
     button.setAttribute("type", "button");
-    button.setAttribute("data-video-id", node.videoId);
-    button.setAttribute("aria-label", `${context.labels.playVideo}: ${node.title}`);
+    button.setAttribute("data-video-id", videoId);
+    button.setAttribute("aria-label", `${labels.playVideo}: ${title}`);
 
     const placeholder = element(document, "span", "rich-text-video-placeholder");
     placeholder.setAttribute("aria-hidden", "true");
@@ -105,7 +106,7 @@ function buildVideoFacade(document, node, metadata, context) {
     button.appendChild(placeholder);
 
     const caption = element(document, "span", "rich-text-video-caption");
-    caption.appendChild(element(document, "span", VIDEO_TITLE_CLASS, node.title));
+    caption.appendChild(element(document, "span", VIDEO_TITLE_CLASS, title));
     const details = element(document, "span", "rich-text-video-details");
     const duration = formatVideoDuration(metadata?.durationSeconds);
     if (duration) {
@@ -119,31 +120,50 @@ function buildVideoFacade(document, node, metadata, context) {
 
 // A video the case reports as removed, private or not embeddable: a notice and
 // the link to watch it on YouTube, instead of a play button.
-function buildUnavailableVideo(document, node, context) {
+function buildUnavailableVideo(document, { videoId, title }, labels) {
     const card = element(document, "div", "rich-text-video-unavailable");
-    card.appendChild(element(document, "span", VIDEO_TITLE_CLASS, node.title));
+    card.appendChild(element(document, "span", VIDEO_TITLE_CLASS, title));
     card.appendChild(element(document, "span", "rich-text-video-notice",
-        context.labels.videoUnavailable));
-    const url = canonicalYoutubeUrl(node.videoId);
+        labels.videoUnavailable));
+    const url = canonicalYoutubeUrl(videoId);
     const link = buildLinkElement(document, url);
     link.appendChild(document.createTextNode(url));
-    card.appendChild(appendNewTabNotice(document, link, context));
+    card.appendChild(appendNewTabNotice(document, link, labels));
     card.appendChild(element(document, "span", "rich-text-video-source", "YouTube"));
     return card;
+}
+
+/**
+ * A YouTube video as the teacher views show it (#785, #788): the click-to-load
+ * facade, or a notice with the watch link when `metadata` reports the video
+ * removed, private or not embeddable.
+ * - `video`: `{ videoId, title, metadata }`; `videoId` must be a valid YouTube
+ *   id, and `metadata` may be null.
+ * - `labels`: as for `buildRichTextFragment`.
+ */
+export function buildVideoBlock(document, video, labels) {
+    if (!isYoutubeVideoId(video?.videoId)) {
+        throw new TypeError("Invalid YouTube video id.");
+    }
+    const allLabels = { ...DEFAULT_LABELS, ...labels };
+    const availability = video.metadata?.availability;
+    if (typeof availability === "string" && availability !== "available") {
+        return buildUnavailableVideo(document, video, allLabels);
+    }
+    const box = element(document, "div", "rich-text-video");
+    box.appendChild(buildVideoFacade(document, video, allLabels));
+    return box;
 }
 
 function buildVideo(document, node, context) {
     if (node.provider !== "youtube" || !isYoutubeVideoId(node.videoId)) {
         return element(document, "p", null, node.title);
     }
-    const metadata = videoMetadata(context, node.videoId);
-    const availability = metadata?.availability;
-    if (typeof availability === "string" && availability !== "available") {
-        return buildUnavailableVideo(document, node, context);
-    }
-    const box = element(document, "div", "rich-text-video");
-    box.appendChild(buildVideoFacade(document, node, metadata, context));
-    return box;
+    return buildVideoBlock(document, {
+        videoId:  node.videoId,
+        title:    node.title,
+        metadata: videoMetadata(context, node.videoId),
+    }, context.labels);
 }
 
 // An item with a single paragraph, nested lists aside, shows that paragraph's
@@ -222,5 +242,23 @@ export function buildVideoPlayer(document, videoId, title) {
     player.setAttribute("allowfullscreen", "");
     player.setAttribute("loading", "lazy");
     player.setAttribute("referrerpolicy", "strict-origin-when-cross-origin");
+    return player;
+}
+
+/**
+ * Plays the video whose facade holds `target`, when that facade is inside
+ * `host`: replaces the facade with the player and focuses it. Returns the
+ * player, or null when `target` is not inside a facade of `host`.
+ */
+export function activateVideoFacade(host, target) {
+    const facade = target?.closest?.(`.${VIDEO_FACADE_CLASS}`);
+    const videoId = facade?.getAttribute("data-video-id");
+    if (!facade || !host.contains(facade) || !isYoutubeVideoId(videoId)) {
+        return null;
+    }
+    const title = facade.querySelector(`.${VIDEO_TITLE_CLASS}`)?.textContent;
+    const player = buildVideoPlayer(host.ownerDocument, videoId, title);
+    facade.replaceWith(player);
+    player.focus();
     return player;
 }

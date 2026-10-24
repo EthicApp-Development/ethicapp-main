@@ -7,10 +7,7 @@
 // case's videos, when the view has the case, for durations and availability.
 
 import { parseRichText } from "../helpers/rich-text.js";
-import {
-    VIDEO_FACADE_CLASS, VIDEO_TITLE_CLASS, buildRichTextFragment, buildVideoPlayer,
-} from "../helpers/rich-text-dom.js";
-import { isYoutubeVideoId } from "../../../../common/modules/youtube-urls.js";
+import { activateVideoFacade, buildRichTextFragment } from "../helpers/rich-text-dom.js";
 
 function RichTextController($element, $rootScope, $translate) {
     const vm = this;
@@ -48,15 +45,7 @@ function RichTextController($element, $rootScope, $translate) {
     }
 
     function playVideo(event) {
-        const facade = event.target.closest(`.${VIDEO_FACADE_CLASS}`);
-        const videoId = facade?.getAttribute("data-video-id");
-        if (!facade || !host.contains(facade) || !isYoutubeVideoId(videoId)) {
-            return;
-        }
-        const title = facade.querySelector(`.${VIDEO_TITLE_CLASS}`)?.textContent;
-        const player = buildVideoPlayer(host.ownerDocument, videoId, title);
-        facade.replaceWith(player);
-        player.focus();
+        activateVideoFacade(host, event.target);
     }
 
     let stopListening = null;

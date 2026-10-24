@@ -4,7 +4,8 @@ import { describe, it } from "node:test";
 
 import { parseRichText } from "../rich-text.js";
 import {
-    buildRichTextFragment, buildVideoPlayer, formatVideoDuration,
+    activateVideoFacade, buildRichTextFragment, buildVideoBlock, buildVideoPlayer,
+    formatVideoDuration,
 } from "../rich-text-dom.js";
 
 const FIXTURES_URL = new URL("../../../../../../canonical-schemas/rich-text/fixtures.json",
@@ -265,6 +266,102 @@ describe("the video facade in the teacher views (#785)", () => {
             const tree = [{ type: "video", title: "Caso", ...block }];
             assert.equal(serialize(buildRichTextFragment(fakeDocument, tree)), "<p>Caso</p>");
         }
+    });
+});
+
+describe("the video block outside rich text (#788)", () => {
+    const metadata = {
+        title:           "Título en YouTube",
+        description:     "",
+        channelTitle:    "Canal",
+        durationSeconds: 933,
+        availability:    "available",
+    };
+
+    it("builds the same facade as rich text videos", () => {
+        const fromText = serialize(render(
+            "[El <video>](https://www.youtube.com/watch?v=M7lc1UVf-VE)", "text/markdown",
+            { videos: [caseVideo(VIDEO_ID, metadata)], labels: { playVideo: "Reproducir" } }));
+        const block = buildVideoBlock(fakeDocument,
+            { videoId: VIDEO_ID, title: "El <video>", metadata }, { playVideo: "Reproducir" });
+        assert.equal(serialize(block), fromText);
+        assert.match(fromText, /15:33/u);
+        assert.doesNotMatch(fromText, /https?:|youtube\.com|ytimg|google|<img|<iframe/u);
+    });
+
+    it("builds the notice of an unavailable video, with English fallback labels", () => {
+        const block = buildVideoBlock(fakeDocument,
+            { videoId: VIDEO_ID, title: "Caso", metadata: { availability: "private" } });
+        assert.equal(block.attributes.class, "rich-text-video-unavailable");
+        assert.match(serialize(block), /Video not available.*\(opens in a new tab\)/u);
+    });
+
+    it("builds a facade with no duration when the metadata is missing", () => {
+        const block = buildVideoBlock(fakeDocument,
+            { videoId: VIDEO_ID, title: "Caso", metadata: null });
+        assert.equal(block.attributes.class, "rich-text-video");
+        assert.doesNotMatch(serialize(block), /rich-text-video-duration/u);
+    });
+
+    it("refuses anything but a video id", () => {
+        for (const videoId of ["\"><script>", "https://youtu.be/x", undefined]) {
+            assert.throws(() => buildVideoBlock(fakeDocument, { videoId, title: "x" }),
+                TypeError, String(videoId));
+        }
+        assert.throws(() => buildVideoBlock(fakeDocument, null), TypeError);
+    });
+});
+
+describe("activating a video facade (#785, #788)", () => {
+    function fakeFacade(videoId) {
+        const facade = {
+            replacedWith:  null,
+            getAttribute:  name => (name === "data-video-id" ? videoId : null),
+            querySelector: () => ({ textContent: "El <video>" }),
+            replaceWith(node) {
+                this.replacedWith = node;
+            },
+        };
+        return facade;
+    }
+
+    function fakeHost(facades) {
+        const ownerDocument = {
+            ...fakeDocument,
+            createElement: tag => ({
+                ...fakeDocument.createElement(tag),
+                focused: false,
+                focus() {
+                    this.focused = true;
+                },
+            }),
+        };
+        return { ownerDocument, contains: node => facades.includes(node) };
+    }
+
+    function targetIn(facade) {
+        return { closest: selector => (selector === ".rich-text-video-facade" ? facade : null) };
+    }
+
+    it("replaces the facade with the focused player", () => {
+        const facade = fakeFacade(VIDEO_ID);
+        const player = activateVideoFacade(fakeHost([facade]), targetIn(facade));
+        assert.equal(facade.replacedWith, player);
+        assert.equal(player.tag, "iframe");
+        assert.equal(player.attributes.title, "El <video>");
+        assert.match(player.attributes.src, /^https:\/\/www\.youtube-nocookie\.com\/embed\//u);
+        assert.equal(player.focused, true);
+    });
+
+    it("ignores clicks outside a facade of the host, or on a facade without a valid id", () => {
+        const outside = fakeFacade(VIDEO_ID);
+        const invalid = fakeFacade("\"><script>");
+        const host = fakeHost([invalid]);
+        for (const target of [targetIn(null), targetIn(outside), targetIn(invalid), {}, null]) {
+            assert.equal(activateVideoFacade(host, target), null);
+        }
+        assert.equal(outside.replacedWith, null);
+        assert.equal(invalid.replacedWith, null);
     });
 });
 
