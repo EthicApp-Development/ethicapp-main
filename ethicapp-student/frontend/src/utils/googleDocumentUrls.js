@@ -57,6 +57,15 @@ function pathSegments(url) {
     return url.pathname.split("/").filter(Boolean);
 }
 
+// Links copied while signed in to several accounts carry the account index
+// right after the product: /document/u/1/d/..., /file/u/0/d/.... Google
+// answers 404 for the index before the product (/u/1/document/d/...).
+function withoutAccountIndex([first, u, index, ...rest]) {
+    return u === "u" && ACCOUNT_INDEX.test(index ?? "")
+        ? [first, ...rest]
+        : [first, u, index, ...rest].filter(segment => segment !== undefined);
+}
+
 function isResourceKey(value) {
     return typeof value === "string" && RESOURCE_KEY.test(value);
 }
@@ -79,12 +88,7 @@ function driveFile(url, product, id) {
 }
 
 function parseDocsPath(url) {
-    let segments = pathSegments(url);
-    // Links copied while signed in to several accounts: /u/<n>/document/d/...
-    if (segments[0] === "u" && ACCOUNT_INDEX.test(segments[1] ?? "")) {
-        segments = segments.slice(2);
-    }
-    const [product, d, idOrE, publishedId, form] = segments;
+    const [product, d, idOrE, publishedId, form] = withoutAccountIndex(pathSegments(url));
     if (!DOCS_PRODUCTS.has(product) || d !== "d") {
         return null;
     }
@@ -98,7 +102,7 @@ function parseDocsPath(url) {
 }
 
 function parseDrivePath(url) {
-    const segments = pathSegments(url);
+    const segments = withoutAccountIndex(pathSegments(url));
     if (segments[0] === "file" && segments[1] === "d") {
         return driveFile(url, "file", segments[2]);
     }
@@ -110,12 +114,13 @@ function parseDrivePath(url) {
 
 /**
  * The parts of a Google document link, or null. Accepted forms:
- * - docs.google.com/{document,spreadsheets,presentation}/d/<id>/..., also
- *   with a /u/<n>/ prefix: a `drive_file` of that product;
+ * - docs.google.com/{document,spreadsheets,presentation}/d/<id>/...: a
+ *   `drive_file` of that product;
  * - drive.google.com/file/d/<id>/... and drive.google.com/open?id=<id>: a
  *   `drive_file` of product `file`;
  * - docs.google.com/{document,spreadsheets,presentation}/d/e/<id>/
  *   {pub,pubhtml,embed}...: a `published` document of that product.
+ * Each form may carry an account index after the product (/document/u/1/d/...).
  * Only http and https are accepted. Folders, other hosts and malformed ids
  * are not. Unrelated query parameters (usp, tab, gid, ...) are ignored.
  *

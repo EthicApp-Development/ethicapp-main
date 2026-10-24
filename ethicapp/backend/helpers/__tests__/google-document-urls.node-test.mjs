@@ -47,8 +47,8 @@ describe("Google document URLs (#791)", () => {
                 `https://docs.google.com/${product}/d/${ID}/preview`,
                 `https://docs.google.com/${product}/d/${ID}/htmlview`,
                 `https://docs.google.com/${product}/d/${ID}/mobilebasic`,
-                `https://docs.google.com/u/0/${product}/d/${ID}/edit`,
-                `https://docs.google.com/u/12/${product}/d/${ID}/view?usp=sharing`,
+                `https://docs.google.com/${product}/u/0/d/${ID}/edit`,
+                `https://docs.google.com/${product}/u/12/d/${ID}/view?usp=sharing`,
                 `http://docs.google.com/${product}/d/${ID}/edit`,
                 `  https://DOCS.Google.com/${product}/d/${ID}/edit  `,
             ];
@@ -67,6 +67,7 @@ describe("Google document URLs (#791)", () => {
             `https://drive.google.com/file/d/${ID}/view?usp=drive_link`,
             `https://drive.google.com/file/d/${ID}/edit`,
             `https://drive.google.com/file/d/${ID}/preview`,
+            `https://drive.google.com/file/u/1/d/${ID}/view?usp=sharing`,
             `https://drive.google.com/open?id=${ID}`,
             `https://drive.google.com/open?usp=sharing&id=${ID}`,
             `http://Drive.Google.com/open?id=${ID}`,
@@ -86,7 +87,7 @@ describe("Google document URLs (#791)", () => {
                 `${base}/pubhtml?gid=0&single=true`,
                 `${base}/embed`,
                 `${base}/embed?start=false&loop=false`,
-                `https://docs.google.com/u/0/${product}/d/e/${PUBLISHED_ID}/pub`,
+                `https://docs.google.com/${product}/u/0/d/e/${PUBLISHED_ID}/pub`,
             ];
             for (const url of accepted) {
                 assert.deepEqual(parseGoogleDocumentUrl(url), published(product), url);
@@ -101,7 +102,7 @@ describe("Google document URLs (#791)", () => {
             [`https://drive.google.com/open?id=${ID}&resourcekey=${RESOURCE_KEY}`, "file"],
             [`https://docs.google.com/document/d/${ID}/edit?resourcekey=${RESOURCE_KEY}`,
                 "document"],
-            [`https://docs.google.com/u/1/spreadsheets/d/${ID}/edit?resourcekey=${RESOURCE_KEY}`
+            [`https://docs.google.com/spreadsheets/u/1/d/${ID}/edit?resourcekey=${RESOURCE_KEY}`
                 + "#gid=0", "spreadsheets"],
         ];
         for (const [url, product] of withKey) {
@@ -159,7 +160,11 @@ describe("Google document URLs (#791)", () => {
             "https://docs.google.com/forms/d/e/1FAIpQLSc_abcdefghijklmnopqrst/viewform",
             `https://docs.google.com/forms/d/${ID}/edit`,
             `https://docs.google.com/drawings/d/${ID}/edit`,
-            `https://docs.google.com/u/x/document/d/${ID}/edit`,
+            `https://docs.google.com/document/u/x/d/${ID}/edit`,
+            // The account index before the product, which Google answers with 404.
+            `https://docs.google.com/u/0/document/d/${ID}/edit`,
+            `https://docs.google.com/u/1/document/d/e/${PUBLISHED_ID}/pub`,
+            `https://drive.google.com/u/1/file/d/${ID}/view`,
             `https://docs.google.com/Document/d/${ID}/edit`,
             // Missing, short, long or malformed file ids.
             "https://docs.google.com/document/d/",
