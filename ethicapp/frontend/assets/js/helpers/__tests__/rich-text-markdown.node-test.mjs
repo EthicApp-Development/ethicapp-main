@@ -36,6 +36,47 @@ function assertRoundTrip(source, contentType, label) {
     return markdown;
 }
 
+// The editor has no links or videos until #787: it loads a link as its text,
+// marks kept, and a video as a paragraph with its title, then saves them as
+// text. A text with links therefore reads back without them.
+function inlineWithoutLinks(nodes) {
+    const result = [];
+    for (const node of nodes) {
+        let flattened = [node];
+        if (node.type === "link") {
+            flattened = inlineWithoutLinks(node.children);
+        } else if (node.children) {
+            flattened = [{ ...node, children: inlineWithoutLinks(node.children) }];
+        }
+        for (const child of flattened) {
+            const last = result[result.length - 1];
+            if (child.type === "text" && last?.type === "text") {
+                result[result.length - 1] = textNode(last.value + child.value);
+            } else {
+                result.push(child);
+            }
+        }
+    }
+    return result;
+}
+
+function withoutLinksAndVideos(blocks) {
+    return blocks.map(block => {
+        if (block.type === "video") {
+            return paragraphNode(textNode(block.title));
+        }
+        if (block.type === "paragraph") {
+            return paragraphNode(...inlineWithoutLinks(block.children));
+        }
+        return {
+            ...block,
+            items: block.items.map(item => ({
+                ...item, children: withoutLinksAndVideos(item.children),
+            })),
+        };
+    });
+}
+
 function assertDocReadsBack(document, expectedTree, label) {
     const markdown = markdownFromDoc(document);
     const [actual, message] = readBack(markdown, label);
@@ -44,10 +85,22 @@ function assertDocReadsBack(document, expectedTree, label) {
 }
 
 describe("rich text editor Markdown (#767)", () => {
-    it("round-trips every shared fixture", () => {
+    it("round-trips every shared fixture, links and videos as text until #787", () => {
         for (const fixture of cases) {
-            assertRoundTrip(fixture.input, fixture.contentType, fixture.name);
+            const document = docFromText(schema, fixture.input, fixture.contentType);
+            assertDocReadsBack(document, withoutLinksAndVideos(fixture.tree), fixture.name);
         }
+    });
+
+    it("loads links as their text, marks kept, and videos as their title", () => {
+        const source = "Lee **[el *caso*](https://example.org)**\n\n"
+            + "[El caso](https://youtu.be/M7lc1UVf-VE)";
+        const loaded = docFromText(schema, source, MARKDOWN);
+        assert.ok(loaded.eq(doc.create(null, [
+            p(text("Lee "), text("el ", [strong]), text("caso", [strong, em])),
+            p(text("El caso")),
+        ])), loaded.toString());
+        assert.equal(markdownFromDoc(loaded), "Lee **el _caso_**\n\nEl caso");
     });
 
     it("writes breaks with a backslash and escapes Markdown characters", () => {
@@ -171,6 +224,8 @@ const PIECES = [
     "a", "b", "é", "ñ", "1", "10", " ", "  ", "?", "¿", "!", ".", ",", ")", "(", "*", "_",
     "`", "[", "]", "<", ">", "&", "#", "-", "+", "=", "|", "~", "\\", "&amp;", "1.", "2)",
     "x*y", "€",
+    // Link syntax, enabled in contract version 2 (#784), must stay text.
+    "https://e.org", "](", "<https://youtu.be/M7lc1UVf-VE>", "mailto:a@e.org",
 ];
 const MARK_SETS = [[], [], [strong], [em], [strong, em]];
 

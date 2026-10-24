@@ -10,6 +10,9 @@ import { parseRichText } from "./rich-text.js";
 
 // ─── Loading ────────────────────────────────────────────────────────────────
 
+// The editor has no links or videos yet (#787): a link loads as its text, with
+// its marks, and a video as a paragraph with its title. Saving such a text
+// writes them back as plain text.
 function inlineNodes(schema, nodes, marks = []) {
     return nodes.flatMap(node => {
         if (node.type === "text") {
@@ -17,6 +20,9 @@ function inlineNodes(schema, nodes, marks = []) {
         }
         if (node.type === "break") {
             return [schema.nodes.hard_break.create(null, null, marks)];
+        }
+        if (node.type === "link") {
+            return inlineNodes(schema, node.children, marks);
         }
         const mark = schema.marks[node.type === "strong" ? "strong" : "em"].create();
         return inlineNodes(schema, node.children, mark.addToSet(marks));
@@ -27,6 +33,9 @@ function blockNodes(schema, blocks) {
     return blocks.map(block => {
         if (block.type === "paragraph") {
             return schema.nodes.paragraph.create(null, inlineNodes(schema, block.children));
+        }
+        if (block.type === "video") {
+            return schema.nodes.paragraph.create(null, schema.text(block.title));
         }
         const items = block.items.map(item => {
             const children = blockNodes(schema, item.children);

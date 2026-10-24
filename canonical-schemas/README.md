@@ -10,7 +10,7 @@ This directory currently contains JSON Schemas for portable EthicApp objects.
 
 ## Tests
 
-`npm run test:schemas` (repository root) validates documents against these schemas. `__tests__/ethicapp-v1.schema.node-test.mjs` checks every canonical seed design in `database/seeds/canonical-activities/manifest.json`, plus the external service `configurations` rules and the text content types. `__tests__/rich-text.node-test.mjs` checks that the rich text fixtures are well formed and normalized, and that their trees match `rich-text/rich-text-tree-v1.schema.json`. Run them whenever a schema, a seed or a fixture changes.
+`npm run test:schemas` (repository root) validates documents against these schemas. `__tests__/ethicapp-v1.schema.node-test.mjs` checks every canonical seed design in `database/seeds/canonical-activities/manifest.json`, plus the external service `configurations` rules and the text content types. `__tests__/rich-text.node-test.mjs` checks that the rich text fixtures are well formed and normalized, and that their trees match `rich-text/rich-text-tree-v2.schema.json`. Run them whenever a schema, a seed or a fixture changes.
 
 ## Design Notes
 

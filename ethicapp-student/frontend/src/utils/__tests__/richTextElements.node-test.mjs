@@ -62,6 +62,13 @@ test('every fixture yields text children and only the allowed elements', () => {
   assert.equal(render('<img src=x onerror="alert(1)">', 'text/markdown'), '<p>&lt;img src=x onerror="alert(1)"&gt;</p>');
 });
 
+test('shows links as their text and videos as their title until #786', () => {
+  const source = 'Lee [el **caso**](https://example.org) y <https://example.org/b>\n\n[El <video>](https://youtu.be/M7lc1UVf-VE)';
+  assert.equal(render(source, 'text/markdown'),
+    '<p>Lee el <strong>caso</strong> y https://example.org/b</p><p>El &lt;video&gt;</p>');
+  assert.equal(render('- [uno](https://example.org)', 'text/markdown'), '<ul><li>uno</li></ul>');
+});
+
 test('renders nothing for empty text or a missing tree', () => {
   assert.deepEqual(renderRichTextTree(parseRichText('', 'text/markdown'), h), []);
   assert.deepEqual(renderRichTextTree(undefined, h), []);

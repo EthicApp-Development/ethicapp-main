@@ -3,8 +3,11 @@
 import MarkdownIt from "markdown-it";
 import { createRichText } from "../../common/modules/rich-text.js";
 import { TEXT_MARKDOWN } from "../../common/modules/text-content-types.js";
+import { canonicalYoutubeUrl, youtubeVideoId } from "../../common/modules/youtube-urls.js";
 
-export const { parseRichText, toPlainText } = createRichText(MarkdownIt);
+export const { parseRichText, toPlainText } = createRichText(MarkdownIt, {
+    youtubeVideoId, canonicalYoutubeUrl,
+});
 
 /**
  * `value` for places that cannot show formatting (#768): text/markdown becomes

@@ -1,6 +1,6 @@
 {
-  "description": "Conformance cases for teacher-written rich text (#762). Every renderer must turn each input, with its contentType (missing means text/plain), into exactly this tree and this plainText. See README.md in this directory.",
-  "version": 1,
+  "description": "Conformance cases for teacher-written rich text (#762; version 2, #784, adds links and YouTube video blocks). Every renderer must turn each input, with its contentType (missing means text/plain), into exactly this tree and this plainText. See README.md in this directory.",
+  "version": 2,
   "cases": [
     {
       "name": "plain: line breaks and a blank line, trimmed",
@@ -988,6 +988,1177 @@
       "plainText": "<b> & ©"
     },
     {
+      "name": "link: inline link in a sentence",
+      "contentType": "text/markdown",
+      "input": "Lee [el caso](https://example.org/caso) antes de responder.",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "value": "Lee "
+            },
+            {
+              "type": "link",
+              "href": "https://example.org/caso",
+              "children": [
+                {
+                  "type": "text",
+                  "value": "el caso"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "value": " antes de responder."
+            }
+          ]
+        }
+      ],
+      "plainText": "Lee el caso (https://example.org/caso) antes de responder."
+    },
+    {
+      "name": "link: autolink",
+      "contentType": "text/markdown",
+      "input": "Fuente: <https://example.org/fuente>",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "value": "Fuente: "
+            },
+            {
+              "type": "link",
+              "href": "https://example.org/fuente",
+              "children": [
+                {
+                  "type": "text",
+                  "value": "https://example.org/fuente"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "plainText": "Fuente: https://example.org/fuente"
+    },
+    {
+      "name": "link: emphasis inside the link text",
+      "contentType": "text/markdown",
+      "input": "[el **caso** *completo*](https://example.org/caso)",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "link",
+              "href": "https://example.org/caso",
+              "children": [
+                {
+                  "type": "text",
+                  "value": "el "
+                },
+                {
+                  "type": "strong",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "caso"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "value": " "
+                },
+                {
+                  "type": "emphasis",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "completo"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "plainText": "el caso completo (https://example.org/caso)"
+    },
+    {
+      "name": "link: inside emphasis",
+      "contentType": "text/markdown",
+      "input": "**[fuerte](https://example.org)** y *[énfasis](https://example.org)*",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "strong",
+              "children": [
+                {
+                  "type": "link",
+                  "href": "https://example.org",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "fuerte"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "value": " y "
+            },
+            {
+              "type": "emphasis",
+              "children": [
+                {
+                  "type": "link",
+                  "href": "https://example.org",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "énfasis"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "plainText": "fuerte (https://example.org) y énfasis (https://example.org)"
+    },
+    {
+      "name": "link: hard break inside the link text",
+      "contentType": "text/markdown",
+      "input": "[primera\\\nsegunda](https://example.org)",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "link",
+              "href": "https://example.org",
+              "children": [
+                {
+                  "type": "text",
+                  "value": "primera"
+                },
+                {
+                  "type": "break"
+                },
+                {
+                  "type": "text",
+                  "value": "segunda"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "plainText": "primera\nsegunda (https://example.org)"
+    },
+    {
+      "name": "link: title is dropped",
+      "contentType": "text/markdown",
+      "input": "[sitio](https://example.org \"Título del sitio\")",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "link",
+              "href": "https://example.org",
+              "children": [
+                {
+                  "type": "text",
+                  "value": "sitio"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "plainText": "sitio (https://example.org)"
+    },
+    {
+      "name": "link: empty text shows the destination",
+      "contentType": "text/markdown",
+      "input": "Ver [](https://example.org/a) y [ ](https://example.org/b).",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "value": "Ver "
+            },
+            {
+              "type": "link",
+              "href": "https://example.org/a",
+              "children": [
+                {
+                  "type": "text",
+                  "value": "https://example.org/a"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "value": " y "
+            },
+            {
+              "type": "link",
+              "href": "https://example.org/b",
+              "children": [
+                {
+                  "type": "text",
+                  "value": "https://example.org/b"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "value": "."
+            }
+          ]
+        }
+      ],
+      "plainText": "Ver https://example.org/a y https://example.org/b."
+    },
+    {
+      "name": "link: http scheme, in any case",
+      "contentType": "text/markdown",
+      "input": "[a](http://example.org) y <HTTPS://Example.org/Ruta>",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "link",
+              "href": "http://example.org",
+              "children": [
+                {
+                  "type": "text",
+                  "value": "a"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "value": " y "
+            },
+            {
+              "type": "link",
+              "href": "HTTPS://Example.org/Ruta",
+              "children": [
+                {
+                  "type": "text",
+                  "value": "HTTPS://Example.org/Ruta"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "plainText": "a (http://example.org) y HTTPS://Example.org/Ruta"
+    },
+    {
+      "name": "link: destination is percent-encoded",
+      "contentType": "text/markdown",
+      "input": "[café](<https://ejemplo.cl/café con leche>)",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "link",
+              "href": "https://ejemplo.cl/caf%C3%A9%20con%20leche",
+              "children": [
+                {
+                  "type": "text",
+                  "value": "café"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "plainText": "café (https://ejemplo.cl/caf%C3%A9%20con%20leche)"
+    },
+    {
+      "name": "link: entities and escapes in the destination are decoded",
+      "contentType": "text/markdown",
+      "input": "[a](https://example.org/?a=1&amp;b=\\*)",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "link",
+              "href": "https://example.org/?a=1&b=*",
+              "children": [
+                {
+                  "type": "text",
+                  "value": "a"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "plainText": "a (https://example.org/?a=1&b=*)"
+    },
+    {
+      "name": "link: international domain in an autolink",
+      "contentType": "text/markdown",
+      "input": "<https://ñandú.cl/aves>",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "link",
+              "href": "https://xn--and-6ma2c.cl/aves",
+              "children": [
+                {
+                  "type": "text",
+                  "value": "https://ñandú.cl/aves"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "plainText": "https://ñandú.cl/aves (https://xn--and-6ma2c.cl/aves)"
+    },
+    {
+      "name": "link: an autolink inside link text keeps only its text",
+      "contentType": "text/markdown",
+      "input": "[ver <https://example.org/a>](https://example.org/b)",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "link",
+              "href": "https://example.org/b",
+              "children": [
+                {
+                  "type": "text",
+                  "value": "ver https://example.org/a"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "plainText": "ver https://example.org/a (https://example.org/b)"
+    },
+    {
+      "name": "link: in list items, even to a video",
+      "contentType": "text/markdown",
+      "input": "- [uno](https://example.org)\n- <https://youtu.be/M7lc1UVf-VE>\n- [Video](https://www.youtube.com/watch?v=M7lc1UVf-VE)",
+      "tree": [
+        {
+          "type": "list",
+          "ordered": false,
+          "start": null,
+          "items": [
+            {
+              "type": "listItem",
+              "children": [
+                {
+                  "type": "paragraph",
+                  "children": [
+                    {
+                      "type": "link",
+                      "href": "https://example.org",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "uno"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "listItem",
+              "children": [
+                {
+                  "type": "paragraph",
+                  "children": [
+                    {
+                      "type": "link",
+                      "href": "https://youtu.be/M7lc1UVf-VE",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "https://youtu.be/M7lc1UVf-VE"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "listItem",
+              "children": [
+                {
+                  "type": "paragraph",
+                  "children": [
+                    {
+                      "type": "link",
+                      "href": "https://www.youtube.com/watch?v=M7lc1UVf-VE",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "Video"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "plainText": "- uno (https://example.org)\n- https://youtu.be/M7lc1UVf-VE\n- Video (https://www.youtube.com/watch?v=M7lc1UVf-VE)"
+    },
+    {
+      "name": "link: bare URLs are not links",
+      "contentType": "text/markdown",
+      "input": "Visita https://example.org o www.example.org",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "value": "Visita https://example.org o www.example.org"
+            }
+          ]
+        }
+      ],
+      "plainText": "Visita https://example.org o www.example.org"
+    },
+    {
+      "name": "link: escaped brackets stay text, as the editor writes them",
+      "contentType": "text/markdown",
+      "input": "\\[sitio\\](https://example.org) y \\<https://example.org\\>",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "value": "[sitio](https://example.org) y <https://example.org>"
+            }
+          ]
+        }
+      ],
+      "plainText": "[sitio](https://example.org) y <https://example.org>"
+    },
+    {
+      "name": "not a link: mailto destination and email autolink",
+      "contentType": "text/markdown",
+      "input": "[escríbeme](mailto:profe@example.org) o <profe@example.org> o [*correo*](mailto:profe@example.org)",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "value": "[escríbeme](mailto:profe@example.org) o <profe@example.org> o ["
+            },
+            {
+              "type": "emphasis",
+              "children": [
+                {
+                  "type": "text",
+                  "value": "correo"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "value": "](mailto:profe@example.org)"
+            }
+          ]
+        }
+      ],
+      "plainText": "[escríbeme](mailto:profe@example.org) o <profe@example.org> o [correo](mailto:profe@example.org)"
+    },
+    {
+      "name": "not a link: ftp destination and autolink",
+      "contentType": "text/markdown",
+      "input": "[archivo](ftp://example.org/a.pdf) o <ftp://example.org/a.pdf>",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "value": "[archivo](ftp://example.org/a.pdf) o <ftp://example.org/a.pdf>"
+            }
+          ]
+        }
+      ],
+      "plainText": "[archivo](ftp://example.org/a.pdf) o <ftp://example.org/a.pdf>"
+    },
+    {
+      "name": "not a link: data destination",
+      "contentType": "text/markdown",
+      "input": "[x](data:text/html;base64,PHNjcmlwdD4=)",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "value": "[x](data:text/html;base64,PHNjcmlwdD4=)"
+            }
+          ]
+        }
+      ],
+      "plainText": "[x](data:text/html;base64,PHNjcmlwdD4=)"
+    },
+    {
+      "name": "not a link: relative, protocol-relative, hostless and empty destinations",
+      "contentType": "text/markdown",
+      "input": "[a](/caso) [b](//example.org) [c](https://) [d](http:example.org) [e]() [f]( )",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "value": "[a](/caso) [b](//example.org) [c](https://) [d](http:example.org) [e]() [f]( )"
+            }
+          ]
+        }
+      ],
+      "plainText": "[a](/caso) [b](//example.org) [c](https://) [d](http:example.org) [e]() [f]( )"
+    },
+    {
+      "name": "not a link: inside link text, so the outer link stays a link",
+      "contentType": "text/markdown",
+      "input": "[ver [a]() y [b](mailto:x@example.org)](https://example.org)",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "link",
+              "href": "https://example.org",
+              "children": [
+                {
+                  "type": "text",
+                  "value": "ver [a]() y [b](mailto:x@example.org)"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "plainText": "ver [a]() y [b](mailto:x@example.org) (https://example.org)"
+    },
+    {
+      "name": "video: youtube.com watch URLs",
+      "contentType": "text/markdown",
+      "input": "[Introducción al caso](https://www.youtube.com/watch?v=M7lc1UVf-VE)\n\n[Sin www](https://youtube.com/watch?v=M7lc1UVf-VE&t=42s)\n\n[Móvil](https://m.youtube.com/watch?feature=share&v=M7lc1UVf-VE)\n\n[Música](https://music.youtube.com/watch?v=M7lc1UVf-VE)",
+      "tree": [
+        {
+          "type": "video",
+          "provider": "youtube",
+          "videoId": "M7lc1UVf-VE",
+          "title": "Introducción al caso"
+        },
+        {
+          "type": "video",
+          "provider": "youtube",
+          "videoId": "M7lc1UVf-VE",
+          "title": "Sin www"
+        },
+        {
+          "type": "video",
+          "provider": "youtube",
+          "videoId": "M7lc1UVf-VE",
+          "title": "Móvil"
+        },
+        {
+          "type": "video",
+          "provider": "youtube",
+          "videoId": "M7lc1UVf-VE",
+          "title": "Música"
+        }
+      ],
+      "plainText": "Video: Introducción al caso (https://www.youtube.com/watch?v=M7lc1UVf-VE)\n\nVideo: Sin www (https://www.youtube.com/watch?v=M7lc1UVf-VE)\n\nVideo: Móvil (https://www.youtube.com/watch?v=M7lc1UVf-VE)\n\nVideo: Música (https://www.youtube.com/watch?v=M7lc1UVf-VE)"
+    },
+    {
+      "name": "video: youtu.be URLs",
+      "contentType": "text/markdown",
+      "input": "[Corto](https://youtu.be/M7lc1UVf-VE?si=abc123)\n\n[Con www](https://www.youtu.be/M7lc1UVf-VE)",
+      "tree": [
+        {
+          "type": "video",
+          "provider": "youtube",
+          "videoId": "M7lc1UVf-VE",
+          "title": "Corto"
+        },
+        {
+          "type": "video",
+          "provider": "youtube",
+          "videoId": "M7lc1UVf-VE",
+          "title": "Con www"
+        }
+      ],
+      "plainText": "Video: Corto (https://www.youtube.com/watch?v=M7lc1UVf-VE)\n\nVideo: Con www (https://www.youtube.com/watch?v=M7lc1UVf-VE)"
+    },
+    {
+      "name": "video: embed, shorts, live and v URLs",
+      "contentType": "text/markdown",
+      "input": "[Embed](https://www.youtube.com/embed/M7lc1UVf-VE?start=10)\n\n[Shorts](https://www.youtube.com/shorts/M7lc1UVf-VE)\n\n[En vivo](https://www.youtube.com/live/M7lc1UVf-VE)\n\n[V](https://www.youtube.com/v/M7lc1UVf-VE)",
+      "tree": [
+        {
+          "type": "video",
+          "provider": "youtube",
+          "videoId": "M7lc1UVf-VE",
+          "title": "Embed"
+        },
+        {
+          "type": "video",
+          "provider": "youtube",
+          "videoId": "M7lc1UVf-VE",
+          "title": "Shorts"
+        },
+        {
+          "type": "video",
+          "provider": "youtube",
+          "videoId": "M7lc1UVf-VE",
+          "title": "En vivo"
+        },
+        {
+          "type": "video",
+          "provider": "youtube",
+          "videoId": "M7lc1UVf-VE",
+          "title": "V"
+        }
+      ],
+      "plainText": "Video: Embed (https://www.youtube.com/watch?v=M7lc1UVf-VE)\n\nVideo: Shorts (https://www.youtube.com/watch?v=M7lc1UVf-VE)\n\nVideo: En vivo (https://www.youtube.com/watch?v=M7lc1UVf-VE)\n\nVideo: V (https://www.youtube.com/watch?v=M7lc1UVf-VE)"
+    },
+    {
+      "name": "video: youtube-nocookie embed URL",
+      "contentType": "text/markdown",
+      "input": "[Sin cookies](https://www.youtube-nocookie.com/embed/aqz-KE-bpKQ)",
+      "tree": [
+        {
+          "type": "video",
+          "provider": "youtube",
+          "videoId": "aqz-KE-bpKQ",
+          "title": "Sin cookies"
+        }
+      ],
+      "plainText": "Video: Sin cookies (https://www.youtube.com/watch?v=aqz-KE-bpKQ)"
+    },
+    {
+      "name": "video: http scheme and uppercase host",
+      "contentType": "text/markdown",
+      "input": "[Http](http://WWW.YOUTUBE.COM/watch?v=aqz-KE-bpKQ)",
+      "tree": [
+        {
+          "type": "video",
+          "provider": "youtube",
+          "videoId": "aqz-KE-bpKQ",
+          "title": "Http"
+        }
+      ],
+      "plainText": "Video: Http (https://www.youtube.com/watch?v=aqz-KE-bpKQ)"
+    },
+    {
+      "name": "video: autolink, titled with its URL",
+      "contentType": "text/markdown",
+      "input": "<https://youtu.be/M7lc1UVf-VE>",
+      "tree": [
+        {
+          "type": "video",
+          "provider": "youtube",
+          "videoId": "M7lc1UVf-VE",
+          "title": "https://youtu.be/M7lc1UVf-VE"
+        }
+      ],
+      "plainText": "Video: https://youtu.be/M7lc1UVf-VE (https://www.youtube.com/watch?v=M7lc1UVf-VE)"
+    },
+    {
+      "name": "video: autolink to the canonical URL",
+      "contentType": "text/markdown",
+      "input": "<https://www.youtube.com/watch?v=M7lc1UVf-VE>",
+      "tree": [
+        {
+          "type": "video",
+          "provider": "youtube",
+          "videoId": "M7lc1UVf-VE",
+          "title": "https://www.youtube.com/watch?v=M7lc1UVf-VE"
+        }
+      ],
+      "plainText": "Video: https://www.youtube.com/watch?v=M7lc1UVf-VE"
+    },
+    {
+      "name": "video: emphasis and breaks in the link text become a plain title",
+      "contentType": "text/markdown",
+      "input": "[**Caso**  *uno*\\\nparte 2](https://youtu.be/M7lc1UVf-VE)",
+      "tree": [
+        {
+          "type": "video",
+          "provider": "youtube",
+          "videoId": "M7lc1UVf-VE",
+          "title": "Caso uno parte 2"
+        }
+      ],
+      "plainText": "Video: Caso uno parte 2 (https://www.youtube.com/watch?v=M7lc1UVf-VE)"
+    },
+    {
+      "name": "video: empty link text takes the URL as title",
+      "contentType": "text/markdown",
+      "input": "[](https://youtu.be/M7lc1UVf-VE)",
+      "tree": [
+        {
+          "type": "video",
+          "provider": "youtube",
+          "videoId": "M7lc1UVf-VE",
+          "title": "https://youtu.be/M7lc1UVf-VE"
+        }
+      ],
+      "plainText": "Video: https://youtu.be/M7lc1UVf-VE (https://www.youtube.com/watch?v=M7lc1UVf-VE)"
+    },
+    {
+      "name": "video: between paragraphs and blank lines",
+      "contentType": "text/markdown",
+      "input": "Mira el video:\n\n\n   [El caso](https://youtu.be/M7lc1UVf-VE)   \n\n\nY responde.",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "value": "Mira el video:"
+            }
+          ]
+        },
+        {
+          "type": "video",
+          "provider": "youtube",
+          "videoId": "M7lc1UVf-VE",
+          "title": "El caso"
+        },
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "value": "Y responde."
+            }
+          ]
+        }
+      ],
+      "plainText": "Mira el video:\n\nVideo: El caso (https://www.youtube.com/watch?v=M7lc1UVf-VE)\n\nY responde."
+    },
+    {
+      "name": "video: whitespace around the link is ignored",
+      "contentType": "text/markdown",
+      "input": "&#32;[El caso](https://youtu.be/M7lc1UVf-VE)&nbsp;",
+      "tree": [
+        {
+          "type": "video",
+          "provider": "youtube",
+          "videoId": "M7lc1UVf-VE",
+          "title": "El caso"
+        }
+      ],
+      "plainText": "Video: El caso (https://www.youtube.com/watch?v=M7lc1UVf-VE)"
+    },
+    {
+      "name": "video: one per paragraph",
+      "contentType": "text/markdown",
+      "input": "[Uno](https://youtu.be/M7lc1UVf-VE)\n\n[Dos](https://youtu.be/aqz-KE-bpKQ)",
+      "tree": [
+        {
+          "type": "video",
+          "provider": "youtube",
+          "videoId": "M7lc1UVf-VE",
+          "title": "Uno"
+        },
+        {
+          "type": "video",
+          "provider": "youtube",
+          "videoId": "aqz-KE-bpKQ",
+          "title": "Dos"
+        }
+      ],
+      "plainText": "Video: Uno (https://www.youtube.com/watch?v=M7lc1UVf-VE)\n\nVideo: Dos (https://www.youtube.com/watch?v=aqz-KE-bpKQ)"
+    },
+    {
+      "name": "not a video: a YouTube link inside a sentence",
+      "contentType": "text/markdown",
+      "input": "Mira [este video](https://youtu.be/M7lc1UVf-VE) antes de responder.",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "value": "Mira "
+            },
+            {
+              "type": "link",
+              "href": "https://youtu.be/M7lc1UVf-VE",
+              "children": [
+                {
+                  "type": "text",
+                  "value": "este video"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "value": " antes de responder."
+            }
+          ]
+        }
+      ],
+      "plainText": "Mira este video (https://youtu.be/M7lc1UVf-VE) antes de responder."
+    },
+    {
+      "name": "not a video: two YouTube links in one paragraph",
+      "contentType": "text/markdown",
+      "input": "[Uno](https://youtu.be/M7lc1UVf-VE)\n[Dos](https://youtu.be/aqz-KE-bpKQ)",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "link",
+              "href": "https://youtu.be/M7lc1UVf-VE",
+              "children": [
+                {
+                  "type": "text",
+                  "value": "Uno"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "value": " "
+            },
+            {
+              "type": "link",
+              "href": "https://youtu.be/aqz-KE-bpKQ",
+              "children": [
+                {
+                  "type": "text",
+                  "value": "Dos"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "plainText": "Uno (https://youtu.be/M7lc1UVf-VE) Dos (https://youtu.be/aqz-KE-bpKQ)"
+    },
+    {
+      "name": "not a video: a YouTube link inside emphasis",
+      "contentType": "text/markdown",
+      "input": "**[El caso](https://youtu.be/M7lc1UVf-VE)**",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "strong",
+              "children": [
+                {
+                  "type": "link",
+                  "href": "https://youtu.be/M7lc1UVf-VE",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "El caso"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "plainText": "El caso (https://youtu.be/M7lc1UVf-VE)"
+    },
+    {
+      "name": "not a video: foreign hosts",
+      "contentType": "text/markdown",
+      "input": "[Vimeo](https://vimeo.com/76979871)\n\n[Parecido](https://youtube.com.example.org/watch?v=M7lc1UVf-VE)\n\n[Otro](https://notyoutube.com/watch?v=M7lc1UVf-VE)\n\n[Usuario](https://www.youtube.com@example.org/watch?v=M7lc1UVf-VE)",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "link",
+              "href": "https://vimeo.com/76979871",
+              "children": [
+                {
+                  "type": "text",
+                  "value": "Vimeo"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "link",
+              "href": "https://youtube.com.example.org/watch?v=M7lc1UVf-VE",
+              "children": [
+                {
+                  "type": "text",
+                  "value": "Parecido"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "link",
+              "href": "https://notyoutube.com/watch?v=M7lc1UVf-VE",
+              "children": [
+                {
+                  "type": "text",
+                  "value": "Otro"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "link",
+              "href": "https://www.youtube.com@example.org/watch?v=M7lc1UVf-VE",
+              "children": [
+                {
+                  "type": "text",
+                  "value": "Usuario"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "plainText": "Vimeo (https://vimeo.com/76979871)\n\nParecido (https://youtube.com.example.org/watch?v=M7lc1UVf-VE)\n\nOtro (https://notyoutube.com/watch?v=M7lc1UVf-VE)\n\nUsuario (https://www.youtube.com@example.org/watch?v=M7lc1UVf-VE)"
+    },
+    {
+      "name": "not a video: YouTube URLs without a valid video id",
+      "contentType": "text/markdown",
+      "input": "[Corto](https://www.youtube.com/watch?v=M7lc1UVf)\n\n[Lista](https://www.youtube.com/playlist?list=PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf)\n\n[Canal](https://www.youtube.com/@ejemplo)\n\n[Inicio](https://youtu.be/)",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "link",
+              "href": "https://www.youtube.com/watch?v=M7lc1UVf",
+              "children": [
+                {
+                  "type": "text",
+                  "value": "Corto"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "link",
+              "href": "https://www.youtube.com/playlist?list=PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf",
+              "children": [
+                {
+                  "type": "text",
+                  "value": "Lista"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "link",
+              "href": "https://www.youtube.com/@ejemplo",
+              "children": [
+                {
+                  "type": "text",
+                  "value": "Canal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "link",
+              "href": "https://youtu.be/",
+              "children": [
+                {
+                  "type": "text",
+                  "value": "Inicio"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "plainText": "Corto (https://www.youtube.com/watch?v=M7lc1UVf)\n\nLista (https://www.youtube.com/playlist?list=PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf)\n\nCanal (https://www.youtube.com/@ejemplo)\n\nInicio (https://youtu.be/)"
+    },
+    {
+      "name": "not a video: a bare YouTube URL",
+      "contentType": "text/markdown",
+      "input": "https://youtu.be/M7lc1UVf-VE",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "value": "https://youtu.be/M7lc1UVf-VE"
+            }
+          ]
+        }
+      ],
+      "plainText": "https://youtu.be/M7lc1UVf-VE"
+    },
+    {
+      "name": "not a video: a YouTube link that is not http",
+      "contentType": "text/markdown",
+      "input": "[Video](ftp://youtu.be/M7lc1UVf-VE)",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "value": "[Video](ftp://youtu.be/M7lc1UVf-VE)"
+            }
+          ]
+        }
+      ],
+      "plainText": "[Video](ftp://youtu.be/M7lc1UVf-VE)"
+    },
+    {
+      "name": "injection: javascript autolink",
+      "contentType": "text/markdown",
+      "input": "<javascript:alert(1)>",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "value": "<javascript:alert(1)>"
+            }
+          ]
+        }
+      ],
+      "plainText": "<javascript:alert(1)>"
+    },
+    {
+      "name": "injection: quotes and angle brackets in a destination are percent-encoded",
+      "contentType": "text/markdown",
+      "input": "[a](https://example.org/\"onmouseover=\"alert(1)) [b](https://example.org/<b>)",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "link",
+              "href": "https://example.org/%22onmouseover=%22alert(1)",
+              "children": [
+                {
+                  "type": "text",
+                  "value": "a"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "value": " "
+            },
+            {
+              "type": "link",
+              "href": "https://example.org/%3Cb%3E",
+              "children": [
+                {
+                  "type": "text",
+                  "value": "b"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "plainText": "a (https://example.org/%22onmouseover=%22alert(1)) b (https://example.org/%3Cb%3E)"
+    },
+    {
+      "name": "disabled: an image with an http destination is a literal ! and a link",
+      "contentType": "text/markdown",
+      "input": "![foto](https://example.org/foto.png)",
+      "tree": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "value": "!"
+            },
+            {
+              "type": "link",
+              "href": "https://example.org/foto.png",
+              "children": [
+                {
+                  "type": "text",
+                  "value": "foto"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "plainText": "!foto (https://example.org/foto.png)"
+    },
+    {
       "name": "disabled: ATX heading",
       "contentType": "text/markdown",
       "input": "# Título **fuerte**",
@@ -1134,7 +2305,7 @@
       "plainText": "con sangría"
     },
     {
-      "name": "disabled: links, autolinks and images",
+      "name": "links and autolinks are enabled, images stay disabled",
       "contentType": "text/markdown",
       "input": "[sitio](https://example.org), <https://example.org> e ![imagen](x.png)",
       "tree": [
@@ -1142,13 +2313,37 @@
           "type": "paragraph",
           "children": [
             {
+              "type": "link",
+              "href": "https://example.org",
+              "children": [
+                {
+                  "type": "text",
+                  "value": "sitio"
+                }
+              ]
+            },
+            {
               "type": "text",
-              "value": "[sitio](https://example.org), <https://example.org> e ![imagen](x.png)"
+              "value": ", "
+            },
+            {
+              "type": "link",
+              "href": "https://example.org",
+              "children": [
+                {
+                  "type": "text",
+                  "value": "https://example.org"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "value": " e ![imagen](x.png)"
             }
           ]
         }
       ],
-      "plainText": "[sitio](https://example.org), <https://example.org> e ![imagen](x.png)"
+      "plainText": "sitio (https://example.org), https://example.org e ![imagen](x.png)"
     },
     {
       "name": "disabled: link reference definition",
