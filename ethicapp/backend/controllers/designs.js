@@ -9,6 +9,11 @@ import * as rpg2 from "../db/rest-pg-2.js";
 import { requireRole } from "../helpers/auth-helper.js";
 import { buildDesignCopyDocument } from "../helpers/design-copy.js";
 import {
+    caseVideosJsonSql,
+    copyCaseVideos,
+    normalizeCaseVideoSummaries,
+} from "../helpers/case-videos.js";
+import {
     designLockedRefusal,
     designUpdateRefusal,
     UPDATE_UNLOCKED_DESIGN_SQL,
@@ -391,6 +396,8 @@ async function copyCaseForUser(client, sourceCaseId, userId, visibility = PRIVAT
         ON CONFLICT (case_id, tag_id) DO UPDATE
         SET assigned_by = EXCLUDED.assigned_by;
     `, [caseId, sourceCase.id, userId]);
+
+    await copyCaseVideos(client, sourceCase.id, caseId);
 
     return inserted.rows[0].id;
 }
@@ -1212,7 +1219,8 @@ router.get("/designs/:id/case", async (req, res) => {
                        c.license_notes,
                        c.permission_statement,
                        c.commercial_source,
-                       c.language_code
+                       c.language_code,
+                       ${caseVideosJsonSql("c")} AS videos
                 FROM designs d
                 LEFT JOIN ethical_cases c ON c.id = d.case_id
                 WHERE d.id = $1
@@ -1250,6 +1258,8 @@ router.get("/designs/:id/case", async (req, res) => {
             return res.status(200).json({ status: "ok", result: null });
         }
 
+        const videos = normalizeCaseVideoSummaries(result.videos);
+
         return res.status(200).json({
             status: "ok",
             result: {
@@ -1265,6 +1275,7 @@ router.get("/designs/:id/case", async (req, res) => {
                 licenseNotes: result.license_notes,
                 permissionStatement: result.permission_statement,
                 commercialSource: result.commercial_source,
+                videos,
             },
         });
     } catch (err) {
