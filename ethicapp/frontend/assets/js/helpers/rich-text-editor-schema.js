@@ -2,14 +2,21 @@
 // canonical-schemas/rich-text/README.md. Pasted HTML is parsed against it, so
 // anything else (underline, colors, fonts, headings, links, tables) is dropped
 // and its text kept.
+//
+// A case video (#787) is an atom block, allowed only at the top level, as the
+// contract's `video` blocks are. The editor draws its card with a node view;
+// `toDOM` and `parseDOM` only carry it through copy and paste.
 
 import { Schema } from "prosemirror-model";
+import { isYoutubeVideoId } from "../../../../common/modules/youtube-urls.js";
 
 const BOLD_WEIGHT = /^(bold(er)?|[5-9]\d{2,})$/u;
+const VIDEO_ID_ATTRIBUTE = "data-rich-text-editor-video-id";
+const VIDEO_TITLE_ATTRIBUTE = "data-rich-text-editor-video-title";
 
 export const richTextSchema = new Schema({
     nodes: {
-        doc: { content: "block+" },
+        doc: { content: "(block | video)+" },
 
         paragraph: {
             group:    "block",
@@ -46,6 +53,26 @@ export const richTextSchema = new Schema({
             defining: true,
             parseDOM: [{ tag: "li" }],
             toDOM:    () => ["li", 0],
+        },
+
+        video: {
+            attrs:      { videoId: {}, title: { default: "" } },
+            atom:       true,
+            selectable: true,
+            draggable:  false,
+            parseDOM:   [{
+                tag:      `div[${VIDEO_ID_ATTRIBUTE}]`,
+                getAttrs: dom => {
+                    const videoId = dom.getAttribute(VIDEO_ID_ATTRIBUTE);
+                    return isYoutubeVideoId(videoId)
+                        ? { videoId, title: dom.getAttribute(VIDEO_TITLE_ATTRIBUTE) || "" }
+                        : false;
+                },
+            }],
+            toDOM: node => ["div", {
+                [VIDEO_ID_ATTRIBUTE]:    node.attrs.videoId,
+                [VIDEO_TITLE_ATTRIBUTE]: node.attrs.title,
+            }],
         },
 
         text: { group: "inline" },

@@ -612,5 +612,18 @@
 	"rich_text_italic": "Cursiva",
 	"rich_text_bullet_list": "Lista con viñetas",
 	"rich_text_numbered_list": "Lista numerada",
-	"rich_text_clear_formatting": "Quitar formato"
+	"rich_text_clear_formatting": "Quitar formato",
+	"rich_text_editor_video_insert": "Insertar video del caso",
+	"rich_text_editor_video_dialog_title": "Insertar un video del caso",
+	"rich_text_editor_video_dialog_help": "Elige uno de los videos del caso. Los estudiantes lo verán en la pregunta y podrán reproducirlo ahí.",
+	"rich_text_editor_video_choose": "Insertar",
+	"rich_text_editor_video_available": "Disponible",
+	"rich_text_editor_video_metadata_missing": "No se pudo consultar YouTube, así que solo se muestra el identificador del video. Puedes insertarlo: su título será el identificador hasta que lo cambies.",
+	"rich_text_editor_video_not_selectable": "No se puede insertar.",
+	"rich_text_editor_video_card_label": "Video del caso",
+	"rich_text_editor_video_title_label": "Título del video",
+	"rich_text_editor_video_remove": "Quitar video",
+	"rich_text_editor_video_not_in_case": "Este video no está entre los videos del caso. Se reproduce igual, pero conviene quitarlo o agregarlo al caso.",
+	"design_video_warnings_title": "Advertencias",
+	"design_video_not_in_case": "Fase {{phase}}, pregunta {{question}}: este video no está entre los videos del caso:"
 }

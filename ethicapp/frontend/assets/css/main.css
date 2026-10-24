@@ -3263,3 +3263,61 @@ img.ProseMirror-separator {
     border: 1px solid #ffc107;
     background-color: #fff3cd;
 }
+
+/* Case videos in the rich text editor (#787): the card of an embedded video,
+   the "Insert a case video" dialog and the design editor's video warnings.
+   The dialog reuses the case form's .case-videos-* rules. */
+.rich-text-editor .rich-text-editor-video {
+    align-items: flex-start;
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    display: flex;
+    gap: 10px;
+    margin-bottom: 6px;
+    padding: 8px 10px;
+    white-space: normal;
+}
+
+.rich-text-editor .rich-text-editor-video.has-warning {
+    border-color: #f0ad4e;
+}
+
+.rich-text-editor-video-icon {
+    color: #777;
+    font-size: 1.4em;
+    margin-top: 6px;
+}
+
+.rich-text-editor-video-body {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.rich-text-editor-video-meta {
+    display: flex;
+    flex-wrap: wrap;
+    font-size: 90%;
+    gap: 4px 12px;
+    margin-top: 4px;
+}
+
+.rich-text-editor .rich-text-editor-video .rich-text-editor-video-warning {
+    margin: 6px 0 0;
+}
+
+.rich-text-editor-video-remove {
+    flex: 0 0 auto;
+}
+
+.case-video-picker-entry.is-unavailable .case-videos-title {
+    color: #777;
+}
+
+.design-video-warnings {
+    margin-top: 10px;
+}
+
+.design-video-warning {
+    cursor: pointer;
+}

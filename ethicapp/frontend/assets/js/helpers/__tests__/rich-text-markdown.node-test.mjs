@@ -4,7 +4,7 @@ import { describe, it } from "node:test";
 
 import { parseRichText } from "../rich-text.js";
 import { richTextSchema as schema } from "../rich-text-editor-schema.js";
-import { docFromText, markdownFromDoc } from "../rich-text-markdown.js";
+import { docFromText, markdownFromDoc, videoMarkdown } from "../rich-text-markdown.js";
 
 const FIXTURES_URL = new URL("../../../../../../canonical-schemas/rich-text/fixtures.json",
     import.meta.url);
@@ -13,7 +13,7 @@ const { cases } = JSON.parse(readFileSync(FIXTURES_URL, "utf8"));
 const MARKDOWN = "text/markdown";
 const {
     paragraph, bullet_list: bulletList, ordered_list: orderedList, list_item: listItem,
-    hard_break: hardBreak, doc,
+    hard_break: hardBreak, video, doc,
 } = schema.nodes;
 const strong = schema.marks.strong.create();
 const em = schema.marks.em.create();
@@ -23,6 +23,7 @@ const li = (...content) => listItem.create(null, content);
 const br = (marks = []) => hardBreak.create(null, null, marks);
 const textNode = value => ({ type: "text", value });
 const paragraphNode = (...children) => ({ type: "paragraph", children });
+const videoNode = (videoId, title) => ({ type: "video", provider: "youtube", videoId, title });
 
 function readBack(markdown, label) {
     return [parseRichText(markdown, MARKDOWN), `${label}\n--- markdown ---\n${markdown}`];
@@ -36,9 +37,9 @@ function assertRoundTrip(source, contentType, label) {
     return markdown;
 }
 
-// The editor has no links or videos until #787: it loads a link as its text,
-// marks kept, and a video as a paragraph with its title, then saves them as
-// text. A text with links therefore reads back without them.
+// The editor has no links: it loads a link as its text, marks kept, and saves
+// it as text. A text with links therefore reads back without them. Videos
+// (#787) read back as videos.
 function inlineWithoutLinks(nodes) {
     const result = [];
     for (const node of nodes) {
@@ -60,10 +61,10 @@ function inlineWithoutLinks(nodes) {
     return result;
 }
 
-function withoutLinksAndVideos(blocks) {
+function withoutLinks(blocks) {
     return blocks.map(block => {
         if (block.type === "video") {
-            return paragraphNode(textNode(block.title));
+            return block;
         }
         if (block.type === "paragraph") {
             return paragraphNode(...inlineWithoutLinks(block.children));
@@ -71,7 +72,7 @@ function withoutLinksAndVideos(blocks) {
         return {
             ...block,
             items: block.items.map(item => ({
-                ...item, children: withoutLinksAndVideos(item.children),
+                ...item, children: withoutLinks(item.children),
             })),
         };
     });
@@ -85,22 +86,84 @@ function assertDocReadsBack(document, expectedTree, label) {
 }
 
 describe("rich text editor Markdown (#767)", () => {
-    it("round-trips every shared fixture, links and videos as text until #787", () => {
+    it("round-trips every shared fixture, videos as videos and links as text", () => {
+        const withVideos = cases.filter(fixture => fixture.tree.some(block =>
+            block.type === "video"));
+        assert.ok(withVideos.length > 0, "the fixtures hold videos");
         for (const fixture of cases) {
             const document = docFromText(schema, fixture.input, fixture.contentType);
-            assertDocReadsBack(document, withoutLinksAndVideos(fixture.tree), fixture.name);
+            assertDocReadsBack(document, withoutLinks(fixture.tree), fixture.name);
         }
     });
 
-    it("loads links as their text, marks kept, and videos as their title", () => {
+    it("loads links as their text, marks kept, and videos as video nodes", () => {
         const source = "Lee **[el *caso*](https://example.org)**\n\n"
-            + "[El caso](https://youtu.be/M7lc1UVf-VE)";
+            + "[El *caso*](https://youtu.be/M7lc1UVf-VE?t=10)";
         const loaded = docFromText(schema, source, MARKDOWN);
         assert.ok(loaded.eq(doc.create(null, [
             p(text("Lee "), text("el ", [strong]), text("caso", [strong, em])),
-            p(text("El caso")),
+            video.create({ videoId: "M7lc1UVf-VE", title: "El caso" }),
         ])), loaded.toString());
-        assert.equal(markdownFromDoc(loaded), "Lee **el _caso_**\n\nEl caso");
+        assert.equal(markdownFromDoc(loaded),
+            "Lee **el _caso_**\n\n[El caso](https://www.youtube.com/watch?v=M7lc1UVf-VE)");
+    });
+
+    it("writes a video as its own paragraph, escaping its title on one line", () => {
+        const id = "M7lc1UVf-VE";
+        const url = `https://www.youtube.com/watch?v=${id}`;
+        const titles = [
+            ["Introducción", "Introducción"],
+            ["*Ética* [1] <b> & `x` \\ fin", "\\*Ética\\* \\[1\\] \\<b\\> \\& \\`x\\` \\\\ fin"],
+            ["  dos\n líneas\t ", "dos líneas"],
+            ["1. - # título", "1. - \\# título"],
+            ["]( https://e.org )", "\\]( https://e.org )"],
+            [url, url],
+        ];
+        for (const [title, escaped] of titles) {
+            const markdown = videoMarkdown(id, title);
+            assert.equal(markdown, `[${escaped}](${url})`, title);
+            const expectedTitle = title.replace(/\s+/gu, " ").trim();
+            assert.deepEqual(parseRichText(markdown, MARKDOWN),
+                [videoNode(id, expectedTitle)], markdown);
+        }
+    });
+
+    it("writes an empty video title as the video's URL", () => {
+        const id = "M7lc1UVf-VE";
+        const url = `https://www.youtube.com/watch?v=${id}`;
+        for (const title of ["", "   ", "\n"]) {
+            assert.equal(videoMarkdown(id, title), `[${url}](${url})`);
+        }
+        const document = doc.create(null, [video.create({ videoId: id, title: "" })]);
+        assertDocReadsBack(document, [videoNode(id, url)], "empty title");
+    });
+
+    it("keeps videos apart from the blocks around them", () => {
+        const id = "M7lc1UVf-VE";
+        const document = doc.create(null, [
+            bulletList.create(null, [li(p(text("a")))]),
+            video.create({ videoId: id, title: "Uno" }),
+            video.create({ videoId: "dQw4w9WgXcQ", title: "Dos" }),
+            bulletList.create(null, [li(p(text("b")))]),
+            p(),
+        ]);
+        const markdown = assertDocReadsBack(document, [
+            parseRichText("- a", MARKDOWN)[0],
+            videoNode(id, "Uno"),
+            videoNode("dQw4w9WgXcQ", "Dos"),
+            parseRichText("- b", MARKDOWN)[0],
+        ], "videos between lists");
+        assert.equal(markdown, "- a\n\n[Uno](https://www.youtube.com/watch?v=M7lc1UVf-VE)"
+            + "\n\n[Dos](https://www.youtube.com/watch?v=dQw4w9WgXcQ)\n\n- b");
+    });
+
+    it("saves a document holding only a video, and drops a malformed one's link", () => {
+        const id = "M7lc1UVf-VE";
+        assert.equal(markdownFromDoc(doc.create(null, [video.create({ videoId: id, title: "V" }),
+            p()])), `[V](https://www.youtube.com/watch?v=${id})`);
+        assert.equal(markdownFromDoc(doc.create(null, [
+            video.create({ videoId: "no", title: "- solo *texto*" }),
+        ])), "\\- solo \\*texto\\*");
     });
 
     it("writes breaks with a backslash and escapes Markdown characters", () => {
@@ -261,13 +324,36 @@ function randomList(random, depth) {
         : orderedList.create({ order: random.pick([1, 1, 3, 0]) }, items);
 }
 
+// Video titles mix Markdown characters, brackets, backslashes, whitespace,
+// URLs (the video's own included) and nothing at all (#787).
+const VIDEO_IDS = ["M7lc1UVf-VE", "dQw4w9WgXcQ", "a_b-c_d-e_f"];
+const TITLE_PIECES = [
+    ...PIECES, "", "", "\n", "\t", "  ", "[x](https://e.org)", "\\]", "&#97;",
+    "https://www.youtube.com/watch?v=M7lc1UVf-VE", "**", "__",
+];
+
+function randomVideo(random) {
+    let title = "";
+    const length = Math.floor(random.next() * 4);
+    for (let piece = 0; piece < length; piece += 1) {
+        title += random.pick(TITLE_PIECES);
+    }
+    return video.create({ videoId: random.pick(VIDEO_IDS), title });
+}
+
+// Videos only at the top level, as the schema and the contract allow.
 function randomBlocks(random, depth) {
     const blocks = [];
     const count = 1 + Math.floor(random.next() * 3);
     for (let index = 0; index < count; index += 1) {
-        blocks.push(depth < 2 && random.next() < 0.3
-            ? randomList(random, depth)
-            : randomParagraph(random));
+        const choice = random.next();
+        if (depth === 0 && choice < 0.2) {
+            blocks.push(randomVideo(random));
+        } else {
+            blocks.push(depth < 2 && choice < 0.45
+                ? randomList(random, depth)
+                : randomParagraph(random));
+        }
     }
     return blocks;
 }
@@ -326,6 +412,9 @@ function normalizeParagraph(tokens) {
 
 function flattenBlocks(blocks) {
     return blocks.map(block => {
+        if (block.type === "video") {
+            return { videoId: block.videoId, title: block.title };
+        }
         if (block.type === "paragraph") {
             return normalizeParagraph(flattenInline(block.children));
         }
@@ -351,9 +440,20 @@ function inlineTree(node) {
     return content;
 }
 
+// A video's title as the contract reads it back: on one line, or its URL.
+function videoTitle(title, videoId) {
+    return title.replace(/\s+/gu, " ").trim()
+        || `https://www.youtube.com/watch?v=${videoId}`;
+}
+
 function treeFromDoc(node) {
     const result = [];
     node.forEach(child => {
+        if (child.type === video) {
+            const { videoId, title } = child.attrs;
+            result.push({ type: "video", videoId, title: videoTitle(title, videoId) });
+            return;
+        }
         if (child.type === paragraph) {
             result.push(paragraphNode(...inlineTree(child)));
             return;
@@ -366,17 +466,27 @@ function treeFromDoc(node) {
     return result;
 }
 
-describe("rich text editor Markdown with random documents (#767)", () => {
-    it("reads back every random document with the same text, emphasis, breaks and lists", () => {
+function hasVideo(document) {
+    let found = false;
+    document.forEach(child => {
+        found ||= child.type === video;
+    });
+    return found;
+}
+
+describe("rich text editor Markdown with random documents (#767, #787)", () => {
+    it("reads back every random document: text, emphasis, breaks, lists and videos", () => {
         const random = generator(20261023);
-        for (let round = 0; round < 400; round += 1) {
+        let videos = 0;
+        for (let round = 0; round < 600; round += 1) {
             const document = doc.create(null, randomBlocks(random, 0));
             const markdown = markdownFromDoc(document);
             const actual = flattenBlocks(parseRichText(markdown, MARKDOWN));
-            // A document with no visible text is saved as "".
-            const expected = document.textContent.trim()
+            // A document with no visible text or video is saved as "".
+            const expected = document.textContent.trim() || hasVideo(document)
                 ? flattenBlocks(treeFromDoc(document))
                 : [];
+            videos += expected.filter(block => block.videoId).length;
             const first = expected.findIndex((block, at) =>
                 JSON.stringify(block) !== JSON.stringify(actual[at]));
             assert.deepEqual(actual, expected, [
@@ -386,5 +496,6 @@ describe("rich text editor Markdown with random documents (#767)", () => {
                 `--- actual ---\n${JSON.stringify(actual[first])}`,
             ].join("\n"));
         }
+        assert.ok(videos > 100, `only ${videos} videos were generated`);
     });
 });

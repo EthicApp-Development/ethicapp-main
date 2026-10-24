@@ -5,6 +5,7 @@ import { ActivityCatalogService } from "../../services/activity-catalog.service.
 import { DesignStateService } from "../../services/design-state.service.js";
 import { DesignCatalogService } from "../../services/design-catalog.service.js";
 import { DesignPublicationService } from "../../services/design-publication.service.js";
+import { CaseVideoPickerService } from "../../services/case-video-picker.service.js";
 import { CasesCatalogService } from "../../services/cases-catalog.service.js";
 import { ExternalServicesCatalogService } from "../../services/external-services-catalog.service.js";
 import { LanguageCatalogService } from "../../services/language-catalog.service.js";
@@ -36,6 +37,7 @@ app.factory("ActivityStateService", ["$http", "TeacherSocketService", ActivitySt
     .factory("ActivityCatalogService", ["$http", ActivityCatalogService])
     .factory("DesignCatalogService", ["$rootScope", "$http", DesignCatalogService])
     .factory("DesignPublicationService", ["$uibModal", "DesignCatalogService", "CasesCatalogService", DesignPublicationService])
+    .factory("CaseVideoPickerService", ["$uibModal", CaseVideoPickerService])
     .factory("DesignStateService", ["$rootScope", "$http", DesignStateService])
     .factory("ExternalServicesCatalogService",
         ["$http", "LanguageCatalogService", ExternalServicesCatalogService])

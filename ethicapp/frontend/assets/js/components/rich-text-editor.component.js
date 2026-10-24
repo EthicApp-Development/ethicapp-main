@@ -6,6 +6,11 @@
 // Bindings: `text` and `contentType` (one-way: the parent stores what
 // `onChange({ text, contentType })` reports), `label` and `placeholder` for
 // the editable area, and `invalid` for the warning style.
+//
+// `videos` (#787) takes the case's videos (`GET /cases/:id`). When it holds
+// any, the toolbar offers "Insert a case video", which opens a dialog to
+// choose one. Video cards show their duration from it, and warn about videos
+// it does not hold. Leave it unset where the case is unknown.
 
 import { EditorState } from "prosemirror-state";
 import { EditorView } from "prosemirror-view";
@@ -16,6 +21,10 @@ import { liftListItem, sinkListItem, splitListItem, wrapInList } from "prosemirr
 
 import { richTextSchema as schema } from "../helpers/rich-text-editor-schema.js";
 import { docFromText, markdownFromDoc } from "../helpers/rich-text-markdown.js";
+import {
+    VideoCardView, insertVideo, trailingParagraphPlugin, withTrailingParagraph,
+} from "../helpers/rich-text-editor-video.js";
+import { embeddedVideoStatus } from "../helpers/case-video-embeds.js";
 
 const TEXT_MARKDOWN = "text/markdown";
 const {
@@ -89,8 +98,9 @@ const COMMANDS = {
 
 function createState(text, contentType) {
     return EditorState.create({
-        doc:     docFromText(schema, text, contentType),
+        doc:     withTrailingParagraph(docFromText(schema, text, contentType)),
         plugins: [
+            trailingParagraphPlugin,
             history(),
             keymap({
                 "Mod-b":       COMMANDS.bold,
@@ -109,16 +119,34 @@ function createState(text, contentType) {
     });
 }
 
-function RichTextEditorController($element, $scope) {
+function RichTextEditorController($element, $scope, $rootScope, $translate,
+    CaseVideoPickerService) {
     const vm = this;
     let view = null;
     let lastEmitted;
+    let stopListening = null;
+    // Whether the teacher has placed the cursor in the current text.
+    let hasCursor = false;
 
     vm.active = {};
     vm.shortcutKey = /Mac|iPhone|iPad/u.test(globalThis.navigator?.platform ?? "") ? "⌘" : "Ctrl+";
 
+    // A new object each time, so that setting it redraws every video card.
+    function nodeViews() {
+        const context = {
+            translate: key => $translate.instant(key),
+            status:    videoId => embeddedVideoStatus(vm.videos, videoId),
+        };
+        return {
+            video: (node, editorView, getPos) => new VideoCardView(node, editorView, getPos,
+                context),
+        };
+    }
+
     function attributes(state) {
-        const isEmpty = state.doc.childCount === 1 && state.doc.firstChild.content.size === 0;
+        const { firstChild } = state.doc;
+        const isEmpty = state.doc.childCount === 1 && firstChild.isTextblock
+            && firstChild.content.size === 0;
         const emptyClass = isEmpty ? " is-empty" : "";
         return {
             "class":            `form-control rich-text-editor-content${emptyClass}`,
@@ -147,11 +175,43 @@ function RichTextEditorController($element, $scope) {
         view.focus();
     };
 
+    vm.hasVideos = function() {
+        return Array.isArray(vm.videos) && vm.videos.length > 0;
+    };
+
+    // Inserts the chosen video at the cursor, or at the end when the text was
+    // never focused, so it has no cursor of the teacher's. Dismissing the
+    // dialog gives the focus back to where it was.
+    vm.openVideoDialog = function() {
+        if (!view || !vm.hasVideos()) {
+            return;
+        }
+        const atEnd = !hasCursor;
+        CaseVideoPickerService.open(vm.videos).then(choice => {
+            if (!view || !choice) {
+                return;
+            }
+            insertVideo(choice, { atEnd })(view.state, view.dispatch);
+            view.focus();
+        }, () => {});
+    };
+
+    function redrawVideoCards() {
+        view?.setProps({ nodeViews: nodeViews() });
+    }
+
     vm.$postLink = function() {
         lastEmitted = vm.text;
         view = new EditorView($element[0].querySelector(".rich-text-editor-host"), {
-            state: createState(vm.text, vm.contentType),
+            state:           createState(vm.text, vm.contentType),
+            nodeViews:       nodeViews(),
             attributes,
+            handleDOMEvents: {
+                focus() {
+                    hasCursor = true;
+                    return false;
+                },
+            },
             dispatchTransaction(transaction) {
                 const state = view.state.apply(transaction);
                 view.updateState(state);
@@ -169,6 +229,9 @@ function RichTextEditorController($element, $scope) {
             },
         });
         refreshToolbar(view.state);
+        // Card labels are read when cards are drawn: draw them again once
+        // translations load or the language changes.
+        stopListening = $rootScope.$on("$translateChangeEnd", redrawVideoCards);
     };
 
     vm.$onChanges = function(changes) {
@@ -178,15 +241,20 @@ function RichTextEditorController($element, $scope) {
         // Reload only for text that did not come from this editor.
         if (changes.text && changes.text.currentValue !== lastEmitted) {
             lastEmitted = changes.text.currentValue;
+            hasCursor = false;
             view.updateState(createState(vm.text, vm.contentType));
             refreshToolbar(view.state);
         }
         if (changes.label || changes.placeholder) {
             view.setProps({ attributes });
         }
+        if (changes.videos) {
+            redrawVideoCards();
+        }
     };
 
     vm.$onDestroy = function() {
+        stopListening?.();
         view?.destroy();
         view = null;
     };
@@ -226,6 +294,7 @@ const richTextEditorComponent = {
         label:       "@",
         placeholder: "@",
         invalid:     "<",
+        videos:      "<?",
         onChange:    "&",
     },
     template: `
@@ -238,11 +307,23 @@ const richTextEditorComponent = {
             </div>
             <div class="btn-group" role="group">${BUTTONS.slice(4).map(toolbarButton).join("")}
             </div>
+            <div class="btn-group" role="group" ng-if="$ctrl.hasVideos()">
+                <button type="button" class="btn btn-default btn-sm rich-text-editor-insert-video"
+                    aria-haspopup="dialog"
+                    ng-mousedown="$event.preventDefault()"
+                    ng-click="$ctrl.openVideoDialog()">
+                    <i class="fa-solid fa-film" aria-hidden="true"></i>
+                    {{ 'rich_text_editor_video_insert' | translate }}
+                </button>
+            </div>
         </div>
         <div class="rich-text-editor-host"></div>
     </div>
     `,
-    controller: ["$element", "$scope", RichTextEditorController],
+    controller: [
+        "$element", "$scope", "$rootScope", "$translate", "CaseVideoPickerService",
+        RichTextEditorController,
+    ],
 };
 
 export default richTextEditorComponent;

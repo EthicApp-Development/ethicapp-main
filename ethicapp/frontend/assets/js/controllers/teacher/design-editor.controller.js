@@ -3,6 +3,7 @@ import * as phaseValidationHelpers from "../../helpers/phase-validation-helpers.
 import accordionStateHelpers from "../../helpers/accordeon-state-helpers.js"
 import { normalizeExternalServicesConfig } from "../../helpers/phase-external-services.js";
 import { designSaveErrorMessageKey } from "../../helpers/design-save-errors.js";
+import { designVideoWarnings } from "../../helpers/case-video-embeds.js";
 
 export function DesignEditorController($scope, $translate, $timeout,
     $routeParams, DesignStateService, DesignCatalogService, CasesCatalogService,
@@ -20,6 +21,24 @@ export function DesignEditorController($scope, $translate, $timeout,
     vm.associatedCase = null;
     vm.externalServices = [];
     vm.languages = [];
+
+    // The design's case videos (#787): null while the case is unknown, empty
+    // when the design has no case. Questions can embed them, and embedded
+    // videos the case does not hold are listed as warnings. Warnings do not
+    // make the design invalid: such a video still plays from its link.
+    vm.caseVideos = null;
+    vm.videoWarnings = [];
+    $scope.$watch(
+        () => designVideoWarnings(vm.design?.phases, vm.caseVideos),
+        warnings => {
+            vm.videoWarnings = warnings;
+        },
+        true
+    );
+
+    function caseVideosOf(caseObj) {
+        return Array.isArray(caseObj?.videos) ? caseObj.videos : [];
+    }
 
     // External service settings (#732). The design as last loaded or saved is
     // what the server compares against (#731); errors are tracked per phase
@@ -167,12 +186,14 @@ export function DesignEditorController($scope, $translate, $timeout,
 
     vm.loadAssociatedCase = async function() {
         vm.associatedCase = null;
+        vm.caseVideos = null;
         if (!vm.designId) {
             return;
         }
         try {
             const response = await CasesCatalogService.getCaseByDesignId(vm.designId);
             vm.associatedCase = response;
+            vm.caseVideos = caseVideosOf(response);
             if (response && response.id) {
                 vm.design.caseId = response.id;
                 vm.selectedCase = vm.formatCaseLabel(response);
@@ -191,17 +212,34 @@ export function DesignEditorController($scope, $translate, $timeout,
 
     vm.selectCase = function(caseItem) {
         if (!caseItem) {
-            vm.design.caseId = null;
-            vm.associatedCase = null;
+            vm.clearAssociatedCase();
             return;
         }
         vm.design.caseId = caseItem.id;
         vm.associatedCase = caseItem;
+        // Search results carry video ids only: the full case adds YouTube's
+        // titles and durations for the video dialog.
+        vm.caseVideos = Array.isArray(caseItem.videos) ? caseItem.videos : null;
+        vm.loadSelectedCaseVideos(caseItem.id);
+    };
+
+    vm.loadSelectedCaseVideos = async function(caseId) {
+        try {
+            const fullCase = await CasesCatalogService.getCaseById(caseId);
+            if (vm.design?.caseId === caseId) {
+                vm.caseVideos = caseVideosOf(fullCase);
+            }
+        } catch (error) {
+            console.error("[DesignEditorController::loadSelectedCaseVideos] Error.", error);
+        } finally {
+            $scope.$applyAsync();
+        }
     };
 
     vm.clearAssociatedCase = function() {
         vm.design.caseId = null;
         vm.associatedCase = null;
+        vm.caseVideos = [];
     };
 
     vm.formatCaseLabel = function(caseItem) {
