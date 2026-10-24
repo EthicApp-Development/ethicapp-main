@@ -43,7 +43,12 @@ async function fetchCanonicalDesigns(pool, designIds) {
                    c.permission_statement AS case_permission_statement,
                    c.commercial_source AS case_commercial_source,
                    c.language_code AS case_language_code,
-                   COALESCE(c.archived, false) AS case_archived
+                   COALESCE(c.archived, false) AS case_archived,
+                   COALESCE((
+                       SELECT array_agg(ecv.youtube_video_id ORDER BY ecv.position)
+                       FROM ethical_case_videos AS ecv
+                       WHERE ecv.case_id = c.id
+                   ), '{}') AS case_video_ids
             FROM designs AS d
             INNER JOIN users AS u
                 ON u.id = d.creator
@@ -116,6 +121,11 @@ async function buildActivityEntry(row, usedKeys, assetsDir) {
             languageCode: row.case_language_code || "es_CL",
             archived: row.case_archived === true,
         };
+
+        // Optional: the case's YouTube video ids, in order (#781).
+        if (Array.isArray(row.case_video_ids) && row.case_video_ids.length > 0) {
+            activity.case.videos = row.case_video_ids;
+        }
     }
 
     return activity;
