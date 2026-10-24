@@ -83,6 +83,33 @@ RECAPTCHA_SECRET_KEY=your-classic-secret
 RECAPTCHA_VERIFY_URL=https://www.google.com/recaptcha/api/siteverify
 ```
 
+## Case Videos (YouTube Data API)
+
+Cases can list YouTube videos (epic #779). `ethicapp` looks up their title,
+description and duration with the YouTube Data API v3, using a Google Cloud API
+key:
+
+```bash
+GOOGLE_API_KEY=change-this-in-production
+YOUTUBE_DATA_API_TIMEOUT_MS=8000
+YOUTUBE_METADATA_CACHE_TTL_SECONDS=86400
+```
+
+To create the key, enable the YouTube Data API v3 in a Google Cloud project,
+create an API key there, and restrict it to that API. The Drive document
+attachments (epic #789) will reuse the same key, which then needs the Drive API
+in its restriction too. The key is a backend-only secret.
+
+Without `GOOGLE_API_KEY`, case video support is off: teachers cannot add videos,
+and `GET /cases/videos/support` answers `{ "enabled": false }`.
+
+Metadata is cached in the cache Redis (`REDIS_CACHE_*`) for
+`YOUTUBE_METADATA_CACHE_TTL_SECONDS`, 24 hours by default. Values above 2592000
+(30 days, YouTube's storage limit for API data) are capped. Each lookup that
+misses the cache costs 1 unit of the project's YouTube quota, 10,000 units a day
+by default, for up to 50 videos. Teachers' URL previews are limited to 30 a
+minute per teacher.
+
 ## Redis Topology
 
 Production deployments use two Redis instances:
