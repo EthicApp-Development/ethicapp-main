@@ -2142,7 +2142,9 @@ h2{
     display: inline-block;
 }
 
-.phase-editor-item-heading a {
+/* The accordion's own links; links in teacher-written rich text keep the
+   normal link look and focus ring (#785). */
+.phase-editor-item-heading a:not(.rich-text a) {
     text-decoration: none;
     color: inherit;
 }
@@ -2171,12 +2173,12 @@ h2{
     text-decoration: none;
 }
 
-.phase-editor-item-heading a:hover {
+.phase-editor-item-heading a:not(.rich-text a):hover {
     text-decoration: none;
     color: #0056b3;
 }
 
-.phase-editor-item-heading a:focus {
+.phase-editor-item-heading a:not(.rich-text a):focus {
     outline: none;
 }
 
