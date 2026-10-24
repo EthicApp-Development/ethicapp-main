@@ -2203,6 +2203,95 @@ h2{
     color: #a94442;
 }
 
+.case-form-actions {
+    margin-top: 10px;
+}
+
+.case-videos-list {
+    margin-bottom: 15px;
+    max-width: 42rem;
+    padding-left: 24px;
+}
+
+.case-videos-entry {
+    border-bottom: 1px solid #e5e5e5;
+    padding: 8px 0;
+}
+
+.case-videos-item {
+    align-items: flex-start;
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+}
+
+.case-videos-item-body {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.case-videos-item-actions {
+    display: flex;
+    flex: 0 0 auto;
+    gap: 4px;
+}
+
+.case-videos-title {
+    display: block;
+    margin: 0 0 4px;
+    overflow-wrap: anywhere;
+}
+
+.case-videos-meta {
+    display: flex;
+    flex-wrap: wrap;
+    font-size: 90%;
+    gap: 4px 12px;
+}
+
+.case-videos-notice {
+    margin: 6px 0 0;
+}
+
+.case-videos-add {
+    align-items: center;
+    display: flex;
+    gap: 8px;
+}
+
+.case-videos-preview {
+    margin-top: 12px;
+}
+
+.case-videos-preview-heading {
+    font-size: 85%;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+}
+
+.case-videos-description {
+    margin: 10px 0 0;
+    overflow-wrap: anywhere;
+    white-space: pre-line;
+}
+
+/* About four lines of Bootstrap's 1.42857 line height. */
+.case-videos-description.is-collapsed {
+    max-height: 5.7em;
+    overflow: hidden;
+}
+
+.case-videos-description-toggle {
+    padding-left: 0;
+}
+
+.case-videos-preview-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}
+
 .fieldset-heading-section {
     margin-bottom: 20px;
 }
