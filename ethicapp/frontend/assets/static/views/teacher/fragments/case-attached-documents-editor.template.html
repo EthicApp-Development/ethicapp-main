@@ -1,0 +1,151 @@
+<fieldset class="case-documents">
+    <legend>{{ 'case_documents_section' | translate }}</legend>
+    <div class="checkbox case-form-field">
+        <label for="caseIncludesDocuments">
+            <input
+                id="caseIncludesDocuments"
+                type="checkbox"
+                ng-model="$ctrl.formModel.includesDocuments"
+                ng-change="$ctrl.onIncludesDocumentsChange()"
+                ng-disabled="$ctrl.isToggleDisabled()"
+                ng-attr-aria-describedby="{{ $ctrl.getSupportHelpKey() ? 'caseDocumentsSupportHelp' : undefined }}">
+            {{ 'case_documents_includes_documents' | translate }}
+        </label>
+        <p id="caseDocumentsSupportHelp" class="help-block" ng-if="$ctrl.getSupportHelpKey()">
+            <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+            {{ $ctrl.getSupportHelpKey() | translate }}
+        </p>
+    </div>
+
+    <div ng-if="$ctrl.areDocumentsShown()">
+        <p class="help-block case-form-field" ng-if="$ctrl.getDocuments().length === 0">
+            {{ 'case_documents_empty' | translate }}
+        </p>
+        <ol class="case-documents-list" ng-if="$ctrl.getDocuments().length > 0" aria-label="{{ 'case_documents_list_label' | translate }}">
+            <li class="case-documents-entry" ng-repeat="caseDocument in $ctrl.formModel.documents track by $ctrl.getTrackKey(caseDocument)">
+                <div class="case-documents-item">
+                    <span class="case-documents-icon">
+                        <i class="fa-solid {{ $ctrl.getIconClass(caseDocument) }}" aria-hidden="true"></i>
+                        <span class="sr-only">{{ $ctrl.getTypeKey(caseDocument) | translate }}</span>
+                    </span>
+                    <div class="case-documents-item-body">
+                        <strong class="case-documents-name">{{ $ctrl.getName(caseDocument) }}</strong>
+                        <div class="text-muted case-documents-meta" ng-if="$ctrl.isPublished(caseDocument) || $ctrl.formatModifiedTime(caseDocument)">
+                            <span class="label label-default" ng-if="$ctrl.isPublished(caseDocument)">{{ 'case_documents_published' | translate }}</span>
+                            <span ng-if="$ctrl.formatModifiedTime(caseDocument)">
+                                {{ 'case_documents_modified' | translate }}: {{ $ctrl.formatModifiedTime(caseDocument) }}
+                            </span>
+                        </div>
+                        <p class="text-warning case-documents-notice" ng-if="$ctrl.getWarningKey(caseDocument)">
+                            <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+                            {{ $ctrl.getWarningKey(caseDocument) | translate }}
+                        </p>
+                        <p class="text-danger case-documents-notice" ng-if="$ctrl.getFieldErrorKey(caseDocument)">
+                            <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
+                            {{ $ctrl.getFieldErrorKey(caseDocument) | translate }}
+                        </p>
+                    </div>
+                    <div class="case-documents-item-actions" ng-if="$ctrl.canEditDocuments()">
+                        <button
+                            type="button"
+                            class="btn btn-default btn-sm"
+                            id="{{ $ctrl.getControlId(caseDocument, 'up') }}"
+                            ng-click="$ctrl.moveDocument($index, -1)"
+                            ng-disabled="$first"
+                            title="{{ 'case_documents_move_up' | translate }}"
+                            aria-label="{{ ('case_documents_move_up' | translate) + ': ' + $ctrl.getName(caseDocument) }}">
+                            <i class="fa-solid fa-arrow-up" aria-hidden="true"></i>
+                        </button>
+                        <button
+                            type="button"
+                            class="btn btn-default btn-sm"
+                            id="{{ $ctrl.getControlId(caseDocument, 'down') }}"
+                            ng-click="$ctrl.moveDocument($index, 1)"
+                            ng-disabled="$last"
+                            title="{{ 'case_documents_move_down' | translate }}"
+                            aria-label="{{ ('case_documents_move_down' | translate) + ': ' + $ctrl.getName(caseDocument) }}">
+                            <i class="fa-solid fa-arrow-down" aria-hidden="true"></i>
+                        </button>
+                        <button
+                            type="button"
+                            class="btn btn-default btn-sm"
+                            id="{{ $ctrl.getControlId(caseDocument, 'remove') }}"
+                            ng-click="$ctrl.removeDocument($index)"
+                            title="{{ 'case_documents_remove' | translate }}"
+                            aria-label="{{ ('case_documents_remove' | translate) + ': ' + $ctrl.getName(caseDocument) }}">
+                            <i class="fa-solid fa-trash text-danger" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                </div>
+            </li>
+        </ol>
+
+        <div class="form-group case-form-field" ng-if="$ctrl.canEditDocuments() && $ctrl.isSupportEnabled()">
+            <label for="caseDocumentUrl">{{ 'case_documents_url_label' | translate }}</label>
+            <div class="case-documents-add">
+                <input
+                    id="caseDocumentUrl"
+                    type="text"
+                    inputmode="url"
+                    autocomplete="off"
+                    class="form-control"
+                    placeholder="https://docs.google.com/document/d/..."
+                    ng-model="$ctrl.documentUrl"
+                    ng-change="$ctrl.onDocumentUrlChange()"
+                    ng-keydown="$ctrl.onDocumentUrlKeydown($event)"
+                    ng-readonly="$ctrl.isListFull()"
+                    aria-describedby="caseDocumentUrlHelp">
+                <button
+                    id="caseDocumentPreviewButton"
+                    type="button"
+                    class="btn btn-default btn-sm"
+                    ng-click="$ctrl.previewDocument()"
+                    ng-disabled="!$ctrl.documentUrl || $ctrl.isPreviewingDocument || $ctrl.isListFull()">
+                    <i class="fa fa-plus" aria-hidden="true"></i> {{ 'case_documents_add' | translate }}
+                </button>
+            </div>
+            <p id="caseDocumentUrlHelp" class="help-block">{{ 'case_documents_url_help' | translate }}</p>
+            <p class="help-block" ng-if="$ctrl.isPreviewingDocument">
+                <i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i>
+                {{ 'case_documents_previewing' | translate }}
+            </p>
+            <p id="caseDocumentPreviewError" class="help-block text-danger" ng-if="$ctrl.documentPreviewErrorKey" role="alert">
+                {{ $ctrl.documentPreviewErrorKey | translate }}
+            </p>
+            <p class="help-block" ng-if="$ctrl.isListFull()">
+                {{ 'case_documents_limit_reached' | translate:{ max: $ctrl.maxCaseDocuments } }}
+            </p>
+
+            <div class="panel panel-default case-documents-preview" ng-if="$ctrl.documentPreview" role="group" aria-labelledby="caseDocumentPreviewName">
+                <div class="panel-body">
+                    <p class="text-muted case-documents-preview-heading">{{ 'case_documents_preview_heading' | translate }}</p>
+                    <div class="case-documents-item">
+                        <span class="case-documents-icon">
+                            <i class="fa-solid {{ $ctrl.getIconClass($ctrl.documentPreview) }}" aria-hidden="true"></i>
+                            <span class="sr-only">{{ $ctrl.getTypeKey($ctrl.documentPreview) | translate }}</span>
+                        </span>
+                        <div class="case-documents-item-body">
+                            <h4 id="caseDocumentPreviewName" class="case-documents-name">{{ $ctrl.getName($ctrl.documentPreview) }}</h4>
+                            <div class="text-muted case-documents-meta">
+                                <span class="case-documents-type" aria-hidden="true">{{ $ctrl.getTypeKey($ctrl.documentPreview) | translate }}</span>
+                                <span class="label label-default" ng-if="$ctrl.isPublished($ctrl.documentPreview)">{{ 'case_documents_published' | translate }}</span>
+                                <span ng-if="$ctrl.formatModifiedTime($ctrl.documentPreview)">
+                                    {{ 'case_documents_modified' | translate }}: {{ $ctrl.formatModifiedTime($ctrl.documentPreview) }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="case-documents-preview-actions">
+                        <button id="caseDocumentPreviewConfirm" type="button" class="btn btn-default btn-sm" ng-click="$ctrl.confirmDocumentPreview()">
+                            <i class="fa fa-plus" aria-hidden="true"></i> {{ 'case_documents_add_to_case' | translate }}
+                        </button>
+                        <button id="caseDocumentPreviewDiscard" type="button" class="btn btn-default btn-sm" ng-click="$ctrl.discardDocumentPreview()">
+                            {{ 'case_documents_discard' | translate }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <p class="sr-only" aria-live="polite">{{ $ctrl.announcement }}</p>
+</fieldset>

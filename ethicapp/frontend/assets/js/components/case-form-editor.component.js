@@ -11,6 +11,7 @@ import {
     previewErrorMessageKey,
     removeCaseVideo,
 } from "../helpers/case-videos-form.js";
+import { moveFocusDirection } from "../helpers/ordered-list.js";
 
 const CaseFormEditorController = function($scope, $window, $timeout, $translate,
     CasesCatalogService) {
@@ -337,11 +338,9 @@ const CaseFormEditorController = function($scope, $window, $timeout, $translate,
             position: position + 1,
             count:    moved.length,
         });
-        // Keeps the keyboard on the moved video, on the button that can still
-        // move it the same way, or on the other one at either end.
-        const canKeepDirection = offset < 0 ? position > 0 : position < moved.length - 1;
-        const direction = (offset < 0) === canKeepDirection ? "up" : "down";
-        vm.focusElement(vm.getVideoControlId(video, direction));
+        // Keeps the keyboard on the moved video.
+        vm.focusElement(vm.getVideoControlId(video,
+            moveFocusDirection(offset, position, moved.length)));
     };
 
     vm.removeVideo = function(index) {

@@ -3,6 +3,7 @@
 // endpoint into list items, edit the ordered list, build the `videos` field
 // the case API takes, and map API error codes to translation keys.
 import { youtubeVideoId } from "../../../../common/modules/youtube-urls.js";
+import { moveListItem, removeListItem, sameOrderedKeys } from "./ordered-list.js";
 
 /** At most this many videos per case, as the case API enforces. */
 export const MAX_CASE_VIDEOS = 50;
@@ -161,26 +162,10 @@ export function addCaseVideo(videos, video) {
 }
 
 /** The list with the video at `index` moved by `offset` places, when possible. */
-export function moveCaseVideo(videos, index, offset) {
-    const target = index + offset;
-    if (!Array.isArray(videos) || index < 0 || index >= videos.length
-        || target < 0 || target >= videos.length) {
-        return videos;
-    }
-
-    const list = videos.slice();
-    const [video] = list.splice(index, 1);
-    list.splice(target, 0, video);
-    return list;
-}
+export const moveCaseVideo = moveListItem;
 
 /** The list without the video at `index`. */
-export function removeCaseVideo(videos, index) {
-    if (!Array.isArray(videos) || index < 0 || index >= videos.length) {
-        return videos;
-    }
-    return videos.filter((_video, position) => position !== index);
-}
+export const removeCaseVideo = removeListItem;
 
 /**
  * The `videos` field of a case create or update: the ordered ids, or null when
@@ -189,10 +174,7 @@ export function removeCaseVideo(videos, index) {
  */
 export function caseVideosPayload(videos, initialIds = []) {
     const ids = caseVideoIds(videos);
-    const initial = Array.isArray(initialIds) ? initialIds : [];
-    const unchanged = ids.length === initial.length
-        && ids.every((id, index) => id === initial[index]);
-    return unchanged ? null : ids;
+    return sameOrderedKeys(ids, initialIds) ? null : ids;
 }
 
 /** The translation key of a failed preview request. */
