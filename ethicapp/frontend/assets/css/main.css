@@ -2295,6 +2295,88 @@ h2{
     margin-top: 12px;
 }
 
+/* Case form: attached documents (#793, epic #789). The list, the URL input
+   and the preview card of public Google Docs, Sheets, Slides and Drive files. */
+.case-documents-list {
+    margin-bottom: 15px;
+    max-width: 42rem;
+    padding-left: 24px;
+}
+
+.case-documents-entry {
+    border-bottom: 1px solid #e5e5e5;
+    padding: 8px 0;
+}
+
+.case-documents-item {
+    align-items: flex-start;
+    display: flex;
+    gap: 12px;
+}
+
+.case-documents-icon {
+    color: #555;
+    flex: 0 0 auto;
+    font-size: 1.4em;
+    line-height: 1.2;
+    text-align: center;
+    width: 1.25em;
+}
+
+.case-documents-item-body {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.case-documents-item-actions {
+    display: flex;
+    flex: 0 0 auto;
+    gap: 4px;
+}
+
+.case-documents-name {
+    display: block;
+    margin: 0 0 4px;
+    overflow-wrap: anywhere;
+}
+
+/* Centered, so a Bootstrap 3 .label in the row is not stretched (#804). */
+.case-documents-meta {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    font-size: 90%;
+    gap: 4px 12px;
+}
+
+.case-documents-notice {
+    margin: 6px 0 0;
+}
+
+.case-documents-add {
+    align-items: center;
+    display: flex;
+    gap: 8px;
+}
+
+.case-documents-preview {
+    margin-top: 12px;
+    max-width: 42rem;
+}
+
+.case-documents-preview-heading {
+    font-size: 85%;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+}
+
+.case-documents-preview-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}
+
 .fieldset-heading-section {
     margin-bottom: 20px;
 }

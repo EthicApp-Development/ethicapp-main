@@ -227,6 +227,8 @@ import caseVideoMaterialComponent from "../../components/case-video-material.com
 import videoFacadeComponent from "../../components/video-facade.component.js";
 import caseAuthorEditorComponent from "../../components/case-author-editor.component.js";
 import caseFormEditorComponent from "../../components/case-form-editor.component.js";
+import caseAttachedDocumentsEditorComponent
+    from "../../components/case-attached-documents-editor.component.js";
 import caseRightsEditorComponent from "../../components/case-rights-editor.component.js";
 import tagSelectorComponent from "../../components/tag-selector.component.js";
 import phaseInstructionsEditComponent from "../../components/phase-instructions-edit.component.js";
@@ -257,6 +259,7 @@ app.component("caseVideoMaterial", caseVideoMaterialComponent);
 app.component("videoFacade", videoFacadeComponent);
 app.component("caseAuthorEditor", caseAuthorEditorComponent);
 app.component("caseFormEditor", caseFormEditorComponent);
+app.component("caseAttachedDocumentsEditor", caseAttachedDocumentsEditorComponent);
 app.component("caseRightsEditor", caseRightsEditorComponent);
 app.component("tagSelector", tagSelectorComponent);
 app.component("phaseInstructionsEdit", phaseInstructionsEditComponent);

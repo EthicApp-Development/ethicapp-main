@@ -292,6 +292,10 @@
         </div>
         <p class="sr-only" aria-live="polite">{{ $ctrl.videoAnnouncement }}</p>
     </fieldset>
+    <case-attached-documents-editor
+        form-model="$ctrl.formModel"
+        is-locked="$ctrl.isLocked()">
+    </case-attached-documents-editor>
     <div class="case-form-actions">
         <button type="submit" class="btn btn-primary" ng-disabled="$ctrl.isLocked()">{{ $ctrl.submitLabelKey | translate }}</button>
         <button type="button" class="btn btn-default" ng-click="$ctrl.onCancel()">{{ 'cancel' | translate }}</button>
