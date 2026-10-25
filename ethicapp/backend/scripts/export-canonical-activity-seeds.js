@@ -10,6 +10,10 @@ import {
     publicUploadPathToFilePath,
     slugify,
 } from "./canonical-activity-seed-utils.js";
+import {
+    caseDocumentsJsonSql,
+    normalizeCaseDocumentSummaries,
+} from "../helpers/case-documents.js";
 
 async function fetchCanonicalDesigns(pool, designIds) {
     if (designIds.length === 0) {
@@ -48,7 +52,8 @@ async function fetchCanonicalDesigns(pool, designIds) {
                        SELECT array_agg(ecv.youtube_video_id ORDER BY ecv.position)
                        FROM ethical_case_videos AS ecv
                        WHERE ecv.case_id = c.id
-                   ), '{}') AS case_video_ids
+                   ), '{}') AS case_video_ids,
+                   ${caseDocumentsJsonSql("c")} AS case_documents
             FROM designs AS d
             INNER JOIN users AS u
                 ON u.id = d.creator
@@ -125,6 +130,14 @@ async function buildActivityEntry(row, usedKeys, assetsDir) {
         // Optional: the case's YouTube video ids, in order (#781).
         if (Array.isArray(row.case_video_ids) && row.case_video_ids.length > 0) {
             activity.case.videos = row.case_video_ids;
+        }
+
+        // Optional: the case's Google documents, in order, as the canonical
+        // URLs the case API's `documents` field takes (#792).
+        const documentUrls = normalizeCaseDocumentSummaries(row.case_documents)
+            .map(document => document.url);
+        if (documentUrls.length > 0) {
+            activity.case.documents = documentUrls;
         }
     }
 

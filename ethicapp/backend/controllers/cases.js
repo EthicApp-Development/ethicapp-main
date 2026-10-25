@@ -39,12 +39,28 @@ import {
     replaceCaseVideos,
     resolveCaseVideos,
 } from "../helpers/case-videos.js";
+import {
+    caseDocumentSummariesFromDocuments,
+    caseDocumentsJsonSql,
+    copyCaseDocuments,
+    listCaseDocuments,
+    normalizeCaseDocumentSummaries,
+    parseCaseDocuments,
+    prepareCaseDocumentSave,
+    replaceCaseDocuments,
+    resolveCaseDocuments,
+} from "../helpers/case-documents.js";
 import * as youtubeMetadata from "../services/youtube-video-metadata.service.js";
+import { googleDocumentAvailability } from "../services/google-document-availability.service.js";
 
 const router = express.Router();
 const caseVideoServices = {
     metadataService:   youtubeMetadata.youtubeVideoMetadata,
     videoAvailability: youtubeMetadata.videoAvailability,
+};
+// The availability service of the case documents. Tests replace it with a fake.
+export const caseDocumentServices = {
+    availabilityService: googleDocumentAvailability,
 };
 const uploadsRoot = path.resolve(process.cwd(), uploadsPath);
 const MAX_SEMANTIC_TAGS = 5;
@@ -106,6 +122,7 @@ const caseSharingSelectSql = `
         WHERE ect.case_id = c.id
     ), '[]'::json) AS tags,
     ${caseVideosJsonSql("c")} AS videos,
+    ${caseDocumentsJsonSql("c")} AS documents,
     COALESCE((
         SELECT json_agg(json_build_object(
             'id', d.id,
@@ -135,6 +152,7 @@ function normalizeCase(row) {
     }] : [];
     const documentProcessing = normalizePdfRenderJob(row);
     const videos = normalizeCaseVideoSummaries(row.videos);
+    const documents = normalizeCaseDocumentSummaries(row.documents);
 
     if (documentProcessing?.status === "completed" && documentProcessing.pageCount) {
         for (let pageNumber = 1; pageNumber <= documentProcessing.pageCount; pageNumber += 1) {
@@ -185,6 +203,7 @@ function normalizeCase(row) {
             }],
         tags: Array.isArray(row.tags) ? row.tags : [],
         videos,
+        documents,
         publicDesigns: row.public_designs || [],
         createdAt: row.created_at,
         updatedAt: row.updated_at,
@@ -340,13 +359,13 @@ async function replaceCaseAuthors(caseId, authors) {
     }
 }
 
-async function saveCaseVideos(caseId, videoIds) {
+async function inTransaction(work) {
     const db = await rpg2.getDBInstance(config.dbconnString);
     const client = await db.connect();
 
     try {
         await client.query("BEGIN");
-        await replaceCaseVideos(client, caseId, videoIds);
+        await work(client);
         await client.query("COMMIT");
     } catch (error) {
         await client.query("ROLLBACK");
@@ -356,15 +375,31 @@ async function saveCaseVideos(caseId, videoIds) {
     }
 }
 
+async function saveCaseVideos(caseId, videoIds) {
+    await inTransaction(client => replaceCaseVideos(client, caseId, videoIds));
+}
+
 async function getCaseVideoIds(caseId) {
     return listCaseVideoIds(await rpg2.getDBInstance(config.dbconnString), caseId);
 }
 
+async function saveCaseDocuments(caseId, documents) {
+    await inTransaction(client => replaceCaseDocuments(client, caseId, documents));
+}
+
+async function getCaseDocuments(caseId) {
+    return listCaseDocuments(await rpg2.getDBInstance(config.dbconnString), caseId);
+}
+
 // The full case of `GET /cases/:id`, create and update: its videos carry their
-// URL and YouTube metadata. Listings keep the summaries of normalizeCase.
-async function normalizeCaseWithVideos(row) {
+// YouTube metadata and its documents their Google availability. Listings keep
+// the summaries of normalizeCase.
+async function normalizeCaseWithMaterial(row) {
     const caseObj = normalizeCase(row);
-    caseObj.videos = await resolveCaseVideos(caseObj.videos, caseVideoServices);
+    [caseObj.videos, caseObj.documents] = await Promise.all([
+        resolveCaseVideos(caseObj.videos, caseVideoServices),
+        resolveCaseDocuments(caseObj.documents, caseDocumentServices),
+    ]);
     return caseObj;
 }
 
@@ -695,7 +730,7 @@ router.get("/cases/:id", async (req, res) => {
             return res.status(404).json({ status: "err", message: "Case not found." });
         }
 
-        const result = await normalizeCaseWithVideos(caseObj);
+        const result = await normalizeCaseWithMaterial(caseObj);
         return res.status(200).json({ status: "ok", result });
     } catch (error) {
         console.error("Error retrieving case by id:", error);
@@ -753,16 +788,31 @@ router.post("/cases", pdfUpload, async (req, res) => {
         return res.status(parsedVideos.status).json(parsedVideos.body);
     }
 
+    const parsedDocuments = parseCaseDocuments(req.body.documents);
+    if (!parsedDocuments.ok) {
+        await removeUploadedFile(req.file);
+        return res.status(parsedDocuments.status).json(parsedDocuments.body);
+    }
+
     const normalizedLicenseCode = normalizeLicenseCode(licenseCode ?? licenseCodeCamel, CASE_DEFAULT_LICENSE);
     const normalizedRightsStatus = normalizeRightsStatus(rightsStatus ?? rightsStatusCamel);
     const normalizedVisibility = normalizeVisibility(visibility);
 
     try {
-        // Checked on YouTube before anything is written.
+        // Checked on YouTube and Google before anything is written.
         const videoSave = await prepareCaseVideoSave(parsedVideos, [], caseVideoServices);
         if (!videoSave.ok) {
             await removeUploadedFile(req.file);
             return res.status(videoSave.status).json(videoSave.body);
+        }
+        const documentSave = await prepareCaseDocumentSave(
+            parsedDocuments,
+            [],
+            caseDocumentServices
+        );
+        if (!documentSave.ok) {
+            await removeUploadedFile(req.file);
+            return res.status(documentSave.status).json(documentSave.body);
         }
 
         const caseIdResult = await rpg2.singleSQL({
@@ -813,6 +863,10 @@ router.post("/cases", pdfUpload, async (req, res) => {
             await saveCaseVideos(caseId, videoSave.videoIds);
         }
         createdCase.videos = caseVideoSummariesFromIds(videoSave.videoIds || []);
+        if (documentSave.documents) {
+            await saveCaseDocuments(caseId, documentSave.documents);
+        }
+        createdCase.documents = caseDocumentSummariesFromDocuments(documentSave.documents || []);
 
         const renderJob = await enqueueCaseRenderSafely(createdCase);
 
@@ -824,7 +878,7 @@ router.post("/cases", pdfUpload, async (req, res) => {
 
         return res.status(201).json({
             status: "ok",
-            result: await normalizeCaseWithVideos({
+            result: await normalizeCaseWithMaterial({
                 ...createdCase,
                 ...renderJob,
             }),
@@ -877,11 +931,17 @@ router.patch("/cases/:id", pdfUpload, async (req, res) => {
     }
     const primaryAuthor = authors[0];
 
-    // Absent leaves the videos unchanged; an empty list removes them all.
+    // Absent leaves the videos and documents unchanged; an empty list removes
+    // them all.
     const parsedVideos = parseCaseVideoIds(req.body.videos);
     if (!parsedVideos.ok) {
         await removeUploadedFile(req.file);
         return res.status(parsedVideos.status).json(parsedVideos.body);
+    }
+    const parsedDocuments = parseCaseDocuments(req.body.documents);
+    if (!parsedDocuments.ok) {
+        await removeUploadedFile(req.file);
+        return res.status(parsedDocuments.status).json(parsedDocuments.body);
     }
 
     try {
@@ -906,8 +966,8 @@ router.patch("/cases/:id", pdfUpload, async (req, res) => {
             return lockedCaseResponse(res);
         }
 
-        // Only ids the case does not hold yet are checked on YouTube, before
-        // anything is written.
+        // Only videos and documents the case does not hold yet are checked on
+        // YouTube and Google, before anything is written.
         const currentVideoIds = parsedVideos.provided ? await getCaseVideoIds(caseId) : [];
         const videoSave = await prepareCaseVideoSave(
             parsedVideos,
@@ -917,6 +977,16 @@ router.patch("/cases/:id", pdfUpload, async (req, res) => {
         if (!videoSave.ok) {
             await removeUploadedFile(req.file);
             return res.status(videoSave.status).json(videoSave.body);
+        }
+        const currentDocuments = parsedDocuments.provided ? await getCaseDocuments(caseId) : [];
+        const documentSave = await prepareCaseDocumentSave(
+            parsedDocuments,
+            currentDocuments,
+            caseDocumentServices
+        );
+        if (!documentSave.ok) {
+            await removeUploadedFile(req.file);
+            return res.status(documentSave.status).json(documentSave.body);
         }
 
         const hasPdf = req.file && req.file.mimetype === "application/pdf";
@@ -977,6 +1047,12 @@ router.patch("/cases/:id", pdfUpload, async (req, res) => {
         updatedCase.videos = caseVideoSummariesFromIds(
             parsedVideos.provided ? parsedVideos.ids : await getCaseVideoIds(caseId)
         );
+        if (documentSave.documents) {
+            await saveCaseDocuments(caseId, documentSave.documents);
+        }
+        updatedCase.documents = caseDocumentSummariesFromDocuments(
+            documentSave.documents ?? await getCaseDocuments(caseId)
+        );
 
         if (hasPdf) {
             await moveUploadedFile(req.file, pdfPath);
@@ -984,7 +1060,7 @@ router.patch("/cases/:id", pdfUpload, async (req, res) => {
             Object.assign(updatedCase, renderJob);
         }
 
-        const result = await normalizeCaseWithVideos(updatedCase);
+        const result = await normalizeCaseWithMaterial(updatedCase);
         return res.status(200).json({ status: "ok", result });
     } catch (error) {
         await removeUploadedFile(req.file);
@@ -1114,6 +1190,7 @@ router.post("/cases/:id/import", async (req, res) => {
         `, [importedCaseId, sourceCase.id, req.session.uid]);
 
         await copyCaseVideos(client, sourceCase.id, importedCaseId);
+        await copyCaseDocuments(client, sourceCase.id, importedCaseId);
 
         const importedCase = await client.query(`
             SELECT c.id, c.case_uuid, c.title, c.author_firstname, c.author_lastname, c.author_email,
@@ -1259,6 +1336,7 @@ router.post("/cases/:id/duplicate", async (req, res) => {
         `, [duplicatedCaseId, sourceCase.id, req.session.uid]);
 
         await copyCaseVideos(client, sourceCase.id, duplicatedCaseId);
+        await copyCaseDocuments(client, sourceCase.id, duplicatedCaseId);
 
         const duplicatedCase = await client.query(`
             SELECT c.id, c.case_uuid, c.title, c.author_firstname, c.author_lastname, c.author_email,
