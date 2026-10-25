@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import CaseDocumentViewer from './CaseDocumentViewer.jsx';
-import CaseVideoMaterial from './CaseVideoMaterial.jsx';
+import CaseMaterial from './CaseMaterial.jsx';
 import ExternalServiceResultPanel from './external-services/ExternalServiceResultPanel.jsx';
 import RankingPhaseView from './phases/RankingPhaseView.jsx';
 import SemanticDifferentialPhaseView from './phases/SemanticDifferentialPhaseView.jsx';
@@ -88,7 +88,7 @@ export default function ActivityTabsPanel({
         {activeTab === 'case' && hasCaseTab ? (
           <>
             <CaseDocumentViewer caseDocument={caseDocument} caseDocumentUrl={caseDocumentUrl} t={t} />
-            <CaseVideoMaterial videos={caseDocument?.videos} t={t} />
+            <CaseMaterial videos={caseDocument?.videos} documents={caseDocument?.documents} t={t} />
           </>
         ) : null}
 

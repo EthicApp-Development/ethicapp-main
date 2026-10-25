@@ -3278,6 +3278,82 @@ tr.group-summary {
     padding-left: 0;
 }
 
+/* Documents as complementary material (#794): the case's Google Drive
+   documents after its videos, one per row at full width, with tap targets
+   of at least 44px. Long names and URLs wrap instead of overflowing. */
+.case-material-documents {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.case-material-list + .case-material-documents {
+    margin-top: 20px;
+}
+
+.case-material-document {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.case-material-document-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 44px;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background-color: #fff;
+}
+
+.case-material-document-link:hover,
+.case-material-document-link:focus {
+    border-color: #66afe9;
+    background-color: #f5f9fc;
+}
+
+.case-material-document-icon {
+    flex: 0 0 auto;
+    width: 1.25em;
+    font-size: 20px;
+    text-align: center;
+}
+
+.case-material-document-name {
+    min-width: 0;
+}
+
+.case-material-document-notice {
+    margin: 4px 0 0;
+    color: #777;
+    font-size: 12px;
+}
+
+.case-material-document-warning {
+    padding: 10px 12px;
+    border: 1px solid #faebcc;
+    border-radius: 4px;
+    background-color: #fcf8e3;
+    color: #8a6d3b;
+}
+
+.case-material-document-warning-title {
+    margin: 0 0 4px;
+    font-weight: bold;
+}
+
+.case-material-document-warning-text {
+    margin: 0 0 8px;
+}
+
+.case-material-document-warning .case-material-document-link {
+    border-color: #faebcc;
+}
+
 /* Rich text editor (#767): a toolbar over an editable area styled as a form
    control. The .ProseMirror rules are the editor's required base styles,
    from prosemirror-view/style/prosemirror.css (MIT). */

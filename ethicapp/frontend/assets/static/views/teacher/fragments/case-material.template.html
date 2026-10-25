@@ -1,0 +1,66 @@
+<section class="case-material" ng-if="$ctrl.hasMaterial()" aria-labelledby="{{ $ctrl.headingId }}">
+    <h3 id="{{ $ctrl.headingId }}" class="case-material-heading">{{ 'case_material_heading' | translate }}</h3>
+    <ol class="case-material-list" ng-if="$ctrl.videos.length > 0">
+        <li class="case-material-item" ng-repeat="video in $ctrl.videos track by video.youtubeVideoId">
+            <video-facade
+                ng-if="video.display === $ctrl.display.facade"
+                class="case-material-video"
+                video-id="video.youtubeVideoId"
+                video-title="video.title || ('case_material_untitled_video' | translate)"
+                metadata="video.metadata"></video-facade>
+
+            <div class="rich-text-video-unavailable case-material-missing" ng-if="video.display === $ctrl.display.link">
+                <span class="rich-text-video-notice">{{ 'case_material_metadata_missing' | translate }}</span>
+                <a ng-href="{{ video.watchUrl }}" target="_blank" rel="noopener noreferrer">{{ video.watchUrl }} <span class="sr-only">{{ 'rich_text_link_new_tab' | translate }}</span></a>
+                <span class="rich-text-video-source">{{ 'case_videos_source_youtube' | translate }}</span>
+            </div>
+
+            <p
+                id="{{ $ctrl.descriptionId(video) }}"
+                class="case-material-description"
+                ng-class="{ 'is-collapsed': $ctrl.isCollapsed(video) }"
+                ng-if="video.description">{{ video.description }}</p>
+            <button
+                type="button"
+                class="btn btn-link btn-sm case-material-description-toggle"
+                ng-if="video.description && video.hasLongDescription"
+                ng-click="$ctrl.toggleDescription(video)"
+                aria-controls="{{ $ctrl.descriptionId(video) }}"
+                aria-expanded="{{ !$ctrl.isCollapsed(video) }}">
+                {{ ($ctrl.isCollapsed(video) ? 'case_material_show_more' : 'case_material_show_less') | translate }}
+            </button>
+        </li>
+    </ol>
+    <ol class="case-material-documents" ng-if="$ctrl.documents.length > 0" aria-label="{{ 'case_material_documents_list_label' | translate }}">
+        <li
+            class="case-material-document"
+            ng-repeat="document in $ctrl.documents track by document.key"
+            ng-class="'is-' + document.display">
+            <a
+                class="case-material-document-link"
+                ng-if="document.display !== $ctrl.documentDisplay.unavailable"
+                ng-href="{{ document.url }}"
+                target="_blank"
+                rel="noopener noreferrer">
+                <i class="fa-solid case-material-document-icon" ng-class="document.icon" aria-hidden="true"></i>
+                <span class="case-material-document-name"><span class="sr-only">{{ ('case_material_documents_type_' + document.type) | translate }}:</span> {{ document.linkText }}</span>
+                <span class="sr-only">{{ 'rich_text_link_new_tab' | translate }}</span>
+            </a>
+            <p class="case-material-document-notice" ng-if="document.display === $ctrl.documentDisplay.unverified">{{ 'case_material_documents_unverified' | translate }}</p>
+
+            <div class="case-material-document-warning" role="note" ng-if="document.display === $ctrl.documentDisplay.unavailable">
+                <p class="case-material-document-warning-title">
+                    <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+                    {{ 'case_material_documents_unavailable' | translate }}<span ng-if="document.name">: {{ document.name }}</span>
+                </p>
+                <p class="case-material-document-warning-text" ng-if="document.status === 'not_public'">{{ 'case_material_documents_not_public' | translate }}</p>
+                <p class="case-material-document-warning-text" ng-if="document.status === 'not_found'">{{ 'case_material_documents_not_found' | translate }}</p>
+                <a class="case-material-document-link" ng-href="{{ document.url }}" target="_blank" rel="noopener noreferrer">
+                    <i class="fa-solid case-material-document-icon" ng-class="document.icon" aria-hidden="true"></i>
+                    <span class="case-material-document-name"><span class="sr-only">{{ ('case_material_documents_type_' + document.type) | translate }}:</span> {{ document.url }}</span>
+                    <span class="sr-only">{{ 'rich_text_link_new_tab' | translate }}</span>
+                </a>
+            </div>
+        </li>
+    </ol>
+</section>
