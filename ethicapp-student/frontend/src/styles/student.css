@@ -367,6 +367,76 @@ body {
   margin-top: 0.25rem;
 }
 
+/* Documents as complementary material (#794): the case's Google Drive
+   documents after its videos, one per row at full width, with tap targets of
+   at least 44px. Long names and URLs wrap instead of overflowing. */
+.case-material__documents {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.case-material__list + .case-material__documents {
+  margin-top: 1.25rem;
+}
+
+.case-material__document {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.case-material__document-link,
+.case-material__document-unavailable {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #dee2e6;
+  border-radius: 0.5rem;
+}
+
+.case-material__document-link {
+  background: #fff;
+  text-decoration: none;
+}
+
+.case-material__document-link:hover,
+.case-material__document-link:focus-visible {
+  border-color: #86b7fe;
+  background: #f5f9ff;
+  text-decoration: underline;
+}
+
+.case-material__document-unavailable {
+  background: #f8f9fa;
+  color: #6c757d;
+}
+
+.case-material__document-icon {
+  flex: 0 0 auto;
+  width: 1.25em;
+  font-size: 1.25rem;
+  text-align: center;
+}
+
+.case-material__document-name {
+  min-width: 0;
+}
+
+.case-material__document-status {
+  font-weight: 600;
+}
+
+.case-material__document-notice {
+  margin: 0.25rem 0 0;
+  color: #6c757d;
+  font-size: 0.875rem;
+}
+
 .external-service-result {
   background: #f8fbff;
 }
