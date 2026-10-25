@@ -26,6 +26,7 @@ import groups from "./controllers/groups.js";
 import group_messages from "./controllers/group-messages.js";
 import cases from "./controllers/cases.js";
 import caseVideos from "./controllers/case-videos.js";
+import caseDocuments from "./controllers/case-documents.js";
 import externalServicesRegistry from "./services/external-services.service.js";
 import tags from "./controllers/tags.js";
 import institutionBranding from "./controllers/institution-branding.js";
@@ -136,8 +137,10 @@ app.use("/", requireLegacyAuth, phases);
 app.use("/", requireLegacyAuth, groups);
 app.use("/", requireLegacyAuth, designs);
 app.use("/", requireLegacyAuth, group_messages);
-// Before cases, whose /cases/:id would otherwise take /cases/videos/...
+// Before cases, whose /cases/:id would otherwise take /cases/videos/... and
+// /cases/documents/...
 app.use("/", requireLegacyAuth, caseVideos);
+app.use("/", requireLegacyAuth, caseDocuments);
 app.use("/", requireLegacyAuth, cases);
 app.use("/", requireLegacyAuth, tags);
 app.use("/", requireLegacyAuth, institutionBranding);
