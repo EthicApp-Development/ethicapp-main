@@ -4,6 +4,7 @@ import express from "express";
 import * as config from "../../config/database.config.js";
 import * as rpg2 from "../../db/rest-pg-2.js";
 import * as ActivitiesHelper from "../../helpers/activities-helper.js";
+import { launchActivity } from "../../helpers/activity-launch-helper.js";
 import * as StatusCodes from "../../../common/modules/session-status.js";
 import { requireRole } from "../../helpers/auth-helper.js";
 import { studentNotifications } from "../../config/socket.config.js";
@@ -193,35 +194,7 @@ router.post("/activities", async (req, res) => {
 
         const sessionCode = ActivitiesHelper.generateSessionCode(sessionId);
 
-        await rpg2.singleSQL({
-            dbcon: config.dbconnString,
-            sql: `
-                UPDATE sessions
-                SET code = $1
-                WHERE id = $2
-                  AND code IS NULL
-            `,
-            sqlParams: [rpg2.param('plain', sessionCode), rpg2.param('plain', sessionId)],
-        });
-
-        await rpg2.singleSQL({
-            dbcon: config.dbconnString,
-            sql: `
-                INSERT INTO activity (design, session)
-                VALUES ($1, $2)
-            `,
-            sqlParams: [rpg2.param('plain', designId), rpg2.param('plain', sessionId)],
-        });
-
-        await rpg2.singleSQL({
-            dbcon: config.dbconnString,
-            sql: `
-                UPDATE designs
-                SET locked = TRUE
-                WHERE id = $1
-            `,
-            sqlParams: [rpg2.param('plain', designId)],
-        });
+        await launchActivity({ sessionId, designId, sessionCode });
 
         const activity = await rpg2.singleSQL({
             dbcon: config.dbconnString,
