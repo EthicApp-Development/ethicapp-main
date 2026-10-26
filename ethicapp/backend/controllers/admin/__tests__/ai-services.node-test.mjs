@@ -109,6 +109,11 @@ function hang(options) {
     });
 }
 
+// A fetch that must never be called: any outbound request fails the test.
+async function forbiddenFetch(url) {
+    throw new Error(`Unexpected request to ${url}`);
+}
+
 // A fake AI Additions behind `fetch`: the token endpoint and the catalog.
 function fakeAiAdditions({
     token = url => tokenResponse(url),
@@ -335,13 +340,32 @@ describe("GET /api/admin/ai-services/catalog", () => {
             { fetchImpl: fakeAiAdditions({ token: () => jsonResponse({ error: "invalid_client" }, 401) }).fetchImpl },
             { fetchImpl: fakeAiAdditions({ catalog: () => jsonResponse({ detail: "no" }, 401) }).fetchImpl },
             { fetchImpl: fakeAiAdditions({ catalog: () => jsonResponse({ detail: "no" }, 403) }).fetchImpl },
-            { fetchImpl: fakeAiAdditions().fetchImpl, env: { AI_ADDITIONS_KEYCLOAK_CLIENT_ID: "ethicapp-platform" } },
         ];
 
         for (const options of cases) {
             const { body } = await getCatalog(buildService(options));
             assert.deepEqual(body, { ok: false, error: "unauthorized" });
         }
+    });
+
+    it("answers credentials_missing without any request when a client credential is empty", async () => {
+        const envs = [
+            {},
+            { AI_ADDITIONS_KEYCLOAK_CLIENT_ID: "ethicapp-platform" },
+            { AI_ADDITIONS_KEYCLOAK_CLIENT_SECRET: CLIENT_SECRET },
+            { ...ENV, AI_ADDITIONS_KEYCLOAK_CLIENT_ID: "   " },
+            { ...ENV, AI_ADDITIONS_KEYCLOAK_CLIENT_SECRET: "" },
+        ];
+
+        for (const env of envs) {
+            const service = buildService({ fetchImpl: forbiddenFetch, env });
+            const { status, body } = await getCatalog(service);
+            assert.equal(status, 200);
+            assert.deepEqual(body, { ok: false, error: "credentials_missing" });
+        }
+        assert.ok(logs.includes(
+            "[ai-services] catalog read failed: error=credentials_missing cause=MissingClientCredentials"
+        ));
     });
 
     it("answers invalid_response for a body that is not the catalog contract", async () => {
@@ -581,9 +605,9 @@ describe("POST /api/admin/ai-services/connection-test", () => {
 
         assert.equal(status, 200);
         assert.deepEqual(body, {
-            ok:           false,
-            token:        { ok: false, error: "unreachable" },
-            issuer:       {
+            ok:     false,
+            token:  { ok: false, error: "unreachable" },
+            issuer: {
                 ok:       false,
                 skipped:  true,
                 expected: `http://127.0.0.1:${port}${REALM_PATH}`,
@@ -621,20 +645,33 @@ describe("POST /api/admin/ai-services/connection-test", () => {
         }
     });
 
-    it("reports a missing client secret as unauthorized without any request", async () => {
-        const { calls, fetchImpl } = fakeAiAdditions();
-        const service = buildService({ fetchImpl, env: {} });
+    it("reports missing client credentials as credentials_missing without any request", async () => {
+        const envs = [
+            {},
+            { AI_ADDITIONS_KEYCLOAK_CLIENT_ID: "ethicapp-platform" },
+            { AI_ADDITIONS_KEYCLOAK_CLIENT_SECRET: CLIENT_SECRET },
+            { ...ENV, AI_ADDITIONS_KEYCLOAK_CLIENT_SECRET: " " },
+        ];
 
-        const { body } = await postTest(service, { baseUrl: "http://ai.example.org" });
+        for (const env of envs) {
+            // A host that does not exist: nothing may be sent to it anyway.
+            const service = buildService({ fetchImpl: forbiddenFetch, env });
+            const { body } = await postTest(service, { baseUrl: "http://ai-additions-missing.invalid" });
 
-        assert.deepEqual(body.token, { ok: false, error: "unauthorized" });
-        assert.deepEqual(body.issuer, {
-            ok:       false,
-            skipped:  true,
-            expected: `http://ai.example.org${REALM_PATH}`,
-        });
-        assert.deepEqual(body.catalog, { ok: false, skipped: true });
-        assert.equal(calls.length, 0);
+            assert.deepEqual(body, {
+                ok:     false,
+                token:  { ok: false, error: "credentials_missing" },
+                issuer: {
+                    ok:       false,
+                    skipped:  true,
+                    expected: `http://ai-additions-missing.invalid${REALM_PATH}`,
+                },
+                catalog:      { ok: false, skipped: true },
+                serviceCount: null,
+            });
+        }
+        assert.ok(logs.includes("[ai-services] connection test token failed: "
+            + "error=credentials_missing cause=MissingClientCredentials"));
     });
 
     it("reports each catalog failure after a valid token", async () => {

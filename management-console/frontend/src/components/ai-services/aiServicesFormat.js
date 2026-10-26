@@ -2,6 +2,7 @@
 // (services/ethicapp.service.js AI_SERVICES_ERROR_CODES).
 const KNOWN_ERROR_CODES = new Set([
   'not_configured',
+  'credentials_missing',
   'unreachable',
   'unauthorized',
   'invalid_response',

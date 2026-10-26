@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
     AiAdditionsClient,
+    AiAdditionsCredentialsMissingError,
     AiAdditionsNotConfiguredError,
+    isAiAdditionsCredentialsMissing,
     isAiAdditionsNotConfigured,
 } from "../ai-additions-client.service.js";
 
@@ -144,11 +146,17 @@ test("clears the cached token and retries once on 401", async () => {
 });
 
 test("requires client credentials for authenticated requests", async () => {
-    const client = makeClient({ env: {}, fetchImpl: async () => jsonResponse({ ok: true }) });
+    const client = makeClient({ env: {}, fetchImpl: forbiddenFetch });
 
     await assert.rejects(
         () => client.requestJson("/argumentation-tutor/api/v2/sessions"),
-        /Missing AI_ADDITIONS_KEYCLOAK_CLIENT_ID/u
+        (error) => {
+            assert.ok(error instanceof AiAdditionsCredentialsMissingError);
+            assert.equal(error.code, "credentials_missing");
+            assert.equal(isAiAdditionsCredentialsMissing(error), true);
+            assert.match(error.message, /Missing AI_ADDITIONS_KEYCLOAK_CLIENT_ID/u);
+            return true;
+        }
     );
 });
 

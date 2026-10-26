@@ -145,6 +145,7 @@ export default {
       },
       errors: {
         not_configured: 'No hay una conexión con AI Additions configurada.',
+        credentials_missing: 'EthicApp no tiene credenciales de cliente de AI Additions, por lo que no se envió ninguna solicitud. Define AI_ADDITIONS_KEYCLOAK_CLIENT_ID y AI_ADDITIONS_KEYCLOAK_CLIENT_SECRET en la configuración de despliegue de EthicApp y vuelve a desplegarlo (ver "AI Services" en INSTALL.md).',
         unreachable: 'No fue posible contactar AI Additions.',
         unauthorized: 'AI Additions rechazó las credenciales de EthicApp.',
         invalid_response: 'AI Additions respondió de forma inesperada.',

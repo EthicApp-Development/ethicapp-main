@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import test from "node:test";
 
 import { AiAdditionsNotConfiguredError } from "../../helpers/ai-additions-connection.js";
+import { AiAdditionsCredentialsMissingError } from "../ai-additions-client.service.js";
 import {
     acceptLanguageFor,
     adaptersByRequiredService,
@@ -88,10 +89,11 @@ test("a catalog response outside the contract is invalid_response", () => {
     }
 });
 
-test("errors map to the four codes", () => {
+test("errors map to the five codes", () => {
     const withStatus = statusCode => Object.assign(new Error("HTTP"), { statusCode });
     const cases = [
         [new AiAdditionsNotConfiguredError(), "not_configured"],
+        [new AiAdditionsCredentialsMissingError(), "credentials_missing"],
         [withStatus(401), "unauthorized"],
         [withStatus(403), "unauthorized"],
         [withStatus(502), "unreachable"],

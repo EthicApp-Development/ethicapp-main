@@ -75,6 +75,9 @@ export async function impersonateProfessorInEthicapp({
 
 export const AI_SERVICES_ERROR_CODES = Object.freeze([
   'not_configured',
+  // EthicApp's own AI_ADDITIONS_KEYCLOAK_CLIENT_ID or _SECRET is empty (#838):
+  // no request reached AI Additions.
+  'credentials_missing',
   'unreachable',
   'unauthorized',
   'invalid_response',

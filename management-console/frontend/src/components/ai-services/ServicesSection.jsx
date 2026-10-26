@@ -32,6 +32,10 @@ function ServicesSection({ hasConnection, catalogState, currentVersion, onSave, 
   // A catalog is only meaningful for an existing connection; a late response
   // must never bring the selection form back after the connection is removed.
   const catalogOk = hasConnection && catalog?.ok === true;
+  // With a connection, the catalog is pending until a request has answered:
+  // only then can it have failed (#838).
+  const catalogPending = hasConnection && (catalogState.loading || !catalog);
+  const catalogFailed = hasConnection && !catalogPending && !catalogOk;
   const catalogIds = new Set(catalogOk ? catalog.services.map((service) => service.id) : []);
   const staleIds = catalogOk ? currentIds.filter((id) => !catalogIds.has(id)) : [];
 
@@ -79,8 +83,9 @@ function ServicesSection({ hasConnection, catalogState, currentVersion, onSave, 
   );
 
   // Without a readable catalog, the only change the backend accepts is an
-  // empty set, so an operator can always turn every service off.
-  const disallowAll = !catalogOk && currentIds.length > 0 ? (
+  // empty set, so an operator can always turn every service off. It is
+  // offered once the catalog has failed, never while it is still loading.
+  const disallowAll = (!hasConnection || catalogFailed) && currentIds.length > 0 ? (
     <div className="border rounded p-3" data-testid="ai-disallow-all">
       <p className="mb-2">{t(hasConnection ? 'pages.aiServices.services.disallowAllHelp' : 'pages.aiServices.services.disallowAllNoConnectionHelp')}</p>
       {noteField}
@@ -108,14 +113,14 @@ function ServicesSection({ hasConnection, catalogState, currentVersion, onSave, 
 
         {!hasConnection ? <p className="text-body-secondary">{t('pages.aiServices.services.noConnection')}</p> : null}
 
-        {hasConnection && catalogState.loading ? (
+        {catalogPending ? (
           <div className="d-flex align-items-center gap-2 mb-3">
             <Spinner size="sm" />
             <span>{t('pages.aiServices.services.loading')}</span>
           </div>
         ) : null}
 
-        {hasConnection && !catalogState.loading && catalog && !catalogOk ? (
+        {catalogFailed ? (
           <Alert variant="warning" data-testid="ai-catalog-error">
             <div>{t(aiErrorKey(catalog.error))}</div>
             <Button variant="outline-secondary" size="sm" className="mt-2" onClick={onRetryCatalog}>
