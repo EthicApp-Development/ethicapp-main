@@ -80,7 +80,7 @@ function ServicesSection({ hasConnection, catalogState, currentVersion, onSave, 
   // empty set, so an operator can always turn every service off.
   const disallowAll = !catalogOk && currentIds.length > 0 ? (
     <div className="border rounded p-3" data-testid="ai-disallow-all">
-      <p className="mb-2">{t('pages.aiServices.services.disallowAllHelp')}</p>
+      <p className="mb-2">{t(hasConnection ? 'pages.aiServices.services.disallowAllHelp' : 'pages.aiServices.services.disallowAllNoConnectionHelp')}</p>
       {noteField}
       <Button variant="outline-danger" onClick={() => save([])} disabled={saving}>
         {saving ? <Spinner size="sm" className="me-2" /> : null}

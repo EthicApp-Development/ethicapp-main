@@ -105,6 +105,7 @@ export default {
         staleIds: 'The current version allows services that AI Additions no longer offers ({{ids}}). They are left out of the new version.',
         disallowAll: 'Allow no services',
         disallowAllHelp: 'The catalog cannot be read, so services cannot be allowed now. You can still save a version that allows no services.',
+        disallowAllNoConnectionHelp: 'No connection is configured, so services cannot be allowed now. The current version still allows some; you can save a version that allows none.',
         columns: {
           allowed: 'Allowed',
           service: 'Service',
