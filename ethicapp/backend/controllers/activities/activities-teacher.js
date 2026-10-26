@@ -5,6 +5,7 @@ import * as config from "../../config/database.config.js";
 import * as rpg2 from "../../db/rest-pg-2.js";
 import * as ActivitiesHelper from "../../helpers/activities-helper.js";
 import { launchActivity } from "../../helpers/activity-launch-helper.js";
+import { listServicesNotRunning } from "../../helpers/ai-service-launch-notice.js";
 import * as StatusCodes from "../../../common/modules/session-status.js";
 import { requireRole } from "../../helpers/auth-helper.js";
 import { studentNotifications } from "../../config/socket.config.js";
@@ -194,7 +195,7 @@ router.post("/activities", async (req, res) => {
 
         const sessionCode = ActivitiesHelper.generateSessionCode(sessionId);
 
-        await launchActivity({ sessionId, designId, sessionCode });
+        const { policyVersionId } = await launchActivity({ sessionId, designId, sessionCode });
 
         const activity = await rpg2.singleSQL({
             dbcon: config.dbconnString,
@@ -224,12 +225,28 @@ router.post("/activities", async (req, res) => {
             sqlParams: [rpg2.param('plain', sessionId), rpg2.param('plain', designId)],
         });
 
-        return res.status(200).json({ status: "ok", activity });
+        return res.status(200).json({
+            status:             "ok",
+            activity,
+            servicesNotRunning: await servicesNotRunningAtLaunch(activity?.design, policyVersionId),
+        });
     } catch (error) {
         console.error("Error in POST /activities endpoint:", error);
         return res.status(500).json({ status: "err", message: "Error processing activity addition" });
     }
 });
+
+// The services the design enables that will not run under the version the
+// session was pinned to (#815), for the launch notice. A failure here never
+// fails the launch: the notice is then empty.
+async function servicesNotRunningAtLaunch(design, policyVersionId) {
+    try {
+        return await listServicesNotRunning({ design, policyVersionId });
+    } catch (error) {
+        console.error("[external-services] Could not list the services that will not run.", error);
+        return [];
+    }
+}
 
 router.get("/activities/:session_id/responses", async (req, res) => {
     if (!requireRole(req, res, "P")) {

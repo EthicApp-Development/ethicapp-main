@@ -2,6 +2,19 @@ let ActivityCatalogService = ($http) => {
     const service = {
         activities: [],
         listeners: {}, // Subscribed listeners
+
+        // Session id -> services that will not run, from the launch response
+        // (#815). The activity dashboard shows them once.
+        launchNotices: new Map(),
+
+        // The services the launched design enables that will not run in this
+        // activity (#815), once: the notice is consumed when read.
+        takeLaunchNotice(sessionId) {
+            const key = Number(sessionId);
+            const services = service.launchNotices.get(key) || [];
+            service.launchNotices.delete(key);
+            return services;
+        },
         
         getActivities() {
             return service.activities;
@@ -64,6 +77,13 @@ let ActivityCatalogService = ($http) => {
                 if (response.data.status === "ok" && response.data.activity) {
                     // Add the new activity to the local list
                     service.activities.push(response.data.activity);
+
+                    const servicesNotRunning = Array.isArray(response.data.servicesNotRunning)
+                        ? response.data.servicesNotRunning
+                        : [];
+                    if (servicesNotRunning.length > 0) {
+                        service.launchNotices.set(Number(sessionId), servicesNotRunning);
+                    }
         
                     // Notify subscribers of the updated activities list
                     service.notifyListeners("onActivityCatalogUpdated", { 

@@ -128,6 +128,8 @@
 	"step_2_prepare_activity" : "Paso 2: Preparar la actividad y lanzarla",
 	"launch_activity": "Lanzar una actividad",
 	"launch_the_activity": "Lanzar la actividad",
+	"activity_services_not_running_dismiss": "Cerrar",
+	"activity_services_not_running_text": "Estos servicios de IA están habilitados en el diseño, pero no se ejecutarán en esta actividad porque esta instalación no los permite actualmente:",
 	"activity_dashboard_title": "Reporte de Actividad",
 	"provide_activity_description" : "Breve descripción de esta actividad (opcional).",
 	"activity_details_dashboard_title" : "Detalles de la Actividad",
