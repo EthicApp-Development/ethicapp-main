@@ -9,7 +9,7 @@ This repository is a multi-project workspace. Important areas:
 - `ethicapp/`: legacy EthicApp application (AngularJS 1.8 + Express).
   - Includes currently used teacher-facing features.
   - Serves the backend API, Socket.IO namespaces and protected uploads that `ethicapp-student` uses; it no longer has a student UI of its own.
-  - Has no administration UI; `management-console` handles administration. ethicapp only keeps the server side of the console's teacher impersonation, under `/api/admin/impersonation/`. Its start endpoint is reached over the internal network only. The stop endpoint is served at the edge for the "back to management console" button, which ends the impersonation and returns to `/mng/users`.
+  - Has no administration UI; `management-console` handles administration. ethicapp only keeps the server side of the console's teacher impersonation, under `/api/admin/impersonation/`, and the console's AI Additions catalog read and connection test, under `/api/admin/ai-services/` (see `EXTERNAL.md`). These are reached over the internal network only, except the impersonation stop endpoint, which is served at the edge for the "back to management console" button: it ends the impersonation and returns to `/mng/users`.
 - `auth-backend/`: authentication app/service (login, logout, sign-up, password recovery, password change).
 - `ethicapp-student/`: new student-focused application under active development (Vite + React 19 (JS) + Express).
 - `management-console/`: super-admin management application for single-tenant operations (React + Vite + Bootstrap 5 frontend, Express backend, PostgreSQL access, and i18n aligned with `auth-backend`).

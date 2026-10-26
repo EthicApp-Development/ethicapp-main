@@ -1,19 +1,17 @@
 import express from "express";
 import pass from "../../helpers/compat-helper.js";
 import { getDBInstance } from "../../db/rest-pg-2.js";
+import { isSuperAdminSession as isAuthorizedSuperAdmin } from "../../helpers/auth-helper.js";
 import {
     legacySessionCookieName,
     legacySessionCookieOptions,
 } from "../../config/session.config.js";
 
-const router = express.Router();
+// Case-sensitive like NGINX's locations: only the exact spellings the edge
+// knows about (`/api/admin/...`) reach these handlers.
+const router = express.Router({ caseSensitive: true });
 
 const MANAGEMENT_CONSOLE_USERS_PATH = "/mng/users";
-
-function isAuthorizedSuperAdmin(req) {
-    const canonicalRole = req.session?.authRole || req.session?.role;
-    return canonicalRole === "S";
-}
 
 // Browsers send Origin on form posts; reject one from another host. Requests
 // without Origin (same-origin navigations in older browsers, server callers)

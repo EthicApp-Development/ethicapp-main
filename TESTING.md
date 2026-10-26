@@ -87,7 +87,9 @@ Purpose:
 
 These tests should be a separate CI/release step, not part of service Dockerfile builds.
 
-`npm run test:nginx-edge` (`scripts/test-nginx-edge.sh`) is a first check of this kind. It builds the `nginx` image, runs it with both the production template and `dev.conf` against stub upstreams on a private Docker network, and verifies how the edge answers missing sessions, outages, and request ids. It needs Docker but none of the application services.
+`npm run test:nginx-edge` (`scripts/test-nginx-edge.sh`) is a first check of this kind. It builds the `nginx` image, runs it with both the production template and `dev.conf` against stub upstreams on a private Docker network, and verifies how the edge answers missing sessions, outages, request ids, and internal-only routes. It needs Docker but none of the application services.
+
+`npm run test:nginx-config` is the static counterpart for internal-only routes. It parses both configurations without Docker and checks that the location NGINX selects for each internal `/api/admin/` route is the blocking `location ^~ /api/admin/`.
 
 ## 2. Docker Image Build Policy
 

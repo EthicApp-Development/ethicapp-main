@@ -121,6 +121,26 @@ run_cases() {
     'X-Request-Id: edge-test-0001' "${api[@]}" --header 'X-Request-Id: edge-test-0001' "$base/home"
   check "outage page shows the request id" 502 text/html 'edge-test-0002' \
     "${nav[@]}" "${valid[@]}" --header 'X-Request-Id: edge-test-0002' "$base/home"
+
+  # Internal-only ethicapp routes (#816): 404 at the edge even with a session,
+  # never proxied (ethicapp is down here, so a proxied request would be 502).
+  check "internal AI services catalog is not served" 404 text/html 'X-Request-Id:' \
+    "${api[@]}" "${valid[@]}" "$base/api/admin/ai-services/catalog?locale=es_CL"
+  check "internal AI connection test is not served" 404 text/html 'X-Request-Id:' \
+    "${api[@]}" "${valid[@]}" --request POST --header 'Content-Type: application/json' \
+    --data '{"baseUrl":"http://ai.example.org"}' "$base/api/admin/ai-services/connection-test"
+  check "internal AI services catalog, other letter case" 404 text/html 'X-Request-Id:' \
+    "${api[@]}" "${valid[@]}" "$base/API/admin/ai-services/catalog?locale=es_CL"
+  check "internal AI connection test, other letter case" 404 text/html 'X-Request-Id:' \
+    "${api[@]}" "${valid[@]}" --request POST --header 'Content-Type: application/json' \
+    --data '{"baseUrl":"http://ai.example.org"}' "$base/api/Admin/ai-services/connection-test"
+  check "impersonation start is not served" 404 text/html 'X-Request-Id:' \
+    "${api[@]}" "${valid[@]}" --request POST "$base/api/admin/impersonation/professor/12"
+  check "impersonation start, other letter case" 404 text/html 'X-Request-Id:' \
+    "${api[@]}" "${valid[@]}" --request POST "$base/Api/Admin/Impersonation/professor/12"
+  # Impersonation stop stays proxied: ethicapp is down here, hence 502.
+  check "impersonation stop is still proxied" 502 application/json '{"status":"unavailable"}' \
+    "${api[@]}" "${valid[@]}" --request POST "$base/api/admin/impersonation/stop"
 }
 
 start_edge() {

@@ -52,3 +52,16 @@ export function requireOwnershipOrRole(req, res, targetUserId, allowedRoles) {
 
     return true;
 }
+
+/**
+ * Whether the session belongs to a super-admin (role `S`). The canonical role
+ * (`authRole`) counts first, so a super-admin keeps it while impersonating a
+ * teacher.
+ *
+ * @param {Object} req - Express request.
+ * @returns {boolean}
+ */
+export function isSuperAdminSession(req) {
+    const canonicalRole = req.session?.authRole || req.session?.role;
+    return canonicalRole === "S";
+}
