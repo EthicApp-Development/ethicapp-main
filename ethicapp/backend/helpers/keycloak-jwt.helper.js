@@ -100,20 +100,51 @@ function extractRealmRoles(payload) {
     return Array.isArray(roles) ? roles : [];
 }
 
+/**
+ * JWKS keys partitioned by URL. Keys fetched from one URL are only ever used
+ * to verify tokens against that same URL, and a response for one URL can
+ * never fill the entry of another: when the AI Additions connection moves to
+ * another host, a fetch still in flight for the previous host cannot make its
+ * keys trusted for the new one. Concurrent fetches of one URL are coalesced.
+ */
 export class JwksCache {
     constructor({ fetchImpl = globalThis.fetch, cacheTtlMs = JWKS_CACHE_TTL_MS } = {}) {
         this.fetchImpl = fetchImpl;
         this.cacheTtlMs = cacheTtlMs;
-        this.keys = null;
-        this.expiresAt = 0;
+        this.entries = new Map();
+        this.pending = new Map();
     }
 
     async fetch(jwksUrl) {
         const now = Date.now();
-        if (this.keys && now < this.expiresAt) {
-            return this.keys;
+        const entry = this.entries.get(jwksUrl);
+        if (entry && now < entry.expiresAt) {
+            return entry.keys;
         }
 
+        const inflight = this.pending.get(jwksUrl);
+        if (inflight) {
+            return (await inflight.request).keys;
+        }
+
+        const pending = { request: this.download(jwksUrl) };
+        this.pending.set(jwksUrl, pending);
+        try {
+            const { keys } = await pending.request;
+            // Only a fetch that is still the current one for its URL is stored:
+            // after invalidate(), a response that was in flight is discarded.
+            if (this.pending.get(jwksUrl) === pending) {
+                this.entries.set(jwksUrl, { keys, expiresAt: now + this.cacheTtlMs });
+            }
+            return keys;
+        } finally {
+            if (this.pending.get(jwksUrl) === pending) {
+                this.pending.delete(jwksUrl);
+            }
+        }
+    }
+
+    async download(jwksUrl) {
         const response = await this.fetchImpl(jwksUrl);
         if (!response.ok) {
             const error = new Error(`JWKS fetch failed: HTTP ${response.status} from ${jwksUrl}`);
@@ -122,14 +153,22 @@ export class JwksCache {
         }
 
         const data = await response.json();
-        this.keys = Array.isArray(data.keys) ? data.keys : [];
-        this.expiresAt = now + this.cacheTtlMs;
-        return this.keys;
+        return { keys: Array.isArray(data.keys) ? data.keys : [] };
     }
 
-    invalidate() {
-        this.keys = null;
-        this.expiresAt = 0;
+    /**
+     * Drops the keys of one URL, or of every URL when none is given. Fetches
+     * in flight for the dropped URLs will not be stored.
+     * @param {string} [jwksUrl]
+     */
+    invalidate(jwksUrl) {
+        if (jwksUrl === undefined) {
+            this.entries.clear();
+            this.pending.clear();
+            return;
+        }
+        this.entries.delete(jwksUrl);
+        this.pending.delete(jwksUrl);
     }
 
     findKey(keys, kid) {
@@ -141,7 +180,7 @@ export class JwksCache {
         let key = this.findKey(keys, kid);
 
         if (!key && kid) {
-            this.invalidate();
+            this.invalidate(jwksUrl);
             keys = await this.fetch(jwksUrl);
             key = this.findKey(keys, kid);
         }

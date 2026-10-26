@@ -461,3 +461,120 @@ test("drops cached JWKS keys when the connection moves to another host", async (
         "http://second.internal/keycloak/realms/ethicapp-ai-additions/protocol/openid-connect/certs",
     ]);
 });
+
+// ─── Connection moves while a JWKS fetch is in flight (PR #828 review) ───────
+
+function deferred() {
+    let resolve;
+    const promise = new Promise((done) => { resolve = done; });
+    return { promise, resolve };
+}
+
+const HOST_A = { baseUrl: "http://host-a.internal", keycloakPublicUrl: "https://a.example.org/keycloak" };
+const HOST_B = { baseUrl: "http://host-b.internal", keycloakPublicUrl: "https://b.example.org/keycloak" };
+const JWKS_A = "http://host-a.internal/keycloak/realms/ethicapp-ai-additions/protocol/openid-connect/certs";
+const JWKS_B = "http://host-b.internal/keycloak/realms/ethicapp-ai-additions/protocol/openid-connect/certs";
+const ISSUER_A = "https://a.example.org/keycloak/realms/ethicapp-ai-additions";
+const ISSUER_B = "https://b.example.org/keycloak/realms/ethicapp-ai-additions";
+
+async function verifyWith(middleware, token) {
+    const res = mockResponse();
+    let accepted = false;
+    await middleware(mockRequest({ authorization: `Bearer ${token}` }), res, () => { accepted = true; });
+    return accepted ? "accepted" : res.statusCode;
+}
+
+async function twoHostKeys() {
+    const keysA = await generateRsaKeyPair();
+    const keysB = await generateRsaKeyPair();
+    return {
+        keysA,
+        keysB,
+        jwkA: await exportJwk(keysA.publicKey, "kid-a"),
+        jwkB: await exportJwk(keysB.publicKey, "kid-b"),
+    };
+}
+
+test("a JWKS response from the previous host never verifies tokens for the new one", async () => {
+    const { keysA, keysB, jwkA, jwkB } = await twoHostKeys();
+    const heldA = deferred();
+    const cache = new JwksCache({
+        fetchImpl: async (url) => {
+            if (url === JWKS_A) {
+                await heldA.promise;
+                return { ok: true, json: async () => ({ keys: [jwkA] }) };
+            }
+            assert.equal(url, JWKS_B);
+            return { ok: true, json: async () => ({ keys: [jwkB] }) };
+        },
+    });
+    let connection = HOST_A;
+    const middleware = createCallbackAuthMiddleware({
+        env:           buildEnv(),
+        getConnection: async () => connection,
+        cache,
+    });
+
+    // 1. Verification against A waits for A's JWKS.
+    const tokenA = await signJwt(buildPayload({ iss: ISSUER_A }), keysA.privateKey, { kid: "kid-a" });
+    const pendingA = verifyWith(middleware, tokenA);
+
+    // 2. The connection moves to B; B tokens verify with B's keys.
+    connection = HOST_B;
+    const tokenB = await signJwt(buildPayload({ iss: ISSUER_B }), keysB.privateKey, { kid: "kid-b" });
+    assert.equal(await verifyWith(middleware, tokenB), "accepted");
+
+    // 3. A's response arrives late.
+    heldA.resolve();
+    await pendingA;
+
+    // 4. A token signed by A's key but claiming B's issuer is rejected.
+    const forged = await signJwt(buildPayload({ iss: ISSUER_B }), keysA.privateKey, { kid: "kid-a" });
+    assert.equal(await verifyWith(middleware, forged), 401);
+
+    // 5. Genuine B tokens stay valid.
+    assert.equal(await verifyWith(middleware, tokenB), "accepted");
+});
+
+test("JwksCache keeps keys per URL, also for responses that arrive out of order", async () => {
+    const { jwkA, jwkB } = await twoHostKeys();
+    const heldA = deferred();
+    const cache = new JwksCache({
+        fetchImpl: async (url) => {
+            if (url === JWKS_A) {
+                await heldA.promise;
+                return { ok: true, json: async () => ({ keys: [jwkA] }) };
+            }
+            return { ok: true, json: async () => ({ keys: [jwkB] }) };
+        },
+    });
+
+    const pendingA = cache.fetch(JWKS_A);
+    assert.equal((await cache.resolveKey(JWKS_B, "kid-b")).kid, "kid-b");
+    heldA.resolve();
+    await pendingA;
+
+    await assert.rejects(() => cache.resolveKey(JWKS_B, "kid-a"), { statusCode: 401 });
+    assert.equal((await cache.resolveKey(JWKS_A, "kid-a")).kid, "kid-a");
+});
+
+test("JwksCache discards a response that was in flight when its URL was invalidated", async () => {
+    const { jwkA } = await twoHostKeys();
+    const heldA = deferred();
+    let fetches = 0;
+    const cache = new JwksCache({
+        fetchImpl: async () => {
+            fetches += 1;
+            await heldA.promise;
+            return { ok: true, json: async () => ({ keys: [jwkA] }) };
+        },
+    });
+
+    const pendingA = cache.fetch(JWKS_A);
+    cache.invalidate();
+    heldA.resolve();
+    await pendingA;
+
+    await cache.fetch(JWKS_A);
+    assert.equal(fetches, 2, "the late response was not stored");
+});

@@ -46,7 +46,10 @@ export function createCallbackAuthMiddleware({
     cache = jwksCache,
     getEndpoints = () => aiAdditionsClient.getEndpoints(),
 } = {}) {
-    // JwksCache holds the keys of one URL: drop them when the connection moves.
+    // JwksCache partitions keys and pending fetches by URL, so keys of a
+    // previous host never verify tokens for the current one. When the
+    // connection moves, drop the previous host's entries (and discard its
+    // fetches still in flight) so they do not linger.
     let cachedJwksUrl = null;
 
     return async function callbackAuthMiddleware(req, res, next) {
