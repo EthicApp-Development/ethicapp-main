@@ -96,7 +96,7 @@
                 {{ 'ethical_cases_validation_required' | translate }}
             </p>
         </div>
-    </fieldset> 
+    </fieldset>
     <fieldset>
        <legend>{{ 'ethical_case_rights_and_license' | translate }} <span class="text-danger" aria-hidden="true">*</span></legend>
         <case-rights-editor
@@ -133,13 +133,176 @@
                 {{ $ctrl.formModel.uploadErrorKey | translate }}
             </p>
         </div>
+    </fieldset>
+    <fieldset class="case-videos">
+        <legend>{{ 'case_videos_section' | translate }}</legend>
+        <div class="checkbox case-form-field">
+            <label for="caseIncludesVideos">
+                <input
+                    id="caseIncludesVideos"
+                    type="checkbox"
+                    ng-model="$ctrl.formModel.includesVideos"
+                    ng-change="$ctrl.onIncludesVideosChange()"
+                    ng-disabled="$ctrl.isVideoToggleDisabled()"
+                    ng-attr-aria-describedby="{{ $ctrl.getVideoSupportHelpKey() ? 'caseVideosSupportHelp' : undefined }}">
+                {{ 'case_videos_includes_videos' | translate }}
+            </label>
+            <p id="caseVideosSupportHelp" class="help-block" ng-if="$ctrl.getVideoSupportHelpKey()">
+                <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+                {{ $ctrl.getVideoSupportHelpKey() | translate }}
+            </p>
+        </div>
 
+        <div ng-if="$ctrl.areVideosShown()">
+            <p class="help-block case-form-field" ng-if="$ctrl.getVideos().length === 0">
+                {{ 'case_videos_empty' | translate }}
+            </p>
+            <ol class="case-videos-list" ng-if="$ctrl.getVideos().length > 0" aria-label="{{ 'case_videos_list_label' | translate }}">
+                <li class="case-videos-entry" ng-repeat="video in $ctrl.formModel.videos track by video.youtubeVideoId">
+                    <div class="case-videos-item">
+                        <div class="case-videos-item-body">
+                            <strong class="case-videos-title">{{ $ctrl.getVideoTitle(video) }}</strong>
+                            <div class="text-muted case-videos-meta">
+                                <span class="label label-default">{{ 'case_videos_source_youtube' | translate }}</span>
+                                <span ng-if="$ctrl.formatVideoDuration(video.metadata.durationSeconds)">
+                                    {{ 'case_videos_duration' | translate }}: {{ $ctrl.formatVideoDuration(video.metadata.durationSeconds) }}
+                                </span>
+                                <span ng-if="video.metadata.channelTitle">
+                                    {{ 'case_videos_channel' | translate }}: {{ video.metadata.channelTitle }}
+                                </span>
+                            </div>
+                            <p class="text-warning case-videos-notice" ng-if="$ctrl.getVideoWarningKey(video)">
+                                <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+                                {{ $ctrl.getVideoWarningKey(video) | translate }}
+                            </p>
+                            <p class="text-danger case-videos-notice" ng-if="$ctrl.getVideoFieldErrorKey(video)">
+                                <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
+                                {{ $ctrl.getVideoFieldErrorKey(video) | translate }}
+                            </p>
+                        </div>
+                        <div class="case-videos-item-actions" ng-if="$ctrl.canEditVideos()">
+                            <button
+                                type="button"
+                                class="btn btn-default btn-sm"
+                                id="{{ $ctrl.getVideoControlId(video, 'up') }}"
+                                ng-click="$ctrl.moveVideo($index, -1)"
+                                ng-disabled="$first"
+                                title="{{ 'case_videos_move_up' | translate }}"
+                                aria-label="{{ ('case_videos_move_up' | translate) + ': ' + $ctrl.getVideoTitle(video) }}">
+                                <i class="fa-solid fa-arrow-up" aria-hidden="true"></i>
+                            </button>
+                            <button
+                                type="button"
+                                class="btn btn-default btn-sm"
+                                id="{{ $ctrl.getVideoControlId(video, 'down') }}"
+                                ng-click="$ctrl.moveVideo($index, 1)"
+                                ng-disabled="$last"
+                                title="{{ 'case_videos_move_down' | translate }}"
+                                aria-label="{{ ('case_videos_move_down' | translate) + ': ' + $ctrl.getVideoTitle(video) }}">
+                                <i class="fa-solid fa-arrow-down" aria-hidden="true"></i>
+                            </button>
+                            <button
+                                type="button"
+                                class="btn btn-default btn-sm"
+                                id="{{ $ctrl.getVideoControlId(video, 'remove') }}"
+                                ng-click="$ctrl.removeVideo($index)"
+                                title="{{ 'case_videos_remove' | translate }}"
+                                aria-label="{{ ('case_videos_remove' | translate) + ': ' + $ctrl.getVideoTitle(video) }}">
+                                <i class="fa-solid fa-trash text-danger" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                    </div>
+                </li>
+            </ol>
+
+            <div class="form-group case-form-field" ng-if="$ctrl.canEditVideos() && $ctrl.isVideoSupportEnabled()">
+                <label for="caseVideoUrl">{{ 'case_videos_url_label' | translate }}</label>
+                <div class="case-videos-add">
+                    <input
+                        id="caseVideoUrl"
+                        type="text"
+                        inputmode="url"
+                        autocomplete="off"
+                        class="form-control"
+                        placeholder="https://www.youtube.com/watch?v=..."
+                        ng-model="$ctrl.videoUrl"
+                        ng-change="$ctrl.onVideoUrlChange()"
+                        ng-keydown="$ctrl.onVideoUrlKeydown($event)"
+                        ng-readonly="$ctrl.isVideoListFull()"
+                        aria-describedby="caseVideoUrlHelp">
+                    <button
+                        id="caseVideoPreviewButton"
+                        type="button"
+                        class="btn btn-default btn-sm"
+                        ng-click="$ctrl.previewVideo()"
+                        ng-disabled="!$ctrl.videoUrl || $ctrl.isPreviewingVideo || $ctrl.isVideoListFull()">
+                        <i class="fa fa-plus" aria-hidden="true"></i> {{ 'case_videos_add' | translate }}
+                    </button>
+                </div>
+                <p id="caseVideoUrlHelp" class="help-block">{{ 'case_videos_url_help' | translate }}</p>
+                <p class="help-block" ng-if="$ctrl.isPreviewingVideo">
+                    <i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i>
+                    {{ 'case_videos_previewing' | translate }}
+                </p>
+                <p id="caseVideoPreviewError" class="help-block text-danger" ng-if="$ctrl.videoPreviewErrorKey" role="alert">
+                    {{ $ctrl.videoPreviewErrorKey | translate }}
+                </p>
+                <p class="help-block" ng-if="$ctrl.isVideoListFull()">
+                    {{ 'case_videos_limit_reached' | translate:{ max: $ctrl.maxCaseVideos } }}
+                </p>
+
+                <div class="panel panel-default case-videos-preview" ng-if="$ctrl.videoPreview" role="group" aria-labelledby="caseVideoPreviewTitle">
+                    <div class="panel-body">
+                        <p class="text-muted case-videos-preview-heading">{{ 'case_videos_preview_heading' | translate }}</p>
+                        <h4 id="caseVideoPreviewTitle" class="case-videos-title">{{ $ctrl.getVideoTitle($ctrl.videoPreview) }}</h4>
+                        <div class="text-muted case-videos-meta">
+                            <span class="label label-default">{{ 'case_videos_source_youtube' | translate }}</span>
+                            <span ng-if="$ctrl.formatVideoDuration($ctrl.videoPreview.metadata.durationSeconds)">
+                                {{ 'case_videos_duration' | translate }}: {{ $ctrl.formatVideoDuration($ctrl.videoPreview.metadata.durationSeconds) }}
+                            </span>
+                            <span ng-if="$ctrl.videoPreview.metadata.channelTitle">
+                                {{ 'case_videos_channel' | translate }}: {{ $ctrl.videoPreview.metadata.channelTitle }}
+                            </span>
+                        </div>
+                        <p
+                            id="caseVideoPreviewDescription"
+                            class="case-videos-description"
+                            ng-class="{ 'is-collapsed': $ctrl.isPreviewDescriptionLong() && !$ctrl.isPreviewDescriptionExpanded }"
+                            ng-if="$ctrl.videoPreview.metadata.description">{{ $ctrl.videoPreview.metadata.description }}</p>
+                        <button
+                            type="button"
+                            class="btn btn-link btn-sm case-videos-description-toggle"
+                            ng-if="$ctrl.videoPreview.metadata.description && $ctrl.isPreviewDescriptionLong()"
+                            ng-click="$ctrl.togglePreviewDescription()"
+                            aria-controls="caseVideoPreviewDescription"
+                            aria-expanded="{{ $ctrl.isPreviewDescriptionExpanded }}">
+                            {{ ($ctrl.isPreviewDescriptionExpanded ? 'case_videos_show_less' : 'case_videos_show_more') | translate }}
+                        </button>
+                        <div class="case-videos-preview-actions">
+                            <button id="caseVideoPreviewConfirm" type="button" class="btn btn-default btn-sm" ng-click="$ctrl.confirmVideoPreview()">
+                                <i class="fa fa-plus" aria-hidden="true"></i> {{ 'case_videos_add_to_case' | translate }}
+                            </button>
+                            <button type="button" class="btn btn-default btn-sm" ng-click="$ctrl.discardVideoPreview()">
+                                {{ 'case_videos_discard' | translate }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <p class="sr-only" aria-live="polite">{{ $ctrl.videoAnnouncement }}</p>
+    </fieldset>
+    <case-attached-documents-editor
+        form-model="$ctrl.formModel"
+        is-locked="$ctrl.isLocked()">
+    </case-attached-documents-editor>
+    <div class="case-form-actions">
         <button type="submit" class="btn btn-primary" ng-disabled="$ctrl.isLocked()">{{ $ctrl.submitLabelKey | translate }}</button>
         <button type="button" class="btn btn-default" ng-click="$ctrl.onCancel()">{{ 'cancel' | translate }}</button>
         <div class="cases-toast-container">
             <toast></toast>
         </div>
-    </fieldset>
+    </div>
     <div class="row mb-3">
         <div class="col-md-12">
             <p>&nbsp;</p>

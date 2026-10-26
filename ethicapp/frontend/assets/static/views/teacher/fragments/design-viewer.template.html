@@ -7,7 +7,8 @@
             <div uib-accordion-heading>
                 <h4>{{ 'phase_title_prefix' | translate }} {{ $index + 1 }}</h4>
             </div>
-            <phase-description phase-number="$index + 1" design-object="ctrl.design"></phase-description>
+            <phase-description phase-number="$index + 1" design-object="ctrl.design"
+                case-videos="ctrl.caseVideos"></phase-description>
         </div>
     </div>      
 </div>

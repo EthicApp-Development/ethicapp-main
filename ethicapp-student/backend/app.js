@@ -3,6 +3,7 @@ import { fileURLToPath } from 'url';
 import express from 'express';
 import session from 'express-session';
 
+import { createStudentSessionStore, resolveStudentSessionTtlSeconds } from './config/session-store.js';
 import studentRoutes from './routes/student.routes.js';
 import studentMessages from './i18n/messages/student-messages.js';
 import { translateMessage } from './i18n/locale.js';
@@ -19,6 +20,7 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use(
   session({
+    store: createStudentSessionStore(),
     name: process.env.ETHICAPP_STUDENT_SESSION_COOKIE_NAME || 'ethicapp.student.sid',
     secret: process.env.ETHICAPP_STUDENT_SESSION_SECRET || process.env.SESSION_SECRET || 'development-secret',
     resave: false,
@@ -27,7 +29,7 @@ app.use(
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 1000 * 60 * 60 * 8
+      maxAge: resolveStudentSessionTtlSeconds() * 1000
     }
   })
 );

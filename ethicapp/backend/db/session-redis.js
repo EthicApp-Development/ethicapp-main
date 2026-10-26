@@ -1,12 +1,10 @@
 import { createClient } from "redis";
 import RedisStore from "connect-redis";
+import { resolveApplicationRedisUrl } from "./application-redis.js";
 
+// Express sessions live on the application Redis (REDIS_APP_*).
 function createSessionRedisClient() {
-    const host = process.env.REDIS_SESSION_HOST || "redis-session";
-    const port = process.env.REDIS_SESSION_PORT || "6379";
-    const url = process.env.REDIS_SESSION_URL || `redis://${host}:${port}`;
-
-    const client = createClient({ url });
+    const client = createClient({ url: resolveApplicationRedisUrl() });
 
     client.on("connect", () => {
         console.log("[legacy-session] Connected to Redis.");
@@ -27,6 +25,6 @@ export function createLegacySessionStore() {
     return new RedisStore({
         client: createSessionRedisClient(),
         prefix: process.env.ETHICAPP_SESSION_REDIS_PREFIX || "ethicapp:sess:",
-        ttl: Number(process.env.ETHICAPP_SESSION_TTL_SECONDS || 60 * 60 * 24),
+        ttl:    Number(process.env.ETHICAPP_SESSION_TTL_SECONDS || 60 * 60 * 24),
     });
 }

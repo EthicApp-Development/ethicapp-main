@@ -1,44 +1,34 @@
-// Initialize teacherSocket behavior
-let teacherSocketInit = (socket, socketNamespace) => {
-    console.debug('Teacher connected');
+import { registerGuardedRoom } from "./guarded-rooms.js";
+import { roomAccess } from "./socket-room-access.js";
 
-    // Handle a teacher joining a specific session
-    socket.on('joinSession', (sessionId) => {
-        // Join the socket to a room named `session-{sessionId}`
-        socket.join(`session-${sessionId}`);
-        console.debug(`A teacher has joined session-${sessionId}`);
-    });
+/**
+ * Builds the /teacher connection handler. The namespace middleware
+ * (requireSocketRole) has already stored the teacher's id in socket.data.
+ * Teachers reach only sessions they created and those sessions' groups.
+ */
+export function createTeacherSocketInit({ access = roomAccess, logger = console } = {}) {
+    return (socket) => {
+        const { uid } = socket.data;
 
-    // Handle a teacher leaving a specific session
-    socket.on('leaveSession', (sessionId) => {
-        // Leave the socket from the room named `session-{sessionId}`
-        socket.leave(`session-${sessionId}`);
-        console.debug(`A teacher has left session-${sessionId}`);
-    });
+        registerGuardedRoom(socket, {
+            joinEvent:  "joinSession",
+            leaveEvent: "leaveSession",
+            roomName:   sessionId => `session-${sessionId}`,
+            canJoin:    sessionId => access.ownsSession(uid, sessionId),
+            logger,
+        });
 
-    socket.on('joinGroupChat', (groupId) => {
-        socket.join(`teacher-group-${groupId}`);
-        console.debug(`A teacher has joined teacher-group-${groupId}`);
-    });
+        registerGuardedRoom(socket, {
+            joinEvent:  "joinGroupChat",
+            leaveEvent: "leaveGroupChat",
+            roomName:   groupId => `teacher-group-${groupId}`,
+            canJoin:    groupId => access.ownsGroupSession(uid, groupId),
+            logger,
+        });
+    };
+}
 
-    socket.on('leaveGroupChat', (groupId) => {
-        socket.leave(`teacher-group-${groupId}`);
-        console.debug(`A teacher has left teacher-group-${groupId}`);
-    });
-
-    // Broadcast a message to all sockets in a specific session
-    socket.on('broadcastToSession', (sessionId, message) => {
-        // Emit a notification to all clients in the room `session-{sessionId}`
-        socketNamespace.to(`session-${sessionId}`).emit('notification', message);
-        console.debug(`Notification sent to session-${sessionId}:`, message);
-    });
-
-
-    // Handle socket disconnection
-    socket.on('disconnect', () => {
-        console.debug('Teacher disconnected');
-    });
-};
+const teacherSocketInit = createTeacherSocketInit();
 
 // Teacher-Student socket notifications (from backend)
 const toTeacherNotifications = (socketNamespace) => {
@@ -58,11 +48,11 @@ const toTeacherNotifications = (socketNamespace) => {
 
         chatMessage: (sessionId, phaseId, questionId, groupId, message) => {
             socketNamespace.to(`session-${sessionId}`).emit("onChatMessage", { 
-                    phaseId,
-                    questionId,
-                    groupId,
-                    message
-                });
+                phaseId,
+                questionId,
+                groupId,
+                message
+            });
         },
 
         groupChatMessage: (groupId, message) => {

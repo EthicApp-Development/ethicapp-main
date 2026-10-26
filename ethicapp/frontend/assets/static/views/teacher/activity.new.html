@@ -58,11 +58,11 @@
                             <p>{{'available_designs_colon' | translate}}</p>
                             <div class="panel panel-default">
                                 <div class="panel-body">
-                                    <design-item 
-                                        ng-repeat="design in bdc.getPaginatedLaunchableUserDesigns() track by design.id" 
+                                    <design-item
+                                        ng-repeat="design in bdc.getPaginatedLaunchableUserDesigns() track by design.id"
                                         design="design"
                                         selected-design-id="bdc.selectedDesignId"
-                                        on-view="bdc.handleView" 
+                                        on-view="bdc.handleView"
                                         is-owner="true"
                                         selection-layout="true"
                                         on-select="bdc.handleSelectDesign">
@@ -94,9 +94,9 @@
                 ng-show="bdc.selectedDesignId != 0 && bdc.selectedDesignId != NaN">
                 <div class="panel-heading">
                     <label>{{'step_2_prepare_activity' | translate}}</label>
-                </div>                
+                </div>
                 <div class="panel-body">
-                    <form ng-submit="ac.createSession(bdc.selectedDesignId)">                    
+                    <form ng-submit="ac.createSession(bdc.selectedDesignId)">
                         <div class="form-group">
                             <p>{{'provide_activity_description' | translate}}</p>
                             <input
@@ -117,7 +117,7 @@
                                 <i class="fa fa-spinner fa-spin"></i>
                                 <p>{{ 'preparing_dashboard' | translate }}</p>
                             </div>
-                        </div>                                        
+                        </div>
                         <div class="row" ng-show="error">
                             <div class="col-lg-6">
                                 <h4 style="color:red; text-align: center; ">

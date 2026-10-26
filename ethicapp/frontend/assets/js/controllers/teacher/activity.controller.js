@@ -92,7 +92,7 @@ export function ActivityController($scope, $http,
                 data: requestObj,
             });
             
-            const stageid = stageResponse.data.id;
+            const stageid = stageResponse.data.phaseId || stageResponse.data.id;
             
             if (stageid) {
                 // Build the phase items
@@ -110,7 +110,7 @@ export function ActivityController($scope, $http,
             await $http({ 
                 url: `/activities/${sessionId}/phase_transition`, 
                 method: "post", 
-                data: { phase_id: stageid }
+                data: { phaseId: stageid }
             });
                 
         } catch (error) {

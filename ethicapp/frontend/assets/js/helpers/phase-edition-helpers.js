@@ -1,4 +1,8 @@
 import { getDesignType } from "./design-helpers.js";
+import {
+    emptyExternalServicesConfig,
+    normalizeExternalServicesConfig,
+} from "./phase-external-services.js";
 
 const phaseBuilders = {
     semantic_differential: genericPhaseBuilder,
@@ -44,6 +48,7 @@ function genericPhaseBuilder(params = {}) {
     const phaseObj = {
         mode: params.mode ?? "individual",
         prevPhasesResponse: params.prevPhasesResponse ?? [],
+        externalServices: params.externalServices ?? emptyExternalServicesConfig(),
         ...params,
     };
     return phaseObj;
@@ -127,6 +132,7 @@ const designEditActions = {
         phase.chat = true;
         phase.grouping_algorithm = phase.grouping_algorithm || null;
         phase.stdntAmount = phase.stdntAmount || 3;
+        normalizeExternalServicesConfig(phase);
     }
 };
 

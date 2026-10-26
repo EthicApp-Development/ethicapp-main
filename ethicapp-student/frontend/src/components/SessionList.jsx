@@ -1,5 +1,5 @@
-import axios from 'axios';
 import { useEffect, useMemo, useState } from 'react';
+import { describeApiError } from '../api/apiErrors.js';
 import { studentApi } from '../api/studentApi.js';
 import { useI18n } from '../app/providers.jsx';
 import { formatSessionDate, sessionStatusLabel } from '../utils/sessionFormat.js';
@@ -39,11 +39,7 @@ export default function SessionList({
         setLoadingSessions(false);
       })
       .catch((error) => {
-        const message = axios.isAxiosError(error)
-          ? (error.response?.data?.error ?? t('sessions.loadErrorFallback'))
-          : t('sessions.loadErrorFallback');
-
-        setSessionsError(message);
+        setSessionsError(describeApiError(error, t, { fallbackKey: 'sessions.loadErrorFallback' }));
         setJoinedSessions([]);
         setLoadingSessions(false);
       });

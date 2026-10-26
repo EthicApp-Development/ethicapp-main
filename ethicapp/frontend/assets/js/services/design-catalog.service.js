@@ -7,7 +7,7 @@ let DesignCatalogService = ($rootScope, $http) => {
         async loadDesigns() {
             try {
                 const response = await $http.get("/designs");
-        
+
                 // Validate the response structure
                 if (response.data.status === "ok" && Array.isArray(response.data.result)) {
                     service.designs = response.data.result; // Assign the fetched designs
@@ -106,8 +106,8 @@ let DesignCatalogService = ($rootScope, $http) => {
                     service.designs.unshift(design);
 
                     // Notify listeners
-                    service.notifyListeners("onDesignCatalogUpdated", { 
-                        response: null });  
+                    service.notifyListeners("onDesignCatalogUpdated", {
+                        response: null });
                     return newDesignId; // Return the new design ID
                 } else {
                     throw new Error("Failed to create design");
@@ -117,34 +117,34 @@ let DesignCatalogService = ($rootScope, $http) => {
                 return null; // Return null to indicate failure
             }
         },
-        
+
         async togglePublicVisibility(id) {
             const design = service.designs.find(d => d.id === id);
             if (!design) return;
-        
+
             const previousPublic = design.public;
             const previousVisibility = design.visibility || (design.public ? "public" : "private");
-        
-            try {        
+
+            try {
                 const response = await $http({ url: `/designs/${id}/toggle_public`, method: "PATCH" });
                 const result = response.data?.result || {};
                 design.visibility = result.visibility || (design.public ? "public" : "private");
                 design.public = result.public === true || design.visibility === "public";
                 design.caseId = result.caseId ?? design.caseId;
-        
+
                 // Notify listeners
-                service.notifyListeners("onDesignCatalogUpdated", { 
-                    response: null });  
+                service.notifyListeners("onDesignCatalogUpdated", {
+                    response: null });
                 return result;
             } catch (error) {
                 console.error(`Failed to change public property of design with id: '${id}'`, error);
-        
+
                 design.public = previousPublic;
                 design.visibility = previousVisibility;
 
                 // Notify listeners
-                service.notifyListeners("onDesignCatalogUpdated", { 
-                    response: null });  
+                service.notifyListeners("onDesignCatalogUpdated", {
+                    response: null });
                 throw error;
             }
         },
@@ -155,32 +155,32 @@ let DesignCatalogService = ($rootScope, $http) => {
                 if (!local) {
                     await $http({ url: `/designs/${id}/lock`, method: "PATCH" });
                 }
-        
+
                 // Update the locked status of the design locally
                 const design = service.designs.find(d => d.id === id);
                 if (design) {
                     design.locked = !design.locked; // Toggle the lock status locally
-                    
+
                     // Notify listeners
-                    service.notifyListeners("onDesignCatalogUpdated", { 
-                        response: null });                      
+                    service.notifyListeners("onDesignCatalogUpdated", {
+                        response: null });
                 }
             } catch (error) {
                 console.error(`Failed to toggle lock property of design with id: '${id}'`, error);
                 // Optional: Notify the user about the failure
             }
         },
-        
+
         async importDesign(id) {
             try {
                 // Make the API call to duplicate the design
                 const response = await $http({ url: `/designs/${id}/duplicate`, method: "POST" });
-        
+
                 // Check if the duplication was successful
                 if (response.data.status === "ok" && response.data.id) {
                     await service.getDesigns(true);
-                    service.notifyListeners("onDesignCatalogUpdated", { 
-                        response: null });  
+                    service.notifyListeners("onDesignCatalogUpdated", {
+                        response: null });
                 } else {
                     console.error("Error: Unexpected response format during design import", response.data);
                     throw new Error("Unexpected response format during design import");
@@ -203,7 +203,7 @@ let DesignCatalogService = ($rootScope, $http) => {
                     url: `/designs/${id}`,
                     method: "DELETE",
                 });
-        
+
                 // Check the response status
                 const data = response.data;
                 if (data.status === "ok") {
@@ -255,7 +255,7 @@ let DesignCatalogService = ($rootScope, $http) => {
                         tagIds,
                     }, // Send the updated design object in the request body
                 });
-        
+
                 // Check the response status
                 if (response.data.status === "ok") {
                     // Reload the designs after successful update
@@ -267,8 +267,10 @@ let DesignCatalogService = ($rootScope, $http) => {
                     throw new Error("Failed to update design");
                 }
             } catch (error) {
+                // Callers tell the teacher why the save failed (#730), so the
+                // rejection, with its status and error code, reaches them.
                 console.error(`Error updating design with id '${designId}':`, error);
-                return false;
+                throw error;
             }
         },
 
@@ -277,7 +279,7 @@ let DesignCatalogService = ($rootScope, $http) => {
                 // Call the API endpoint
                 const response = await $http.get(`/designs/${designId}/valid`);
                 // console.debug(`[isDesignValid] ${JSON.stringify(response)}`);
-                
+
                 // Check the response
                 if (response.data.status === 'ok' && typeof response.data.valid === 'boolean') {
                     return response.data.valid; // Return the validity status
@@ -310,7 +312,7 @@ let DesignCatalogService = ($rootScope, $http) => {
             if (service.listeners[eventName]) {
                 service.listeners[eventName].forEach((callback) => callback(data));
             }
-        },   
+        },
     };
 
     return service;

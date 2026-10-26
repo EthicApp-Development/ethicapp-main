@@ -87,6 +87,11 @@ body {
     width: 152px;
 }
 
+.teacher-admin-return-form {
+    display: inline-flex;
+    margin: 0;
+}
+
 .teacher-admin-return {
     white-space: nowrap;
 }
@@ -830,20 +835,6 @@ input:checked + .slider::before {
 }
 
 /* The following CSS classes are from libraries (it seems), so the kebab-case will be preserved */
-
-.ngdialog-overlay {
-    position: fixed;
-    top: 0;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    z-index: 10000;
-}
-  
-.ngdialog-content {
-    position: absolute;
-    z-index: 10001;
-}
 
 .error {
     border-color: #F44336 !important;

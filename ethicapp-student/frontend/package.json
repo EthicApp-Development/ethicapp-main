@@ -6,12 +6,14 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0 --port 5174",
     "build": "vite build",
-    "preview": "vite preview --host 0.0.0.0 --port 4174"
+    "preview": "vite preview --host 0.0.0.0 --port 4174",
+    "test": "node --test \"src/**/*.node-test.mjs\""
   },
   "dependencies": {
     "@popperjs/core": "^2.11.8",
     "axios": "^1.20.0",
     "bootstrap": "^5.3.8",
+    "markdown-it": "^15.0.3",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-router-dom": "^7.14.2"

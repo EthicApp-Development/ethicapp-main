@@ -4,6 +4,9 @@ WORKDIR /app/backend
 COPY ethicapp/backend/package*.json ./
 RUN npm ci
 COPY ethicapp/backend ./
+COPY ethicapp/common /app/common
+# Rich text fixtures (#764), at the same path relative to the tests as in the repository.
+COPY canonical-schemas/rich-text /canonical-schemas/rich-text
 RUN npm test && touch /tmp/backend-tests-passed
 
 FROM node:24

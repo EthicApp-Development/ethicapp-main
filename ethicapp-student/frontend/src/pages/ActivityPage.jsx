@@ -1,14 +1,21 @@
-import axios from 'axios';
-import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { Link, useOutletContext, useParams } from 'react-router-dom';
+import { describeApiError, withReference } from '../api/apiErrors.js';
 import { studentApi, legacyUserApi } from '../api/studentApi.js';
 import { useI18n } from '../app/providers.jsx';
 import ActivityTabsPanel from '../components/session-detail/ActivityTabsPanel.jsx';
 import SessionMetadata from '../components/session-detail/SessionMetadata.jsx';
 import WaitingStatePanel from '../components/session-detail/WaitingStatePanel.jsx';
+import { CaseVideosProvider } from '../context/CaseVideosContext.jsx';
 import { useStudentActivityState } from '../context/StudentActivityStateContext.jsx';
 import { useActivityRealtimeSync } from './session-detail/hooks/useActivityRealtimeSync.js';
 import { usePhaseResponseSubmission } from './session-detail/hooks/usePhaseResponseSubmission.js';
+import {
+  EXTERNAL_RESPONSE_PROCESSING_TIMEOUT_MS,
+  applyResponseProcessingDelta,
+  buildResponseProcessingByPhase,
+  buildResponseProcessingServicesByPhase
+} from './session-detail/externalResponseProcessing.js';
 import {
   initialSessionDetailState,
   normalizeStatusCode,
@@ -33,17 +40,36 @@ function isCaseDocumentProcessingActive(caseDocument) {
   return status === 'pending' || status === 'processing';
 }
 
+function buildResponseProcessingTimeoutKey(phaseId, serviceId) {
+  return `${phaseId}:${serviceId}`;
+}
+
+function removeQueuedTimeout(timeoutMap, timeoutKey, timeoutId) {
+  const queue = timeoutMap.get(timeoutKey) ?? [];
+  const nextQueue = queue.filter((queuedTimeoutId) => queuedTimeoutId !== timeoutId);
+
+  if (nextQueue.length > 0) {
+    timeoutMap.set(timeoutKey, nextQueue);
+  } else {
+    timeoutMap.delete(timeoutKey);
+  }
+}
+
 export default function ActivityPage() {
   const { locale, t } = useI18n();
   const { session, sessionRefreshKey } = useOutletContext();
   const { sessionId } = useParams();
   const [localState, dispatch] = useReducer(sessionDetailReducer, initialSessionDetailState);
   const [chatRefreshTokenByPhaseId, setChatRefreshTokenByPhaseId] = useState({});
+  const [externalServiceResults, setExternalServiceResults] = useState([]);
   const [groupIdByPhaseId, setGroupIdByPhaseId] = useState({});
   const [groupContextByPhaseId, setGroupContextByPhaseId] = useState({});
+  const [pendingExternalResponseProcessingByPhaseId, setPendingExternalResponseProcessingByPhaseId] = useState({});
   const lastAutoSelectedPhaseIdRef = useRef(null);
   const currentGroupIdRef = useRef(null);
   const currentPhaseIdRef = useRef(null);
+  const responseProcessingTimeoutsByKeyRef = useRef(new Map());
+  const responseProcessingServiceIdsByPhaseIdRef = useRef({});
   const {
     stateBySession,
     loadingBySession,
@@ -52,6 +78,71 @@ export default function ActivityPage() {
     loadCurrentPhaseState,
     submitActivityResponse
   } = useStudentActivityState();
+
+  const adjustExternalResponseProcessing = useCallback(({ phaseId, serviceId, delta }) => {
+    setPendingExternalResponseProcessingByPhaseId((previous) => (
+      applyResponseProcessingDelta(previous, { phaseId, serviceId, delta })
+    ));
+  }, []);
+
+  const clearExternalResponseProcessingTimeouts = useCallback(() => {
+    responseProcessingTimeoutsByKeyRef.current.forEach((timeoutQueue) => {
+      timeoutQueue.forEach((timeoutId) => window.clearTimeout(timeoutId));
+    });
+    responseProcessingTimeoutsByKeyRef.current.clear();
+  }, []);
+
+  const beginExternalResponseProcessing = useCallback(({ phaseId, serviceId }) => {
+    const normalizedPhaseId = Number(phaseId);
+    const normalizedServiceId = typeof serviceId === 'string' ? serviceId.trim() : '';
+
+    if (!Number.isInteger(normalizedPhaseId) || normalizedPhaseId <= 0 || !normalizedServiceId) {
+      return;
+    }
+
+    adjustExternalResponseProcessing({
+      phaseId: normalizedPhaseId,
+      serviceId: normalizedServiceId,
+      delta: 1
+    });
+
+    const timeoutKey = buildResponseProcessingTimeoutKey(normalizedPhaseId, normalizedServiceId);
+    const timeoutId = window.setTimeout(() => {
+      removeQueuedTimeout(responseProcessingTimeoutsByKeyRef.current, timeoutKey, timeoutId);
+      adjustExternalResponseProcessing({
+        phaseId: normalizedPhaseId,
+        serviceId: normalizedServiceId,
+        delta: -1
+      });
+    }, EXTERNAL_RESPONSE_PROCESSING_TIMEOUT_MS);
+
+    const timeoutQueue = responseProcessingTimeoutsByKeyRef.current.get(timeoutKey) ?? [];
+    responseProcessingTimeoutsByKeyRef.current.set(timeoutKey, [...timeoutQueue, timeoutId]);
+  }, [adjustExternalResponseProcessing]);
+
+  const resolveExternalResponseProcessing = useCallback(({ phaseId, serviceId }) => {
+    const normalizedPhaseId = Number(phaseId);
+    const normalizedServiceId = typeof serviceId === 'string' ? serviceId.trim() : '';
+
+    if (!Number.isInteger(normalizedPhaseId) || normalizedPhaseId <= 0 || !normalizedServiceId) {
+      return;
+    }
+
+    const timeoutKey = buildResponseProcessingTimeoutKey(normalizedPhaseId, normalizedServiceId);
+    const timeoutQueue = responseProcessingTimeoutsByKeyRef.current.get(timeoutKey) ?? [];
+    const timeoutId = timeoutQueue[0];
+
+    if (timeoutId) {
+      window.clearTimeout(timeoutId);
+      removeQueuedTimeout(responseProcessingTimeoutsByKeyRef.current, timeoutKey, timeoutId);
+    }
+
+    adjustExternalResponseProcessing({
+      phaseId: normalizedPhaseId,
+      serviceId: normalizedServiceId,
+      delta: -1
+    });
+  }, [adjustExternalResponseProcessing]);
 
   useEffect(() => {
     if (!session.isAuthenticated) {
@@ -70,11 +161,10 @@ export default function ActivityPage() {
         });
       })
       .catch((error) => {
-        const message = axios.isAxiosError(error)
-          ? (error.response?.data?.error ?? t('sessionDetail.loadErrorFallback'))
-          : t('sessionDetail.loadErrorFallback');
-
-        dispatch({ type: 'SESSIONS_LOAD_ERROR', payload: message });
+        dispatch({
+          type: 'SESSIONS_LOAD_ERROR',
+          payload: describeApiError(error, t, { fallbackKey: 'sessionDetail.loadErrorFallback' })
+        });
       });
   }, [session.isAuthenticated, sessionRefreshKey, t]);
 
@@ -104,6 +194,17 @@ export default function ActivityPage() {
   }, [selectedSessionId]);
 
   useEffect(() => {
+    clearExternalResponseProcessingTimeouts();
+    setPendingExternalResponseProcessingByPhaseId({});
+  }, [clearExternalResponseProcessingTimeouts, selectedSessionId]);
+
+  useEffect(() => {
+    return () => {
+      clearExternalResponseProcessingTimeouts();
+    };
+  }, [clearExternalResponseProcessingTimeouts]);
+
+  useEffect(() => {
     if (!session.isAuthenticated || !selectedSession) {
       dispatch({ type: 'DESCRIPTOR_CLEAR' });
       return;
@@ -127,11 +228,10 @@ export default function ActivityPage() {
           return;
         }
 
-        const message = axios.isAxiosError(error)
-          ? (error.response?.data?.error ?? t('sessionDetail.descriptorLoadErrorFallback'))
-          : t('sessionDetail.descriptorLoadErrorFallback');
-
-        dispatch({ type: 'DESCRIPTOR_LOAD_ERROR', payload: message });
+        dispatch({
+          type: 'DESCRIPTOR_LOAD_ERROR',
+          payload: describeApiError(error, t, { fallbackKey: 'sessionDetail.descriptorLoadErrorFallback' })
+        });
       });
 
     return () => {
@@ -146,6 +246,49 @@ export default function ActivityPage() {
   const shouldShowWaitingScreen = activityStatusCode === SESSION_STATUS.initiated;
   const shouldLoadActivityData = activityStatusCode >= SESSION_STATUS.inProgress;
   const isSessionFinished = activityStatusCode === SESSION_STATUS.finished;
+
+  const handleExternalServiceResult = useCallback((payload) => {
+    const serviceId = String(payload?.serviceId || '').trim();
+    const payloadPhaseId = Number(payload?.phaseId);
+    const responseProcessingServiceIds = responseProcessingServiceIdsByPhaseIdRef.current[payloadPhaseId] ?? [];
+
+    if (
+      serviceId
+      && Number.isInteger(payloadPhaseId)
+      && payloadPhaseId > 0
+      && responseProcessingServiceIds.includes(serviceId)
+    ) {
+      resolveExternalResponseProcessing({ phaseId: payloadPhaseId, serviceId });
+    }
+
+    setExternalServiceResults((previousResults) => [
+      {
+        id: payload?.id || `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        ...payload
+      },
+      ...previousResults
+    ]);
+  }, [resolveExternalResponseProcessing]);
+
+  const externalResultsByPhaseId = useMemo(() => {
+    const byPhaseId = {};
+
+    externalServiceResults.forEach((result) => {
+      const phaseId = Number(result?.phaseId);
+      if (!Number.isInteger(phaseId) || phaseId <= 0) {
+        // Session-level results are intentionally not shown in phase tabs.
+        return;
+      }
+
+      (byPhaseId[phaseId] ??= []).push(result);
+    });
+
+    return byPhaseId;
+  }, [externalServiceResults]);
+
+  const onDismissExternalResult = useCallback((resultId) => {
+    setExternalServiceResults((previousResults) => previousResults.filter((result) => result.id !== resultId));
+  }, []);
 
   useEffect(() => {
     if (!session.isAuthenticated || !selectedSession || !session.uid || !shouldLoadActivityData) {
@@ -207,11 +350,13 @@ export default function ActivityPage() {
           return;
         }
 
-        const message = axios.isAxiosError(error)
-          ? (error.response?.data?.message ?? t('sessionDetail.caseLoadErrorFallback'))
-          : t('sessionDetail.caseLoadErrorFallback');
-
-        dispatch({ type: 'CASE_LOAD_ERROR', payload: message });
+        dispatch({
+          type: 'CASE_LOAD_ERROR',
+          payload: describeApiError(error, t, {
+            fallbackKey: 'sessionDetail.caseLoadErrorFallback',
+            bodyField: 'message'
+          })
+        });
       });
 
     return () => {
@@ -255,7 +400,7 @@ export default function ActivityPage() {
     };
   }, [localState.caseDocument]);
 
-  useActivityRealtimeSync({
+  const { realtimeIssue } = useActivityRealtimeSync({
     session,
     selectedSession,
     currentPhaseIdRef,
@@ -266,7 +411,8 @@ export default function ActivityPage() {
     setChatRefreshTokenByPhaseId,
     activityCurrentPhaseId: activityState?.descriptor?.currentPhaseId,
     setGroupIdByPhaseId,
-    setGroupContextByPhaseId
+    setGroupContextByPhaseId,
+    onExternalServiceResult: handleExternalServiceResult
   });
 
   const phaseTabs = useMemo(() => {
@@ -290,6 +436,33 @@ export default function ActivityPage() {
       };
     });
   }, [activityState, groupContextByPhaseId, groupIdByPhaseId]);
+
+  const responseProcessingServiceIdsByPhaseId = useMemo(() => {
+    const design = activityState?.descriptor?.design || localState.activityDescriptor?.design;
+    const services = activityState?.descriptor?.externalServices?.services
+      ?? localState.activityDescriptor?.externalServices?.services
+      ?? [];
+
+    return buildResponseProcessingServicesByPhase({
+      phases: phaseTabs,
+      design,
+      services
+    });
+  }, [
+    activityState?.descriptor?.design,
+    activityState?.descriptor?.externalServices?.services,
+    localState.activityDescriptor?.design,
+    localState.activityDescriptor?.externalServices?.services,
+    phaseTabs
+  ]);
+
+  useEffect(() => {
+    responseProcessingServiceIdsByPhaseIdRef.current = responseProcessingServiceIdsByPhaseId;
+  }, [responseProcessingServiceIdsByPhaseId]);
+
+  const externalResponseProcessingByPhaseId = useMemo(() => (
+    buildResponseProcessingByPhase(pendingExternalResponseProcessingByPhaseId)
+  ), [pendingExternalResponseProcessingByPhaseId]);
 
   const currentPhaseNumber = activityState?.descriptor?.currentPhaseNumber ?? null;
   const currentPhaseId = activityState?.descriptor?.currentPhaseId ?? null;
@@ -362,7 +535,23 @@ export default function ActivityPage() {
     selectedSessionId,
     submitActivityResponse,
     loadFullState,
-    userId: session.uid
+    userId: session.uid,
+    onResponseAccepted: ({ responsePayload }) => {
+      const phaseId = Number(responsePayload?.phaseId);
+      if (!Number.isInteger(phaseId) || phaseId <= 0) {
+        return;
+      }
+
+      const processingServiceIds = responseProcessingServiceIdsByPhaseId[phaseId] ?? [];
+
+      if (processingServiceIds.length === 0) {
+        return;
+      }
+
+      processingServiceIds.forEach((serviceId) => {
+        beginExternalResponseProcessing({ phaseId, serviceId });
+      });
+    }
   });
 
   return (
@@ -392,6 +581,12 @@ export default function ActivityPage() {
               </Link>
             </div>
             <div className="card-body">
+              {realtimeIssue ? (
+                <div className="alert alert-warning py-2 mb-3" role="status">
+                  {withReference(t('apiErrors.realtimeUnavailable'), realtimeIssue.requestId, t)}
+                </div>
+              ) : null}
+
               {localState.loadingDescriptor ? <p className="text-muted mt-3 mb-0">{t('sessionDetail.loadingDescriptor')}</p> : null}
 
               {localState.descriptorError ? (
@@ -419,7 +614,7 @@ export default function ActivityPage() {
               ) : null}
 
               {!shouldShowWaitingScreen && !activityStateError && tabEntries.length > 0 ? (
-                <>
+                <CaseVideosProvider videos={localState.caseDocument?.videos}>
                   {isSessionFinished ? (
                     <div className="alert alert-warning mt-3 mb-0" role="alert">
                       {t('sessionDetail.activityFinished')}
@@ -439,9 +634,12 @@ export default function ActivityPage() {
                     isSessionFinished={isSessionFinished}
                     onSubmitPhaseResponse={onSubmitPhaseResponse}
                     chatRefreshTokenByPhaseId={chatRefreshTokenByPhaseId}
+                    externalResponseProcessingByPhaseId={externalResponseProcessingByPhaseId}
+                    externalResultsByPhaseId={externalResultsByPhaseId}
+                    onDismissExternalResult={onDismissExternalResult}
                     userId={session.uid}
                   />
-                </>
+                </CaseVideosProvider>
               ) : null}
             </div>
           </article>

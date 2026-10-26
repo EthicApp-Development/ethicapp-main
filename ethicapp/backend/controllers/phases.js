@@ -4,6 +4,7 @@ import express from "express";
 import * as config from "../config/database.config.js";
 import * as rpg2 from "../db/rest-pg-2.js";
 import * as DesignTypes from "../../common/modules/design-types.js";
+import { storedTextContentType } from "../../common/modules/text-content-types.js";
 
 const router = express.Router();
 
@@ -170,6 +171,8 @@ router.post("/phases/:id/items", async (req, res) => {
  * @param {Object} params - The parameters for the new item.
  * @param {string} params.stageId - The ID of the phase (stage) to which the item belongs.
  * @param {string} params.name - The title of the item.
+ * @param {string} [params.titleContentType] - How to read the title (#763): text/plain or
+ *   text/markdown. Anything else is stored as null, which is read as text/plain.
  * @param {string} params.tleft - The left pole text for the item.
  * @param {string} params.tright - The right pole text for the item.
  * @param {number} params.orden - The order of the item in the phase.
@@ -206,12 +209,14 @@ async function addSemanticDifferentialItem({
     num,
     justify,
     wordCount,
+    titleContentType,
 }) {
     await rpg2.execSQL({
         sql: `
             INSERT INTO differential(
-                title, tleft, tright, orden, creator, stageid, num, justify, sesid, word_count
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                title, tleft, tright, orden, creator, stageid, num, justify, sesid, word_count,
+                title_content_type
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
         `,
         dbcon: config.dbconnString,
         sqlParams: [
@@ -225,6 +230,7 @@ async function addSemanticDifferentialItem({
             rpg2.param('plain', justify),
             rpg2.param('plain', sessionId),
             rpg2.param('plain', wordCount),
+            rpg2.param("plain", storedTextContentType(titleContentType)),
         ],
     });
 }

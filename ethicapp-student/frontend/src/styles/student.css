@@ -43,6 +43,12 @@ body {
   --bs-btn-disabled-border-color: #8f99bf;
 }
 
+/* Above the topbar (1030) and the chat overlay (1060). */
+.session-expired-notice {
+  z-index: 1080;
+  width: min(100%, 640px);
+}
+
 .student-topbar {
   position: sticky;
   top: 0;
@@ -182,6 +188,386 @@ body {
 .phase-pill--inactive {
   border-color: #fd7e14;
   color: #b35a00;
+}
+
+/* Teacher-written rich text (#766): block content with no trailing margin. */
+.rich-text > :last-child {
+  margin-bottom: 0;
+}
+
+.rich-text ul,
+.rich-text ol {
+  padding-left: 1.5rem;
+}
+
+/* Video blocks in rich text (#786): a generic EthicApp card, full width of
+   the column, that becomes the player in the same 16:9 box when tapped. */
+.video-facade {
+  margin-bottom: 1rem;
+  overflow: hidden;
+  border-radius: 0.5rem;
+  background: #071c78;
+  font-weight: 400;
+}
+
+.video-facade__button {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  border: 0;
+  color: #fff;
+  text-align: left;
+  background:
+    radial-gradient(120% 90% at 20% 0%, rgba(255, 255, 255, 0.18), transparent 60%),
+    linear-gradient(135deg, var(--ea-primary) 0%, var(--ea-primary-hover) 100%);
+  cursor: pointer;
+}
+
+.video-facade__button:focus-visible {
+  outline: 3px solid #ffc107;
+  outline-offset: -3px;
+}
+
+.video-facade__play {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: center;
+}
+
+.video-facade__play > i {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  padding-left: 0.2rem;
+  border-radius: 50%;
+  color: var(--ea-primary-hover);
+  font-size: 1.4rem;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  transition: transform 0.15s ease-in-out;
+}
+
+.video-facade__button:hover .video-facade__play > i,
+.video-facade__button:focus-visible .video-facade__play > i {
+  transform: scale(1.08);
+}
+
+.video-facade__caption {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.6rem 0.85rem 0.7rem;
+  background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.35) 100%);
+}
+
+.video-facade__title {
+  display: -webkit-box;
+  overflow: hidden;
+  font-weight: 600;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.video-facade__details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  font-size: 0.85rem;
+  opacity: 0.9;
+}
+
+.video-facade__source {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.video-facade__player {
+  border: 0;
+}
+
+.video-facade-unavailable {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid #dee2e6;
+  border-radius: 0.5rem;
+  background: #f8f9fa;
+  font-weight: 400;
+}
+
+.video-facade-unavailable__icon {
+  margin-top: 0.2rem;
+  color: #6c757d;
+}
+
+.video-facade-unavailable__body {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.video-facade-unavailable__title {
+  margin-bottom: 0.15rem;
+  font-weight: 600;
+}
+
+.video-facade-unavailable__notice {
+  margin-bottom: 0.25rem;
+  color: #6c757d;
+}
+
+/* Complementary material (#788): the case's videos below the case document,
+   one full-width column on phones and as many columns as fit on wider
+   screens. The facades keep the video rules above. */
+.case-material {
+  margin-top: 1.5rem;
+}
+
+.case-material__heading {
+  margin-bottom: 0.75rem;
+}
+
+.case-material__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+  gap: 1.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.case-material__item {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.case-material__source {
+  font-weight: 600;
+}
+
+.case-material__description {
+  margin-bottom: 0;
+  white-space: pre-line;
+}
+
+/* About four lines of Bootstrap's 1.5 line height. */
+.case-material__description.is-collapsed {
+  max-height: 6em;
+  overflow: hidden;
+}
+
+.case-material__toggle {
+  margin-top: 0.25rem;
+}
+
+/* Documents as complementary material (#794): the case's Google Drive
+   documents after its videos, one per row at full width, with tap targets of
+   at least 44px. Long names and URLs wrap instead of overflowing. */
+.case-material__documents {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.case-material__list + .case-material__documents {
+  margin-top: 1.25rem;
+}
+
+.case-material__document {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.case-material__document-link,
+.case-material__document-unavailable {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #dee2e6;
+  border-radius: 0.5rem;
+}
+
+.case-material__document-link {
+  background: #fff;
+  text-decoration: none;
+}
+
+.case-material__document-link:hover,
+.case-material__document-link:focus-visible {
+  border-color: #86b7fe;
+  background: #f5f9ff;
+  text-decoration: underline;
+}
+
+.case-material__document-unavailable {
+  background: #f8f9fa;
+  color: #6c757d;
+}
+
+.case-material__document-icon {
+  flex: 0 0 auto;
+  width: 1.25em;
+  font-size: 1.25rem;
+  text-align: center;
+}
+
+.case-material__document-name {
+  min-width: 0;
+}
+
+.case-material__document-status {
+  font-weight: 600;
+}
+
+.case-material__document-notice {
+  margin: 0.25rem 0 0;
+  color: #6c757d;
+  font-size: 0.875rem;
+}
+
+.external-service-result {
+  background: #f8fbff;
+}
+
+.external-service-result__body {
+  font-size: 0.95rem;
+}
+
+.ats-feedback-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.ats-feedback-compact__summary {
+  margin: 0;
+  color: #1f2937;
+}
+
+.ats-feedback-compact__criteria {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.ats-feedback-compact__criteria-pill {
+  display: inline-flex;
+  gap: 0.3rem;
+  padding: 0.3rem 0.55rem;
+  border-radius: 999px;
+  background: #e8eefc;
+  color: #1e3a8a;
+  font-size: 0.85rem;
+}
+
+.ats-feedback-compact__section-title {
+  margin: 0 0 0.45rem;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #334155;
+}
+
+.ats-feedback-compact__score-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 0.5rem;
+}
+
+.ats-feedback-compact__score-item {
+  border: 1px solid #dbe2f5;
+  border-radius: 0.6rem;
+  background: #fff;
+  padding: 0.5rem 0.6rem;
+}
+
+.ats-feedback-compact__score-label {
+  font-size: 0.78rem;
+  color: #64748b;
+}
+
+.ats-feedback-compact__score-values {
+  margin-top: 0.15rem;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.ats-feedback-compact__score-arrow {
+  font-weight: 600;
+  color: #64748b;
+}
+
+.ats-feedback-compact__delta {
+  margin-top: 0.2rem;
+  display: inline-block;
+  font-size: 0.76rem;
+  font-weight: 700;
+  padding: 0.1rem 0.35rem;
+  border-radius: 999px;
+}
+
+.ats-feedback-compact__delta--up {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.ats-feedback-compact__delta--down {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.ats-feedback-compact__delta--neutral {
+  background: #e2e8f0;
+  color: #334155;
+}
+
+.ats-feedback-compact__arguments {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.5rem;
+}
+
+.ats-feedback-compact__argument-card {
+  border: 1px solid #dbe2f5;
+  border-radius: 0.6rem;
+  background: #fff;
+  padding: 0.55rem 0.65rem;
+}
+
+.ats-feedback-compact__argument-card h4 {
+  margin: 0 0 0.3rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #334155;
+}
+
+.ats-feedback-compact__argument-card p {
+  margin: 0;
+  font-size: 0.88rem;
+  color: #0f172a;
+}
+
+.ats-feedback-compact__bullets {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.ats-feedback-compact__bullets li {
+  margin-bottom: 0.2rem;
 }
 
 .case-document-image-scroll {

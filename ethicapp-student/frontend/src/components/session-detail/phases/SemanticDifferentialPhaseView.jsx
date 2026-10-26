@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { legacyUserApi } from '../../../api/studentApi.js';
 import PhaseChatOverlay from './PhaseChatOverlay.jsx';
+import PhaseInstructions from './PhaseInstructions.jsx';
 import PreviousPhaseResponsesAccordion from './PreviousPhaseResponsesAccordion.jsx';
 import SemanticDifferentialTaskView from './SemanticDifferentialTaskView.jsx';
 
@@ -60,18 +61,12 @@ export default function SemanticDifferentialPhaseView({
   isReadOnly,
   isActivePhase,
   onSubmitPhaseResponse,
+  isExternalResponseProcessing,
   onRequestOpenChatRefreshToken,
   userId,
   t
 }) {
   const responsesByTask = useMemo(() => mapResponsesByTaskId(phase), [phase]);
-  const phaseInstructions = useMemo(() => {
-    if (typeof phase?.instructions === 'string' && phase.instructions.trim().length > 0) {
-      return phase.instructions;
-    }
-
-    return typeof phase?.question === 'string' ? phase.question : '';
-  }, [phase]);
   const safeDraftByTaskId = draftByTaskId ?? {};
   const [submittingTaskId, setSubmittingTaskId] = useState(null);
   const [feedbackByTaskId, setFeedbackByTaskId] = useState({});
@@ -210,6 +205,7 @@ export default function SemanticDifferentialPhaseView({
     const result = await onSubmitPhaseResponse({
       responseKey: taskId,
       responsePayload: {
+        phaseId: Number(phase?.id),
         questionId: taskId,
         value,
         justification
@@ -243,9 +239,11 @@ export default function SemanticDifferentialPhaseView({
         </div>
       ) : null}
 
-      {phaseInstructions.trim().length > 0 ? (
-        <div className="alert alert-secondary mb-0" role="note">
-          <strong>{t('sessionDetail.instructionsLabel')}:</strong> {phaseInstructions}
+      <PhaseInstructions phase={phase} t={t} />
+      {isExternalResponseProcessing ? (
+        <div className="alert alert-info py-2 mb-0 d-inline-flex align-items-center gap-2" role="status" aria-live="polite">
+          <span className="spinner-border spinner-border-sm" aria-hidden="true" />
+          <span>{t('sessionDetail.externalResponseProcessing')}</span>
         </div>
       ) : null}
 
@@ -265,6 +263,7 @@ export default function SemanticDifferentialPhaseView({
             justification={justification}
             taskFeedback={taskFeedback}
             submitting={submittingTaskId === taskId}
+            externalResponseProcessing={Boolean(isExternalResponseProcessing)}
             previousResponsesContent={
               previousPhaseNumbers.length > 0 ? (
                 <>

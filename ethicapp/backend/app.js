@@ -10,8 +10,7 @@ import cookieParser from "cookie-parser";
 
 import assetVersions from "express-asset-versions";
 
-import session from "express-session";
-import { createLegacySessionStore } from "./db/session-redis.js";
+import { getLegacySessionMiddleware } from "./config/session.config.js";
 
 import teacherHome from "./controllers/teacher-home.js";
 import user_profile from "./controllers/users/user-profile.js";
@@ -22,27 +21,31 @@ import activitiesStudent from "./controllers/activities/activities-student.js";
 import activityReports from "./controllers/activities/reports.js";
 import phases from "./controllers/phases.js";
 import designs from "./controllers/designs.js";
+import externalServices from "./controllers/external-services.js";
 import groups from "./controllers/groups.js";
 import group_messages from "./controllers/group-messages.js";
 import cases from "./controllers/cases.js";
+import caseVideos from "./controllers/case-videos.js";
+import caseDocuments from "./controllers/case-documents.js";
+import externalServicesRegistry from "./services/external-services.service.js";
 import tags from "./controllers/tags.js";
 import institutionBranding from "./controllers/institution-branding.js";
 import protectedUploads from "./controllers/protected-uploads.js";
 
 import fs from "fs";
 
-import i18n from "i18n";
 import path from "path";
 import { fileURLToPath } from "url";
 import expressLayouts from "express-ejs-layouts";
+import { mountStaticAssets } from "./config/static-assets.js";
 import { renderScripts } from "./helpers/views-helper.js";
 import redisClient from "./db/redis.js"; // Importar el módulo centralizado
 import { ErrorReply } from "redis";
 import {
-  hydrateLegacySession,
-  exposeLegacySession,
-  requireLegacyAuth
-} from './middleware/index.js';
+    hydrateLegacySession,
+    exposeLegacySession,
+    requireLegacyAuth
+} from "./middleware/index.js";
 
 let app = express();
 app.set("trust proxy", true); // i.e., trust headers from a reverse proxy
@@ -52,16 +55,6 @@ app.set("trust proxy", 1);
 // Configure assets 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-i18n.configure({
-    locales:        ["es_CL", "en_US"],
-    directory:      path.join(__dirname, "locales"),
-    defaultLocale:  "en_US",
-    queryParameter: "lang",
-    objectNotation: true,
-});
-
-app.use(i18n.init);
 
 //const allowedOrigins = process.env.ALLOWED_ORIGINS.split(",");
 const corsOptions = {
@@ -73,9 +66,9 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-// Asset handling
+// Asset handling: only the public asset directories are served (#706).
 const assetPath = path.join(__dirname, "../frontend/assets");
-app.use(express.static(assetPath));
+mountStaticAssets(app, assetPath);
 app.use(assetVersions("/assets", assetPath));
 
 // view engine setup
@@ -94,31 +87,19 @@ logger.token("utc-date", function () {
     return new Date().toISOString();
 });
 
-app.use(logger("[:utc-date | EthicApp] :method :url :status - :response-time ms"));
-
-// Static path for frontend files
-app.use(express.static(path.join(__dirname, "../frontend")));
+// request_id matches the X-Request-Id that NGINX logs for the same request.
+app.use(logger(
+    "[:utc-date | EthicApp] :method :url :status - :response-time ms request_id=:req[x-request-id]"
+));
 
 // Set up cookies and session management
 app.use(cookieParser());
-app.use(session({
-    store:             createLegacySessionStore(),
-    name:              process.env.ETHICAPP_SESSION_COOKIE_NAME || "ethicapp.sid",
-    secret:            process.env.SESSION_SECRET || "legacy-dev-secret",
-    resave:            false,
-    saveUninitialized: false,
-    cookie:            {
-        httpOnly: true,
-        secure:   process.env.ETHICAPP_SESSION_COOKIE_SECURE
-            ? process.env.ETHICAPP_SESSION_COOKIE_SECURE === "true"
-            : process.env.NODE_ENV === "production",
-        sameSite: process.env.ETHICAPP_SESSION_COOKIE_SAMESITE || "lax",
-        maxAge:   Number(process.env.ETHICAPP_SESSION_COOKIE_MAX_AGE_MS || 24 * 60 * 60 * 1000),
-    },
-}));
+app.use(getLegacySessionMiddleware());
 
 app.use(hydrateLegacySession);
 app.use(exposeLegacySession);
+
+app.use("/", externalServices);
 app.use("/", requireLegacyAuth, protectedUploads);
 
 // Middleware for handling redis errors
@@ -143,6 +124,8 @@ try {
 // Make ETHICAPP_BUILD_HASH available in the entire application
 app.locals.ETHICAPP_BUILD_HASH = ETHICAPP_BUILD_HASH;
 
+await externalServicesRegistry.initialize();
+
 app.use("/", requireLegacyAuth, teacherHome);
 app.use("/", requireLegacyAuth, user_profile);
 app.use("/", requireLegacyAuth, impersonation);
@@ -154,6 +137,10 @@ app.use("/", requireLegacyAuth, phases);
 app.use("/", requireLegacyAuth, groups);
 app.use("/", requireLegacyAuth, designs);
 app.use("/", requireLegacyAuth, group_messages);
+// Before cases, whose /cases/:id would otherwise take /cases/videos/... and
+// /cases/documents/...
+app.use("/", requireLegacyAuth, caseVideos);
+app.use("/", requireLegacyAuth, caseDocuments);
 app.use("/", requireLegacyAuth, cases);
 app.use("/", requireLegacyAuth, tags);
 app.use("/", requireLegacyAuth, institutionBranding);

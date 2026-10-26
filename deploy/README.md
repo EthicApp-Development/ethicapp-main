@@ -28,6 +28,22 @@ The contract distinguishes:
 
 All `VITE_*` variables are public frontend variables. They must never contain secrets.
 
+## External Services Manifest
+
+`EXTERNAL_SERVICES_MANIFEST` selects which external-service adapters the
+`ethicapp` container enables (#738). The image ships three manifests:
+
+- default (variable unset): `/app/backend/external-services/manifest.json`,
+  Polyadic Agents and the Argumentation Tutor. Use it in production.
+- `/app/backend/external-services/manifest.staging.json`: the same plus Case
+  Analyst. Set it in staging targets.
+- `/app/backend/external-services/manifest.development.json`: everything,
+  including the mock adapters. Local development only; it needs
+  `external-mock-service`.
+
+Designs keep the ids of services a target disables; they are neither offered
+in the editor nor dispatched.
+
 ## reCAPTCHA Enterprise
 
 The recommended reCAPTCHA provider for `auth-backend` and `management-console`
@@ -69,8 +85,8 @@ legacy-compatible services, not the preferred production setting.
 
 Browser authentication uses opaque, Redis-backed Express sessions issued by
 `auth-backend`. The browser receives only the signed `auth.sid` cookie; session
-contents remain server-side in the session Redis store. Production deployments
-should use `REDIS_SESSION_*` for this Redis role and keep it separate from
+contents remain server-side in the application Redis. Production deployments
+should use `REDIS_APP_*` for this Redis role and keep it separate from
 `REDIS_CACHE_*`.
 
 `auth-backend` enforces role-aware idle and absolute timeouts:
@@ -160,6 +176,33 @@ production config also preserves the `auth_request` session-renewal behavior:
 protected routes read `Set-Cookie` from the auth check response and propagate it
 back to the browser so sliding sessions continue to work in production.
 
+## NGINX Error Responses and Request Correlation
+
+NGINX classifies each request as a page navigation or an API call. It uses
+`Sec-Fetch-Mode: navigate`, then `Sec-Fetch-Dest: document`, then an `Accept`
+header containing `text/html`; every other request counts as an API call. The
+classification only changes how NGINX answers errors it produces itself:
+
+| Situation | Page navigation | API call |
+| --- | --- | --- |
+| Missing or expired session on a protected route | `302` to `/auth/login` | `401` with `{"status":"expired"}` |
+| Upstream down or timed out, or auth check failed (`500`, `502`, `503`, `504`) | Readable "temporarily unavailable" page, same status | `{"status":"unavailable"}`, same status |
+
+Errors returned by the applications themselves pass through unchanged. When
+`auth-backend` expires a session, NGINX also forwards the `Set-Cookie` that
+clears the auth cookie, on both the redirect and the JSON `401`.
+
+Every response carries an `X-Request-Id` header. NGINX keeps a well-formed
+`X-Request-Id` set by a proxy in front of it (8 to 128 characters from
+`A-Z a-z 0-9 . _ -`) and generates one otherwise. It forwards the id to every
+upstream, and the unavailable page shows it as a reference users can report.
+
+Access log lines use the `ethicapp_edge` format, which includes `request_id`,
+the request classification, the auth check status, the user id, the upstream
+status, and upstream and total response times. `ethicapp` logs the same
+`request_id`, so an edge line can be joined with the application line for the
+same request. No environment variables are involved.
+
 ## Student Anonymization
 
 Periodic student data anonymization is documented in
@@ -188,13 +231,29 @@ new or edited JSON taxonomy files from the deployed release are upserted into
 `ETHICAPP_SEED_TAG_TAXONOMIES=true` in production unless the deployment mounts
 and manages a different seed directory through `ETHICAPP_TAG_TAXONOMY_SEED_DIR`.
 
-Redis is role-specific in production. Use `REDIS_SESSION_*` for Express session
-storage and `REDIS_CACHE_*` for database-derived cache entries. Production
-deployments should expose distinct service names, normally `redis-session` and
-`redis-cache`, and should not provide generic `REDIS_HOST`, `REDIS_PORT`, or
-`REDIS_URL` fallbacks. Development may map both roles to the same Redis instance.
-The default production memory limits are `REDIS_SESSION_MAXMEMORY=128mb` and
+Redis is role-specific in production. Use `REDIS_APP_*` for the application
+Redis: Express session storage, the domain-event pub/sub channel that
+`ethicapp-student` uses to notify `ethicapp` (`canonical-schemas/events/README.md`),
+and other application state that must not be evicted as cache. Use
+`REDIS_CACHE_*` for database-derived cache entries. Production deployments should
+expose distinct service names, normally `redis-app` and `redis-cache`, and should
+not provide generic `REDIS_HOST`, `REDIS_PORT`, or `REDIS_URL` fallbacks.
+Development may map both roles to the same Redis instance. The default
+production memory limits are `REDIS_APP_MAXMEMORY=128mb` and
 `REDIS_CACHE_MAXMEMORY=256mb`.
+
+### Migrating from `REDIS_SESSION_*`
+
+`REDIS_APP_*` replaces `REDIS_SESSION_*` (#660). The old names are not part of
+the contract and the services no longer read them, so a deployment adopting this
+release must rename them in the same change:
+
+1. Rename `REDIS_SESSION_HOST`, `REDIS_SESSION_PORT`, `REDIS_SESSION_URL`,
+   `REDIS_SESSION_MAXMEMORY` and `REDIS_SESSION_MAXMEMORY_POLICY` to their
+   `REDIS_APP_*` equivalents in the environment values.
+2. Rename the Redis service to `redis-app`, or add `redis-app` as a network alias
+   of the existing `redis-session` service. Keeping the same data volume means no
+   data migration: existing sessions survive the rename.
 
 The PDF render worker is a separate process that uses the same `ethicapp` image.
 Deploy it as its own service with `ETHICAPP_PROCESS_ROLE=pdf-render-worker`,
@@ -202,6 +261,39 @@ provide the `PDF_RENDER_*` variables from the contract, and mount the same
 protected uploads volume used by `ethicapp`. Do not expose rendered PDF pages or
 manifests through NGINX/static mounts; they must stay behind authorization-aware
 application endpoints.
+
+## Health Diagnostics Targets
+
+`MNG_HEALTH_CHECK_TARGETS` is the allowlist used by the management-console
+health diagnostics to check DNS resolution and outbound connectivity. The
+console only contacts the hosts listed here; requests to the diagnostics API
+cannot add or change targets.
+
+The value is a comma-separated list of `label=host:port` entries:
+
+```text
+MNG_HEALTH_CHECK_TARGETS=smtp=smtp.gmail.com:465,openai=api.openai.com:443
+```
+
+| Rule | Detail |
+| --- | --- |
+| Label | Lowercase letters, digits and hyphens, up to 40 characters, unique per list. |
+| Host | Hostname or IP address, without scheme, credentials or path. Write IPv6 addresses as `[address]:port`. |
+| Port | Integer from 1 to 65535. |
+| Size | At most 20 entries. |
+
+Invalid, duplicate or excess entries are ignored and reported as warnings when
+the management-console starts. When the variable is unset or empty, no targets
+are checked.
+
+List the external dependencies whose failure would break the platform, such as
+the SMTP relay configured in `SMTP_HOST`/`SMTP_PORT` for `auth-backend` and the
+AI provider endpoints reached by external-service adapters. management-console
+does not receive `SMTP_HOST`, so the SMTP relay has to be listed explicitly.
+
+The diagnostics page (`/mng/diagnostics`) and how to read its DNS and
+connectivity results are described in
+[`health-diagnostics-runbook.md`](./health-diagnostics-runbook.md).
 
 ## Production Backups
 

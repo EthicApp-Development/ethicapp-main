@@ -9,7 +9,11 @@ function normalizeLocale(locale) {
   return String(locale || '').trim().toLowerCase().replace('-', '_');
 }
 
-function resolveSupportedLocale(candidateLocale) {
+/**
+ * Canonical locale rule: Spanish (es, es_*) maps to es_CL, anything else to
+ * en_US. Returns null for an empty value.
+ */
+export function resolveSupportedLocale(candidateLocale) {
   const normalizedLocale = normalizeLocale(candidateLocale);
 
   if (!normalizedLocale) {

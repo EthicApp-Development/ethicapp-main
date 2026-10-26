@@ -2,7 +2,14 @@ import { useState } from 'react';
 
 const RESPONSE_COOLDOWN_MS = 3000;
 
-export function usePhaseResponseSubmission({ t, selectedSessionId, submitActivityResponse, loadFullState, userId }) {
+export function usePhaseResponseSubmission({
+  t,
+  selectedSessionId,
+  submitActivityResponse,
+  loadFullState,
+  userId,
+  onResponseAccepted
+}) {
   const [lastSubmittedAtByResponse, setLastSubmittedAtByResponse] = useState({});
 
   const onSubmitPhaseResponse = async ({ responseKey, responsePayload }) => {
@@ -26,6 +33,10 @@ export function usePhaseResponseSubmission({ t, selectedSessionId, submitActivit
     try {
       await submitActivityResponse({ sessionId: selectedSessionId, responsePayload });
       setLastSubmittedAtByResponse((prev) => ({ ...prev, [key]: now }));
+      onResponseAccepted?.({
+        responseKey: key,
+        responsePayload
+      });
       await loadFullState({ sessionId: selectedSessionId, userId, invalidate: true });
       return { ok: true, message: t('sessionDetail.responseSubmitted') };
     } catch {

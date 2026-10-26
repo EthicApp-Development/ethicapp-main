@@ -7,6 +7,27 @@ import * as config from "../config/database.config.js";
 import { uploadsPath } from "../config/uploads.config.js";
 import * as rpg2 from "../db/rest-pg-2.js";
 import { requireRole } from "../helpers/auth-helper.js";
+import { buildDesignCopyDocument } from "../helpers/design-copy.js";
+import {
+    caseVideosJsonSql,
+    copyCaseVideos,
+    normalizeCaseVideoSummaries,
+} from "../helpers/case-videos.js";
+import {
+    caseDocumentsJsonSql,
+    copyCaseDocuments,
+    normalizeCaseDocumentSummaries,
+} from "../helpers/case-documents.js";
+import {
+    designLockedRefusal,
+    designUpdateRefusal,
+    UPDATE_UNLOCKED_DESIGN_SQL,
+} from "../helpers/design-update.js";
+import externalServicesRegistry from "../services/external-services.service.js";
+import {
+    invalidConfigurationResponse,
+    validateDesignServiceConfigurations,
+} from "../services/service-configuration-validation.service.js";
 import {
     CASE_DEFAULT_LICENSE,
     DEFAULT_LANGUAGE_CODE,
@@ -30,6 +51,29 @@ const MAX_SEMANTIC_TAGS = 5;
 
 function sameId(left, right) {
     return Number(left) === Number(right);
+}
+
+function parseStoredDesign(value) {
+    if (typeof value !== "string") {
+        return value ?? null;
+    }
+    try {
+        return JSON.parse(value);
+    } catch {
+        return null;
+    }
+}
+
+// Validates the design's external service configurations against the services'
+// capability descriptors (#731). Problems already present in `storedDesign`
+// come back as warnings.
+function validateServiceConfigurations(design, storedDesign = null) {
+    return validateDesignServiceConfigurations({
+        design,
+        storedDesign,
+        getInstanceConfiguration: (serviceId, locale) =>
+            externalServicesRegistry.getServiceInstanceConfiguration(serviceId, locale),
+    });
 }
 
 function parseTagIds(value) {
@@ -358,6 +402,9 @@ async function copyCaseForUser(client, sourceCaseId, userId, visibility = PRIVAT
         SET assigned_by = EXCLUDED.assigned_by;
     `, [caseId, sourceCase.id, userId]);
 
+    await copyCaseVideos(client, sourceCase.id, caseId);
+    await copyCaseDocuments(client, sourceCase.id, caseId);
+
     return inserted.rows[0].id;
 }
 
@@ -434,6 +481,12 @@ router.post("/designs", async (req, res) => {
         }
 
         let { id, ...designNoId } = design;
+        const configurationCheck = await validateServiceConfigurations(designNoId);
+        if (configurationCheck.errors.length > 0) {
+            const invalid = invalidConfigurationResponse(configurationCheck);
+            return res.status(invalid.status).json(invalid.body);
+        }
+
         const nextVisibility = normalizeVisibility(visibility);
         if (nextVisibility === PUBLIC_VISIBILITY && caseId) {
             const associatedCase = await rpg2.singleSQL({
@@ -482,7 +535,7 @@ router.post("/designs", async (req, res) => {
         // Check if the design was successfully created
         if (result && result.id) {
             await replaceDesignTags(result.id, parsedTagIds, sessionUid);
-            return res.json({ status: "ok", id: result.id });
+            return res.json({ status: "ok", id: result.id, warnings: configurationCheck.warnings });
         } else {
             return res.status(500).json({ status: "err", message: "Failed to create design." });
         }
@@ -529,19 +582,26 @@ router.patch("/designs/:id", async (req, res) => {
         const existingDesign = await rpg2.singleSQL({
             dbcon: config.dbconnString,
             sql: `
-                SELECT id, creator, visibility, license_code, attribution_text, language_code
+                SELECT id, creator, locked, design, visibility, license_code,
+                       attribution_text, language_code
                 FROM designs
                 WHERE id = $1
             `,
             sqlParams: [rpg2.param("plain", designId)],
         });
 
-        if (!existingDesign) {
-            return res.status(404).json({ status: "err", message: "Design not found" });
+        const refusal = designUpdateRefusal(existingDesign, sessionUid);
+        if (refusal) {
+            return res.status(refusal.status).json(refusal.body);
         }
 
-        if (!sameId(sessionUid, existingDesign.creator)) {
-            return res.status(403).json({ status: "err", message: "Forbidden: You do not have permission to update this design." });
+        const configurationCheck = await validateServiceConfigurations(
+            design,
+            parseStoredDesign(existingDesign.design)
+        );
+        if (configurationCheck.errors.length > 0) {
+            const invalid = invalidConfigurationResponse(configurationCheck);
+            return res.status(invalid.status).json(invalid.body);
         }
 
         let {id, ...designNoId} = design;
@@ -571,20 +631,10 @@ router.patch("/designs/:id", async (req, res) => {
             }
         }
 
-        // Update the design
-        await rpg2.singleSQL({
+        // Update the design unless it was locked in the meantime
+        const updated = await rpg2.singleSQL({
             dbcon: config.dbconnString,
-            sql: `
-                UPDATE designs
-                SET design = $1,
-                    case_id = $2,
-                    visibility = $4,
-                    public = $5,
-                    license_code = $6,
-                    attribution_text = $7,
-                    language_code = $8
-                WHERE id = $3
-            `,
+            sql: UPDATE_UNLOCKED_DESIGN_SQL,
             sqlParams: [
                 rpg2.param("plain", designNoId),
                 rpg2.param("plain", caseId),
@@ -596,143 +646,19 @@ router.patch("/designs/:id", async (req, res) => {
                 rpg2.param("plain", normalizeLanguageCode(languageCode ?? languageCodeSnake, existingDesign.language_code || DEFAULT_LANGUAGE_CODE)),
             ],
         });
+        if (!updated?.id) {
+            const locked = designLockedRefusal();
+            return res.status(locked.status).json(locked.body);
+        }
         await replaceDesignTags(designId, parsedTagIds, sessionUid);
 
-        return res.json({ status: "ok", message: "Design updated successfully" });
+        return res.json({
+            status:   "ok",
+            message:  "Design updated successfully",
+            warnings: configurationCheck.warnings,
+        });
     } catch (err) {
         console.error("Error in /designs/:id PATCH:", err);
-        return res.status(500).json({ status: "err", message: "Internal Server Error" });
-    }
-});
-
-router.put("/designs/:id", async (req, res) => {
-    try {
-        const sessionUid = req.session?.uid; // Get the user ID from the session
-        const designId = req.params.id; // Get the design ID from the path
-        const updatedDesign = req.body.design; // Get the updated design from the request body
-
-        // Validate session
-        if (!sessionUid) {
-            return res.status(401).json({ status: "err", message: "Unauthorized" });
-        }
-
-        // Validate input
-        if (!designId || !updatedDesign) {
-            return res.status(400).json({ status: "err", message: "Design ID and updated design data are required" });
-        }
-
-        let {id, ...designNoId} = JSON.parse(updatedDesign);
-        designNoId = JSON.stringify(designNoId);
-
-        // Execute SQL to update the design
-        const result = await singleSQL({
-            dbcon: pass.dbcon,
-            sql: `
-                UPDATE designs
-                SET design = $1
-                WHERE creator = $2 AND id = $3
-            `,
-            sqlParams: [designNoId, sessionUid, designId],
-        });
-
-        // Check if the update was successful
-        if (result) {
-            return res.json({ status: "ok" });
-        } else {
-            return res.status(404).json({ status: "err", message: "Design not found or not owned by the user" });
-        }
-    } catch (err) {
-        console.error("Error in /designs/:id PUT endpoint:", err);
-        return res.status(500).json({ status: "err", message: "Internal Server Error" });
-    }
-});
-
-router.get("/users/:id/designs", async (req, res) => {
-    try {
-        const userId = req.params.id; // Extract user ID from the path
-        const sessionUid = req.session?.uid; // Get session user ID
-
-        // Validate session
-        if (!sessionUid) {
-            return res.status(401).json({ status: "err", message: "Unauthorized" });
-        }
-
-        // Check if the user is allowed to access this data
-        if (!sameId(sessionUid, userId)) {
-            return res.status(403).json({ status: "err", message: "Forbidden" });
-        }
-
-        // Execute SQL to fetch the designs
-        const designs = await rpg2.execSQL({
-            dbcon: config.dbconnString,
-            sql: `
-                SELECT d.id, d.design, d.public, d.visibility, d.locked, d.archived, d.license_code,
-                       d.language_code,
-                       d.attribution_text, d.original_design_id, d.imported_from_design_id,
-                       d.source_design_title, d.source_design_author, d.source_design_license_code,
-                       d.is_editable_copy,
-                       d.case_id,
-                       c.title AS case_title,
-                       c.author_firstname AS case_author_firstname,
-                       c.author_lastname AS case_author_lastname,
-                       c.author_email AS case_author_email,
-                       c.visibility AS case_visibility,
-                       c.license_code AS case_license_code,
-                       c.language_code AS case_language_code,
-                       c.archived AS case_archived,
-                       c.attribution_text AS case_attribution_text,
-                       c.original_case_id AS case_original_case_id,
-                       c.imported_from_case_id AS case_imported_from_case_id,
-                       c.source_case_title AS case_source_case_title,
-                       c.source_case_author AS case_source_case_author,
-                       c.source_case_license_code AS case_source_case_license_code,
-                       c.is_editable_copy AS case_is_editable_copy,
-                       c.rights_status AS case_rights_status,
-                       c.license_notes AS case_license_notes,
-                       c.permission_statement AS case_permission_statement,
-                       c.commercial_source AS case_commercial_source,
-                       COALESCE((
-                           SELECT json_agg(json_build_object(
-                               'id', t.id,
-                               'code', t.code,
-                               'label', COALESCE(tt.label, fallback_tt.label, t.code),
-                               'description', COALESCE(tt.description, fallback_tt.description),
-                               'categoryCode', tc.code,
-                               'categoryLabel', COALESCE(tct.label, fallback_tct.label, tc.code)
-                           ) ORDER BY tc.sort_order, t.sort_order, t.id)
-                           FROM designs_tags dt
-                           INNER JOIN tags t ON t.id = dt.tag_id
-                           INNER JOIN tag_categories tc ON tc.id = t.category_id
-                           LEFT JOIN tag_translations tt
-                               ON tt.tag_id = t.id
-                              AND tt.locale = d.language_code
-                           LEFT JOIN tag_translations fallback_tt
-                               ON fallback_tt.tag_id = t.id
-                              AND fallback_tt.locale = 'en_US'
-                           LEFT JOIN tag_category_translations tct
-                               ON tct.category_id = tc.id
-                              AND tct.locale = d.language_code
-                           LEFT JOIN tag_category_translations fallback_tct
-                               ON fallback_tct.category_id = tc.id
-                              AND fallback_tct.locale = 'en_US'
-                           WHERE dt.design_id = d.id
-                       ), '[]'::json) AS tags,
-                       TRUE AS user_owned
-                FROM designs d
-                LEFT JOIN ethical_cases c ON c.id = d.case_id
-                WHERE d.creator = $1
-                ORDER BY d.id DESC;
-            `,
-            sqlParams: [userId], // Pass the user ID as a parameter
-        });
-
-        // Transform the result into the desired format
-        const result = designs.map(normalizeDesignRow);
-
-        // Return the formatted designs
-        return res.json({ status: "ok", result });
-    } catch (err) {
-        console.error("Error in /users/:id/designs:", err);
         return res.status(500).json({ status: "err", message: "Internal Server Error" });
     }
 });
@@ -1096,19 +1022,15 @@ router.post("/designs/:id/duplicate", async (req, res) => {
                 return res.status(403).json({ status: "err", message: "Forbidden: You cannot clone a private design you do not own." });
             }
 
-            const { id, ...designNoId } = design.design;
-            designNoId.public = false;
-            designNoId.visibility = PRIVATE_VISIBILITY;
-            designNoId.locked = false;
-            designNoId.metainfo = {
-                ...(designNoId.metainfo || {}),
+            const designNoId = buildDesignCopyDocument(design.design, {
                 title: await getUniqueDesignCopyTitle(
                     client,
                     sessionUid,
                     getDesignTitle(design.design),
                     design.case_language_code || design.language_code
                 ),
-            };
+                visibility: PRIVATE_VISIBILITY,
+            });
 
             const copiedCaseId = design.case_id
                 ? await copyCaseForUser(client, design.case_id, sessionUid, PRIVATE_VISIBILITY)
@@ -1277,7 +1199,7 @@ router.get('/designs/:id/valid', async (req, res) => {
 });
 
 router.get("/designs/:id/case", async (req, res) => {
-    if (!requireRole(req, res, ["P", "A", "S"])) {
+    if (!requireRole(req, res, ["P", "A"])) {
         return;
     }
 
@@ -1303,7 +1225,9 @@ router.get("/designs/:id/case", async (req, res) => {
                        c.license_notes,
                        c.permission_statement,
                        c.commercial_source,
-                       c.language_code
+                       c.language_code,
+                       ${caseVideosJsonSql("c")} AS videos,
+                       ${caseDocumentsJsonSql("c")} AS documents
                 FROM designs d
                 LEFT JOIN ethical_cases c ON c.id = d.case_id
                 WHERE d.id = $1
@@ -1341,6 +1265,9 @@ router.get("/designs/:id/case", async (req, res) => {
             return res.status(200).json({ status: "ok", result: null });
         }
 
+        const videos = normalizeCaseVideoSummaries(result.videos);
+        const documents = normalizeCaseDocumentSummaries(result.documents);
+
         return res.status(200).json({
             status: "ok",
             result: {
@@ -1356,6 +1283,8 @@ router.get("/designs/:id/case", async (req, res) => {
                 licenseNotes: result.license_notes,
                 permissionStatement: result.permission_statement,
                 commercialSource: result.commercial_source,
+                videos,
+                documents,
             },
         });
     } catch (err) {

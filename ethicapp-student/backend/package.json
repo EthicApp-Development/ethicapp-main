@@ -6,13 +6,16 @@
   "main": "server.js",
   "scripts": {
     "dev": "nodemon server.js",
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "node --test \"**/*.node-test.mjs\""
   },
   "dependencies": {
+    "connect-redis": "^8.1.0",
     "dotenv": "^17.4.1",
     "express": "^5.2.1",
     "express-session": "^1.19.0",
-    "pg": "^8.16.3"
+    "pg": "^8.16.3",
+    "redis": "^4.7.1"
   },
   "devDependencies": {
     "nodemon": "^3.1.14"

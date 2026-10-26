@@ -19,6 +19,7 @@ export function buildSemanticDifferentialResponsesReportSql() {
             u.sex AS gender,
             d.orden AS question_number,
             d.title AS question_text,
+            d.title_content_type AS question_text_content_type,
             d.tleft AS left_pole,
             d.tright AS right_pole,
             d.num AS max_scale_range,
@@ -43,6 +44,7 @@ export function buildSemanticDifferentialChatTranscriptSql() {
         SELECT
             dc.id,
             dc.uid AS user_id,
+            dc.external_agent_id,
             COALESCE(dc.tmid, (
                 SELECT tu.tmid
                 FROM teamusers AS tu
@@ -54,11 +56,17 @@ export function buildSemanticDifferentialChatTranscriptSql() {
                 ORDER BY tu.tmid
                 LIMIT 1
             )) AS team_id,
-            u.name,
+            CASE
+                WHEN esa.id IS NOT NULL THEN 'external_service'
+                ELSE u.role
+            END AS author_role,
+            COALESCE(esa.display_name, u.name) AS name,
             u.rut,
             u.sex AS gender,
+            esa.service_id AS external_service_id,
             d.orden AS question_number,
             d.title AS question_text,
+            d.title_content_type AS question_text_content_type,
             d.tleft AS left_pole,
             d.tright AS right_pole,
             dc.content AS message,
@@ -70,8 +78,10 @@ export function buildSemanticDifferentialChatTranscriptSql() {
             ON dc.did = d.id
         INNER JOIN stages AS st
             ON d.stageid = st.id
-        INNER JOIN users AS u
+        LEFT JOIN users AS u
             ON dc.uid = u.id
+        LEFT JOIN external_service_agents AS esa
+            ON dc.external_agent_id = esa.id
         WHERE st.sesid = $1
         ORDER BY st.number, d.orden, team_id, dc.stime, dc.id
     `;

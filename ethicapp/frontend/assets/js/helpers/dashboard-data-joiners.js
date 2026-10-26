@@ -137,8 +137,8 @@ let rankingPhaseDataJoiner = (phaseDescriptor, responses, users,
     // Filter relevant users (only those with role 'A')
     const relevantUsers = users.filter(u => u.role === 'A');
 
-    // Extract relevant chat statistics
-    const relevantChats = chatMessageStats;
+    // Extract relevant chat statistics; phases without chat have none.
+    const relevantChats = chatMessageStats ?? [];
 
     // Initialize a map of users indexed by their user ID
     const usersMap = relevantUsers.reduce((acc, user) => {

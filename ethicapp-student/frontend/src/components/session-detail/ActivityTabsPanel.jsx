@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
 import CaseDocumentViewer from './CaseDocumentViewer.jsx';
+import CaseMaterial from './CaseMaterial.jsx';
+import ExternalServiceResultPanel from './external-services/ExternalServiceResultPanel.jsx';
 import RankingPhaseView from './phases/RankingPhaseView.jsx';
 import SemanticDifferentialPhaseView from './phases/SemanticDifferentialPhaseView.jsx';
 
@@ -16,6 +18,9 @@ export default function ActivityTabsPanel({
   isSessionFinished,
   onSubmitPhaseResponse,
   chatRefreshTokenByPhaseId,
+  externalResponseProcessingByPhaseId,
+  externalResultsByPhaseId,
+  onDismissExternalResult,
   userId,
   t
 }) {
@@ -81,7 +86,10 @@ export default function ActivityTabsPanel({
 
       <div className={`activity-tabs-panel-content border border-top-0 rounded-bottom ${panelPaddingClass}`}>
         {activeTab === 'case' && hasCaseTab ? (
-          <CaseDocumentViewer caseDocument={caseDocument} caseDocumentUrl={caseDocumentUrl} t={t} />
+          <>
+            <CaseDocumentViewer caseDocument={caseDocument} caseDocumentUrl={caseDocumentUrl} t={t} />
+            <CaseMaterial videos={caseDocument?.videos} documents={caseDocument?.documents} t={t} />
+          </>
         ) : null}
 
         {activeTab !== 'case' && activePhase && designType === 'semantic_differential' ? (
@@ -92,6 +100,7 @@ export default function ActivityTabsPanel({
             isReadOnly={isSessionFinished}
             isActivePhase={isActivePhase}
             onSubmitPhaseResponse={onSubmitPhaseResponse}
+            isExternalResponseProcessing={Boolean(externalResponseProcessingByPhaseId?.[activePhaseId])}
             onRequestOpenChatRefreshToken={chatRefreshTokenByPhaseId[activePhaseId] ?? 0}
             userId={userId}
             t={t}
@@ -109,6 +118,14 @@ export default function ActivityTabsPanel({
 
         {activeTab !== 'case' && (!activePhase || !['semantic_differential', 'ranking'].includes(designType)) ? (
           <p className="mb-0 text-secondary">{t('sessionDetail.phaseTabPlaceholder')}</p>
+        ) : null}
+
+        {activeTab !== 'case' && activePhase ? (
+          <ExternalServiceResultPanel
+            results={externalResultsByPhaseId?.[activePhaseId] ?? []}
+            onDismiss={onDismissExternalResult}
+            t={t}
+          />
         ) : null}
       </div>
     </section>

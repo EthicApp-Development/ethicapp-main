@@ -42,18 +42,18 @@ export function BrowseDesignsController($scope, $routeParams, toast, $translate,
             vm.forceFetchDesigns();
         };
 
-        DesignCatalogService.registerListener("onDesignCatalogUpdated", 
+        DesignCatalogService.registerListener("onDesignCatalogUpdated",
             updateHandler);
 
         $scope.$on('$destroy', function () {
-            DesignCatalogService.unregisterListener("onDesignCatalogUpdated", 
-                updateHandler);    
+            DesignCatalogService.unregisterListener("onDesignCatalogUpdated",
+                updateHandler);
         });
         $scope.$on("caseVisibilityUpdatedDesigns", function(_event, data) {
             DesignCatalogService.applyPrivateVisibilityToDesigns(data?.affectedDesignIds || []);
             vm.forceFetchDesigns();
         });
-        
+
         try {
             await vm.forceFetchDesigns();
 
@@ -66,7 +66,7 @@ export function BrowseDesignsController($scope, $routeParams, toast, $translate,
             }
         } catch(error) {
             console.error("[BrowseDesignsController::init] Failed to retrieve designId route parameter");
-        }        
+        }
     }
 
     vm.handleSelectDesign = function(id) {
@@ -115,11 +115,11 @@ export function BrowseDesignsController($scope, $routeParams, toast, $translate,
             $scope.$applyAsync();
         }
     };
-    
+
     vm.designLock = async function(id) {
         await DesignCatalogService.toggleDesignLock(id);
     };
-    
+
     vm.getDesigns = async function() {
         vm.userDesigns = await DesignCatalogService.getUserDesigns();
         vm.archivedDesigns = await DesignCatalogService.getArchivedDesigns();
@@ -287,7 +287,7 @@ export function BrowseDesignsController($scope, $routeParams, toast, $translate,
         vm.setPage(vm.currentPage);
         $scope.$applyAsync();
     };
-    
+
     vm.deleteDesign = async function(id) {
         await DesignCatalogService.deleteDesign(id);
     };
@@ -314,7 +314,7 @@ export function BrowseDesignsController($scope, $routeParams, toast, $translate,
     vm.importDesign = async function(id) {
         try {
             await DesignCatalogService.importDesign(id);
-            
+
             $scope.$applyAsync(() => {
                 $translate("design_imported_text").then((result) => {
                     toast.create({
@@ -334,7 +334,7 @@ export function BrowseDesignsController($scope, $routeParams, toast, $translate,
             vm.showDesignToast(messageKey, "alert-danger");
         }
     };
-    
+
     vm.getDesign = async function(id) {
         const design = await DesignCatalogService.getDesignById(id);
         ActivityStateService.setDesign(id, design);

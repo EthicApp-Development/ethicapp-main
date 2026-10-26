@@ -1,50 +1,48 @@
-import * as ChatHelper from "../helpers/chat-helper.js";
+import { registerGuardedRoom } from "./guarded-rooms.js";
+import { roomAccess } from "./socket-room-access.js";
 
-let studentSocketInit = (socket, socketNamespace) => {
-    console.debug('Student connected');
+/**
+ * Builds the /student connection handler. The namespace middleware
+ * (requireSocketRole) has already stored the student's id in socket.data.
+ * Rooms are joined only after a server-side participation check; the
+ * personal room is always the caller's own.
+ */
+export function createStudentSocketInit({ access = roomAccess, logger = console } = {}) {
+    return (socket) => {
+        const { uid } = socket.data;
 
-    // Join a session
-    socket.on('joinSession', (sessionId) => {
-        socket.join(`session-${sessionId}`);
-        console.debug(`A student has joined session-${sessionId}`);
-    });
+        registerGuardedRoom(socket, {
+            joinEvent:  "joinSession",
+            leaveEvent: "leaveSession",
+            roomName:   sessionId => `session-${sessionId}`,
+            canJoin:    sessionId => access.isSessionParticipant(uid, sessionId),
+            logger,
+        });
 
-    // Leave a session
-    socket.on('leaveSession', (sessionId) => {
-        // Leave the socket from the room named `session-{sessionId}`
-        socket.leave(`session-${sessionId}`);
-        console.debug(`A student has left session-${sessionId}`);
-    });
+        registerGuardedRoom(socket, {
+            joinEvent:  "joinGroup",
+            leaveEvent: "leaveGroup",
+            roomName:   groupId => `group-${groupId}`,
+            canJoin:    groupId => access.isGroupMember(uid, groupId),
+            logger,
+        });
 
-    // Join a group
-    socket.on('joinGroup', (groupId) => {
-        socket.join(`group-${groupId}`);
-        console.debug(`Student joined group ${groupId}`);
-    });
+        // The id sent by legacy clients is ignored: a student can only
+        // subscribe to their own external-service results.
+        socket.on("joinUser", (_requestedUserId, ack) => {
+            socket.join(`user-${uid}`);
+            if (typeof ack === "function") {
+                ack({ ok: true });
+            }
+        });
 
-    // Leave a group
-    socket.on('leaveGroup', (groupId) => {
-        // Leave the socket from the room named `group-{groupId}`
-        socket.leave(`group-${groupId}`);
-        console.debug(`A teacher has left group-${groupId}`);
-    });    
-
-    // Send a message to the group
-    socket.on('messageToGroup', (data) => {
-        // Keep the message
-        try {
-            ChatHelper.saveChatMessage(data);
-            socketNamespace.to(`group-${data.header.groupId}`).emit('onGroupMessage', data);    
-        } catch (error) {
-            console.error(`Failed to process message for group ${groupId}`);
-        }
-    });
-
-    // Broadcast message to everyone in the session
-    socket.on('broadcastToSession', (sessionId, message) => {
-        socketNamespace.to(`session-${sessionId}`).emit('notification', message);
-    });
+        socket.on("leaveUser", () => {
+            socket.leave(`user-${uid}`);
+        });
+    };
 }
+
+const studentSocketInit = createStudentSocketInit();
 
 // Teacher-Student socket notifications (from backend)
 const toStudentsNotifications = (socketNamespace) => {
@@ -63,9 +61,13 @@ const toStudentsNotifications = (socketNamespace) => {
                 { content });
         },
 
-        endSession:  (sessionId, content) => {
+        endSession: (sessionId, content) => {
             socketNamespace.to(`session-${sessionId}`).emit("onEndSession", 
                 { content });
+        },
+
+        externalServiceResult: (userId, payload) => {
+            socketNamespace.to(`user-${userId}`).emit("onExternalServiceResult", payload);
         }
     };
 };

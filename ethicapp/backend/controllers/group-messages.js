@@ -4,6 +4,7 @@ import express from "express";
 import * as config from "../config/database.config.js";
 import * as rpg2 from "../db/rest-pg-2.js";
 import { getDesignTypeByPhaseId } from "../helpers/designs-helper.js";
+import { dispatchPhaseHook } from "../helpers/external-service-dispatch.js";
 import { getStatusCode } from "../../common/modules/session-status.js";
 import { messageCountHandlers,
     chatTranscriptHandlers,
@@ -174,16 +175,28 @@ router.post("/phases/:id/question/:question_id/chat_messages", async (req, res) 
         teacherNotifications.chatMessage(accessContext.sessionId, phaseId, questionId, groupId, content);
         teacherNotifications.groupChatMessage(groupId, {
             ...notificationPayload,
+            phaseId:    Number(phaseId),
+            questionId: Number(questionId),
+            groupId:    Number(groupId),
+        });
+        studentNotifications?.chatMessage(groupId);
+        dispatchIncomingChatMessageHook({
+            sessionId: accessContext.sessionId,
             phaseId: Number(phaseId),
             questionId: Number(questionId),
             groupId: Number(groupId),
+            userId: Number(userId),
+            parentId: parentId == null ? null : Number(parentId),
+            content,
+            savedMessage,
+            notificationPayload,
+            designType: accessContext.designType,
         });
-        studentNotifications?.chatMessage(groupId);
 
         // Respond with success
         res.status(201).json({
-            status: "ok",
-            message: "Message posted successfully.",
+            status:       "ok",
+            message:      "Message posted successfully.",
             chat_message: notificationPayload,
         });
     } catch (err) {
@@ -191,6 +204,14 @@ router.post("/phases/:id/question/:question_id/chat_messages", async (req, res) 
         res.status(500).json({ error: "Internal server error" });
     }
 });
+
+async function dispatchIncomingChatMessageHook(context) {
+    try {
+        await dispatchPhaseHook("chat-message-received", context);
+    } catch (error) {
+        console.error("[external-services] Error dispatching incoming chat message hook.", error);
+    }
+}
 
 async function resolveGroupChatAccessContext({ groupId, phaseId = null, questionId, userId, role }) {
     const rows = await rpg2.execSQL({

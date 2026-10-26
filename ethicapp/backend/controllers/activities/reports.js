@@ -16,6 +16,7 @@ import {
     buildSemanticDifferentialResponsesReportSql,
 } from "./report-query-builders.js";
 import { buildCsv } from "./csv-builder.js";
+import { withPlainQuestionText } from "./report-rows.js";
 
 const router = express.Router();
 const REPORT_NOT_IMPLEMENTED = "REPORT_NOT_IMPLEMENTED";
@@ -39,10 +40,13 @@ const SEMANTIC_DIFFERENTIAL_RESPONSE_COLUMNS = [
 const SEMANTIC_DIFFERENTIAL_CHAT_COLUMNS = [
     "id",
     "user_id",
+    "external_agent_id",
     "team_id",
+    "author_role",
     "name",
     "rut",
     "gender",
+    "external_service_id",
     "question_number",
     "question_text",
     "left_pole",
@@ -152,7 +156,7 @@ async function buildSemanticDifferentialResponsesReport(context) {
         sqlParams: [rpg2.param("plain", context.sessionId)],
     });
 
-    const content = buildCsv(SEMANTIC_DIFFERENTIAL_RESPONSE_COLUMNS, rows);
+    const content = buildCsv(SEMANTIC_DIFFERENTIAL_RESPONSE_COLUMNS, withPlainQuestionText(rows));
     const filename = `responses_${context.sessionId}-${buildTimestampForFilename()}.csv`;
 
     return {
@@ -171,7 +175,7 @@ async function buildSemanticDifferentialChatTranscript(context) {
         sqlParams: [rpg2.param("plain", context.sessionId)],
     });
 
-    const content = buildCsv(SEMANTIC_DIFFERENTIAL_CHAT_COLUMNS, rows);
+    const content = buildCsv(SEMANTIC_DIFFERENTIAL_CHAT_COLUMNS, withPlainQuestionText(rows));
     const filename = `chat_${context.sessionId}-${buildTimestampForFilename()}.csv`;
 
     return {

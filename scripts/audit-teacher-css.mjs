@@ -13,7 +13,6 @@ const cssFiles = [
 const teacherContentRoots = [
   'ethicapp/backend/views/layouts/teacher-app.ejs',
   'ethicapp/backend/views/home.ejs',
-  'ethicapp/backend/views/partials/profile.html',
   'ethicapp/frontend/assets/static/views/teacher',
   'ethicapp/frontend/assets/js/modules/teacher',
   'ethicapp/frontend/assets/js/controllers/teacher',

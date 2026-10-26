@@ -1,5 +1,6 @@
-import { useEffect } from 'react';
-import { legacyUserApi } from '../../../api/studentApi.js';
+import { useEffect, useState } from 'react';
+import { legacyUserApi, studentApi } from '../../../api/studentApi.js';
+import { createRealtimeConnectionMonitor } from '../../../services/realtimeConnectionMonitor.js';
 import { getStudentSocket } from '../../../services/studentSocket.js';
 
 export function useActivityRealtimeSync({
@@ -13,8 +14,11 @@ export function useActivityRealtimeSync({
   setChatRefreshTokenByPhaseId,
   activityCurrentPhaseId,
   setGroupIdByPhaseId,
-  setGroupContextByPhaseId
+  setGroupContextByPhaseId,
+  onExternalServiceResult
 }) {
+  const [realtimeIssue, setRealtimeIssue] = useState(null);
+
   useEffect(() => {
     if (!session.isAuthenticated || !selectedSession) {
       return;
@@ -23,6 +27,21 @@ export function useActivityRealtimeSync({
     let isUnmounted = false;
     let socket = null;
     const activeSessionId = Number(selectedSession.id);
+    const connectionMonitor = createRealtimeConnectionMonitor({
+      checkSession: () => studentApi.get('session'),
+      onIssue: (issue) => {
+        if (!isUnmounted) setRealtimeIssue(issue);
+      },
+      onRecovered: () => {
+        if (!isUnmounted) setRealtimeIssue(null);
+      }
+    });
+    const handleConnectError = () => {
+      connectionMonitor.handleConnectError();
+    };
+    const handleConnect = () => {
+      connectionMonitor.handleConnect();
+    };
 
     const handlePhaseTransition = (...payload) => {
       console.debug('[student socket] onPhaseTransition', { sessionId: activeSessionId, payload });
@@ -49,33 +68,56 @@ export function useActivityRealtimeSync({
       setChatRefreshTokenByPhaseId((prev) => ({ ...prev, [phaseId]: (prev[phaseId] ?? 0) + 1 }));
     };
 
+    const handleExternalServiceResult = (payload) => {
+      console.debug('[student socket] onExternalServiceResult', { sessionId: activeSessionId, payload });
+
+      const payloadSessionId = Number(payload?.sessionId);
+      if (Number.isInteger(payloadSessionId) && payloadSessionId > 0 && payloadSessionId !== activeSessionId) {
+        return;
+      }
+
+      onExternalServiceResult?.(payload);
+    };
+
     getStudentSocket()
       .then((instance) => {
         if (isUnmounted) return;
 
         socket = instance;
+        socket.on('connect_error', handleConnectError);
+        socket.on('connect', handleConnect);
         socket.emit('joinSession', activeSessionId);
+        socket.emit('joinUser', session.uid);
         socket.on('onPhaseTransition', handlePhaseTransition);
         socket.on('onShareResponse', handleShareResponse);
         socket.on('onEndSession', handleEndSession);
         socket.on('onChatMessage', handleChatMessage);
+        socket.on('onExternalServiceResult', handleExternalServiceResult);
       })
       .catch((error) => {
         console.debug('[student socket] could not initialize websocket client', { sessionId: activeSessionId, error });
+        // Loading the client script from /socket.io/ fails the same way as a refused handshake.
+        handleConnectError();
       });
 
     return () => {
       isUnmounted = true;
+      setRealtimeIssue(null);
       if (!socket) return;
+
+      socket.off('connect_error', handleConnectError);
+      socket.off('connect', handleConnect);
 
       if (Number.isInteger(Number(currentGroupIdRef.current)) && Number(currentGroupIdRef.current) > 0) {
         socket.emit('leaveGroup', Number(currentGroupIdRef.current));
       }
       socket.emit('leaveSession', activeSessionId);
+      socket.emit('leaveUser', session.uid);
       socket.off('onPhaseTransition', handlePhaseTransition);
       socket.off('onShareResponse', handleShareResponse);
       socket.off('onEndSession', handleEndSession);
       socket.off('onChatMessage', handleChatMessage);
+      socket.off('onExternalServiceResult', handleExternalServiceResult);
     };
   }, [
     currentGroupIdRef,
@@ -83,6 +125,7 @@ export function useActivityRealtimeSync({
     dispatch,
     loadCurrentPhaseState,
     loadFullState,
+    onExternalServiceResult,
     selectedSession,
     session,
     setChatRefreshTokenByPhaseId
@@ -175,4 +218,6 @@ export function useActivityRealtimeSync({
     setGroupContextByPhaseId,
     setGroupIdByPhaseId
   ]);
+
+  return { realtimeIssue };
 }

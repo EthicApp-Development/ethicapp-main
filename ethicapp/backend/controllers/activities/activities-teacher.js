@@ -9,6 +9,10 @@ import { requireRole } from "../../helpers/auth-helper.js";
 import { studentNotifications } from "../../config/socket.config.js";
 import redisClient from "../../db/redis.js";
 import { getDesignTypeBySessionId } from "./activities-common.js";
+import { getEnabledExternalServiceIdsBySessionId } from "../../helpers/designs-helper.js";
+import { dispatchPhaseHook } from "../../helpers/external-service-dispatch.js";
+import { shouldDispatchActivityStarted } from "../../helpers/activity-lifecycle-helper.js";
+import externalServicesRegistry from "../../services/external-services.service.js";
 
 const router = express.Router();
 
@@ -334,8 +338,8 @@ router.post("/activities/:session_id/phase_transition", async (req, res) => {
     if (!requireRole(req, res, "P")) {
         return;
     }
-    const { session_id: sessionId } = req.params;
-    const { phaseId } = req.body;
+    const sessionId = Number(req.params.session_id);
+    const phaseId = Number(req.body.phaseId || req.body.phase_id);
 
     if (!sessionId || !phaseId) {
         return res.status(400).json({ error: "Missing required parameters: session_id or phase_id." });
@@ -358,6 +362,23 @@ router.post("/activities/:session_id/phase_transition", async (req, res) => {
             return res.status(400).json({ error: "The phase does not exist." });
         }
 
+        const sessionState = await rpg2.singleSQL({
+            sql: `
+                SELECT current_stage, status
+                FROM sessions
+                WHERE id = $1
+            `,
+            dbcon: config.dbconnString,
+            sqlParams: [rpg2.param('plain', sessionId)],
+        });
+
+        if (!sessionState) {
+            return res.status(404).json({ error: "Session not found." });
+        }
+
+        const previousPhaseId = Number(sessionState.current_stage) || null;
+        const previousStatus  = Number(sessionState.status) || null;
+
         result = await rpg2.execSQL({
             sql: `
                 UPDATE sessions
@@ -375,6 +396,22 @@ router.post("/activities/:session_id/phase_transition", async (req, res) => {
 
         await redisClient.del(`descriptor:${sessionId}`);
         studentNotifications.phaseTransition(sessionId);
+        dispatchPhaseTransitionHooks({
+            sessionId,
+            startedPhaseId: phaseId,
+            endedPhaseId:   previousPhaseId,
+        });
+
+        // Fire activity-started only on the transition into in_progress (the
+        // activity's first phase), not on ordinary phase-to-phase advances.
+        if (shouldDispatchActivityStarted(previousStatus)) {
+            dispatchActivityStartedHook({
+                sessionId,
+                phaseId:        phaseId,
+                startedPhaseId: phaseId,
+                endedPhaseId:   previousPhaseId,
+            });
+        }
 
         res.status(200).json({ status: "ok", message: "Session transitioned to the new phase." });
     } catch (err) {
@@ -382,6 +419,57 @@ router.post("/activities/:session_id/phase_transition", async (req, res) => {
         res.status(500).json({ error: "Internal server error" });
     }
 });
+
+async function dispatchPhaseTransitionHooks({ sessionId, startedPhaseId, endedPhaseId }) {
+    try {
+        if (endedPhaseId && endedPhaseId !== startedPhaseId) {
+            await dispatchPhaseHook("phase-ended", {
+                sessionId,
+                phaseId: endedPhaseId,
+                startedPhaseId,
+                endedPhaseId,
+            });
+        }
+
+        await dispatchPhaseHook("phase-started", {
+            sessionId,
+            phaseId: startedPhaseId,
+            startedPhaseId,
+            endedPhaseId,
+        });
+    } catch (error) {
+        console.error("[external-services] Error dispatching phase transition hooks.", error);
+    }
+}
+
+// Broadcasts activity-started to the services enabled for the phase being
+// entered (phase-scoped, since preparation is relevant to that phase), isolating
+// any adapter failure so it never breaks the teacher request.
+async function dispatchActivityStartedHook(context) {
+    try {
+        await dispatchPhaseHook("activity-started", context);
+    } catch (error) {
+        console.error("[external-services] Error dispatching activity-started hook.", error);
+    }
+}
+
+// Broadcasts activity-finished to the union of services enabled across ALL phases
+// of the activity design, so any service that could have opened provider-side
+// state (e.g. chat rooms) is notified to clean up — regardless of which phase the
+// activity finished on. This is the safety net guaranteeing nothing leaks past
+// the end of the activity. Adapter failures are isolated from the teacher request.
+async function dispatchActivityFinishedHook(sessionId, context) {
+    try {
+        const enabledServiceIds = await getEnabledExternalServiceIdsBySessionId(sessionId);
+        if (enabledServiceIds.length === 0) {
+            return;
+        }
+        await externalServicesRegistry.dispatchHook("activity-finished", context, { enabledServiceIds });
+    } catch (error) {
+        console.error("[external-services] Error dispatching activity-finished hook.", error);
+    }
+}
+
 
 router.post("/activities/:session_id/finish", async (req, res) => {
     if (!requireRole(req, res, "P")) {
@@ -396,6 +484,22 @@ router.post("/activities/:session_id/finish", async (req, res) => {
     const status = StatusCodes.getStatusCode("finished");
 
     try {
+        const sessionState = await rpg2.singleSQL({
+            sql: `
+                SELECT current_stage
+                FROM sessions
+                WHERE id = $1
+            `,
+            dbcon: config.dbconnString,
+            sqlParams: [rpg2.param('plain', sessionId)],
+        });
+
+        if (!sessionState) {
+            return res.status(404).json({ error: "Session not found." });
+        }
+
+        const previousPhaseId = Number(sessionState.current_stage) || null;
+
         const result = await rpg2.execSQL({
             sql: `
                 UPDATE sessions
@@ -411,7 +515,27 @@ router.post("/activities/:session_id/finish", async (req, res) => {
             return res.status(404).json({ error: "Session not found or no update performed." });
         }
 
+        if (previousPhaseId) {
+            await dispatchPhaseHook("phase-ended", {
+                sessionId: Number(sessionId),
+                phaseId: previousPhaseId,
+                startedPhaseId: null,
+                endedPhaseId: previousPhaseId,
+            });
+        }
+
         studentNotifications.endSession(sessionId);
+
+        // Broadcast activity-finished to every service enabled anywhere in the
+        // activity design (union across phases) so adapters can run required
+        // cleanup regardless of which phase the activity finished on. Fired even
+        // when there is no current phase, so nothing leaks past the activity end.
+        await dispatchActivityFinishedHook(Number(sessionId), {
+            sessionId:      Number(sessionId),
+            phaseId:        previousPhaseId,
+            startedPhaseId: null,
+            endedPhaseId:   previousPhaseId,
+        });
 
         res.status(200).json({ status: "ok", message: "Activity session finished successfully." });
     } catch (err) {
@@ -512,6 +636,7 @@ router.post("/activities/:session_id/phases", async (req, res) => {
 
         res.status(201).json({
             status: "ok",
+            id: result[0].id,
             phaseId: result[0].id,
             message: "Phase added successfully.",
         });

@@ -89,7 +89,8 @@ export function DashboardController($scope, $routeParams, $http,
         }
 
         const hydratedPhaseData = vm.hydratePhaseDataForIndividualModal(phaseData);
-        openSemanticDifferentialIndividualResponseModal($uibModal, response, hydratedPhaseData);
+        openSemanticDifferentialIndividualResponseModal($uibModal, response, hydratedPhaseData,
+            vm.associatedCase?.videos);
     };
 
     vm.openGroupResponseModal = async function(group, phaseData) {
@@ -118,7 +119,8 @@ export function DashboardController($scope, $routeParams, $http,
                 hydratedPhaseData,
                 responses,
                 chatMessages,
-                vm.canUseLiveGroupChat(hydratedPhaseData)
+                vm.canUseLiveGroupChat(hydratedPhaseData),
+                vm.associatedCase?.videos
             );
         } catch (error) {
             console.error("Error opening group response modal:", error);

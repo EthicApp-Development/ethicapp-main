@@ -23,3 +23,32 @@ export let getSessionIdByPhaseId = async (phaseId) => {
         throw err;
     }
 };
+
+export async function getCaseIdBySessionId(sessionId) {
+    const parsedSessionId = Number(sessionId);
+
+    if (!Number.isSafeInteger(parsedSessionId) || parsedSessionId <= 0) {
+        throw new Error("sessionId must be a positive integer.");
+    }
+
+    try {
+        const result = await rpg2.singleSQL({
+            sql: `
+                SELECT d.case_id
+                FROM activity a
+                INNER JOIN designs d
+                    ON d.id = a.design
+                WHERE a.session = $1
+                  AND d.case_id IS NOT NULL
+                LIMIT 1;
+            `,
+            dbcon: config.dbconnString,
+            sqlParams: [rpg2.param("plain", parsedSessionId)],
+        });
+
+        return result?.case_id ? Number(result.case_id) : null;
+    } catch (err) {
+        console.error("Error fetching caseId by sessionId:", err);
+        throw err;
+    }
+}

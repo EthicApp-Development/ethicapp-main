@@ -34,6 +34,19 @@ move to the new tag while the other services stay pinned to their previous tags.
 The contract entry should point to the source ref whose `env.contract.yml`
 matches the environment files being rendered.
 
+When a change adds, renames or removes a variable in `deploy/env.contract.yml`,
+the deployment repository must refresh its copy of the contract for every
+target that deploys that change, update the manifest's `env_contract` source
+ref, and set the target values before the release is deployed. For example,
+`MNG_HEALTH_CHECK_TARGETS` (management-console health diagnostics allowlist,
+see [`deploy/README.md`](./deploy/README.md#health-diagnostics-targets)) needs
+per-target values listing the external dependencies to check.
+
+When outbound email, AI features or other external integrations fail, use the
+management-console diagnostics page and
+[`deploy/health-diagnostics-runbook.md`](./deploy/health-diagnostics-runbook.md)
+to tell DNS failures from network or TLS problems.
+
 Pay special attention to `VITE_*` variables. They are public frontend variables, not secrets. Production images keep frontend bundles environment-neutral; each container writes its frontend `runtime-config.js` from runtime environment variables when it starts.
 
 ## reCAPTCHA Enterprise
@@ -70,20 +83,85 @@ RECAPTCHA_SECRET_KEY=your-classic-secret
 RECAPTCHA_VERIFY_URL=https://www.google.com/recaptcha/api/siteverify
 ```
 
+## Case Videos (YouTube Data API)
+
+Cases can list YouTube videos (epic #779). `ethicapp` looks up their title,
+description and duration with the YouTube Data API v3, using a Google Cloud API
+key:
+
+```bash
+GOOGLE_API_KEY=change-this-in-production
+YOUTUBE_DATA_API_TIMEOUT_MS=8000
+YOUTUBE_METADATA_CACHE_TTL_SECONDS=86400
+```
+
+To create the key, enable the YouTube Data API v3 in a Google Cloud project,
+create an API key there, and restrict it to that API. The case documents below
+reuse the same key, which then needs the Drive API in its restriction too. The
+key is a backend-only secret.
+
+Without `GOOGLE_API_KEY`, case video support is off: teachers cannot add videos,
+and `GET /cases/videos/support` answers `{ "enabled": false }`.
+
+Metadata is cached in the cache Redis (`REDIS_CACHE_*`) for
+`YOUTUBE_METADATA_CACHE_TTL_SECONDS`, 24 hours by default. Values above 2592000
+(30 days, YouTube's storage limit for API data) are capped. Each lookup that
+misses the cache costs 1 unit of the project's YouTube quota, 10,000 units a day
+by default, for up to 50 videos. Teachers' URL previews are limited to 30 a
+minute per teacher.
+
+## Case Documents (Google Drive API)
+
+Cases can list Google Docs, Sheets, Slides and Drive files shared as "Anyone
+with the link", and documents published to the web (epic #789). `ethicapp`
+checks that each one opens for anyone, and reads its name, with the same
+`GOOGLE_API_KEY`:
+
+```bash
+GOOGLE_API_KEY=change-this-in-production
+GOOGLE_DOCUMENT_TIMEOUT_MS=8000
+GOOGLE_DOCUMENT_CACHE_TTL_SECONDS=900
+```
+
+The Google Cloud project of the key must enable the Google Drive API, and a key
+restricted by API must allow the Drive API next to the YouTube Data API v3. A
+key restricted by IP address must allow both the server's IPv4 and IPv6 egress
+addresses: a request from an address outside the list fails with HTTP 403, so
+new documents cannot be added and existing ones show as not verified.
+
+How a document is checked:
+
+- A Drive file is looked up with the Drive API v3 `files.get`, with the key in
+  the `X-Goog-Api-Key` header. When the API answers 404, an anonymous request to
+  the document's URL tells a restricted document (401, or a redirect to the
+  Google sign-in page) from a missing one (404).
+- A document published to the web is checked with an anonymous request to its
+  published URL only, and its name is read from the page title.
+
+Without `GOOGLE_API_KEY`, document attachments are off, published links
+included: teachers cannot add documents, and `GET /cases/documents/support`
+answers `{ "enabled": false }`.
+
+Results are cached in the cache Redis (`REDIS_CACHE_*`): an available document
+for `GOOGLE_DOCUMENT_CACHE_TTL_SECONDS`, 15 minutes by default and at most 86400
+(one day); a document found not public or missing for 120 seconds. Failed
+checks (timeouts, HTTP 403, 429 or 5xx) are not cached. Teachers' URL previews
+are limited to 30 a minute per teacher.
+
 ## Redis Topology
 
 Production deployments use two Redis instances:
 
-- `redis-session`: Express session storage for `ethicapp` and `auth-backend`.
+- `redis-app` (the application Redis): Express session storage for `ethicapp`, `auth-backend` and `ethicapp-student`, the domain-event channel from `ethicapp-student` to `ethicapp` (see `canonical-schemas/events/README.md`), and other application state that must not be evicted as cache. If it is unavailable, `ethicapp-student` keeps serving requests with sessions rebuilt from the auth headers.
 - `redis-cache`: database-derived cache entries used by the legacy `ethicapp` application.
 
-Development keeps a single Redis instance. In development, both `REDIS_SESSION_*` and `REDIS_CACHE_*` point to the same `redis` service.
+Development keeps a single Redis instance. In development, both `REDIS_APP_*` and `REDIS_CACHE_*` point to the same `redis` service.
 
 Use role-specific variables in deployment environments:
 
 ```bash
-REDIS_SESSION_HOST=redis-session
-REDIS_SESSION_PORT=6379
+REDIS_APP_HOST=redis-app
+REDIS_APP_PORT=6379
 REDIS_CACHE_HOST=redis-cache
 REDIS_CACHE_PORT=6379
 ```
@@ -91,11 +169,22 @@ REDIS_CACHE_PORT=6379
 Set Redis container memory limits through the Compose environment:
 
 ```bash
-REDIS_SESSION_MAXMEMORY=128mb
-REDIS_SESSION_MAXMEMORY_POLICY=volatile-ttl
+REDIS_APP_MAXMEMORY=128mb
+REDIS_APP_MAXMEMORY_POLICY=volatile-ttl
 REDIS_CACHE_MAXMEMORY=256mb
 REDIS_CACHE_MAXMEMORY_POLICY=allkeys-lru
 ```
+
+The application Redis keeps the `volatile-ttl` eviction policy: keys with a TTL,
+such as sessions, can be evicted under memory pressure, and keys without a TTL
+are never evicted. Any new application key type must state whether it carries a
+TTL.
+
+`REDIS_APP_*` replaces the earlier `REDIS_SESSION_*` names (#660), which are no
+longer read. To migrate a deployment, rename the variables and either rename the
+Redis service to `redis-app` or give the existing service a `redis-app` alias.
+No data migration is needed: existing sessions survive while the new name points
+to the same instance.
 
 Do not use generic `REDIS_HOST`, `REDIS_PORT`, or `REDIS_URL` values in production. The services resolve Redis by role-specific variables only, which avoids accidentally routing session traffic and cache traffic to the same Docker DNS name.
 
@@ -129,6 +218,7 @@ The repository can build and publish these project images:
 | Service | Context | Default image |
 | --- | --- | --- |
 | `ethicapp` | repository root (`ethicapp/Dockerfile`) | `ghcr.io/<owner>/ethicapp:<tag>` |
+| `external-mock-service` | `external-mock-service/` | `ghcr.io/<owner>/ethicapp-external-mock-service:<tag>` |
 | `auth-backend` | `auth-backend/` | `ghcr.io/<owner>/ethicapp-auth-backend:<tag>` |
 | `ethicapp-student` | `ethicapp-student/` | `ghcr.io/<owner>/ethicapp-student:<tag>` |
 | `management-console` | `management-console/` | `ghcr.io/<owner>/ethicapp-management-console:<tag>` |
@@ -153,6 +243,19 @@ on the production host. The image entrypoint derives `FLYWAY_URL`,
 `POSTGRES_USER`, and `POSTGRES_PASSWORD` when the migration job receives the
 database container env file. Explicit Flyway variables can still override that
 mapping.
+
+`external-mock-service` is the repository-provided PoC service used by mock
+external-service adapters. Publish it with the full image set so deployment
+manifests can pin it, but deploy it only when mock integrations are
+intentionally enabled.
+
+The `ethicapp` image ships three external-services manifests (#738). The
+default, `manifest.json`, enables no external AI service, so an installation
+that sets nothing uses no AI (#811). Staging sets
+`EXTERNAL_SERVICES_MANIFEST=/app/backend/external-services/manifest.staging.json`
+to also enable Case Analyst. `manifest.development.json`, used by the local
+Compose stack, enables the mock adapters too; deploy `external-mock-service`
+only with it.
 
 `postgres` and `redis` are not built by this repository. Use the official images
 and pin the desired versions in the deployment repository.

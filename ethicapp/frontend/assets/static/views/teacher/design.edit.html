@@ -6,7 +6,7 @@
     </div>
 
     <div class="panel panel-default">
-        <div class="panel-body">    
+        <div class="panel-body">
             <div class="row" ng-if="dec.design">
                 <div class="col-md-12">
                     <fieldset>
@@ -49,6 +49,7 @@
                 <div class="col-md-12">
                     <design-error-summary
                         validation-errors="dec.validationErrors"
+                        video-warnings="dec.videoWarnings"
                         scroll-to="dec.scrollToPhase(phaseKey)">
                     </design-error-summary>
                 </div>
@@ -76,13 +77,13 @@
                 </div>
             </div>
         </div>
-    </div>    
+    </div>
 
     <div class="design-editor" validate-design
             phases="dec.design.phases"
             on-validate="dec.handleValidationResult(result)">
         <div uib-accordion close-others="false">
-            <div uib-accordion-group class="panel-default phase-editor-item-heading" 
+            <div uib-accordion-group class="panel-default phase-editor-item-heading"
                 ng-repeat="phase in dec.design.phases track by $index"
                 is-open="dec.accordionState[$index]">
 
@@ -94,15 +95,15 @@
                                 <i class="fa-regular fa-copy  ms-auto"
                                     style="cursor: pointer;"
                                     ng-click="dec.duplicatePhase(phaseIndex, $event)"></i>&nbsp;
-                                <i class="fa-solid fa-trash text-danger" 
-                                    style="cursor: pointer;" 
-                                    phase-deleter 
-                                    phases="dec.design.phases" 
+                                <i class="fa-solid fa-trash text-danger"
+                                    style="cursor: pointer;"
+                                    phase-deleter
+                                    phases="dec.design.phases"
                                     phase-index="phaseIndex"
                                     on-delete="dec.handlePhaseDeletion(index)">
                                 </i>&nbsp;
-                                <i ng-class="{'fa-solid fa-down-left-and-up-right-to-center': dec.accordionState[phaseIndex], 
-                                            'fa-solid fa-up-right-and-down-left-from-center': !dec.accordionState[phaseIndex]}" 
+                                <i ng-class="{'fa-solid fa-down-left-and-up-right-to-center': dec.accordionState[phaseIndex],
+                                            'fa-solid fa-up-right-and-down-left-from-center': !dec.accordionState[phaseIndex]}"
                                     class="fa-solid me-2"
                                     ng-click="dec.toggleAccordionState(phaseIndex, $event)">
                                 </i>
@@ -119,26 +120,57 @@
                             </div>
                         </div>
                         <div class="col-md-4" style="padding-top: 16px" ng-if="phase.mode !== 'individual'">
-                            <grouping-mode-selector 
-                                phase="phase" 
-                                phase-index="phaseIndex" 
-                                design="dec.design" 
+                            <grouping-mode-selector
+                                phase="phase"
+                                phase-index="phaseIndex"
+                                design="dec.design"
                                 validate-callback="dec.handleValidationResult(result)">
                             </grouping-mode-selector>
-                        
+
                             <div style="margin-top:0.5em" ng-if="dec.design.phases[phaseIndex].grouping_algorithm !== 'preserve'">
                                 <label>{{ 'group_size_label' | translate }}</label>
-                                <numeric-input-with-spinbutton 
-                                    value="phase.stdntAmount" 
-                                    min="2" 
-                                    max="10" 
-                                    step="1" 
+                                <numeric-input-with-spinbutton
+                                    value="phase.stdntAmount"
+                                    min="2"
+                                    max="10"
+                                    step="1"
                                     id="phaseNumericInput">
                                 </numeric-input-with-spinbutton>
                             </div>
                         </div>
                         <div class="col-md-4" style="padding-top: 4px">
                             <previous-phases-selector phase="phase" phase-index="phaseIndex" design="dec.design"></previous-phases-selector>
+                        </div>
+                    </div>
+                    <div class="row" ng-if="dec.externalServices.length > 0">
+                        <div class="col-md-12">
+                            <h4>{{ 'external_services_title' | translate }}</h4>
+                            <p class="help-block">{{ 'external_services_phase_help' | translate }}</p>
+                            <div class="external-service-option" ng-repeat="service in dec.externalServices track by service.id">
+                                <div class="checkbox">
+                                    <label>
+                                        <input
+                                            type="checkbox"
+                                            ng-disabled="dec.design.locked"
+                                            ng-checked="dec.isExternalServiceEnabled(phase, service.id)"
+                                            ng-click="dec.setExternalServiceEnabled(phase, service.id, !dec.isExternalServiceEnabled(phase, service.id))">
+                                        <strong>{{ dec.serviceLabel(service) }}</strong>
+                                        <span ng-if="dec.serviceDescription(service)"> - {{ dec.serviceDescription(service) }}</span>
+                                    </label>
+                                </div>
+                                <p class="help-block external-service-llm-notice" ng-if="dec.serviceUsesLlm(service)">
+                                    {{ 'external_services_llm_notice' | translate }}
+                                </p>
+                                <service-configuration-form
+                                    ng-if="dec.isExternalServiceEnabled(phase, service.id) && service.descriptor"
+                                    phase="phase"
+                                    service-id="service.id"
+                                    stored-configurations="dec.storedConfigurationsFor(service.id)"
+                                    server-errors="dec.serverErrorsFor(phase, service.id)"
+                                    read-only="dec.design.locked"
+                                    on-errors-change="dec.setServiceSettingErrors(phase, serviceId, count)">
+                                </service-configuration-form>
+                            </div>
                         </div>
                     </div>
                     <div class="row">
@@ -168,20 +200,21 @@
                                 <div ng-switch on="dec.design.type">
                                     <div ng-switch-when="semantic_differential" ng-repeat="item in phase.questions track by $index">
                                         <div>
-                                            <sd-item-editor 
+                                            <sd-item-editor
                                                 phase-number="phaseIndex+1"
-                                                question="item" 
+                                                question="item"
                                                 question-number="$index+1"
-                                                show-separator="false" 
+                                                show-separator="false"
+                                                case-videos="dec.caseVideos"
                                                 validate-callback="dec.handleValidationResult(result)">
                                                 <div class="row">
                                                     <div class="col-xs-6">
-                                                        <item-deleter 
+                                                        <item-deleter
                                                             items="phase.questions"
                                                             index="$index"
                                                             phase-number="phaseIndex+1"
                                                             on-delete="dec.handleItemDeletion({ phaseNumber: phaseNumber, deletedItem: deletedItem, index: index })">
-                                                        </item-deleter>                                                        
+                                                        </item-deleter>
                                                         <item-duplicator items="phase.questions" index="$index"></item-duplicator>
                                                     </div>
                                                     <div class="col-xs-6 text-right">
@@ -194,7 +227,7 @@
                                     <div ng-switch-when="ranking">
                                         <input style="margin-top: 1em;" ng-model="phase.randomize_item_order" type="checkbox"> <label>{{ 'item_random_order_label' | translate }}</label>
                                         <div ng-repeat="item in phase.roles track by $index">
-                                            <ranking-item-editor 
+                                            <ranking-item-editor
                                                 phase-number="phaseIndex+1"
                                                 item="item"
                                                 item-number="$index+1"
@@ -222,7 +255,7 @@
                     <div class="row">
                         <div class="col-sm-12 text-right">
                             <hr style="margin-top:1em">
-                            <item-mover 
+                            <item-mover
                                 items="dec.design.phases"
                                 item="phase"
                                 on-move="dec.handlePhaseMove({ fromIndex, toIndex })">

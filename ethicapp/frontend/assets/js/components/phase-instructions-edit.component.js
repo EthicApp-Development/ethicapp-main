@@ -14,6 +14,13 @@ function PhaseInstructionsEditController() {
         }
 
         delete vm.phase.instructions;
+        delete vm.phase.instructionsContentType;
+    };
+
+    // The editor reports text/markdown (#767).
+    vm.setInstructions = function (text, contentType) {
+        vm.phase.instructions = text;
+        vm.phase.instructionsContentType = contentType;
     };
 
     vm.isInstructionsInvalid = function () {
@@ -54,14 +61,14 @@ const phaseInstructionsEditComponent = {
         </label>
 
         <div style="margin-top: 0.5em" ng-if="$ctrl.isInstructionsEnabled">
-            <textarea
-                id="phase_instructions_text_{{$ctrl.phaseIndex}}"
-                class="form-control"
-                ng-class="{'input-warning': $ctrl.isInstructionsInvalid()}"
-                rows="3"
-                ng-model="$ctrl.phase.instructions"
-                placeholder="{{ 'phase_instructions_placeholder' | translate }}">
-            </textarea>
+            <rich-text-editor
+                text="$ctrl.phase.instructions"
+                content-type="$ctrl.phase.instructionsContentType"
+                label="{{ 'phase_instructions_title' | translate }}"
+                placeholder="{{ 'phase_instructions_placeholder' | translate }}"
+                invalid="$ctrl.isInstructionsInvalid()"
+                on-change="$ctrl.setInstructions(text, contentType)">
+            </rich-text-editor>
         </div>
     </div>
     `,

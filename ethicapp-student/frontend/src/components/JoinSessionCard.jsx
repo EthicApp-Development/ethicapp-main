@@ -1,52 +1,53 @@
-import axios from 'axios';
-import { useState } from 'react';
-import { legacyUserApi } from '../api/studentApi.js';
+import { useRef, useState } from 'react';
+import { studentApi } from '../api/studentApi.js';
+import { withReference } from '../api/apiErrors.js';
 import { useI18n } from '../app/providers.jsx';
+import { interpretJoinError, interpretJoinResponse } from '../utils/joinSessionOutcome.js';
 
 export default function JoinSessionCard({ disabled, onJoined }) {
   const { t } = useI18n();
   const [joinCode, setJoinCode] = useState('');
   const [joinBusy, setJoinBusy] = useState(false);
   const [joinFeedback, setJoinFeedback] = useState(null);
+  // Set synchronously so a second Enter press before re-render cannot resubmit.
+  const submittingRef = useRef(false);
 
   const handleJoinSession = async (event) => {
     event.preventDefault();
 
-    const normalizedCode = joinCode.trim();
+    if (submittingRef.current) {
+      return;
+    }
+
+    const normalizedCode = joinCode.trim().toLowerCase();
     if (!normalizedCode) {
       setJoinFeedback({ type: 'danger', message: t('joinSession.invalidCode') });
       return;
     }
 
+    submittingRef.current = true;
     setJoinBusy(true);
     setJoinFeedback(null);
 
+    let result;
     try {
-      const { data } = await legacyUserApi.post(`/sessions/join/${normalizedCode.toLowerCase()}`, {
-        device: 'web'
-      });
-
-      if (data?.status !== 'ok') {
-        throw new Error(t('joinSession.joinErrorFallback'));
-      }
-
-      const alreadyJoined = false;
-      const sessionId = Number(data?.sesid);
-
-      setJoinFeedback({
-        type: 'success',
-        message: alreadyJoined ? t('joinSession.alreadyJoined') : t('joinSession.joinedSuccess')
-      });
-      setJoinCode('');
-      onJoined(sessionId, { alreadyJoined });
+      result = interpretJoinResponse(
+        await studentApi.post('sessions/join', { code: normalizedCode, device: 'web' })
+      );
     } catch (error) {
-      const message = axios.isAxiosError(error)
-        ? (error.response?.data?.error ?? t('joinSession.joinErrorFallback'))
-        : t('joinSession.joinErrorFallback');
+      result = interpretJoinError(error);
+    }
 
-      setJoinFeedback({ type: 'danger', message });
-    } finally {
-      setJoinBusy(false);
+    setJoinFeedback({
+      type: result.succeeded ? 'success' : 'danger',
+      message: withReference(t(result.messageKey), result.requestId, t)
+    });
+    submittingRef.current = false;
+    setJoinBusy(false);
+
+    if (result.succeeded) {
+      setJoinCode('');
+      onJoined(result.sessionId, { alreadyJoined: result.kind === 'already_joined' });
     }
   };
 

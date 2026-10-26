@@ -1,0 +1,145 @@
+<div class="service-configuration-form">
+    <p class="help-block" ng-if="$ctrl.status === 'loading'">
+        {{ 'service_settings_loading' | translate }}
+    </p>
+
+    <div class="alert alert-warning service-configuration-notice" role="status" ng-if="$ctrl.status === 'unavailable'">
+        {{ 'service_settings_unavailable' | translate }}
+        <ul class="list-unstyled service-configuration-stored" ng-if="$ctrl.storedEntries.length > 0">
+            <li ng-repeat="entry in $ctrl.storedEntries track by entry.key">
+                <code>{{ entry.key }}</code>: {{ entry.value }}
+            </li>
+        </ul>
+    </div>
+
+    <p class="help-block" ng-if="$ctrl.status === 'none'">
+        {{ 'service_settings_none' | translate }}
+    </p>
+
+    <div ng-if="$ctrl.status === 'ready'">
+        <p class="help-block" ng-if="$ctrl.stale">{{ 'service_settings_stale' | translate }}</p>
+        <p class="help-block" ng-if="$ctrl.sections.length === 0">{{ 'service_settings_none' | translate }}</p>
+
+        <fieldset
+            class="service-configuration-section"
+            ng-repeat="section in $ctrl.sections track by $index"
+            ng-disabled="$ctrl.readOnly">
+            <legend class="service-configuration-group" ng-if="section.group">{{ section.group }}</legend>
+
+            <div
+                class="form-group"
+                ng-repeat="field in section.fields track by field.key"
+                ng-class="{ 'has-error': $ctrl.errorFor(field) }"
+                ng-switch="$ctrl.controlKind(field)">
+
+                <label
+                    ng-if="$ctrl.controlKind(field) !== 'checkbox'"
+                    ng-attr-for="{{ $ctrl.idPrefix + '-' + field.key }}">{{ field.label }}</label>
+
+                <select
+                    ng-switch-when="select"
+                    class="form-control input-sm"
+                    ng-attr-id="{{ $ctrl.idPrefix + '-' + field.key }}"
+                    ng-model="$ctrl.values[field.key]"
+                    ng-options="entry.value as entry.label for entry in $ctrl.options[field.key]"
+                    ng-change="$ctrl.onChange(field)">
+                    <option value="">{{ 'service_settings_default' | translate }} ({{ $ctrl.placeholder(field) }})</option>
+                </select>
+
+                <input
+                    ng-switch-when="number"
+                    type="number"
+                    class="form-control input-sm"
+                    ng-attr-id="{{ $ctrl.idPrefix + '-' + field.key }}"
+                    ng-model="$ctrl.values[field.key]"
+                    ng-model-options="{ allowInvalid: true }"
+                    ng-attr-min="{{ field.validation.minimum }}"
+                    ng-attr-max="{{ field.validation.maximum }}"
+                    ng-attr-step="{{ field.validation.step || 'any' }}"
+                    placeholder="{{ $ctrl.placeholderText(field) }}"
+                    ng-change="$ctrl.onChange(field)">
+
+                <div ng-switch-when="checkbox" class="checkbox">
+                    <label>
+                        <input
+                            type="checkbox"
+                            ng-attr-id="{{ $ctrl.idPrefix + '-' + field.key }}"
+                            ng-checked="$ctrl.effectiveBoolean(field)"
+                            ng-click="$ctrl.toggle(field)">
+                        {{ field.label }}
+                    </label>
+                </div>
+
+                <textarea
+                    ng-switch-when="textarea"
+                    class="form-control input-sm"
+                    rows="3"
+                    ng-attr-id="{{ $ctrl.idPrefix + '-' + field.key }}"
+                    ng-model="$ctrl.values[field.key]"
+                    ng-model-options="{ allowInvalid: true }"
+                    ng-trim="false"
+                    placeholder="{{ $ctrl.placeholderText(field) }}"
+                    ng-change="$ctrl.onChange(field)"></textarea>
+
+                <input
+                    ng-switch-when="text"
+                    type="text"
+                    class="form-control input-sm"
+                    ng-attr-id="{{ $ctrl.idPrefix + '-' + field.key }}"
+                    ng-model="$ctrl.values[field.key]"
+                    ng-model-options="{ allowInvalid: true }"
+                    ng-trim="false"
+                    placeholder="{{ $ctrl.placeholderText(field) }}"
+                    ng-change="$ctrl.onChange(field)">
+
+                <p class="help-block" ng-if="field.description">{{ field.description }}</p>
+                <p class="help-block service-configuration-error" role="alert" ng-if="$ctrl.errorFor(field)">
+                    {{ ('service_setting_error_' + $ctrl.errorFor(field)) | translate:$ctrl.errorParams[field.key] }}
+                </p>
+                <p class="help-block service-configuration-lifecycle" role="status" ng-if="$ctrl.noticeFor(field)">
+                    <i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
+                    {{ ('service_setting_notice_' + $ctrl.noticeFor(field).kind) | translate }}<span
+                        ng-if="$ctrl.noticeFor(field).kind === 'retired_value' && $ctrl.noticeFor(field).defaultText">: {{ $ctrl.noticeFor(field).defaultText }}</span><span
+                        ng-if="$ctrl.noticeFor(field).kind === 'retired_value' && !$ctrl.noticeFor(field).defaultText">.</span>
+                    <span ng-if="$ctrl.noticeFor(field).kind === 'no_longer_valid'">
+                        {{ ('service_setting_error_' + $ctrl.noticeFor(field).reason) | translate:$ctrl.errorParams[field.key] }}
+                    </span>
+                </p>
+                <button
+                    type="button"
+                    class="btn btn-default btn-xs"
+                    ng-if="$ctrl.noticeFor(field).replacement && !$ctrl.readOnly"
+                    ng-click="$ctrl.applyReplacement(field, $ctrl.noticeFor(field).replacement)">
+                    {{ 'service_setting_switch_to' | translate }} «{{ $ctrl.noticeFor(field).replacement.label }}»
+                </button>
+                <button
+                    type="button"
+                    class="btn btn-default btn-xs"
+                    ng-if="$ctrl.isSet(field) && !$ctrl.readOnly"
+                    ng-click="$ctrl.reset(field)">
+                    {{ 'service_settings_use_default' | translate }}
+                </button>
+            </div>
+        </fieldset>
+
+        <div class="service-configuration-retired" role="status" ng-if="$ctrl.notices.retiredFields.length > 0">
+            <p class="help-block">
+                <i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
+                <strong>{{ 'service_settings_retired_title' | translate }}</strong>
+                {{ 'service_settings_retired_help' | translate }}
+            </p>
+            <ul class="list-unstyled">
+                <li ng-repeat="setting in $ctrl.notices.retiredFields track by setting.key">
+                    <code>{{ setting.key }}</code>: {{ $ctrl.formatValue(setting.value) }}
+                    <button
+                        type="button"
+                        class="btn btn-default btn-xs"
+                        ng-if="!$ctrl.readOnly"
+                        ng-click="$ctrl.removeRetired(setting.key)">
+                        {{ 'service_settings_remove' | translate }}
+                    </button>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>

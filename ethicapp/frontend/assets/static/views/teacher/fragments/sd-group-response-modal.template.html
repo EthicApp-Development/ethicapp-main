@@ -13,9 +13,9 @@
             <strong>{{ 'item_label' | translate }} {{ $index + 1 }}</strong>
         </div>
         <div class="panel-body">
-            <p>
-                {{ question.text || ('no_response' | translate) }}
-            </p>
+            <rich-text ng-if="question.text.trim()" text="question.text"
+                content-type="question.contentType" videos="$ctrl.caseVideos"></rich-text>
+            <p ng-if="!question.text.trim()">{{ 'no_response' | translate }}</p>
 
             <div ng-if="$ctrl.getQuestionResponses(question).length === 0">
                 <p class="text-muted">{{ 'no_response' | translate }}</p>

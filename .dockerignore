@@ -9,5 +9,8 @@
 auth-backend/frontend/dist/
 ethicapp-student/frontend/dist/
 management-console/frontend/dist/
+# Built inside the image; local copies may hold stale bundles.
+ethicapp/frontend/assets/js/dist/
+ethicapp/frontend/assets/css/dist/
 
 npm-debug.log*

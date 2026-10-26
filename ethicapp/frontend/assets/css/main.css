@@ -251,31 +251,6 @@ a:hover{
     height: auto;
 }
 
-.top-bar-mini{
-    /* height: 24px; */
-    /* background: #aaa; linear-gradient(to bottom, #fadf72 0%, #ffdb3f 75%, #ffd900 100%);*/
-    background: linear-gradient(to right, #eee 0%, #eee 16%, #252728 30%, #252728 100%); /* #a1a1a1 50%,*/
-    border-bottom: #3C3E3F solid 2px;
-    color: white;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    z-index: 9999;
-}
-
-.top-bar-mini-admin-inspection{
-    border-top: #d62828 solid 2px;
-}
-
-.admin-inspection-legend{
-    margin-right: 0.75rem;
-    margin-left: 0.75rem;
-    font-size: 1.5rem;
-    color: #d62828;
-    font-weight: 600;
-}
-
 .side-panel{
     padding: 8px 24px;
     background: #e2e2e2;
@@ -381,10 +356,6 @@ canvas{
     background: rgb(0 0 0 /40%);
 }
 
-.simple-margin-left{
-    margin-left: 8px;
-}
-
 .simple-padding-top{
     padding-top: 4px;
 }
@@ -423,14 +394,6 @@ canvas{
 
 .bg-blue{
     background: #3f97d4;
-}
-
-.mid-container{
-    max-width: 920px;
-    margin: 0 auto;
-    background: white;
-    padding: 24px;
-    box-shadow: black 0 0 36px;
 }
 
 .mid-container-inst{
@@ -525,20 +488,10 @@ canvas{
     padding: 0 4px;
 }
 
-.scrollable-container{
-    height: calc(100vh - 76px);
-    overflow-y: scroll;
-    background: #333;
-}
-
 .small-scrollable-container{
     height: calc(50vh - 76px);
     overflow-y: scroll;
 
-}
-
-.scrollable-container.doble {
-    height: calc(100vh - 100px);
 }
 
 .table-green-bar{
@@ -597,31 +550,8 @@ td.clickable:hover{
     }
 }
 
-.splash{
-    position: absolute;
-    z-index: 100;
-    background: rgb(0 0 0 /35%);
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-}
-
-.splash .splash-box{
-    background: #eee;
-    width: 320px;
-    padding: 16px;
-    margin: 20vh auto;
-    text-align: center;
-    box-shadow: #333 0 2px 32px;
-}
-
 .label-light:not(.label-success){
     background-color: #adadad;
-}
-
-span.boxed{
-    margin: 4px 16px;
 }
 
 .bg-black-alpha{
@@ -644,11 +574,6 @@ span.boxed{
     background: #fbd387;
 }
 
-div.boxed{
-    border: 1px solid #ccc;
-    padding: 8px;
-}
-
 /*p {
     white-space: pre-wrap;
 }*/
@@ -669,11 +594,6 @@ div.boxed{
 .bordered.black{
     border: 2px solid #000;
 }
-
-.parent-msg{
-    background: rgb(0 0 0 /10%);
-}
-
 
 /* SLIDER */
 .onoffswitch {
@@ -786,11 +706,6 @@ div.boxed{
     padding-right: 0 !important;
 }
 
-.row-min-padding > [class*="col-"] {
-    padding-left: 4px !important;
-    padding-right: 4px !important;
-}
-
 .g-recaptcha {
     display: inline-block;
 }
@@ -870,14 +785,6 @@ div.boxed{
     text-align: center;
 }
 
-
-@media screen and (min-width: 1096px) {
-    .admin-container{
-        padding-left: 10%;
-        padding-right: 10%;
-    }
-}
-
 .question-content{
     font-size: 125%;
     color: #000;
@@ -940,110 +847,8 @@ div.boxed{
     width: 25rem;
 }
 
-.top-bar-tabs{
-    height: auto;
-    padding: 0 8px;
-}
-
-.qs-tabs{
-    overflow-x: auto;
-    overflow-y: hidden;
-    margin-top: 2px;
-    max-height: 36px;
-    white-space: nowrap;
-    -ms-overflow-style: none;
-    overflow: -moz-scrollbars-none;
-}
-
-.qs-tabs::-webkit-scrollbar{
-    display: none;
-}
-
-.qs-tabs .tab{
-    display: inline-block;
-    width: 45px;
-    margin-right: 5px;
-    border-top-right-radius: 8px;
-    border-top-left-radius: 8px;
-    background: #fff;
-    color: #000;
-    text-align: center;
-    padding: 4px 2px;
-    border-top: 8px solid #eee;
-    border-bottom: 1px solid #ddd;
-    opacity: 0.7;
-}
-
-.qs-tabs .tab.wide {
-    width: auto;
-    padding: 4px 8px;
-}
-
-.qs-tabs .tab.tab-text {
-    width: 100px;
-    text-overflow: ellipsis;
-    padding: 4px 8px;
-}
-
-.qs-tabs .tab.tab-text.tab-text-lg {
-    width: 120px;
-}
-
-.qs-tabs .tab:hover{
-    cursor: pointer;
-}
-
-.qs-tabs .tab.active{
-    border-bottom: 1px solid #fff;
-    opacity: 1;
-}
-
-.qs-tabs .tab.yellow{
-    border-top: 8px solid #ffc06a;
-}
-
-.qs-tabs .tab.green{
-    border-top: 8px solid #8BC369;
-}
-
-.qs-tabs .tab.red{
-    border-top: 8px solid #D75C37;
-}
-
-.mid-container.qs-content{
-    max-width: unset;
-    margin: 0 8px;
-    box-shadow: #333 0 4px 36px;
-}
-
-.scrollable-container.blue{
-    background: #fff;
-}
-
-.scrollable-container.white{
-    background: #fff;
-}
-
 .text-white{
     color: #fff !important;
-}
-
-.cflex{
-    display: flex;
-    align-items: stretch;
-}
-
-.cflex > div.cf1 {
-    flex-grow: 1;
-}
-
-.cflex > div.cf3 {
-    flex-grow: 3;
-}
-
-.logo-bar{
-    width: 42px;
-    margin-top: -6px;
 }
 
 /** RADIO BUTTONS **/
@@ -1122,10 +927,6 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
     background-color: rgb(208  208  208 /90%);
 }
 
-.mid-container.simple-pad{
-    padding: 12px;
-}
-
 .margin-hor{
     margin: 0 16px;
 }
@@ -1152,14 +953,6 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
 
 .border-white{
     border: 1px solid white;
-}
-
-.hscroll{
-    height: 30px;
-    overflow-x: auto;
-    overflow-y: hidden;
-    white-space: nowrap;
-    margin: 0 8px;
 }
 
 .rtab{
@@ -1204,36 +997,12 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
     padding: 0;
 }
 
-.pdf-embed{
-    width: 100%;
-    height: calc(100vh - 220px);
-}
-
 .hoverable:hover{
     cursor: pointer;
 }
 
-.anon-badge{
-    display: inline-block;
-    border: 1px solid #eee;
-    background: #0077C2;
-    color: white;
-    font-weight: 700;
-    padding: 2px 6px;
-}
-
 .break-words{
     overflow-wrap: break-word;
-}
-
-.chat-msg{
-    border-radius: 8px;
-    padding: 4px 12px;
-    margin-bottom: 2px;
-}
-
-.chat-msg:hover{
-    background: rgb(0 0 0 /10%);
 }
 
 .margin-top-28{
@@ -1248,10 +1017,6 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
 
 .margin-left-n8{
     margin-left: -8px;
-}
-
-.margin-top-n12{
-    margin-top: -12px;
 }
 
 .dfc{
@@ -1282,38 +1047,6 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
     padding: 4px;
 }
 
-.chat-container{
-    position: absolute;
-    bottom: 0;
-    background: white;
-    margin-right: 16px;
-    margin-left: -12px;
-    border-top: 8px solid #0077c1;
-    border-top-left-radius: 5px;
-    border-top-right-radius: 5px;
-    z-index: 99999;
-    width: 98%;
-}
-
-.chat-border{
-    border: 1px solid #0077c1;
-}
-
-.chat-area{
-    height: 20vh;
-    overflow-y: auto;
-}
-
-.chat-inv{
-    display: block;
-    height: 30vh;
-}
-
-.chat-label-background{
-    background-color: #0077c1;
-    color: white;
-}
-
 .sub-tab-content{
     padding: 16px;
     border: 8px solid #bbb;
@@ -1333,15 +1066,6 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
 
 .bg-darkgray{
     background: #bbb;
-}
-
-.drag-item{
-    padding: 8px;
-}
-
-.h30{
-    height: 30px;
-    padding: 5px;
 }
 
 .text-black{
@@ -1393,17 +1117,6 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
 
 .bg-purple{
     background: #843eb3;
-}
-
-.role-box{
-    padding: 16px 28px;
-    margin: 8px 0;
-    text-align: justify;
-}
-
-.mh30 {
-    min-height: 30px;
-    padding: 5px;
 }
 
 .line_labels{
@@ -1833,16 +1546,6 @@ h2{
     margin-top: 0.5rem;
 }
 
-.top-bar-mini .cf1.text-right.margin-right-8 {
-    display: flex;
-    justify-content: right;
-    align-items: center;
-}
-
-.top-bar-mini strong {
-    margin-left: 0.8rem;
-}
-
 .locked-svg{
     width: 2rem;
 }
@@ -2101,22 +1804,6 @@ h2{
     min-width: 16rem;
 }
 
-.border-word-count-red{
-    border: 1px solid #d74448;
-    border-top-left-radius: 10px;
-    border-top-right-radius: 10px;
-}
-
-.border-word-count-blue{
-    border: 1px solid #0077C2;
-    border-top-left-radius: 10px;
-    border-top-right-radius: 10px;
-}
-
-.text-comment-input{
-    height: 6rem !important;
-}
-
 .rounded-div {
     border: 1px solid #ccc;
     border-radius: 10px;
@@ -2161,19 +1848,6 @@ h2{
     display: flex;
     justify-content: start;
     
-}
-
-.word-count-df-bg{
-    background: #0077C2; 
-}
-
-.word-count-df{
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 8rem;
-    height: 1.5rem;
-    padding: 1rem;
 }
 
 .mr-2{
@@ -2468,7 +2142,9 @@ h2{
     display: inline-block;
 }
 
-.phase-editor-item-heading a {
+/* The accordion's own links; links in teacher-written rich text keep the
+   normal link look and focus ring (#785). */
+.phase-editor-item-heading a:not(.rich-text a) {
     text-decoration: none;
     color: inherit;
 }
@@ -2497,12 +2173,12 @@ h2{
     text-decoration: none;
 }
 
-.phase-editor-item-heading a:hover {
+.phase-editor-item-heading a:not(.rich-text a):hover {
     text-decoration: none;
     color: #0056b3;
 }
 
-.phase-editor-item-heading a:focus {
+.phase-editor-item-heading a:not(.rich-text a):focus {
     outline: none;
 }
 
@@ -2527,6 +2203,178 @@ h2{
 
 .case-form-field .help-block.text-danger {
     color: #a94442;
+}
+
+.case-form-actions {
+    margin-top: 10px;
+}
+
+.case-videos-list {
+    margin-bottom: 15px;
+    max-width: 42rem;
+    padding-left: 24px;
+}
+
+.case-videos-entry {
+    border-bottom: 1px solid #e5e5e5;
+    padding: 8px 0;
+}
+
+.case-videos-item {
+    align-items: flex-start;
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+}
+
+.case-videos-item-body {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.case-videos-item-actions {
+    display: flex;
+    flex: 0 0 auto;
+    gap: 4px;
+}
+
+.case-videos-title {
+    display: block;
+    margin: 0 0 4px;
+    overflow-wrap: anywhere;
+}
+
+.case-videos-meta {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    font-size: 90%;
+    gap: 4px 12px;
+}
+
+.case-videos-notice {
+    margin: 6px 0 0;
+}
+
+.case-videos-add {
+    align-items: center;
+    display: flex;
+    gap: 8px;
+}
+
+.case-videos-preview {
+    margin-top: 12px;
+}
+
+.case-videos-preview-heading {
+    font-size: 85%;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+}
+
+.case-videos-description {
+    margin: 10px 0 0;
+    overflow-wrap: anywhere;
+    white-space: pre-line;
+}
+
+/* About four lines of Bootstrap's 1.42857 line height. */
+.case-videos-description.is-collapsed {
+    max-height: 5.7em;
+    overflow: hidden;
+}
+
+.case-videos-description-toggle {
+    padding-left: 0;
+}
+
+.case-videos-preview-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+/* Case form: attached documents (#793, epic #789). The list, the URL input
+   and the preview card of public Google Docs, Sheets, Slides and Drive files. */
+.case-documents-list {
+    margin-bottom: 15px;
+    max-width: 42rem;
+    padding-left: 24px;
+}
+
+.case-documents-entry {
+    border-bottom: 1px solid #e5e5e5;
+    padding: 8px 0;
+}
+
+.case-documents-item {
+    align-items: flex-start;
+    display: flex;
+    gap: 12px;
+}
+
+.case-documents-icon {
+    color: #555;
+    flex: 0 0 auto;
+    font-size: 1.4em;
+    line-height: 1.2;
+    text-align: center;
+    width: 1.25em;
+}
+
+.case-documents-item-body {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.case-documents-item-actions {
+    display: flex;
+    flex: 0 0 auto;
+    gap: 4px;
+}
+
+.case-documents-name {
+    display: block;
+    margin: 0 0 4px;
+    overflow-wrap: anywhere;
+}
+
+/* Centered, so a Bootstrap 3 .label in the row is not stretched (#804). */
+.case-documents-meta {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    font-size: 90%;
+    gap: 4px 12px;
+}
+
+.case-documents-notice {
+    margin: 6px 0 0;
+}
+
+.case-documents-add {
+    align-items: center;
+    display: flex;
+    gap: 8px;
+}
+
+.case-documents-preview {
+    margin-top: 12px;
+    max-width: 42rem;
+}
+
+.case-documents-preview-heading {
+    font-size: 85%;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+}
+
+.case-documents-preview-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
 }
 
 .fieldset-heading-section {
@@ -2614,6 +2462,26 @@ h2{
 
 .teacher-toast {
     width: 100%;
+}
+
+/* Above the navigation and the workspace loading screen. */
+.session-expired-notice {
+    left: 50%;
+    max-width: calc(100% - 32px);
+    position: fixed;
+    top: 16px;
+    transform: translateX(-50%);
+    width: 640px;
+    z-index: 10050;
+}
+
+.session-expired-notice .alert {
+    align-items: center;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 0;
 }
 
 .teacher-toast-alert {
@@ -3187,4 +3055,429 @@ tr.group-summary {
         min-height: 340px;
         padding: 8px;
     }
+}
+
+/* External service settings in the design editor (#732). */
+.external-service-option {
+    margin-bottom: 10px;
+}
+
+.external-service-llm-notice {
+    margin: -6px 0 6px 20px;
+}
+
+.service-configuration-form {
+    border-left: 3px solid #ddd;
+    margin: 0 0 10px 20px;
+    padding-left: 12px;
+}
+
+.service-configuration-form .service-configuration-group {
+    border-bottom: none;
+    font-size: 13px;
+    font-weight: bold;
+    margin-bottom: 6px;
+}
+
+.service-configuration-form .form-group {
+    max-width: 480px;
+}
+
+.service-configuration-stored {
+    margin: 6px 0 0;
+}
+
+.service-configuration-lifecycle,
+.service-configuration-retired .help-block {
+    color: #8a6d3b;
+}
+
+/* External services in the design and activity views (#757). */
+.phase-external-services-summary .phase-external-service {
+    margin-bottom: 12px;
+}
+
+.phase-external-services-summary .phase-external-service-name {
+    margin-bottom: 2px;
+}
+
+.phase-external-services-summary .phase-external-service-settings .help-block {
+    margin: 2px 0 4px;
+}
+
+/* Teacher-written rich text (#765): block content with the surrounding text's
+   spacing and no trailing margin. */
+.rich-text {
+    display: block;
+}
+
+.rich-text > :last-child {
+    margin-bottom: 0;
+}
+
+.rich-text ul,
+.rich-text ol {
+    padding-left: 1.5em;
+}
+
+/* Videos in rich text (#785): a click-to-load facade over a generic EthicApp
+   placeholder, which the YouTube player replaces in the same 16:9 box. */
+.rich-text-video {
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    margin-bottom: 10px;
+    border-radius: 4px;
+    background-color: #14205f;
+}
+
+.rich-text-video-facade,
+.rich-text-video-player {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+}
+
+.rich-text-video-facade {
+    position: relative;
+    padding: 0;
+    background: linear-gradient(135deg, #2649ec, #14205f);
+    color: #fff;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.rich-text-video-facade:focus-visible {
+    outline: 3px solid #ffbf47;
+    outline-offset: -3px;
+}
+
+.rich-text-video-placeholder {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.rich-text-video-play {
+    position: relative;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background-color: rgb(0 0 0 / 55%);
+    transition: background-color 0.15s;
+}
+
+.rich-text-video-play::before {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    border-width: 11px 0 11px 18px;
+    border-style: solid;
+    border-color: transparent transparent transparent #fff;
+    content: "";
+    transform: translate(-35%, -50%);
+}
+
+.rich-text-video-facade:hover .rich-text-video-play,
+.rich-text-video-facade:focus-visible .rich-text-video-play {
+    background-color: rgb(0 0 0 / 80%);
+}
+
+.rich-text-video-caption {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    padding: 24px 12px 10px;
+    background: linear-gradient(transparent, rgb(0 0 0 / 70%));
+}
+
+.rich-text-video-title {
+    display: -webkit-box;
+    overflow: hidden;
+    font-weight: bold;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+.rich-text-video-details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 10px;
+    font-size: 12px;
+}
+
+.rich-text-video-source {
+    font-weight: bold;
+}
+
+/* A video the case reports as removed, private or not embeddable. */
+.rich-text-video-unavailable {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 10px;
+    padding: 10px 12px;
+    border: 1px solid #faebcc;
+    border-radius: 4px;
+    background-color: #fcf8e3;
+    overflow-wrap: anywhere;
+}
+
+.rich-text-video-notice {
+    color: #8a6d3b;
+}
+
+/* Complementary material (#788): the case's videos below the case document,
+   one full-width column on phones and as many columns as fit on wider
+   screens. The facades and notices keep the rich text video rules above. */
+.case-material {
+    margin: 20px 0;
+}
+
+.case-material-heading {
+    margin: 0 0 12px;
+    font-size: 18px;
+}
+
+.case-material-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+    gap: 20px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.case-material-item {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.case-material-video {
+    display: block;
+}
+
+.case-material-description {
+    margin: 0;
+    white-space: pre-line;
+}
+
+/* About four lines of Bootstrap's 1.42857 line height. */
+.case-material-description.is-collapsed {
+    max-height: 5.7em;
+    overflow: hidden;
+}
+
+.case-material-description-toggle {
+    padding-left: 0;
+}
+
+/* Documents as complementary material (#794): the case's Google Drive
+   documents after its videos, one per row at full width, with tap targets
+   of at least 44px. Long names and URLs wrap instead of overflowing. */
+.case-material-documents {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.case-material-list + .case-material-documents {
+    margin-top: 20px;
+}
+
+.case-material-document {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.case-material-document-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 44px;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background-color: #fff;
+}
+
+.case-material-document-link:hover,
+.case-material-document-link:focus {
+    border-color: #66afe9;
+    background-color: #f5f9fc;
+}
+
+.case-material-document-icon {
+    flex: 0 0 auto;
+    width: 1.25em;
+    font-size: 20px;
+    text-align: center;
+}
+
+.case-material-document-name {
+    min-width: 0;
+}
+
+.case-material-document-notice {
+    margin: 4px 0 0;
+    color: #777;
+    font-size: 12px;
+}
+
+.case-material-document-warning {
+    padding: 10px 12px;
+    border: 1px solid #faebcc;
+    border-radius: 4px;
+    background-color: #fcf8e3;
+    color: #8a6d3b;
+}
+
+.case-material-document-warning-title {
+    margin: 0 0 4px;
+    font-weight: bold;
+}
+
+.case-material-document-warning-text {
+    margin: 0 0 8px;
+}
+
+.case-material-document-warning .case-material-document-link {
+    border-color: #faebcc;
+}
+
+/* Rich text editor (#767): a toolbar over an editable area styled as a form
+   control. The .ProseMirror rules are the editor's required base styles,
+   from prosemirror-view/style/prosemirror.css (MIT). */
+.ProseMirror {
+    position: relative;
+    overflow-wrap: break-word;
+    white-space: pre-wrap;
+    white-space: break-spaces;
+    font-variant-ligatures: none;
+    font-feature-settings: "liga" 0;
+}
+
+.rich-text-editor .ProseMirror li {
+    position: relative;
+}
+
+.ProseMirror-hideselection *::selection {
+    background: transparent;
+}
+
+.ProseMirror-hideselection {
+    caret-color: transparent;
+}
+
+.ProseMirror-selectednode {
+    outline: 2px solid #8cf;
+}
+
+img.ProseMirror-separator {
+    display: inline !important;
+    margin: 0 !important;
+    border: none !important;
+}
+
+.rich-text-editor-toolbar {
+    margin-bottom: 4px;
+}
+
+.rich-text-editor .rich-text-editor-content {
+    height: auto;
+    min-height: 5.5em;
+}
+
+.rich-text-editor .rich-text-editor-content p {
+    margin-bottom: 6px;
+}
+
+.rich-text-editor .rich-text-editor-content > :last-child {
+    margin-bottom: 0;
+}
+
+.rich-text-editor .rich-text-editor-content ul,
+.rich-text-editor .rich-text-editor-content ol {
+    margin-bottom: 6px;
+    padding-left: 1.5em;
+}
+
+.rich-text-editor .rich-text-editor-content.is-empty::before {
+    position: absolute;
+    color: #999;
+    content: attr(data-placeholder);
+    pointer-events: none;
+}
+
+.rich-text-editor-invalid .rich-text-editor-content {
+    border: 1px solid #ffc107;
+    background-color: #fff3cd;
+}
+
+/* Case videos in the rich text editor (#787): the card of an embedded video,
+   the "Insert a case video" dialog and the design editor's video warnings.
+   The dialog reuses the case form's .case-videos-* rules. */
+.rich-text-editor .rich-text-editor-video {
+    align-items: flex-start;
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    display: flex;
+    gap: 10px;
+    margin-bottom: 6px;
+    padding: 8px 10px;
+    white-space: normal;
+}
+
+.rich-text-editor .rich-text-editor-video.has-warning {
+    border-color: #f0ad4e;
+}
+
+.rich-text-editor-video-icon {
+    color: #777;
+    font-size: 1.4em;
+    margin-top: 6px;
+}
+
+.rich-text-editor-video-body {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.rich-text-editor-video-meta {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    font-size: 90%;
+    gap: 4px 12px;
+    margin-top: 4px;
+}
+
+.rich-text-editor .rich-text-editor-video .rich-text-editor-video-warning {
+    margin: 6px 0 0;
+}
+
+.rich-text-editor-video-remove {
+    flex: 0 0 auto;
+}
+
+.case-video-picker-entry.is-unavailable .case-videos-title {
+    color: #777;
+}
+
+.design-video-warnings {
+    margin-top: 10px;
+}
+
+.design-video-warning {
+    cursor: pointer;
 }

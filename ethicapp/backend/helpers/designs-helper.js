@@ -1,5 +1,6 @@
 import * as config from "../config/database.config.js";
 import * as rpg2 from "../db/rest-pg-2.js";
+import { phaseExternalServices, unionEnabledServiceIds } from "./phase-external-services.js";
 
 /**
  * Fetches a design from the "designs" table by its ID.
@@ -171,3 +172,53 @@ export async function getPhaseDesignByPhaseId(phaseId) {
     }
 }
 
+/**
+ * Fetches the union of enabled external-service ids across all phases of the
+ * activity design bound to a session. Used to resolve the broadcast audience for
+ * the `activity-finished` cleanup hook, so any service enabled in any phase is
+ * notified when the activity ends — regardless of which phase it finishes on.
+ *
+ * Design shape per canonical-schemas/ethicapp-v1.schema.json:
+ * `design.phases[].externalServices.enabledServiceIds`.
+ *
+ * @param {number} sessionId - The session whose activity design is inspected.
+ * @returns {Promise<string[]>} De-duplicated enabled service ids (empty if none).
+ */
+export async function getEnabledExternalServiceIdsBySessionId(sessionId) {
+    const activityResult = await rpg2.singleSQL({
+        dbcon: config.dbconnString,
+        sql: `
+            SELECT design
+            FROM activity
+            WHERE session = $1
+        `,
+        sqlParams: [rpg2.param('plain', sessionId)],
+    });
+
+    if (!activityResult) {
+        return [];
+    }
+
+    const designResult = await rpg2.singleSQL({
+        dbcon: config.dbconnString,
+        sql: `
+            SELECT design
+            FROM designs
+            WHERE id = $1
+        `,
+        sqlParams: [rpg2.param('plain', activityResult.design)],
+    });
+
+    return unionEnabledServiceIds(designResult?.design?.phases);
+}
+
+
+/**
+ * The external services enabled for a phase and their stored configurations,
+ * read from the activity's design when the hook is dispatched (#734).
+ * @param {number} phaseId
+ * @returns {Promise<{ enabledServiceIds: string[], configurations: Object<string, object> }>}
+ */
+export async function getPhaseExternalServices(phaseId) {
+    return phaseExternalServices(await getPhaseDesignByPhaseId(phaseId));
+}

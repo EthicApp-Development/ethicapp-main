@@ -1,3 +1,5 @@
+import RichText from '../../common/RichText.jsx';
+
 export default function SemanticDifferentialTaskView({
   task,
   disabled,
@@ -5,6 +7,7 @@ export default function SemanticDifferentialTaskView({
   justification,
   taskFeedback,
   submitting,
+  externalResponseProcessing,
   previousResponsesContent,
   onTaskValueChange,
   onTaskJustificationChange,
@@ -75,7 +78,7 @@ export default function SemanticDifferentialTaskView({
 
   return (
     <article>
-      <p className="fw-semibold mb-2">{task.title}</p>
+      <RichText className="fw-semibold mb-2" text={task.title} contentType={task.titleContentType} />
       <div className="row align-items-center g-2 mb-3">
         <div className="col-3 text-start">
           <small className="text-muted">{task.leftPole}</small>
@@ -160,12 +163,22 @@ export default function SemanticDifferentialTaskView({
         <button
           type="button"
           className="btn btn-primary btn-sm"
-          disabled={disabled || submitting}
+          disabled={disabled || submitting || externalResponseProcessing}
           onClick={onTaskSubmit}
         >
           <span className="d-inline-flex align-items-center gap-2">
-            <i className="fa-solid fa-paper-plane" aria-hidden="true" />
-            <span>{submitting ? t('sessionDetail.submittingResponse') : t('sessionDetail.submitResponse')}</span>
+            {externalResponseProcessing && !submitting ? (
+              <span className="spinner-border spinner-border-sm" aria-hidden="true" />
+            ) : (
+              <i className="fa-solid fa-paper-plane" aria-hidden="true" />
+            )}
+            <span>
+              {submitting
+                ? t('sessionDetail.submittingResponse')
+                : externalResponseProcessing
+                  ? t('sessionDetail.externalResponseProcessingButton')
+                  : t('sessionDetail.submitResponse')}
+            </span>
           </span>
         </button>
       </div>

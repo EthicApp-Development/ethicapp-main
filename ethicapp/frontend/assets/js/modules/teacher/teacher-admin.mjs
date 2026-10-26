@@ -5,18 +5,25 @@ import { ActivityCatalogService } from "../../services/activity-catalog.service.
 import { DesignStateService } from "../../services/design-state.service.js";
 import { DesignCatalogService } from "../../services/design-catalog.service.js";
 import { DesignPublicationService } from "../../services/design-publication.service.js";
+import { CaseVideoPickerService } from "../../services/case-video-picker.service.js";
 import { CasesCatalogService } from "../../services/cases-catalog.service.js";
+import { ExternalServicesCatalogService } from "../../services/external-services-catalog.service.js";
 import { LanguageCatalogService } from "../../services/language-catalog.service.js";
 import { TagCatalogService } from "../../services/tag-catalog.service.js";
 import { TeacherGroupChatService } from "../../services/teacher-group-chat.service.js";
 import { TeacherToastService } from "../../services/teacher-toast.service.js";
 import UserProfileService from "../../services/user-profile.service.js";
 import SocketService from '../../services/socket.service.js';
+import {
+    SessionExpiryService,
+    sessionExpiredNoticeComponent,
+    sessionExpiryInterceptor
+} from "../../services/session-expiry.service.js";
 
 var app = angular.module("TeacherApp", ["ngSanitize",
     "ui.bootstrap", "timer", "ngFileUpload",
     "tableSort", "pascalprecht.translate",
-    "ngRoute", "checklist-model", "ngDialog", "toggle-switch",
+    "ngRoute", "checklist-model", "toggle-switch",
     'ngAnimate']
 );
 
@@ -30,12 +37,23 @@ app.factory("ActivityStateService", ["$http", "TeacherSocketService", ActivitySt
     .factory("ActivityCatalogService", ["$http", ActivityCatalogService])
     .factory("DesignCatalogService", ["$rootScope", "$http", DesignCatalogService])
     .factory("DesignPublicationService", ["$uibModal", "DesignCatalogService", "CasesCatalogService", DesignPublicationService])
+    .factory("CaseVideoPickerService", ["$uibModal", CaseVideoPickerService])
     .factory("DesignStateService", ["$rootScope", "$http", DesignStateService])
+    .factory("ExternalServicesCatalogService",
+        ["$http", "LanguageCatalogService", ExternalServicesCatalogService])
     .factory("UserProfileService", ["$http", "$rootScope", "Upload", UserProfileService])
     .factory("CasesCatalogService", ["$rootScope", "$http", CasesCatalogService])
     .factory("LanguageCatalogService", ["$http", "$translate", LanguageCatalogService])
     .factory("TagCatalogService", ["$http", "$translate", TagCatalogService]);
 app.service("toast", ["$rootScope", "$timeout", TeacherToastService]);
+
+// One notice and one redirect to sign-in when API calls find the session expired.
+app.service("SessionExpiryService", ["$timeout", "$window", SessionExpiryService]);
+app.factory("sessionExpiryInterceptor", ["$q", "SessionExpiryService", sessionExpiryInterceptor]);
+app.config(["$httpProvider", function($httpProvider) {
+    $httpProvider.interceptors.push("sessionExpiryInterceptor");
+}]);
+app.component("sessionExpiredNotice", sessionExpiredNoticeComponent);
 
 import { LocalesController } from "../../controllers/common/locales.controller.js";
 import { ActivityController } from "../../controllers/teacher/activity.controller.js";
@@ -144,31 +162,11 @@ app.controller("ErrorController",
     ["$scope", "$window", "$routeParams",
         ErrorController]);
 app.controller("DesignEditorController", 
-    ["$scope", "$translate", "$timeout", "$routeParams", "DesignStateService", 
+    ["$scope", "$translate", "$timeout", "$routeParams", "DesignStateService",
         "DesignCatalogService", "CasesCatalogService", "LanguageCatalogService",
-        "toast", DesignEditorController]);         
+        "ExternalServicesCatalogService", "toast", "$rootScope", DesignEditorController]);
 app.controller("VoidController", [VoidController]);
 app.controller("ProfileController", ["$scope", "$translate", "toast", "UserProfileService", "LanguageCatalogService", ProfileController]);
-
-app.service("DialogService", function(ngDialog) {
-    this.openDialog = function() {
-        ngDialog.open({
-            template:        "views/templates/teacher/warning-dialog.html",
-            controller:      "DialogCtrl",
-            className:       "ngdialog-theme-default",
-            closeByDocument: true
-        });
-    };
-  
-    this.closeDialog = function() {
-        ngDialog.close();
-    };
-});
-
-app.controller("DialogCtrl", function($scope, DialogService) {
-    $scope.openDialog = DialogService.openDialog;
-    $scope.closeDialog = DialogService.closeDialog;
-});
 
 import { connectedUsersDirective, ConnectedUsersDirectiveController } from "../../directives/connected-users.directive.js";
 import { activityControlsDirective } from "../../directives/activity-controls.directive.js";
@@ -208,6 +206,12 @@ import { designDescriptionComponent } from "../../components/design-description.
 import rankingItemEditorComponent from "../../components/ranking-item-editor.component.js";
 import sdItemEditorComponent from "../../components/sd-item-editor.component.js";
 import groupingModeSelectorComponent from "../../components/grouping-mode-selector.component.js";
+import serviceConfigurationFormComponent
+    from "../../components/service-configuration-form.component.js";
+import phaseExternalServicesSummaryComponent
+    from "../../components/phase-external-services-summary.component.js";
+import richTextComponent from "../../components/rich-text.component.js";
+import richTextEditorComponent from "../../components/rich-text-editor.component.js";
 import previousPhasesSelectorComponent from "../../components/previous-phases-selector.component.js";
 import numericInputWithSpinbuttonComponent from "../../components/numeric-input-with-spinbutton.component.js";
 import phaseMoverComponent from "../../components/phase-mover.component.js";
@@ -219,8 +223,12 @@ import designItemComponent from '../../components/design-item.component.js';
 import caseSearchSelectorComponent from "../../components/case-search-selector.component.js";
 import caseCardComponent from "../../components/case-card.component.js";
 import caseDocumentViewerComponent from "../../components/case-document-viewer.component.js";
+import caseMaterialComponent from "../../components/case-material.component.js";
+import videoFacadeComponent from "../../components/video-facade.component.js";
 import caseAuthorEditorComponent from "../../components/case-author-editor.component.js";
 import caseFormEditorComponent from "../../components/case-form-editor.component.js";
+import caseAttachedDocumentsEditorComponent
+    from "../../components/case-attached-documents-editor.component.js";
 import caseRightsEditorComponent from "../../components/case-rights-editor.component.js";
 import tagSelectorComponent from "../../components/tag-selector.component.js";
 import phaseInstructionsEditComponent from "../../components/phase-instructions-edit.component.js";
@@ -230,6 +238,10 @@ import teacherToastComponent from "../../components/teacher-toast.component.js";
 app.component('activityDescription', activityDescriptionComponent);
 app.component('designDescription', designDescriptionComponent);
 app.component('groupingModeSelector', groupingModeSelectorComponent);
+app.component("serviceConfigurationForm", serviceConfigurationFormComponent);
+app.component("phaseExternalServicesSummary", phaseExternalServicesSummaryComponent);
+app.component("richText", richTextComponent);
+app.component("richTextEditor", richTextEditorComponent);
 app.component('previousPhasesSelector', previousPhasesSelectorComponent);
 app.component('numericInputWithSpinbutton', numericInputWithSpinbuttonComponent);
 app.component('phaseMover', phaseMoverComponent);
@@ -243,8 +255,11 @@ app.component('designItem', designItemComponent);
 app.component("caseSearchSelector", caseSearchSelectorComponent);
 app.component("caseCard", caseCardComponent);
 app.component("caseDocumentViewer", caseDocumentViewerComponent);
+app.component("caseMaterial", caseMaterialComponent);
+app.component("videoFacade", videoFacadeComponent);
 app.component("caseAuthorEditor", caseAuthorEditorComponent);
 app.component("caseFormEditor", caseFormEditorComponent);
+app.component("caseAttachedDocumentsEditor", caseAttachedDocumentsEditorComponent);
 app.component("caseRightsEditor", caseRightsEditorComponent);
 app.component("tagSelector", tagSelectorComponent);
 app.component("phaseInstructionsEdit", phaseInstructionsEditComponent);

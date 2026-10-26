@@ -7,9 +7,9 @@ This file defines working expectations for humans and coding agents operating in
 This repository is a multi-project workspace. Important areas:
 
 - `ethicapp/`: legacy EthicApp application (AngularJS 1.8 + Express).
-  - Includes deprecated/aging student features.
   - Includes currently used teacher-facing features.
-  - Includes admin-user functionality.
+  - Serves the backend API, Socket.IO namespaces and protected uploads that `ethicapp-student` uses; it no longer has a student UI of its own.
+  - Has no administration UI; `management-console` handles administration. ethicapp only keeps the server side of the console's teacher impersonation, under `/api/admin/impersonation/`. Its start endpoint is reached over the internal network only. The stop endpoint is served at the edge for the "back to management console" button, which ends the impersonation and returns to `/mng/users`.
 - `auth-backend/`: authentication app/service (login, logout, sign-up, password recovery, password change).
 - `ethicapp-student/`: new student-focused application under active development (Vite + React 19 (JS) + Express).
 - `management-console/`: super-admin management application for single-tenant operations (React + Vite + Bootstrap 5 frontend, Express backend, PostgreSQL access, and i18n aligned with `auth-backend`).
@@ -113,6 +113,47 @@ Given the mix of legacy code, prototype-quality code, and AI-assisted developmen
   - risks/limitations,
   - verification steps.
 
+### Epics and sub-issues
+
+Work that spans several PRs is tracked as an epic with sub-issues. Epics #687 and #760 are the reference examples.
+
+The epic:
+
+- **Title and labels.** `[Epic] <goal>`, labeled `epic` plus the kind of work (for example `enhancement`).
+- **Body sections:**
+  - Goal;
+  - Current state, with file and line references;
+  - Scope;
+  - Out of scope;
+  - Decisions, dated, which close the open questions;
+  - Open questions, while any remain;
+  - Deployment: migrations, environment variables, `ethicapp-deployment` sync;
+  - Context;
+  - Sub-issues.
+- **Sub-issues section:**
+  - a checklist grouped by area, one line per sub-issue;
+  - each line gives the issue, its saga number and what it depends on, by saga number. For example: `- [ ] #763 (03/08): ... Depends on 02.`;
+  - when a sub-issue is done, its line is checked and records the PR that closed it (`#729 (06/15, via #747)`).
+
+Each sub-issue:
+
+- **Title.** It carries the saga number in the suggested order: `[Epic <epic number> · <NN>/<total>] <title>`, for example `[Epic 760 · 03/08] Carry text content types into activity phases and student payloads`. An item added later gets a letter suffix (`04b`), so existing numbers stay stable.
+- **Body.** It starts with `Parent epic: #<epic number>`, followed by these sections:
+  - Summary;
+  - Current state;
+  - Proposed approach;
+  - Acceptance criteria;
+  - Dependencies;
+  - Notes, optional.
+- **Linking.** It is linked to the epic as a GitHub sub-issue, in addition to the checklist.
+
+A PR that implements a sub-issue:
+
+- **Title.** It carries the same saga prefix as its sub-issue: `[Epic <epic number> · <NN>/<total>] <title>`, for example `[Epic 760 · 03/08] Carry text content types into activity phases and student payloads`.
+- **Body.** It starts with `Part of epic #<epic number>. Closes #<sub-issue number>.`, followed by the PR description sections above.
+
+Issues are written in English. A PR merged into a branch other than the default branch does not close its issue automatically. Close the issue by hand, with a comment naming the PR and the merge commit, and check its line in the epic.
+
 ## 5) Constraints and do-not rules
 
 - **Do not** introduce dependencies with known security risks or dependencies that are obsolete.
@@ -160,9 +201,9 @@ Production-oriented changes must stay aligned with the repository-owned deployme
 - The PDF render worker is production-relevant. Keep `PDF_RENDER_*` defaults aligned across `deploy/env.contract.yml`, `ethicapp/.env.example`, `docker-compose.yml`, and deployment notes when changing rendering behavior.
 - Rendered case-document images and manifests must stay in protected uploads storage and be served through authorization-aware application endpoints. Do not expose them through public static NGINX mounts.
 - Production Redis topology is role-specific:
-  - `REDIS_SESSION_*` is for Express session storage used by `ethicapp` and `auth-backend`.
+  - `REDIS_APP_*` is the application Redis: Express session storage used by `ethicapp`, `auth-backend` and `ethicapp-student`, one-way domain events between services (`canonical-schemas/events/`), and other application state that must not be evicted as cache. Never route application logic through `REDIS_CACHE_*`. Its eviction policy is `volatile-ttl`, so any new key type must state whether it carries a TTL.
   - `REDIS_CACHE_*` is for database-derived cache entries used by legacy `ethicapp`.
-  - Production deployments must provide distinct Redis service DNS names, normally `redis-session` and `redis-cache`.
+  - Production deployments must provide distinct Redis service DNS names, normally `redis-app` and `redis-cache`.
   - Development may map both roles to the same Redis service in the root local-development Compose file.
   - Keep Redis memory defaults and eviction policies in sync across `.env.example`, `deploy/env.contract.yml`, and `INSTALL.md`.
 - Do not add generic `REDIS_HOST`, `REDIS_PORT`, or `REDIS_URL` production fallbacks; prefer role-specific Redis variables.
@@ -256,3 +297,12 @@ When adding/changing translatable features:
 3. Ensure API/email/user-flow messages are localized as applicable.
 4. Ensure locale inference/normalization follows the canonical rule above.
 5. If DB locale defaults or schema are touched, keep naming as `preferred_locale` and defaults aligned with the policy.
+
+## Agent Skills
+
+`.claude/settings.json` registers the `ethicapp-agent-skills` marketplace
+(`EthicApp-Development/ethicapp-agent-skills`, public) and enables the
+`ethicapp-security` plugin for anyone who clones and trusts this repository.
+Use `/ethicapp-security:dependency-vulnerabilities` for dependency
+vulnerability audits and fixes; the skill defers to this file for repository
+facts.

@@ -1,0 +1,188 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.ethicapp.local/rich-text/rich-text-tree-v2.schema.json",
+  "title": "EthicApp Rich Text Tree",
+  "description": "Normalized structure of a teacher-written text (#762), as renderers produce it from a text and its content type. Version 2 (#784) adds links and YouTube video blocks. See README.md in this directory for the parsing and normalization rules.",
+  "type": "array",
+  "items": { "$ref": "#/$defs/block" },
+
+  "$defs": {
+    "block": {
+      "description": "A top-level block. Videos are only top-level: inside a list item, a link to a video stays a link.",
+      "oneOf": [
+        { "$ref": "#/$defs/paragraph" },
+        { "$ref": "#/$defs/list" },
+        { "$ref": "#/$defs/video" }
+      ]
+    },
+
+    "listBlock": {
+      "oneOf": [
+        { "$ref": "#/$defs/paragraph" },
+        { "$ref": "#/$defs/list" }
+      ]
+    },
+
+    "paragraph": {
+      "type": "object",
+      "required": ["type", "children"],
+      "properties": {
+        "type": { "const": "paragraph" },
+        "children": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/inline" }
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "list": {
+      "description": "A bulleted list (ordered: false, start: null) or a numbered list (ordered: true, start: the first item's number). Whether the source list was tight or loose is not recorded.",
+      "type": "object",
+      "required": ["type", "ordered", "start", "items"],
+      "properties": {
+        "type": { "const": "list" },
+        "ordered": { "type": "boolean" },
+        "start": { "type": ["integer", "null"], "minimum": 0 },
+        "items": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/listItem" }
+        }
+      },
+      "additionalProperties": false,
+      "if": { "properties": { "ordered": { "const": true } } },
+      "then": { "properties": { "start": { "type": "integer" } } },
+      "else": { "properties": { "start": { "type": "null" } } }
+    },
+
+    "listItem": {
+      "description": "A list item holds blocks, so it can contain paragraphs and nested lists. An empty item has no children.",
+      "type": "object",
+      "required": ["type", "children"],
+      "properties": {
+        "type": { "const": "listItem" },
+        "children": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/listBlock" }
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "video": {
+      "description": "A top-level paragraph whose only content was a link to a YouTube video. Only the validated id is kept: renderers build every URL from it, never from the source text.",
+      "type": "object",
+      "required": ["type", "provider", "videoId", "title"],
+      "properties": {
+        "type": { "const": "video" },
+        "provider": { "const": "youtube" },
+        "videoId": {
+          "description": "A YouTube video id: 11 characters from A-Z, a-z, 0-9, '_' and '-'.",
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{11}$"
+        },
+        "title": {
+          "description": "The link's text on one line: breaks and whitespace runs become single spaces, and the ends are trimmed.",
+          "type": "string",
+          "pattern": "^\\S+( \\S+)*$"
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "inline": {
+      "oneOf": [
+        { "$ref": "#/$defs/text" },
+        { "$ref": "#/$defs/strong" },
+        { "$ref": "#/$defs/emphasis" },
+        { "$ref": "#/$defs/break" },
+        { "$ref": "#/$defs/link" }
+      ]
+    },
+
+    "text": {
+      "description": "Literal text, shown as is. Adjacent text nodes are always merged, so two never follow each other.",
+      "type": "object",
+      "required": ["type", "value"],
+      "properties": {
+        "type": { "const": "text" },
+        "value": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
+
+    "strong": {
+      "type": "object",
+      "required": ["type", "children"],
+      "properties": {
+        "type": { "const": "strong" },
+        "children": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/inline" }
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "emphasis": {
+      "type": "object",
+      "required": ["type", "children"],
+      "properties": {
+        "type": { "const": "emphasis" },
+        "children": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/inline" }
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "break": {
+      "description": "A line break inside a paragraph.",
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": { "const": "break" }
+      },
+      "additionalProperties": false
+    },
+
+    "link": {
+      "description": "A link to an http or https URL. Its text never contains another link, and is never empty: a link with no visible text has its href as text.",
+      "type": "object",
+      "required": ["type", "href", "children"],
+      "properties": {
+        "type": { "const": "link" },
+        "href": {
+          "description": "The destination as markdown-it normalizes it: entities and escapes decoded, the host in punycode, and every character outside the URL-safe ASCII set percent-encoded. It never holds spaces, quotes or angle brackets.",
+          "type": "string",
+          "pattern": "^[Hh][Tt][Tt][Pp][Ss]?://[A-Za-z0-9;:@&=+$,_.!~*'()%-][A-Za-z0-9;/?:@&=+$,_.!~*'()#%-]*$"
+        },
+        "children": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/inline",
+            "not": { "$ref": "#/$defs/containsLink" }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "containsLink": {
+      "description": "An inline node that is a link or holds one at any depth.",
+      "anyOf": [
+        { "required": ["type"], "properties": { "type": { "const": "link" } } },
+        {
+          "required": ["children"],
+          "properties": { "children": { "contains": { "$ref": "#/$defs/containsLink" } } }
+        }
+      ]
+    }
+  }
+}

@@ -61,4 +61,28 @@ describe("dashboard data joiners", () => {
         assert.equal(groupSummary.chatR1, 5);
         assert.equal(groupSummary.totalChatCount, 5);
     });
+
+    it("builds ranking phase data when the phase has chat disabled", () => {
+        // The dashboard passes null chat statistics for phases without chat.
+        const users = [{ id: 1, name: "Ada", role: "A" }];
+        const responses = [{ uid: 1, actorid: 11, orden: 2, description: "Because" }];
+
+        const state = DashboardDataJoiners.ranking.joinPhaseData(
+            phaseDescriptor, responses, users, null
+        );
+
+        assert.equal(state.length, 1);
+        assert.equal(state[0].chatCount, 0);
+    });
+
+    it("builds semantic differential phase data when the phase has chat disabled", () => {
+        const users = [{ id: 1, name: "Ada", role: "A" }];
+
+        const state = DashboardDataJoiners.semantic_differential.joinPhaseData(
+            phaseDescriptor, [], users, null
+        );
+
+        assert.equal(state.length, 1);
+        assert.equal(state[0].userId, 1);
+    });
 });

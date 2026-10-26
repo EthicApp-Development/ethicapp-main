@@ -7,6 +7,7 @@ import { getManagementSessionCookieMaxAgeMs } from './config/session.js';
 import hydrateSessionFromAuthProxy from './middleware/hydrateSessionFromAuthProxy.js';
 import { csrfProtection } from './middleware/csrfProtection.js';
 import csrfRoutes from './routes/csrf.routes.js';
+import healthRoutes from './routes/health.routes.js';
 import institutionRoutes from './routes/institution.routes.js';
 import runtimeConfigRoutes from './routes/runtime-config.routes.js';
 import profileRoutes from './routes/profile.routes.js';
@@ -45,6 +46,7 @@ app.use('/mng/api', csrfProtection);
 app.use(institutionRoutes);
 app.use(profileRoutes);
 app.use(usersRoutes);
+app.use(healthRoutes);
 app.use(viewRoutes);
 
 app.get('/mng/health', (req, res) => {
