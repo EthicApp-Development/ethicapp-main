@@ -78,7 +78,7 @@ test("manifest: no service declares the removed capabilities key", () => {
 // ─── Manifests per environment (#738) ────────────────────────────────────────
 
 const MANIFESTS = {
-    "manifest.json":         ["argumentation-tutor-system", "polyadic-devils-advocate"],
+    "manifest.json":         [],
     "manifest.staging.json": [
         "argumentation-tutor-system",
         "case-analyst",
@@ -104,7 +104,7 @@ function enabledIds(manifestData) {
         .sort();
 }
 
-test("manifests: each environment enables its services (production: Polyadic, tutor)", async () => {
+test("manifests: each environment enables its services (default: none, #811)", async () => {
     for (const [name, expected] of Object.entries(MANIFESTS)) {
         assert.deepEqual(enabledIds(await readManifest(name)), expected, name);
     }
@@ -133,10 +133,11 @@ test("manifests: environments differ only in which services are enabled", async 
     }
 });
 
-// Production services name themselves even when their AI service does not
-// respond (#757). The tutor adapter cannot be imported in tests (it loads the
+// AI services name themselves even when their AI service does not respond
+// (#757). The default manifest enables none of them (#811), so they are
+// enabled here to load their adapters. The tutor adapter cannot be imported in tests (it loads the
 // database and Redis), so its translations are read from its utils module.
-test("manifest: production AI services provide UI translations", async () => {
+test("manifest: AI services provide UI translations", async () => {
     const registry = new ExternalServicesRegistry({ jobsService: {} });
     const adapters = {
         "polyadic-devils-advocate":   "./adapters/polyadic-bridge.adapter.js",
@@ -148,7 +149,8 @@ test("manifest: production AI services provide UI translations", async () => {
     try {
         for (const [serviceId, adapter] of Object.entries(adapters)) {
             const service = manifest.services.find(entry => entry.id === serviceId);
-            await registry.registerService({ ...service, adapter }, fileURLToPath(manifestUrl));
+            const entry = { ...service, adapter, enabled: true };
+            await registry.registerService(entry, fileURLToPath(manifestUrl));
 
             const translations = await registry.getServiceUiTranslations(serviceId);
             assert.ok(translations, `${serviceId} provides no valid es_CL and en_US translations`);

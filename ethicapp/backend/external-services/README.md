@@ -20,9 +20,13 @@ differ only in `enabled`; `__tests__/manifest.node-test.mjs` keeps them in sync.
 
 | Manifest | Enabled services | Used by |
 | --- | --- | --- |
-| `manifest.json` (default) | `polyadic-devils-advocate`, `argumentation-tutor-system` | production |
+| `manifest.json` (default) | none | production, and any installation that does not set `EXTERNAL_SERVICES_MANIFEST` |
 | `manifest.staging.json` | the above plus `case-analyst` | staging (`EXTERNAL_SERVICES_MANIFEST=/app/backend/external-services/manifest.staging.json`) |
 | `manifest.development.json` | all, including the mock adapters | the root `docker-compose.yml` |
+
+The default enables nothing, so an installation uses no AI service unless it
+selects a manifest that enables one (#811). Epic #810 replaces the manifests
+with an operator-managed policy.
 
 When you add or change a service, edit the entry identically in all three and
 set `enabled` per environment. Designs keep the ids of disabled services; the
@@ -68,7 +72,7 @@ Each manifest entry describes one service:
 | `ui` | no | `{ component }`: the kebab-case name of the EthicApp frontend component that will show the service's analysis in the case view. Defaults to `{ component: null }`; other names are dropped with a warning. The texts come from the adapter, not from the manifest (see "UI translations"). |
 | `descriptor` | no | `{ serviceId, path }`: the capability descriptor the service's AI backend publishes (#687). `serviceId` is the descriptor's `service.id`, which may differ from `id`: ids are mapped, not renamed, so stored designs, chat agents and jobs keep the manifest id. `path` is the descriptor route relative to `AI_ADDITIONS_BASE_URL`, for example `/polyadic-agent/api/capabilities`; it must be an absolute path without host, query or `..` segments. An invalid block is dropped with a warning. `GET /external-services` exposes `descriptor.serviceId` and a summary (see "Listing services"); the route stays internal (`getServiceDescriptor()`). |
 | `capabilities` | — | Removed (#726). Entries that still declare it log a deprecation warning and the key is ignored. A service that processes student responses declares the `response` scope instead; the student app shows the processing state for those services. |
-| `enabled` | no | Defaults to `true`. Disabled services stay registered, and appear in the student activity descriptor with `enabled: false`, but `GET /external-services` does not list them and their adapter is never imported. |
+| `enabled` | no | Only `true` enables the service; a missing value means disabled (#811). Disabled services stay registered, and appear in the student activity descriptor with `enabled: false`, but `GET /external-services` does not list them and their adapter is never imported. |
 | `callbackAuth` | no | Inbound callback authorization. See below. |
 
 When `callbackAuth` is present, EthicApp verifies that the authenticated Keycloak
