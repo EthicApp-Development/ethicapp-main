@@ -7,6 +7,8 @@ import {
 } from '../ethicapp.service.js';
 
 const SECRET_TOKEN = 'eyJhbGciOiJSUzI1NiJ9.secret-access-token';
+const ISSUER = 'https://ai.example.org/keycloak/realms/ethicapp-ai-additions';
+const OTHER_ISSUER = 'http://localhost:8080/keycloak/realms/ethicapp-ai-additions';
 const IDENTITY = { cookie: 'ethicapp.mng.sid=abc', userId: 7, userRole: 'S', language: 'es-CL' };
 
 function jsonResponse(status, body) {
@@ -151,6 +153,7 @@ describe('ethicapp AI Additions connection test client', () => {
     const { calls, fetchImpl } = fakeFetch(() => jsonResponse(200, {
       ok: true,
       token: { ok: true, accessToken: SECRET_TOKEN },
+      issuer: { ok: true, expected: ISSUER, actual: ISSUER, claims: { sub: SECRET_TOKEN } },
       catalog: { ok: true },
       serviceCount: 3
     }));
@@ -166,6 +169,7 @@ describe('ethicapp AI Additions connection test client', () => {
       ok: true,
       error: null,
       token: { ok: true, error: null, skipped: false },
+      issuer: { ok: true, error: null, skipped: false, expected: ISSUER, actual: ISSUER },
       catalog: { ok: true, error: null, skipped: false },
       serviceCount: 3
     });
@@ -197,6 +201,7 @@ describe('ethicapp AI Additions connection test client', () => {
         ok: false,
         error: code,
         token: { ok: false, error: code, skipped: false },
+        issuer: null,
         catalog: { ok: false, error: null, skipped: true },
         serviceCount: null
       });
@@ -215,6 +220,7 @@ describe('ethicapp AI Additions connection test client', () => {
       ok: false,
       error: 'invalid_response',
       token: { ok: true, error: null, skipped: false },
+      issuer: null,
       catalog: { ok: false, error: 'invalid_response', skipped: false },
       serviceCount: null
     });
@@ -227,6 +233,114 @@ describe('ethicapp AI Additions connection test client', () => {
     }));
     const result = await testAiAdditionsConnectionInEthicapp({ baseUrl: 'http://x', ...IDENTITY, fetchImpl });
     assert.equal(result.token.error, 'invalid_response');
+  });
+
+  it('passes through an issuer mismatch with both issuers and fails the test', async () => {
+    const { fetchImpl } = fakeFetch(() => jsonResponse(200, {
+      ok: false,
+      token: { ok: true },
+      issuer: { ok: false, error: 'issuer_mismatch', expected: ISSUER, actual: OTHER_ISSUER },
+      catalog: { ok: true },
+      serviceCount: 2
+    }));
+
+    assert.deepEqual(await testAiAdditionsConnectionInEthicapp({ baseUrl: 'http://x', ...IDENTITY, fetchImpl }), {
+      ok: false,
+      error: 'issuer_mismatch',
+      token: { ok: true, error: null, skipped: false },
+      issuer: { ok: false, error: 'issuer_mismatch', skipped: false, expected: ISSUER, actual: OTHER_ISSUER },
+      catalog: { ok: true, error: null, skipped: false },
+      serviceCount: 2
+    });
+  });
+
+  it('fails the test on an issuer step that failed even when ethicapp says ok', async () => {
+    const { fetchImpl } = fakeFetch(() => jsonResponse(200, {
+      ok: true,
+      token: { ok: true },
+      issuer: { ok: false, error: 'invalid_response', expected: ISSUER },
+      catalog: { ok: true },
+      serviceCount: 2
+    }));
+
+    const result = await testAiAdditionsConnectionInEthicapp({ baseUrl: 'http://x', ...IDENTITY, fetchImpl });
+    assert.equal(result.ok, false);
+    assert.equal(result.error, 'invalid_response');
+    assert.deepEqual(result.issuer, { ok: false, error: 'invalid_response', skipped: false, expected: ISSUER, actual: null });
+  });
+
+  it('reports a skipped issuer step after a failed token step', async () => {
+    const { fetchImpl } = fakeFetch(() => jsonResponse(200, {
+      ok: false,
+      token: { ok: false, error: 'unauthorized' },
+      issuer: { ok: false, skipped: true, expected: ISSUER, actual: OTHER_ISSUER },
+      catalog: { ok: false, skipped: true }
+    }));
+
+    const result = await testAiAdditionsConnectionInEthicapp({ baseUrl: 'http://x', ...IDENTITY, fetchImpl });
+    assert.equal(result.error, 'unauthorized');
+    assert.deepEqual(result.issuer, { ok: false, error: null, skipped: true, expected: ISSUER, actual: null });
+  });
+
+  it('treats an omitted issuer step as not reported (older ethicapp)', async () => {
+    const { fetchImpl } = fakeFetch(() => jsonResponse(200, {
+      ok: true,
+      token: { ok: true },
+      catalog: { ok: true },
+      serviceCount: 1
+    }));
+
+    const result = await testAiAdditionsConnectionInEthicapp({ baseUrl: 'http://x', ...IDENTITY, fetchImpl });
+    assert.equal(result.ok, true);
+    assert.equal(result.error, null);
+    assert.equal(result.issuer, null);
+  });
+
+  it('drops issuers that are not http(s) URLs of at most 2048 characters', async () => {
+    const badValues = [
+      'javascript:alert(1)',
+      'ftp://kc.example.org/realms/r',
+      'https://kc.example.org/realms/ r',
+      `https://kc.example.org/${'a'.repeat(2048)}`,
+      'https://',
+      42,
+      { href: ISSUER }
+    ];
+
+    for (const bad of badValues) {
+      const { fetchImpl } = fakeFetch(() => jsonResponse(200, {
+        ok: false,
+        token: { ok: true },
+        issuer: { ok: false, error: 'issuer_mismatch', expected: bad, actual: bad },
+        catalog: { ok: true },
+        serviceCount: 0
+      }));
+      const result = await testAiAdditionsConnectionInEthicapp({ baseUrl: 'http://x', ...IDENTITY, fetchImpl });
+      assert.deepEqual(result.issuer, {
+        ok: false,
+        error: 'issuer_mismatch',
+        skipped: false,
+        expected: null,
+        actual: null
+      }, String(bad));
+    }
+  });
+
+  it('maps an unknown issuer error code to invalid_response, and issuer_mismatch on other steps too', async () => {
+    const { fetchImpl } = fakeFetch(() => jsonResponse(200, {
+      token: { ok: true },
+      issuer: { ok: false, error: 'something_new', expected: ISSUER },
+      catalog: { ok: false, error: 'issuer_mismatch' }
+    }));
+    const result = await testAiAdditionsConnectionInEthicapp({ baseUrl: 'http://x', ...IDENTITY, fetchImpl });
+    assert.equal(result.issuer.error, 'invalid_response');
+    assert.equal(result.catalog.error, 'invalid_response');
+  });
+
+  it('reports the issuer step as skipped when ethicapp cannot be reached', async () => {
+    const refused = fakeFetch(() => { throw new TypeError('fetch failed'); });
+    const result = await testAiAdditionsConnectionInEthicapp({ baseUrl: 'http://x', ...IDENTITY, fetchImpl: refused.fetchImpl });
+    assert.deepEqual(result.issuer, { ok: false, error: null, skipped: true, expected: null, actual: null });
   });
 
   it('maps transport failures to unreachable and ethicapp failures to ethicapp_error', async () => {

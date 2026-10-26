@@ -232,6 +232,47 @@ function sanitizeStep(step) {
   return { ok: false, error: knownErrorCode(step.error) || 'invalid_response', skipped: false };
 }
 
+// The issuer step (#834) also reports `issuer_mismatch`: the token's `iss`
+// differs from the issuer ethicapp expects for the tested connection.
+export const ISSUER_MISMATCH = 'issuer_mismatch';
+const MAX_ISSUER_LENGTH = 2048;
+
+// An issuer passes through only as an http(s) URL of at most 2048 characters.
+function issuerUrl(value) {
+  if (typeof value !== 'string' || value.length > MAX_ISSUER_LENGTH || !/^https?:\/\/[^\s]+$/i.test(value)) {
+    return null;
+  }
+
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:' ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+// Unlike the token and catalog steps, an absent issuer step is not an error:
+// an ethicapp older than #834 does not report it. It is then null.
+function sanitizeIssuerStep(step) {
+  if (!step || typeof step !== 'object') {
+    return null;
+  }
+
+  const expected = issuerUrl(step.expected);
+  const actual = issuerUrl(step.actual);
+
+  if (step.ok === true) {
+    return { ok: true, error: null, skipped: false, expected, actual };
+  }
+
+  if (step.skipped === true) {
+    return { ok: false, error: null, skipped: true, expected, actual: null };
+  }
+
+  const error = step.error === ISSUER_MISMATCH ? ISSUER_MISMATCH : (knownErrorCode(step.error) || 'invalid_response');
+  return { ok: false, error, skipped: false, expected, actual };
+}
+
 const SKIPPED_STEP = Object.freeze({ ok: false, error: null, skipped: true });
 
 function failedConnectionTest(error) {
@@ -239,15 +280,18 @@ function failedConnectionTest(error) {
     ok: false,
     error,
     token: { ...SKIPPED_STEP },
+    issuer: { ...SKIPPED_STEP, expected: null, actual: null },
     catalog: { ...SKIPPED_STEP },
     serviceCount: null
   };
 }
 
 // ethicapp is expected to answer
-//   { ok, token: { ok, error? }, catalog: { ok, error?, skipped? }, serviceCount }
-// where error is one of the AI Additions codes. The console adds a top-level
-// error when the exchange with ethicapp itself fails.
+//   { ok, token: { ok, error? }, issuer: { ok, error?, skipped?, expected, actual? },
+//     catalog: { ok, error?, skipped? }, serviceCount }
+// where error is one of the AI Additions codes, or `issuer_mismatch` for the
+// issuer step. The console adds a top-level error when the exchange with
+// ethicapp itself fails.
 export function sanitizeConnectionTestBody(body) {
   if (!body || typeof body !== 'object') {
     return null;
@@ -260,15 +304,17 @@ export function sanitizeConnectionTestBody(body) {
     return null;
   }
 
+  const issuer = sanitizeIssuerStep(body.issuer);
   const serviceCount = Number.isInteger(body.serviceCount) && body.serviceCount >= 0
     ? body.serviceCount
     : null;
-  const ok = token.ok && catalog.ok;
+  const ok = token.ok && catalog.ok && (issuer ? issuer.ok : true);
 
   return {
     ok,
-    error: ok ? null : (token.error || catalog.error || 'invalid_response'),
+    error: ok ? null : (token.error || issuer?.error || catalog.error || 'invalid_response'),
     token,
+    issuer,
     catalog,
     serviceCount: catalog.ok ? serviceCount : null
   };

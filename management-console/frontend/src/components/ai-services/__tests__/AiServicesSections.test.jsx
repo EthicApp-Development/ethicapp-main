@@ -7,7 +7,7 @@ import ConnectionSection from '../ConnectionSection.jsx';
 import ConnectionTestResult from '../ConnectionTestResult.jsx';
 import HistorySection from '../HistorySection.jsx';
 import ServicesSection from '../ServicesSection.jsx';
-import { aiErrorKey, serviceNamesById } from '../aiServicesFormat.js';
+import { aiErrorKey, issuerMismatchHint, serviceNamesById } from '../aiServicesFormat.js';
 
 // Without an I18n provider, t() returns the translation key, so assertions
 // look for keys instead of localized text.
@@ -137,6 +137,107 @@ describe('AI services connection test result', () => {
 
     expect(html).toContain('pages.aiServices.connection.test.success');
     expect(html.split('pages.aiServices.connection.test.status.ok').length - 1).toBe(2);
+    expect(html).not.toContain('pages.aiServices.connection.test.issuer.label');
+  });
+
+  const EXPECTED_ISSUER = 'https://ai.example.org/keycloak/realms/ethicapp-ai-additions';
+  const ACTUAL_ISSUER = 'http://localhost:8080/kc/realms/ethicapp-ai-additions';
+
+  function issuerResult(issuer, overrides = {}) {
+    return {
+      ok: issuer.ok,
+      error: issuer.ok ? null : issuer.error,
+      token: { ok: true, error: null, skipped: false },
+      issuer: { skipped: false, expected: EXPECTED_ISSUER, actual: null, ...issuer },
+      catalog: { ok: true, error: null, skipped: false },
+      serviceCount: 2,
+      ...overrides
+    };
+  }
+
+  it('shows the issuer step between the token and the catalog', () => {
+    const html = renderToStaticMarkup(
+      <ConnectionTestResult result={issuerResult({ ok: true, error: null, actual: EXPECTED_ISSUER })} />
+    );
+
+    const token = html.indexOf('pages.aiServices.connection.test.token');
+    const issuer = html.indexOf('pages.aiServices.connection.test.issuer.label');
+    const catalogStep = html.indexOf('pages.aiServices.connection.test.catalog');
+    expect(token).toBeGreaterThan(-1);
+    expect(issuer).toBeGreaterThan(token);
+    expect(catalogStep).toBeGreaterThan(issuer);
+    expect(html.split('pages.aiServices.connection.test.status.ok').length - 1).toBe(3);
+    expect(html).not.toContain('ai-connection-test-issuer-mismatch');
+  });
+
+  it('shows expected and actual issuers, the matching Keycloak URL and the callback consequence on a mismatch', () => {
+    const html = renderToStaticMarkup(
+      <ConnectionTestResult result={issuerResult({ ok: false, error: 'issuer_mismatch', actual: ACTUAL_ISSUER })} />
+    );
+
+    expect(html).toContain('pages.aiServices.connection.test.failure');
+    expect(html).toContain('pages.aiServices.errors.issuer_mismatch');
+    expect(html).toContain('pages.aiServices.connection.test.issuer.mismatchExplanation');
+    expect(html).toContain(EXPECTED_ISSUER);
+    expect(html).toContain(ACTUAL_ISSUER);
+    expect(html).toContain('pages.aiServices.connection.test.issuer.suggestion');
+    expect(html).toMatch(/data-testid="ai-connection-test-issuer-suggestion">http:\/\/localhost:8080\/kc</);
+    expect(html).not.toContain('pages.aiServices.connection.test.issuer.realmMismatch');
+  });
+
+  it('explains that no Keycloak URL helps when the realms differ', () => {
+    const html = renderToStaticMarkup(
+      <ConnectionTestResult result={issuerResult({
+        ok: false,
+        error: 'issuer_mismatch',
+        actual: 'https://ai.example.org/keycloak/realms/other'
+      })} />
+    );
+
+    expect(html).toContain('pages.aiServices.connection.test.issuer.realmMismatch');
+    expect(html).not.toContain('ai-connection-test-issuer-suggestion');
+  });
+
+  it('explains an unreadable token issuer and a skipped issuer step', () => {
+    const invalid = renderToStaticMarkup(
+      <ConnectionTestResult result={issuerResult({ ok: false, error: 'invalid_response' })} />
+    );
+    expect(invalid).toContain('pages.aiServices.connection.test.issuer.invalidToken');
+    expect(invalid).not.toContain('ai-connection-test-issuer-mismatch');
+
+    const skipped = renderToStaticMarkup(
+      <ConnectionTestResult result={issuerResult({ ok: false, error: null, skipped: true }, {
+        error: 'unauthorized',
+        token: { ok: false, error: 'unauthorized', skipped: false },
+        catalog: { ok: false, error: null, skipped: true },
+        serviceCount: null
+      })} />
+    );
+    expect(skipped.split('pages.aiServices.connection.test.status.skipped').length - 1).toBe(2);
+  });
+});
+
+describe('issuerMismatchHint', () => {
+  const expected = 'https://ai.example.org/keycloak/realms/ethicapp-ai-additions';
+
+  it('drops /realms/<realm> from the actual issuer', () => {
+    expect(issuerMismatchHint(expected, 'http://kc.example.org/realms/ethicapp-ai-additions')).toEqual({
+      realmMismatch: false,
+      keycloakPublicUrl: 'http://kc.example.org'
+    });
+    expect(issuerMismatchHint(expected, 'https://x.org/base/keycloak/realms/ethicapp-ai-additions/')).toEqual({
+      realmMismatch: false,
+      keycloakPublicUrl: 'https://x.org/base/keycloak'
+    });
+  });
+
+  it('flags a different realm and ignores values that are not issuers', () => {
+    expect(issuerMismatchHint(expected, 'https://kc.example.org/realms/other')).toEqual({
+      realmMismatch: true,
+      keycloakPublicUrl: null
+    });
+    expect(issuerMismatchHint(expected, 'https://kc.example.org/no-realm')).toBeNull();
+    expect(issuerMismatchHint(expected, null)).toBeNull();
   });
 });
 

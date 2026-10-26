@@ -226,12 +226,42 @@ headers); other roles get `403`.
   where `adapters` lists the non-development adapters of the catalog in
   `manifest.json` whose `requires` include the service, as `{ id, description }`.
 - `POST /api/admin/ai-services/connection-test` with
-  `{ baseUrl, keycloakPublicUrl? }` obtains a token and reads the catalog
-  against those URLs without saving them, with its own token cache. It answers
-  `{ ok, token: { ok, error? }, catalog: { ok, error?, skipped? }, serviceCount }`;
-  `catalog.skipped` is `true` when no token was obtained. Both URLs must be
+  `{ baseUrl, keycloakPublicUrl? }` obtains a token, checks its issuer and
+  reads the catalog against those URLs without saving them, with its own token
+  cache. It answers
+  `{ ok, token: { ok, error? }, issuer: { ok, error?, skipped?, expected, actual? }, catalog: { ok, error?, skipped? }, serviceCount }`;
+  `ok` is `true` only when all three steps pass. `issuer.skipped` and
+  `catalog.skipped` are `true` when no token was obtained. Both URLs must be
   `http(s)://<authority>[/<path>]`, with no userinfo, query or fragment;
   anything else gets `400`.
+
+The issuer step (#834) catches a wrong Keycloak public URL before it is saved.
+Tokens are always requested through `base_url`, so the token step succeeds
+even when `keycloakPublicUrl` is wrong; the mistake would only show later, when
+every AI Additions callback fails verification. Keycloak writes its public
+hostname (`KC_HOSTNAME`, AI Additions' `KEYCLOAK_PUBLIC_URL`) into `iss`,
+whatever host the token was requested through. The step:
+
+- decodes the token's payload without verifying it (the token comes straight
+  from the Keycloak the test just called) and reads `iss`;
+- compares it with `expected`, the issuer callbacks are verified against:
+  `<keycloakPublicUrl or baseUrl/keycloak>/realms/<realm>`, derived by the
+  same code as the callback verification (`getEndpoints().issuer`);
+- compares exactly, letter case included, after removing a single trailing
+  slash from each side. Keycloak issuers have no trailing slash, and neither
+  has `expected`, so the tolerance only covers a hand-typed slash;
+- answers `issuer_mismatch` with `expected` and `actual` when they differ, or
+  `invalid_response` (with `expected` only) when the token is not a JWT or its
+  payload has no `iss` that is an `http(s)` URL of at most 2048 characters.
+
+The catalog step still runs after an issuer failure, since the two are
+independent. Only `expected` and `actual` (the `iss` URL) leave the step: the
+token and its other claims are never returned or logged. On a mismatch, the
+management console shows both issuers and suggests the Keycloak public URL that
+matches the token: `actual` without its `/realms/<realm>` suffix. When the
+realm itself differs (`AI_ADDITIONS_KEYCLOAK_REALM`), it says that no Keycloak
+public URL fixes it. A console talking to an ethicapp without the issuer step
+shows the token and catalog steps only.
 
 Failures are typed results with status `200`:
 
@@ -240,7 +270,8 @@ Failures are typed results with status `200`:
 | `not_configured` | No stored connection (catalog only); no request is sent. |
 | `unreachable` | Network error, DNS failure, timeout, or a `502`/`503`/`504` from the gateway. |
 | `unauthorized` | `401`/`403` from the token endpoint or the catalog, or no client credentials in the environment. |
-| `invalid_response` | Any other status, a non-JSON body, a token response without `access_token`, or a catalog outside contract version `1`. |
+| `invalid_response` | Any other status, a non-JSON body, a token response without `access_token`, a token that is not a JWT with an `http(s)` `iss` (issuer step), or a catalog outside contract version `1`. |
+| `issuer_mismatch` | Issuer step only: the token's `iss` differs from the expected issuer. |
 
 Each step answers within the console's timeouts (12 s for the catalog; 8 s for
 the token and 8 s for the catalog in the test). Neither route logs tokens,
