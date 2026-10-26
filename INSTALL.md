@@ -250,8 +250,8 @@ manifests can pin it, but deploy it only when mock integrations are
 intentionally enabled.
 
 The `ethicapp` image ships three external-services manifests (#738). The
-default, `manifest.json`, enables only Polyadic Agents and the Argumentation
-Tutor, which is what production should run. Staging sets
+default, `manifest.json`, enables no external AI service, so an installation
+that sets nothing uses no AI (#811). Staging sets
 `EXTERNAL_SERVICES_MANIFEST=/app/backend/external-services/manifest.staging.json`
 to also enable Case Analyst. `manifest.development.json`, used by the local
 Compose stack, enables the mock adapters too; deploy `external-mock-service`

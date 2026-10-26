@@ -48,7 +48,7 @@
         "serviceId": "polyadic-agent",
         "path": "/polyadic-agent/api/capabilities"
       },
-      "enabled": true,
+      "enabled": false,
       "callbackAuth": {
         "allowedClientIds": ["polyadic-agent-api"],
         "requiredRoles": []
@@ -68,7 +68,7 @@
         "serviceId": "argumentation-tutor",
         "path": "/argumentation-tutor/api/capabilities"
       },
-      "enabled": true,
+      "enabled": false,
       "callbackAuth": {
         "allowedClientIds": ["argumentation-tutor-api"],
         "requiredRoles": []

@@ -291,7 +291,9 @@ export class ExternalServicesRegistry {
             scopes:       normalizeScopes(service.scopes, service.id),
             ui:           normalizeUi(service.ui, service.id),
             descriptor:   normalizeDescriptor(service.descriptor, service.id),
-            enabled:      service.enabled !== false,
+            // Only an explicit `"enabled": true` enables a service: an
+            // installation must never use an AI service it did not opt into (#811).
+            enabled:      service.enabled === true,
             adapter:      service.adapter,
             callbackAuth: service.callbackAuth && typeof service.callbackAuth === "object"
                 ? {
