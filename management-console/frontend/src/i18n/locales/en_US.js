@@ -66,6 +66,15 @@ export default {
         },
         test: {
           token: 'Token request',
+          issuer: {
+            label: 'Token issuer',
+            invalidToken: 'The token is not a JWT with an issuer (iss), so its issuer could not be checked.',
+            mismatchExplanation: 'The token issuer differs from the one EthicApp expects for these URLs. With this connection, EthicApp would reject every callback from AI Additions. The expected issuer is the Keycloak public URL (or the AI Additions URL followed by /keycloak) plus /realms/<realm>.',
+            expected: 'Expected',
+            actual: 'In the token',
+            suggestion: 'Keycloak public URL that matches the token:',
+            realmMismatch: 'The realm in the token differs from the one EthicApp uses (AI_ADDITIONS_KEYCLOAK_REALM), so no Keycloak public URL fixes this; check the EthicApp deployment.'
+          },
           catalog: 'Catalog read',
           success: 'The connection works. AI Additions offers {{count}} services.',
           failure: 'The connection test failed. The URLs were not saved.',
@@ -139,6 +148,7 @@ export default {
         unreachable: 'AI Additions could not be reached.',
         unauthorized: 'AI Additions rejected the EthicApp credentials.',
         invalid_response: 'AI Additions answered with an unexpected response.',
+        issuer_mismatch: 'The token issuer differs from the expected one.',
         ethicapp_error: 'EthicApp could not complete the request. Check that the EthicApp service is running and up to date.',
         generic: 'The request failed. Try again in a few seconds.'
       }

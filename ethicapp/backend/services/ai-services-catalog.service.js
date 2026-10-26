@@ -19,6 +19,7 @@ export const AI_SERVICES_ERROR = Object.freeze({
     UNREACHABLE:      "unreachable",
     UNAUTHORIZED:     "unauthorized",
     INVALID_RESPONSE: "invalid_response",
+    ISSUER_MISMATCH:  "issuer_mismatch",
 });
 
 export const CATALOG_PATH = "/catalog/v1/services";
@@ -85,6 +86,52 @@ export function isValidConnectionUrl(value) {
     } catch {
         return false;
     }
+}
+
+function withoutTrailingSlash(value) {
+    return value.endsWith("/") ? value.slice(0, -1) : value;
+}
+
+/**
+ * The `iss` claim of an access token, read WITHOUT verifying the token: the
+ * connection test only compares it with the issuer that callbacks will be
+ * checked against. Nothing else from the token leaves this function.
+ * @param {unknown} token
+ * @returns {string|null} The issuer when the token is a JWT whose payload has
+ *   an http(s) `iss` (at most 2048 characters); null otherwise.
+ */
+export function readUnverifiedIssuer(token) {
+    if (typeof token !== "string") {
+        return null;
+    }
+    const parts = token.split(".");
+    if (parts.length !== 3 || !/^[A-Za-z0-9_-]+$/u.test(parts[1])) {
+        return null;
+    }
+
+    let payload;
+    try {
+        payload = JSON.parse(Buffer.from(parts[1], "base64url").toString("utf8"));
+    } catch {
+        return null;
+    }
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+        return null;
+    }
+
+    const issuer = payload.iss;
+    return isValidConnectionUrl(issuer) && issuer === issuer.trim() ? issuer : null;
+}
+
+/**
+ * Whether a token issuer matches the expected one. The comparison is exact,
+ * letter case included, as the callback verification compares `iss`; only a
+ * single trailing slash is ignored on both sides.
+ * @param {string} expected
+ * @param {string} actual
+ */
+export function issuersMatch(expected, actual) {
+    return withoutTrailingSlash(expected) === withoutTrailingSlash(actual);
 }
 
 /**
@@ -395,21 +442,45 @@ export function createAiServicesCatalogService({
     }
 
     /**
-     * Obtains a token and reads the catalog against an unsaved connection.
-     * Nothing is stored, and the shared client's token cache is not touched.
+     * The issuer step: compares the token's `iss`, read without verification,
+     * with the issuer EthicApp derives for this connection. Only the two
+     * issuers are returned; the token and its other claims are not.
+     */
+    function checkIssuer(token, expected) {
+        const actual = readUnverifiedIssuer(token);
+        if (!actual) {
+            logger.warn("[ai-services] connection test issuer failed: "
+                + "error=invalid_response cause=UnreadableIssuer");
+            return { ok: false, error: AI_SERVICES_ERROR.INVALID_RESPONSE, expected };
+        }
+        if (!issuersMatch(expected, actual)) {
+            logger.warn("[ai-services] connection test issuer failed: error=issuer_mismatch");
+            return { ok: false, error: AI_SERVICES_ERROR.ISSUER_MISMATCH, expected, actual };
+        }
+        return { ok: true, expected, actual };
+    }
+
+    /**
+     * Obtains a token, checks its issuer and reads the catalog against an
+     * unsaved connection. Nothing is stored, and the shared client's token
+     * cache is not touched.
      * @param {{ baseUrl: string, keycloakPublicUrl?: string|null, locale?: string }} input
      *   URLs already validated with `isValidConnectionUrl`.
-     * @returns {Promise<object>} `{ ok, token: { ok, error? }, catalog: { ok, error?,
-     *   skipped? }, serviceCount }`.
+     * @returns {Promise<object>} `{ ok, token: { ok, error? }, issuer: { ok, error?,
+     *   skipped?, expected, actual? }, catalog: { ok, error?, skipped? }, serviceCount }`.
      */
     async function testConnection({ baseUrl, keycloakPublicUrl = null, locale } = {}) {
         const testClient = client.withConnection({
             baseUrl:           baseUrl.trim(),
             keycloakPublicUrl: keycloakPublicUrl ? keycloakPublicUrl.trim() : null,
         });
+        // The issuer callbacks from this connection would be checked against,
+        // derived exactly as the callback verification derives it.
+        const { issuer: expectedIssuer } = await testClient.getEndpoints();
         const result = {
             ok:           false,
             token:        { ok: false },
+            issuer:       { ok: false, skipped: true, expected: expectedIssuer },
             catalog:      { ok: false, skipped: true },
             serviceCount: null,
         };
@@ -421,13 +492,18 @@ export function createAiServicesCatalogService({
             return result;
         }
 
+        let token;
         try {
-            await withDeadline(testClient.getAccessToken(), tokenStepDeadlineMs);
+            token = await withDeadline(testClient.getAccessToken(), tokenStepDeadlineMs);
             result.token = { ok: true };
         } catch (error) {
             result.token = { ok: false, error: failure("connection test token", error) };
             return result;
         }
+
+        // A mismatch does not stop the test: the catalog step is independent
+        // of it, and the operator sees both answers at once.
+        result.issuer = checkIssuer(token, expectedIssuer);
 
         try {
             const catalog = await withDeadline(
@@ -436,11 +512,11 @@ export function createAiServicesCatalogService({
             );
             result.catalog = { ok: true };
             result.serviceCount = catalog.services.length;
-            result.ok = true;
         } catch (error) {
             result.catalog = { ok: false, error: failure("connection test catalog", error) };
         }
 
+        result.ok = result.token.ok && result.issuer.ok && result.catalog.ok;
         return result;
     }
 

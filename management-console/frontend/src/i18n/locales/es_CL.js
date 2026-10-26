@@ -66,6 +66,15 @@ export default {
         },
         test: {
           token: 'Solicitud de token',
+          issuer: {
+            label: 'Emisor del token',
+            invalidToken: 'El token no es un JWT con emisor (iss), así que no fue posible verificar su emisor.',
+            mismatchExplanation: 'El emisor del token no coincide con el que EthicApp espera para estas URL. Con esta conexión, EthicApp rechazaría todas las llamadas de vuelta (callbacks) de AI Additions. El emisor esperado es la URL pública de Keycloak (o la URL de AI Additions seguida de /keycloak) más /realms/<realm>.',
+            expected: 'Esperado',
+            actual: 'En el token',
+            suggestion: 'URL pública de Keycloak que coincide con el token:',
+            realmMismatch: 'El realm del token no es el que usa EthicApp (AI_ADDITIONS_KEYCLOAK_REALM), así que ninguna URL pública de Keycloak lo resuelve; revisa el despliegue de EthicApp.'
+          },
           catalog: 'Lectura del catálogo',
           success: 'La conexión funciona. AI Additions ofrece {{count}} servicios.',
           failure: 'La prueba de conexión falló. Las URL no se guardaron.',
@@ -139,6 +148,7 @@ export default {
         unreachable: 'No fue posible contactar AI Additions.',
         unauthorized: 'AI Additions rechazó las credenciales de EthicApp.',
         invalid_response: 'AI Additions respondió de forma inesperada.',
+        issuer_mismatch: 'El emisor del token no es el esperado.',
         ethicapp_error: 'EthicApp no pudo completar la solicitud. Verifica que el servicio EthicApp esté en ejecución y actualizado.',
         generic: 'La solicitud falló. Intenta de nuevo en unos segundos.'
       }

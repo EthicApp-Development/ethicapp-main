@@ -232,6 +232,14 @@ again every few seconds, so editing or removing it takes effect without a
 restart. **Without the row EthicApp makes no AI call**, and AI Additions
 callbacks are rejected.
 
+Test a connection in the console before saving it. The test reports three
+steps: the token request, the token issuer and the catalog read. The issuer
+step compares the token's `iss` with the expected callback issuer above, so a
+wrong `keycloak_public_url` shows up as an issuer mismatch instead of as
+callbacks failing after the save. On a mismatch the console shows both issuers
+and the Keycloak public URL that would match. See the internal endpoints
+section of [`EXTERNAL.md`](./EXTERNAL.md) for the exact comparison.
+
 The deployment still provides, as environment variables,
 `AI_ADDITIONS_KEYCLOAK_REALM`, `AI_ADDITIONS_KEYCLOAK_CLIENT_ID`,
 `AI_ADDITIONS_KEYCLOAK_CLIENT_SECRET` (secret), `AI_ADDITIONS_KEYCLOAK_SCOPE`,

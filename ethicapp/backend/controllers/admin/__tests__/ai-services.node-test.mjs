@@ -5,17 +5,61 @@ import express from "express";
 
 import { createAiServicesRouter } from "../ai-services.js";
 import { AiAdditionsClient } from "../../../services/ai-additions-client.service.js";
-import { createAiServicesCatalogService } from "../../../services/ai-services-catalog.service.js";
+import {
+    createAiServicesCatalogService,
+    issuersMatch,
+    readUnverifiedIssuer,
+} from "../../../services/ai-services-catalog.service.js";
 
-// Values that must never appear in a response or a log line.
+// Values that must never appear in a response or a log line: the client
+// secret, the signature every fake token ends with, a claim other than `iss`,
+// and the payload segment of every token the fake issued.
 const CLIENT_SECRET = "client-secret-that-must-not-leak";
 const ACCESS_TOKEN = "access-token-that-must-not-leak";
+const SECRET_CLAIM = "subject-claim-that-must-not-leak";
+const issuedPayloads = new Set();
 const ENV = Object.freeze({
     AI_ADDITIONS_KEYCLOAK_CLIENT_ID:     "ethicapp-platform",
     AI_ADDITIONS_KEYCLOAK_CLIENT_SECRET: CLIENT_SECRET,
 });
 const STORED_CONNECTION = Object.freeze({ baseUrl: "http://ai.stored", keycloakPublicUrl: null });
-const TOKEN_PATH = "/keycloak/realms/ethicapp-ai-additions/protocol/openid-connect/token";
+const REALM_PATH = "/keycloak/realms/ethicapp-ai-additions";
+const TOKEN_PATH = `${REALM_PATH}/protocol/openid-connect/token`;
+const DEFAULT_TEST_ISSUER = `http://ai.example.org${REALM_PATH}`;
+
+function assertNoLeak(text, where) {
+    assert.equal(text.includes(CLIENT_SECRET), false, `${where} leaks the client secret`);
+    assert.equal(text.includes(ACCESS_TOKEN), false, `${where} leaks the token`);
+    assert.equal(text.includes(SECRET_CLAIM), false, `${where} leaks a token claim`);
+    for (const payload of issuedPayloads) {
+        assert.equal(text.includes(payload), false, `${where} leaks a token payload`);
+    }
+}
+
+function base64url(text) {
+    return Buffer.from(text, "utf8").toString("base64url");
+}
+
+// An unsigned-looking JWT: the connection test never verifies it.
+function fakeJwt(claims) {
+    const payload = base64url(JSON.stringify(claims));
+    issuedPayloads.add(payload);
+    return `${base64url(JSON.stringify({ alg: "RS256", typ: "JWT" }))}.${payload}.${ACCESS_TOKEN}`;
+}
+
+// Keycloak without a fixed hostname: `iss` follows the URL the token was
+// requested through, which is the expected issuer when no Keycloak public URL
+// is set.
+function issuerOfTokenUrl(url) {
+    return url.slice(0, -"/protocol/openid-connect/token".length);
+}
+
+function tokenResponse(url, claims = {}) {
+    return jsonResponse({
+        access_token: fakeJwt({ iss: issuerOfTokenUrl(url), sub: SECRET_CLAIM, ...claims }),
+        expires_in:   300,
+    });
+}
 
 const ADAPTER_CATALOG = Object.freeze({
     services: [
@@ -67,7 +111,7 @@ function hang(options) {
 
 // A fake AI Additions behind `fetch`: the token endpoint and the catalog.
 function fakeAiAdditions({
-    token = () => jsonResponse({ access_token: ACCESS_TOKEN, expires_in: 300 }),
+    token = url => tokenResponse(url),
     catalog = () => jsonResponse(CATALOG_BODY),
 } = {}) {
     const calls = [];
@@ -104,8 +148,7 @@ afterEach(() => {
         console[level] = fn;
     }
     for (const line of logs) {
-        assert.equal(line.includes(CLIENT_SECRET), false, `a log line leaks the client secret: ${line}`);
-        assert.equal(line.includes(ACCESS_TOKEN), false, `a log line leaks the token: ${line}`);
+        assertNoLeak(line, `the log line "${line}"`);
     }
 });
 
@@ -157,8 +200,7 @@ async function request(service, {
             body: body === undefined ? undefined : JSON.stringify(body),
         });
         const text = await response.text();
-        assert.equal(text.includes(CLIENT_SECRET), false, "the response leaks the client secret");
-        assert.equal(text.includes(ACCESS_TOKEN), false, "the response leaks the token");
+        assertNoLeak(text, "the response");
         return { status: response.status, body: parseJson && text ? JSON.parse(text) : text };
     } finally {
         await new Promise(resolve => server.close(resolve));
@@ -236,7 +278,8 @@ describe("GET /api/admin/ai-services/catalog", () => {
         assert.equal(calls[0].url, `http://ai.stored${TOKEN_PATH}`);
         assert.equal(calls[1].url, "http://ai.stored/catalog/v1/services");
         assert.equal(calls[1].options.method, "GET");
-        assert.equal(calls[1].options.headers.Authorization, `Bearer ${ACCESS_TOKEN}`);
+        const bearer = new RegExp(`^Bearer .+\\.${ACCESS_TOKEN}$`, "u");
+        assert.match(calls[1].options.headers.Authorization, bearer);
         assert.equal(calls[1].options.headers["Accept-Language"], "es-CL");
     });
 
@@ -470,7 +513,10 @@ describe("letter case of the internal routes", () => {
 
 describe("POST /api/admin/ai-services/connection-test", () => {
     it("obtains a token and reads the catalog from the given URLs without the stored connection", async () => {
-        const { calls, fetchImpl } = fakeAiAdditions();
+        // Keycloak with a fixed public hostname, matching keycloakPublicUrl.
+        const { calls, fetchImpl } = fakeAiAdditions({
+            token: url => tokenResponse(url, { iss: `https://auth.example.org${REALM_PATH}` }),
+        });
         let storedReads = 0;
         const service = buildService({
             fetchImpl,
@@ -484,8 +530,13 @@ describe("POST /api/admin/ai-services/connection-test", () => {
 
         assert.equal(status, 200);
         assert.deepEqual(body, {
-            ok:           true,
-            token:        { ok: true },
+            ok:     true,
+            token:  { ok: true },
+            issuer: {
+                ok:       true,
+                expected: `https://auth.example.org${REALM_PATH}`,
+                actual:   `https://auth.example.org${REALM_PATH}`,
+            },
             catalog:      { ok: true },
             serviceCount: 3,
         });
@@ -532,6 +583,11 @@ describe("POST /api/admin/ai-services/connection-test", () => {
         assert.deepEqual(body, {
             ok:           false,
             token:        { ok: false, error: "unreachable" },
+            issuer:       {
+                ok:       false,
+                skipped:  true,
+                expected: `http://127.0.0.1:${port}${REALM_PATH}`,
+            },
             catalog:      { ok: false, skipped: true },
             serviceCount: null,
         });
@@ -557,6 +613,7 @@ describe("POST /api/admin/ai-services/connection-test", () => {
             assert.deepEqual(body, {
                 ok:           false,
                 token:        { ok: false, error },
+                issuer:       { ok: false, skipped: true, expected: DEFAULT_TEST_ISSUER },
                 catalog:      { ok: false, skipped: true },
                 serviceCount: null,
             });
@@ -571,6 +628,11 @@ describe("POST /api/admin/ai-services/connection-test", () => {
         const { body } = await postTest(service, { baseUrl: "http://ai.example.org" });
 
         assert.deepEqual(body.token, { ok: false, error: "unauthorized" });
+        assert.deepEqual(body.issuer, {
+            ok:       false,
+            skipped:  true,
+            expected: `http://ai.example.org${REALM_PATH}`,
+        });
         assert.deepEqual(body.catalog, { ok: false, skipped: true });
         assert.equal(calls.length, 0);
     });
@@ -591,8 +653,13 @@ describe("POST /api/admin/ai-services/connection-test", () => {
             const { status, body } = await postTest(service, { baseUrl: "http://ai.example.org" });
             assert.equal(status, 200);
             assert.deepEqual(body, {
-                ok:           false,
-                token:        { ok: true },
+                ok:     false,
+                token:  { ok: true },
+                issuer: {
+                    ok:       true,
+                    expected: `http://ai.example.org${REALM_PATH}`,
+                    actual:   `http://ai.example.org${REALM_PATH}`,
+                },
                 catalog:      { ok: false, error },
                 serviceCount: null,
             });
@@ -655,5 +722,201 @@ describe("POST /api/admin/ai-services/connection-test", () => {
         assert.equal(status, 403);
         assert.deepEqual(body, { ok: false, error: "forbidden" });
         assert.equal(calls.length, 0);
+    });
+});
+
+describe("POST /api/admin/ai-services/connection-test: the issuer step", () => {
+    const BASE_ONLY = Object.freeze({ baseUrl: "http://ai.example.org" });
+    const DEFAULT_ISSUER = `http://ai.example.org${REALM_PATH}`;
+    const PUBLIC_ISSUER = "https://auth.example.org/keycloak/realms/ethicapp-ai-additions";
+    const UNREADABLE_ISSUER_LOG = "error=invalid_response cause=UnreadableIssuer";
+
+    // Keycloak with a fixed public hostname (`KC_HOSTNAME`): `iss` is the
+    // same whatever URL the token was requested through.
+    function fixedHostnameKeycloak(iss = PUBLIC_ISSUER, options = {}) {
+        return fakeAiAdditions({ token: url => tokenResponse(url, { iss }), ...options });
+    }
+
+    function catalogCalls(calls) {
+        return calls.filter(call => call.url.endsWith("/catalog/v1/services")).length;
+    }
+
+    it("passes without a Keycloak public URL for a token from base_url/keycloak", async () => {
+        const { fetchImpl } = fakeAiAdditions();
+
+        const { body } = await postTest(buildService({ fetchImpl }), BASE_ONLY);
+
+        assert.equal(body.ok, true);
+        assert.deepEqual(body.issuer, {
+            ok:       true,
+            expected: DEFAULT_ISSUER,
+            actual:   DEFAULT_ISSUER,
+        });
+    });
+
+    it("passes when the given Keycloak public URL matches the token issuer", async () => {
+        const { fetchImpl } = fixedHostnameKeycloak();
+
+        const { body } = await postTest(buildService({ fetchImpl }), {
+            baseUrl:           "http://ai.example.org",
+            keycloakPublicUrl: "https://auth.example.org/keycloak",
+        });
+
+        assert.equal(body.ok, true);
+        assert.deepEqual(body.issuer, { ok: true, expected: PUBLIC_ISSUER, actual: PUBLIC_ISSUER });
+    });
+
+    it("ignores a single trailing slash on either side", async () => {
+        const { fetchImpl } = fixedHostnameKeycloak(`${PUBLIC_ISSUER}/`);
+
+        const { body } = await postTest(buildService({ fetchImpl }), {
+            baseUrl:           "http://ai.example.org",
+            keycloakPublicUrl: "https://auth.example.org/keycloak/",
+        });
+
+        assert.equal(body.ok, true);
+        assert.deepEqual(body.issuer, {
+            ok:       true,
+            expected: PUBLIC_ISSUER,
+            actual:   `${PUBLIC_ISSUER}/`,
+        });
+    });
+
+    it("reports issuer_mismatch for a wrong Keycloak URL and reads the catalog", async () => {
+        const { calls, fetchImpl } = fixedHostnameKeycloak();
+
+        const { status, body } = await postTest(buildService({ fetchImpl }), {
+            baseUrl:           "http://ai.example.org",
+            keycloakPublicUrl: "https://wrong.example.org/keycloak",
+        });
+
+        assert.equal(status, 200);
+        assert.deepEqual(body, {
+            ok:     false,
+            token:  { ok: true },
+            issuer: {
+                ok:       false,
+                error:    "issuer_mismatch",
+                expected: "https://wrong.example.org/keycloak/realms/ethicapp-ai-additions",
+                actual:   PUBLIC_ISSUER,
+            },
+            catalog:      { ok: true },
+            serviceCount: 3,
+        });
+        assert.equal(catalogCalls(calls), 1);
+        assert.deepEqual(logs, [
+            "[ai-services] connection test issuer failed: error=issuer_mismatch",
+        ]);
+    });
+
+    it("reports issuer_mismatch without a Keycloak URL when it has a fixed hostname", async () => {
+        const { fetchImpl } = fixedHostnameKeycloak();
+
+        const { body } = await postTest(buildService({ fetchImpl }), BASE_ONLY);
+
+        assert.equal(body.ok, false);
+        assert.deepEqual(body.issuer, {
+            ok:       false,
+            error:    "issuer_mismatch",
+            expected: DEFAULT_ISSUER,
+            actual:   PUBLIC_ISSUER,
+        });
+    });
+
+    it("compares letter case exactly, as the callback verification does", async () => {
+        const { fetchImpl } = fixedHostnameKeycloak(
+            "https://AUTH.example.org/keycloak/realms/ethicapp-ai-additions"
+        );
+
+        const { body } = await postTest(buildService({ fetchImpl }), {
+            baseUrl:           "http://ai.example.org",
+            keycloakPublicUrl: "https://auth.example.org/keycloak",
+        });
+
+        assert.equal(body.issuer.error, "issuer_mismatch");
+    });
+
+    it("reports both an issuer mismatch and a catalog failure", async () => {
+        const { fetchImpl } = fixedHostnameKeycloak(PUBLIC_ISSUER, {
+            catalog: () => jsonResponse({ detail: "no" }, 403),
+        });
+
+        const { body } = await postTest(buildService({ fetchImpl }), BASE_ONLY);
+
+        assert.equal(body.ok, false);
+        assert.equal(body.issuer.error, "issuer_mismatch");
+        assert.deepEqual(body.catalog, { ok: false, error: "unauthorized" });
+    });
+
+    it("answers invalid_response for a token that is not a JWT", async () => {
+        const header = base64url(JSON.stringify({ alg: "RS256" }));
+        const tokens = [
+            `opaque-${ACCESS_TOKEN}`,
+            `${header}.${ACCESS_TOKEN}`,
+            `${header}.!!!.${ACCESS_TOKEN}`,
+            `${header}.${base64url("not json")}.${ACCESS_TOKEN}`,
+            `${header}.${base64url("[1,2]")}.${ACCESS_TOKEN}`,
+            `${header}.${base64url("null")}.${ACCESS_TOKEN}`,
+        ];
+
+        for (const accessToken of tokens) {
+            const { calls, fetchImpl } = fakeAiAdditions({
+                token: () => jsonResponse({ access_token: accessToken, expires_in: 300 }),
+            });
+            const { body } = await postTest(buildService({ fetchImpl }), BASE_ONLY);
+
+            assert.deepEqual(body, {
+                ok:           false,
+                token:        { ok: true },
+                issuer:       { ok: false, error: "invalid_response", expected: DEFAULT_ISSUER },
+                catalog:      { ok: true },
+                serviceCount: 3,
+            }, accessToken);
+            assert.equal(catalogCalls(calls), 1);
+        }
+    });
+
+    it("answers invalid_response when the token has no usable iss", async () => {
+        const claimSets = [
+            { iss: undefined },
+            { iss: 42 },
+            { iss: "" },
+            { iss: "urn:keycloak:realm" },
+            { iss: `${PUBLIC_ISSUER}?x=${SECRET_CLAIM}` },
+            { iss: ` ${PUBLIC_ISSUER}` },
+            { iss: `https://auth.example.org/${"a".repeat(2048)}` },
+        ];
+
+        for (const claims of claimSets) {
+            const { fetchImpl } = fakeAiAdditions({ token: url => tokenResponse(url, claims) });
+            const { body } = await postTest(buildService({ fetchImpl }), BASE_ONLY);
+
+            assert.equal(body.ok, false);
+            assert.deepEqual(body.issuer, {
+                ok:       false,
+                error:    "invalid_response",
+                expected: DEFAULT_ISSUER,
+            });
+        }
+        assert.equal(logs.length, claimSets.length);
+        assert.equal(logs.every(line => line.endsWith(UNREADABLE_ISSUER_LOG)), true);
+    });
+});
+
+describe("issuer helpers", () => {
+    it("reads only an http(s) iss from the payload segment", () => {
+        const token = fakeJwt({ iss: "https://kc.example.org/realms/r", sub: SECRET_CLAIM });
+        assert.equal(readUnverifiedIssuer(token), "https://kc.example.org/realms/r");
+        assert.equal(readUnverifiedIssuer(null), null);
+        assert.equal(readUnverifiedIssuer(fakeJwt({ sub: SECRET_CLAIM })), null);
+        assert.equal(readUnverifiedIssuer(`${token}.extra`), null);
+    });
+
+    it("removes at most one trailing slash before comparing", () => {
+        assert.equal(issuersMatch("https://kc/realms/r", "https://kc/realms/r"), true);
+        assert.equal(issuersMatch("https://kc/realms/r/", "https://kc/realms/r"), true);
+        assert.equal(issuersMatch("https://kc/realms/r", "https://kc/realms/r/"), true);
+        assert.equal(issuersMatch("https://kc/realms/r", "https://kc/realms/r//"), false);
+        assert.equal(issuersMatch("https://kc/realms/r", "http://kc/realms/r"), false);
     });
 });
