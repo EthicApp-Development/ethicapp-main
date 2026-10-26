@@ -211,71 +211,231 @@ For the complete operator-facing session variable list, defaults, and
 revocation semantics, see the Browser Session Policy section in
 [`deploy/README.md`](./deploy/README.md#browser-session-policy).
 
-## AI Additions Connection
+## AI Services (AI Additions)
 
-Where EthicApp reaches AI Additions is data, not configuration (#814, epic
-#810). The **AI Additions connection** is a single database row
-(`ai_additions_connection`) that operators edit in the management console
-(#817). It holds:
+EthicApp's AI features come from a separate deployment, EthicApp AI Additions
+(`ethicapp-ai-additions`). Whether an installation uses them, and which ones,
+is data that the operator edits in the management console, at
+`/mng/ai-services` (role `S`). The deployment only provides the AI Additions
+client credentials (epic #810).
 
-- `base_url`: the AI Additions gateway as EthicApp reaches it, either a
-  Docker-internal name or an external HTTPS host;
-- `keycloak_public_url` (optional): the public Keycloak URL AI Additions
-  publishes as its token issuer (its `KEYCLOAK_PUBLIC_URL`), when it differs
-  from `base_url/keycloak`.
+- **Adapter catalog (code).** The `ethicapp` image ships one catalog,
+  `backend/external-services/manifest.json`. Every production adapter
+  (Polyadic Agents, the Argumentation Tutor, Case Analyst) registers at
+  startup, and each declares the AI Additions services it `requires`. There is
+  no per-environment manifest and no variable to select one.
+- **AI Additions connection (data).** A single, unversioned row,
+  `ai_additions_connection`: where EthicApp reaches AI Additions. Without it,
+  EthicApp makes no AI call.
+- **AI service policy (data).** An append-only list of versions,
+  `ai_service_policy_versions`, each naming the AI Additions services allowed.
+  Saving a policy creates a new version; versions are never edited.
 
-From it EthicApp derives every URL: the token endpoint and the JWKS
-(`base_url/keycloak/realms/<realm>/protocol/openid-connect/{token,certs}`), the
-expected callback issuer (`<keycloak_public_url or base_url/keycloak>/realms/<realm>`)
-and each service API (`base_url` plus the service path). EthicApp reads the row
-again every few seconds, so editing or removing it takes effect without a
-restart. **Without the row EthicApp makes no AI call**, and AI Additions
-callbacks are rejected.
+### Pinning
 
-Test a connection in the console before saving it. The test reports three
-steps: the token request, the token issuer and the catalog read. The issuer
-step compares the token's `iss` with the expected callback issuer above, so a
-wrong `keycloak_public_url` shows up as an issuer mismatch instead of as
-callbacks failing after the save. On a mismatch the console shows both issuers
-and the Keycloak public URL that would match. See the internal endpoints
-section of [`EXTERNAL.md`](./EXTERNAL.md) for the exact comparison.
+Each session is pinned to the policy version that is current when its
+activity is launched. Its phase hooks reach an adapter only when the phase's
+design enables the adapter, the pinned version allows every service the
+adapter requires, and a connection is stored. A new version therefore affects
+activities launched afterwards; running activities keep their version. Case
+analyses (`case-created`) follow the version current when the case is created.
+The connection is not versioned: running activities follow it when it changes,
+and removing it stops every AI call at once, inbound callbacks included. Design
+editors and case forms offer only the services the current version allows, and
+launching a design whose services are not allowed shows a notice. See
+[`EXTERNAL.md`](./EXTERNAL.md) for the dispatch gate and the callback rules.
 
-The deployment still provides, as environment variables,
-`AI_ADDITIONS_KEYCLOAK_REALM`, `AI_ADDITIONS_KEYCLOAK_CLIENT_ID`,
-`AI_ADDITIONS_KEYCLOAK_CLIENT_SECRET` (secret), `AI_ADDITIONS_KEYCLOAK_SCOPE`,
-`AI_ADDITIONS_HTTP_TIMEOUT_MS`, `AI_ADDITIONS_POLYADIC_AGENTS_AUTHENTICATED`,
-`AI_ADDITIONS_POLYADIC_AGENTS_PIPELINE_TYPE` and the
-`EXTERNAL_SERVICES_CALLBACK_AUTH_*` toggles (`_ENABLED`, `_AUDIENCE`,
-`_CLOCK_TOLERANCE_SECONDS`).
+### Environment variables
 
-**Upgrade note.** The following variables are removed, with no fallback
-period; delete them from every deployment environment and from the deployment
-repository's contract copies:
+The deployment provides, for an installation that uses AI:
 
-- `AI_ADDITIONS_BASE_URL`
-- `AI_ADDITIONS_KEYCLOAK_BASE_URL`
-- `AI_ADDITIONS_KEYCLOAK_TOKEN_URL`
-- `AI_ADDITIONS_POLYADIC_AGENTS_API_BASE_URL`
-- `AI_ADDITIONS_ARGUMENTATION_TUTOR_API_BASE_URL`
-- `AI_ADDITIONS_CASE_ANALYST_API_BASE_URL`
-- `EXTERNAL_SERVICES_CALLBACK_AUTH_ISSUER`
-- `EXTERNAL_SERVICES_CALLBACK_AUTH_JWKS_URL`
+| Variable | Notes |
+| --- | --- |
+| `AI_ADDITIONS_KEYCLOAK_CLIENT_ID` | The EthicApp client in AI Additions' Keycloak, normally `ethicapp-platform`. |
+| `AI_ADDITIONS_KEYCLOAK_CLIENT_SECRET` | Secret. The same value as AI Additions' `ETHICAPP_PLATFORM_CLIENT_SECRET`. |
+| `AI_ADDITIONS_KEYCLOAK_REALM` | Defaults to `ethicapp-ai-additions`; must equal AI Additions' `KEYCLOAK_REALM`. |
+| `AI_ADDITIONS_KEYCLOAK_SCOPE` | Optional OAuth scope. |
+| `AI_ADDITIONS_HTTP_TIMEOUT_MS` | Defaults to `12000`. |
+| `AI_ADDITIONS_POLYADIC_AGENTS_AUTHENTICATED`, `AI_ADDITIONS_POLYADIC_AGENTS_PIPELINE_TYPE` | Polyadic Agents settings with contract defaults. |
+| `EXTERNAL_SERVICES_CALLBACK_AUTH_ENABLED`, `_AUDIENCE`, `_CLOCK_TOLERANCE_SECONDS` | Callback token verification; keep `_ENABLED=true`. `_AUDIENCE` must match the audience AI Additions puts in callback tokens. |
 
-After upgrading, an installation that uses AI has none until its operator
-configures the connection in the management console (#817) and allows services
-in the AI service policy. Until the console page ships, insert the row with SQL
-as shown below.
+Leave `EXTERNAL_SERVICES_DEVELOPMENT_ADAPTERS` unset or `false` in every
+deployment: it registers the mock adapters, which only the local development
+Compose stack uses. The management console reaches the internal ethicapp API
+through `ETHICAPP_INTERNAL_BASE_URL` to read the AI Additions catalog and test
+connections, so the credentials stay in `ethicapp` alone.
 
-**Local development.** The development Compose stack used to point to AI
-Additions through these variables. Now insert the connection row (until the
-console page exists); for AI Additions running on the host:
+### Installation without AI
+
+This is the default: an installation where no operator has saved a connection
+uses no AI service. Nothing needs to be set. The `AI_ADDITIONS_*` variables
+can stay unset, and no AI Additions deployment is needed.
+
+To check that an installation makes no outbound AI calls:
+
+1. In the management console, `/mng/ai-services` shows "This installation uses
+   no external AI".
+2. The connection table is empty and no AI job was created since the upgrade
+   (or ever):
+
+   ```bash
+   docker compose exec postgresql psql -U postgres -d ethicapp -c \
+     "SELECT count(*) AS connections FROM ai_additions_connection;"
+   docker compose exec postgresql psql -U postgres -d ethicapp -c \
+     "SELECT service_id, count(*), max(created_at) FROM external_service_jobs GROUP BY service_id;"
+   ```
+
+   `connections` must be `0`. Each hook an AI adapter handles is recorded as a
+   job in `external_service_jobs` before any request is sent, so no row newer
+   than the upgrade means no hook reached AI Additions.
+3. Inbound callbacks are refused: a `POST /external-services/callbacks`
+   answers `503` with `code: "not_configured"`, visible as `503` in the NGINX
+   access log if anything still sends them.
+
+Use the PostgreSQL service and user names of the target deployment. The
+policy history may still show versions; without a connection they have no
+effect.
+
+### Enabling AI
+
+1. Deploy AI Additions with a release that serves the service catalog
+   (`GET /catalog/v1/services`, the `ai-catalog` service), and configure it as
+   in one of the two topologies below.
+2. Set the EthicApp client credentials above in the `ethicapp` environment and
+   redeploy it.
+3. In `/mng/ai-services`, enter the connection: the AI Additions URL
+   (`base_url`) and, when needed, the Keycloak public URL
+   (`keycloak_public_url`).
+4. Select "Test connection". All three steps must pass: the token request,
+   the token issuer and the catalog read. An issuer mismatch shows both
+   issuers and the Keycloak public URL that would match.
+5. Save the connection.
+6. Under "Allowed services", tick the services to allow, add an optional note
+   and select "Save as a new version". Activities launched from now on use
+   them.
+
+Removing the connection ("Remove connection") turns AI off again for every
+activity. The policy history is kept and applies again if a connection is
+saved later.
+
+From the connection EthicApp derives every URL:
+
+| URL | Derivation |
+| --- | --- |
+| Token endpoint | `base_url/keycloak/realms/<realm>/protocol/openid-connect/token` |
+| JWKS (callback verification) | `base_url/keycloak/realms/<realm>/protocol/openid-connect/certs` |
+| Expected callback issuer | `<keycloak_public_url or base_url/keycloak>/realms/<realm>` |
+| Service APIs and the catalog | `base_url` plus the service path |
+
+Keycloak is always reached through `base_url`. Keycloak writes its own public
+hostname (`KC_HOSTNAME`, set from AI Additions' `KEYCLOAK_PUBLIC_URL`) into
+every token's `iss`, whatever host the token was requested through, so
+`keycloak_public_url` only tells EthicApp which issuer to expect. EthicApp
+reads the connection again every few seconds, so a change takes effect without
+a restart.
+
+### AI Additions on the same Docker host or network
+
+Use a `base_url` that the `ethicapp` container can resolve, for example the
+AI Additions NGINX service name on a shared Docker network
+(`http://ai-apps-nginx`) or the host's published port
+(`http://host.docker.internal:8311`, with
+`extra_hosts: ["host.docker.internal:host-gateway"]` on `ethicapp`). Plain
+HTTP is acceptable on a private network.
+
+- `keycloak_public_url`: leave it empty when AI Additions'
+  `KEYCLOAK_PUBLIC_URL` equals `base_url` plus `/keycloak`. Otherwise set it
+  to AI Additions' `KEYCLOAK_PUBLIC_URL` exactly, for example when AI
+  Additions publishes `https://ai.example.edu/keycloak` and EthicApp reaches it
+  as `http://ai-apps-nginx`.
+- `POLYADIC_AGENTS_ETHICAPP_CALLBACK_URL` and
+  `ARGUMENTATION_TUTOR_ETHICAPP_CALLBACK_URL` in AI Additions point to
+  EthicApp's callback endpoint, `/external-services/callbacks`, at a URL the
+  AI Additions containers can reach: EthicApp's public URL, or its NGINX
+  service on the shared network.
+
+### AI Additions on a separate host
+
+- Publish AI Additions over HTTPS: put a TLS-terminating reverse proxy in front
+  of its NGINX facade, and use that URL as `base_url`, for example
+  `https://ai.example.edu`.
+- AI Additions' `KEYCLOAK_PUBLIC_URL` must be its public HTTPS URL plus
+  `/keycloak` (`https://ai.example.edu/keycloak`), and its
+  `KEYCLOAK_ISSUER_URL` the same value. With that, `keycloak_public_url` can
+  stay empty in the console. If AI Additions publishes Keycloak at another
+  URL, enter that URL as `keycloak_public_url`.
+- AI Additions' `POLYADIC_AGENTS_ETHICAPP_CALLBACK_URL` and
+  `ARGUMENTATION_TUTOR_ETHICAPP_CALLBACK_URL` must be
+  `https://<ethicapp-host>/external-services/callbacks`.
+- The network must allow both directions: the `ethicapp` container reaches
+  `base_url` on 443 (token, catalog and service calls), and the AI Additions
+  services reach EthicApp's public HTTPS URL (callbacks). Firewalls, VPNs and
+  IP allowlists must permit both. The management-console diagnostics page can
+  check the outbound side if the AI Additions host is listed in
+  `MNG_HEALTH_CHECK_TARGETS` (see
+  [`deploy/README.md`](./deploy/README.md#health-diagnostics-targets)).
+- The EthicApp client credentials belong to that AI Additions installation.
+  Pointing the connection at a different installation also needs its
+  credentials redeployed in `ethicapp`.
+
+### Upgrading from environment-configured AI
+
+Releases from epic #810 on take the AI Additions location from the database.
+The upgrade affects only installations that used AI.
+
+1. Delete these variables from every deployment environment and from the
+   deployment repository's values. They are removed from
+   `deploy/env.contract.yml` with no fallback period:
+
+   - `AI_ADDITIONS_BASE_URL`
+   - `AI_ADDITIONS_KEYCLOAK_BASE_URL`
+   - `AI_ADDITIONS_KEYCLOAK_TOKEN_URL`
+   - `AI_ADDITIONS_POLYADIC_AGENTS_API_BASE_URL`
+   - `AI_ADDITIONS_ARGUMENTATION_TUTOR_API_BASE_URL`
+   - `AI_ADDITIONS_CASE_ANALYST_API_BASE_URL`
+   - `EXTERNAL_SERVICES_CALLBACK_AUTH_ISSUER`
+   - `EXTERNAL_SERVICES_CALLBACK_AUTH_JWKS_URL`
+   - `EXTERNAL_SERVICES_MANIFEST` (with `manifest.staging.json` and
+     `manifest.development.json`, which no longer exist)
+
+   Keep the client credentials and the other variables of the table above.
+   Before deleting `AI_ADDITIONS_BASE_URL`, note its value: it becomes the
+   connection's `base_url`.
+2. Refresh the deployment repository's copy of `deploy/env.contract.yml` from
+   the release being deployed.
+3. Deploy. Flyway applies V22 (the connection, the policy versions and the
+   session pin) and V23 (pending callback results). V22 creates policy
+   version 1, which allows nothing, and pins every existing session to it.
+4. AI stops at once in every session, including activities that were running
+   during the upgrade. They stay without AI permanently, since a pin never
+   changes; only activities launched after a policy is saved use AI. Plan the
+   upgrade between activities.
+5. In `/mng/ai-services`, follow steps 3 to 6 of "Enabling AI": enter the
+   connection (the former `AI_ADDITIONS_BASE_URL` as `base_url`), test it
+   until the token, issuer and catalog steps pass, save it, allow the
+   services, and save a new version.
+
+AI Additions must be on a release that serves the catalog before step 5,
+otherwise the catalog step fails with `unreachable` or `invalid_response` and
+no service can be allowed.
+
+### Local development
+
+The development Compose stack sets `EXTERNAL_SERVICES_DEVELOPMENT_ADAPTERS=true`,
+so the mock adapters work without AI Additions. To use a local AI Additions
+started from its own repository (NGINX on port 8010), configure the connection
+at `http://localhost/mng/ai-services` with
+`base_url` `http://host.docker.internal:8010` and `keycloak_public_url`
+`http://localhost:8010/keycloak`, its development `KEYCLOAK_PUBLIC_URL`. The
+same row can be written with SQL:
 
 ```bash
 docker compose exec postgresql psql -U postgres -d ethicapp -c \
-  "INSERT INTO ai_additions_connection (id, base_url) VALUES (1, 'http://host.docker.internal:8010') ON CONFLICT (id) DO UPDATE SET base_url = EXCLUDED.base_url;"
+  "INSERT INTO ai_additions_connection (id, base_url, keycloak_public_url) VALUES (1, 'http://host.docker.internal:8010', 'http://localhost:8010/keycloak') ON CONFLICT (id) DO UPDATE SET base_url = EXCLUDED.base_url, keycloak_public_url = EXCLUDED.keycloak_public_url;"
 ```
 
 Delete the row (`DELETE FROM ai_additions_connection;`) to stop all AI calls.
+The services still need a saved policy version that allows them.
 
 ## Publishable Images
 
@@ -317,17 +477,12 @@ intentionally enabled.
 
 The `ethicapp` image ships one external-services adapter catalog,
 `backend/external-services/manifest.json` (#812). It is code, not
-configuration: there is no per-environment manifest and no variable to select
-one. Every production adapter is registered at startup, but none receives
-events until an AI Additions connection is stored and the AI service policy
-allows the services it requires (epic #810, #815), so an installation uses no
-AI service until the operator configures both in the management console.
-Activities keep the policy version current at their launch. The mock adapters are
-development-only: they are registered only with
+configuration. No production adapter receives events until an operator stores
+an AI Additions connection and allows services in the management console; see
+[AI Services (AI Additions)](#ai-services-ai-additions). The mock adapters
+need `external-mock-service` and register only with
 `EXTERNAL_SERVICES_DEVELOPMENT_ADAPTERS=true`, which only the local Compose
-stack sets, and they need `external-mock-service`. Leave the variable unset in
-every deployment. `EXTERNAL_SERVICES_MANIFEST` is removed: delete it from
-deployment environments when upgrading.
+stack sets.
 
 `postgres` and `redis` are not built by this repository. Use the official images
 and pin the desired versions in the deployment repository.
