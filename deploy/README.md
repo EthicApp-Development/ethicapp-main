@@ -28,20 +28,23 @@ The contract distinguishes:
 
 All `VITE_*` variables are public frontend variables. They must never contain secrets.
 
-## External Services Manifest
+## External Services Catalog
 
-`EXTERNAL_SERVICES_MANIFEST` selects which external-service adapters the
-`ethicapp` container enables (#738). The image ships three manifests:
+The `ethicapp` image ships a single external-services adapter catalog
+(`/app/backend/external-services/manifest.json`, #812). Deployments do not
+select or edit it, and the variable that chose a manifest is removed (see
+`INSTALL.md`).
 
-- default (variable unset): `/app/backend/external-services/manifest.json`,
-  Polyadic Agents and the Argumentation Tutor. Use it in production.
-- `/app/backend/external-services/manifest.staging.json`: the same plus Case
-  Analyst. Set it in staging targets.
-- `/app/backend/external-services/manifest.development.json`: everything,
-  including the mock adapters. Local development only; it needs
-  `external-mock-service`.
+- Production adapters (Polyadic Agents, the Argumentation Tutor, Case Analyst)
+  always register, and each declares the AI Additions services it requires.
+  Whether they are used is the AI service policy of epic #810, edited in the
+  management console (#815, #817). Until #815 ships, no production adapter is
+  used anywhere.
+- Mock adapters are development-only. They register only with
+  `EXTERNAL_SERVICES_DEVELOPMENT_ADAPTERS=true`, which only the local
+  development Compose file sets. Leave it unset or `false` in deployments.
 
-Designs keep the ids of services a target disables; they are neither offered
+Designs keep the ids of services that cannot be used; they are neither offered
 in the editor nor dispatched.
 
 ## reCAPTCHA Enterprise
