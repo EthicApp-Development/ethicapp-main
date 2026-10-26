@@ -212,11 +212,18 @@ export class CapabilityDescriptorsClient {
      *   options.getDescriptorLink the manifest link of a service
      *   (`ExternalServicesRegistry#getServiceDescriptor`)
      * @param {(path: string, options: object) => Promise<unknown>} options.requestJson
-     *   authenticated GET relative to AI_ADDITIONS_BASE_URL (`AiAdditionsClient#requestJson`)
+     *   authenticated GET relative to the connection's base URL
+     *   (`AiAdditionsClient#requestJson`)
+     * @param {() => Promise<string|null>} [options.getConnectionKey] the
+     *   fingerprint of the AI Additions connection, null when none is stored
+     *   (`AiAdditionsClient#getConnectionFingerprint`). Without a connection no
+     *   descriptor is requested; when it changes, cached descriptors are dropped.
+     *   Omitted, the connection is assumed constant.
      */
     constructor({
         getDescriptorLink,
         requestJson,
+        getConnectionKey = async () => "",
         now = () => Date.now(),
         ttlMs = DESCRIPTOR_TTL_MS,
         retryMs = DESCRIPTOR_RETRY_MS,
@@ -225,6 +232,8 @@ export class CapabilityDescriptorsClient {
     }) {
         this._getDescriptorLink = getDescriptorLink;
         this._requestJson       = requestJson;
+        this._getConnectionKey  = getConnectionKey;
+        this._connectionKey     = null;
         this._now               = now;
         this._ttlMs             = ttlMs;
         this._retryMs           = retryMs;
@@ -243,6 +252,9 @@ export class CapabilityDescriptorsClient {
      * descriptor cannot be fetched or is invalid. A descriptor fetched
      * successfully earlier is kept (with `stale: true`) while the service is
      * unavailable, and the fetch is retried after a short delay.
+     *
+     * Without an AI Additions connection it returns
+     * `{ available: false, reason: "not_configured" }` without any request.
      */
     async getInstanceConfiguration(serviceId, locale) {
         const link = this._getDescriptorLink(serviceId);
@@ -250,8 +262,31 @@ export class CapabilityDescriptorsClient {
             return null;
         }
 
+        let connectionKey;
+        try {
+            connectionKey = await this._getConnectionKey();
+        } catch (error) {
+            this._logger.warn(
+                `[capability-descriptors] ${serviceId}: AI Additions connection unreadable `
+                + `(${error?.message || error?.name || "unknown error"})`
+            );
+            return { available: false, reason: "unreachable" };
+        }
+
+        if (connectionKey !== this._connectionKey) {
+            // The connection changed or was removed: descriptors fetched from
+            // the previous host no longer apply.
+            this._cache.clear();
+            this._connectionKey = connectionKey;
+        }
+        if (connectionKey === null) {
+            return { available: false, reason: "not_configured" };
+        }
+
         const acceptLanguage = descriptorLocale(locale);
-        const cacheKey = `${serviceId}\u0000${acceptLanguage}`;
+        // The connection is part of the key, so a request still in flight for
+        // a previous connection never fills the cache of the current one.
+        const cacheKey = `${connectionKey}\u0000${serviceId}\u0000${acceptLanguage}`;
         const cached = this._cache.get(cacheKey);
 
         if (cached && cached.expiresAtMs > this._now()) {
@@ -299,6 +334,10 @@ export class CapabilityDescriptorsClient {
                 timeoutMs: this._timeoutMs,
             });
         } catch (error) {
+            // The connection was removed after it was checked: no request left.
+            if (error?.code === "not_configured") {
+                return { available: false, reason: "not_configured" };
+            }
             this._logger.warn(
                 `[capability-descriptors] ${serviceId}: descriptor unavailable `
                 + `(${error?.message || error?.name || "unknown error"})`

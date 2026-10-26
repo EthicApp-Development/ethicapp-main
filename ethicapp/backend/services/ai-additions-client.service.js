@@ -1,8 +1,22 @@
-const DEFAULT_AI_ADDITIONS_BASE_URL = "http://host.docker.internal:8010";
-const DEFAULT_KEYCLOAK_REALM = "ethicapp-ai-additions";
+import {
+    AiAdditionsNotConfiguredError,
+    connectionFingerprint,
+    deriveAiAdditionsEndpoints,
+    isAiAdditionsNotConfigured,
+    joinUrl,
+    readKeycloakRealm,
+} from "../helpers/ai-additions-connection.js";
+import { getConnection as getStoredConnection } from "../helpers/ai-service-policy.js";
+
+export { AiAdditionsNotConfiguredError, isAiAdditionsNotConfigured };
+
 const DEFAULT_HTTP_TIMEOUT_MS = 12000;
 const DEFAULT_TOKEN_TTL_MS = 300000;
 const TOKEN_EXPIRY_SAFETY_WINDOW_MS = 30000;
+// How long a connection read from the database is reused. The management
+// console can change it at any time; a few seconds bounds how long EthicApp
+// keeps calling a host the operator just replaced or removed.
+const DEFAULT_CONNECTION_TTL_MS = 5000;
 
 function normalizeText(value) {
     if (value === null || value === undefined) {
@@ -11,10 +25,6 @@ function normalizeText(value) {
 
     const text = String(value).trim();
     return text.length > 0 ? text : "";
-}
-
-function trimTrailingSlash(value) {
-    return normalizeText(value).replace(/\/+$/u, "");
 }
 
 function readPositiveInteger(value, fallback, minimum = 1) {
@@ -30,10 +40,33 @@ function safeJsonParse(value) {
     }
 }
 
+/**
+ * HTTP client for AI Additions (#814). Every URL derives from the stored
+ * connection (`getConnection`), reread at most every `connectionTtlMs`:
+ *
+ * - tokens: `base_url/keycloak/realms/<realm>/protocol/openid-connect/token`,
+ *   with the client credentials from `AI_ADDITIONS_KEYCLOAK_*`;
+ * - API calls: `base_url + basePath + pathname`.
+ *
+ * Without a connection every call rejects with `AiAdditionsNotConfiguredError`
+ * (`code: "not_configured"`) before any request leaves the host, whether the
+ * call is authenticated or not. When the connection changes, the cached token
+ * is dropped.
+ */
 export class AiAdditionsClient {
+    /**
+     * @param {object} [options]
+     * @param {object} [options.env]  Source of the kept AI_ADDITIONS_* variables.
+     * @param {Function} [options.fetchImpl]
+     * @param {() => Promise<{ baseUrl: string, keycloakPublicUrl?: string|null } | null>}
+     *   [options.getConnection]  Reads the stored connection; defaults to the database.
+     * @param {number} [options.connectionTtlMs]  How long a read connection is reused.
+     */
     constructor({
         env = process.env,
         fetchImpl = globalThis.fetch,
+        getConnection = getStoredConnection,
+        connectionTtlMs = DEFAULT_CONNECTION_TTL_MS,
         now = () => Date.now(),
         setTimeoutImpl = setTimeout,
         clearTimeoutImpl = clearTimeout,
@@ -41,21 +74,39 @@ export class AiAdditionsClient {
         if (typeof fetchImpl !== "function") {
             throw new Error("AiAdditionsClient requires a fetch implementation.");
         }
+        if (typeof getConnection !== "function") {
+            throw new Error("AiAdditionsClient requires a getConnection function.");
+        }
 
         this.env = env;
         this.fetchImpl = fetchImpl;
+        this.getConnection = getConnection;
+        this.connectionTtlMs = connectionTtlMs;
         this.now = now;
         this.setTimeoutImpl = setTimeoutImpl;
         this.clearTimeoutImpl = clearTimeoutImpl;
-        this.tokenCache = {
-            token: null,
-            expiresAtMs: 0,
-        };
+        this.connectionCache = { connection: null, fingerprint: null, expiresAtMs: 0 };
+        this.connectionRequest = null;
+        this.tokenCache = { token: null, tokenUrl: null, expiresAtMs: 0 };
         this.tokenRequest = null;
     }
 
-    getBaseUrl() {
-        return trimTrailingSlash(this.env.AI_ADDITIONS_BASE_URL) || DEFAULT_AI_ADDITIONS_BASE_URL;
+    /**
+     * A client bound to a given connection instead of the stored one, with
+     * its own token cache. Used to test a connection before saving it.
+     * @param {{ baseUrl: string, keycloakPublicUrl?: string|null } | null} connection
+     */
+    withConnection(connection) {
+        const fixed = connection ? { ...connection } : null;
+        return new AiAdditionsClient({
+            env:              this.env,
+            fetchImpl:        this.fetchImpl,
+            getConnection:    async () => fixed,
+            connectionTtlMs:  0,
+            now:              this.now,
+            setTimeoutImpl:   this.setTimeoutImpl,
+            clearTimeoutImpl: this.clearTimeoutImpl,
+        });
     }
 
     getHttpTimeoutMs() {
@@ -66,13 +117,8 @@ export class AiAdditionsClient {
         );
     }
 
-    getKeycloakBaseUrl() {
-        return trimTrailingSlash(this.env.AI_ADDITIONS_KEYCLOAK_BASE_URL)
-            || `${this.getBaseUrl()}/keycloak`;
-    }
-
     getKeycloakRealm() {
-        return normalizeText(this.env.AI_ADDITIONS_KEYCLOAK_REALM) || DEFAULT_KEYCLOAK_REALM;
+        return readKeycloakRealm(this.env);
     }
 
     getKeycloakClientId() {
@@ -87,53 +133,113 @@ export class AiAdditionsClient {
         return normalizeText(this.env.AI_ADDITIONS_KEYCLOAK_SCOPE);
     }
 
-    getTokenUrl() {
-        const explicitTokenUrl = normalizeText(this.env.AI_ADDITIONS_KEYCLOAK_TOKEN_URL);
-        if (explicitTokenUrl) {
-            return explicitTokenUrl;
+    /**
+     * The stored connection, reread when the cached copy expired. Errors other
+     * than "no connection" (a database failure) propagate and are not cached.
+     * @returns {Promise<object|null>}
+     */
+    async readConnection() {
+        if (this.connectionCache.expiresAtMs > this.now()) {
+            return this.connectionCache.connection;
         }
 
-        const realm = encodeURIComponent(this.getKeycloakRealm());
-        return `${this.getKeycloakBaseUrl()}/realms/${realm}/protocol/openid-connect/token`;
+        if (!this.connectionRequest) {
+            this.connectionRequest = (async () => {
+                const connection = (await this.getConnection()) ?? null;
+                const fingerprint = connectionFingerprint(connection);
+
+                if (fingerprint !== this.connectionCache.fingerprint) {
+                    this.clearAccessToken();
+                }
+
+                this.connectionCache = {
+                    connection,
+                    fingerprint,
+                    expiresAtMs: this.now() + this.connectionTtlMs,
+                };
+                return connection;
+            })();
+        }
+
+        try {
+            return await this.connectionRequest;
+        } finally {
+            this.connectionRequest = null;
+        }
     }
 
-    buildServiceUrl(pathname, baseUrl = this.getBaseUrl()) {
-        const normalizedPath = normalizeText(pathname);
-        if (/^https?:\/\//iu.test(normalizedPath)) {
-            return normalizedPath;
-        }
+    /**
+     * Every URL derived from the current connection.
+     * @returns {Promise<import("../helpers/ai-additions-connection.js").AiAdditionsEndpoints>}
+     * @throws {AiAdditionsNotConfiguredError} without a connection.
+     */
+    async getEndpoints() {
+        const connection = await this.readConnection();
+        return deriveAiAdditionsEndpoints(connection, { realm: this.getKeycloakRealm() });
+    }
 
-        const base = trimTrailingSlash(baseUrl);
-        const path = normalizedPath.startsWith("/") ? normalizedPath : `/${normalizedPath}`;
-        return `${base}${path}`;
+    /**
+     * The fingerprint of the current connection, or null when none is stored.
+     * Caches of data fetched from AI Additions key on it.
+     * @returns {Promise<string|null>}
+     */
+    async getConnectionFingerprint() {
+        try {
+            return (await this.getEndpoints()).fingerprint;
+        } catch (error) {
+            if (isAiAdditionsNotConfigured(error)) {
+                return null;
+            }
+            throw error;
+        }
+    }
+
+    /**
+     * `base_url` followed by the given relative path segments.
+     * @throws {AiAdditionsNotConfiguredError} without a connection.
+     */
+    async resolveServiceUrl(...segments) {
+        const { baseUrl } = await this.getEndpoints();
+        return joinUrl(baseUrl, ...segments);
     }
 
     clearAccessToken() {
-        this.tokenCache.token = null;
-        this.tokenCache.expiresAtMs = 0;
+        this.tokenCache = { token: null, tokenUrl: null, expiresAtMs: 0 };
         this.tokenRequest = null;
     }
 
+    /**
+     * A bearer token for the current connection, cached until shortly before
+     * it expires.
+     * @throws {AiAdditionsNotConfiguredError} without a connection.
+     */
     async getAccessToken() {
+        const { tokenUrl } = await this.getEndpoints();
+
         if (
             this.tokenCache.token
+            && this.tokenCache.tokenUrl === tokenUrl
             && this.tokenCache.expiresAtMs > this.now() + TOKEN_EXPIRY_SAFETY_WINDOW_MS
         ) {
             return this.tokenCache.token;
         }
 
-        if (!this.tokenRequest) {
-            this.tokenRequest = this.requestAccessToken();
+        if (!this.tokenRequest || this.tokenRequest.tokenUrl !== tokenUrl) {
+            const request = this.requestAccessToken(tokenUrl);
+            this.tokenRequest = { tokenUrl, request };
         }
 
+        const pending = this.tokenRequest;
         try {
-            return await this.tokenRequest;
+            return await pending.request;
         } finally {
-            this.tokenRequest = null;
+            if (this.tokenRequest === pending) {
+                this.tokenRequest = null;
+            }
         }
     }
 
-    async requestAccessToken() {
+    async requestAccessToken(tokenUrl) {
         const clientId = this.getKeycloakClientId();
         const clientSecret = this.getKeycloakClientSecret();
 
@@ -144,8 +250,8 @@ export class AiAdditionsClient {
         }
 
         const body = new URLSearchParams({
-            grant_type: "client_credentials",
-            client_id: clientId,
+            grant_type:    "client_credentials",
+            client_id:     clientId,
             client_secret: clientSecret,
         });
 
@@ -154,10 +260,10 @@ export class AiAdditionsClient {
             body.set("scope", scope);
         }
 
-        const tokenResponse = await this.fetchJsonRaw(this.getTokenUrl(), {
-            method: "POST",
+        const tokenResponse = await this.fetchJsonRaw(tokenUrl, {
+            method:  "POST",
             headers: { "Content-Type": "application/x-www-form-urlencoded" },
-            body: body.toString(),
+            body:    body.toString(),
         });
 
         const accessToken = normalizeText(tokenResponse?.access_token);
@@ -167,9 +273,12 @@ export class AiAdditionsClient {
             throw new Error("AI Additions Keycloak token endpoint did not return access_token.");
         }
 
-        this.tokenCache.token = accessToken;
-        this.tokenCache.expiresAtMs = this.now()
-            + (Number.isFinite(expiresIn) ? expiresIn * 1000 : DEFAULT_TOKEN_TTL_MS);
+        this.tokenCache = {
+            token:       accessToken,
+            tokenUrl,
+            expiresAtMs: this.now()
+                + (Number.isFinite(expiresIn) ? expiresIn * 1000 : DEFAULT_TOKEN_TTL_MS),
+        };
 
         return accessToken;
     }
@@ -207,15 +316,25 @@ export class AiAdditionsClient {
         }
     }
 
+    /**
+     * Sends a JSON request to `base_url + basePath + pathname`.
+     * @param {string} pathname  Path relative to `basePath`.
+     * @param {object} [options]
+     * @param {string} [options.basePath]  The service's API path under `base_url`,
+     *   for example `/polyadic-agent/api`.
+     * @param {boolean} [options.authenticated]  Sends a bearer token (default true).
+     * @throws {AiAdditionsNotConfiguredError} without a connection, before any request.
+     */
     async requestJson(pathname, {
         method = "GET",
         body = null,
         headers = {},
-        baseUrl = this.getBaseUrl(),
+        basePath = "",
         authenticated = true,
         timeoutMs = this.getHttpTimeoutMs(),
     } = {}) {
         const execute = async () => {
+            const url = await this.resolveServiceUrl(basePath, pathname);
             const requestHeaders = {
                 "Content-Type": "application/json",
                 ...headers,
@@ -225,10 +344,10 @@ export class AiAdditionsClient {
                 requestHeaders.Authorization = `Bearer ${await this.getAccessToken()}`;
             }
 
-            return this.fetchJsonRaw(this.buildServiceUrl(pathname, baseUrl), {
+            return this.fetchJsonRaw(url, {
                 method,
                 headers: requestHeaders,
-                body: body == null ? null : JSON.stringify(body),
+                body:    body == null ? null : JSON.stringify(body),
                 timeoutMs,
             });
         };
