@@ -504,8 +504,11 @@ service id, and decides where the callback may publish (#815):
   job's session, phase, question, group and user, even after the current policy
   removed the service. Its payload may not name another destination (`409`).
   A room job (#833) accepts repeated callbacks until its phase ends or its
-  activity finishes, and is never completed by one; once closed, its callbacks
-  answer `409`.
+  activity finishes, and is never completed by one; once closed, or once its
+  phase is no longer the session's active phase, its callbacks answer `409`.
+  The registry closes room jobs itself when it dispatches `phase-ended` or
+  `activity-finished`, before the policy and connection gate, so they close
+  even when no adapter receives the hook.
 - A callback that matches no job (an older Polyadic's proactive interventions
   carry a fresh correlation id each time) is refused (`409`) when the room it
   names is bound to an open room job. Otherwise it is accepted only for the

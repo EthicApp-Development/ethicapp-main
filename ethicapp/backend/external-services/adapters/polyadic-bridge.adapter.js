@@ -460,7 +460,6 @@ const NO_ROOM_JOBS = Object.freeze({
     create: async () => null,
     open:   async () => false,
     fail:   async () => {},
-    close:  async () => 0,
 });
 
 export async function register({
@@ -590,15 +589,6 @@ export async function register({
         const creation = createRoom(options).finally(() => roomCreations.delete(roomName));
         roomCreations.set(roomName, creation);
         return creation;
-    }
-
-    async function closeRoomJobs(scope) {
-        try {
-            return await roomJobs.close(scope);
-        } catch (error) {
-            console.error("[polyadic-bridge] Could not close room jobs.", scope, error);
-            return 0;
-        }
     }
 
     // Polyadic's lifecycle report for each created room, for the job result.
@@ -841,9 +831,9 @@ export async function register({
         const phaseRoomsKey = getPhaseRoomsKey(sessionId, phaseId);
         const rooms = phaseRooms.get(phaseRoomsKey) || new Set();
         let roomsClosed = 0;
-        // First, so the rooms' callbacks are refused from now on, including
-        // rooms this process no longer tracks (#833).
-        const roomJobsClosed = await closeRoomJobs({ sessionId, phaseId });
+        // The rooms' room jobs are already closed: the registry closes them
+        // before dispatching phase-ended, even when this handler does not run
+        // (#833).
 
         for (const roomName of rooms) {
             try {
@@ -861,14 +851,13 @@ export async function register({
             serviceId: service.id,
             hook:      "phase-ended",
             status:    "completed",
-            payload:   { sessionId, phaseId, roomsClosed, roomJobsClosed },
+            payload:   { sessionId, phaseId, roomsClosed },
         });
     });
 
     subscribe("activity-finished", async (context, { callback }) => {
         const sessionId = Number(context.sessionId);
         let roomsClosed = 0;
-        const roomJobsClosed = await closeRoomJobs({ sessionId });
 
         for (const [roomName, storedContext] of roomContext.entries()) {
             if (storedContext.sessionId !== sessionId) {
@@ -898,7 +887,7 @@ export async function register({
             serviceId: service.id,
             hook:      "activity-finished",
             status:    "completed",
-            payload:   { sessionId, roomsClosed, roomJobsClosed },
+            payload:   { sessionId, roomsClosed },
         });
     });
 }

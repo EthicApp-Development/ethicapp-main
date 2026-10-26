@@ -37,6 +37,17 @@ function refusal(statusCode, message, code) {
     return Object.assign(new Error(message), { statusCode, code });
 }
 
+/**
+ * Whether a phase state (from the loader below) says the phase is the
+ * launched session's current phase and the activity is in progress.
+ */
+export function isActivePhaseState(state, phaseId) {
+    return Boolean(state)
+        && state.launched === true
+        && Number(state.status) === IN_PROGRESS
+        && Number(state.current_stage) === Number(phaseId);
+}
+
 async function defaultGetDb() {
     return rpg2.getDBInstance(config.dbconnString);
 }

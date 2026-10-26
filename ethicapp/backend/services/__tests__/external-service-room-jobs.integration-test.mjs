@@ -171,9 +171,13 @@ test("room jobs: a claim after the room job closed is refused and stays pending"
 test("room jobs: the registry refuses a callback to a closed room job (409)", { skip: SKIP_REASON }, async () => {
     const services = makeServices();
     const registry = new ExternalServicesRegistry({
-        jobsService:         services.jobs,
-        roomJobsService:     services.roomJobs,
-        developmentAdapters: false,
+        jobsService:                services.jobs,
+        roomJobsService:            services.roomJobs,
+        developmentAdapters:        false,
+        // Session 10 is not a real session: its phase 2 is reported active.
+        callbackDestinationLookups: {
+            loadPhaseState: async () => ({ launched: true, status: 2, current_stage: 2 }),
+        },
     });
     registry.initialized = true;
     registry.services.set(services.serviceId, {
@@ -215,4 +219,74 @@ test("room jobs: the registry refuses a callback to a closed room job (409)", { 
     );
     assert.deepEqual(rows.map(row => row.status),
         [RESULT_STATUS.COMPLETED, RESULT_STATUS.COMPLETED, RESULT_STATUS.FAILED]);
+});
+
+const randomSessionId = () => 100000 + Math.floor(Math.random() * 1000000);
+
+test("room jobs: closing without a service closes every service's, per phase or session", { skip: SKIP_REASON }, async () => {
+    const sessionId = randomSessionId();
+    const first = makeServices();
+    const second = makeServices();
+    const create = (services, phaseId) => services.roomJobs.createRoomJob({
+        serviceId: services.serviceId, hookName: "phase-started", sessionId, phaseId, groupId: 301,
+    });
+    const a2 = await create(first, 2);
+    const b2 = await create(second, 2);
+    const a3 = await create(first, 3);
+    await first.roomJobs.openRoomJob(a2.id, { bound: true });
+
+    assert.equal(await first.roomJobs.closeRoomJobs({ sessionId, phaseId: 2 }), 2);
+    assert.equal((await jobRow(a2.id)).status, JOB_STATUS.CLOSED);
+    assert.equal((await jobRow(b2.id)).status, JOB_STATUS.CLOSED);
+    assert.equal((await jobRow(a3.id)).status, JOB_STATUS.PENDING);
+    assert.equal(await first.roomJobs.closeRoomJobs({ sessionId, phaseId: 2 }), 0, "idempotent");
+
+    assert.equal(await first.roomJobs.closeRoomJobs({ sessionId }), 1);
+    assert.equal((await jobRow(a3.id)).status, JOB_STATUS.CLOSED);
+});
+
+test("room jobs: closeRoomJob closes one live room job only", { skip: SKIP_REASON }, async () => {
+    const services = makeServices();
+    const job = await createRoomJob(services);
+    const failed = await createRoomJob(services, 302);
+    await services.roomJobs.openRoomJob(job.id, { bound: true });
+    await services.roomJobs.failRoomJob(failed.id);
+
+    await services.roomJobs.closeRoomJob(job.id);
+    await services.roomJobs.closeRoomJob(failed.id);
+
+    assert.equal((await jobRow(job.id)).status, JOB_STATUS.CLOSED);
+    assert.equal((await jobRow(failed.id)).status, JOB_STATUS.FAILED);
+});
+
+test("room jobs: dispatchHook closes them without a connection", { skip: SKIP_REASON }, async () => {
+    const services = makeServices();
+    const sessionId = randomSessionId();
+    const job = await services.roomJobs.createRoomJob({
+        serviceId: services.serviceId, hookName: "phase-started", sessionId, phaseId: 2, groupId: 301,
+    });
+    await services.roomJobs.openRoomJob(job.id, { bound: true });
+
+    const registry = new ExternalServicesRegistry({
+        jobsService:             services.jobs,
+        roomJobsService:         services.roomJobs,
+        developmentAdapters:     false,
+        isAiAdditionsConfigured: async () => false,
+    });
+    registry.initialized = true;
+    registry.services.set(services.serviceId, {
+        id:          services.serviceId,
+        development: false,
+        requires:    ["polyadic-agent"],
+        hooks:       ["phase-ended"],
+    });
+    let handled = 0;
+    registry.subscribe(services.serviceId, "phase-ended", async () => { handled += 1; });
+
+    await registry.dispatchHook("phase-ended", { sessionId, phaseId: 2 }, {
+        enabledServiceIds: [services.serviceId],
+    });
+
+    assert.equal(handled, 0);
+    assert.equal((await jobRow(job.id)).status, JOB_STATUS.CLOSED);
 });

@@ -23,7 +23,11 @@ import {
     validateCatalogEntry,
 } from "../external-services/catalog.js";
 import { CapabilityDescriptorsClient } from "./capability-descriptors.service.js";
-import { resolveCallbackDestination } from "../helpers/callback-destination.js";
+import {
+    createPhaseStateLoader,
+    isActivePhaseState,
+    resolveCallbackDestination,
+} from "../helpers/callback-destination.js";
 import {
     externalServiceJobsService,
     isRoomJob,
@@ -335,15 +339,31 @@ export function assertCallbackTargetWithinJob(job, target, serviceId) {
     }
 }
 
+// The lifecycle hooks that end room jobs (#833), and the phase each one ends:
+// phase-ended ends its phase, activity-finished every phase of the session.
+const ROOM_JOB_CLOSING_HOOKS = Object.freeze({
+    "phase-ended":       context => context?.phaseId ?? null,
+    "activity-finished": () => null,
+});
+
+function positiveId(value) {
+    const id = Number(value);
+    return Number.isSafeInteger(id) && id > 0 ? id : null;
+}
+
+function roomJobClosedError(serviceId) {
+    return Object.assign(
+        new Error(`The callback for ${serviceId} names a closed room job.`),
+        { statusCode: 409, code: "callback_room_job_closed" }
+    );
+}
+
 // Refuses a callback correlated to a room job that no longer accepts callbacks
 // (#833): its phase ended, its activity finished, a newer room job of the room
 // superseded it, or the room was never created.
 function assertRoomJobLive(job, serviceId) {
     if (isRoomJob(job) && !LIVE_ROOM_JOB_STATUSES.includes(job.status)) {
-        throw Object.assign(
-            new Error(`The callback for ${serviceId} names a closed room job.`),
-            { statusCode: 409, code: "callback_room_job_closed" }
-        );
+        throw roomJobClosedError(serviceId);
     }
 }
 
@@ -413,6 +433,8 @@ export class ExternalServicesRegistry {
         // loadPhaseExternalServices }) replaces its database reads in tests.
         this._resolveCallbackDestination = resolveDestination;
         this._callbackDestinationLookups = callbackDestinationLookups;
+        // The phase state a room job's callback is checked against (#833).
+        this._loadPhaseState = callbackDestinationLookups.loadPhaseState ?? createPhaseStateLoader();
 
         this.uiTranslationProviders   = new Map();
         this.uiTranslationsCache      = new Map();
@@ -957,10 +979,15 @@ export class ExternalServicesRegistry {
     // `options.serviceConfigurations` (the phase's settings, #734) or {}.
     // `options.jobIds` maps service ids to job ids chosen by the caller, for
     // work it reserved before dispatching. The other services get a new id.
+    //
+    // phase-ended and activity-finished first close the room jobs they end
+    // (closeRoomJobsForHook), before and regardless of the gate.
     async dispatchHook(hookName, context, options = {}) {
         if (!this.initialized) {
             await this.initialize();
         }
+
+        await this.closeRoomJobsForHook(hookName, context);
 
         const requestedIds = Array.from(new Set(options.enabledServiceIds || []))
             .filter(serviceId => this.services.has(serviceId));
@@ -991,6 +1018,69 @@ export class ExternalServicesRegistry {
                 presetJobId: Object.hasOwn(jobIds, serviceId) ? jobIds[serviceId] : null,
             })
         ));
+    }
+
+    /**
+     * Closes the live room jobs a lifecycle hook ends (#833), for every
+     * service: phase-ended closes those of its phase, activity-finished those
+     * of every phase of the session. This is local, adapter-agnostic
+     * finalization: it runs before the policy and connection gate and whether
+     * or not any adapter receives the hook, so a room job never outlives its
+     * phase because its adapter was not usable at that moment. It reads only
+     * the database, so it also closes jobs opened before a restart. It is
+     * idempotent; a failure is logged, and callbacks still meet the phase
+     * check of dispatchServiceHook().
+     * @returns {Promise<number>} How many room jobs were closed.
+     */
+    async closeRoomJobsForHook(hookName, context = {}) {
+        const phaseOf = ROOM_JOB_CLOSING_HOOKS[hookName];
+        const sessionId = positiveId(context?.sessionId);
+        if (!phaseOf || sessionId === null) {
+            return 0;
+        }
+
+        const phaseId = phaseOf(context);
+        if (hookName === "phase-ended" && positiveId(phaseId) === null) {
+            return 0;
+        }
+
+        try {
+            return await this._roomJobsService.closeRoomJobs({
+                sessionId,
+                phaseId: phaseId === null ? null : positiveId(phaseId),
+            });
+        } catch (error) {
+            console.error(`[external-services] Could not close the room jobs ended by ${hookName}.`, error);
+            return 0;
+        }
+    }
+
+    // Checks that a room job's phase is still the session's active phase and
+    // its activity in progress (#833), in case its closure was missed. A room
+    // job whose phase is over is closed (best effort) and refused with 409; a
+    // failed lookup answers 503 and leaves the result pending.
+    async _assertRoomJobPhaseActive(job, serviceId) {
+        let state;
+        try {
+            state = await this._loadPhaseState({
+                sessionId: job.sessionId,
+                phaseId:   job.phaseId,
+                groupId:   job.groupId ?? null,
+                userId:    null,
+            });
+        } catch (error) {
+            console.error(`[external-services] Could not read the phase state of a ${serviceId} callback.`, error);
+            throw Object.assign(
+                new Error("The phase state of the callback could not be read; try again later."),
+                { statusCode: 503, code: "callback_lookup_failed" }
+            );
+        }
+
+        if (!isActivePhaseState(state, job.phaseId)) {
+            await this._roomJobsService.closeRoomJob(job.id).catch(error => console.error(
+                `[external-services] Could not close a ${serviceId} room job whose phase is over.`, error));
+            throw roomJobClosedError(serviceId);
+        }
     }
 
     // Dispatches a design-independent hook to the services that opted into it
@@ -1075,6 +1165,9 @@ export class ExternalServicesRegistry {
                 job = resultRecord.job ?? { id: resultRecord.job_id };
                 assertRoomJobLive(job, serviceId);
                 assertCallbackTargetWithinJob(job, target, serviceId);
+                if (isRoomJob(job)) {
+                    await this._assertRoomJobPhaseActive(job, serviceId);
+                }
                 destination = job;
             } else {
                 destination = await this._resolveCallbackDestination({ service, target }, {

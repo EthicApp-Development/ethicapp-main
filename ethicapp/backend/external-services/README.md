@@ -86,7 +86,8 @@ never the request's own values:
    the job (`assertCallbackTargetWithinJob`): a field it names must equal the
    job's, and a job without that field accepts none. Otherwise `409`. A
    **room job** (see "Room jobs" below) accepts repeated callbacks while it is
-   `pending` or `open`; a closed or failed one refuses them with `409`
+   `pending` or `open` and its phase is still the session's active phase; a
+   closed or failed one, or one whose phase is over, refuses them with `409`
    (`callback_room_job_closed`).
 2. **The callback matches no job** (no correlation id, or a fresh one: an
    older Polyadic generates a new one for every proactive intervention, such
@@ -159,8 +160,26 @@ of `register()` (`services/external-service-room-jobs.service.js`).
 | --- | --- | --- |
 | `pending` | Created right before the room is created in the service | Accepted (the service may call back before it answers) |
 | `open` | The room exists. `room_bound` is true when the service echoed the id | Accepted, each deduplicated by `eventId`; a callback outcome never completes the job |
-| `closed` | `phase-ended` for its phase, `activity-finished` for its session, or a newer room job of the same room opened (superseded) | `409` |
+| `closed` | `phase-ended` for its phase, `activity-finished` for its session, a newer room job of the same room opened (superseded), or a callback found its phase no longer active | `409` |
 | `failed` | The room could not be created | `409` |
+
+**Closing is the platform's, not the adapter's.** `dispatchHook()` closes the
+live room jobs of every service for `phase-ended` (its phase) and
+`activity-finished` (every phase of the session) as its first step
+(`closeRoomJobsForHook`), before the policy and connection gate and whether or
+not any adapter receives the hook. It is local and reads only the database, so
+it works without an AI Additions connection and after a restart, and it is
+idempotent. Outbound calls (closing the Polyadic rooms) stay in the adapters,
+behind the gate. `dispatchPhaseHook()` and the activity-finished dispatch hand
+these two hooks to the registry even when no service is enabled or the design
+cannot be read.
+
+**Phase check (defense in depth).** A callback matched to a live room job is
+also checked against the phase state (`loadPhaseState`, as in
+`helpers/callback-destination.js`): the job's phase must still be the
+session's current phase, and the activity in progress. Otherwise it answers
+`409` (`callback_room_job_closed`) and the job is closed, on a best-effort
+basis. A failed read answers `503` and leaves the result pending.
 
 Polyadic:
 - `phase-started` creates one room job per room and sends its id as the
@@ -174,8 +193,6 @@ Polyadic:
   it is refused (`409`). An older Polyadic does not echo the field; its rooms
   stay unbound and keep the verified-destination rule above. Either release
   can therefore ship first.
-- `phase-ended` and `activity-finished` close the room jobs first, from the
-  database, so rooms this process no longer tracks are closed too.
 
 Every room job write is one statement conditional on the job's status, so a
 phase transition and a re-creation racing each other never reopen a closed
@@ -274,7 +291,7 @@ export async function register({
     publishGroupChatMessage, // (payload) => Promise<{ savedMessage, notificationPayload } | null>
     aiAdditionsClient,       // shared AI Additions HTTP client
     caseAnalyses,            // markProcessing/complete/fail for this service's case analyses
-    roomJobs,                // create/open/fail/close for this service's room jobs (see "Room jobs")
+    roomJobs,                // create/open/fail for this service's room jobs (see "Room jobs")
 }) {
     subscribe("student-response-submitted", async (context, { callback }) => {
         // Adapter logic.

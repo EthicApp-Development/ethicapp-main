@@ -53,3 +53,24 @@ test("dispatchPhaseHook: does nothing when the phase enables no service", async 
     assert.deepEqual(outcomes, []);
     assert.equal(registry.calls.length, 0);
 });
+
+test("dispatchPhaseHook: phase-ended always reaches the registry, which closes room jobs (#833)", async () => {
+    const registry = fakeRegistry();
+    const originalError = console.error;
+    console.error = () => {};
+    try {
+        await dispatchPhaseHook("phase-ended", { sessionId: 3, phaseId: 4 }, {
+            registry,
+            loadPhaseExternalServices: async () => ({ enabledServiceIds: [], configurations: {} }),
+        });
+        await dispatchPhaseHook("phase-ended", { sessionId: 3, phaseId: 5 }, {
+            registry,
+            loadPhaseExternalServices: async () => { throw new Error("database unavailable"); },
+        });
+    } finally {
+        console.error = originalError;
+    }
+
+    assert.deepEqual(registry.calls.map(call => [call.hookName, call.context.phaseId,
+        call.options.enabledServiceIds]), [["phase-ended", 4, []], ["phase-ended", 5, []]]);
+});

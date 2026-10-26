@@ -19,8 +19,9 @@ import {
  *
  *   pending  created, the room is being created; accepts callbacks
  *   open     the room exists; accepts callbacks
- *   closed   the phase ended, the activity finished, or a newer room job of
- *            the same room superseded it; callbacks are refused (409)
+ *   closed   the phase ended, the activity finished, a newer room job of the
+ *            same room superseded it, or a callback found its phase no longer
+ *            active; callbacks are refused (409)
  *   failed   the room could not be created; callbacks are refused (409)
  *
  * `room_bound` records whether the service acknowledged the correlation id
@@ -119,15 +120,17 @@ export class ExternalServiceRoomJobsService {
 
     /**
      * Closes the live room jobs of a phase, or of every phase of a session
-     * when `phaseId` is null.
+     * when `phaseId` is null: of one service, or of every service when
+     * `serviceId` is null. Run by the registry when a phase ends or an
+     * activity finishes, whatever the adapters' usability. Idempotent.
      * @returns {Promise<number>} How many were closed.
      */
-    async closeRoomJobs({ serviceId, sessionId, phaseId = null }) {
+    async closeRoomJobs({ serviceId = null, sessionId, phaseId = null }) {
         const rows = await this._db(
             `UPDATE external_service_jobs
              SET status = $4, completed_at = now(), updated_at = now()
              WHERE kind = $5
-               AND service_id = $1
+               AND ($1::text IS NULL OR service_id = $1)
                AND session_id = $2
                AND ($3::integer IS NULL OR phase_id = $3)
                AND status = ANY($6::text[])
@@ -135,6 +138,17 @@ export class ExternalServiceRoomJobsService {
             [serviceId, sessionId, phaseId, JOB_STATUS.CLOSED, JOB_KIND.ROOM, LIVE_ROOM_JOB_STATUSES]
         );
         return rows.length;
+    }
+
+    // Closes one live room job, for example when a callback finds its phase
+    // no longer active.
+    async closeRoomJob(jobId) {
+        await this._db(
+            `UPDATE external_service_jobs
+             SET status = $2, completed_at = now(), updated_at = now()
+             WHERE id = $1 AND kind = $3 AND status = ANY($4::text[])`,
+            [jobId, JOB_STATUS.CLOSED, JOB_KIND.ROOM, LIVE_ROOM_JOB_STATUSES]
+        );
     }
 
     /**
@@ -165,16 +179,16 @@ export class ExternalServiceRoomJobsService {
 
 /**
  * The room jobs of one service, as an adapter receives them in register().
- * Errors propagate; the adapter decides how a failed write degrades.
+ * Errors propagate; the adapter decides how a failed write degrades. Closing
+ * is not the adapter's: the registry closes room jobs when a phase ends or an
+ * activity finishes, even when no adapter runs.
  */
 export function createRoomJobsAccess(store, serviceId) {
     return Object.freeze({
         create: ({ hookName, sessionId, phaseId, groupId, questionId, room }) =>
             store.createRoomJob({ serviceId, hookName, sessionId, phaseId, groupId, questionId, room }),
-        open:  (jobId, options) => store.openRoomJob(jobId, options),
-        fail:  jobId => store.failRoomJob(jobId),
-        close: ({ sessionId, phaseId = null }) =>
-            store.closeRoomJobs({ serviceId, sessionId, phaseId }),
+        open: (jobId, options) => store.openRoomJob(jobId, options),
+        fail: jobId => store.failRoomJob(jobId),
     });
 }
 

@@ -102,14 +102,29 @@ function makeDatabase() {
             }
             return [];
         }
-        // claimResult() advancing a hook job, and recordCallbackResult().
-        if (text.startsWith("UPDATE external_service_jobs SET status = $2, updated_at = now() WHERE id = $1")
-            || text.startsWith("UPDATE external_service_jobs SET status = $2, updated_at = now(), completed_at")) {
+        // Hook jobs: updateJobStatus(), claimResult() advancing a hook job, and
+        // createJob() from dispatchHook().
+        if (text.startsWith("UPDATE external_service_jobs SET status = $2, updated_at = now()")) {
             const job = jobs.find(candidate => candidate.id === params[0]);
             if (job) {
                 job.status = params[1];
             }
             return [];
+        }
+        if (text.startsWith("INSERT INTO external_service_jobs (id, service_id")) {
+            const [serviceId, hookName, status, sessionId, phaseId] = params;
+            const job = {
+                id:         randomUUID(),
+                service_id: serviceId,
+                hook_name:  hookName,
+                kind:       "hook",
+                status,
+                session_id: sessionId,
+                phase_id:   phaseId,
+                created_at: ++clock,
+            };
+            jobs.push(job);
+            return [{ ...job }];
         }
 
         // ExternalServiceRoomJobsService
@@ -148,18 +163,21 @@ function makeDatabase() {
             Object.assign(target, { status: open, room_bound: bound });
             return [{ id: target.id }];
         }
+        // failRoomJob() (from pending) and closeRoomJob() (from any live status).
         if (text.startsWith("UPDATE external_service_jobs SET status = $2, completed_at = now()")) {
-            const [jobId, failed, kind, pending] = params;
+            const [jobId, status, kind, from] = params;
+            const allowed = Array.isArray(from) ? from : [from];
             const job = jobs.find(candidate => candidate.id === jobId && candidate.kind === kind
-                && candidate.status === pending);
+                && allowed.includes(candidate.status));
             if (job) {
-                job.status = failed;
+                job.status = status;
             }
             return [];
         }
         if (text.startsWith("UPDATE external_service_jobs SET status = $4")) {
             const [serviceId, sessionId, phaseId, closed, kind, liveStatuses] = params;
-            const closing = jobs.filter(job => job.kind === kind && job.service_id === serviceId
+            const closing = jobs.filter(job => job.kind === kind
+                && (serviceId === null || job.service_id === serviceId)
                 && job.session_id === sessionId && (phaseId === null || job.phase_id === phaseId)
                 && liveStatuses.includes(job.status));
             closing.forEach(job => { job.status = closed; });
@@ -178,34 +196,46 @@ function makeDatabase() {
 }
 
 const VERSION = Object.freeze({ id: 2, allowedServiceIds: Object.freeze(["polyadic-agent"]) });
+const IN_PROGRESS = 2;
 
-// The verified-destination lookups (#815): session 10, phase 2 is active and
-// enables the adapter; groups 301 and 302 belong to it.
-const lookups = {
-    policy: {
-        getCurrentPolicyVersion:   async () => VERSION,
-        getPolicyVersion:          async () => VERSION,
-        getSessionPolicyVersionId: async () => 2,
-    },
-    isAiAdditionsConfigured:    async () => true,
-    callbackDestinationLookups: {
-        loadPhaseState: async ({ sessionId, phaseId, groupId }) => (sessionId === 10 && phaseId === 2
-            ? {
-                current_stage:     2,
-                status:            2,
-                launched:          true,
-                group_exists:      [301, 302].includes(groupId),
-                user_participates: false,
-            }
-            : null),
-        loadPhaseExternalServices: async () => ({ enabledServiceIds: [SERVICE_ID] }),
-    },
-};
+// The policy gate and the verified-destination lookups (#815), over `world`:
+// whether the AI Additions connection exists, each session's current phase
+// (session 10 is in phase 2), and whether phase state reads fail. Groups 301
+// and 302 belong to every phase; every phase enables the adapter.
+function makeLookups(world) {
+    return {
+        policy: {
+            getCurrentPolicyVersion:   async () => VERSION,
+            getPolicyVersion:          async () => VERSION,
+            getSessionPolicyVersionId: async () => 2,
+        },
+        isAiAdditionsConfigured:    async () => world.connected,
+        callbackDestinationLookups: {
+            loadPhaseState: async ({ sessionId, groupId }) => {
+                if (world.failPhaseState) {
+                    throw new Error("database unavailable");
+                }
+                return Object.hasOwn(world.currentPhase, sessionId)
+                    ? {
+                        current_stage:     world.currentPhase[sessionId],
+                        status:            IN_PROGRESS,
+                        launched:          true,
+                        group_exists:      [301, 302].includes(groupId),
+                        user_participates: false,
+                    }
+                    : null;
+            },
+            loadPhaseExternalServices: async () => ({ enabledServiceIds: [SERVICE_ID] }),
+        },
+    };
+}
 
 // `echo(room)` decides whether the fake Polyadic echoes the room correlation
-// id; `failRooms` lists rooms whose creation fails.
-async function makeHarness({ echo = () => true, failRooms = [] } = {}) {
-    const database = makeDatabase();
+// id; `failRooms` lists rooms whose creation fails. `database` lets a fresh
+// registry and adapter (a restarted process) share the tables of another.
+async function makeHarness({ echo = () => true, failRooms = [], database = makeDatabase() } = {}) {
+    const world = { connected: true, currentPhase: { 10: 2 }, failPhaseState: false };
+    const lookups = makeLookups(world);
     const roomJobsService = new ExternalServiceRoomJobsService({ dbQuery: database.dbQuery });
     const registry = new ExternalServicesRegistry({
         jobsService:                new ExternalServiceJobsService({ dbQuery: database.dbQuery }),
@@ -229,6 +259,7 @@ async function makeHarness({ echo = () => true, failRooms = [] } = {}) {
     registry.callbackTargetResolvers.set(SERVICE_ID, getCallbackTarget);
 
     const sessionRequests = [];
+    const closeRequests = [];
     const published = [];
     const client = {
         async getEndpoints() {
@@ -236,6 +267,9 @@ async function makeHarness({ echo = () => true, failRooms = [] } = {}) {
         },
         async requestJson(pathname, { method, body }) {
             const room = decodeURIComponent(pathname.split("/")[2]);
+            if (method === "DELETE") {
+                closeRequests.push(room);
+            }
             if (method === "POST" && pathname.endsWith("/sessions")) {
                 sessionRequests.push({ room, body });
                 await tick();
@@ -288,10 +322,40 @@ async function makeHarness({ echo = () => true, failRooms = [] } = {}) {
         });
     }
 
+    // A lifecycle hook as the platform sends it: through the real
+    // dispatchHook(), with its policy and connection gate.
+    async function dispatch(hookName, context) {
+        const handlersBefore = handlerRuns.length;
+        await registry.dispatchHook(hookName, context, { enabledServiceIds: [SERVICE_ID] });
+        return handlerRuns.length - handlersBefore;
+    }
+
+    // Counts the adapter handlers that dispatchHook() actually runs.
+    const handlerRuns = [];
+    for (const subscribers of registry.hookSubscribers.values()) {
+        for (const subscriber of subscribers) {
+            const { handler } = subscriber;
+            subscriber.handler = (context, tools) => {
+                handlerRuns.push(context);
+                return handler(context, tools);
+            };
+        }
+    }
+
     const roomJobOf = room => database.jobs.filter(job => job.provider_reference === room).at(-1);
 
     return {
-        registry, database, sessionRequests, published, hookResults, runHook, callback, roomJobOf,
+        registry,
+        database,
+        world,
+        sessionRequests,
+        closeRequests,
+        published,
+        hookResults,
+        runHook,
+        dispatch,
+        callback,
+        roomJobOf,
     };
 }
 
@@ -391,15 +455,19 @@ test("room jobs: a callback naming another room than its room job is refused", a
     assert.deepEqual(harness.published, []);
 });
 
+const roomJobsOf = harness => harness.database.jobs.filter(job => job.kind === JOB_KIND.ROOM);
+
 test("room jobs: phase-ended closes them, and a later callback is refused with 409", async () => {
     const harness = await makeHarness();
     await harness.runHook("phase-started", { sessionId: 10, phaseId: 2 });
+    await harness.runHook("phase-started", { sessionId: 10, phaseId: 3 });
     const job = harness.roomJobOf("ethicapp-s10-p2-g301");
     await harness.callback({ correlationId: job.id });
 
-    await harness.runHook("phase-ended", { sessionId: 10, phaseId: 2 });
-    assert.ok(harness.database.jobs.every(row => row.status === JOB_STATUS.CLOSED));
-    assert.equal(harness.hookResults.at(-1).payload.roomJobsClosed, 2);
+    assert.equal(await harness.dispatch("phase-ended", { sessionId: 10, phaseId: 2 }), 1);
+    assert.deepEqual(roomJobsOf(harness).map(row => [row.phase_id, row.status]), [
+        [2, JOB_STATUS.CLOSED], [2, JOB_STATUS.CLOSED], [3, JOB_STATUS.OPEN], [3, JOB_STATUS.OPEN],
+    ]);
 
     await assert.rejects(harness.callback({ correlationId: job.id }), {
         statusCode: 409, code: "callback_room_job_closed",
@@ -413,11 +481,90 @@ test("room jobs: activity-finished closes them in every phase of the session", a
     await harness.runHook("phase-started", { sessionId: 10, phaseId: 2 });
     await harness.runHook("phase-started", { sessionId: 10, phaseId: 3 });
 
-    await harness.runHook("activity-finished", { sessionId: 10 });
+    await harness.dispatch("activity-finished", { sessionId: 10, phaseId: 3 });
 
-    assert.equal(harness.database.jobs.length, 4);
-    assert.ok(harness.database.jobs.every(row => row.status === JOB_STATUS.CLOSED));
+    assert.equal(roomJobsOf(harness).length, 4);
+    assert.ok(roomJobsOf(harness).every(row => row.status === JOB_STATUS.CLOSED));
 });
+
+test("room jobs: phase-ended and activity-finished close them without a connection", quietly(async () => {
+    const harness = await makeHarness();
+    await harness.runHook("phase-started", { sessionId: 10, phaseId: 2 });
+    const job = harness.roomJobOf("ethicapp-s10-p2-g301");
+
+    // The connection is removed before the phase ends: the gate lets no
+    // production adapter receive the lifecycle hooks.
+    harness.world.connected = false;
+    assert.equal(await harness.dispatch("phase-ended", { sessionId: 10, phaseId: 2 }), 0);
+    assert.equal(await harness.dispatch("activity-finished", { sessionId: 10, phaseId: 2 }), 0);
+    assert.deepEqual(harness.closeRequests, [], "no outbound call");
+    assert.ok(roomJobsOf(harness).every(row => row.status === JOB_STATUS.CLOSED));
+
+    // The connection returns; the fake still reports phase 2 as active, so
+    // only the closure refuses the old room's fresh event.
+    harness.world.connected = true;
+    await assert.rejects(harness.callback({ correlationId: job.id }), {
+        statusCode: 409, code: "callback_room_job_closed",
+    });
+    assert.deepEqual(harness.published, []);
+    assert.equal(job.status, JOB_STATUS.CLOSED);
+}));
+
+test("room jobs: a restarted process closes them from the database", async () => {
+    const harness = await makeHarness();
+    await harness.runHook("phase-started", { sessionId: 10, phaseId: 2 });
+    const job = harness.roomJobOf("ethicapp-s10-p2-g301");
+
+    // A fresh registry and adapter, which track no rooms, over the same tables.
+    const restarted = await makeHarness({ database: harness.database });
+    await restarted.dispatch("phase-ended", { sessionId: 10, phaseId: 2 });
+
+    assert.ok(roomJobsOf(restarted).every(row => row.status === JOB_STATUS.CLOSED));
+    await assert.rejects(restarted.callback({ correlationId: job.id }), {
+        statusCode: 409, code: "callback_room_job_closed",
+    });
+    assert.deepEqual(restarted.published, []);
+});
+
+test("room jobs: a callback whose phase is no longer active is refused and its job closed", async () => {
+    const harness = await makeHarness();
+    await harness.runHook("phase-started", { sessionId: 10, phaseId: 2 });
+    const job = harness.roomJobOf("ethicapp-s10-p2-g301");
+
+    // The session moved on, and phase-ended never reached the registry.
+    harness.world.currentPhase[10] = 3;
+    await assert.rejects(harness.callback({ correlationId: job.id }), {
+        statusCode: 409, code: "callback_room_job_closed",
+    });
+    assert.deepEqual(harness.published, []);
+    assert.equal(job.status, JOB_STATUS.CLOSED);
+    assert.equal(harness.database.results[0].status, RESULT_STATUS.FAILED);
+
+    // A finished activity has no active phase either.
+    const other = harness.roomJobOf("ethicapp-s10-p2-g302");
+    delete harness.world.currentPhase[10];
+    await assert.rejects(harness.callback({ correlationId: other.id, room: "ethicapp-s10-p2-g302" }),
+        { statusCode: 409, code: "callback_room_job_closed" });
+    assert.equal(other.status, JOB_STATUS.CLOSED);
+});
+
+test("room jobs: a failed phase state read answers 503 and leaves the result pending", quietly(async () => {
+    const harness = await makeHarness();
+    await harness.runHook("phase-started", { sessionId: 10, phaseId: 2 });
+    const job = harness.roomJobOf("ethicapp-s10-p2-g301");
+    const eventId = randomUUID();
+
+    harness.world.failPhaseState = true;
+    await assert.rejects(harness.callback({ correlationId: job.id, eventId }), { statusCode: 503 });
+    assert.equal(harness.database.results[0].status, RESULT_STATUS.PENDING);
+    assert.equal(job.status, JOB_STATUS.OPEN);
+
+    // The retry of the same event is delivered once the read works again.
+    harness.world.failPhaseState = false;
+    const retry = await harness.callback({ correlationId: job.id, eventId });
+    assert.deepEqual(retry.outcomes.map(outcome => outcome.status), ["fulfilled"]);
+    assert.equal(harness.published.length, 1);
+}));
 
 test("room jobs: a room job closed after authorization runs no handler (409)", async () => {
     const harness = await makeHarness();
@@ -425,7 +572,7 @@ test("room jobs: a room job closed after authorization runs no handler (409)", a
     const job = harness.roomJobOf("ethicapp-s10-p2-g301");
     harness.database.beforeClaim = async () => {
         harness.database.beforeClaim = null;
-        await harness.runHook("phase-ended", { sessionId: 10, phaseId: 2 });
+        await harness.dispatch("phase-ended", { sessionId: 10, phaseId: 2 });
     };
 
     await assert.rejects(harness.callback({ correlationId: job.id }), {
@@ -441,8 +588,7 @@ test("room jobs: a room created again lazily supersedes its previous room job", 
     const previous = harness.roomJobOf("ethicapp-s10-p2-g301");
 
     // This process after a restart tracks no rooms; the jobs table persists.
-    const restarted = await makeHarness();
-    restarted.database.jobs.push(...harness.database.jobs);
+    const restarted = await makeHarness({ database: harness.database });
     await restarted.runHook("chat-message-received", {
         sessionId: 10, phaseId: 2, groupId: 301, userId: 9, content: "Hello",
     });
@@ -514,7 +660,7 @@ test("room jobs: a callback without a job naming an unbound room keeps option A"
 test("room jobs: once its phase ended, a bound room no longer refuses callbacks as bound", async () => {
     const harness = await makeHarness();
     await harness.runHook("phase-started", { sessionId: 10, phaseId: 2 });
-    await harness.runHook("phase-ended", { sessionId: 10, phaseId: 2 });
+    await harness.dispatch("phase-ended", { sessionId: 10, phaseId: 2 });
 
     // Option A decides, and the fake keeps phase 2 active, so it is delivered;
     // in production the ended phase is no longer the active one.
