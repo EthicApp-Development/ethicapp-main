@@ -28,33 +28,42 @@ The contract distinguishes:
 
 All `VITE_*` variables are public frontend variables. They must never contain secrets.
 
-## External Services Catalog
+## AI Services
 
-The `ethicapp` image ships a single external-services adapter catalog
+Whether an installation uses AI, where AI Additions is, and which AI services
+are allowed are data that operators edit in the management console
+(`/mng/ai-services`, epic #810). Deployments provide only the AI Additions
+client credentials. The full operator guide, with the console steps and the
+pinning rules, is
+[AI Services (AI Additions)](../INSTALL.md#ai-services-ai-additions) in
+`INSTALL.md`; the dispatch gate and callback rules are in
+[`EXTERNAL.md`](../EXTERNAL.md).
+
+The `ethicapp` image ships a single adapter catalog
 (`/app/backend/external-services/manifest.json`, #812). Deployments do not
-select or edit it, and the variable that chose a manifest is removed (see
-`INSTALL.md`).
+select or edit it. Mock adapters register only with
+`EXTERNAL_SERVICES_DEVELOPMENT_ADAPTERS=true`, which only the local
+development Compose file sets; leave it unset or `false` in deployments.
 
-- Production adapters (Polyadic Agents, the Argumentation Tutor, Case Analyst)
-  always register, and each declares the AI Additions services it requires.
-  Whether they are used is the AI service policy of epic #810, edited in the
-  management console (#815, #817). Until #815 ships, no production adapter is
-  used anywhere.
-- Mock adapters are development-only. They register only with
-  `EXTERNAL_SERVICES_DEVELOPMENT_ADAPTERS=true`, which only the local
-  development Compose file sets. Leave it unset or `false` in deployments.
+What a deployment target sets in each scenario:
 
-Designs keep the ids of services that cannot be used; they are neither offered
-in the editor nor dispatched.
+| Scenario | `ethicapp` values | AI Additions values | After deploying |
+| --- | --- | --- | --- |
+| No AI (default) | None of the `AI_ADDITIONS_*` variables are needed. | No AI Additions deployment. | Nothing. Check the runbook in `INSTALL.md`, "Installation without AI". |
+| AI Additions on the same Docker host or network | `AI_ADDITIONS_KEYCLOAK_CLIENT_ID`, `AI_ADDITIONS_KEYCLOAK_CLIENT_SECRET` (via the secret store), `AI_ADDITIONS_KEYCLOAK_REALM`; `extra_hosts` or a shared network so `ethicapp` resolves AI Additions. | `KEYCLOAK_PUBLIC_URL`, `*_ETHICAPP_CALLBACK_URL` pointing at EthicApp's `/external-services/callbacks`. | In the console: connection with a Docker-internal `base_url`, plus `keycloak_public_url` = AI Additions' `KEYCLOAK_PUBLIC_URL` when it is not `base_url/keycloak`; test; allow services; save a version. |
+| AI Additions on a separate host | The same client credentials. | HTTPS in front of its NGINX; `KEYCLOAK_PUBLIC_URL` = its public HTTPS URL plus `/keycloak`; `*_ETHICAPP_CALLBACK_URL` = `https://<ethicapp-host>/external-services/callbacks`. Both hosts must reach each other over HTTPS. | Connection with the HTTPS `base_url`; test; allow services; save a version. |
+| Upgrade from environment-configured AI | Delete the removed variables listed below; keep the client credentials. | A release that serves the catalog (`ai-catalog`). | V22 and V23 run. Policy version 1 allows nothing, so running sessions lose AI for good and only activities launched after a policy is saved use it. Configure the connection and save a policy as above. |
 
-Where AI Additions is comes from the AI Additions connection stored in the
-database, not from the environment (#814). The URL variables
-(`AI_ADDITIONS_BASE_URL`, `AI_ADDITIONS_KEYCLOAK_BASE_URL`,
-`AI_ADDITIONS_KEYCLOAK_TOKEN_URL`, the three `AI_ADDITIONS_*_API_BASE_URL`,
-`EXTERNAL_SERVICES_CALLBACK_AUTH_ISSUER` and `..._JWKS_URL`) are removed from
-the contract: delete them from every target. The Keycloak client credentials
-stay deployment secrets. Without a stored connection, EthicApp makes no AI
-call. See "AI Additions Connection" in `INSTALL.md`.
+Removed from the contract with no fallback, so delete them from every target
+and from the deployment repository's environment files when moving to a
+release from epic #810: `AI_ADDITIONS_BASE_URL`,
+`AI_ADDITIONS_KEYCLOAK_BASE_URL`, `AI_ADDITIONS_KEYCLOAK_TOKEN_URL`, the three
+`AI_ADDITIONS_*_API_BASE_URL`, `EXTERNAL_SERVICES_CALLBACK_AUTH_ISSUER`,
+`EXTERNAL_SERVICES_CALLBACK_AUTH_JWKS_URL` and `EXTERNAL_SERVICES_MANIFEST`.
+A validator that rejects undeclared variables, such as `ethicapp-deployment`'s
+`scripts/validate-env.sh`, fails on a target that keeps one of them. The
+post-deploy console steps are part of the release and belong in its session
+record.
 
 ## reCAPTCHA Enterprise
 

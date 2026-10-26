@@ -195,13 +195,10 @@ The remaining `AI_ADDITIONS_*` variables are:
 - `AI_ADDITIONS_POLYADIC_AGENTS_AUTHENTICATED` and
   `AI_ADDITIONS_POLYADIC_AGENTS_PIPELINE_TYPE`.
 
-In local development, until the console page exists, insert the connection
-row directly; for AI Additions running on the host:
-
-```bash
-docker compose exec postgresql psql -U postgres -d ethicapp -c \
-  "INSERT INTO ai_additions_connection (id, base_url) VALUES (1, 'http://host.docker.internal:8010') ON CONFLICT (id) DO UPDATE SET base_url = EXCLUDED.base_url;"
-```
+Operators configure the connection, and the AI service policy that decides
+which services may be used, on the management console's AI services page;
+`INSTALL.md` ("AI Services (AI Additions)") covers the installation scenarios
+and the local development setup.
 
 The shared client obtains and caches client-credentials tokens, attaches Bearer
 authorization headers, and retries once after a `401`. Adapter code should focus
