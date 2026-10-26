@@ -103,8 +103,14 @@ describe('ethicapp AI services catalog client', () => {
       { ok: false, error: 'unreachable' }
     );
 
+    // AbortSignal.timeout uses an unref'd timer, so the fake keeps the event
+    // loop alive until the abort arrives, like a pending socket would.
     const hanging = fakeFetch((url, init) => new Promise((resolve, reject) => {
-      init.signal.addEventListener('abort', () => reject(init.signal.reason));
+      const keepAlive = setInterval(() => {}, 1000);
+      init.signal.addEventListener('abort', () => {
+        clearInterval(keepAlive);
+        reject(init.signal.reason);
+      });
     }));
     assert.deepEqual(
       await fetchAiServicesCatalogFromEthicapp({ ...IDENTITY, fetchImpl: hanging.fetchImpl, timeoutMs: 10 }),
