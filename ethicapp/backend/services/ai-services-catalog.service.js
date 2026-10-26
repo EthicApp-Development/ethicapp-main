@@ -1,6 +1,9 @@
 import fs from "node:fs/promises";
 
-import aiAdditionsClient from "./ai-additions-client.service.js";
+import aiAdditionsClient, {
+    AI_ADDITIONS_CREDENTIALS_MISSING,
+    isAiAdditionsCredentialsMissing,
+} from "./ai-additions-client.service.js";
 import {
     isAiAdditionsNotConfigured,
     isValidAiAdditionsUrl,
@@ -18,11 +21,12 @@ import { assertValidCatalog, validateCatalog } from "../external-services/catalo
  */
 
 export const AI_SERVICES_ERROR = Object.freeze({
-    NOT_CONFIGURED:   "not_configured",
-    UNREACHABLE:      "unreachable",
-    UNAUTHORIZED:     "unauthorized",
-    INVALID_RESPONSE: "invalid_response",
-    ISSUER_MISMATCH:  "issuer_mismatch",
+    NOT_CONFIGURED:      "not_configured",
+    CREDENTIALS_MISSING: AI_ADDITIONS_CREDENTIALS_MISSING,
+    UNREACHABLE:         "unreachable",
+    UNAUTHORIZED:        "unauthorized",
+    INVALID_RESPONSE:    "invalid_response",
+    ISSUER_MISMATCH:     "issuer_mismatch",
 });
 
 export const CATALOG_PATH = "/catalog/v1/services";
@@ -233,11 +237,15 @@ function isNetworkError(error) {
 /**
  * The typed error code for a failed exchange with AI Additions.
  * @param {unknown} error
- * @returns {"not_configured" | "unreachable" | "unauthorized" | "invalid_response"}
+ * @returns {"not_configured" | "credentials_missing" | "unreachable" | "unauthorized"
+ *   | "invalid_response"}
  */
 export function classifyAiAdditionsError(error) {
     if (isAiAdditionsNotConfigured(error)) {
         return AI_SERVICES_ERROR.NOT_CONFIGURED;
+    }
+    if (isAiAdditionsCredentialsMissing(error)) {
+        return AI_SERVICES_ERROR.CREDENTIALS_MISSING;
     }
 
     const status = Number(error?.statusCode);
@@ -342,6 +350,14 @@ export function createAiServicesCatalogService({
             && targetClient.getKeycloakClientSecret());
     }
 
+    // Missing client credentials are a gap in EthicApp's own deployment
+    // configuration: report them as such, before any request.
+    function credentialsMissing(step) {
+        logger.warn(`[ai-services] ${step} failed: `
+            + "error=credentials_missing cause=MissingClientCredentials");
+        return AI_SERVICES_ERROR.CREDENTIALS_MISSING;
+    }
+
     function failure(step, error) {
         const code = classifyAiAdditionsError(error);
         logger.warn(`[ai-services] ${step} failed: ${describeFailure(error, code)}`);
@@ -377,9 +393,7 @@ export function createAiServicesCatalogService({
         }
 
         if (!hasClientCredentials(snapshotClient)) {
-            logger.warn("[ai-services] catalog read failed: "
-                + "error=unauthorized cause=MissingClientCredentials");
-            return { ok: false, error: AI_SERVICES_ERROR.UNAUTHORIZED };
+            return { ok: false, error: credentialsMissing("catalog read") };
         }
 
         const adapters = adaptersByRequiredService(await adapterCatalog());
@@ -451,9 +465,7 @@ export function createAiServicesCatalogService({
         };
 
         if (!hasClientCredentials(testClient)) {
-            logger.warn("[ai-services] connection test token failed: "
-                + "error=unauthorized cause=MissingClientCredentials");
-            result.token = { ok: false, error: AI_SERVICES_ERROR.UNAUTHORIZED };
+            result.token = { ok: false, error: credentialsMissing("connection test token") };
             return result;
         }
 

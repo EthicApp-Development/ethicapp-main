@@ -274,8 +274,9 @@ Failures are typed results with status `200`:
 | Code | Cause |
 | --- | --- |
 | `not_configured` | No stored connection (catalog only); no request is sent. |
+| `credentials_missing` | `AI_ADDITIONS_KEYCLOAK_CLIENT_ID` or `AI_ADDITIONS_KEYCLOAK_CLIENT_SECRET` is empty or unset in EthicApp's environment (catalog, and the token step of the test); no request is sent. |
 | `unreachable` | Network error, DNS failure, timeout, or a `502`/`503`/`504` from the gateway. |
-| `unauthorized` | `401`/`403` from the token endpoint or the catalog, or no client credentials in the environment. |
+| `unauthorized` | `401`/`403` from the token endpoint or the catalog. |
 | `invalid_response` | Any other status, a non-JSON body, a token response without `access_token`, a token that is not a JWT with an `http(s)` `iss` (issuer step), or a catalog outside contract version `1`. |
 | `issuer_mismatch` | Issuer step only: the token's `iss` differs from the expected issuer. |
 

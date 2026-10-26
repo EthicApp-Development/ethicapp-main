@@ -110,6 +110,23 @@ describe('AI services connection test result', () => {
     expect(html).toContain('pages.aiServices.connection.test.status.skipped');
   });
 
+  it('explains missing client credentials on the token step, not as an AI Additions refusal', () => {
+    const html = renderToStaticMarkup(
+      <ConnectionTestResult result={{
+        ok: false,
+        error: 'credentials_missing',
+        token: { ok: false, error: 'credentials_missing', skipped: false },
+        issuer: { ok: false, error: null, skipped: true, expected: 'http://ai-additions-missing.invalid/keycloak/realms/r', actual: null },
+        catalog: { ok: false, error: null, skipped: true },
+        serviceCount: null
+      }} />
+    );
+
+    expect(html).toContain('pages.aiServices.errors.credentials_missing');
+    expect(html).not.toContain('pages.aiServices.errors.unauthorized');
+    expect(html.split('pages.aiServices.connection.test.status.skipped').length - 1).toBe(2);
+  });
+
   it('shows the ethicapp-level error when no step ran', () => {
     const html = renderToStaticMarkup(
       <ConnectionTestResult result={{
@@ -261,7 +278,7 @@ describe('AI services allowed-services section', () => {
     expect(html).toContain('pages.aiServices.services.staleIds');
   });
 
-  for (const code of ['not_configured', 'unreachable', 'unauthorized', 'invalid_response', 'ethicapp_error']) {
+  for (const code of ['not_configured', 'credentials_missing', 'unreachable', 'unauthorized', 'invalid_response', 'ethicapp_error']) {
     it(`explains a ${code} catalog error and only offers to allow nothing`, () => {
       const html = renderServices({ catalogState: { loading: false, result: { ok: false, error: code } } });
 
@@ -332,6 +349,17 @@ describe('AI services translations', () => {
   it('uses the Spanish labels from the issue', () => {
     expect(esCL.pages.aiServices.services.columns.usesLlm).toBe('Usa un LLM');
     expect(esCL.pages.aiServices.services.columns.allowed).toBe('Permitido');
+  });
+
+  it('points missing client credentials to the EthicApp deployment in both locales', () => {
+    expect(aiErrorKey('credentials_missing')).toBe('pages.aiServices.errors.credentials_missing');
+    for (const locale of [enUS, esCL]) {
+      const text = locale.pages.aiServices.errors.credentials_missing;
+      expect(text).toContain('AI_ADDITIONS_KEYCLOAK_CLIENT_ID');
+      expect(text).toContain('AI_ADDITIONS_KEYCLOAK_CLIENT_SECRET');
+      expect(text).toContain('INSTALL.md');
+      expect(text).toContain('AI Services');
+    }
   });
 
   it('maps unknown error codes to the generic message', () => {

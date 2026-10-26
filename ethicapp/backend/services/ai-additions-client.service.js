@@ -10,6 +10,28 @@ import { getConnection as getStoredConnection } from "../helpers/ai-service-poli
 
 export { AiAdditionsNotConfiguredError, isAiAdditionsNotConfigured };
 
+export const AI_ADDITIONS_CREDENTIALS_MISSING = "credentials_missing";
+
+/**
+ * Thrown before any token request when `AI_ADDITIONS_KEYCLOAK_CLIENT_ID` or
+ * `AI_ADDITIONS_KEYCLOAK_CLIENT_SECRET` is empty or unset: a gap in
+ * EthicApp's own deployment configuration, not an answer from AI Additions.
+ * Callers recognize it by `code === "credentials_missing"`
+ * (`isAiAdditionsCredentialsMissing`), never by message.
+ */
+export class AiAdditionsCredentialsMissingError extends Error {
+    constructor(message = "Missing AI_ADDITIONS_KEYCLOAK_CLIENT_ID or "
+        + "AI_ADDITIONS_KEYCLOAK_CLIENT_SECRET in EthicApp environment.") {
+        super(message);
+        this.name = "AiAdditionsCredentialsMissingError";
+        this.code = AI_ADDITIONS_CREDENTIALS_MISSING;
+    }
+}
+
+export function isAiAdditionsCredentialsMissing(error) {
+    return error?.code === AI_ADDITIONS_CREDENTIALS_MISSING;
+}
+
 const DEFAULT_HTTP_TIMEOUT_MS = 12000;
 const DEFAULT_TOKEN_TTL_MS = 300000;
 const TOKEN_EXPIRY_SAFETY_WINDOW_MS = 30000;
@@ -275,9 +297,7 @@ export class AiAdditionsClient {
         const clientSecret = this.getKeycloakClientSecret();
 
         if (!clientId || !clientSecret) {
-            throw new Error(
-                "Missing AI_ADDITIONS_KEYCLOAK_CLIENT_ID or AI_ADDITIONS_KEYCLOAK_CLIENT_SECRET in EthicApp environment."
-            );
+            throw new AiAdditionsCredentialsMissingError();
         }
 
         const body = new URLSearchParams({

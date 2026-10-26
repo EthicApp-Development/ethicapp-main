@@ -308,7 +308,12 @@ effect.
    (`keycloak_public_url`).
 4. Select "Test connection". All three steps must pass: the token request,
    the token issuer and the catalog read. An issuer mismatch shows both
-   issuers and the Keycloak public URL that would match.
+   issuers and the Keycloak public URL that would match. A token step that
+   fails with `credentials_missing` ("EthicApp has no AI Additions client
+   credentials") means step 2 is not done: `AI_ADDITIONS_KEYCLOAK_CLIENT_ID`
+   or `AI_ADDITIONS_KEYCLOAK_CLIENT_SECRET` is empty in the `ethicapp`
+   environment. No request was sent, so the cause is not on the AI Additions
+   side. The catalog under "Allowed services" reports the same code.
 5. Save the connection.
 6. Under "Allowed services", tick the services to allow, add an optional note
    and select "Save as a new version". Activities launched from now on use

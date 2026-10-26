@@ -88,7 +88,7 @@ describe('ethicapp AI services catalog client', () => {
     assert.ok(!JSON.stringify(result).includes(SECRET_TOKEN));
   });
 
-  for (const code of ['not_configured', 'unreachable', 'unauthorized', 'invalid_response']) {
+  for (const code of ['not_configured', 'credentials_missing', 'unreachable', 'unauthorized', 'invalid_response']) {
     it(`passes through the ${code} error from ethicapp`, async () => {
       for (const status of [200, 502, 503]) {
         const { fetchImpl } = fakeFetch(() => jsonResponse(status, { ok: false, error: code, detail: SECRET_TOKEN }));
@@ -189,7 +189,7 @@ describe('ethicapp AI Additions connection test client', () => {
     assert.deepEqual(JSON.parse(calls[0].init.body), { baseUrl: 'http://ai-additions:8080' });
   });
 
-  for (const code of ['unreachable', 'unauthorized', 'invalid_response']) {
+  for (const code of ['credentials_missing', 'unreachable', 'unauthorized', 'invalid_response']) {
     it(`reports a failed token step (${code}) with the catalog skipped`, async () => {
       const { fetchImpl } = fakeFetch(() => jsonResponse(200, {
         ok: false,

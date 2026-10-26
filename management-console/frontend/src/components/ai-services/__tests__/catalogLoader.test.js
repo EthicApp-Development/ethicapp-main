@@ -141,6 +141,84 @@ describe('catalog loader', () => {
   });
 });
 
+// Renders the section with what the loader last wrote, as the page does.
+function renderSection(catalogState, allowedServiceIds = ['service-a']) {
+  return renderToStaticMarkup(createElement(ServicesSection, {
+    hasConnection: true,
+    catalogState,
+    currentVersion: { id: 2, allowedServiceIds },
+    onSave: async () => {},
+    onRetryCatalog: () => {}
+  }));
+}
+
+function expectOnlyLoading(html) {
+  expect(html).toContain('pages.aiServices.services.loading');
+  expect(html).not.toContain('ai-catalog-error');
+  expect(html).not.toContain('ai-disallow-all');
+  expect(html).not.toContain('pages.aiServices.services.disallowAllHelp');
+  expect(html).not.toContain('pages.aiServices.errors.');
+  expect(html).not.toContain('ai-service-allowed-');
+}
+
+describe('services section while the catalog loads (#838)', () => {
+  it('shows only the loading state before the first request starts', () => {
+    expectOnlyLoading(renderSection(IDLE_CATALOG));
+  });
+
+  it('goes from loading to the catalog table on success', async () => {
+    const harness = createHarness();
+    const load = harness.loader.load({ connectionKey: connectionKeyOf(connectionA), locale: 'en_US' });
+
+    expectOnlyLoading(renderSection(harness.latest()));
+
+    harness.requests[0].resolve(catalogA);
+    await load;
+
+    const html = renderSection(harness.latest());
+    expect(html).not.toContain('pages.aiServices.services.loading');
+    expect(html).not.toContain('ai-catalog-error');
+    expect(html).not.toContain('ai-disallow-all');
+    expect(html).toContain('ai-service-allowed-service-a');
+  });
+
+  it('goes from loading to the error panel and "allow no services" on failure', async () => {
+    for (const settle of [
+      request => request.resolve({ ok: false, error: 'credentials_missing' }),
+      request => request.reject(new Error('network'))
+    ]) {
+      const harness = createHarness();
+      const load = harness.loader.load({ connectionKey: connectionKeyOf(connectionA), locale: 'en_US' });
+
+      expectOnlyLoading(renderSection(harness.latest()));
+
+      settle(harness.requests[0]);
+      await load;
+
+      const html = renderSection(harness.latest());
+      expect(html).not.toContain('pages.aiServices.services.loading');
+      expect(html).toContain('ai-catalog-error');
+      expect(html).toContain('ai-disallow-all');
+      expect(html).not.toContain('ai-service-allowed-');
+    }
+  });
+
+  it('shows only the loading state again while a retry is pending', async () => {
+    const harness = createHarness();
+    const first = harness.loader.load({ connectionKey: connectionKeyOf(connectionA), locale: 'en_US' });
+    harness.requests[0].resolve({ ok: false, error: 'unreachable' });
+    await first;
+    expect(renderSection(harness.latest())).toContain('ai-catalog-error');
+
+    const retry = harness.loader.load({ connectionKey: connectionKeyOf(connectionA), locale: 'en_US' });
+    expectOnlyLoading(renderSection(harness.latest()));
+
+    harness.requests[1].resolve(catalogA);
+    await retry;
+    expect(renderSection(harness.latest())).toContain('ai-service-allowed-service-a');
+  });
+});
+
 describe('services section after removal', () => {
   it('never renders the selection form without a connection, even with a successful catalog', () => {
     const html = renderToStaticMarkup(createElement(ServicesSection, {
