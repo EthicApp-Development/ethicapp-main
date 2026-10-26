@@ -7,6 +7,8 @@ COPY ethicapp/backend ./
 COPY ethicapp/common /app/common
 # Rich text fixtures (#764), at the same path relative to the tests as in the repository.
 COPY canonical-schemas/rich-text /canonical-schemas/rich-text
+# AI Additions connection URL cases (#834), shared with the management console.
+COPY canonical-schemas/ai-additions-connection /canonical-schemas/ai-additions-connection
 RUN npm test && touch /tmp/backend-tests-passed
 
 FROM node:24

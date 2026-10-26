@@ -150,12 +150,16 @@ registered.
 ### Stored connection URLs
 
 The management console only saves valid URLs, but rows inserted by hand bypass
-it, and the database CHECK only requires `^https?://`. A `base_url` or
-`keycloak_public_url` whose raw value does not match `^https?://[^/?#\s]+`, or
-that contains a query string, a fragment, userinfo or whitespace, counts as no
-connection: the AI Additions client rejects every call with `not_configured`
-before sending anything, callbacks answer `503 not_configured`, and the gate
-lets no production adapter through. Path prefixes are allowed.
+it, and the database CHECK only requires `^https?://`. EthicApp applies the
+console's rule (#834): after trimming surrounding whitespace, the value must
+match `^https?://([^/?#@\\\s]+)(/[^?#\\\s]*)?$` (case-insensitive), have no `.`
+or `..` path segment, be at most 2048 characters long and parse with a
+non-empty host. Path prefixes and trailing slashes are allowed. A `base_url` or
+`keycloak_public_url` that breaks the rule counts as no connection: the AI
+Additions client rejects every call with `not_configured` before sending
+anything, callbacks answer `503 not_configured`, and the gate lets no
+production adapter through. The boundary cases both implementations pass are in
+`canonical-schemas/ai-additions-connection/url-cases.json`.
 
 Every service declares `callbackAuth`. The mock adapters never receive HTTP
 callbacks (they call the mock service synchronously), so they accept only

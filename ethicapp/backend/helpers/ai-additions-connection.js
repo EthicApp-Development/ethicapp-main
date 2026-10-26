@@ -42,38 +42,52 @@ function trimTrailingSlash(value) {
     return normalizeText(value).replace(/\/+$/u, "");
 }
 
-// An explicit http(s) authority right after the scheme, as the management
-// console requires (#829): `^https?://[^/?#\s]+`.
-const AI_ADDITIONS_URL_PATTERN = /^https?:\/\/([^/?#\s]+)/iu;
+// The one AI Additions connection URL rule (#834). The management console
+// keeps its own copy (`normalizeConnectionUrl` in
+// management-console/backend/services/ai-services.service.js), and both pass
+// canonical-schemas/ai-additions-connection/url-cases.json. EthicApp extends
+// these URLs by plain string concatenation, so the raw text must be
+// `http(s)://<authority>[/<path>]`: an explicit authority without userinfo,
+// an optional path prefix, and no query, fragment, backslash or whitespace.
+// The raw text is checked first because the WHATWG parser silently repairs
+// forms such as `http:host` or `http:///host`.
+const AI_ADDITIONS_URL_PATTERN = /^https?:\/\/([^/?#@\\\s]+)(\/[^?#\\\s]*)?$/iu;
+const MAX_AI_ADDITIONS_URL_LENGTH = 2048;
 
 /**
- * Whether a stored connection URL (`base_url` or `keycloak_public_url`) is one
- * EthicApp may derive endpoints from (#815). The raw value must be an http(s)
- * URL with an explicit authority (`^https?://[^/?#\s]+`), without userinfo,
- * query string, fragment or whitespace; a path prefix is allowed. The
- * management console refuses other values, but rows inserted by hand bypass
- * it, and the database CHECK only requires `^https?://`. A query string would
- * otherwise move the Keycloak path of the derived URLs into the query.
+ * Whether a connection URL (`base_url` or `keycloak_public_url`, stored or
+ * sent to the connection test) is one EthicApp may derive endpoints from.
+ * Surrounding whitespace is ignored, since derivation trims it. The trimmed
+ * value must match `^https?://([^/?#@\\\s]+)(/[^?#\\\s]*)?$`
+ * (case-insensitive), have no `.` or `..` path segment, be at most 2048
+ * characters long and parse with a non-empty host, which rejects ports above
+ * 65535. Trailing slashes are accepted; derivation drops them. The management
+ * console only saves such values, but rows inserted by hand bypass it, and the
+ * database CHECK only requires `^https?://`.
  *
  * @param {unknown} value
  * @returns {boolean}
  */
 export function isValidAiAdditionsUrl(value) {
-    if (typeof value !== "string" || /[\s?#]/u.test(value)) {
+    if (typeof value !== "string") {
         return false;
     }
 
-    const authority = AI_ADDITIONS_URL_PATTERN.exec(value)?.[1];
-    if (!authority || authority.includes("@")) {
+    const trimmed = value.trim();
+    const match = AI_ADDITIONS_URL_PATTERN.exec(trimmed);
+    if (!match || trimmed.length > MAX_AI_ADDITIONS_URL_LENGTH) {
+        return false;
+    }
+
+    const path = match[2] || "";
+    if (path.split("/").some(segment => segment === "." || segment === "..")) {
         return false;
     }
 
     try {
-        const url = new URL(value);
-        return (url.protocol === "http:" || url.protocol === "https:")
-            && url.hostname.length > 0
-            && !url.username
-            && !url.password;
+        const url = new URL(trimmed);
+        return Boolean(url.hostname) && !url.username && !url.password
+            && !url.search && !url.hash;
     } catch {
         return false;
     }

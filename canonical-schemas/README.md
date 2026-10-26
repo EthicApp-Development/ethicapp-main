@@ -6,6 +6,7 @@ This directory currently contains JSON Schemas for portable EthicApp objects.
 - `case-document-representation-v1.schema.json`: canonical representation of an ethical case document as metadata, source-format metadata, text content, and an ordered rendered-image sequence.
 - `rich-text/`: how teacher-written texts (phase instructions and semantic differential questions) are interpreted. It holds the content types, the CommonMark subset, the normalized tree renderers produce, and shared conformance fixtures. See [`rich-text/README.md`](rich-text/README.md).
 - `events/`: domain-event envelope and per-event payload contracts for one-way notifications between services over the application Redis. See [`events/README.md`](events/README.md).
+- `ai-additions-connection/url-cases.json`: boundary cases of the AI Additions connection URL rule (#834), each with its expected outcome and a reason. ethicapp (`isValidAiAdditionsUrl`) and the management console (`normalizeConnectionUrl`) both run every case. The console image cannot see this directory, so the console keeps a byte-identical copy in `management-console/backend/services/__tests__/fixtures/`, and a console test fails when the copies differ.
 - `tag-taxonomy-v1.schema.json`: portable controlled taxonomy for semantic tags used by ethical cases and activity designs, including domain-specific translations outside UI locale catalogs.
 
 ## Tests
