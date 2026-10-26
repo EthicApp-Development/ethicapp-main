@@ -54,6 +54,28 @@ Preferred conventions:
 
 Integration tests should be explicit about their infrastructure requirements and should fail with clear setup errors when the required test database is unavailable.
 
+Current integration suites:
+
+- `ethicapp/backend`: `npm run test:integration` runs `**/*.integration-test.mjs` against the database in `ETHICAPP_INTEGRATION_DATABASE_URL`, which must have migrations V1 to V22 or later applied. When the variable is unset, the suites are skipped with a message saying so. They insert rows that are not cleaned up (AI service policy versions are append-only), so point them at a disposable database. For example:
+
+  ```bash
+  docker network create ethicapp-it
+  docker run -d --name ethicapp-it-pg --network ethicapp-it \
+    -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=ethicapp -p 127.0.0.1::5432 postgres:16
+  docker run --rm --network ethicapp-it \
+    -e FLYWAY_URL=jdbc:postgresql://ethicapp-it-pg:5432/ethicapp \
+    -e FLYWAY_USER=postgres -e FLYWAY_PASSWORD=postgres -e FLYWAY_CONNECT_RETRIES=30 \
+    -e FLYWAY_LOCATIONS=filesystem:/flyway/migrations \
+    -v "$PWD/database/migrations:/flyway/migrations:ro" \
+    flyway/flyway:11-alpine migrate
+  cd ethicapp/backend
+  ETHICAPP_INTEGRATION_DATABASE_URL="postgres://postgres:postgres@$(docker port ethicapp-it-pg 5432)/ethicapp" \
+    npm run test:integration
+  docker rm -f -v ethicapp-it-pg && docker network rm ethicapp-it
+  ```
+
+  The first suite covers the activity launch transaction and the AI service policy pin, including two concurrent launches of the same session.
+
 ### 1.3. End-to-End and Smoke Tests
 
 End-to-end and smoke tests are appropriate for validating the full Compose stack or release candidates.
@@ -117,7 +139,7 @@ Current guardrail coverage includes:
 - `auth-backend`: CSRF protection plus authentication route behavior for login, registration validation, duplicate account handling, locale normalization, forgot-password token creation, and password reset.
 - `management-console/backend`: CSRF protection and professor impersonation route behavior, including reCAPTCHA rejection, role rejection, and EthicApp session cookie forwarding.
 
-The broader integration regression layer is not yet consistently implemented. Until it exists for a touched area, changes that rely on real database behavior should be manually verified against the local Docker Compose stack and should document that limitation in PR verification notes.
+The broader integration regression layer is not yet consistently implemented; `ethicapp/backend` has a first suite (section 1.2). Until it exists for a touched area, changes that rely on real database behavior should be manually verified against the local Docker Compose stack and should document that limitation in PR verification notes.
 
 ## 5. Adding or Changing Tests
 
