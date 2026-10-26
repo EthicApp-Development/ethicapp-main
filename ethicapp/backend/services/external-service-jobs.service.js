@@ -18,9 +18,11 @@ export const RESULT_STATUS = Object.freeze({
     COMPLETED:           "completed",
     FAILED:              "failed",
     UNKNOWN_CORRELATION: "unknown-correlation",
-    // Refused before any handler ran, for a transient cause (#815): a retry
-    // with the same eventId claims it back (createResult).
-    RETRYABLE:           "retryable",
+    // Received, not yet consumed (#815). Every callback is recorded in this
+    // state; claimResult() consumes it right before any handler runs, moving
+    // it to callback-received or unknown-correlation. Until then a retry with
+    // the same eventId is authorized again instead of being dropped.
+    PENDING:             "pending",
 });
 
 const TERMINAL_JOB_STATUSES = new Set([
@@ -180,7 +182,9 @@ export class ExternalServiceJobsService {
             }
         }
 
-        let rows = await this._db(
+        // Every callback is recorded unconsumed (#815). Receipt writes nothing
+        // else: the job is only advanced when the result is claimed.
+        const rows = await this._db(
             `INSERT INTO external_service_results
                  (job_id, correlation_id, service_id, hook_name, status,
                   session_id, phase_id, question_id, group_id, user_id,
@@ -191,31 +195,20 @@ export class ExternalServiceJobsService {
              RETURNING id, job_id, correlation_id, service_id, hook_name,
                        status, received_at`,
             [
-                jobId, correlationId, serviceId, hookName, resultStatus,
+                jobId, correlationId, serviceId, hookName, RESULT_STATUS.PENDING,
                 sessionId, phaseId, questionId, groupId, userId,
                 rawPayload ?? {}, eventId,
             ]
         );
 
-        // Empty result with a provided eventId means (service_id, event_id)
-        // already exists. A retryable one (refused before any handler ran,
-        // for a transient cause) is claimed back by exactly one retry: the
-        // UPDATE only matches while the row is still retryable, and Postgres
-        // re-checks that condition after a concurrent claim commits. The
-        // claimer processes the event again; everyone else gets a duplicate.
-        let claimed = false;
-        if (rows.length === 0 && eventId !== null) {
-            rows = await this._db(
-                `UPDATE external_service_results
-                 SET status = $3, job_id = $4, correlation_id = $5, processed_at = NULL
-                 WHERE service_id = $1 AND event_id = $2 AND status = $6
-                 RETURNING id, job_id, correlation_id, service_id, hook_name,
-                           status, received_at`,
-                [serviceId, eventId, resultStatus, jobId, correlationId, RESULT_STATUS.RETRYABLE]
-            );
-            claimed = rows.length > 0;
-        }
+        let result = rows[0] || null;
 
+        // Empty result with a provided eventId means (service_id, event_id)
+        // already exists. A consumed one is a duplicate, as before. An
+        // unconsumed one (an earlier attempt was refused before any handler
+        // ran, or failed before it could consume it) is processed again, with
+        // this attempt's correlation; claimResult() lets only one attempt
+        // through.
         if (rows.length === 0 && eventId !== null) {
             const existing = await this._db(
                 `SELECT id, job_id, correlation_id, service_id, hook_name, status, received_at
@@ -223,18 +216,16 @@ export class ExternalServiceJobsService {
                  WHERE service_id = $1 AND event_id = $2`,
                 [serviceId, eventId]
             );
-            const dup = existing[0] || null;
-            if (dup) {
-                dup.is_duplicate = true;
+            const stored = existing[0] || null;
+            if (!stored || stored.status !== RESULT_STATUS.PENDING) {
+                if (stored) {
+                    stored.is_duplicate = true;
+                }
+                return stored;
             }
-            return dup;
+            result = { ...stored, job_id: jobId, correlation_id: correlationId, is_retry: true };
         }
 
-        const result = rows[0] || null;
-
-        if (result && claimed) {
-            result.is_retry = true;
-        }
         if (result && jobContext) {
             result.job = jobContext;
         }
@@ -252,17 +243,53 @@ export class ExternalServiceJobsService {
             }
         }
 
-        // Only advance a non-terminal job to callback-received.
-        if (result && jobId && !TERMINAL_JOB_STATUSES.has(jobStatus)) {
+        return result;
+    }
+
+    /**
+     * Consumes a received result right before its handlers run (#815): one
+     * atomic UPDATE that only matches while the result is still pending, so
+     * of several attempts at the same event exactly one claims it (Postgres
+     * re-checks the condition after a concurrent claim commits). The claim
+     * records the attempt's correlation, and then advances a non-terminal job
+     * to callback-received.
+     *
+     * Delivery is at most once from here on: a crash after the claim leaves the
+     * event consumed.
+     *
+     * @param {object} result  From createResult().
+     * @returns {Promise<object|null>} The claimed row, or null when another
+     *          attempt consumed it first. Rejects when the claim cannot be
+     *          written; the result then stays pending.
+     */
+    async claimResult(result) {
+        const status = result.job_id
+            ? RESULT_STATUS.CALLBACK_RECEIVED
+            : RESULT_STATUS.UNKNOWN_CORRELATION;
+        const rows = await this._db(
+            `UPDATE external_service_results
+             SET status = $2, job_id = $3, correlation_id = $4
+             WHERE id = $1 AND status = $5
+             RETURNING id, job_id, correlation_id, service_id, hook_name,
+                       status, received_at`,
+            [result.id, status, result.job_id ?? null, result.correlation_id ?? null,
+                RESULT_STATUS.PENDING]
+        );
+        const claimed = rows[0] || null;
+
+        // Only advance a non-terminal job to callback-received. The event is
+        // already consumed, so a failure here is only logged.
+        if (claimed && result.job_id && !TERMINAL_JOB_STATUSES.has(result.job_prior_status)) {
             await this._db(
                 `UPDATE external_service_jobs
                  SET status = $2, updated_at = now()
                  WHERE id = $1`,
-                [jobId, JOB_STATUS.CALLBACK_RECEIVED]
-            );
+                [result.job_id, JOB_STATUS.CALLBACK_RECEIVED]
+            ).catch(error => console.error(
+                "[external-services] Could not advance the job of a claimed callback.", error));
         }
 
-        return result;
+        return claimed;
     }
 
     async updateResult(resultId, {

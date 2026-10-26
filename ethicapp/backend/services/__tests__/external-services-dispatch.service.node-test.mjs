@@ -12,6 +12,8 @@ function makeJobsServiceStub(overrides = {}) {
         createJob:               async () => ({ id: JOB_UUID }),
         updateJobStatus:         async () => {},
         createResult:            async () => ({ id: RESULT_UUID, job_id: JOB_UUID }),
+        // Consumes the result right before handlers run (#815).
+        claimResult:             async result => ({ ...result }),
         updateResult:            async () => {},
         recordProviderReference: async () => {},
         ...overrides,

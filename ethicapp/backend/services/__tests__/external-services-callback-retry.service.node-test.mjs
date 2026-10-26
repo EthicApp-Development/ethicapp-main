@@ -5,11 +5,12 @@ import { ExternalServicesRegistry } from "../external-services.service.js";
 import { ExternalServiceJobsService, RESULT_STATUS } from "../external-service-jobs.service.js";
 import { getCallbackTarget } from "../../external-services/adapters/polyadic-bridge.adapter.js";
 
-// Callback idempotency with retryable refusals (#815). A callback refused for
-// a transient cause before any handler ran (503) is stored as 'retryable'; a
-// retry with the same (service_id, event_id) claims it back and is processed
-// again, exactly once. Every other refusal, and every delivered event, stays a
-// terminal duplicate.
+// Callback idempotency (#815). Every callback is recorded 'pending'
+// (received, not consumed). Authorization writes nothing; the result is
+// consumed by one conditional UPDATE right before handlers run. So a
+// transient failure, even one that also takes the database down, never
+// consumes the event: the sender's retry with the same eventId is authorized
+// again and delivered exactly once. Consumed events stay duplicates.
 
 const normalize = sql => sql.replace(/\s+/g, " ").trim();
 const tick = () => new Promise(resolve => setImmediate(resolve));
@@ -17,11 +18,16 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
 // An in-memory stand-in for the two tables, enforcing the partial unique
 // index on (service_id, event_id). Each statement yields to the event loop
 // first, so concurrent requests interleave between statements, and runs
-// atomically, as a single Postgres statement does.
+// atomically, as a single Postgres statement does. `down` fails every
+// statement; `failClaims` fails only the claim.
 function makeDatabase({ jobs = [] } = {}) {
     const results = [];
-    async function dbQuery(sql, params = []) {
+    const database = { results, down: false, failClaims: 0 };
+    database.dbQuery = async (sql, params = []) => {
         await tick();
+        if (database.down) {
+            throw new Error("database unavailable");
+        }
         const text = normalize(sql);
 
         if (text.startsWith("SELECT id, status, session_id")) {
@@ -44,10 +50,13 @@ function makeDatabase({ jobs = [] } = {}) {
             results.push(row);
             return [{ ...row }];
         }
-        if (text.startsWith("UPDATE external_service_results SET status = $3, job_id = $4")) {
-            const [serviceId, eventId, status, jobId, correlationId, retryable] = params;
-            const row = results.find(candidate => candidate.service_id === serviceId
-                && candidate.event_id === eventId && candidate.status === retryable);
+        if (text.startsWith("UPDATE external_service_results SET status = $2, job_id = $3")) {
+            if (database.failClaims > 0) {
+                database.failClaims -= 1;
+                throw new Error("claim failed");
+            }
+            const [id, status, jobId, correlationId, pending] = params;
+            const row = results.find(candidate => candidate.id === id && candidate.status === pending);
             if (!row) {
                 return [];
             }
@@ -69,8 +78,8 @@ function makeDatabase({ jobs = [] } = {}) {
             return [];
         }
         throw new Error(`Unexpected statement: ${text}`);
-    }
-    return { dbQuery, results };
+    };
+    return database;
 }
 
 const VERSION = Object.freeze({ id: 2, allowedServiceIds: Object.freeze(["polyadic-agent"]) });
@@ -78,12 +87,16 @@ const ACTIVE = Object.freeze({
     current_stage: 2, status: 2, launched: true, group_exists: true, user_participates: false,
 });
 
-// Each lookup can fail a given number of times before it answers.
-function makeFlakyLookups(failures = {}) {
+// Each lookup can fail a given number of times before it answers; with
+// `outage`, its failure also takes the database down.
+function makeFlakyLookups(failures, database, { outage = false } = {}) {
     const remaining = { ...failures };
     const failOnce = (name) => {
         if (remaining[name] > 0) {
             remaining[name] -= 1;
+            if (outage) {
+                database.down = true;
+            }
             throw new Error(`${name} unavailable`);
         }
     };
@@ -104,9 +117,9 @@ function makeFlakyLookups(failures = {}) {
     };
 }
 
-function makeRegistry({ failures = {}, jobs = [] } = {}) {
+function makeRegistry({ failures = {}, jobs = [], outage = false, handler = null } = {}) {
     const database = makeDatabase({ jobs });
-    const lookups = makeFlakyLookups(failures);
+    const lookups = makeFlakyLookups(failures, database, { outage });
     const registry = new ExternalServicesRegistry({
         jobsService:                new ExternalServiceJobsService({ dbQuery: database.dbQuery }),
         developmentAdapters:        false,
@@ -124,11 +137,11 @@ function makeRegistry({ failures = {}, jobs = [] } = {}) {
     const published = [];
     registry.hookSubscribers.set("callback-received", [{
         serviceId: "svc-polyadic",
-        handler:   async (context, { callback }) => {
+        handler:   handler ?? (async (context, { callback }) => {
             await tick();
             published.push({ room: context.requestPayload.room, sessionId: context.sessionId });
             return callback({ status: "completed" });
-        },
+        }),
     }]);
     return { registry, database, published };
 }
@@ -154,13 +167,13 @@ function quietly(fn) {
 }
 
 for (const lookup of ["policy", "connection", "phaseState", "design"]) {
-    test(`retry: a transient ${lookup} failure leaves the event retryable, and the retry delivers it once`, quietly(async () => {
+    test(`retry: a transient ${lookup} failure writes nothing, and the retry delivers the event once`, quietly(async () => {
         const { registry, database, published } = makeRegistry({ failures: { [lookup]: 1 } });
         const eventId = randomUUID();
 
         await assert.rejects(deliver(registry, eventId), { statusCode: 503 });
         assert.deepEqual(published, []);
-        assert.equal(database.results[0].status, RESULT_STATUS.RETRYABLE);
+        assert.equal(database.results[0].status, RESULT_STATUS.PENDING);
 
         // The retry, with a fresh correlation id as Polyadic sends, is
         // authorized again and delivered.
@@ -177,33 +190,61 @@ for (const lookup of ["policy", "connection", "phaseState", "design"]) {
         assert.deepEqual(later.outcomes, []);
         assert.equal(published.length, 1);
     }));
+
+    test(`retry: when the ${lookup} failure also takes the database down, the retry after recovery delivers once`, quietly(async () => {
+        const { registry, database, published } = makeRegistry({
+            failures: { [lookup]: 1 },
+            outage:   true,
+        });
+        const eventId = randomUUID();
+
+        await assert.rejects(deliver(registry, eventId), { statusCode: 503 });
+        assert.equal(database.results[0].status, RESULT_STATUS.PENDING, "nothing to recover");
+
+        database.down = false;
+        await deliver(registry, eventId);
+        await deliver(registry, eventId);
+        assert.equal(published.length, 1);
+    }));
 }
 
-test("retry: a retry that fails again stays retryable", quietly(async () => {
-    const { registry, database, published } = makeRegistry({ failures: { phaseState: 2 } });
+test("retry: a failed claim answers 503 and the event stays recoverable", quietly(async () => {
+    const { registry, database, published } = makeRegistry();
+    database.failClaims = 1;
     const eventId = randomUUID();
 
     await assert.rejects(deliver(registry, eventId), { statusCode: 503 });
-    await assert.rejects(deliver(registry, eventId), { statusCode: 503 });
-    assert.equal(database.results[0].status, RESULT_STATUS.RETRYABLE);
+    assert.deepEqual(published, []);
+    assert.equal(database.results[0].status, RESULT_STATUS.PENDING);
 
     await deliver(registry, eventId);
     assert.equal(published.length, 1);
 }));
 
-test("retry: of two concurrent retries exactly one claims and publishes", quietly(async () => {
+test("retry: a retry that fails again stays pending", quietly(async () => {
+    const { registry, database, published } = makeRegistry({ failures: { phaseState: 2 } });
+    const eventId = randomUUID();
+
+    await assert.rejects(deliver(registry, eventId), { statusCode: 503 });
+    await assert.rejects(deliver(registry, eventId), { statusCode: 503 });
+    assert.equal(database.results[0].status, RESULT_STATUS.PENDING);
+
+    await deliver(registry, eventId);
+    assert.equal(published.length, 1);
+}));
+
+test("retry: of concurrent attempts at one event exactly one claims and publishes", quietly(async () => {
     const { registry, published } = makeRegistry({ failures: { design: 1 } });
     const eventId = randomUUID();
     await assert.rejects(deliver(registry, eventId), { statusCode: 503 });
 
-    const [first, second] = await Promise.all([deliver(registry, eventId), deliver(registry, eventId)]);
+    const attempts = await Promise.all([1, 2, 3].map(() => deliver(registry, eventId)));
 
     assert.equal(published.length, 1);
-    const retries = [first, second].filter(({ resultRecord }) => resultRecord.is_retry === true);
-    const duplicates = [first, second].filter(({ resultRecord }) => resultRecord.is_duplicate === true);
-    assert.equal(retries.length, 1);
-    assert.equal(duplicates.length, 1);
-    assert.deepEqual(duplicates[0].outcomes, []);
+    const delivered = attempts.filter(({ outcomes }) => outcomes.length === 1);
+    const duplicates = attempts.filter(({ resultRecord }) => resultRecord.is_duplicate === true);
+    assert.equal(delivered.length, 1);
+    assert.equal(duplicates.length, 2);
 }));
 
 test("retry: an event refused for a non-transient reason (409) stays refused", async () => {
@@ -220,6 +261,21 @@ test("retry: an event refused for a non-transient reason (409) stays refused", a
     assert.deepEqual(published, []);
 });
 
+test("retry: a 409 whose failed mark is lost is simply refused again", async () => {
+    const { registry, database, published } = makeRegistry();
+    const eventId = randomUUID();
+    const updateResult = registry._jobsService.updateResult.bind(registry._jobsService);
+    registry._jobsService.updateResult = async () => { throw new Error("database unavailable"); };
+
+    await assert.rejects(deliver(registry, eventId, { room: "ethicapp-s10-p9-g3" }), { statusCode: 409 });
+    assert.equal(database.results[0].status, RESULT_STATUS.PENDING);
+
+    registry._jobsService.updateResult = updateResult;
+    await assert.rejects(deliver(registry, eventId, { room: "ethicapp-s10-p9-g3" }), { statusCode: 409 });
+    assert.equal(database.results[0].status, RESULT_STATUS.FAILED);
+    assert.deepEqual(published, []);
+});
+
 test("retry: a delivered event is a duplicate on retry, as before", async () => {
     const { registry, published } = makeRegistry();
     const eventId = randomUUID();
@@ -231,9 +287,32 @@ test("retry: a delivered event is a duplicate on retry, as before", async () => 
     assert.equal(published.length, 1);
 });
 
+test("retry: a crash after the claim leaves the event consumed (at most once)", quietly(async () => {
+    let runs = 0;
+    const holder = {};
+    const { registry, database } = makeRegistry({
+        handler: async () => {
+            runs += 1;
+            // The process dies mid-handler: nothing else is written.
+            holder.database.down = true;
+            throw new Error("crash");
+        },
+    });
+    holder.database = database;
+    const eventId = randomUUID();
+
+    await deliver(registry, eventId);
+    assert.equal(database.results[0].status, RESULT_STATUS.UNKNOWN_CORRELATION, "claimed");
+
+    database.down = false;
+    const retry = await deliver(registry, eventId);
+    assert.equal(retry.resultRecord.is_duplicate, true);
+    assert.equal(runs, 1);
+}));
+
 test("retry: job-matched callbacks are unchanged", async () => {
     const jobId = randomUUID();
-    const { registry, published } = makeRegistry({
+    const { registry, database, published } = makeRegistry({
         jobs: [{
             id:          jobId, service_id:  "svc-polyadic", status:      "dispatched",
             session_id:  10, phase_id:    2, question_id: 4, group_id:    3, user_id:     5,
@@ -249,4 +328,5 @@ test("retry: job-matched callbacks are unchanged", async () => {
     assert.deepEqual(first.outcomes.map(outcome => outcome.status), ["fulfilled"]);
     assert.equal(retry.resultRecord.is_duplicate, true);
     assert.equal(published.length, 1);
+    assert.equal(database.results[0].job_id, jobId);
 });

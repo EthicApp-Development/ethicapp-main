@@ -157,6 +157,7 @@ function makeRegistry({
             createJob:       async args => { createdJobs.push(args); return { id: JOB_UUID }; },
             updateJobStatus: async (jobId, status) => { jobStatuses.push({ jobId, status }); },
             createResult:    async args => { createdResults.push(args); return createResult(args); },
+            claimResult:     async result => ({ ...result }),
             updateResult:    async () => {},
         },
         capabilityDescriptors: {

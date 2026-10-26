@@ -1,7 +1,6 @@
-// Integration tests for retryable callback results (#815), against a real
+// Integration tests for pending callback results (#815), against a real
 // PostgreSQL database with migrations V1-V23 applied: the status CHECK and
-// the concurrent claim of a retryable (service_id, event_id) cannot be
-// checked with fakes.
+// the concurrent claim of a pending result cannot be checked with fakes.
 //
 // Run with `npm run test:integration`, setting ETHICAPP_INTEGRATION_DATABASE_URL
 // to a disposable database.
@@ -37,57 +36,67 @@ test.after(async () => {
 
 const SERVICE_ID = "polyadic-devils-advocate";
 
-test("retryable results: concurrent retries of one event claim it exactly once", { skip: SKIP_REASON }, async () => {
+function receive(service, eventId) {
+    return service.createResult({
+        correlationId: randomUUID(), serviceId: SERVICE_ID, rawPayload: { room: "r" }, eventId,
+    });
+}
+
+test("pending results: a received result stays pending until claimed", { skip: SKIP_REASON }, async () => {
     const service = makeService();
     const eventId = randomUUID();
 
-    const first = await service.createResult({
-        correlationId: randomUUID(), serviceId: SERVICE_ID, rawPayload: { room: "r" }, eventId,
-    });
-    assert.equal(first.status, RESULT_STATUS.UNKNOWN_CORRELATION);
-    await service.updateResult(first.id, { status: RESULT_STATUS.RETRYABLE });
+    const first = await receive(service, eventId);
+    assert.equal(first.status, RESULT_STATUS.PENDING);
 
-    const attempts = await Promise.all(Array.from({ length: 8 }, () => service.createResult({
-        correlationId: randomUUID(), serviceId: SERVICE_ID, rawPayload: { room: "r" }, eventId,
-    })));
-
-    const claimed = attempts.filter(result => result.is_retry === true);
-    const duplicates = attempts.filter(result => result.is_duplicate === true);
-    assert.equal(claimed.length, 1);
-    assert.equal(duplicates.length, 7);
-    assert.equal(claimed[0].id, first.id, "the same row is claimed, no second row");
-
-    const rows = (await getPool().query(
-        "SELECT status, processed_at FROM external_service_results WHERE service_id = $1 AND event_id = $2",
-        [SERVICE_ID, eventId]
-    )).rows;
-    assert.equal(rows.length, 1);
-    assert.equal(rows[0].status, RESULT_STATUS.UNKNOWN_CORRELATION);
-    assert.equal(rows[0].processed_at, null);
+    // A retry before any claim is processed again, on the same row.
+    const retry = await receive(service, eventId);
+    assert.equal(retry.is_retry, true);
+    assert.equal(retry.id, first.id);
 });
 
-test("retryable results: terminal results are never claimed", { skip: SKIP_REASON }, async () => {
+test("pending results: concurrent attempts at one event claim it exactly once", { skip: SKIP_REASON }, async () => {
+    const service = makeService();
+    const eventId = randomUUID();
+    await receive(service, eventId);
+
+    const attempts = await Promise.all(Array.from({ length: 8 }, () => receive(service, eventId)));
+    assert.ok(attempts.every(result => result.is_retry === true), "all still pending");
+
+    const claims = await Promise.all(attempts.map(result => service.claimResult(result)));
+    const claimed = claims.filter(Boolean);
+    assert.equal(claimed.length, 1);
+    assert.equal(claimed[0].status, RESULT_STATUS.UNKNOWN_CORRELATION);
+
+    const rows = (await getPool().query(
+        "SELECT status FROM external_service_results WHERE service_id = $1 AND event_id = $2",
+        [SERVICE_ID, eventId]
+    )).rows;
+    assert.deepEqual(rows, [{ status: RESULT_STATUS.UNKNOWN_CORRELATION }]);
+
+    const later = await receive(service, eventId);
+    assert.equal(later.is_duplicate, true, "a claimed event is consumed");
+});
+
+test("pending results: terminal results are duplicates and never claimed", { skip: SKIP_REASON }, async () => {
     const service = makeService();
     for (const status of [RESULT_STATUS.FAILED, RESULT_STATUS.COMPLETED]) {
         const eventId = randomUUID();
-        const first = await service.createResult({
-            serviceId: SERVICE_ID, rawPayload: {}, eventId,
-        });
+        const first = await receive(service, eventId);
         await service.updateResult(first.id, { status });
 
-        const retry = await service.createResult({ serviceId: SERVICE_ID, rawPayload: {}, eventId });
+        const retry = await receive(service, eventId);
         assert.equal(retry.is_duplicate, true, status);
-        assert.equal(retry.is_retry, undefined, status);
+        assert.equal(await service.claimResult(first), null, status);
     }
 });
 
-test("retryable results: the status CHECK accepts retryable and nothing unknown", { skip: SKIP_REASON }, async () => {
+test("pending results: the status CHECK accepts pending and nothing unknown", { skip: SKIP_REASON }, async () => {
     const service = makeService();
-    const result = await service.createResult({ serviceId: SERVICE_ID, rawPayload: {}, eventId: randomUUID() });
+    const result = await receive(service, randomUUID());
 
-    await service.updateResult(result.id, { status: RESULT_STATUS.RETRYABLE });
     await assert.rejects(
-        service.updateResult(result.id, { status: "claimed-somewhere" }),
+        service.updateResult(result.id, { status: "retryable" }),
         { code: "23514" }
     );
 });

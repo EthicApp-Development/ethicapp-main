@@ -498,10 +498,12 @@ service id, and decides where the callback may publish (#815):
   and the group (or user) belongs to it. Otherwise `409`.
 - A correlation id of another service's job answers `409`; a failed lookup
   answers `503`.
-- A `503` refusal happens before any handler runs and leaves the event
-  retryable: a retry with the same `eventId` is authorized and delivered again,
-  exactly once (concurrent retries that lose the claim get `202` as a
-  duplicate). Delivered events and `409` refusals stay duplicates.
+- Every callback is recorded `pending` and consumed by one conditional
+  `UPDATE` right before its handlers run. Authorization writes nothing, so a
+  `503` (even during a database outage) leaves the event pending: a retry with
+  the same `eventId` is authorized and delivered again, exactly once (attempts
+  that lose the claim get `202` as a duplicate). Delivered events and `409`
+  refusals stay duplicates.
 
 The handler receives that destination, not the request's values. See
 `ethicapp/backend/external-services/README.md`, "Usability".

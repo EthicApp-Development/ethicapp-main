@@ -1003,11 +1003,15 @@ export class ExternalServicesRegistry {
             return { resultRecord, outcomes: [] };
         }
 
-        assertCallbackCorrelation(resultRecord, serviceId);
-
+        // Authorization writes nothing (#815): a transient failure (503)
+        // leaves the result pending, so the sender's retry is authorized
+        // again. A refusal (409) marks it failed, on a best-effort basis: if
+        // that write fails, a retry is simply refused again.
         let job = null;
         let destination;
         try {
+            assertCallbackCorrelation(resultRecord, serviceId);
+
             const resolveTarget = this.callbackTargetResolvers.get(serviceId);
             const target = resolveTarget ? resolveTarget(context.requestPayload ?? {}) : null;
 
@@ -1024,16 +1028,29 @@ export class ExternalServicesRegistry {
                 });
             }
         } catch (error) {
-            // No handler ran. A transient refusal (503) leaves the event
-            // retryable, so a retry with the same eventId is processed again;
-            // any other refusal is final.
-            const transient = error.statusCode === 503;
-            await this._jobsService
-                .updateResult(resultRecord.id, {
-                    status: transient ? RESULT_STATUS.RETRYABLE : RESULT_STATUS.FAILED,
-                })
-                .catch(() => null);
-            throw error.statusCode ? error : Object.assign(error, { statusCode: 400 });
+            const statusCode = error.statusCode ?? 400;
+            if (statusCode !== 503 && resultRecord) {
+                await this._jobsService
+                    .updateResult(resultRecord.id, { status: RESULT_STATUS.FAILED })
+                    .catch(() => null);
+            }
+            throw error.statusCode ? error : Object.assign(error, { statusCode });
+        }
+
+        // Claimed right before any side effect: only one attempt at an event
+        // runs its handlers. The others get the duplicate answer.
+        let claimed;
+        try {
+            claimed = await this._jobsService.claimResult(resultRecord);
+        } catch (error) {
+            console.error(`[external-services] Could not claim a ${serviceId} callback.`, error);
+            throw Object.assign(
+                new Error(`The callback for ${serviceId} could not be recorded; try again later.`),
+                { statusCode: 503 }
+            );
+        }
+        if (!claimed) {
+            return { resultRecord: { ...resultRecord, is_duplicate: true }, outcomes: [] };
         }
 
         const subscribers = this.hookSubscribers.get(hookName) || [];

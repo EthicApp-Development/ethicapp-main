@@ -130,7 +130,7 @@ test("recordProviderReference: sets provider_reference on job", async () => {
 
 // ─── createResult ─────────────────────────────────────────────────────────────
 
-test("createResult: matching correlationId — resolves job, updates job status", async () => {
+test("createResult: matching correlationId — resolves job, records it pending, no job update", async () => {
     const jobRow    = {
         id:          JOB_UUID,
         session_id:  null,
@@ -145,8 +145,9 @@ test("createResult: matching correlationId — resolves job, updates job status"
         correlation_id: JOB_UUID,
         status:         RESULT_STATUS.CALLBACK_RECEIVED,
     };
-    // call 0: job lookup; call 1: insert result; call 2: update job status
-    const db  = makeDbQueue([jobRow], [resultRow], []);
+    // call 0: job lookup; call 1: insert result. The job is only advanced
+    // when the result is claimed (#815).
+    const db  = makeDbQueue([jobRow], [resultRow]);
     const svc = new ExternalServiceJobsService({ dbQuery: db });
 
     const result = await svc.createResult({
@@ -157,20 +158,16 @@ test("createResult: matching correlationId — resolves job, updates job status"
 
     assert.equal(result.status, RESULT_STATUS.CALLBACK_RECEIVED);
     assert.equal(result.job_id, JOB_UUID);
-    assert.equal(db.calls.length, 3);
+    assert.equal(db.calls.length, 2);
 
     // call 0: SELECT includes service_id guard
     assert.ok(db.calls[0].sql.includes("service_id = $2"));
     assert.equal(db.calls[0].params[0], JOB_UUID);
     assert.equal(db.calls[0].params[1], "polyadic-devils-advocate");
 
-    // call 1: INSERT result with callback-received status
+    // call 1: INSERT result, unconsumed
     assert.ok(db.calls[1].sql.includes("INSERT INTO external_service_results"));
-    assert.equal(db.calls[1].params[4], RESULT_STATUS.CALLBACK_RECEIVED);
-
-    // call 2: UPDATE job to callback-received
-    assert.ok(db.calls[2].sql.includes("UPDATE external_service_jobs"));
-    assert.equal(db.calls[2].params[1], JOB_STATUS.CALLBACK_RECEIVED);
+    assert.equal(db.calls[1].params[4], RESULT_STATUS.PENDING);
 });
 
 test("createResult: returns the matched job's context as the trusted destination", async () => {
@@ -316,7 +313,7 @@ test("createResult: unknown correlationId — unknown-correlation, no job update
     assert.equal(result.job_id, null);
     assert.equal(result.correlates_other_service, undefined);
     assert.equal(db.calls.length, 3);
-    assert.equal(db.calls[2].params[4], RESULT_STATUS.UNKNOWN_CORRELATION);
+    assert.equal(db.calls[2].params[4], RESULT_STATUS.PENDING);
 });
 
 test("createResult: null correlationId — skips job lookup, unknown-correlation", async () => {
@@ -365,7 +362,7 @@ test("createResult: terminal job without eventId — is_duplicate true (backward
     assert.equal(result.job_prior_status, JOB_STATUS.COMPLETED);
 });
 
-test("createResult: non-terminal job without eventId — is_duplicate false, job advanced to callback-received", async () => {
+test("createResult: non-terminal job without eventId — is_duplicate false, job not advanced on receipt", async () => {
     const jobRow    = {
         id:          JOB_UUID,
         status:      JOB_STATUS.DISPATCHED,
@@ -376,7 +373,7 @@ test("createResult: non-terminal job without eventId — is_duplicate false, job
         user_id:     null,
     };
     const resultRow = { id: RESULT_UUID, job_id: JOB_UUID, status: RESULT_STATUS.CALLBACK_RECEIVED };
-    const db  = makeDbQueue([jobRow], [resultRow], []);
+    const db  = makeDbQueue([jobRow], [resultRow]);
     const svc = new ExternalServiceJobsService({ dbQuery: db });
 
     const result = await svc.createResult({
@@ -385,7 +382,7 @@ test("createResult: non-terminal job without eventId — is_duplicate false, job
         rawPayload:    {},
     });
 
-    assert.equal(db.calls.length, 3, "should UPDATE non-terminal job");
+    assert.equal(db.calls.length, 2, "the job is advanced by claimResult()");
     assert.equal(result.is_duplicate,     false, "non-terminal job: not a duplicate");
     assert.equal(result.job_prior_status, JOB_STATUS.DISPATCHED);
 });
@@ -411,12 +408,11 @@ test("createResult: with eventId, first delivery — inserts row and is_duplicat
     assert.equal(result?.is_duplicate, undefined);
 });
 
-test("createResult: with eventId, conflict — fetches existing row and marks is_duplicate true", async () => {
+test("createResult: with eventId, conflict — a consumed existing row is a duplicate", async () => {
     const EVENT_UUID  = "e1e2e3e4-0000-4000-8000-000000000099";
     const existingRow = { id: RESULT_UUID, job_id: JOB_UUID, status: RESULT_STATUS.CALLBACK_RECEIVED };
-    // call 0: INSERT returns [] (ON CONFLICT DO NOTHING hit); call 1: the
-    // retryable claim matches nothing (#815); call 2: SELECT existing row
-    const db  = makeDbQueue([], [], [existingRow]);
+    // call 0: INSERT returns [] (ON CONFLICT DO NOTHING hit); call 1: SELECT existing row
+    const db  = makeDbQueue([], [existingRow]);
     const svc = new ExternalServiceJobsService({ dbQuery: db });
 
     const result = await svc.createResult({
@@ -426,14 +422,68 @@ test("createResult: with eventId, conflict — fetches existing row and marks is
         eventId:       EVENT_UUID,
     });
 
-    assert.equal(db.calls.length, 3);
-    assert.ok(db.calls[1].sql.includes("AND status = $6"), "the claim only matches retryable rows");
-    assert.equal(db.calls[1].params[5], RESULT_STATUS.RETRYABLE);
-    assert.ok(db.calls[2].sql.includes("event_id = $2"), "fallback SELECT must query by event_id");
-    assert.equal(db.calls[2].params[0], "polyadic-devils-advocate");
-    assert.equal(db.calls[2].params[1], EVENT_UUID);
+    assert.equal(db.calls.length, 2);
+    assert.ok(db.calls[1].sql.includes("event_id = $2"), "fallback SELECT must query by event_id");
+    assert.equal(db.calls[1].params[0], "polyadic-devils-advocate");
+    assert.equal(db.calls[1].params[1], EVENT_UUID);
     assert.equal(result?.is_duplicate, true);
     assert.equal(result?.id, RESULT_UUID);
+});
+
+test("createResult: with eventId, conflict — a pending existing row is processed again (#815)", async () => {
+    const EVENT_UUID  = "e1e2e3e4-0000-4000-8000-000000000099";
+    const existingRow = { id: RESULT_UUID, job_id: null, status: RESULT_STATUS.PENDING };
+    // job lookup, other-service lookup, INSERT (conflict), SELECT existing
+    const db  = makeDbQueue([], [], [], [existingRow]);
+    const svc = new ExternalServiceJobsService({ dbQuery: db });
+
+    const result = await svc.createResult({
+        correlationId: JOB_UUID,
+        serviceId:     "polyadic-devils-advocate",
+        rawPayload:    {},
+        eventId:       EVENT_UUID,
+    });
+
+    assert.equal(result.is_duplicate, undefined);
+    assert.equal(result.is_retry, true);
+    assert.equal(result.id, RESULT_UUID);
+    assert.equal(result.correlation_id, JOB_UUID, "this attempt's correlation");
+    assert.equal(db.calls.length, 4, "no write besides the conflicting INSERT");
+});
+
+test("claimResult: one conditional UPDATE, then the job is advanced", async () => {
+    const claimedRow = { id: RESULT_UUID, job_id: JOB_UUID, status: RESULT_STATUS.CALLBACK_RECEIVED };
+    const db  = makeDbQueue([claimedRow], []);
+    const svc = new ExternalServiceJobsService({ dbQuery: db });
+
+    const claimed = await svc.claimResult({
+        id: RESULT_UUID, job_id: JOB_UUID, correlation_id: JOB_UUID, job_prior_status: JOB_STATUS.DISPATCHED,
+    });
+
+    assert.deepEqual(claimed, claimedRow);
+    assert.ok(db.calls[0].sql.includes("WHERE id = $1 AND status = $5"));
+    assert.deepEqual(db.calls[0].params, [
+        RESULT_UUID, RESULT_STATUS.CALLBACK_RECEIVED, JOB_UUID, JOB_UUID, RESULT_STATUS.PENDING,
+    ]);
+    assert.ok(db.calls[1].sql.includes("UPDATE external_service_jobs"));
+    assert.equal(db.calls[1].params[1], JOB_STATUS.CALLBACK_RECEIVED);
+});
+
+test("claimResult: null when another attempt consumed it; no job update", async () => {
+    const db  = makeDbQueue([]);
+    const svc = new ExternalServiceJobsService({ dbQuery: db });
+
+    assert.equal(await svc.claimResult({ id: RESULT_UUID, job_id: null }), null);
+    assert.equal(db.calls.length, 1);
+    assert.equal(db.calls[0].params[1], RESULT_STATUS.UNKNOWN_CORRELATION);
+});
+
+test("claimResult: a terminal job is not advanced", async () => {
+    const db  = makeDbQueue([{ id: RESULT_UUID }]);
+    const svc = new ExternalServiceJobsService({ dbQuery: db });
+
+    await svc.claimResult({ id: RESULT_UUID, job_id: JOB_UUID, job_prior_status: JOB_STATUS.COMPLETED });
+    assert.equal(db.calls.length, 1);
 });
 
 test("createResult: null eventId with conflict-returning empty INSERT — not treated as duplicate", async () => {

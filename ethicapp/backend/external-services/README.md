@@ -109,12 +109,27 @@ never the request's own values:
    phase state or the design) answers `503`, so the caller may retry. Without a
    connection the middleware already answers `503 not_configured`.
 
-No handler runs when a callback is refused. A refusal for a transient cause
-(`503`: the pinned version, the connection, the phase state or the design
-could not be read) stores the result as `retryable`
-(`V23__external_service_results_retryable.sql`). Every other refusal (`409`)
-marks it `failed`. Development adapters follow the same rules (they need no
-connection, as for dispatch); the mocks never receive HTTP callbacks.
+No handler runs when a callback is refused. Development adapters follow the
+same rules (they need no connection, as for dispatch); the mocks never receive
+HTTP callbacks.
+
+**Result states** (`external_service_results.status`,
+`V23__external_service_results_pending.sql`):
+
+| Step | Write | Status |
+| --- | --- | --- |
+| Receipt (`createResult`) | Insert, nothing else | `pending`: received, not consumed |
+| Authorization (correlation, target, destination, policy) | None | stays `pending` |
+| Transient refusal (`503`) | None | stays `pending` |
+| Refusal (`409`) | Best effort | `failed`; if the write fails, it stays `pending` and a retry is refused again |
+| Claim (`claimResult`), right before handlers | `UPDATE … WHERE id = $1 AND status = 'pending'`, then the job is advanced to `callback-received` | `callback-received` (job matched) or `unknown-correlation` |
+| Handler outcome | As before | `completed` or `failed` |
+
+Recovery never depends on a write made during an outage: until the claim, the
+event is unconsumed, and a retry with the same `eventId` is authorized again.
+Only one attempt can claim it; the others get the duplicate answer. A failed
+claim answers `503` and leaves it pending. Delivery is at most once from the
+claim on: a crash after the claim leaves the event consumed.
 
 Targets per adapter:
 - Polyadic: the room `ethicapp-s<session>-p<phase>-g<group>`.
@@ -629,14 +644,12 @@ authenticated by `middleware/external-services-callback-auth.middleware.js`
   reports `correlationStatus: "matched"` or `"unknown"`.
 - `eventId`, when provided, must be a UUID. A repeated `eventId` for the same
   service is recorded as a duplicate and is **not** dispatched to the adapter
-  (`202`, `isDuplicate: true`), with one exception (#815): when the earlier
-  attempt was refused with `503` before any handler ran, its result is
-  `retryable`, and the retry claims it back with one atomic
-  `UPDATE ... WHERE service_id = $1 AND event_id = $2 AND status = 'retryable'`.
-  The claimer is authorized and delivered again; concurrent retries that lose
-  the claim get the usual duplicate answer (`202`, nothing delivered), so the
-  sender stops retrying while the claimer carries the event to completion or to
-  another `503`. Events delivered or refused with `409` stay duplicates.
+  (`202`, `isDuplicate: true`) once it is consumed. While it is still
+  `pending` (#815: the earlier attempt was refused with `503`, or failed before
+  it could claim it), the retry is authorized and, if it claims the result,
+  delivered. Attempts that lose the claim get the usual duplicate answer
+  (`202`, nothing delivered), so the sender stops retrying while the claimer
+  carries the event. Events delivered or refused with `409` stay duplicates.
 
 The registry creates an `external_service_results` row, then dispatches
 `callback-received` only to the subscribers of the named service with the
