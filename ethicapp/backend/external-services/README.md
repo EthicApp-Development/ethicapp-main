@@ -101,7 +101,7 @@ Each manifest entry describes one service:
 | `globalHooks` | no | Hooks the service opts into at manifest level, without an activity-design opt-in. Defaults to `[]`. Each name must be kebab-case and must also appear in `hooks`; other entries are dropped with a warning and duplicates are removed. Only consulted by `dispatchGlobalHook()` (see "Hook enablement"). Exposed through `GET /external-services`. |
 | `scopes` | no | Where the service operates: `case` (case documents), `response` (student responses) or `chat` (group chat). Defaults to `[]`. Unknown values are dropped with a warning and duplicates are removed. Screens list services by scope (see "Listing services"), so an entry without scopes appears in none of them; `__tests__/manifest.node-test.mjs` requires at least one. |
 | `ui` | no | `{ component }`: the kebab-case name of the EthicApp frontend component that will show the service's analysis in the case view. Defaults to `{ component: null }`; other names are dropped with a warning. The texts come from the adapter, not from the manifest (see "UI translations"). |
-| `descriptor` | no | `{ path }`: the capability descriptor the service's AI backend publishes (#687). Its id (`service.id` in the descriptor) is the one AI Additions service in `requires`, so an adapter with a descriptor requires exactly one service; `descriptor.serviceId` is no longer accepted (#812). That id may differ from `id`: ids are mapped, not renamed, so stored designs, chat agents and jobs keep the manifest id. `path` is the descriptor route relative to `AI_ADDITIONS_BASE_URL`, for example `/polyadic-agent/api/capabilities`; it must be an absolute path without host, query or `..` segments. An invalid path is dropped with a warning. `GET /external-services` exposes `descriptor.serviceId` and a summary (see "Listing services"); the route stays internal (`getServiceDescriptor()`). |
+| `descriptor` | no | `{ path }`: the capability descriptor the service's AI backend publishes (#687). Its id (`service.id` in the descriptor) is the one AI Additions service in `requires`, so an adapter with a descriptor requires exactly one service; `descriptor.serviceId` is no longer accepted (#812). That id may differ from `id`: ids are mapped, not renamed, so stored designs, chat agents and jobs keep the manifest id. `path` is the descriptor route relative to the AI Additions connection's `base_url`, for example `/polyadic-agent/api/capabilities`; it must be an absolute path without host, query or `..` segments. An invalid path is dropped with a warning. `GET /external-services` exposes `descriptor.serviceId` and a summary (see "Listing services"); the route stays internal (`getServiceDescriptor()`). |
 | `capabilities` | — | Removed (#726). Entries that still declare it log a deprecation warning and the key is ignored. A service that processes student responses declares the `response` scope instead; the student app shows the processing state for those services. |
 | `enabled` | — | Removed (#812). An entry that declares it rejects the catalog; usability is decided at dispatch (see "Usability"). |
 | `callbackAuth` | no | Inbound callback authorization. See below. |
@@ -197,9 +197,12 @@ const configuration = await externalServicesRegistry
 - **Result.** `null` for unknown or disabled services and for services without a
   descriptor. Otherwise `{ available: true, stale, descriptorServiceId, name,
   usesLlm, locale, fields }`, or `{ available: false, reason }` with `reason`
-  `unreachable` (network error, timeout, HTTP error), `invalid_descriptor`,
-  `unsupported_contract_version` or `service_id_mismatch`. It never throws, and
-  it never touches stored configurations.
+  `not_configured` (no AI Additions connection is stored; nothing is requested),
+  `unreachable` (network error, timeout, HTTP error, or the connection cannot be
+  read), `invalid_descriptor`, `unsupported_contract_version` or
+  `service_id_mismatch`. It never throws, and it never touches stored
+  configurations. Cached descriptors are keyed by the connection, so they are
+  dropped when the operator changes or removes it.
 - **Fetching.** `GET descriptor.path` through `aiAdditionsClient.requestJson`
   (Keycloak token, one retry after `401`) with a 5 s timeout and
   `Accept-Language`: `es-CL` for Spanish locales, `en-US` otherwise. Until
@@ -679,28 +682,74 @@ stores an excerpt.
 
 ## AI Additions Authentication
 
-EthicApp authenticates to AI Additions centrally through
+EthicApp talks to AI Additions centrally through
 `../services/ai-additions-client.service.js`.
+
+### The connection
+
+Where AI Additions is comes from the AI Additions connection stored in the
+database (`ai_additions_connection`, #813), not from environment variables. The
+client reads it through `helpers/ai-service-policy.js#getConnection` and reuses
+it for 5 seconds. Every URL derives from it (`helpers/ai-additions-connection.js`):
+
+| URL | Derivation |
+| --- | --- |
+| Token endpoint | `base_url/keycloak/realms/<realm>/protocol/openid-connect/token` |
+| JWKS (callback verification) | `base_url/keycloak/realms/<realm>/protocol/openid-connect/certs` |
+| Expected callback issuer | `<keycloak_public_url or base_url/keycloak>/realms/<realm>` |
+| Service APIs | `base_url` + the adapter's API path (`/polyadic-agent/api`, `/argumentation-tutor/api/v2`, `/case-analyst/api/v1`) |
+| Capability descriptors | `base_url` + the catalog's `descriptor.path` |
+
+EthicApp reaches Keycloak through `base_url` because the public Keycloak URL
+may not be reachable from inside the container. `keycloak_public_url` only sets
+the issuer EthicApp expects: with a fixed `KC_HOSTNAME`, Keycloak issues the
+same `iss` whatever host a request comes through. `<realm>` is
+`AI_ADDITIONS_KEYCLOAK_REALM`.
+
+**Without a connection nothing is called.** Every client call rejects with
+`AiAdditionsNotConfiguredError` (`code: "not_configured"`, test it with
+`isAiAdditionsNotConfigured(error)`) before any request leaves the host,
+authenticated or not (`AI_ADDITIONS_POLYADIC_AGENTS_AUTHENTICATED=false`
+included). Adapters let it fail their job; descriptors report
+`{ available: false, reason: "not_configured" }`; callbacks are rejected with
+`503` and `code: "not_configured"`, because their tokens cannot be verified
+without the connection and removing the connection stops all AI traffic.
+
+When the connection changes, the cached token is dropped, cached descriptors
+no longer apply, and the callback verifier drops its JWKS keys.
+
+### The client
 
 The client uses the Keycloak client credentials flow and:
 
-- derives the token endpoint from the AI Additions facade by default;
-- caches access tokens until shortly before expiry;
+- caches access tokens per token URL until shortly before expiry;
 - coalesces concurrent token requests;
 - adds the `Authorization: Bearer ...` header to authenticated requests;
 - retries once after `401` by clearing the cached token.
 
+Its public API:
+
+| Member | Purpose |
+| --- | --- |
+| `requestJson(pathname, { method, body, headers, basePath, authenticated, timeoutMs })` | JSON request to `base_url + basePath + pathname`. Paths must be relative; absolute URLs are refused. |
+| `getAccessToken()` | A bearer token for the current connection. |
+| `getEndpoints()` | `{ baseUrl, realm, tokenUrl, jwksUrl, issuer, fingerprint }` for the current connection. |
+| `resolveServiceUrl(...segments)` | `base_url` joined with relative segments. |
+| `getConnectionFingerprint()` | Changes when the connection does; `null` without one. |
+| `withConnection({ baseUrl, keycloakPublicUrl })` | A client bound to an unsaved connection, with its own token cache, for a connection test. |
+
+All of them reject with `not_configured` without a connection (except
+`getConnectionFingerprint`, which returns `null`). Database errors while reading
+the connection propagate unchanged.
+
 Adapters must not implement Keycloak token negotiation directly. Use the injected
-`aiAdditionsClient`:
+`aiAdditionsClient` with the service's API path:
 
 ```js
 const response = await aiAdditionsClient.requestJson("/sessions", {
-    method: "POST",
-    baseUrl: process.env.AI_ADDITIONS_MY_SERVICE_API_BASE_URL
-        || aiAdditionsClient.buildServiceUrl("/my-service/api/v1"),
-    body: {
-        example: true,
-    },
+    method:   "POST",
+    basePath: "/my-service/api/v1",
+    body:     { example: true },
 });
 ```
 
@@ -712,42 +761,34 @@ Set `authenticated: false` only for explicitly public AI Additions endpoints.
 
 | Variable | Purpose |
 | --- | --- |
-| `AI_ADDITIONS_BASE_URL` | Base URL for the AI Additions facade. Defaults to `http://host.docker.internal:8010`. |
 | `AI_ADDITIONS_HTTP_TIMEOUT_MS` | HTTP timeout for token and service requests. Defaults to `12000`. |
-| `AI_ADDITIONS_KEYCLOAK_BASE_URL` | Keycloak base URL. Defaults to `${AI_ADDITIONS_BASE_URL}/keycloak`. |
 | `AI_ADDITIONS_KEYCLOAK_REALM` | Keycloak realm. Defaults to `ethicapp-ai-additions`. |
 | `AI_ADDITIONS_KEYCLOAK_CLIENT_ID` | Confidential client id used by EthicApp. Required for authenticated calls. |
 | `AI_ADDITIONS_KEYCLOAK_CLIENT_SECRET` | Confidential client secret used by EthicApp. Required for authenticated calls. |
-| `AI_ADDITIONS_KEYCLOAK_TOKEN_URL` | Optional full token endpoint override. |
 | `AI_ADDITIONS_KEYCLOAK_SCOPE` | Optional token scope. |
 
 ### Inbound callback authentication (AI Additions → EthicApp)
 
 | Variable | Purpose |
 | --- | --- |
-| `EXTERNAL_SERVICES_CALLBACK_AUTH_ENABLED` | Set to `false` to disable JWT validation in development. Defaults to `true`. |
-| `EXTERNAL_SERVICES_CALLBACK_AUTH_ISSUER` | Keycloak issuer URL for JWT `iss` claim validation. Derived from `AI_ADDITIONS_KEYCLOAK_BASE_URL` and `AI_ADDITIONS_KEYCLOAK_REALM` when unset. |
-| `EXTERNAL_SERVICES_CALLBACK_AUTH_JWKS_URL` | Explicit JWKS endpoint. Derived from issuer as `.../protocol/openid-connect/certs` when unset. |
+| `EXTERNAL_SERVICES_CALLBACK_AUTH_ENABLED` | Set to `false` to disable JWT validation in development. Defaults to `true`. The connection is then not read. |
 | `EXTERNAL_SERVICES_CALLBACK_AUTH_AUDIENCE` | Expected `aud` claim. Defaults to `ethicapp-ai-services` (the audience injected by the Keycloak mapper in AI Additions). Leave empty to skip audience check. |
 | `EXTERNAL_SERVICES_CALLBACK_AUTH_CLOCK_TOLERANCE_SECONDS` | Clock skew tolerance for `exp`/`nbf` validation. Defaults to `30`. |
 
-Service-specific adapters may define additional variables for their normalized
-facade path. For example, the Argumentation Tutor adapter uses:
+The issuer and JWKS URL derive from the connection (see above).
+
+### Polyadic Agents
 
 | Variable | Purpose |
 | --- | --- |
-| `AI_ADDITIONS_ARGUMENTATION_TUTOR_API_BASE_URL` | Argumentation Tutor API base URL. Defaults to `${AI_ADDITIONS_BASE_URL}/argumentation-tutor/api/v2`. |
-
-The Case Analyst adapter uses:
-
-| Variable | Purpose |
-| --- | --- |
-| `AI_ADDITIONS_CASE_ANALYST_API_BASE_URL` | Case Analyst API base URL. Defaults to `${AI_ADDITIONS_BASE_URL}/case-analyst/api/v1`. |
+| `AI_ADDITIONS_POLYADIC_AGENTS_AUTHENTICATED` | Whether Polyadic requests carry a bearer token. Defaults to `true`. Unauthenticated requests still need the connection. |
+| `AI_ADDITIONS_POLYADIC_AGENTS_PIPELINE_TYPE` | Fallback pipeline for phases whose design does not configure one. |
 
 The Case Analyst adapter is currently a skeleton: it builds the analysis
 request for every case that chose it and completes the job without calling the
-provider or recording a case analysis. Submission and result handling are the
-next increments.
+provider or recording a case analysis (it fails the job with `not_configured`
+when no connection is stored). Submission and result handling are the next
+increments.
 
 Argumentation Tutor completion is callback-driven. EthicApp submits the task and
 keeps the external-service job dispatched until the correlated `result` callback
@@ -759,16 +800,13 @@ files.
 
 ## AI Additions Facade Contract
 
-EthicApp should call AI Additions through the facade URL, not through internal
-container ports. In a co-located staging deployment, AI Additions can listen only
-on localhost while EthicApp remains public. In that topology:
-
-- `AI_ADDITIONS_BASE_URL` should point to the local AI Additions facade, for
-  example `http://127.0.0.1:8010`.
-- Keycloak should be reached through the facade prefix,
-  `http://127.0.0.1:8010/keycloak`.
-- Service APIs should use normalized facade paths such as
-  `/argumentation-tutor/api/v2` or `/polyadic-agent/api`.
+EthicApp calls AI Additions through its gateway (`base_url`), not through
+internal container ports. `base_url` may be a Docker-internal name or an
+external HTTPS host. In a co-located staging deployment, AI Additions can listen
+only on localhost while EthicApp remains public; the connection's `base_url` is
+then the local gateway, for example `http://127.0.0.1:8010`, and
+`keycloak_public_url` is the public Keycloak URL AI Additions publishes as its
+issuer (`KEYCLOAK_PUBLIC_URL`).
 
 AI Additions services validate the Bearer token issued by the shared realm.
 EthicApp adapters only need to use the shared client; authentication remains
@@ -857,8 +895,8 @@ When implementing a new adapter:
    (see "The adapter catalog").
 4. Use `aiAdditionsClient.requestJson()` for AI Additions HTTP calls and forward
    `context.correlationId` in outbound requests.
-5. Keep service-specific URL configuration under an `AI_ADDITIONS_<SERVICE>_*`
-   prefix.
+5. Pass the service's API path as `basePath`; never read a URL from the
+   environment. Every URL derives from the AI Additions connection.
 6. Subscribe to `callback-received` to handle inbound callbacks from the service
    and close the job by calling `callback()` there.
 7. Publish outcomes through `publishStudentResult`,
