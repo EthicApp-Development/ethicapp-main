@@ -312,8 +312,11 @@ function configuredSettings(serviceConfiguration) {
  * configured settings (#734), validated against the capability descriptor on
  * save (#731), replace them and add any other instance field (`llm_tier`,
  * `session_duration_seconds`, ...). Fields left unset take Polyadic's defaults.
+ * `ethicapp_room_correlation_id` (#833) is the id of the room's room job, which
+ * Polyadic uses for the room's proactive callbacks; no setting replaces it.
  * @param {{ topic?: string, agentNickname?: string, locale?: string,
- *   serviceConfiguration?: object, pipelineType?: string }} options
+ *   serviceConfiguration?: object, pipelineType?: string,
+ *   roomCorrelationId?: string|null }} options
  */
 export function buildPolyadicSessionPayload({
     topic,
@@ -321,14 +324,20 @@ export function buildPolyadicSessionPayload({
     locale,
     serviceConfiguration = {},
     pipelineType = getPipelineType(),
+    roomCorrelationId = null,
 } = {}) {
-    return {
+    const payload = {
         prompt_inicial: topic || "EthicApp discussion",
         pipeline_type:  pipelineType,
         agent_nickname: agentNickname || DEFAULT_AGENT_NICKNAME,
         locale:         locale || DEFAULT_POLYADIC_LOCALE,
         ...configuredSettings(serviceConfiguration),
     };
+    delete payload.ethicapp_room_correlation_id;
+    if (roomCorrelationId) {
+        payload.ethicapp_room_correlation_id = roomCorrelationId;
+    }
+    return payload;
 }
 
 export function resolvePolyadicUsername(identity, userId) {
@@ -370,10 +379,15 @@ async function requestPolyadicJson(pathname, { method = "GET", body = null } = {
     });
 }
 
-function creationOutcome(response, extra = {}) {
+// `roomCorrelationAcknowledged`: Polyadic echoed the room correlation id, so it
+// stored it and sends it with the room's proactive callbacks (#833). An older
+// Polyadic ignores the field and echoes nothing.
+function creationOutcome(response, roomCorrelationId, extra = {}) {
     return {
-        warnings: Array.isArray(response?.warnings) ? response.warnings : [],
-        degraded: response?.degraded === true,
+        warnings:                    Array.isArray(response?.warnings) ? response.warnings : [],
+        degraded:                    response?.degraded === true,
+        roomCorrelationAcknowledged: Boolean(roomCorrelationId)
+            && response?.ethicapp_room_correlation_id === roomCorrelationId,
         ...extra,
     };
 }
@@ -381,19 +395,24 @@ function creationOutcome(response, extra = {}) {
 /**
  * Creates the Polyadic session of a room and returns Polyadic's lifecycle
  * report, `{ warnings, degraded, configurationRejected }` (#735, recorded by
- * #737). Polyadic answers 400 when a configured value fails its format rules,
+ * #737), and whether Polyadic acknowledged the room correlation id (#833).
+ * Polyadic answers 400 when a configured value fails its format rules,
  * which a design saved before a rule tightened can still hold (#731 accepts it
  * with a warning). The room is then created once more without the configured
  * settings, so the group still gets its agent, and `configurationRejected` says so.
  */
-async function ensurePolyadicSession(roomName, { topic, agentNickname, locale, serviceConfiguration }) {
+async function ensurePolyadicSession(roomName, {
+    topic, agentNickname, locale, serviceConfiguration, roomCorrelationId = null,
+}) {
     const path = `/rooms/${encodeURIComponent(roomName)}/sessions`;
-    const body = buildPolyadicSessionPayload({ topic, agentNickname, locale, serviceConfiguration });
+    const body = buildPolyadicSessionPayload({
+        topic, agentNickname, locale, serviceConfiguration, roomCorrelationId,
+    });
 
     try {
         const response = await requestPolyadicJson(path, { method: "POST", body });
         console.info(`[polyadic-bridge] Polyadic session ready for ${roomName}.`);
-        return creationOutcome(response, { configurationRejected: false });
+        return creationOutcome(response, roomCorrelationId, { configurationRejected: false });
     } catch (error) {
         const hasConfiguration = Object.keys(configuredSettings(serviceConfiguration)).length > 0;
         if (Number(error?.statusCode) !== 400 || !hasConfiguration) {
@@ -402,10 +421,10 @@ async function ensurePolyadicSession(roomName, { topic, agentNickname, locale, s
 
         console.warn(`[polyadic-bridge] Polyadic rejected the configured settings for ${roomName}; `
             + "creating the session with EthicApp's defaults.", error.responseBody ?? error);
-        const fallback = buildPolyadicSessionPayload({ topic, agentNickname, locale });
+        const fallback = buildPolyadicSessionPayload({ topic, agentNickname, locale, roomCorrelationId });
         const response = await requestPolyadicJson(path, { method: "POST", body: fallback });
         console.info(`[polyadic-bridge] Polyadic session ready for ${roomName} without configured settings.`);
-        return creationOutcome(response, {
+        return creationOutcome(response, roomCorrelationId, {
             configurationRejected: true,
             rejection:             error.responseBody ?? null,
         });
@@ -435,11 +454,21 @@ async function forwardChatMessage(roomName, username, content, correlationId) {
     return true;
 }
 
+// Without room jobs (a registry that provides none), rooms are created without
+// a room correlation id, as before #833.
+const NO_ROOM_JOBS = Object.freeze({
+    create: async () => null,
+    open:   async () => false,
+    fail:   async () => {},
+    close:  async () => 0,
+});
+
 export async function register({
     service,
     subscribe,
     publishGroupChatMessage,
     aiAdditionsClient: providedAiAdditionsClient,
+    roomJobs = NO_ROOM_JOBS,
     polyadicBridgeDependencies = {},
 }) {
     aiAdditionsClient = providedAiAdditionsClient || defaultAiAdditionsClient;
@@ -447,6 +476,9 @@ export async function register({
     const dependencies = createDependencies(polyadicBridgeDependencies);
     const phaseRooms = new Map();
     const roomContext = new Map();
+    // roomName -> the creation in flight, so concurrent creations of one room
+    // share one room job and one Polyadic session.
+    const roomCreations = new Map();
 
     function rememberRoomContext(roomName, sessionId, phaseId, groupId, questionId) {
         const existing = roomContext.get(roomName);
@@ -491,19 +523,81 @@ export async function register({
         };
     }
 
-    // Returns `{ roomName, warnings, degraded, configurationRejected }`, or
-    // null when the room could not be created.
-    async function createRoom({ sessionId, phaseId, groupId, questionId, ...sessionOptions }) {
+    // The room job of a new room (#833). Without one the room is created
+    // without a room correlation id, and its proactive callbacks keep the
+    // verified-destination rule (#815).
+    async function createRoomJob(hookName, room) {
+        try {
+            return await roomJobs.create({ hookName, ...room });
+        } catch (error) {
+            console.error(`[polyadic-bridge] Could not create the room job of ${room.room}.`, error);
+            return null;
+        }
+    }
+
+    async function settleRoomJob(roomJobId, roomName, settle) {
+        if (!roomJobId) {
+            return;
+        }
+        try {
+            await settle(roomJobId);
+        } catch (error) {
+            console.error(`[polyadic-bridge] Could not update the room job of ${roomName}.`, error);
+        }
+    }
+
+    // Creates the room with a new room job, whose id it sends to Polyadic.
+    // Once the room exists the job opens, bound when Polyadic echoed the id,
+    // and supersedes the room's older room jobs; when the room could not be
+    // created it fails. Returns `{ roomName, roomJobId, warnings, degraded,
+    // configurationRejected }`, or null when the room could not be created.
+    async function createRoom({ hookName, sessionId, phaseId, groupId, questionId, ...sessionOptions }) {
         const roomName = getRoomName(sessionId, phaseId, groupId);
         rememberRoomContext(roomName, sessionId, phaseId, groupId, questionId);
+        const roomJob = await createRoomJob(hookName, {
+            sessionId, phaseId, groupId, questionId: questionId ?? null, room: roomName,
+        });
+        const roomJobId = roomJob?.id ?? null;
 
+        let outcome;
         try {
-            const outcome = await ensurePolyadicSession(roomName, sessionOptions);
-            return { roomName, ...outcome };
+            outcome = await ensurePolyadicSession(roomName, {
+                ...sessionOptions,
+                roomCorrelationId: roomJobId,
+            });
         } catch (error) {
             roomContext.delete(roomName);
             console.warn(`[polyadic-bridge] Failed to create polyadic room ${roomName}.`, error);
+            await settleRoomJob(roomJobId, roomName, id => roomJobs.fail(id));
             return null;
+        }
+
+        const { roomCorrelationAcknowledged, ...report } = outcome;
+        await settleRoomJob(roomJobId, roomName,
+            id => roomJobs.open(id, { bound: roomCorrelationAcknowledged }));
+        return { roomName, roomJobId, ...report };
+    }
+
+    // One creation per room at a time: a concurrent caller gets the same
+    // room, marked `shared` so it does not report it again.
+    function createRoomOnce(options) {
+        const roomName = getRoomName(options.sessionId, options.phaseId, options.groupId);
+        const inFlight = roomCreations.get(roomName);
+        if (inFlight) {
+            return inFlight.then(room => room && { ...room, shared: true });
+        }
+
+        const creation = createRoom(options).finally(() => roomCreations.delete(roomName));
+        roomCreations.set(roomName, creation);
+        return creation;
+    }
+
+    async function closeRoomJobs(scope) {
+        try {
+            return await roomJobs.close(scope);
+        } catch (error) {
+            console.error("[polyadic-bridge] Could not close room jobs.", scope, error);
+            return 0;
         }
     }
 
@@ -548,18 +642,22 @@ export async function register({
         await aiAdditionsClient.getEndpoints();
         const teamIds = await dependencies.getTeamIdsForPhase(sessionId, phaseId);
         const topicData = await buildTopicForPhase(sessionId, phaseId);
+        // Rooms are tracked as they are created, so a chat message in a room
+        // already created does not create it again.
         const createdRooms = new Set();
+        phaseRooms.set(getPhaseRoomsKey(sessionId, phaseId), createdRooms);
         const created = [];
 
         for (const groupId of teamIds) {
-            const room = await createRoom({ sessionId, phaseId, groupId, ...topicData, serviceConfiguration });
+            const room = await createRoomOnce({
+                hookName: "phase-started", sessionId, phaseId, groupId, ...topicData, serviceConfiguration,
+            });
             if (room) {
                 createdRooms.add(room.roomName);
                 created.push(room);
             }
         }
 
-        phaseRooms.set(getPhaseRoomsKey(sessionId, phaseId), createdRooms);
         await reportRooms(created, reportInstantiation);
 
         await callback({
@@ -602,7 +700,8 @@ export async function register({
         let createdReport = null;
         if (!phaseCreatedRooms.has(roomName)) {
             const topicData = await buildTopicForPhase(sessionId, phaseId);
-            const createdRoom = await createRoom({
+            const createdRoom = await createRoomOnce({
+                hookName:   "chat-message-received",
                 sessionId,
                 phaseId,
                 groupId,
@@ -622,8 +721,10 @@ export async function register({
             }
 
             phaseCreatedRooms.add(createdRoom.roomName);
-            createdReport = roomReports([createdRoom])[0];
-            await reportRooms([createdRoom], reportInstantiation);
+            if (!createdRoom.shared) {
+                createdReport = roomReports([createdRoom])[0];
+                await reportRooms([createdRoom], reportInstantiation);
+            }
         } else {
             rememberRoomContext(roomName, sessionId, phaseId, groupId, questionId);
         }
@@ -740,6 +841,9 @@ export async function register({
         const phaseRoomsKey = getPhaseRoomsKey(sessionId, phaseId);
         const rooms = phaseRooms.get(phaseRoomsKey) || new Set();
         let roomsClosed = 0;
+        // First, so the rooms' callbacks are refused from now on, including
+        // rooms this process no longer tracks (#833).
+        const roomJobsClosed = await closeRoomJobs({ sessionId, phaseId });
 
         for (const roomName of rooms) {
             try {
@@ -757,13 +861,14 @@ export async function register({
             serviceId: service.id,
             hook:      "phase-ended",
             status:    "completed",
-            payload:   { sessionId, phaseId, roomsClosed },
+            payload:   { sessionId, phaseId, roomsClosed, roomJobsClosed },
         });
     });
 
     subscribe("activity-finished", async (context, { callback }) => {
         const sessionId = Number(context.sessionId);
         let roomsClosed = 0;
+        const roomJobsClosed = await closeRoomJobs({ sessionId });
 
         for (const [roomName, storedContext] of roomContext.entries()) {
             if (storedContext.sessionId !== sessionId) {
@@ -793,7 +898,7 @@ export async function register({
             serviceId: service.id,
             hook:      "activity-finished",
             status:    "completed",
-            payload:   { sessionId, roomsClosed },
+            payload:   { sessionId, roomsClosed, roomJobsClosed },
         });
     });
 }

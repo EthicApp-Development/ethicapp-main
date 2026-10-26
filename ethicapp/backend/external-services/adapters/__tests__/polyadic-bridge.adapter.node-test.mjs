@@ -778,3 +778,85 @@ test("formatQuestionText leaves questions without a Markdown content type as the
         assert.equal(formatQuestionText(question), "**literal** | A vs. B");
     }
 });
+
+// ─── Room correlation id (#833) ─────────────────────────────────────────────
+
+test("buildPolyadicSessionPayload: the room correlation id is top level and no setting replaces it", () => {
+    const payload = buildPolyadicSessionPayload({
+        roomCorrelationId:    "room-job-1",
+        serviceConfiguration: { ethicapp_room_correlation_id: "forged", llm_tier: "basic" },
+    });
+
+    assert.equal(payload.ethicapp_room_correlation_id, "room-job-1");
+    assert.equal(payload.llm_tier, "basic");
+    assert.equal(Object.hasOwn(buildPolyadicSessionPayload({}), "ethicapp_room_correlation_id"), false);
+});
+
+test("without room jobs, rooms are created without a room correlation id", async () => {
+    const harness = createHarness();
+    await harness.initialize();
+
+    await harness.dispatch("phase-started", { sessionId: 11, phaseId: 22 });
+
+    assert.ok(harness.requests.every(request =>
+        !Object.hasOwn(request.options.body, "ethicapp_room_correlation_id")));
+});
+
+test("a rejected configuration is retried with the same room correlation id", async () => {
+    const roomJobCalls = [];
+    const subscribers = new Map();
+    const bodies = [];
+    await register({
+        service: { id: "polyadic-devils-advocate" },
+        subscribe(hookName, handler) {
+            subscribers.set(hookName, handler);
+        },
+        async publishGroupChatMessage() {
+            return null;
+        },
+        aiAdditionsClient: {
+            async getEndpoints() {
+                return {};
+            },
+            async requestJson(pathname, { body }) {
+                bodies.push(body);
+                if (bodies.length === 1) {
+                    throw Object.assign(new Error("HTTP 400"), { statusCode: 400 });
+                }
+                return { ethicapp_room_correlation_id: body.ethicapp_room_correlation_id };
+            },
+        },
+        roomJobs: {
+            create: async room => {
+                roomJobCalls.push(["create", room.room, room.hookName]);
+                return { id: "room-job-7" };
+            },
+            open:  async (id, options) => { roomJobCalls.push(["open", id, options]); return true; },
+            fail:  async id => { roomJobCalls.push(["fail", id]); },
+            close: async () => 0,
+        },
+        polyadicBridgeDependencies: {
+            getTeamIdsForPhase:       async () => [301],
+            getFirstQuestionForPhase: async () => null,
+            getCaseIdBySessionId:     async () => null,
+            getSessionLanguageCode:   async () => "es_CL",
+        },
+    });
+
+    const originalWarn = console.warn;
+    console.warn = () => {};
+    try {
+        await subscribers.get("phase-started")(
+            { sessionId: 11, phaseId: 22, serviceConfiguration: { session_duration_seconds: 1 } },
+            { callback: async () => {}, reportInstantiation: async () => {} }
+        );
+    } finally {
+        console.warn = originalWarn;
+    }
+
+    assert.deepEqual(bodies.map(body => body.ethicapp_room_correlation_id), ["room-job-7", "room-job-7"]);
+    assert.deepEqual(roomJobCalls, [
+        ["create", "ethicapp-s11-p22-g301", "phase-started"],
+        ["open", "room-job-7", { bound: true }],
+    ]);
+});

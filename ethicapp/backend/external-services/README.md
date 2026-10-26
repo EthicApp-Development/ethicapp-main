@@ -84,10 +84,16 @@ never the request's own values:
    earlier can finish after its service is removed. The destination its payload
    names (the adapter's `getCallbackTarget(requestPayload)`) must stay inside
    the job (`assertCallbackTargetWithinJob`): a field it names must equal the
-   job's, and a job without that field accepts none. Otherwise `409`.
-2. **The callback matches no job** (no correlation id, or a fresh one: Polyadic
-   generates a new one for every proactive intervention, such as session start,
-   timer ticks, inactivity or window events). It is accepted only when
+   job's, and a job without that field accepts none. Otherwise `409`. A
+   **room job** (see "Room jobs" below) accepts repeated callbacks while it is
+   `pending` or `open`; a closed or failed one refuses them with `409`
+   (`callback_room_job_closed`).
+2. **The callback matches no job** (no correlation id, or a fresh one: an
+   older Polyadic generates a new one for every proactive intervention, such
+   as session start, timer ticks, inactivity or window events). If the room it
+   names is **bound** (it has an open room job whose id Polyadic acknowledged),
+   it is refused with `409` (`callback_room_bound`): that room's callbacks must
+   carry its job. Otherwise it is accepted only when
    `resolveCallbackDestination()` (`helpers/callback-destination.js`) verifies
    the destination the payload names:
    - the adapter exports `getCallbackTarget` and names a complete target: a
@@ -106,7 +112,8 @@ never the request's own values:
    resolves it from the phase.
 3. A correlation id of **another service's job** is refused with `409`. A
    failed lookup (the result or job, the pinned version, the connection, the
-   phase state or the design) answers `503`, so the caller may retry. Without a
+   phase state, the design or the room's room jobs) answers `503`, so the
+   caller may retry. Without a
    connection the middleware already answers `503 not_configured`.
 
 No handler runs when a callback is refused. Development adapters follow the
@@ -121,9 +128,10 @@ HTTP callbacks.
 | Receipt (`createResult`) | Insert, nothing else | `pending`: received, not consumed |
 | Authorization (correlation, target, destination, policy) | None | stays `pending` |
 | Transient refusal (`503`) | None | stays `pending` |
-| Refusal (`409`) | Best effort | `failed`; if the write fails, it stays `pending` and a retry is refused again |
-| Claim (`claimResult`), right before handlers | `UPDATE … WHERE id = $1 AND status = 'pending'`, then the job is advanced to `callback-received` | `callback-received` (job matched) or `unknown-correlation` |
-| Handler outcome | As before | `completed` or `failed` |
+| Refusal (`409`), including a closed room job or a bound room without a job | Best effort | `failed`; if the write fails, it stays `pending` and a retry is refused again |
+| Claim (`claimResult`), right before handlers | `UPDATE … WHERE id = $1 AND status = 'pending'`, then a hook job is advanced to `callback-received`. For a room job, the same statement also requires the job to be still `pending` or `open`, and the job is not advanced | `callback-received` (job matched) or `unknown-correlation` |
+| Claim refused because the room job closed after authorization | Best effort | `409`, `failed` |
+| Handler outcome | As before; a room job's status is never changed | `completed` or `failed` |
 
 Recovery never depends on a write made during an outage: until the claim, the
 event is unconsumed, and a retry with the same `eventId` is authorized again.
@@ -138,10 +146,49 @@ Targets per adapter:
 - Case Analyst: none. Its handler only records the result, so it only accepts
   callbacks for its jobs.
 
-Residual risk: a Polyadic client that holds valid credentials can still name
-another room, as long as that room's session allows Polyadic, its phase is
-active and enables it, and the group exists. Room-scoped, long-lived jobs whose
-correlation id Polyadic echoes ("option B") are a planned follow-up.
+### Room jobs
+
+A room job (#833, `V24__external_service_room_jobs.sql`) binds a room's
+proactive callbacks to a job EthicApp created for that room. It is a row of
+`external_service_jobs` with `kind = 'room'` (every other job has
+`kind = 'hook'`), for one room: service, session, phase and group. Its id is
+the room's correlation id. Adapters reach them through the `roomJobs` argument
+of `register()` (`services/external-service-room-jobs.service.js`).
+
+| Status | When | Callbacks with its id |
+| --- | --- | --- |
+| `pending` | Created right before the room is created in the service | Accepted (the service may call back before it answers) |
+| `open` | The room exists. `room_bound` is true when the service echoed the id | Accepted, each deduplicated by `eventId`; a callback outcome never completes the job |
+| `closed` | `phase-ended` for its phase, `activity-finished` for its session, or a newer room job of the same room opened (superseded) | `409` |
+| `failed` | The room could not be created | `409` |
+
+Polyadic:
+- `phase-started` creates one room job per room and sends its id as the
+  top-level `ethicapp_room_correlation_id` of `POST /rooms/:room/sessions`
+  (also on the retry without configured settings). A room created lazily by
+  `chat-message-received`, for example after a restart, gets a new room job
+  that supersedes the previous one. Concurrent creations of one room in a
+  process share one room job and one request.
+- When Polyadic echoes the same `ethicapp_room_correlation_id` in its
+  response, the room is **bound**: a callback that carries no job and names
+  it is refused (`409`). An older Polyadic does not echo the field; its rooms
+  stay unbound and keep the verified-destination rule above. Either release
+  can therefore ship first.
+- `phase-ended` and `activity-finished` close the room jobs first, from the
+  database, so rooms this process no longer tracks are closed too.
+
+Every room job write is one statement conditional on the job's status, so a
+phase transition and a re-creation racing each other never reopen a closed
+job. If a room job cannot be created, the room is created without an id, as
+before; if it cannot be opened, it stays `pending` (still accepting
+callbacks) and the room stays unbound.
+
+Residual risk: a callback without a job that names an **unbound** room is still
+accepted under the verified-destination rule, so a Polyadic client that holds
+valid credentials can name another unbound room whose session allows Polyadic,
+whose phase is active and enables it, and whose group exists. Once every
+Polyadic acknowledges the id, callbacks without a job can be refused for
+Polyadic altogether.
 
 The editor does not offer services that are not usable (#686), so seeded
 activities that reference the mocks still load where the mocks are not
@@ -227,6 +274,7 @@ export async function register({
     publishGroupChatMessage, // (payload) => Promise<{ savedMessage, notificationPayload } | null>
     aiAdditionsClient,       // shared AI Additions HTTP client
     caseAnalyses,            // markProcessing/complete/fail for this service's case analyses
+    roomJobs,                // create/open/fail/close for this service's room jobs (see "Room jobs")
 }) {
     subscribe("student-response-submitted", async (context, { callback }) => {
         // Adapter logic.

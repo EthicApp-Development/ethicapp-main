@@ -122,6 +122,8 @@ function makeRegistry({ failures = {}, jobs = [], outage = false, handler = null
     const lookups = makeFlakyLookups(failures, database, { outage });
     const registry = new ExternalServicesRegistry({
         jobsService:                new ExternalServiceJobsService({ dbQuery: database.dbQuery }),
+        // No room is bound to a room job (#833): option A applies.
+        roomJobsService:            { hasOpenBoundRoomJob: async () => false },
         developmentAdapters:        false,
         aiServicePolicy:            lookups.policy,
         isAiAdditionsConfigured:    lookups.isAiAdditionsConfigured,

@@ -26,9 +26,15 @@ import { CapabilityDescriptorsClient } from "./capability-descriptors.service.js
 import { resolveCallbackDestination } from "../helpers/callback-destination.js";
 import {
     externalServiceJobsService,
+    isRoomJob,
     JOB_STATUS,
+    LIVE_ROOM_JOB_STATUSES,
     RESULT_STATUS,
 } from "./external-service-jobs.service.js";
+import {
+    createRoomJobsAccess,
+    externalServiceRoomJobsService,
+} from "./external-service-room-jobs.service.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -329,9 +335,52 @@ export function assertCallbackTargetWithinJob(job, target, serviceId) {
     }
 }
 
+// Refuses a callback correlated to a room job that no longer accepts callbacks
+// (#833): its phase ended, its activity finished, a newer room job of the room
+// superseded it, or the room was never created.
+function assertRoomJobLive(job, serviceId) {
+    if (isRoomJob(job) && !LIVE_ROOM_JOB_STATUSES.includes(job.status)) {
+        throw Object.assign(
+            new Error(`The callback for ${serviceId} names a closed room job.`),
+            { statusCode: 409, code: "callback_room_job_closed" }
+        );
+    }
+}
+
+/**
+ * Refuses a callback without a job that names a bound room (#833): the
+ * service acknowledged the correlation id of that room's open room job, so
+ * the room's callbacks must carry it. Rooms that are not bound keep the
+ * verified-destination rule (#815). A failed lookup answers 503.
+ */
+async function assertRoomNotBound(roomJobsService, serviceId, destination) {
+    let bound;
+    try {
+        bound = await roomJobsService.hasOpenBoundRoomJob({
+            serviceId,
+            sessionId: destination.sessionId ?? null,
+            phaseId:   destination.phaseId   ?? null,
+            groupId:   destination.groupId   ?? null,
+        });
+    } catch (error) {
+        console.error(`[external-services] Could not read the room jobs of a ${serviceId} callback.`, error);
+        throw Object.assign(
+            new Error("The room of the callback could not be read; try again later."),
+            { statusCode: 503, code: "callback_lookup_failed" }
+        );
+    }
+    if (bound) {
+        throw Object.assign(
+            new Error(`Callback for ${serviceId}: its room is bound to a room job, and it carries none.`),
+            { statusCode: 409, code: "callback_room_bound" }
+        );
+    }
+}
+
 export class ExternalServicesRegistry {
     constructor({
         jobsService,
+        roomJobsService,
         caseAnalysesStore = DEFAULT_CASE_ANALYSES_STORE,
         now = () => Date.now(),
         uiTranslationsTimeoutMs = UI_TRANSLATIONS_TIMEOUT_MS,
@@ -347,6 +396,8 @@ export class ExternalServicesRegistry {
         this.services         = new Map();
         this.hookSubscribers  = new Map();
         this._jobsService     = jobsService ?? externalServiceJobsService;
+        // Room-scoped jobs (#833), handed to adapters as `roomJobs`.
+        this._roomJobsService = roomJobsService ?? externalServiceRoomJobsService;
 
         // Whether development adapters are registered (and usable). Read from
         // EXTERNAL_SERVICES_DEVELOPMENT_ADAPTERS unless a test injects it.
@@ -512,6 +563,7 @@ export class ExternalServicesRegistry {
             publishGroupChatMessage: payload => this.publishGroupChatMessage(normalizedService.id, payload),
             aiAdditionsClient,
             caseAnalyses,
+            roomJobs:                createRoomJobsAccess(this._roomJobsService, normalizedService.id),
         });
     }
 
@@ -971,6 +1023,10 @@ export class ExternalServicesRegistry {
     //   payload names only when resolveCallbackDestination() verifies it: the
     //   destination session's pinned policy allows the adapter, its phase is
     //   active and enables the adapter, and the group or user belongs to it.
+    //   A room bound to an open room job refuses it (409, #833): the room's
+    //   callbacks must carry their job.
+    // - A room job (#833) accepts repeated callbacks while it is live, and
+    //   none once closed (409). A callback outcome never completes it.
     // - A correlation id of another service's job is refused (409), and so is
     //   a destination that fails a check; a failed lookup answers 503. No
     //   handler runs in either case.
@@ -1017,6 +1073,7 @@ export class ExternalServicesRegistry {
 
             if (resultRecord.job_id) {
                 job = resultRecord.job ?? { id: resultRecord.job_id };
+                assertRoomJobLive(job, serviceId);
                 assertCallbackTargetWithinJob(job, target, serviceId);
                 destination = job;
             } else {
@@ -1026,6 +1083,7 @@ export class ExternalServicesRegistry {
                     isAiAdditionsConfigured: this._isAiAdditionsConfigured,
                     ...this._callbackDestinationLookups,
                 });
+                await assertRoomNotBound(this._roomJobsService, serviceId, destination);
             }
         } catch (error) {
             const statusCode = error.statusCode ?? 400;
@@ -1043,6 +1101,13 @@ export class ExternalServicesRegistry {
         try {
             claimed = await this._jobsService.claimResult(resultRecord);
         } catch (error) {
+            // Its room job closed after authorization (#833): refused as above.
+            if (error.statusCode === 409) {
+                await this._jobsService
+                    .updateResult(resultRecord.id, { status: RESULT_STATUS.FAILED })
+                    .catch(() => null);
+                throw error;
+            }
             console.error(`[external-services] Could not claim a ${serviceId} callback.`, error);
             throw Object.assign(
                 new Error(`The callback for ${serviceId} could not be recorded; try again later.`),
@@ -1161,7 +1226,8 @@ export class ExternalServicesRegistry {
                 })
                 .catch(err => console.error("[external-services] Failed to persist callback result.", err));
 
-            if (context.jobId) {
+            // A room job stays open for the room's next callbacks (#833).
+            if (context.jobId && !isRoomJob(context.job)) {
                 const jobStatus = result?.status === "failed"
                     ? JOB_STATUS.FAILED
                     : result?.status === "skipped"

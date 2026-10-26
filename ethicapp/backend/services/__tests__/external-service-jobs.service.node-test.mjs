@@ -191,7 +191,8 @@ test("createResult: returns the matched job's context as the trusted destination
     });
 
     assert.deepEqual({ ...result.job }, {
-        id: JOB_UUID, sessionId: 1, phaseId: 2, questionId: 3, groupId: 4, userId: 5,
+        id:         JOB_UUID, sessionId:  1, phaseId:    2, questionId: 3, groupId:    4, userId:     5,
+        kind:       "hook", status:     JOB_STATUS.DISPATCHED,
     });
 });
 
