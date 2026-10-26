@@ -1,6 +1,7 @@
 import express from "express";
 import pass from "../../helpers/compat-helper.js";
 import { getDBInstance } from "../../db/rest-pg-2.js";
+import { isSuperAdminSession as isAuthorizedSuperAdmin } from "../../helpers/auth-helper.js";
 import {
     legacySessionCookieName,
     legacySessionCookieOptions,
@@ -9,11 +10,6 @@ import {
 const router = express.Router();
 
 const MANAGEMENT_CONSOLE_USERS_PATH = "/mng/users";
-
-function isAuthorizedSuperAdmin(req) {
-    const canonicalRole = req.session?.authRole || req.session?.role;
-    return canonicalRole === "S";
-}
 
 // Browsers send Origin on form posts; reject one from another host. Requests
 // without Origin (same-origin navigations in older browsers, server callers)
