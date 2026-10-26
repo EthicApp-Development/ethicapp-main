@@ -305,6 +305,7 @@ describe('management-console AI services routes', () => {
       assert.equal(normalizeLocale('es'), 'es_CL');
       assert.equal(normalizeLocale('es_ES'), 'es_CL');
       assert.equal(normalizeLocale('ES-mx'), 'es_CL');
+      assert.equal(normalizeLocale('es;q=0.9,en;q=0.5'), 'es_CL');
       assert.equal(normalizeLocale('en-GB'), 'en_US');
       assert.equal(normalizeLocale('pt-BR,es;q=0.8'), 'en_US');
       assert.equal(normalizeLocale(undefined), 'en_US');

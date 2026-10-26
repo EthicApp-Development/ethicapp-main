@@ -15,8 +15,8 @@ const BASE_PATH = '/mng/api/ai-services';
 
 // Canonical locale rule (AGENTS.md §9): Spanish only when explicitly preferred.
 export function normalizeLocale(value) {
-  const primary = String(value || '').split(',')[0].trim().toLowerCase();
-  return primary === 'es' || primary.startsWith('es-') || primary.startsWith('es_') ? 'es_CL' : 'en_US';
+  const primary = String(value || '').split(',')[0].split(';')[0].trim().toLowerCase();
+  return /^es([-_]|$)/.test(primary) ? 'es_CL' : 'en_US';
 }
 
 function requestIdentity(req) {
