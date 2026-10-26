@@ -29,6 +29,31 @@ export default {
     M: 'Masculino',
     O: 'Otro'
   },
+  sensitiveAction: {
+    defaultTitle: 'Confirma esta acción',
+    loading: 'Revisando cómo confirmar...',
+    passwordIntro: 'Para confirmar, ingresa tu contraseña de administrador y completa el reCAPTCHA.',
+    passwordHelp: 'La contraseña de la cuenta de administrador con la que iniciaste sesión.',
+    passkeyIntro: 'Para confirmar, usa tu passkey de administrador.',
+    passkeyHelp: 'Al confirmar, el navegador te pedirá tu passkey.',
+    passkeyUnsupported: 'Este administrador tiene passkeys, así que las acciones sensibles se confirman con una, pero este navegador no soporta passkeys. Usa un navegador que las soporte.',
+    fields: {
+      adminPassword: 'Contraseña de administrador'
+    },
+    actions: {
+      cancel: 'Cancelar',
+      close: 'Cerrar',
+      confirm: 'Confirmar',
+      confirmWithPasskey: 'Confirmar con passkey'
+    },
+    errors: {
+      invalidPassword: 'La contraseña de administrador no es correcta. No se cambió nada.',
+      invalidPasskey: 'No fue posible verificar la passkey. No se cambió nada.',
+      invalidRecaptcha: 'La verificación reCAPTCHA falló. Complétala de nuevo. No se cambió nada.',
+      passkeyRequired: 'Este administrador tiene passkeys, así que esta acción se confirma con una passkey. No se cambió nada.',
+      passkeyFailed: 'La confirmación con passkey no terminó. No se cambió nada; puedes intentarlo de nuevo.'
+    }
+  },
   pages: {
     aiServices: {
       heading: 'Servicios de IA',
@@ -84,11 +109,15 @@ export default {
             skipped: 'No se intentó'
           }
         },
+        confirmSave: {
+          title: '¿Guardar la conexión con AI Additions?',
+          body: 'EthicApp se conectará a AI Additions en {{baseUrl}}.',
+          details: 'Las actividades en curso pasan a usar la nueva conexión.'
+        },
         remove: {
           title: '¿Eliminar la conexión con AI Additions?',
           body: 'Esto detiene de inmediato todas las llamadas a IA, incluso en las actividades que están en curso.',
           policyKept: 'Los servicios permitidos y su historial se conservan, y vuelven a aplicarse si más adelante se guarda una conexión.',
-          cancel: 'Cancelar',
           confirm: 'Eliminar y detener toda la IA'
         }
       },
@@ -115,6 +144,12 @@ export default {
         disallowAll: 'No permitir ningún servicio',
         disallowAllHelp: 'No es posible leer el catálogo, así que ahora no se pueden permitir servicios. Igual puedes guardar una versión que no permita ninguno.',
         disallowAllNoConnectionHelp: 'No hay una conexión configurada, así que ahora no se pueden permitir servicios. La versión actual aún permite algunos; puedes guardar una versión que no permita ninguno.',
+        confirmSave: {
+          title: '¿Guardar una nueva versión de la política?',
+          allowed: 'La nueva versión permite estos servicios: {{services}}.',
+          none: 'La nueva versión no permite ningún servicio.',
+          confirm: 'Guardar versión'
+        },
         columns: {
           allowed: 'Permitido',
           service: 'Servicio',
@@ -180,9 +215,6 @@ export default {
       heading: 'Detalle de cuenta',
       back: 'Volver',
       roleHelp: 'Solo se permite cambiar entre estudiante y profesor.',
-      adminPasswordHelp: 'Debes confirmar tu contraseña de administrador para aplicar cambios.',
-      passkeyConfirmationHelp: 'Las acciones sensibles pedirán tu passkey de administrador en vez de contraseña y reCAPTCHA.',
-      passkeyUnsupported: 'Este administrador tiene passkeys configuradas, pero este navegador no soporta confirmación con passkey.',
       saveSuccess: 'Usuario actualizado correctamente.',
       saveError: 'No fue posible actualizar el usuario.',
       passwordResetSuccess: 'Se envió el correo de recuperación de contraseña.',
@@ -196,8 +228,24 @@ export default {
         status: 'Estado de cuenta',
         lastLogin: 'Último login',
         email: 'Email',
-        emailConfirmation: 'Confirmar email',
-        adminPassword: 'Contraseña de administrador'
+        emailConfirmation: 'Confirmar email'
+      },
+      confirm: {
+        save: {
+          title: '¿Guardar los cambios de esta cuenta?',
+          body: 'Se actualizará la cuenta de {{name}}.',
+          confirm: 'Guardar cambios'
+        },
+        passwordReset: {
+          title: '¿Enviar un correo de recuperación de contraseña?',
+          body: 'Se enviará un correo de recuperación de contraseña a {{email}}.',
+          confirm: 'Enviar correo'
+        },
+        impersonation: {
+          title: '¿Ingresar como este profesor?',
+          body: 'Usarás EthicApp como {{name}} hasta que vuelvas a la consola de gestión.',
+          confirm: 'Ingresar como profesor'
+        }
       },
       status: {
         active: 'Cuenta activa',

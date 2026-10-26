@@ -1,18 +1,17 @@
 import { useEffect, useState } from 'react';
 import { Alert, Button, Card, Col, Form, Row, Spinner } from 'react-bootstrap';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { startAuthentication } from '@simplewebauthn/browser';
 
 import { useI18n } from '../app/providers.jsx';
-import { fetchPasskeys, fetchProfile, startPasskeyAuthentication } from '../api/profileApi.js';
+import { fetchProfile } from '../api/profileApi.js';
 import {
   fetchUserById,
   impersonateProfessor,
   triggerPasswordReset,
   updateUser
 } from '../api/usersApi.js';
-import RecaptchaField from '../components/common/RecaptchaField.jsx';
-import { recaptchaProvider, recaptchaSiteKey } from '../config/env.js';
+import SensitiveActionConfirmModal from '../components/common/SensitiveActionConfirmModal.jsx';
+import { useSensitiveActionConfirmation } from '../components/common/useSensitiveActionConfirmation.js';
 
 function UserShowPage() {
   const { id } = useParams();
@@ -23,14 +22,11 @@ function UserShowPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [resetMessage, setResetMessage] = useState('');
-  const [recaptchaToken, setRecaptchaToken] = useState('');
-  const [recaptchaResetCounter, setRecaptchaResetCounter] = useState(0);
-  const [hasPasskeys, setHasPasskeys] = useState(false);
   const [lastLoginAt, setLastLoginAt] = useState(null);
   const [currentProfile, setCurrentProfile] = useState(null);
-  const passkeysAvailable = typeof window !== 'undefined' && Boolean(window.PublicKeyCredential);
-  const usePasskeyStepUp = hasPasskeys;
-  const passkeyActionsDisabled = usePasskeyStepUp && !passkeysAvailable;
+  // Saving, password recovery and impersonation ask for the administrator's
+  // passkey, or password and reCAPTCHA, in a dialog.
+  const { requestConfirmation, modalProps } = useSensitiveActionConfirmation();
 
   const [form, setForm] = useState({
     firstname: '',
@@ -40,8 +36,7 @@ function UserShowPage() {
     email_confirmation: '',
     role: 'A',
     active: true,
-    emailConfirmed: true,
-    admin_password: ''
+    emailConfirmed: true
   });
   const isOwnSuperAdminAccount =
     currentProfile?.role === 'S' &&
@@ -56,9 +51,8 @@ function UserShowPage() {
       setError('');
 
       try {
-        const [user, passkeysResult, profileResult] = await Promise.all([
+        const [user, profileResult] = await Promise.all([
           fetchUserById(id),
-          fetchPasskeys(),
           fetchProfile()
         ]);
 
@@ -74,11 +68,9 @@ function UserShowPage() {
           email_confirmation: user.email || '',
           role: user.role || 'A',
           active: user.active !== false,
-          emailConfirmed: user.emailConfirmed !== false,
-          admin_password: ''
+          emailConfirmed: user.emailConfirmed !== false
         });
         setLastLoginAt(user.lastLoginAt || null);
-        setHasPasskeys((passkeysResult.passkeys || []).length > 0);
         setCurrentProfile(profileResult);
       } catch (requestError) {
         if (isMounted) {
@@ -105,30 +97,15 @@ function UserShowPage() {
     }));
   }
 
-  async function confirmWithPasskey() {
-    const options = await startPasskeyAuthentication();
-    return startAuthentication({ optionsJSON: options });
-  }
+  const accountName = `${form.firstname} ${form.lastname}`.trim() || form.email;
 
-  async function getSensitiveActionPayload(extraPayload = {}) {
-    if (!usePasskeyStepUp) {
-      return {
-        ...extraPayload,
-        admin_password: form.admin_password,
-        recaptcha_token: recaptchaToken
-      };
-    }
-
-    if (!passkeysAvailable) {
-      throw new Error(t('pages.userShow.passkeyUnsupported'));
-    }
-
-    const passkeyAssertion = await confirmWithPasskey();
-
-    return {
-      ...extraPayload,
-      passkey_assertion: passkeyAssertion
-    };
+  function confirmAction(action, request) {
+    return requestConfirmation({
+      title: t(`pages.userShow.confirm.${action}.title`),
+      description: t(`pages.userShow.confirm.${action}.body`, { name: accountName, email: form.email }),
+      confirmLabel: t(`pages.userShow.confirm.${action}.confirm`),
+      action: request
+    });
   }
 
   function formatLastLogin(value) {
@@ -148,17 +125,9 @@ function UserShowPage() {
     setSuccess('');
 
     try {
-      const payload = await getSensitiveActionPayload(form);
-      await updateUser(id, payload);
-
-      setSuccess(t('pages.userShow.saveSuccess'));
-      setForm((currentForm) => ({
-        ...currentForm,
-        admin_password: ''
-      }));
-      if (!usePasskeyStepUp) {
-        setRecaptchaToken('');
-        setRecaptchaResetCounter((counter) => counter + 1);
+      const outcome = await confirmAction('save', (stepUp) => updateUser(id, { ...form, ...stepUp }));
+      if (outcome.confirmed) {
+        setSuccess(t('pages.userShow.saveSuccess'));
       }
     } catch (requestError) {
       setError(requestError.message || t('pages.userShow.saveError'));
@@ -174,13 +143,9 @@ function UserShowPage() {
     setResetMessage('');
 
     try {
-      const payload = await getSensitiveActionPayload();
-      const response = await triggerPasswordReset(id, payload);
-
-      setResetMessage(response.message || t('pages.userShow.passwordResetSuccess'));
-      if (!usePasskeyStepUp) {
-        setRecaptchaToken('');
-        setRecaptchaResetCounter((counter) => counter + 1);
+      const outcome = await confirmAction('passwordReset', (stepUp) => triggerPasswordReset(id, stepUp));
+      if (outcome.confirmed) {
+        setResetMessage(outcome.result.message || t('pages.userShow.passwordResetSuccess'));
       }
     } catch (requestError) {
       setError(requestError.message || t('pages.userShow.passwordResetError'));
@@ -191,11 +156,10 @@ function UserShowPage() {
     setError('');
 
     try {
-      const payload = await getSensitiveActionPayload();
-      const response = await impersonateProfessor(id, payload);
-
-      const redirectTo = response.redirectTo || '/home';
-      window.location.assign(redirectTo);
+      const outcome = await confirmAction('impersonation', (stepUp) => impersonateProfessor(id, stepUp));
+      if (outcome.confirmed) {
+        window.location.assign(outcome.result.redirectTo || '/home');
+      }
     } catch (requestError) {
       setError(requestError.message || t('pages.userShow.impersonationError'));
     }
@@ -302,41 +266,10 @@ function UserShowPage() {
               />
             </Col>
 
-            {usePasskeyStepUp ? (
-              <Col md={12}>
-                <Alert variant={passkeysAvailable ? 'info' : 'warning'} className="mb-0">
-                  {passkeysAvailable
-                    ? t('pages.userShow.passkeyConfirmationHelp')
-                    : t('pages.userShow.passkeyUnsupported')}
-                </Alert>
-              </Col>
-            ) : (
-              <>
-                <Col md={12}>
-                  <Form.Label>{t('pages.userShow.fields.adminPassword')}</Form.Label>
-                  <Form.Control
-                    type="password"
-                    value={form.admin_password}
-                    onChange={(event) => onFieldChange('admin_password', event.target.value)}
-                    required
-                  />
-                  <Form.Text>{t('pages.userShow.adminPasswordHelp')}</Form.Text>
-                </Col>
-
-                <Col md={12} className="d-flex justify-content-center">
-                  <RecaptchaField
-                    provider={recaptchaProvider}
-                    siteKey={recaptchaSiteKey}
-                    resetCounter={recaptchaResetCounter}
-                    onChange={setRecaptchaToken}
-                  />
-                </Col>
-              </>
-            )}
           </Row>
 
           <div className="d-flex gap-2 mt-4">
-            <Button type="submit" disabled={passkeyActionsDisabled}>
+            <Button type="submit">
               <i className="fa-solid fa-floppy-disk me-2" aria-hidden="true" />
               {t('pages.userShow.actions.save')}
             </Button>
@@ -349,7 +282,6 @@ function UserShowPage() {
                 type="button"
                 variant="warning"
                 onClick={onTriggerPasswordReset}
-                disabled={passkeyActionsDisabled}
               >
                 <i className="fa-solid fa-key me-2" aria-hidden="true" />
                 {t('pages.userShow.actions.triggerPasswordReset')}
@@ -360,7 +292,6 @@ function UserShowPage() {
                 type="button"
                 variant="dark"
                 onClick={onImpersonateProfessor}
-                disabled={passkeyActionsDisabled}
               >
                 <i className="fa-solid fa-user-secret me-2" aria-hidden="true" />
                 {t('pages.userShow.actions.impersonateProfessor')}
@@ -369,6 +300,8 @@ function UserShowPage() {
           </div>
         </Form>
       </Card.Body>
+
+      <SensitiveActionConfirmModal {...modalProps} />
     </Card>
   );
 }
