@@ -18,17 +18,36 @@ export class AiServicesValidationError extends Error {
   }
 }
 
-// Returns the URL as entered (trimmed) when it is an absolute http(s) URL with
-// a host, no userinfo and no fragment; otherwise null. The value is stored as
-// typed so operators see what they saved.
+// Connection URLs are bases that ethicapp extends by plain string
+// concatenation (`<baseUrl>/keycloak/realms/...`, `<baseUrl><apiBasePath>`,
+// `<keycloakPublicUrl>/realms/...`). So the RAW text must be
+//   http(s)://<authority>[/<path>]
+// with an explicit, non-empty authority (no userinfo), an optional path
+// prefix, and no query, fragment, backslash, whitespace or dot segment.
+// The rule is checked on the raw input, because the WHATWG parser silently
+// repairs forms such as "http:host" or "http:///host" that the database CHECK
+// (V22) and the string composition would not accept.
+const CONNECTION_URL_PATTERN = /^https?:\/\/([^/?#@\\\s]+)(\/[^?#\\\s]*)?$/i;
+
+// Returns the canonical form of a connection URL, or null when it is not
+// acceptable. Canonical form: trimmed, with trailing slashes removed
+// ("https://ai.example.org/" -> "https://ai.example.org"), matching how
+// ethicapp trims the stored value before composing URLs. Everything else is
+// kept as typed so operators see what they saved.
 export function normalizeConnectionUrl(value) {
   if (typeof value !== 'string') {
     return null;
   }
 
   const trimmed = value.trim();
+  const match = CONNECTION_URL_PATTERN.exec(trimmed);
 
-  if (!trimmed || trimmed.length > MAX_URL_LENGTH || /\s/.test(trimmed) || trimmed.includes('#')) {
+  if (!match || trimmed.length > MAX_URL_LENGTH) {
+    return null;
+  }
+
+  const path = match[2] || '';
+  if (path.split('/').some((segment) => segment === '.' || segment === '..')) {
     return null;
   }
 
@@ -39,19 +58,11 @@ export function normalizeConnectionUrl(value) {
     return null;
   }
 
-  if (!['http:', 'https:'].includes(parsed.protocol)) {
+  if (!parsed.hostname || parsed.username || parsed.password || parsed.search || parsed.hash) {
     return null;
   }
 
-  // The WHATWG parser drops an empty userinfo ("http://@host"), so the raw
-  // authority is checked as well.
-  const rawAuthority = /^https?:\/\/([^/?]*)/i.exec(trimmed)?.[1] || '';
-
-  if (!parsed.hostname || parsed.username || parsed.password || rawAuthority.includes('@')) {
-    return null;
-  }
-
-  return trimmed;
+  return trimmed.replace(/\/+$/, '');
 }
 
 // Validates { baseUrl, keycloakPublicUrl? } from a request body.

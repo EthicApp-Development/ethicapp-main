@@ -181,14 +181,14 @@ describe('management-console AI services routes', () => {
           keycloakPublicUrl: ''
         }));
         assert.equal(saved.status, 200);
-        assert.equal((await saved.json()).connection.baseUrl, 'https://ai.example.org/');
+        assert.equal((await saved.json()).connection.baseUrl, 'https://ai.example.org');
 
         const read = await fetch(`${baseUrl}/mng/api/ai-services/connection`);
-        assert.equal((await read.json()).connection.baseUrl, 'https://ai.example.org/');
+        assert.equal((await read.json()).connection.baseUrl, 'https://ai.example.org');
       });
 
       assert.deepEqual(calls.saveConnection, [{
-        baseUrl: 'https://ai.example.org/',
+        baseUrl: 'https://ai.example.org',
         keycloakPublicUrl: null,
         userId: 7
       }]);
@@ -199,6 +199,11 @@ describe('management-console AI services routes', () => {
       [{ baseUrl: 'https://user:secret@ai.example.org' }, 'INVALID_BASE_URL'],
       [{ baseUrl: 'https://ai.example.org/#fragment' }, 'INVALID_BASE_URL'],
       [{ baseUrl: '' }, 'INVALID_BASE_URL'],
+      [{ baseUrl: 'http:ai.example.org' }, 'INVALID_BASE_URL'],
+      [{ baseUrl: 'http:///ai.example.org' }, 'INVALID_BASE_URL'],
+      [{ baseUrl: 'https://ai.example.org/base?x=1' }, 'INVALID_BASE_URL'],
+      [{ baseUrl: 'https://ai.example.org', keycloakPublicUrl: 'https://ai.example.org/keycloak?x=1' }, 'INVALID_KEYCLOAK_PUBLIC_URL'],
+      [{ baseUrl: 'https://ai.example.org', keycloakPublicUrl: 'https:ai.example.org/keycloak' }, 'INVALID_KEYCLOAK_PUBLIC_URL'],
       [{}, 'INVALID_BASE_URL'],
       [{ baseUrl: 'https://ai.example.org', keycloakPublicUrl: 'javascript:alert(1)' }, 'INVALID_KEYCLOAK_PUBLIC_URL'],
       [{ baseUrl: 'https://ai.example.org', keycloakPublicUrl: 'https://kc@ai.example.org' }, 'INVALID_KEYCLOAK_PUBLIC_URL']
