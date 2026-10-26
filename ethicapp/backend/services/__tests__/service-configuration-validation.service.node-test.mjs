@@ -4,7 +4,9 @@ import { normalizeDescriptor } from "../capability-descriptors.service.js";
 import {
     INVALID_CONFIGURATION_CODE,
     checkServiceConfiguration,
+    designEnabledServiceIds,
     invalidConfigurationResponse,
+    notAllowedServiceWarnings,
     validateDesignServiceConfigurations,
 } from "../service-configuration-validation.service.js";
 
@@ -366,4 +368,60 @@ test("invalidConfigurationResponse: 400 with the documented body", () => {
             warnings: [],
         },
     });
+});
+
+// ─── services the AI service policy does not allow (#815) ────────────────────
+
+const POLICY_DESIGN = Object.freeze({
+    phases: [
+        { externalServices: {
+            enabledServiceIds: [SERVICE, "mock-chat-agent", SERVICE],
+            configurations:    { [SERVICE]: { llm_tier: "nonsense" } },
+        } },
+        { externalServices: { enabledServiceIds: ["unknown-service"] } },
+        {},
+    ],
+});
+
+test("designEnabledServiceIds: every enabled id once, across phases", () => {
+    assert.deepEqual(designEnabledServiceIds(POLICY_DESIGN), [SERVICE, "mock-chat-agent", "unknown-service"]);
+    assert.deepEqual(designEnabledServiceIds(null), []);
+});
+
+test("notAllowedServiceWarnings: one warning per phase and service that is not usable", () => {
+    assert.deepEqual(notAllowedServiceWarnings(POLICY_DESIGN, ["mock-chat-agent"]), [
+        { phaseIndex: 0, serviceId: SERVICE, field: null, code: "not_allowed" },
+        { phaseIndex: 1, serviceId: "unknown-service", field: null, code: "not_allowed" },
+    ]);
+});
+
+test("validateDesignServiceConfigurations: a service that is not allowed is a warning, never an error", async () => {
+    const asked = [];
+    const result = await validateDesignServiceConfigurations({
+        design:                   POLICY_DESIGN,
+        usableServiceIds:         ["mock-chat-agent"],
+        getInstanceConfiguration: async (serviceId) => {
+            asked.push(serviceId);
+            return { available: true, fields: FIELDS };
+        },
+    });
+
+    assert.deepEqual(result.errors, [], "its invalid configuration is not validated");
+    assert.deepEqual(result.warnings.map(({ serviceId, code }) => ({ serviceId, code })), [
+        { serviceId: SERVICE, code: "not_allowed" },
+        { serviceId: "unknown-service", code: "not_allowed" },
+    ]);
+    assert.deepEqual(asked, []);
+});
+
+test("validateDesignServiceConfigurations: an allowed service is still validated", async () => {
+    const result = await validateDesignServiceConfigurations({
+        design:                   POLICY_DESIGN,
+        usableServiceIds:         [SERVICE, "mock-chat-agent", "unknown-service"],
+        getInstanceConfiguration: async () => ({ available: true, fields: FIELDS }),
+    });
+
+    assert.ok(result.errors.some(error => error.field === "llm_tier"));
+    assert.ok(result.errors.every(error => error.serviceId === SERVICE));
+    assert.deepEqual(result.warnings, []);
 });

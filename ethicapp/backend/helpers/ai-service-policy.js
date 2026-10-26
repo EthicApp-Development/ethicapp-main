@@ -12,7 +12,8 @@ import * as rpg2 from "../db/rest-pg-2.js";
  *   updates and deletes), so a version read once is cached without expiry.
  * - Each session is pinned to a policy version. The activity launch
  *   transaction pins it to the version current at launch; ethicapp writes
- *   nothing else to these tables.
+ *   nothing else to these tables. A launched session's pin never changes, so
+ *   `getSessionPolicyVersionId` caches it per session.
  *
  * Database access is injectable: `createAiServicePolicyStore({ getDb })` takes
  * a function that resolves to anything with `query(sql, params)` returning
@@ -42,6 +43,7 @@ import * as rpg2 from "../db/rest-pg-2.js";
  */
 
 const VERSION_COLUMNS = "id, allowed_service_ids, note, created_at, created_by";
+const DEFAULT_SESSION_CACHE_SIZE = 10000;
 
 function toConnection(row) {
     if (!row) {
@@ -131,10 +133,23 @@ export async function pinSessionPolicy(client, sessionId) {
  * Builds the policy store over an injectable database. Each store has its own
  * immutable-version cache.
  *
- * @param {{ getDb?: () => Promise<{ query: Function }> }} [options]
+ * @param {{ getDb?: () => Promise<{ query: Function }>, sessionCacheSize?: number }} [options]
  */
-export function createAiServicePolicyStore({ getDb = defaultGetDb } = {}) {
+export function createAiServicePolicyStore({
+    getDb = defaultGetDb,
+    sessionCacheSize = DEFAULT_SESSION_CACHE_SIZE,
+} = {}) {
     const versionCache = new Map();
+    // Session id -> pinned version id, only for launched sessions, whose pin
+    // never changes again. Bounded: the oldest entry is dropped first.
+    const sessionPinCache = new Map();
+
+    function rememberSessionPin(sessionId, versionId) {
+        sessionPinCache.set(sessionId, versionId);
+        while (sessionPinCache.size > sessionCacheSize) {
+            sessionPinCache.delete(sessionPinCache.keys().next().value);
+        }
+    }
 
     function remember(version) {
         if (version) {
@@ -207,6 +222,41 @@ export function createAiServicePolicyStore({ getDb = defaultGetDb } = {}) {
             return remember(toPolicyVersion(rows[0]));
         },
 
+        /**
+         * The policy version a session is pinned to (#815). Once the session
+         * has an activity the pin never changes, so it is cached per session;
+         * before launch it is read every time (the launch re-pins it).
+         * @param {number|string} sessionId
+         * @returns {Promise<number|null>} null for an unknown or invalid session.
+         */
+        async getSessionPolicyVersionId(sessionId) {
+            const id = toVersionId(sessionId);
+            if (id === null) {
+                return null;
+            }
+
+            if (sessionPinCache.has(id)) {
+                return sessionPinCache.get(id);
+            }
+
+            const rows = await query(`
+                SELECT s.ai_service_policy_version_id,
+                       EXISTS (
+                           SELECT 1
+                           FROM activity
+                           WHERE activity.session = s.id
+                       ) AS launched
+                FROM sessions AS s
+                WHERE s.id = $1;
+            `, [id]);
+
+            const versionId = toVersionId(rows[0]?.ai_service_policy_version_id);
+            if (versionId !== null && rows[0].launched === true) {
+                rememberSessionPin(id, versionId);
+            }
+            return versionId;
+        },
+
         pinSessionPolicy,
     };
 }
@@ -216,3 +266,4 @@ const defaultStore = createAiServicePolicyStore();
 export const getConnection = defaultStore.getConnection;
 export const getCurrentPolicyVersion = defaultStore.getCurrentPolicyVersion;
 export const getPolicyVersion = defaultStore.getPolicyVersion;
+export const getSessionPolicyVersionId = defaultStore.getSessionPolicyVersionId;

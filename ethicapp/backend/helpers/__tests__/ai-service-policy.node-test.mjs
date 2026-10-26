@@ -195,3 +195,56 @@ test("pinSessionPolicy: null for an unknown session, without an update", async (
     assert.equal(await pinSessionPolicy(db, 999), null);
     assert.equal(calls.length, 1);
 });
+
+// ─── session pins (#815) ─────────────────────────────────────────────────────
+
+test("getSessionPolicyVersionId: a launched session's pin is cached", async () => {
+    const { getDb, calls } = makeDb([{ ai_service_policy_version_id: "4", launched: true }]);
+    const store = createAiServicePolicyStore({ getDb });
+
+    assert.equal(await store.getSessionPolicyVersionId(12), 4);
+    assert.equal(await store.getSessionPolicyVersionId("12"), 4);
+    assert.equal(calls.length, 1);
+    assert.match(calls[0].sql, /FROM sessions AS s WHERE s\.id = \$1;$/);
+    assert.deepEqual(calls[0].params, [12]);
+});
+
+test("getSessionPolicyVersionId: a session not launched yet is read every time", async () => {
+    const { getDb, calls } = makeDb(
+        [{ ai_service_policy_version_id: 2, launched: false }],
+        [{ ai_service_policy_version_id: 3, launched: true }]
+    );
+    const store = createAiServicePolicyStore({ getDb });
+
+    assert.equal(await store.getSessionPolicyVersionId(5), 2);
+    assert.equal(await store.getSessionPolicyVersionId(5), 3);
+    assert.equal(await store.getSessionPolicyVersionId(5), 3);
+    assert.equal(calls.length, 2);
+});
+
+test("getSessionPolicyVersionId: null for unknown or invalid sessions", async () => {
+    const { getDb, calls } = makeDb([]);
+    const store = createAiServicePolicyStore({ getDb });
+
+    assert.equal(await store.getSessionPolicyVersionId(99), null);
+    for (const invalid of [null, undefined, "abc", 0, -1, 1.5]) {
+        assert.equal(await store.getSessionPolicyVersionId(invalid), null, String(invalid));
+    }
+    assert.equal(calls.length, 1);
+});
+
+test("getSessionPolicyVersionId: the cache drops its oldest session beyond its size", async () => {
+    const { getDb, calls } = makeDb(
+        [{ ai_service_policy_version_id: 1, launched: true }],
+        [{ ai_service_policy_version_id: 2, launched: true }],
+        [{ ai_service_policy_version_id: 1, launched: true }]
+    );
+    const store = createAiServicePolicyStore({ getDb, sessionCacheSize: 1 });
+
+    await store.getSessionPolicyVersionId(1);
+    await store.getSessionPolicyVersionId(2);
+    assert.equal(await store.getSessionPolicyVersionId(2), 2);
+    assert.equal(calls.length, 2);
+    assert.equal(await store.getSessionPolicyVersionId(1), 1);
+    assert.equal(calls.length, 3);
+});

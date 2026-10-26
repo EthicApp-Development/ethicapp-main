@@ -33,6 +33,18 @@
     <div class="row">
         <div class="col-md-12">
             <div ng-show="dc.activeTab === 'info'" class="margin-top-8">
+                <div class="alert alert-warning" role="alert" ng-if="dc.servicesNotRunning.length > 0">
+                    <button type="button" class="close" ng-click="dc.dismissServicesNotRunning()"
+                        aria-label="{{ 'activity_services_not_running_dismiss' | translate }}">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                    <p>{{ 'activity_services_not_running_text' | translate }}</p>
+                    <ul>
+                        <li ng-repeat="service in dc.servicesNotRunning track by service.id">
+                            {{ dc.serviceNotRunningName(service) }}
+                        </li>
+                    </ul>
+                </div>
                 <activity-description activity="dc.activityState.descriptor" associated-case="dc.associatedCase" enable-link="false"></activity-description>
                 <activity-controls is-last-phase="dc.reachedLastPhase" is-finished="dc.isActivityFinished" parent-ctrl="dc"></activity-controls>              
                 <!-- Horizontal Rule -->

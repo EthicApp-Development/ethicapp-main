@@ -151,7 +151,8 @@ app.controller("CreateDesignController",
 app.controller("DashboardController", 
     ["$scope", "$routeParams", "$http", "$translate", "$timeout", "$uibModal",
         "ActivityStateService", "ActivityCatalogService", "DesignCatalogService",
-        "CasesCatalogService", "TeacherGroupChatService", DashboardController]);
+        "CasesCatalogService", "TeacherGroupChatService", "LanguageCatalogService",
+        DashboardController]);
 app.controller("DesignViewerController", 
     ["$scope", "$routeParams", "$window", "DesignCatalogService", "CasesCatalogService",
         "DesignPublicationService", DesignViewerController]);

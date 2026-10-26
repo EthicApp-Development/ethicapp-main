@@ -56,8 +56,14 @@ Each manifest entry declares:
   service in `requires`, mapped to the catalog `id` instead of renamed.
 
 There is no `enabled`: the catalog lists adapters, and whether one may be used
-is decided at dispatch (`isServiceUsable()` in the registry). Until the AI
-service policy lands (#815), only development adapters are usable.
+is decided at dispatch by the AI service policy gate
+(`effectiveServiceIds()` in the registry, #815). A production adapter is usable
+when the policy version in force allows every service in its `requires` and a
+valid AI Additions connection is stored. Session hooks follow the version the
+session was pinned to at launch; `case-created`, the teacher listings and
+callbacks follow the current version. Development adapters are usable whenever
+they are registered. See `ethicapp/backend/external-services/README.md`,
+"Usability".
 
 Hook names are standardized as kebab-case identifiers. New adapters should use
 names such as `phase-started`, `phase-ended`, `activity-started`,
@@ -338,8 +344,10 @@ EthicApp dispatches hooks only to services enabled in the phase design:
 
 The registry accepts `enabledServiceIds` and filters subscribers by service id.
 This keeps phase and response hooks scoped to services selected by the teacher.
-It also drops the services that are not usable (`isServiceUsable()`, #812), so
-a design that selects one reaches nothing for it and creates no job.
+It also drops the services the AI service policy gate does not let through
+(`effectiveServiceIds()`, #815: the session's pinned policy version and the
+connection), so a design that selects one reaches nothing for it and creates no
+job.
 
 Each handler also receives `context.serviceConfiguration` (#734): the settings
 the phase stores for that service in
@@ -466,7 +474,7 @@ payload:
 |---|---|---|
 | `serviceId` | Yes | Identifier of the calling service, must match a registered service. |
 | `eventType` | No | Type label for the event; defaults to `"result"`. |
-| `correlationId` | No | The job UUID returned by EthicApp when the job was dispatched. Used to correlate callbacks to outbound jobs. |
+| `correlationId` | No | The job UUID returned by EthicApp when the job was dispatched. Without a matching job of the service, the callback is delivered only to a verified destination (see above). |
 | `eventId` | No | A UUID minted by the caller for this specific emission attempt. When provided, EthicApp uses `(serviceId, eventId)` as a deduplication key so that network retries of the same event are idempotent. Distinct `eventId` values on the same job are each processed independently. Omitting `eventId` falls back to terminal-state deduplication: any callback on a job that has already reached a terminal status is treated as a duplicate. |
 | `payload` | No | Arbitrary service-specific data. |
 
@@ -478,7 +486,27 @@ the caller against the per-service `callbackAuth` manifest entry.
 
 The controller dispatches the `callback-received` hook with
 `dispatchServiceHook(...)`, which selects only subscribers belonging to the target
-service id.
+service id, and decides where the callback may publish (#815):
+
+- A callback whose `correlationId` matches a job of its service goes to the
+  job's session, phase, question, group and user, even after the current policy
+  removed the service. Its payload may not name another destination (`409`).
+- A callback that matches no job (Polyadic's proactive interventions carry a
+  fresh correlation id each time) is accepted only for the destination its
+  payload names when the session's pinned policy version allows the adapter,
+  the phase is the session's active phase and its design enables the adapter,
+  and the group (or user) belongs to it. Otherwise `409`.
+- A correlation id of another service's job answers `409`; a failed lookup
+  answers `503`.
+- Every callback is recorded `pending` and consumed by one conditional
+  `UPDATE` right before its handlers run. Authorization writes nothing, so a
+  `503` (even during a database outage) leaves the event pending: a retry with
+  the same `eventId` is authorized and delivered again, exactly once (attempts
+  that lose the claim get `202` as a duplicate). Delivered events and `409`
+  refusals stay duplicates.
+
+The handler receives that destination, not the request's values. See
+`ethicapp/backend/external-services/README.md`, "Usability".
 
 Current callback controller:
 

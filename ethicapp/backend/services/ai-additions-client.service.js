@@ -203,6 +203,17 @@ export class AiAdditionsClient {
     }
 
     /**
+     * Whether a usable connection is stored: one exists and its URLs are valid
+     * (`isUsableAiAdditionsConnection`). The AI service policy gate (#815)
+     * dispatches nothing to AI Additions adapters while this is false.
+     * Database errors propagate.
+     * @returns {Promise<boolean>}
+     */
+    async isConfigured() {
+        return (await this.getConnectionFingerprint()) !== null;
+    }
+
+    /**
      * `base_url` followed by the given relative path segments.
      * @throws {AiAdditionsNotConfiguredError} without a connection.
      */

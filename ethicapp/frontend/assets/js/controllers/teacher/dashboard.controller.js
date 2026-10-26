@@ -3,11 +3,13 @@ import * as DesignHelpers from "../../helpers/design-helpers.js";
 import { DashboardDataJoiners } from "../../helpers/dashboard-data-joiners.js";
 import { openSemanticDifferentialIndividualResponseModal } from "../../helpers/dashboard-individual-response-modal.helper.js";
 import { openSemanticDifferentialGroupResponseModal } from "../../helpers/dashboard-group-response-modal.helper.js";
+import { serviceDisplayName } from "../../helpers/service-configuration-summary.js";
 
 /*eslint func-style: ["error", "expression"]*/
 export function DashboardController($scope, $routeParams, $http, 
     $translate, $timeout, $uibModal, 
-    ActivityStateService, ActivityCatalogService, DesignCatalogService, CasesCatalogService, TeacherGroupChatService) {
+    ActivityStateService, ActivityCatalogService, DesignCatalogService, CasesCatalogService, TeacherGroupChatService,
+    LanguageCatalogService) {
 
     const vm = this;
 
@@ -19,6 +21,20 @@ export function DashboardController($scope, $routeParams, $http,
     vm.dashboardPhaseUpdateState = new Map();
     
     vm.selectedTab = null;
+
+    // Services the design enables that will not run in this activity, shown
+    // once right after launch (#815).
+    vm.servicesNotRunning = [];
+
+    // A service's name in the UI language, or its id without one.
+    vm.serviceNotRunningName = function(service) {
+        return serviceDisplayName(service, LanguageCatalogService.getCurrentUiLanguageCode())
+            || service?.id;
+    };
+
+    vm.dismissServicesNotRunning = function() {
+        vm.servicesNotRunning = [];
+    };
 
     vm.hasAssociatedCaseTab = function() {
         return Boolean(vm.associatedCase);
@@ -229,6 +245,8 @@ export function DashboardController($scope, $routeParams, $http,
 
         // Display the info tab by default
         vm.activeTab = 'info';
+
+        vm.servicesNotRunning = ActivityCatalogService.takeLaunchNotice(vm.sessionId);
 
         // Keep the activity state service subscribed to state updates from the backend.
         const unsubscribeHandler = ActivityStateService.subscribeToActivityEvents(vm.sessionId);

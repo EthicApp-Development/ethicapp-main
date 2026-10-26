@@ -115,6 +115,8 @@
 	"step_2_prepare_activity" : "Step 2: Prepare the activity and launch it",
 	"launch_activity": "Launch an activity",
 	"launch_the_activity": "Launch the activity",
+	"activity_services_not_running_dismiss": "Dismiss",
+	"activity_services_not_running_text": "These AI services are enabled in the design, but they will not run in this activity because this installation does not allow them now:",
 	"activity_dashboard_title": "Activity Dashboard",
 	"provide_activity_description" : "Brief description of this activity (optional)",
 	"activity_details_dashboard_title" : "Activity Details",

@@ -12,6 +12,8 @@ function makeJobsServiceStub(overrides = {}) {
         createJob:               async () => ({ id: JOB_UUID }),
         updateJobStatus:         async () => {},
         createResult:            async () => ({ id: RESULT_UUID, job_id: JOB_UUID }),
+        // Consumes the result right before handlers run (#815).
+        claimResult:             async result => ({ ...result }),
         updateResult:            async () => {},
         recordProviderReference: async () => {},
         ...overrides,
@@ -25,14 +27,20 @@ const importNoopAdapter = async () => ({
     getUiTranslations: () => null,
 });
 
-// Until the service policy (#815), only development adapters are usable, so
-// the services these tests dispatch to are development ones (#812).
+// Development adapters pass the policy gate whatever the policy (#815), so the
+// services these tests dispatch to are development ones (#812).
 function makeRegistry(jobsServiceOverrides = {}) {
     const jobsService = makeJobsServiceStub(jobsServiceOverrides);
     const registry = new ExternalServicesRegistry({
         jobsService,
         developmentAdapters: true,
         importAdapter:       importNoopAdapter,
+        // The current policy version allows nothing, and there is no
+        // connection (#815): only development adapters are usable.
+        aiServicePolicy:     {
+            getCurrentPolicyVersion: async () => ({ id: 1, allowedServiceIds: [] }),
+        },
+        isAiAdditionsConfigured: async () => false,
     });
     registry.initialized = true;
     registry.services.set("svc-a", { id: "svc-a", development: true });
@@ -277,7 +285,7 @@ test("dispatchServiceHook: falls back to rawBody when requestPayload absent", as
     const { registry } = makeRegistry({
         createResult: async (args) => {
             createResultCalls.push(args);
-            return { id: RESULT_UUID, job_id: null };
+            return { id: RESULT_UUID, job_id: JOB_UUID };
         },
     });
 
@@ -288,7 +296,7 @@ test("dispatchServiceHook: falls back to rawBody when requestPayload absent", as
     await registry.dispatchServiceHook(
         "callback-received",
         "svc-a",
-        { rawBody: { raw: true } }
+        { correlationId: JOB_UUID, rawBody: { raw: true } }
     );
 
     assert.deepEqual(createResultCalls[0].rawPayload, { raw: true });
@@ -587,14 +595,14 @@ test("listServices: exposes globalHooks and defaults it to [] for legacy entries
     assert.deepEqual(listed.find(s => s.id === "svc-a").globalHooks, []);
 });
 
-test("getUsableServiceIdsForGlobalHook: returns only usable services that list the hook", () => {
+test("getUsableServiceIdsForGlobalHook: returns only usable services that list the hook", async () => {
     const { registry } = makeRegistry();
     registry.services.set("svc-global",   { id: "svc-global",   development: true,  globalHooks: ["case-created"] });
     registry.services.set("svc-disabled", { id: "svc-disabled", development: false, globalHooks: ["case-created"] });
     registry.services.set("svc-other",    { id: "svc-other",    development: true,  globalHooks: ["case-updated"] });
 
-    assert.deepEqual(registry.getUsableServiceIdsForGlobalHook("case-created"), ["svc-global"]);
-    assert.deepEqual(registry.getUsableServiceIdsForGlobalHook("unknown-hook"), []);
+    assert.deepEqual(await registry.getUsableServiceIdsForGlobalHook("case-created"), ["svc-global"]);
+    assert.deepEqual(await registry.getUsableServiceIdsForGlobalHook("unknown-hook"), []);
 });
 
 test("dispatchGlobalHook: invokes only usable global subscribers and enriches context", async () => {
@@ -879,8 +887,12 @@ test("getServiceInstanceConfiguration: null for unknown and unusable services", 
     const registry = new ExternalServicesRegistry({
         jobsService:           makeJobsServiceStub(),
         capabilityDescriptors: descriptors,
+        aiServicePolicy:       {
+            getCurrentPolicyVersion: async () => ({ id: 1, allowedServiceIds: [] }),
+        },
+        isAiAdditionsConfigured: async () => true,
     });
-    registry.services.set("svc-off", { id: "svc-off", development: false });
+    registry.services.set("svc-off", { id: "svc-off", development: false, requires: ["case-analyst"] });
 
     assert.equal(await registry.getServiceInstanceConfiguration("svc-off", "en_US"), null);
     assert.equal(await registry.getServiceInstanceConfiguration("unknown", "en_US"), null);

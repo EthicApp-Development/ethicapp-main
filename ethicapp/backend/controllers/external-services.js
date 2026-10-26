@@ -124,8 +124,10 @@ function summarizeDescriptor(service, configuration) {
     };
 }
 
-// Only usable services are listed (#686, #812; see the registry's
-// isServiceUsable): the others are not offered to teachers. With `scope` (one
+// Only usable services are listed (#686, #812, #815): those the current AI
+// service policy version allows while an AI Additions connection is stored,
+// plus the development adapters when they are registered (the registry's
+// policy gate). The others are not offered to teachers. With `scope` (one
 // value or several), the list is narrowed to the services that declare at least
 // one of those scopes. Each service carries the
 // UI translations its adapter provides, or null, and a summary of its capability
@@ -141,20 +143,23 @@ export async function listExternalServices({ scope, registry, locale = "en_US" }
     }
 
     await registry.initialize();
-    const services = registry.listServices().filter(service => service.usable
-        && (scopes.length === 0
-            || service.scopes.some(serviceScope => scopes.includes(serviceScope))));
+    // One read of the current version for the listing and its descriptors.
+    const policyVersion = await registry.getCurrentPolicyVersion();
+    const services = (await registry.listUsableServices({ policyVersion }))
+        .filter(service => scopes.length === 0
+            || service.scopes.some(serviceScope => scopes.includes(serviceScope)));
 
     const result = await Promise.all(services.map(async (service) => {
         const [translations, configuration] = await Promise.all([
             registry.getServiceUiTranslations(service.id),
             service.descriptor
-                ? registry.getServiceInstanceConfiguration(service.id, locale)
+                ? registry.getServiceInstanceConfiguration(service.id, locale, { policyVersion })
                 : null,
         ]);
 
         return {
             ...service,
+            usable:     true,
             ui:         { ...service.ui, translations },
             descriptor: summarizeDescriptor(service, configuration),
         };
@@ -167,9 +172,9 @@ export async function listExternalServices({ scope, registry, locale = "en_US" }
 }
 
 // The instance configuration a service's capability descriptor advertises, for
-// the design editor (#728). 404 for unknown or unusable services and services
-// without a descriptor; `available: false` when the descriptor cannot be
-// fetched. The service's runtime configuration and its routes stay internal.
+// the design editor (#728). 404 for unknown or unusable services (under the
+// current AI service policy version, #815) and services without a descriptor;
+// `available: false` when the descriptor cannot be fetched. The service's runtime configuration and its routes stay internal.
 export async function getExternalServiceInstanceConfiguration({
     serviceId,
     registry,

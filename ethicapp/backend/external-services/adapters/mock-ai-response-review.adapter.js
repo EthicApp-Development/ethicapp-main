@@ -64,6 +64,13 @@ async function callbackPhaseTransition({ service, context, callback, hook }) {
     });
 }
 
+// The destination a callback names: the student its result is published to.
+// The registry refuses the callback when it differs from its job (#815).
+export function getCallbackTarget(requestPayload) {
+    const { sessionId, phaseId, questionId, userId } = sanitizeExternalResultPayload(requestPayload);
+    return { sessionId, phaseId, questionId, userId };
+}
+
 function sanitizeExternalResultPayload(payload) {
     const input = payload && typeof payload === "object" ? payload : {};
     const status = typeof input.status === "string" && input.status.trim()

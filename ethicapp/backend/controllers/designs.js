@@ -25,6 +25,7 @@ import {
 } from "../helpers/design-update.js";
 import externalServicesRegistry from "../services/external-services.service.js";
 import {
+    designEnabledServiceIds,
     invalidConfigurationResponse,
     validateDesignServiceConfigurations,
 } from "../services/service-configuration-validation.service.js";
@@ -66,13 +67,25 @@ function parseStoredDesign(value) {
 
 // Validates the design's external service configurations against the services'
 // capability descriptors (#731). Problems already present in `storedDesign`
-// come back as warnings.
-function validateServiceConfigurations(design, storedDesign = null) {
+// come back as warnings, and so do enabled services that the current AI
+// service policy version does not allow (`not_allowed`, #815): the design keeps
+// them, they just will not run.
+async function validateServiceConfigurations(design, storedDesign = null) {
+    await externalServicesRegistry.initialize();
+    const enabledServiceIds = designEnabledServiceIds(design);
+    const policyVersion = enabledServiceIds.length > 0
+        ? await externalServicesRegistry.getCurrentPolicyVersion()
+        : null;
+
     return validateDesignServiceConfigurations({
         design,
         storedDesign,
-        getInstanceConfiguration: (serviceId, locale) =>
-            externalServicesRegistry.getServiceInstanceConfiguration(serviceId, locale),
+        usableServiceIds: await externalServicesRegistry.usableServiceIds(
+            enabledServiceIds,
+            { policyVersion }
+        ),
+        getInstanceConfiguration: (serviceId, locale) => externalServicesRegistry
+            .getServiceInstanceConfiguration(serviceId, locale, { policyVersion }),
     });
 }
 

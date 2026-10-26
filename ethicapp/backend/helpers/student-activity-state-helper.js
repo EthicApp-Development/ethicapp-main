@@ -129,10 +129,13 @@ export async function getStudentActivityDescriptor(sessionId) {
                 description,
                 design,
                 externalServices: {
-                    // Only usable services: the student app waits for the
-                    // response processing of the services it is given.
-                    services: externalServicesRegistry.listServices()
-                        .filter(service => service.usable),
+                    // Only the effective services of this session (its pinned
+                    // AI service policy version, #815): the student app waits
+                    // for the response processing of the services it is given.
+                    services: await externalServicesRegistry.listUsableServices({
+                        policyVersion: await externalServicesRegistry
+                            .getSessionPolicyVersion(sessionId),
+                    }),
                 },
                 currentPhaseNumber,
                 currentPhaseId

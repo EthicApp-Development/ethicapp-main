@@ -61,6 +61,14 @@ export function getRoomName(sessionId, phaseId, groupId) {
     return `ethicapp-s${sessionId}-p${phaseId}-g${groupId}`;
 }
 
+// The destination a Polyadic callback names: the session, phase and group
+// encoded in its room. The registry refuses the callback when they differ
+// from the job it correlates with (#815). An unparseable room names nothing,
+// and the handler then reports it as unknown.
+export function getCallbackTarget(requestPayload) {
+    return parseRoomName(requestPayload?.room) ?? {};
+}
+
 export function parseRoomName(roomName) {
     const match = normalizeText(roomName).match(/^ethicapp-s(\d+)-p(\d+)-g(\d+)$/);
     if (!match) {
