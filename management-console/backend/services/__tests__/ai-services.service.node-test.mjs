@@ -25,13 +25,81 @@ function createFakeQuery(responses) {
 }
 
 describe('AI services store input validation', () => {
-  it('accepts http and https URLs with internal or external hosts', () => {
-    assert.equal(normalizeConnectionUrl('http://ai-additions:8080'), 'http://ai-additions:8080');
-    assert.equal(normalizeConnectionUrl(' https://ai.example.org/base?x=1 '), 'https://ai.example.org/base?x=1');
+  it('accepts http and https URLs with internal or external hosts and path prefixes', () => {
+    const accepted = [
+      ['http://ai-additions:8080', 'http://ai-additions:8080'],
+      ['HTTPS://AI.example.org', 'HTTPS://AI.example.org'],
+      [' https://ai.example.org/ ', 'https://ai.example.org'],
+      ['https://ai.example.org//', 'https://ai.example.org'],
+      ['https://ai.example.org/base', 'https://ai.example.org/base'],
+      ['https://ai.example.org/base/', 'https://ai.example.org/base'],
+      ['http://10.0.0.5:8080/ai-additions/v1', 'http://10.0.0.5:8080/ai-additions/v1'],
+      ['http://[::1]:8080', 'http://[::1]:8080']
+    ];
+
+    for (const [input, canonical] of accepted) {
+      assert.equal(normalizeConnectionUrl(input), canonical, input);
+    }
   });
 
-  it('rejects other schemes, credentials, fragments, whitespace and non-strings', () => {
+  it('stores canonical values that satisfy the V22 CHECK', () => {
+    // Same expression as ai_additions_connection_base_url_check.
+    const dbCheck = /^https?:\/\/[^/?#\s]+([/?#]\S*)?$/i;
+    for (const input of ['http://ai-additions:8080/', 'https://ai.example.org/base/']) {
+      assert.match(normalizeConnectionUrl(input), dbCheck);
+    }
+  });
+
+  it('accepted URLs compose the token, JWKS, issuer and service paths', () => {
+    // Plain string rules matching ethicapp's derivation from the stored
+    // connection (base URL without trailing slash, then fixed suffixes).
+    const realm = 'ethicapp-ai-additions';
+    const compose = ({ baseUrl, keycloakPublicUrl }) => ({
+      token: `${baseUrl}/keycloak/realms/${realm}/protocol/openid-connect/token`,
+      jwks: `${baseUrl}/keycloak/realms/${realm}/protocol/openid-connect/certs`,
+      issuer: `${keycloakPublicUrl || `${baseUrl}/keycloak`}/realms/${realm}`,
+      service: `${baseUrl}/polyadic-agent/api`
+    });
+
+    const connection = parseConnectionInput({
+      baseUrl: 'https://ai.example.org/base/',
+      keycloakPublicUrl: 'https://auth.example.org/keycloak/'
+    });
+    const urls = compose(connection);
+
+    assert.deepEqual(
+      Object.fromEntries(Object.entries(urls).map(([key, value]) => {
+        const parsed = new URL(value);
+        return [key, { origin: parsed.origin, pathname: parsed.pathname, search: parsed.search }];
+      })),
+      {
+        token: { origin: 'https://ai.example.org', pathname: `/base/keycloak/realms/${realm}/protocol/openid-connect/token`, search: '' },
+        jwks: { origin: 'https://ai.example.org', pathname: `/base/keycloak/realms/${realm}/protocol/openid-connect/certs`, search: '' },
+        issuer: { origin: 'https://auth.example.org', pathname: `/keycloak/realms/${realm}`, search: '' },
+        service: { origin: 'https://ai.example.org', pathname: '/base/polyadic-agent/api', search: '' }
+      }
+    );
+
+    const defaults = compose(parseConnectionInput({ baseUrl: 'http://ai-additions:8080' }));
+    assert.equal(defaults.token, `http://ai-additions:8080/keycloak/realms/${realm}/protocol/openid-connect/token`);
+    assert.equal(defaults.issuer, `http://ai-additions:8080/keycloak/realms/${realm}`);
+  });
+
+  it('rejects other schemes, missing authorities, queries, credentials, fragments, whitespace and non-strings', () => {
     for (const value of [
+      'http:ai.example.org',
+      'http:/ai.example.org',
+      'http:///ai.example.org',
+      'https:ai.example.org/keycloak',
+      'http://',
+      'http://:8080',
+      'http://ai.example.org:99999',
+      'https://ai.example.org/base?x=1',
+      'https://ai.example.org?',
+      'https://ai.example.org/?',
+      'https://ai.example.org\\base',
+      'https://ai.example.org/a/../b',
+      'https://ai.example.org/./b',
       'ftp://ai.example.org',
       'javascript:alert(1)',
       'file:///etc/passwd',
@@ -48,6 +116,30 @@ describe('AI services store input validation', () => {
       null
     ]) {
       assert.equal(normalizeConnectionUrl(value), null, String(value).slice(0, 60));
+    }
+  });
+
+  it('applies the same rule and canonical form to the keycloak URL', () => {
+    assert.deepEqual(parseConnectionInput({
+      baseUrl: 'http://ai-additions:8080/',
+      keycloakPublicUrl: 'https://ai.example.org/keycloak/'
+    }), {
+      baseUrl: 'http://ai-additions:8080',
+      keycloakPublicUrl: 'https://ai.example.org/keycloak'
+    });
+
+    for (const keycloakPublicUrl of [
+      'https://ai.example.org/keycloak?x=1',
+      'http:///ai.example.org/keycloak',
+      'https:ai.example.org/keycloak',
+      'https://kc@ai.example.org/keycloak',
+      'https://ai.example.org/keycloak#realm'
+    ]) {
+      assert.throws(
+        () => parseConnectionInput({ baseUrl: 'https://ai.example.org', keycloakPublicUrl }),
+        (error) => error.code === 'INVALID_KEYCLOAK_PUBLIC_URL',
+        keycloakPublicUrl
+      );
     }
   });
 

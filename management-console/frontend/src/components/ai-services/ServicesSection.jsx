@@ -29,7 +29,9 @@ function ServicesSection({ hasConnection, catalogState, currentVersion, onSave, 
   const [feedback, setFeedback] = useState(null);
 
   const catalog = catalogState.result;
-  const catalogOk = catalog?.ok === true;
+  // A catalog is only meaningful for an existing connection; a late response
+  // must never bring the selection form back after the connection is removed.
+  const catalogOk = hasConnection && catalog?.ok === true;
   const catalogIds = new Set(catalogOk ? catalog.services.map((service) => service.id) : []);
   const staleIds = catalogOk ? currentIds.filter((id) => !catalogIds.has(id)) : [];
 

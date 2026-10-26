@@ -51,13 +51,13 @@ export default {
         testError: 'No fue posible ejecutar la prueba de conexión.',
         fields: {
           baseUrl: 'URL de AI Additions',
-          baseUrlHelp: 'Una URL http o https: un nombre interno de Docker o un host externo. No se permiten usuario, contraseña ni fragmento.',
+          baseUrlHelp: 'Una URL http:// o https:// con un host (un nombre interno de Docker o un host externo) y una ruta opcional, por ejemplo https://ai.example.org/base. No se permiten usuario, contraseña, parámetros de consulta ni fragmento; se quita la barra final.',
           keycloakPublicUrl: 'URL pública de Keycloak (opcional)',
-          keycloakPublicUrlHelp: 'Solo es necesaria cuando AI Additions publica Keycloak en otra URL. Por defecto es la URL de AI Additions seguida de /keycloak.'
+          keycloakPublicUrlHelp: 'Solo es necesaria cuando AI Additions publica Keycloak en otra URL. Sigue las mismas reglas que la URL de AI Additions. Por defecto es la URL de AI Additions seguida de /keycloak.'
         },
         errors: {
-          INVALID_BASE_URL: 'Ingresa una URL http o https válida para AI Additions, sin usuario, contraseña ni fragmento.',
-          INVALID_KEYCLOAK_PUBLIC_URL: 'Ingresa una URL http o https válida para Keycloak, sin usuario, contraseña ni fragmento, o déjala vacía.'
+          INVALID_BASE_URL: 'Ingresa una URL http:// o https:// de AI Additions con un host y una ruta opcional, sin usuario, contraseña, parámetros de consulta ni fragmento.',
+          INVALID_KEYCLOAK_PUBLIC_URL: 'Ingresa una URL http:// o https:// de Keycloak con un host y una ruta opcional, sin usuario, contraseña, parámetros de consulta ni fragmento, o déjala vacía.'
         },
         actions: {
           test: 'Probar conexión',
