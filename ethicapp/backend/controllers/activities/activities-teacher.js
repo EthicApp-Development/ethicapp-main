@@ -448,11 +448,16 @@ async function dispatchActivityStartedHook(context) {
 // state (e.g. chat rooms) is notified to clean up — regardless of which phase the
 // activity finished on. This is the safety net guaranteeing nothing leaks past
 // the end of the activity. Adapter failures are isolated from the teacher request.
+// The registry receives it even when no service is enabled or the design cannot
+// be read, since it also closes the session's room jobs (#833).
 async function dispatchActivityFinishedHook(sessionId, context) {
     try {
-        const enabledServiceIds = await getEnabledExternalServiceIdsBySessionId(sessionId);
-        if (enabledServiceIds.length === 0) {
-            return;
+        let enabledServiceIds = [];
+        try {
+            enabledServiceIds = await getEnabledExternalServiceIdsBySessionId(sessionId);
+        } catch (error) {
+            console.error("[external-services] Could not read the services of the finished activity; "
+                + "activity-finished only closes its room jobs.", error);
         }
         await externalServicesRegistry.dispatchHook("activity-finished", context, { enabledServiceIds });
     } catch (error) {

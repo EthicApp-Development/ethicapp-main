@@ -302,6 +302,18 @@ Anything still unset takes Polyadic's defaults. Polyadic's `warnings` and
 newer rule no longer accepts), the room is created again with EthicApp's
 defaults and reported with `configurationRejected: true`.
 
+Each room also gets a room job (#833): a long-lived job for that room whose id
+EthicApp sends as the top-level `ethicapp_room_correlation_id` of
+`POST /rooms/:room/sessions`. Polyadic uses it as the `correlationId` of the
+room's proactive callbacks (session start, timer ticks and milestones,
+inactivity, window events), so each of them is matched to that room's job,
+deduplicated by its `eventId`, and refused (`409`) once the phase has ended.
+When Polyadic echoes the id in its response the room is bound, and a callback
+without a job that names it is refused (`409`); an older Polyadic does not echo
+it, and its rooms keep the verified-destination rule. A room created again
+(lazily, for example after a restart) gets a new id that supersedes the old
+one. See `ethicapp/backend/external-services/README.md`, "Room jobs".
+
 Polyadic callbacks target the unified callback endpoint:
 
 ```text
@@ -474,7 +486,7 @@ payload:
 |---|---|---|
 | `serviceId` | Yes | Identifier of the calling service, must match a registered service. |
 | `eventType` | No | Type label for the event; defaults to `"result"`. |
-| `correlationId` | No | The job UUID returned by EthicApp when the job was dispatched. Without a matching job of the service, the callback is delivered only to a verified destination (see above). |
+| `correlationId` | No | The job UUID returned by EthicApp when the job was dispatched, or a room's room job id (`ethicapp_room_correlation_id`, #833). Without a matching job of the service, the callback is delivered only to a verified destination whose room is not bound (see above). |
 | `eventId` | No | A UUID minted by the caller for this specific emission attempt. When provided, EthicApp uses `(serviceId, eventId)` as a deduplication key so that network retries of the same event are idempotent. Distinct `eventId` values on the same job are each processed independently. Omitting `eventId` falls back to terminal-state deduplication: any callback on a job that has already reached a terminal status is treated as a duplicate. |
 | `payload` | No | Arbitrary service-specific data. |
 
@@ -491,11 +503,18 @@ service id, and decides where the callback may publish (#815):
 - A callback whose `correlationId` matches a job of its service goes to the
   job's session, phase, question, group and user, even after the current policy
   removed the service. Its payload may not name another destination (`409`).
-- A callback that matches no job (Polyadic's proactive interventions carry a
-  fresh correlation id each time) is accepted only for the destination its
-  payload names when the session's pinned policy version allows the adapter,
-  the phase is the session's active phase and its design enables the adapter,
-  and the group (or user) belongs to it. Otherwise `409`.
+  A room job (#833) accepts repeated callbacks until its phase ends or its
+  activity finishes, and is never completed by one; once closed, or once its
+  phase is no longer the session's active phase, its callbacks answer `409`.
+  The registry closes room jobs itself when it dispatches `phase-ended` or
+  `activity-finished`, before the policy and connection gate, so they close
+  even when no adapter receives the hook.
+- A callback that matches no job (an older Polyadic's proactive interventions
+  carry a fresh correlation id each time) is refused (`409`) when the room it
+  names is bound to an open room job. Otherwise it is accepted only for the
+  destination its payload names when the session's pinned policy version
+  allows the adapter, the phase is the session's active phase and its design
+  enables the adapter, and the group (or user) belongs to it. Otherwise `409`.
 - A correlation id of another service's job answers `409`; a failed lookup
   answers `503`.
 - Every callback is recorded `pending` and consumed by one conditional

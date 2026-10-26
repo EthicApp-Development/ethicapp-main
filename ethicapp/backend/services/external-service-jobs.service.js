@@ -11,7 +11,23 @@ export const JOB_STATUS = Object.freeze({
     FAILED:            "failed",
     SKIPPED:           "skipped",
     EXPIRED:           "expired",
+    // Room jobs only (#833): the room exists and accepts callbacks; the room
+    // was closed or superseded.
+    OPEN:              "open",
+    CLOSED:            "closed",
 });
+
+// A job's kind (#833). A hook job is one dispatch of one hook, completed by
+// its outcome. A room job is opened by an adapter for one room (session,
+// phase, group) and accepts repeated callbacks until it is closed.
+export const JOB_KIND = Object.freeze({
+    HOOK: "hook",
+    ROOM: "room",
+});
+
+// The room job statuses that accept callbacks. A callback may arrive while
+// the room is being created, before its job is open.
+export const LIVE_ROOM_JOB_STATUSES = Object.freeze([JOB_STATUS.PENDING, JOB_STATUS.OPEN]);
 
 export const RESULT_STATUS = Object.freeze({
     CALLBACK_RECEIVED:   "callback-received",
@@ -30,7 +46,12 @@ const TERMINAL_JOB_STATUSES = new Set([
     JOB_STATUS.FAILED,
     JOB_STATUS.SKIPPED,
     JOB_STATUS.EXPIRED,
+    JOB_STATUS.CLOSED,
 ]);
+
+export function isRoomJob(job) {
+    return job?.kind === JOB_KIND.ROOM;
+}
 
 let _pool = null;
 
@@ -41,7 +62,7 @@ function getPool() {
     return _pool;
 }
 
-async function poolQuery(sql, params = []) {
+export async function poolQuery(sql, params = []) {
     const result = await getPool().query(sql, params);
     return result.rows;
 }
@@ -143,7 +164,7 @@ export class ExternalServiceJobsService {
 
         if (correlationId) {
             const matchRows = await this._db(
-                `SELECT id, status, session_id, phase_id, question_id, group_id, user_id
+                `SELECT id, status, session_id, phase_id, question_id, group_id, user_id, kind
                  FROM external_service_jobs
                  WHERE id::text = $1 AND service_id = $2`,
                 [correlationId, serviceId]
@@ -172,6 +193,8 @@ export class ExternalServiceJobsService {
                     questionId: job.question_id ?? null,
                     groupId:    job.group_id    ?? null,
                     userId:     job.user_id     ?? null,
+                    kind:       job.kind        ?? JOB_KIND.HOOK,
+                    status:     job.status,
                 });
                 // Propagate job context to result when caller did not provide it.
                 sessionId    = sessionId  ?? job.session_id;
@@ -237,8 +260,10 @@ export class ExternalServiceJobsService {
             result.job_prior_status = jobStatus;
             // When eventId is absent, fall back to terminal-state replay protection so
             // existing integrations that omit eventId retain the same dedup behavior
-            // they had before this feature was introduced.
-            if (eventId === null) {
+            // they had before this feature was introduced. A room job is never
+            // completed by a callback, and a closed one is refused, not
+            // dropped (#833).
+            if (eventId === null && !isRoomJob(jobContext)) {
                 result.is_duplicate = TERMINAL_JOB_STATUSES.has(jobStatus);
             }
         }
@@ -258,28 +283,64 @@ export class ExternalServiceJobsService {
      * event consumed.
      *
      * @param {object} result  From createResult().
+     * A room job (#833) is never advanced: it stays open for the room's next
+     * callbacks. Its claim also requires the job to be still live, in the same
+     * statement, so a callback authorized just before the phase ended runs no
+     * handler once the job is closed.
+     *
      * @returns {Promise<object|null>} The claimed row, or null when another
      *          attempt consumed it first. Rejects when the claim cannot be
-     *          written; the result then stays pending.
+     *          written; the result then stays pending. Rejects with a 409
+     *          (`callback_room_job_closed`) when the result is still pending
+     *          because its room job was closed meanwhile.
      */
     async claimResult(result) {
         const status = result.job_id
             ? RESULT_STATUS.CALLBACK_RECEIVED
             : RESULT_STATUS.UNKNOWN_CORRELATION;
-        const rows = await this._db(
-            `UPDATE external_service_results
-             SET status = $2, job_id = $3, correlation_id = $4
-             WHERE id = $1 AND status = $5
-             RETURNING id, job_id, correlation_id, service_id, hook_name,
-                       status, received_at`,
-            [result.id, status, result.job_id ?? null, result.correlation_id ?? null,
-                RESULT_STATUS.PENDING]
-        );
+        const roomJobId = result.job_id && isRoomJob(result.job) ? result.job_id : null;
+        const params = [result.id, status, result.job_id ?? null, result.correlation_id ?? null,
+            RESULT_STATUS.PENDING];
+        const rows = roomJobId
+            ? await this._db(
+                `UPDATE external_service_results
+                 SET status = $2, job_id = $3, correlation_id = $4
+                 WHERE id = $1 AND status = $5
+                   AND EXISTS (
+                       SELECT 1 FROM external_service_jobs
+                       WHERE id = $3 AND kind = $6 AND status = ANY($7::text[])
+                   )
+                 RETURNING id, job_id, correlation_id, service_id, hook_name,
+                           status, received_at`,
+                [...params, JOB_KIND.ROOM, LIVE_ROOM_JOB_STATUSES]
+            )
+            : await this._db(
+                `UPDATE external_service_results
+                 SET status = $2, job_id = $3, correlation_id = $4
+                 WHERE id = $1 AND status = $5
+                 RETURNING id, job_id, correlation_id, service_id, hook_name,
+                           status, received_at`,
+                params
+            );
         const claimed = rows[0] || null;
 
-        // Only advance a non-terminal job to callback-received. The event is
-        // already consumed, so a failure here is only logged.
-        if (claimed && result.job_id && !TERMINAL_JOB_STATUSES.has(result.job_prior_status)) {
+        if (!claimed && roomJobId) {
+            const current = await this._db(
+                "SELECT status FROM external_service_results WHERE id = $1",
+                [result.id]
+            );
+            if (current[0]?.status === RESULT_STATUS.PENDING) {
+                throw Object.assign(
+                    new Error(`The room job of the callback for ${result.service_id} is closed.`),
+                    { statusCode: 409, code: "callback_room_job_closed" }
+                );
+            }
+        }
+
+        // Only advance a non-terminal hook job to callback-received. The event
+        // is already consumed, so a failure here is only logged.
+        if (claimed && result.job_id && !roomJobId
+            && !TERMINAL_JOB_STATUSES.has(result.job_prior_status)) {
             await this._db(
                 `UPDATE external_service_jobs
                  SET status = $2, updated_at = now()

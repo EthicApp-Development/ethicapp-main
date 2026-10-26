@@ -153,6 +153,8 @@ function makeRegistry({
         aiServicePolicy: policy,
         isAiAdditionsConfigured,
         callbackDestinationLookups,
+        // No room is bound to a room job (#833): option A applies.
+        roomJobsService: { hasOpenBoundRoomJob: async () => false },
         jobsService:     {
             createJob:       async args => { createdJobs.push(args); return { id: JOB_UUID }; },
             updateJobStatus: async (jobId, status) => { jobStatuses.push({ jobId, status }); },

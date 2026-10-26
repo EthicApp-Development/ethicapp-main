@@ -56,7 +56,7 @@ Integration tests should be explicit about their infrastructure requirements and
 
 Current integration suites:
 
-- `ethicapp/backend`: `npm run test:integration` runs `**/*.integration-test.mjs` against the database in `ETHICAPP_INTEGRATION_DATABASE_URL`, which must have migrations V1 to V23 or later applied. When the variable is unset, the suites are skipped with a message saying so. They insert rows that are not cleaned up (AI service policy versions are append-only), so point them at a disposable database. For example:
+- `ethicapp/backend`: `npm run test:integration` runs `**/*.integration-test.mjs` against the database in `ETHICAPP_INTEGRATION_DATABASE_URL`, which must have migrations V1 to V24 or later applied. When the variable is unset, the suites are skipped with a message saying so. They insert rows that are not cleaned up (AI service policy versions are append-only), so point them at a disposable database. For example:
 
   ```bash
   docker network create ethicapp-it
@@ -74,7 +74,7 @@ Current integration suites:
   docker rm -f -v ethicapp-it-pg && docker network rm ethicapp-it
   ```
 
-  The first suite covers the activity launch transaction and the AI service policy pin, including two concurrent launches of the same session.
+  The first suite covers the activity launch transaction and the AI service policy pin, including two concurrent launches of the same session. Others cover pending callback results and their concurrent claim (V23), and room-scoped jobs (V24): opening, supersession, closing, and the refusal of a callback to a closed room job.
 
 ### 1.3. End-to-End and Smoke Tests
 

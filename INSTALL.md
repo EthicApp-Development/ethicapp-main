@@ -404,7 +404,8 @@ The upgrade affects only installations that used AI.
 2. Refresh the deployment repository's copy of `deploy/env.contract.yml` from
    the release being deployed.
 3. Deploy. Flyway applies V22 (the connection, the policy versions and the
-   session pin) and V23 (pending callback results). V22 creates policy
+   session pin), V23 (pending callback results) and V24 (room-scoped jobs for
+   Polyadic callbacks, which needs no operator action). V22 creates policy
    version 1, which allows nothing, and pins every existing session to it.
 4. AI stops at once in every session, including activities that were running
    during the upgrade. They stay without AI permanently, since a pin never
