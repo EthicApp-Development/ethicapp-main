@@ -19,7 +19,8 @@ export {
     getUiTranslations,
 };
 
-const DEFAULT_ATS_BASE_PATH = "/argumentation-tutor/api/v2";
+// The Argumentation Tutor API under the AI Additions connection's base URL (#814).
+export const ATS_API_BASE_PATH = "/argumentation-tutor/api/v2";
 
 const atsSessionByPhase = new Map();
 const atsSessionCreationByPhase = new Map();
@@ -47,16 +48,15 @@ function extractResponseText(context) {
     return candidates.find(candidate => normalizeText(candidate).length > 0)?.trim() || "";
 }
 
-function getAtsBaseUrl() {
-    return normalizeText(process.env.AI_ADDITIONS_ARGUMENTATION_TUTOR_API_BASE_URL)
-        || aiAdditionsClient.buildServiceUrl(DEFAULT_ATS_BASE_PATH);
-}
-
-async function fetchAtsJson(pathname, { method = "GET", body = null } = {}) {
+/**
+ * A request to the Argumentation Tutor API (`base_url + ATS_API_BASE_PATH`).
+ * Rejects with `not_configured` without an AI Additions connection.
+ */
+export async function requestAtsJson(pathname, { method = "GET", body = null } = {}) {
     return aiAdditionsClient.requestJson(pathname, {
         method,
         body,
-        baseUrl: getAtsBaseUrl(),
+        basePath: ATS_API_BASE_PATH,
     });
 }
 
@@ -226,7 +226,7 @@ async function getOrCreateAtsSession(context) {
         const created = await createAtsSession({
             metadata,
             serviceConfiguration: context.serviceConfiguration,
-            request:              body => fetchAtsJson("/sessions", { method: "POST", body }),
+            request:              body => requestAtsJson("/sessions", { method: "POST", body }),
         });
 
         atsSessionByPhase.set(cacheKey, created.sessionId);
@@ -248,7 +248,7 @@ async function deleteAtsSession(atsSessionId) {
     }
 
     try {
-        await fetchAtsJson(`/sessions/${encodeURIComponent(atsSessionId)}`, {
+        await requestAtsJson(`/sessions/${encodeURIComponent(atsSessionId)}`, {
             method: "DELETE",
         });
 
@@ -266,7 +266,7 @@ async function deleteAtsSession(atsSessionId) {
 async function submitArgumentToAts(context, responseText, groupId) {
     const { sessionId: atsSessionId, creation } = await getOrCreateAtsSession(context);
 
-    const response = await fetchAtsJson(`/sessions/${encodeURIComponent(atsSessionId)}/arguments`, {
+    const response = await requestAtsJson(`/sessions/${encodeURIComponent(atsSessionId)}/arguments`, {
         method: "POST",
         body:   {
             argument:       responseText,
@@ -302,7 +302,7 @@ async function submitArgumentComparisonToAts(context, responseText, groupId) {
     const { sessionId: atsSessionId, creation } = await getOrCreateAtsSession(context);
 
     try {
-        const response = await fetchAtsJson(`/sessions/${encodeURIComponent(atsSessionId)}/arguments/compare`, {
+        const response = await requestAtsJson(`/sessions/${encodeURIComponent(atsSessionId)}/arguments/compare`, {
             method: "POST",
             body:   {
                 revised_argument: responseText,
@@ -380,6 +380,8 @@ async function processStudentResponse({ context, callback, reportInstantiation }
         return;
     }
 
+    // Fails fast with `not_configured` when no AI Additions connection is stored.
+    await aiAdditionsClient.getEndpoints();
     const groupId = await resolveGroupId(context);
     const submission = await submitArgumentWithFlow(context, responseText, groupId);
     incrementSubmissionCount(context);

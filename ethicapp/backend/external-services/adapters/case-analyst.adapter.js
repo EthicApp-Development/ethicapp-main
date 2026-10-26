@@ -5,7 +5,8 @@ import defaultAiAdditionsClient from "../../services/ai-additions-client.service
 // submitting anything to the provider yet. The real analysis flow plugs into
 // processCaseCreated() and processExternalResult().
 
-const DEFAULT_CASE_ANALYST_BASE_PATH = "/case-analyst/api/v1";
+// The Case Analyst API under the AI Additions connection's base URL (#814).
+export const CASE_ANALYST_API_BASE_PATH = "/case-analyst/api/v1";
 const CASE_CREATED_HOOK      = "case-created";
 const CALLBACK_RECEIVED_HOOK = "callback-received";
 
@@ -40,9 +41,12 @@ function toPositiveInteger(value) {
     return Number.isInteger(number) && number > 0 ? number : null;
 }
 
-export function getCaseAnalystBaseUrl(client = aiAdditionsClient) {
-    return normalizeText(process.env.AI_ADDITIONS_CASE_ANALYST_API_BASE_URL)
-        || client.buildServiceUrl(DEFAULT_CASE_ANALYST_BASE_PATH);
+/**
+ * The Case Analyst API URL for the current AI Additions connection.
+ * @throws {AiAdditionsNotConfiguredError} (`code: "not_configured"`) without one.
+ */
+export async function getCaseAnalystBaseUrl(client = aiAdditionsClient) {
+    return client.resolveServiceUrl(CASE_ANALYST_API_BASE_PATH);
 }
 
 export async function getUiTranslations() {
@@ -89,9 +93,12 @@ async function processCaseCreated({ context, callback }) {
         return;
     }
 
+    // Fails fast with `not_configured` when no AI Additions connection is stored.
+    const baseUrl = await getCaseAnalystBaseUrl();
+
     console.info(`[case-analyst] Acknowledged case-created for case ${request.case.id}.`, {
         correlationId: context.correlationId ?? null,
-        baseUrl:       getCaseAnalystBaseUrl(),
+        baseUrl,
     });
 
     await callback({
