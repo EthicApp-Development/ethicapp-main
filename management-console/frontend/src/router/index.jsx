@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import ManagementLayout from '../components/layout/ManagementLayout.jsx';
+import AiServicesPage from '../pages/AiServicesPage.jsx';
 import DiagnosticsPage from '../pages/DiagnosticsPage.jsx';
 import InstitutionPage from '../pages/InstitutionPage.jsx';
 import ProfilePage from '../pages/ProfilePage.jsx';
@@ -32,6 +33,14 @@ const router = createBrowserRouter([
     element: (
       <ManagementLayout>
         <InstitutionPage />
+      </ManagementLayout>
+    )
+  },
+  {
+    path: '/ai-services',
+    element: (
+      <ManagementLayout>
+        <AiServicesPage />
       </ManagementLayout>
     )
   },

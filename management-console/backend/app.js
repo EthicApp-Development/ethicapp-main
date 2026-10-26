@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import { getManagementSessionCookieMaxAgeMs } from './config/session.js';
 import hydrateSessionFromAuthProxy from './middleware/hydrateSessionFromAuthProxy.js';
 import { csrfProtection } from './middleware/csrfProtection.js';
+import aiServicesRoutes from './routes/ai-services.routes.js';
 import csrfRoutes from './routes/csrf.routes.js';
 import healthRoutes from './routes/health.routes.js';
 import institutionRoutes from './routes/institution.routes.js';
@@ -46,6 +47,7 @@ app.use('/mng/api', csrfProtection);
 app.use(institutionRoutes);
 app.use(profileRoutes);
 app.use(usersRoutes);
+app.use(aiServicesRoutes);
 app.use(healthRoutes);
 app.use(viewRoutes);
 

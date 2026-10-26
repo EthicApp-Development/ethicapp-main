@@ -4,6 +4,7 @@ export default {
     subtitle: 'Operaciones de usuarios para entorno single-tenant'
   },
   nav: {
+    aiServices: 'Servicios de IA',
     users: 'Usuarios',
     institution: 'Institución',
     diagnostics: 'Diagnóstico',
@@ -29,6 +30,119 @@ export default {
     O: 'Otro'
   },
   pages: {
+    aiServices: {
+      heading: 'Servicios de IA',
+      description: 'Decide si esta instalación usa servicios de IA externos a través de AI Additions, y qué servicios están permitidos.',
+      loading: 'Cargando servicios de IA...',
+      loadError: 'No fue posible cargar la configuración de servicios de IA.',
+      noConnection: {
+        title: 'Esta instalación no usa IA externa',
+        body: 'No hay una conexión con AI Additions configurada, así que EthicApp no envía nada a ningún servicio de IA. Ingresa una conexión más abajo para habilitar servicios de IA.'
+      },
+      connection: {
+        heading: 'Conexión',
+        description: 'Dónde EthicApp encuentra AI Additions. Las actividades en curso siguen esta conexión cuando cambia. Las credenciales de cliente de AI Additions siguen siendo secretos del despliegue de EthicApp.',
+        lastUpdated: 'Guardada por última vez el {{date}} por {{author}}.',
+        lastUpdatedNoAuthor: 'Guardada por última vez el {{date}}.',
+        saveSuccess: 'Conexión guardada.',
+        saveError: 'No fue posible guardar la conexión.',
+        removeSuccess: 'Conexión eliminada. Esta instalación ya no usa IA externa.',
+        removeError: 'No fue posible eliminar la conexión.',
+        testError: 'No fue posible ejecutar la prueba de conexión.',
+        fields: {
+          baseUrl: 'URL de AI Additions',
+          baseUrlHelp: 'Una URL http o https: un nombre interno de Docker o un host externo. No se permiten usuario, contraseña ni fragmento.',
+          keycloakPublicUrl: 'URL pública de Keycloak (opcional)',
+          keycloakPublicUrlHelp: 'Solo es necesaria cuando AI Additions publica Keycloak en otra URL. Por defecto es la URL de AI Additions seguida de /keycloak.'
+        },
+        errors: {
+          INVALID_BASE_URL: 'Ingresa una URL http o https válida para AI Additions, sin usuario, contraseña ni fragmento.',
+          INVALID_KEYCLOAK_PUBLIC_URL: 'Ingresa una URL http o https válida para Keycloak, sin usuario, contraseña ni fragmento, o déjala vacía.'
+        },
+        actions: {
+          test: 'Probar conexión',
+          save: 'Guardar conexión',
+          remove: 'Eliminar conexión'
+        },
+        test: {
+          token: 'Solicitud de token',
+          catalog: 'Lectura del catálogo',
+          success: 'La conexión funciona. AI Additions ofrece {{count}} servicios.',
+          failure: 'La prueba de conexión falló. Las URL no se guardaron.',
+          status: {
+            ok: 'OK',
+            failed: 'Falló',
+            skipped: 'No se intentó'
+          }
+        },
+        remove: {
+          title: '¿Eliminar la conexión con AI Additions?',
+          body: 'Esto detiene de inmediato todas las llamadas a IA, incluso en las actividades que están en curso.',
+          policyKept: 'Los servicios permitidos y su historial se conservan, y vuelven a aplicarse si más adelante se guarda una conexión.',
+          cancel: 'Cancelar',
+          confirm: 'Eliminar y detener toda la IA'
+        }
+      },
+      services: {
+        heading: 'Servicios permitidos',
+        description: 'Los servicios que ofrece este despliegue de AI Additions. EthicApp solo puede usar los servicios permitidos.',
+        launchNotice: 'Guardar crea una nueva versión de la política. Solo la usan las actividades lanzadas después; las actividades en curso mantienen la versión con la que se lanzaron.',
+        noConnection: 'Configura una conexión para ver los servicios que ofrece AI Additions.',
+        loading: 'Cargando el catálogo de AI Additions...',
+        empty: 'Este despliegue de AI Additions no ofrece servicios.',
+        retry: 'Reintentar',
+        allowService: 'Permitir {{name}}',
+        yes: 'Sí',
+        no: 'No',
+        available: 'Disponible',
+        unavailable: 'No disponible',
+        noAdapters: 'Ninguno',
+        note: 'Nota (opcional)',
+        notePlaceholder: '¿Por qué este cambio? Por ejemplo, el curso o estudio para el que es.',
+        save: 'Guardar como nueva versión',
+        saveSuccess: 'Versión {{version}} guardada.',
+        saveError: 'No fue posible guardar la nueva versión.',
+        staleIds: 'La versión actual permite servicios que AI Additions ya no ofrece ({{ids}}). Quedan fuera de la nueva versión.',
+        disallowAll: 'No permitir ningún servicio',
+        disallowAllHelp: 'No es posible leer el catálogo, así que ahora no se pueden permitir servicios. Igual puedes guardar una versión que no permita ninguno.',
+        disallowAllNoConnectionHelp: 'No hay una conexión configurada, así que ahora no se pueden permitir servicios. La versión actual aún permite algunos; puedes guardar una versión que no permita ninguno.',
+        columns: {
+          allowed: 'Permitido',
+          service: 'Servicio',
+          usesLlm: 'Usa un LLM',
+          availability: 'Disponibilidad',
+          adapters: 'Adaptadores de EthicApp que habilita'
+        },
+        errors: {
+          unknownIds: 'AI Additions no ofrece estos servicios: {{ids}}.',
+          catalogUnavailable: 'No fue posible leer el catálogo para verificar los servicios seleccionados.'
+        }
+      },
+      history: {
+        heading: 'Historial de versiones',
+        description: 'Cada política guardada, de la más reciente a la más antigua. Las versiones nunca se editan. Las sesiones cuentan solo actividades lanzadas fijadas a cada versión.',
+        empty: 'Aún no hay versiones.',
+        current: 'Actual',
+        systemAuthor: 'Sistema',
+        noServices: 'Ningún servicio',
+        columns: {
+          version: 'Versión',
+          date: 'Fecha',
+          author: 'Autor',
+          allowed: 'Servicios permitidos',
+          note: 'Nota',
+          sessions: 'Sesiones lanzadas'
+        }
+      },
+      errors: {
+        not_configured: 'No hay una conexión con AI Additions configurada.',
+        unreachable: 'No fue posible contactar AI Additions.',
+        unauthorized: 'AI Additions rechazó las credenciales de EthicApp.',
+        invalid_response: 'AI Additions respondió de forma inesperada.',
+        ethicapp_error: 'EthicApp no pudo completar la solicitud. Verifica que el servicio EthicApp esté en ejecución y actualizado.',
+        generic: 'La solicitud falló. Intenta de nuevo en unos segundos.'
+      }
+    },
     users: {
       heading: 'Gestión de usuarios',
       description: 'Esta sección centralizará los flujos de administración de usuarios.',

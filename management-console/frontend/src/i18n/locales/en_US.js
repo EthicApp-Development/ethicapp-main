@@ -4,6 +4,7 @@ export default {
     subtitle: 'Single-tenant user operations'
   },
   nav: {
+    aiServices: 'AI services',
     users: 'Users',
     institution: 'Institution',
     diagnostics: 'Diagnostics',
@@ -29,6 +30,119 @@ export default {
     O: 'Other'
   },
   pages: {
+    aiServices: {
+      heading: 'AI services',
+      description: 'Decide whether this installation uses external AI services through AI Additions, and which services are allowed.',
+      loading: 'Loading AI services...',
+      loadError: 'Unable to load the AI services configuration.',
+      noConnection: {
+        title: 'This installation uses no external AI',
+        body: 'No AI Additions connection is configured, so EthicApp sends nothing to any AI service. Enter a connection below to enable AI services.'
+      },
+      connection: {
+        heading: 'Connection',
+        description: 'Where EthicApp reaches AI Additions. Running activities follow this connection when it changes. The AI Additions client credentials stay deployment secrets of EthicApp.',
+        lastUpdated: 'Last saved {{date}} by {{author}}.',
+        lastUpdatedNoAuthor: 'Last saved {{date}}.',
+        saveSuccess: 'Connection saved.',
+        saveError: 'Unable to save the connection.',
+        removeSuccess: 'Connection removed. This installation no longer uses external AI.',
+        removeError: 'Unable to remove the connection.',
+        testError: 'Unable to run the connection test.',
+        fields: {
+          baseUrl: 'AI Additions URL',
+          baseUrlHelp: 'An http or https URL: a Docker-internal name or an external host. User names, passwords and fragments are not allowed.',
+          keycloakPublicUrl: 'Keycloak public URL (optional)',
+          keycloakPublicUrlHelp: 'Only needed when AI Additions publishes Keycloak at another URL. Defaults to the AI Additions URL followed by /keycloak.'
+        },
+        errors: {
+          INVALID_BASE_URL: 'Enter a valid http or https AI Additions URL, without user name, password or fragment.',
+          INVALID_KEYCLOAK_PUBLIC_URL: 'Enter a valid http or https Keycloak URL, without user name, password or fragment, or leave it empty.'
+        },
+        actions: {
+          test: 'Test connection',
+          save: 'Save connection',
+          remove: 'Remove connection'
+        },
+        test: {
+          token: 'Token request',
+          catalog: 'Catalog read',
+          success: 'The connection works. AI Additions offers {{count}} services.',
+          failure: 'The connection test failed. The URLs were not saved.',
+          status: {
+            ok: 'OK',
+            failed: 'Failed',
+            skipped: 'Not attempted'
+          }
+        },
+        remove: {
+          title: 'Remove the AI Additions connection?',
+          body: 'This stops every AI call immediately, including in activities that are running now.',
+          policyKept: 'The allowed services and their history are kept, and apply again if a connection is saved later.',
+          cancel: 'Cancel',
+          confirm: 'Remove and stop all AI'
+        }
+      },
+      services: {
+        heading: 'Allowed services',
+        description: 'The services this AI Additions deployment offers. EthicApp can only use the allowed services.',
+        launchNotice: 'Saving creates a new policy version. Only activities launched afterwards use it; running activities keep the version they were launched with.',
+        noConnection: 'Configure a connection to see the services AI Additions offers.',
+        loading: 'Loading the AI Additions catalog...',
+        empty: 'This AI Additions deployment offers no services.',
+        retry: 'Try again',
+        allowService: 'Allow {{name}}',
+        yes: 'Yes',
+        no: 'No',
+        available: 'Available',
+        unavailable: 'Unavailable',
+        noAdapters: 'None',
+        note: 'Note (optional)',
+        notePlaceholder: 'Why this change? For example, the course or study it is for.',
+        save: 'Save as a new version',
+        saveSuccess: 'Version {{version}} saved.',
+        saveError: 'Unable to save the new version.',
+        staleIds: 'The current version allows services that AI Additions no longer offers ({{ids}}). They are left out of the new version.',
+        disallowAll: 'Allow no services',
+        disallowAllHelp: 'The catalog cannot be read, so services cannot be allowed now. You can still save a version that allows no services.',
+        disallowAllNoConnectionHelp: 'No connection is configured, so services cannot be allowed now. The current version still allows some; you can save a version that allows none.',
+        columns: {
+          allowed: 'Allowed',
+          service: 'Service',
+          usesLlm: 'Uses an LLM',
+          availability: 'Availability',
+          adapters: 'EthicApp adapters it enables'
+        },
+        errors: {
+          unknownIds: 'AI Additions does not offer these services: {{ids}}.',
+          catalogUnavailable: 'The catalog could not be read to check the selected services.'
+        }
+      },
+      history: {
+        heading: 'Version history',
+        description: 'Every saved policy, newest first. Versions are never edited. Sessions count only launched activities pinned to each version.',
+        empty: 'No versions yet.',
+        current: 'Current',
+        systemAuthor: 'System',
+        noServices: 'No services',
+        columns: {
+          version: 'Version',
+          date: 'Date',
+          author: 'Author',
+          allowed: 'Allowed services',
+          note: 'Note',
+          sessions: 'Launched sessions'
+        }
+      },
+      errors: {
+        not_configured: 'No AI Additions connection is configured.',
+        unreachable: 'AI Additions could not be reached.',
+        unauthorized: 'AI Additions rejected the EthicApp credentials.',
+        invalid_response: 'AI Additions answered with an unexpected response.',
+        ethicapp_error: 'EthicApp could not complete the request. Check that the EthicApp service is running and up to date.',
+        generic: 'The request failed. Try again in a few seconds.'
+      }
+    },
     users: {
       heading: 'User management',
       description: 'This section will centralize user administration workflows.',

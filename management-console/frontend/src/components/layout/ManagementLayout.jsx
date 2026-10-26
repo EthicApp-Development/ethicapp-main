@@ -24,6 +24,11 @@ function ManagementLayout({ children }) {
       label: t('nav.institution')
     },
     {
+      to: '/ai-services',
+      icon: 'fa-wand-magic-sparkles',
+      label: t('nav.aiServices')
+    },
+    {
       to: '/diagnostics',
       icon: 'fa-stethoscope',
       label: t('nav.diagnostics')
