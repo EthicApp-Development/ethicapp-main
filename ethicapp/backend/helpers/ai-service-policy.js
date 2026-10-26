@@ -87,12 +87,30 @@ async function defaultGetDb() {
  * inserted: the pin only moves while the session has no activity, so a session
  * that was already launched keeps its pin and later versions never change it.
  *
+ * Concurrency: the session row is locked first (`FOR UPDATE`, held until the
+ * transaction ends), and the activity check runs afterwards as a separate
+ * statement. Under READ COMMITTED each statement takes a fresh snapshot, so a
+ * concurrent launch that waited for the lock sees the activity the first
+ * launch committed and keeps its pin. Checking and updating in one statement
+ * would reuse a snapshot taken before the lock wait and re-pin the session.
+ *
  * @param {{ query: Function }} client  A `pg` client inside an open transaction.
  * @param {number|string} sessionId
  * @returns {Promise<number|null>} The pinned version id, or null when the
  *          session does not exist.
  */
 export async function pinSessionPolicy(client, sessionId) {
+    const locked = await client.query(`
+        SELECT ai_service_policy_version_id
+        FROM sessions
+        WHERE id = $1
+        FOR UPDATE;
+    `, [sessionId]);
+
+    if (locked.rows.length === 0) {
+        return null;
+    }
+
     const pinned = await client.query(`
         UPDATE sessions
         SET ai_service_policy_version_id = current_ai_service_policy_version_id()
@@ -105,19 +123,8 @@ export async function pinSessionPolicy(client, sessionId) {
         RETURNING ai_service_policy_version_id;
     `, [sessionId]);
 
-    if (pinned.rows.length > 0) {
-        return toVersionId(pinned.rows[0].ai_service_policy_version_id);
-    }
-
-    const existing = await client.query(`
-        SELECT ai_service_policy_version_id
-        FROM sessions
-        WHERE id = $1;
-    `, [sessionId]);
-
-    return existing.rows.length > 0
-        ? toVersionId(existing.rows[0].ai_service_policy_version_id)
-        : null;
+    const row = pinned.rows[0] ?? locked.rows[0];
+    return toVersionId(row.ai_service_policy_version_id);
 }
 
 /**

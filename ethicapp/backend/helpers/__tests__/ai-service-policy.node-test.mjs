@@ -161,29 +161,37 @@ test("getPolicyVersion: invalid ids return null without a query", async () => {
 
 // ─── the session pin ─────────────────────────────────────────────────────────
 
-test("pinSessionPolicy: pins a session that has no activity to the current version", async () => {
-    const { db, calls } = makeDb([{ ai_service_policy_version_id: "4" }]);
+const LOCK_SESSION =
+    /^SELECT ai_service_policy_version_id FROM sessions WHERE id = \$1 FOR UPDATE;$/;
+
+test("pinSessionPolicy: locks the session, then pins it while it has no activity", async () => {
+    const { db, calls } = makeDb(
+        [{ ai_service_policy_version_id: "1" }],
+        [{ ai_service_policy_version_id: "4" }]
+    );
 
     assert.equal(await pinSessionPolicy(db, 12), 4);
-    assert.equal(calls.length, 1);
-    assert.match(calls[0].sql, new RegExp("^UPDATE sessions "
-        + "SET ai_service_policy_version_id = current_ai_service_policy_version_id\\(\\)"));
-    assert.match(calls[0].sql, new RegExp("AND NOT EXISTS \\( SELECT 1 FROM activity "
-        + "WHERE activity.session = sessions.id \\)"));
+    assert.equal(calls.length, 2);
+    assert.match(calls[0].sql, LOCK_SESSION);
     assert.deepEqual(calls[0].params, [12]);
+    assert.match(calls[1].sql, new RegExp("^UPDATE sessions "
+        + "SET ai_service_policy_version_id = current_ai_service_policy_version_id\\(\\)"));
+    assert.match(calls[1].sql, new RegExp("AND NOT EXISTS \\( SELECT 1 FROM activity "
+        + "WHERE activity.session = sessions.id \\)"));
+    assert.deepEqual(calls[1].params, [12]);
 });
 
-test("pinSessionPolicy: a launched session keeps its pin", async () => {
-    const { db, calls } = makeDb([], [{ ai_service_policy_version_id: "2" }]);
+test("pinSessionPolicy: a launched session keeps the pin read under the lock", async () => {
+    const { db, calls } = makeDb([{ ai_service_policy_version_id: "2" }], []);
 
     assert.equal(await pinSessionPolicy(db, 12), 2);
     assert.equal(calls.length, 2);
-    assert.match(calls[1].sql,
-        /^SELECT ai_service_policy_version_id FROM sessions WHERE id = \$1;$/);
+    assert.match(calls[0].sql, LOCK_SESSION);
 });
 
-test("pinSessionPolicy: null for an unknown session", async () => {
-    const { db } = makeDb([], []);
+test("pinSessionPolicy: null for an unknown session, without an update", async () => {
+    const { db, calls } = makeDb([]);
 
     assert.equal(await pinSessionPolicy(db, 999), null);
+    assert.equal(calls.length, 1);
 });
