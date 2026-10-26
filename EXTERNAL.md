@@ -474,7 +474,7 @@ payload:
 |---|---|---|
 | `serviceId` | Yes | Identifier of the calling service, must match a registered service. |
 | `eventType` | No | Type label for the event; defaults to `"result"`. |
-| `correlationId` | Yes in practice | The job UUID returned by EthicApp when the job was dispatched. A callback without a job of its service is recorded but never delivered (`409`). |
+| `correlationId` | No | The job UUID returned by EthicApp when the job was dispatched. Without a matching job of the service, the callback is delivered only to a verified destination (see above). |
 | `eventId` | No | A UUID minted by the caller for this specific emission attempt. When provided, EthicApp uses `(serviceId, eventId)` as a deduplication key so that network retries of the same event are idempotent. Distinct `eventId` values on the same job are each processed independently. Omitting `eventId` falls back to terminal-state deduplication: any callback on a job that has already reached a terminal status is treated as a duplicate. |
 | `payload` | No | Arbitrary service-specific data. |
 
@@ -486,14 +486,20 @@ the caller against the per-service `callbackAuth` manifest entry.
 
 The controller dispatches the `callback-received` hook with
 `dispatchServiceHook(...)`, which selects only subscribers belonging to the target
-service id. A handler runs only when `correlationId` matches a persisted job of
-that service (otherwise `409`, or `503` when the lookup fails), and only when the
-destination the payload names (the adapter's `getCallbackTarget()`, for example
-the Polyadic room `ethicapp-s<session>-p<phase>-g<group>`) equals the job's
-session, phase, question, group and user (otherwise `409`). The handler receives
-the job's destination, not the request's. This holds whatever the current AI
-service policy allows, so a newer policy cannot open a session pinned to an
-older one, while a job dispatched earlier still completes (#815). See
+service id, and decides where the callback may publish (#815):
+
+- A callback whose `correlationId` matches a job of its service goes to the
+  job's session, phase, question, group and user, even after the current policy
+  removed the service. Its payload may not name another destination (`409`).
+- A callback that matches no job (Polyadic's proactive interventions carry a
+  fresh correlation id each time) is accepted only for the destination its
+  payload names when the session's pinned policy version allows the adapter,
+  the phase is the session's active phase and its design enables the adapter,
+  and the group (or user) belongs to it. Otherwise `409`.
+- A correlation id of another service's job answers `409`; a failed lookup
+  answers `503`.
+
+The handler receives that destination, not the request's values. See
 `ethicapp/backend/external-services/README.md`, "Usability".
 
 Current callback controller:

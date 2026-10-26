@@ -23,6 +23,7 @@ import {
     validateCatalogEntry,
 } from "../external-services/catalog.js";
 import { CapabilityDescriptorsClient } from "./capability-descriptors.service.js";
+import { resolveCallbackDestination } from "../helpers/callback-destination.js";
 import {
     externalServiceJobsService,
     JOB_STATUS,
@@ -271,12 +272,11 @@ function serviceConfigurationFor(serviceConfigurations, serviceId) {
     return isObject ? { ...configuration } : {};
 }
 
-// A callback is delivered only when it correlates with a persisted job of that
-// same service (#815): createResult() matches the correlation id against that
-// service's jobs and returns the job. The result row stays recorded either
-// way. Throws 503 when the result or job lookup failed (the caller may retry)
-// and 409 without a matching job.
-function assertCallbackForExistingJob(resultRecord, serviceId) {
+// Refuses a callback whose correlation id names another service's job (409),
+// and any callback whose result or job lookup failed (503; the caller may
+// retry). A callback that matches no job at all goes on to
+// resolveCallbackDestination() (#815). The result row stays recorded.
+function assertCallbackCorrelation(resultRecord, serviceId) {
     if (!resultRecord) {
         const error = new Error(
             `The callback for ${serviceId} could not be matched to a job; try again later.`
@@ -287,9 +287,9 @@ function assertCallbackForExistingJob(resultRecord, serviceId) {
 
     const belongsToService = resultRecord.service_id === undefined
         || resultRecord.service_id === serviceId;
-    if (!resultRecord.job_id || !belongsToService) {
+    if (resultRecord.correlates_other_service === true || (resultRecord.job_id && !belongsToService)) {
         const error = new Error(
-            `External service ${serviceId} is not in use, and the callback matches none of its jobs.`
+            `The callback for ${serviceId} names a job of another service.`
         );
         error.statusCode = 409;
         throw error;
@@ -340,6 +340,8 @@ export class ExternalServicesRegistry {
         importAdapter = href => import(href),
         aiServicePolicy = DEFAULT_AI_SERVICE_POLICY,
         isAiAdditionsConfigured = () => aiAdditionsClient.isConfigured(),
+        resolveCallbackDestination: resolveDestination = resolveCallbackDestination,
+        callbackDestinationLookups = {},
     } = {}) {
         this.initialized      = false;
         this.services         = new Map();
@@ -355,6 +357,11 @@ export class ExternalServicesRegistry {
         // session pins, and whether a usable AI Additions connection exists.
         this._aiServicePolicy         = aiServicePolicy;
         this._isAiAdditionsConfigured = isAiAdditionsConfigured;
+        // Verifies the destination of callbacks that match no job (#815).
+        // `callbackDestinationLookups` ({ loadPhaseState,
+        // loadPhaseExternalServices }) replaces its database reads in tests.
+        this._resolveCallbackDestination = resolveDestination;
+        this._callbackDestinationLookups = callbackDestinationLookups;
 
         this.uiTranslationProviders   = new Map();
         this.uiTranslationsCache      = new Map();
@@ -622,9 +629,9 @@ export class ExternalServicesRegistry {
     // effectiveServiceIds() is the one place that decides whether a registered
     // adapter may receive events. Every dispatch path (phase, activity, case
     // and global hooks), every listing and the descriptor lookups go through
-    // it. Callbacks are the one exception: they need a job of their service,
-    // whatever the policy, and may only target that job's destination
-    // (dispatchServiceHook).
+    // it. Callbacks are the one exception: one that matches a job goes to the
+    // job's destination whatever the policy; one that matches no job is checked
+    // against its destination session's pinned version (dispatchServiceHook).
     //
     // - A production adapter passes when every AI Additions service in its
     //   `requires` is in `policyVersion.allowedServiceIds` and a usable AI
@@ -794,8 +801,8 @@ export class ExternalServicesRegistry {
     }
 
     // Callback callers are authorized for every registered adapter, usable or
-    // not; dispatchServiceHook then delivers a callback only when it matches
-    // an existing job of that service and stays inside that job's target.
+    // not; dispatchServiceHook then decides where, if anywhere, the callback
+    // may be delivered.
     authorizeCallbackCaller(serviceId, authContext) {
         const service = this.services.get(serviceId);
         if (!service) {
@@ -951,19 +958,29 @@ export class ExternalServicesRegistry {
         });
     }
 
-    // Delivers an inbound callback to its adapter, only for a job that already
-    // exists for that service (assertCallbackForExistingJob, #815), and only
-    // when the payload's target stays inside that job
-    // (assertCallbackTargetWithinJob). The handler's context carries the job's
-    // session, phase, question, group and user. Work created before its
-    // service stopped being allowed can finish, while unsolicited callbacks
-    // cause no side effects.
+    // Delivers an inbound callback to its adapter (#815). The destination is
+    // decided here, in one place, and handed to the handler as trusted
+    // context; the payload's own ids are only a claim:
+    //
+    // - A callback that matches a job of its service goes to that job's
+    //   destination. Its payload may not target anything else
+    //   (assertCallbackTargetWithinJob). It completes even after the current
+    //   policy removed the service, so work started earlier can finish.
+    // - A callback that matches no job (no correlation id, or a fresh one, as
+    //   in Polyadic's proactive interventions) goes to the destination its
+    //   payload names only when resolveCallbackDestination() verifies it: the
+    //   destination session's pinned policy allows the adapter, its phase is
+    //   active and enables the adapter, and the group or user belongs to it.
+    // - A correlation id of another service's job is refused (409), and so is
+    //   a destination that fails a check; a failed lookup answers 503. No
+    //   handler runs in either case.
     async dispatchServiceHook(hookName, serviceId, context) {
         if (!this.initialized) {
             await this.initialize();
         }
 
-        if (!this.services.has(serviceId)) {
+        const service = this.services.get(serviceId);
+        if (!service) {
             const error = new Error(`Unknown external service: ${serviceId}`);
             error.statusCode = 404;
             throw error;
@@ -986,23 +1003,26 @@ export class ExternalServicesRegistry {
             return { resultRecord, outcomes: [] };
         }
 
-        // Every callback needs a persisted job of its service, whatever the
-        // current policy allows: the job proves the work was dispatched under
-        // the destination session's pinned version. A genuine job still
-        // completes after a newer version removes its service.
-        assertCallbackForExistingJob(resultRecord, serviceId);
+        assertCallbackCorrelation(resultRecord, serviceId);
 
-        // The destination is the job's, never the payload's: a payload that
-        // names another session, phase, question, group or user is refused
-        // before any handler runs.
-        const job = resultRecord.job ?? { id: resultRecord.job_id };
+        let job = null;
+        let destination;
         try {
             const resolveTarget = this.callbackTargetResolvers.get(serviceId);
-            assertCallbackTargetWithinJob(
-                job,
-                resolveTarget ? resolveTarget(context.requestPayload ?? {}) : null,
-                serviceId
-            );
+            const target = resolveTarget ? resolveTarget(context.requestPayload ?? {}) : null;
+
+            if (resultRecord.job_id) {
+                job = resultRecord.job ?? { id: resultRecord.job_id };
+                assertCallbackTargetWithinJob(job, target, serviceId);
+                destination = job;
+            } else {
+                destination = await this._resolveCallbackDestination({ service, target }, {
+                    isAllowedByPolicy:       version => this.isAllowedByPolicy(service, version),
+                    policy:                  this._aiServicePolicy,
+                    isAiAdditionsConfigured: this._isAiAdditionsConfigured,
+                    ...this._callbackDestinationLookups,
+                });
+            }
         } catch (error) {
             await this._jobsService
                 .updateResult(resultRecord.id, { status: RESULT_STATUS.FAILED })
@@ -1018,13 +1038,14 @@ export class ExternalServicesRegistry {
         const outcomes = await Promise.allSettled(selectedSubscribers.map(async ({ handler }) => {
             const serviceContext = {
                 ...context,
-                // The trusted destination, from the job (#815).
-                sessionId:            job.sessionId  ?? null,
-                phaseId:              job.phaseId    ?? null,
-                questionId:           job.questionId ?? null,
-                groupId:              job.groupId    ?? null,
-                userId:               job.userId     ?? null,
+                // The trusted destination: the job's, or the verified one.
+                sessionId:            destination.sessionId  ?? null,
+                phaseId:              destination.phaseId    ?? null,
+                questionId:           destination.questionId ?? null,
+                groupId:              destination.groupId    ?? null,
+                userId:               destination.userId     ?? null,
                 job,
+                callbackDestination:  destination,
                 serviceId,
                 jobId:                resultRecord?.job_id      ?? null,
                 resultId:             resultRecord?.id          ?? null,

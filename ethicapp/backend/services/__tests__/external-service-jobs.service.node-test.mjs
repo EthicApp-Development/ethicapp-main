@@ -199,7 +199,7 @@ test("createResult: returns the matched job's context as the trusted destination
 });
 
 test("createResult: no job context without a matching job", async () => {
-    const db  = makeDbQueue([], [{ id: RESULT_UUID, job_id: null }]);
+    const db  = makeDbQueue([], [], [{ id: RESULT_UUID, job_id: null }]);
     const svc = new ExternalServiceJobsService({ dbQuery: db });
 
     const result = await svc.createResult({
@@ -209,6 +209,7 @@ test("createResult: no job context without a matching job", async () => {
     });
 
     assert.equal(result.job, undefined);
+    assert.equal(result.correlates_other_service, undefined);
 });
 
 test("createResult: propagates job context to result when caller omits it", async () => {
@@ -274,9 +275,10 @@ test("createResult: caller-provided context takes precedence over job context", 
 });
 
 test("createResult: cross-service correlationId — unknown-correlation, no job update", async () => {
-    // Job lookup returns empty when service_id doesn't match, even if UUID exists elsewhere.
+    // Job lookup returns empty when service_id doesn't match; the second lookup
+    // finds the UUID under another service, which the result reports (#815).
     const resultRow = { id: RESULT_UUID, job_id: null, status: RESULT_STATUS.UNKNOWN_CORRELATION };
-    const db  = makeDbQueue([], [resultRow]);
+    const db  = makeDbQueue([], [{ "?column?": 1 }], [resultRow]);
     const svc = new ExternalServiceJobsService({ dbQuery: db });
 
     const result = await svc.createResult({
@@ -286,8 +288,10 @@ test("createResult: cross-service correlationId — unknown-correlation, no job 
     });
 
     assert.equal(result.status, RESULT_STATUS.UNKNOWN_CORRELATION);
-    assert.equal(db.calls.length, 2);
+    assert.equal(result.correlates_other_service, true);
+    assert.equal(db.calls.length, 3);
     assert.equal(db.calls[0].params[1], "argumentation-tutor-system");
+    assert.deepEqual(db.calls[1].params, [JOB_UUID]);
 });
 
 test("createResult: unknown correlationId — unknown-correlation, no job update", async () => {
@@ -297,8 +301,9 @@ test("createResult: unknown correlationId — unknown-correlation, no job update
         correlation_id: "unknown-id",
         status:         RESULT_STATUS.UNKNOWN_CORRELATION,
     };
-    // call 0: job lookup returns nothing; call 1: insert result
-    const db  = makeDbQueue([], [resultRow]);
+    // call 0: job lookup returns nothing; call 1: no job of any service;
+    // call 2: insert result
+    const db  = makeDbQueue([], [], [resultRow]);
     const svc = new ExternalServiceJobsService({ dbQuery: db });
 
     const result = await svc.createResult({
@@ -309,8 +314,9 @@ test("createResult: unknown correlationId — unknown-correlation, no job update
 
     assert.equal(result.status, RESULT_STATUS.UNKNOWN_CORRELATION);
     assert.equal(result.job_id, null);
-    assert.equal(db.calls.length, 2);
-    assert.equal(db.calls[1].params[4], RESULT_STATUS.UNKNOWN_CORRELATION);
+    assert.equal(result.correlates_other_service, undefined);
+    assert.equal(db.calls.length, 3);
+    assert.equal(db.calls[2].params[4], RESULT_STATUS.UNKNOWN_CORRELATION);
 });
 
 test("createResult: null correlationId — skips job lookup, unknown-correlation", async () => {

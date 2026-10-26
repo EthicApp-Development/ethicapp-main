@@ -61,6 +61,7 @@ async function createResultLikeTheJobsService({ correlationId, serviceId }) {
         service_id: serviceId,
         status:     matches ? "callback_received" : "unknown_correlation",
         ...(matches ? { job: { id: correlationId, ...context } } : {}),
+        ...(stored && !matches ? { correlates_other_service: true } : {}),
     };
 }
 
@@ -95,12 +96,53 @@ function makePolicy({ currentVersionId = 2, failWith = null } = {}) {
 const HOOKS = ["phase-started", "student-response-submitted", "case-created", "callback-received"];
 const SERVICE_IDS = ["svc-production", "svc-both", "svc-development"];
 
+// Sessions 10 (pinned to version 2) and 11 (pinned to version 1) are both
+// launched and in progress on their phase 2, which has group 3 and in which
+// user 5 takes part. Phase 2's design enables svc-production and
+// svc-development.
+function makeDestinationLookups({
+    state = {},
+    enabledServiceIds = ["svc-production", "svc-development"],
+    failPhaseState = false,
+    failDesign = false,
+} = {}) {
+    const reads = [];
+    return {
+        reads,
+        async loadPhaseState({ sessionId, phaseId, groupId, userId }) {
+            reads.push(["state", sessionId, phaseId]);
+            if (failPhaseState) {
+                throw new Error("database unavailable");
+            }
+            if (![10, 11].includes(sessionId) || phaseId !== 2) {
+                return null;
+            }
+            return {
+                current_stage:     2,
+                status:            2,
+                launched:          true,
+                group_exists:      groupId === 3,
+                user_participates: userId === 5,
+                ...state,
+            };
+        },
+        async loadPhaseExternalServices(phaseId) {
+            reads.push(["design", phaseId]);
+            if (failDesign) {
+                throw new Error("database unavailable");
+            }
+            return { enabledServiceIds, configurations: {} };
+        },
+    };
+}
+
 function makeRegistry({
     developmentAdapters = true,
     createResult = createResultLikeTheJobsService,
     policy = makePolicy(),
     connected = true,
     isAiAdditionsConfigured = async () => connected,
+    callbackDestinationLookups = makeDestinationLookups(),
 } = {}) {
     const createdJobs = [];
     const createdResults = [];
@@ -110,6 +152,7 @@ function makeRegistry({
         developmentAdapters,
         aiServicePolicy: policy,
         isAiAdditionsConfigured,
+        callbackDestinationLookups,
         jobsService:     {
             createJob:       async args => { createdJobs.push(args); return { id: JOB_UUID }; },
             updateJobStatus: async (jobId, status) => { jobStatuses.push({ jobId, status }); },
@@ -551,6 +594,48 @@ function withPublishingHandler(registry) {
     return published;
 }
 
+// ─── callbacks without a job (proactive interventions, option A) ─────────────
+
+const FRESH_UUID = "c1d2e3f4-0000-4000-8000-0000000000ff";
+
+function proactive(room = "ethicapp-s10-p2-g3") {
+    return { correlationId: FRESH_UUID, requestPayload: { room, evaluations: [{}] } };
+}
+
+test("callbacks: a proactive callback into an allowed, active destination is delivered", async () => {
+    const { registry, policy } = makeRegistry({ policy: makePolicy({ currentVersionId: 2 }) });
+    const published = withPublishingHandler(registry);
+    let seen = null;
+    const handler = registry.hookSubscribers.get("callback-received")[0].handler;
+    registry.hookSubscribers.get("callback-received")[0].handler = async (context, tools) => {
+        seen = context;
+        return handler(context, tools);
+    };
+
+    const { outcomes } = await registry.dispatchServiceHook(
+        "callback-received", "svc-production", { ...proactive(), sessionId: 99 }
+    );
+
+    assert.deepEqual(outcomes.map(outcome => outcome.status), ["fulfilled"]);
+    assert.deepEqual(published.map(({ room }) => room), ["ethicapp-s10-p2-g3"]);
+    assert.deepEqual(
+        { sessionId: seen.sessionId, phaseId: seen.phaseId, groupId: seen.groupId, job: seen.job },
+        { sessionId: 10, phaseId: 2, groupId: 3, job: null },
+        "the verified destination, not the request's"
+    );
+    assert.ok(policy.reads.includes("session:10"));
+    assert.equal(policy.reads.includes("current"), false, "never the current version");
+});
+
+test("callbacks: a running activity keeps its policy for proactive callbacks after the current version removes the service", async () => {
+    const { registry } = makeRegistry({ policy: makePolicy({ currentVersionId: 3 }) });
+    const published = withPublishingHandler(registry);
+
+    await registry.dispatchServiceHook("callback-received", "svc-production", proactive());
+
+    assert.deepEqual(published.map(({ room }) => room), ["ethicapp-s10-p2-g3"]);
+});
+
 test("callbacks: a session pinned to version 1 gets nothing without a job, even when the current version allows the service", async () => {
     for (const correlationId of [undefined, UNKNOWN_UUID]) {
         const { registry, createdResults } = makeRegistry({ policy: makePolicy({ currentVersionId: 2 }) });
@@ -567,6 +652,95 @@ test("callbacks: a session pinned to version 1 gets nothing without a job, even 
         assert.equal(createdResults.length, 1, "the callback is still recorded");
     }
 });
+
+const REFUSED_DESTINATIONS = {
+    "an ended phase (activity no longer in progress)": {
+        lookups: makeDestinationLookups({ state: { status: 3 } }),
+    },
+    "a phase that is not the session's current one": {
+        lookups: makeDestinationLookups({ state: { current_stage: 7 } }),
+    },
+    "a session that was not launched": {
+        lookups: makeDestinationLookups({ state: { launched: false } }),
+    },
+    "a phase outside the session":                      { room: "ethicapp-s10-p9-g3" },
+    "a phase whose design does not enable the adapter": {
+        lookups: makeDestinationLookups({ enabledServiceIds: ["svc-development"] }),
+    },
+    "a group that does not exist in the phase": { room: "ethicapp-s10-p2-g8" },
+    "a payload that names no destination":      { room: "not-a-room" },
+    "a session with no pinned version":         { room: "ethicapp-s77-p2-g3" },
+};
+
+for (const [label, { lookups, room }] of Object.entries(REFUSED_DESTINATIONS)) {
+    test(`callbacks: a proactive callback into ${label} is rejected (409)`, async () => {
+        const updatedResults = [];
+        const { registry } = makeRegistry({
+            ...(lookups ? { callbackDestinationLookups: lookups } : {}),
+        });
+        registry._jobsService.updateResult = async (id, update) => { updatedResults.push(update.status); };
+        const published = withPublishingHandler(registry);
+
+        await assert.rejects(
+            () => registry.dispatchServiceHook("callback-received", "svc-production", proactive(room)),
+            { statusCode: 409 }
+        );
+        assert.deepEqual(published, []);
+        assert.deepEqual(updatedResults, ["failed"]);
+    });
+}
+
+test("callbacks: an adapter without getCallbackTarget gets no callback without a job", async () => {
+    const { registry, called } = makeRegistry();
+    registry.callbackTargetResolvers.delete("svc-production");
+
+    await assert.rejects(
+        () => registry.dispatchServiceHook("callback-received", "svc-production", proactive()),
+        { statusCode: 409 }
+    );
+    assert.deepEqual(called, []);
+});
+
+const FAILED_LOOKUPS = {
+    "the pinned version": {
+        policy: makePolicy({ failWith: new Error("database unavailable") }),
+    },
+    "the connection": {
+        isAiAdditionsConfigured: async () => { throw new Error("database unavailable"); },
+    },
+    "the phase state": {
+        callbackDestinationLookups: makeDestinationLookups({ failPhaseState: true }),
+    },
+    "the phase design": {
+        callbackDestinationLookups: makeDestinationLookups({ failDesign: true }),
+    },
+};
+
+for (const [label, options] of Object.entries(FAILED_LOOKUPS)) {
+    test(`callbacks: a failed lookup of ${label} publishes nothing (503)`, quietly(async () => {
+        const { registry } = makeRegistry(options);
+        const published = withPublishingHandler(registry);
+
+        await assert.rejects(
+            () => registry.dispatchServiceHook("callback-received", "svc-production", proactive()),
+            { statusCode: 503 }
+        );
+        assert.deepEqual(published, []);
+    }));
+}
+
+test("callbacks: without a connection a proactive callback is refused as not_configured", async () => {
+    const { registry } = makeRegistry({ connected: false });
+    const published = withPublishingHandler(registry);
+
+    await assert.rejects(
+        () => registry.dispatchServiceHook("callback-received", "svc-production", proactive()),
+        { statusCode: 503, code: "not_configured" }
+    );
+    assert.deepEqual(published, []);
+});
+
+// ─── callbacks that match a job ──────────────────────────────────────────────
 
 test("callbacks: a correlation id of another service's job is rejected", async () => {
     const { registry } = makeRegistry();
@@ -688,9 +862,9 @@ test("callbacks: a failed job lookup publishes nothing (503)", async () => {
     }
 });
 
-// Development adapters follow the same rule: the mocks never receive HTTP
-// callbacks, so requiring a job costs them nothing.
-test("callbacks: development adapters also need a job of their own", async () => {
+// Development adapters follow the same rules. The mocks never receive HTTP
+// callbacks, so this costs them nothing.
+test("callbacks: development adapters follow the same rules", async () => {
     const without = makeRegistry();
     await assert.rejects(
         () => without.registry.dispatchServiceHook("callback-received", "svc-development", {}),
@@ -704,6 +878,13 @@ test("callbacks: development adapters also need a job of their own", async () =>
     );
     assert.equal(outcomes.length, 1);
     assert.deepEqual(withJob.called, ["svc-development:callback-received"]);
+
+    // With a target, a development adapter is checked like any other, but it
+    // needs no connection, as for dispatch.
+    const proactiveMock = makeRegistry({ connected: false });
+    proactiveMock.registry.callbackTargetResolvers.set("svc-development", getCallbackTarget);
+    await proactiveMock.registry.dispatchServiceHook("callback-received", "svc-development", proactive());
+    assert.deepEqual(proactiveMock.called, ["svc-development:callback-received"]);
 });
 
 test("callbacks: 404 for an adapter that is not registered", async () => {

@@ -73,35 +73,57 @@ them. Saving a design that enables one answers with a `not_allowed` warning for
 it, and launching an activity lists them in `servicesNotRunning` (shown to the
 teacher as a notice on the activity dashboard). Neither is an error.
 
-Callbacks are the one exception to the gate: they are not checked against any
-policy version, because the job they belong to was dispatched under the right
-one. Instead, `POST /external-services/callbacks` runs a handler only when:
+Callbacks are the one exception to the gate. `POST /external-services/callbacks`
+decides the destination of each callback in `dispatchServiceHook`, and hands it
+to the handler as trusted context (`sessionId`, `phaseId`, `questionId`,
+`groupId`, `userId`, plus `context.job` or `context.callbackDestination`),
+never the request's own values:
 
-1. `correlationId` matches a persisted job of that same service
-   (`assertCallbackForExistingJob`). This holds for every adapter, development
-   ones included, whatever the current policy allows; the mocks never receive
-   HTTP callbacks, so it costs them nothing. Without a matching job the result
-   is recorded, no handler runs, and the endpoint answers `409`; when the
-   result or job lookup fails it answers `503`. Without a connection the
-   middleware already answers `503 not_configured`.
-2. The destination the payload names stays inside that job
-   (`assertCallbackTargetWithinJob`). An adapter that publishes callbacks
-   exports `getCallbackTarget(requestPayload)`, returning the `sessionId`,
-   `phaseId`, `questionId`, `groupId` and `userId` the payload targets; each
-   field it names must equal the job's, and a job without that field accepts
-   no target for it. Otherwise the result is marked failed and the endpoint
-   answers `409`.
-   - Polyadic: the room `ethicapp-s<session>-p<phase>-g<group>` (its callbacks
-     echo the `chat-message-received` job id).
-   - Argumentation Tutor and the mock response review: the `sessionId`,
-     `phaseId`, `questionId` and `userId` their feedback is published to
-     (the `student-response-submitted` job).
-   - Case Analyst: none; its callback handler only records the result.
+1. **The callback matches a job of its service** (`correlationId`). It goes to
+   that job's destination, whatever the current policy allows, so work started
+   earlier can finish after its service is removed. The destination its payload
+   names (the adapter's `getCallbackTarget(requestPayload)`) must stay inside
+   the job (`assertCallbackTargetWithinJob`): a field it names must equal the
+   job's, and a job without that field accepts none. Otherwise `409`.
+2. **The callback matches no job** (no correlation id, or a fresh one: Polyadic
+   generates a new one for every proactive intervention, such as session start,
+   timer ticks, inactivity or window events). It is accepted only when
+   `resolveCallbackDestination()` (`helpers/callback-destination.js`) verifies
+   the destination the payload names:
+   - the adapter exports `getCallbackTarget` and names a complete target: a
+     session and a phase, plus the group or the user when its target has them;
+   - the destination session's **pinned** policy version allows the adapter
+     (never the current version), and a connection exists for production
+     adapters;
+   - the session was launched, the phase is its current phase and the activity
+     is in progress;
+   - the phase's design (the locked design, `getPhaseExternalServices`, as for
+     phase hooks) enables the adapter;
+   - the group belongs to that phase (`teams`), and the user takes part in the
+     session (`sesusers`).
 
-The handler's context carries the job's destination (`sessionId`, `phaseId`,
-`questionId`, `groupId`, `userId`) and the job itself (`context.job`), never
-values from the request. A genuine job still completes after a newer policy
-version removes its service, so work started earlier can finish.
+   Otherwise `409`. The verified destination has no `questionId`; Polyadic
+   resolves it from the phase.
+3. A correlation id of **another service's job** is refused with `409`. A
+   failed lookup (the result or job, the pinned version, the connection, the
+   phase state or the design) answers `503`, so the caller may retry. Without a
+   connection the middleware already answers `503 not_configured`.
+
+No handler runs when a callback is refused; the result is recorded and marked
+failed. Development adapters follow the same rules (they need no connection,
+as for dispatch); the mocks never receive HTTP callbacks.
+
+Targets per adapter:
+- Polyadic: the room `ethicapp-s<session>-p<phase>-g<group>`.
+- Argumentation Tutor and the mock response review: the `sessionId`,
+  `phaseId`, `questionId` and `userId` their feedback is published to.
+- Case Analyst: none. Its handler only records the result, so it only accepts
+  callbacks for its jobs.
+
+Residual risk: a Polyadic client that holds valid credentials can still name
+another room, as long as that room's session allows Polyadic, its phase is
+active and enables it, and the group exists. Room-scoped, long-lived jobs whose
+correlation id Polyadic echoes ("option B") are a planned follow-up.
 
 The editor does not offer services that are not usable (#686), so seeded
 activities that reference the mocks still load where the mocks are not
@@ -595,9 +617,10 @@ authenticated by `middleware/external-services-callback-auth.middleware.js`
 }
 ```
 
-- `serviceId` is required and must match a registered catalog entry.
-  `correlationId` must match one of that service's existing jobs, and the
-  payload may only target that job's destination (see "Usability", #815).
+- `serviceId` is required and must match a registered catalog entry. A
+  callback that matches one of that service's jobs goes to the job's
+  destination; one that matches no job is accepted only for a verified
+  destination (see "Usability", #815).
 - `eventType` defaults to `"result"`.
 - `correlationId` is matched against `external_service_jobs.id`; the response
   reports `correlationStatus: "matched"` or `"unknown"`.

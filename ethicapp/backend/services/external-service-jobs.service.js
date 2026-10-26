@@ -133,6 +133,7 @@ export class ExternalServiceJobsService {
         let jobId        = null;
         let jobStatus    = null;
         let jobContext   = null;
+        let correlatesOtherService = false;
         let resultStatus = RESULT_STATUS.UNKNOWN_CORRELATION;
 
         if (correlationId) {
@@ -142,6 +143,16 @@ export class ExternalServiceJobsService {
                  WHERE id::text = $1 AND service_id = $2`,
                 [correlationId, serviceId]
             );
+            if (matchRows.length === 0) {
+                // A correlation id that names another service's job is
+                // refused by the registry; an unknown one may be a proactive
+                // callback (#815).
+                const otherRows = await this._db(
+                    "SELECT 1 FROM external_service_jobs WHERE id::text = $1",
+                    [correlationId]
+                );
+                correlatesOtherService = otherRows.length > 0;
+            }
             if (matchRows.length > 0) {
                 const job    = matchRows[0];
                 jobId        = job.id;
@@ -202,6 +213,9 @@ export class ExternalServiceJobsService {
 
         if (result && jobContext) {
             result.job = jobContext;
+        }
+        if (result && correlatesOtherService) {
+            result.correlates_other_service = true;
         }
 
         if (result && jobStatus !== null) {
