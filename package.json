@@ -25,6 +25,7 @@
     "anonymization:maintenance": "./scripts/student-anonymization-maintenance.sh",
     "build:ethicapp-assets": "./scripts/build-ethicapp-assets.sh",
     "test:nginx-edge": "./scripts/test-nginx-edge.sh",
+    "test:nginx-config": "node --test \"nginx/**/*.node-test.mjs\"",
     "test:schemas": "node --test \"canonical-schemas/**/*.node-test.mjs\"",
     "publish:ghcr": "./scripts/ghcr-build-push.sh"
   },

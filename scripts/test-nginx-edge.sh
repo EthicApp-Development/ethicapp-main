@@ -121,6 +121,14 @@ run_cases() {
     'X-Request-Id: edge-test-0001' "${api[@]}" --header 'X-Request-Id: edge-test-0001' "$base/home"
   check "outage page shows the request id" 502 text/html 'edge-test-0002' \
     "${nav[@]}" "${valid[@]}" --header 'X-Request-Id: edge-test-0002' "$base/home"
+
+  # Internal-only ethicapp routes (#816): 404 at the edge even with a session,
+  # never proxied (ethicapp is down here, so a proxied request would be 502).
+  check "internal AI services catalog is not served" 404 text/html 'X-Request-Id:' \
+    "${api[@]}" "${valid[@]}" "$base/api/admin/ai-services/catalog?locale=es_CL"
+  check "internal AI connection test is not served" 404 text/html 'X-Request-Id:' \
+    "${api[@]}" "${valid[@]}" --request POST --header 'Content-Type: application/json' \
+    --data '{"baseUrl":"http://ai.example.org"}' "$base/api/admin/ai-services/connection-test"
 }
 
 start_edge() {
