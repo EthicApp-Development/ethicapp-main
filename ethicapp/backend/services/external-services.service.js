@@ -146,8 +146,8 @@ function normalizeText(value) {
 
 // `descriptor` links a service to the capability descriptor its AI service
 // publishes (#687, #725). The catalog declares only its `path`, the descriptor
-// route relative to AI_ADDITIONS_BASE_URL: an absolute path without host, query
-// or `..` segments. Its `serviceId`, the descriptor's `service.id`, is the one AI
+// route relative to the AI Additions connection's base URL (#814): an absolute
+// path without host, query or `..` segments. Its `serviceId`, the descriptor's `service.id`, is the one AI
 // Additions service the adapter requires (#812). It may differ from the catalog
 // id: ids are mapped, not renamed, so stored designs and jobs keep theirs.
 function normalizeDescriptor(descriptor, requires, serviceId) {
@@ -164,7 +164,7 @@ function normalizeDescriptor(descriptor, requires, serviceId) {
     if (requires.length !== 1 || !isValidPath) {
         console.warn(
             `[external-services] Ignoring invalid descriptor in ${serviceId}: expected `
-            + "{ path } with an absolute path relative to AI_ADDITIONS_BASE_URL, and "
+            + "{ path } with an absolute path relative to the AI Additions base URL, and "
             + "exactly one service in requires."
         );
         return null;
@@ -311,6 +311,7 @@ export class ExternalServicesRegistry {
         this._capabilityDescriptors = capabilityDescriptors ?? new CapabilityDescriptorsClient({
             getDescriptorLink: serviceId => this.getServiceDescriptor(serviceId),
             requestJson:       (pathname, options) => aiAdditionsClient.requestJson(pathname, options),
+            getConnectionKey:  () => aiAdditionsClient.getConnectionFingerprint(),
             now,
         });
     }

@@ -399,23 +399,83 @@ function jsonResponse(body, status = 200) {
 function makeAiAdditionsClient(fetchImpl, extra = {}) {
     return new AiAdditionsClient({
         env: {
-            AI_ADDITIONS_BASE_URL:               "http://ai.local",
             AI_ADDITIONS_KEYCLOAK_CLIENT_ID:     "ethicapp-platform",
             AI_ADDITIONS_KEYCLOAK_CLIENT_SECRET: "secret",
         },
+        getConnection:   async () => ({ baseUrl: "http://ai.local", keycloakPublicUrl: null }),
+        connectionTtlMs: 0,
         fetchImpl,
         ...extra,
     });
 }
 
-function clientOver(aiAdditionsClient) {
+// Wired like the registry does (services/external-services.service.js).
+function clientOver(aiAdditionsClient, extra = {}) {
     return new CapabilityDescriptorsClient({
         getDescriptorLink: () => LINK,
         requestJson:       (path, options) => aiAdditionsClient.requestJson(path, options),
+        getConnectionKey:  () => aiAdditionsClient.getConnectionFingerprint(),
         timeoutMs:         2500,
         logger:            makeLogger(),
+        ...extra,
     });
 }
+
+test("through AiAdditionsClient: without a connection the descriptor is unavailable and nothing is requested", async () => {
+    const aiAdditions = makeAiAdditionsClient(async (url) => {
+        throw new Error(`no request may leave the host, got ${url}`);
+    }, { getConnection: async () => null });
+
+    const configuration = await clientOver(aiAdditions).getInstanceConfiguration("svc", "en_US");
+
+    assert.deepEqual(configuration, { available: false, reason: "not_configured" });
+});
+
+test("through AiAdditionsClient: a changed or removed connection drops cached descriptors", async () => {
+    let connection = { baseUrl: "http://first.local" };
+    const serviceCalls = [];
+    const aiAdditions = makeAiAdditionsClient(async (url) => {
+        if (url.includes("/protocol/openid-connect/token")) {
+            return jsonResponse({ access_token: "token", expires_in: 300 });
+        }
+        serviceCalls.push(url);
+        return jsonResponse(makeDescriptor());
+    }, { getConnection: async () => connection });
+    const descriptors = clientOver(aiAdditions);
+
+    assert.equal((await descriptors.getInstanceConfiguration("svc", "en_US")).available, true);
+    assert.equal((await descriptors.getInstanceConfiguration("svc", "en_US")).available, true);
+    assert.deepEqual(serviceCalls, ["http://first.local/polyadic-agent/api/capabilities"]);
+
+    connection = { baseUrl: "http://second.local" };
+    assert.equal((await descriptors.getInstanceConfiguration("svc", "en_US")).available, true);
+    assert.deepEqual(serviceCalls, [
+        "http://first.local/polyadic-agent/api/capabilities",
+        "http://second.local/polyadic-agent/api/capabilities",
+    ]);
+
+    connection = null;
+    assert.deepEqual(await descriptors.getInstanceConfiguration("svc", "en_US"),
+        { available: false, reason: "not_configured" }, "no stale descriptor without a connection");
+
+    connection = { baseUrl: "http://second.local" };
+    assert.equal((await descriptors.getInstanceConfiguration("svc", "en_US")).available, true);
+    assert.equal(serviceCalls.length, 3, "the cache was emptied when the connection was removed");
+});
+
+test("an unreadable connection reports the descriptor unreachable", async () => {
+    const logger = makeLogger();
+    const descriptors = new CapabilityDescriptorsClient({
+        getDescriptorLink: () => LINK,
+        requestJson:       async () => assert.fail("must not request"),
+        getConnectionKey:  async () => { throw new Error("database down"); },
+        logger,
+    });
+
+    assert.deepEqual(await descriptors.getInstanceConfiguration("svc", "en_US"),
+        { available: false, reason: "unreachable" });
+    assert.equal(logger.warnings.length, 1);
+});
 
 test("through AiAdditionsClient: retries once with a new token after a 401", async () => {
     let tokens = 0;

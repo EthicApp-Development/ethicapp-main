@@ -10,8 +10,8 @@ const FACADE_BASE = "http://ai-additions.test:8010";
 
 function makeAiAdditionsClient() {
     return {
-        buildServiceUrl: pathname => `${FACADE_BASE}${pathname}`,
-        requestJson:     async () => { throw new Error("skeleton must not call AI Additions"); },
+        resolveServiceUrl: async (...segments) => `${FACADE_BASE}${segments.join("")}`,
+        requestJson:       async () => { throw new Error("skeleton must not call AI Additions"); },
     };
 }
 
@@ -38,23 +38,8 @@ function makeCallbackRecorder() {
     return { results, callback: async result => { results.push(result); } };
 }
 
-test("getCaseAnalystBaseUrl: prefers the environment override over the facade default", () => {
-    const client = makeAiAdditionsClient();
-    const original = process.env.AI_ADDITIONS_CASE_ANALYST_API_BASE_URL;
-
-    try {
-        delete process.env.AI_ADDITIONS_CASE_ANALYST_API_BASE_URL;
-        assert.equal(getCaseAnalystBaseUrl(client), `${FACADE_BASE}/case-analyst/api/v1`);
-
-        process.env.AI_ADDITIONS_CASE_ANALYST_API_BASE_URL = " http://override.test/api ";
-        assert.equal(getCaseAnalystBaseUrl(client), "http://override.test/api");
-    } finally {
-        if (original === undefined) {
-            delete process.env.AI_ADDITIONS_CASE_ANALYST_API_BASE_URL;
-        } else {
-            process.env.AI_ADDITIONS_CASE_ANALYST_API_BASE_URL = original;
-        }
-    }
+test("getCaseAnalystBaseUrl: the Case Analyst path under the connection's base URL", async () => {
+    assert.equal(await getCaseAnalystBaseUrl(makeAiAdditionsClient()), `${FACADE_BASE}/case-analyst/api/v1`);
 });
 
 test("buildCaseAnalysisRequest: builds client_context and case metadata", () => {

@@ -211,6 +211,64 @@ For the complete operator-facing session variable list, defaults, and
 revocation semantics, see the Browser Session Policy section in
 [`deploy/README.md`](./deploy/README.md#browser-session-policy).
 
+## AI Additions Connection
+
+Where EthicApp reaches AI Additions is data, not configuration (#814, epic
+#810). The **AI Additions connection** is a single database row
+(`ai_additions_connection`) that operators edit in the management console
+(#817). It holds:
+
+- `base_url`: the AI Additions gateway as EthicApp reaches it, either a
+  Docker-internal name or an external HTTPS host;
+- `keycloak_public_url` (optional): the public Keycloak URL AI Additions
+  publishes as its token issuer (its `KEYCLOAK_PUBLIC_URL`), when it differs
+  from `base_url/keycloak`.
+
+From it EthicApp derives every URL: the token endpoint and the JWKS
+(`base_url/keycloak/realms/<realm>/protocol/openid-connect/{token,certs}`), the
+expected callback issuer (`<keycloak_public_url or base_url/keycloak>/realms/<realm>`)
+and each service API (`base_url` plus the service path). EthicApp reads the row
+again every few seconds, so editing or removing it takes effect without a
+restart. **Without the row EthicApp makes no AI call**, and AI Additions
+callbacks are rejected.
+
+The deployment still provides, as environment variables,
+`AI_ADDITIONS_KEYCLOAK_REALM`, `AI_ADDITIONS_KEYCLOAK_CLIENT_ID`,
+`AI_ADDITIONS_KEYCLOAK_CLIENT_SECRET` (secret), `AI_ADDITIONS_KEYCLOAK_SCOPE`,
+`AI_ADDITIONS_HTTP_TIMEOUT_MS`, `AI_ADDITIONS_POLYADIC_AGENTS_AUTHENTICATED`,
+`AI_ADDITIONS_POLYADIC_AGENTS_PIPELINE_TYPE` and the
+`EXTERNAL_SERVICES_CALLBACK_AUTH_*` toggles (`_ENABLED`, `_AUDIENCE`,
+`_CLOCK_TOLERANCE_SECONDS`).
+
+**Upgrade note.** The following variables are removed, with no fallback
+period; delete them from every deployment environment and from the deployment
+repository's contract copies:
+
+- `AI_ADDITIONS_BASE_URL`
+- `AI_ADDITIONS_KEYCLOAK_BASE_URL`
+- `AI_ADDITIONS_KEYCLOAK_TOKEN_URL`
+- `AI_ADDITIONS_POLYADIC_AGENTS_API_BASE_URL`
+- `AI_ADDITIONS_ARGUMENTATION_TUTOR_API_BASE_URL`
+- `AI_ADDITIONS_CASE_ANALYST_API_BASE_URL`
+- `EXTERNAL_SERVICES_CALLBACK_AUTH_ISSUER`
+- `EXTERNAL_SERVICES_CALLBACK_AUTH_JWKS_URL`
+
+After upgrading, an installation that uses AI has none until its operator
+configures the connection in the management console (#817) and allows services
+in the AI service policy. Until the console page ships, insert the row with SQL
+as shown below.
+
+**Local development.** The development Compose stack used to point to AI
+Additions through these variables. Now insert the connection row (until the
+console page exists); for AI Additions running on the host:
+
+```bash
+docker compose exec postgresql psql -U postgres -d ethicapp -c \
+  "INSERT INTO ai_additions_connection (id, base_url) VALUES (1, 'http://host.docker.internal:8010') ON CONFLICT (id) DO UPDATE SET base_url = EXCLUDED.base_url;"
+```
+
+Delete the row (`DELETE FROM ai_additions_connection;`) to stop all AI calls.
+
 ## Publishable Images
 
 The repository can build and publish these project images:

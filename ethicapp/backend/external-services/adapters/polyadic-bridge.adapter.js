@@ -3,7 +3,8 @@ import * as config from "../../config/database.config.js";
 import defaultAiAdditionsClient from "../../services/ai-additions-client.service.js";
 import { plainTextOf } from "../../helpers/rich-text-helper.js";
 
-const DEFAULT_POLYADIC_BASE_PATH = "/polyadic-agent/api";
+// The Polyadic Agents API under the AI Additions connection's base URL (#814).
+export const POLYADIC_API_BASE_PATH = "/polyadic-agent/api";
 
 // The texts teachers read about this service (#723), available even when
 // Polyadic does not respond (#757).
@@ -45,11 +46,6 @@ function readBoolean(value, fallback) {
     }
 
     return String(value).trim().toLowerCase() === "true";
-}
-
-export function getPolyadicApiBaseUrl(client = aiAdditionsClient) {
-    return normalizeText(process.env.AI_ADDITIONS_POLYADIC_AGENTS_API_BASE_URL)
-        || client.buildServiceUrl(DEFAULT_POLYADIC_BASE_PATH);
 }
 
 function isPolyadicAuthenticated() {
@@ -359,7 +355,9 @@ async function requestPolyadicJson(pathname, { method = "GET", body = null } = {
     return aiAdditionsClient.requestJson(pathname, {
         method,
         body,
-        baseUrl:       getPolyadicApiBaseUrl(),
+        basePath:      POLYADIC_API_BASE_PATH,
+        // Unauthenticated calls still need the connection: without one the
+        // client rejects with `not_configured` before any request.
         authenticated: isPolyadicAuthenticated(),
     });
 }
@@ -537,6 +535,9 @@ export async function register({
 
     subscribe("phase-started", async (context, { callback, reportInstantiation }) => {
         const { sessionId, phaseId, serviceConfiguration } = context;
+        // Without an AI Additions connection the job fails with `not_configured`
+        // here, instead of completing with every room silently missing.
+        await aiAdditionsClient.getEndpoints();
         const teamIds = await dependencies.getTeamIdsForPhase(sessionId, phaseId);
         const topicData = await buildTopicForPhase(sessionId, phaseId);
         const createdRooms = new Set();

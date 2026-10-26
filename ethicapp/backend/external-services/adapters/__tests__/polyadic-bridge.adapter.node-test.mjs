@@ -20,8 +20,8 @@ function createHarness({ dependencies = {}, respond = null } = {}) {
     const publishedMessages = [];
 
     const client = {
-        buildServiceUrl(pathname) {
-            return `http://ai.local${pathname}`;
+        async getEndpoints() {
+            return { baseUrl: "http://ai.local" };
         },
         async requestJson(pathname, options) {
             requests.push({ pathname, options });
@@ -120,7 +120,7 @@ test("phase-started creates one Polyadic room per EthicApp group", async () => {
     );
     assert.equal(harness.requests[0].options.method, "POST");
     assert.equal(harness.requests[0].options.authenticated, true);
-    assert.equal(harness.requests[0].options.baseUrl, "http://ai.local/polyadic-agent/api");
+    assert.equal(harness.requests[0].options.basePath, "/polyadic-agent/api");
     assert.equal(harness.requests[0].options.body.pipeline_type, "abogado-del-diablo");
     assert.match(harness.requests[0].options.body.prompt_inicial, /Case text for discussion/);
     assert.match(harness.requests[0].options.body.prompt_inicial, /Should the team intervene/);

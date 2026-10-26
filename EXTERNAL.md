@@ -52,7 +52,7 @@ Each manifest entry declares:
   service (`requires: []`) and register only with
   `EXTERNAL_SERVICES_DEVELOPMENT_ADAPTERS=true`.
 - `descriptor`: `{ path }`, the capability descriptor that the AI service
-  publishes (`GET <path>` under `AI_ADDITIONS_BASE_URL`). Its id is the one
+  publishes (`GET <path>` under the AI Additions connection's `base_url`). Its id is the one
   service in `requires`, mapped to the catalog `id` instead of renamed.
 
 There is no `enabled`: the catalog lists adapters, and whether one may be used
@@ -161,25 +161,47 @@ Repository-owned AI services are expected to be reached through the
 `ethicapp-ai-additions` facade, not through individual service container ports.
 Keycloak is exposed by that facade under the `/keycloak` prefix.
 
-EthicApp configures the facade and Keycloak client through `AI_ADDITIONS_*`
-variables. The default contract is:
+Where the facade is comes from the **AI Additions connection** stored in the
+database (`ai_additions_connection`), edited by operators in the management
+console (#817), not from environment variables (#814). The connection holds
+`base_url` and an optional `keycloak_public_url`. From it EthicApp derives:
 
-- `AI_ADDITIONS_BASE_URL` points to the AI Additions facade.
-- `AI_ADDITIONS_KEYCLOAK_BASE_URL` defaults to
-  `${AI_ADDITIONS_BASE_URL}/keycloak`.
-- `AI_ADDITIONS_KEYCLOAK_REALM` defaults to `ethicapp-ai-additions`.
-- `AI_ADDITIONS_KEYCLOAK_CLIENT_ID` and
-  `AI_ADDITIONS_KEYCLOAK_CLIENT_SECRET` identify the confidential client used by
-  EthicApp.
-- Service-specific adapters use normalized facade paths, for example
-  `/argumentation-tutor/api/v2` or `/polyadic-agent/api`.
+- the token endpoint,
+  `base_url/keycloak/realms/<realm>/protocol/openid-connect/token`;
+- the JWKS URL for callbacks,
+  `base_url/keycloak/realms/<realm>/protocol/openid-connect/certs`;
+- the callback issuer it expects,
+  `<keycloak_public_url or base_url/keycloak>/realms/<realm>`;
+- each service API, `base_url` plus the adapter's normalized facade path, for
+  example `/argumentation-tutor/api/v2` or `/polyadic-agent/api`.
+
+Keycloak is always reached through `base_url`, because the public Keycloak URL
+may not be reachable from inside the EthicApp container; `keycloak_public_url`
+only sets the expected issuer. **Without a connection EthicApp makes no AI
+call**: every call fails with `not_configured` before any request is sent.
+
+The remaining `AI_ADDITIONS_*` variables are:
+
+- `AI_ADDITIONS_KEYCLOAK_REALM`, defaulting to `ethicapp-ai-additions`;
+- `AI_ADDITIONS_KEYCLOAK_CLIENT_ID` and `AI_ADDITIONS_KEYCLOAK_CLIENT_SECRET`,
+  the confidential client used by EthicApp (deployment secrets);
+- `AI_ADDITIONS_KEYCLOAK_SCOPE` and `AI_ADDITIONS_HTTP_TIMEOUT_MS`;
+- `AI_ADDITIONS_POLYADIC_AGENTS_AUTHENTICATED` and
+  `AI_ADDITIONS_POLYADIC_AGENTS_PIPELINE_TYPE`.
+
+In local development, until the console page exists, insert the connection
+row directly; for AI Additions running on the host:
+
+```bash
+docker compose exec postgresql psql -U postgres -d ethicapp -c \
+  "INSERT INTO ai_additions_connection (id, base_url) VALUES (1, 'http://host.docker.internal:8010') ON CONFLICT (id) DO UPDATE SET base_url = EXCLUDED.base_url;"
+```
 
 The shared client obtains and caches client-credentials tokens, attaches Bearer
 authorization headers, and retries once after a `401`. Adapter code should focus
 on translating EthicApp hook context into service-specific requests.
 
-The Polyadic Agents bridge uses `AI_ADDITIONS_POLYADIC_AGENTS_API_BASE_URL`,
-defaulting to `${AI_ADDITIONS_BASE_URL}/polyadic-agent/api`, and creates one
+The Polyadic Agents bridge calls `base_url/polyadic-agent/api` and creates one
 Polyadic REST room per EthicApp session/phase/group. When it creates a room's
 session (#735) it sends:
 
@@ -648,10 +670,12 @@ Environment variables for inbound authentication:
 | Variable | Purpose |
 | --- | --- |
 | `EXTERNAL_SERVICES_CALLBACK_AUTH_ENABLED` | Set to `false` to disable auth in development. Defaults to `true`. |
-| `EXTERNAL_SERVICES_CALLBACK_AUTH_ISSUER` | Keycloak issuer URL. Derived from `AI_ADDITIONS_KEYCLOAK_BASE_URL` and `AI_ADDITIONS_KEYCLOAK_REALM` when unset. |
-| `EXTERNAL_SERVICES_CALLBACK_AUTH_JWKS_URL` | Explicit JWKS URL. Derived from issuer when unset. |
 | `EXTERNAL_SERVICES_CALLBACK_AUTH_AUDIENCE` | Expected `aud` claim. Defaults to `ethicapp-ai-services` (the audience injected by the Keycloak mapper in AI Additions). Leave empty to skip audience check. |
 | `EXTERNAL_SERVICES_CALLBACK_AUTH_CLOCK_TOLERANCE_SECONDS` | Clock skew tolerance. Defaults to `30`. |
+
+The issuer and JWKS URL derive from the AI Additions connection (see "AI
+Additions and Keycloak"). Without a connection, callbacks are rejected with
+`503` and `code: "not_configured"`.
 
 ## Current Limitations
 

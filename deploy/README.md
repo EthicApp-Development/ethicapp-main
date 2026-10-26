@@ -47,6 +47,15 @@ select or edit it, and the variable that chose a manifest is removed (see
 Designs keep the ids of services that cannot be used; they are neither offered
 in the editor nor dispatched.
 
+Where AI Additions is comes from the AI Additions connection stored in the
+database, not from the environment (#814). The URL variables
+(`AI_ADDITIONS_BASE_URL`, `AI_ADDITIONS_KEYCLOAK_BASE_URL`,
+`AI_ADDITIONS_KEYCLOAK_TOKEN_URL`, the three `AI_ADDITIONS_*_API_BASE_URL`,
+`EXTERNAL_SERVICES_CALLBACK_AUTH_ISSUER` and `..._JWKS_URL`) are removed from
+the contract: delete them from every target. The Keycloak client credentials
+stay deployment secrets. Without a stored connection, EthicApp makes no AI
+call. See "AI Additions Connection" in `INSTALL.md`.
+
 ## reCAPTCHA Enterprise
 
 The recommended reCAPTCHA provider for `auth-backend` and `management-console`
