@@ -24,11 +24,12 @@ async function parseResponse(response) {
   return json;
 }
 
-async function getJson(path) {
+async function getJson(path, { signal } = {}) {
   const response = await fetch(`${BASE_PATH}${path}`, {
     method: 'GET',
     credentials: 'include',
-    headers: { Accept: 'application/json' }
+    headers: { Accept: 'application/json' },
+    signal
   });
   return parseResponse(response);
 }
@@ -59,8 +60,8 @@ export function testConnection({ baseUrl, keycloakPublicUrl }) {
   return sendJson('POST', '/connection/test', { baseUrl, keycloakPublicUrl });
 }
 
-export function fetchCatalog(locale) {
-  return getJson(`/catalog?${new URLSearchParams({ locale }).toString()}`);
+export function fetchCatalog(locale, { signal } = {}) {
+  return getJson(`/catalog?${new URLSearchParams({ locale }).toString()}`, { signal });
 }
 
 export function fetchPolicy() {

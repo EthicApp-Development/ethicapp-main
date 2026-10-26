@@ -15,8 +15,7 @@ import ConnectionSection from '../components/ai-services/ConnectionSection.jsx';
 import HistorySection from '../components/ai-services/HistorySection.jsx';
 import ServicesSection from '../components/ai-services/ServicesSection.jsx';
 import { serviceNamesById } from '../components/ai-services/aiServicesFormat.js';
-
-const IDLE_CATALOG = { loading: false, result: null };
+import { IDLE_CATALOG, connectionKeyOf, createCatalogLoader } from '../components/ai-services/catalogLoader.js';
 
 // AI services page (epic #810): the AI Additions connection, the allowed
 // services saved as append-only policy versions, and their history. This
@@ -29,15 +28,14 @@ function AiServicesPage() {
   const [policy, setPolicy] = useState({ current: null, versions: [] });
   const [catalogState, setCatalogState] = useState(IDLE_CATALOG);
   const [policySaved, setPolicySaved] = useState(false);
+  const [catalogLoader] = useState(() => createCatalogLoader({ fetchCatalog, setState: setCatalogState }));
 
-  const loadCatalog = useCallback(async () => {
-    setCatalogState({ loading: true, result: null });
-    try {
-      setCatalogState({ loading: false, result: await fetchCatalog(locale) });
-    } catch {
-      setCatalogState({ loading: false, result: { ok: false, error: 'generic' } });
-    }
-  }, [locale]);
+  const loadCatalogFor = useCallback((targetConnection) => catalogLoader.load({
+    connectionKey: connectionKeyOf(targetConnection),
+    locale
+  }), [catalogLoader, locale]);
+
+  useEffect(() => () => catalogLoader.dispose(), [catalogLoader]);
 
   useEffect(() => {
     let active = true;
@@ -51,7 +49,7 @@ function AiServicesPage() {
         setPolicy(loadedPolicy);
         setLoading(false);
         if (loadedConnection) {
-          loadCatalog();
+          loadCatalogFor(loadedConnection);
         }
       })
       .catch(() => {
@@ -64,20 +62,20 @@ function AiServicesPage() {
     return () => {
       active = false;
     };
-  }, [loadCatalog, t]);
+  }, [loadCatalogFor, t]);
 
   const handleSaveConnection = useCallback(async (values) => {
     const saved = await saveConnection(values);
     setConnection(saved);
-    loadCatalog();
+    loadCatalogFor(saved);
     return saved;
-  }, [loadCatalog]);
+  }, [loadCatalogFor]);
 
   const handleRemoveConnection = useCallback(async () => {
     await removeConnection();
     setConnection(null);
-    setCatalogState(IDLE_CATALOG);
-  }, []);
+    catalogLoader.reset();
+  }, [catalogLoader]);
 
   const handleSavePolicy = useCallback(async (input) => {
     await createPolicyVersion(input);
@@ -85,9 +83,14 @@ function AiServicesPage() {
     setPolicySaved(true);
   }, []);
 
+  // Defense in depth: show a catalog only for the connection it was read for.
+  const currentCatalog = catalogState.connectionKey === connectionKeyOf(connection)
+    ? catalogState
+    : IDLE_CATALOG;
+
   const namesById = useMemo(
-    () => serviceNamesById(catalogState.result?.ok ? catalogState.result.services : []),
-    [catalogState.result]
+    () => serviceNamesById(currentCatalog.result?.ok ? currentCatalog.result.services : []),
+    [currentCatalog.result]
   );
 
   return (
@@ -127,10 +130,10 @@ function AiServicesPage() {
           <ServicesSection
             key={policy.current?.id ?? 'none'}
             hasConnection={Boolean(connection)}
-            catalogState={catalogState}
+            catalogState={currentCatalog}
             currentVersion={policy.current}
             onSave={handleSavePolicy}
-            onRetryCatalog={loadCatalog}
+            onRetryCatalog={() => loadCatalogFor(connection)}
           />
           <HistorySection versions={policy.versions} namesById={namesById} />
         </>
