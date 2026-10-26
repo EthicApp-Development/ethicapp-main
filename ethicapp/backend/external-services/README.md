@@ -51,8 +51,13 @@ policy gate: an adapter is usable when the policy version in force (the
 session's pinned version, or the current one outside sessions) allows every
 service in its `requires`, and an AI Additions connection is configured.
 
-Callbacks are not gated: `POST /external-services/callbacks` is accepted for
-every registered adapter, so jobs created earlier can still finish.
+Callbacks are the one exception, for jobs that already exist.
+`POST /external-services/callbacks` is delivered to a usable adapter as
+before. For a registered adapter that is not usable, it is delivered only when
+`correlationId` matches a persisted job of that same service, so jobs created
+earlier can still finish. Otherwise the result is recorded, the handler does
+not run, and the endpoint answers `409` (no matching job) or `503` (the result
+or job lookup failed).
 
 Designs keep the ids of services that are not usable; the editor does not offer
 them and nothing is dispatched to them (#686), so seeded activities that
@@ -531,8 +536,9 @@ authenticated by `middleware/external-services-callback-auth.middleware.js`
 }
 ```
 
-- `serviceId` is required and must match a registered catalog entry, usable or
-  not, so jobs created earlier can still finish (#812).
+- `serviceId` is required and must match a registered catalog entry. For a
+  service that is not usable, `correlationId` must also match one of its
+  existing jobs (see "Usability", #812).
 - `eventType` defaults to `"result"`.
 - `correlationId` is matched against `external_service_jobs.id`; the response
   reports `correlationStatus: "matched"` or `"unknown"`.

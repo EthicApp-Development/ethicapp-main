@@ -4,20 +4,45 @@ import { ExternalServicesRegistry } from "../external-services.service.js";
 
 // The usability seam (#812): until the service policy (#815), no production
 // adapter receives events; development adapters do when
-// EXTERNAL_SERVICES_DEVELOPMENT_ADAPTERS is true. Callbacks are not gated.
+// EXTERNAL_SERVICES_DEVELOPMENT_ADAPTERS is true. Callbacks for jobs that
+// already exist are the one exception.
 
-const JOB_UUID    = "c1d2e3f4-0000-4000-8000-000000000021";
-const RESULT_UUID = "c1d2e3f4-0000-4000-8000-000000000022";
+const JOB_UUID       = "c1d2e3f4-0000-4000-8000-000000000021";
+const RESULT_UUID    = "c1d2e3f4-0000-4000-8000-000000000022";
+const OTHER_JOB_UUID = "c1d2e3f4-0000-4000-8000-000000000023";
+const UNKNOWN_UUID   = "c1d2e3f4-0000-4000-8000-000000000024";
 
-function makeRegistry({ developmentAdapters = true } = {}) {
+// Persisted jobs and the service each belongs to.
+const JOBS = new Map([
+    [JOB_UUID, "svc-production"],
+    [OTHER_JOB_UUID, "svc-development"],
+]);
+
+// Like the real createResult(): the correlation id matches a job only when
+// that job belongs to the calling service; the result is recorded either way.
+async function createResultLikeTheJobsService({ correlationId, serviceId }) {
+    const matches = Boolean(correlationId) && JOBS.get(correlationId) === serviceId;
+    return {
+        id:         RESULT_UUID,
+        job_id:     matches ? correlationId : null,
+        service_id: serviceId,
+        status:     matches ? "callback_received" : "unknown_correlation",
+    };
+}
+
+function makeRegistry({
+    developmentAdapters = true,
+    createResult = createResultLikeTheJobsService,
+} = {}) {
     const createdJobs = [];
     const createdResults = [];
+    const jobStatuses = [];
     const registry = new ExternalServicesRegistry({
         developmentAdapters,
         jobsService: {
             createJob:       async args => { createdJobs.push(args); return { id: JOB_UUID }; },
-            updateJobStatus: async () => {},
-            createResult:    async args => { createdResults.push(args); return { id: RESULT_UUID, job_id: JOB_UUID }; },
+            updateJobStatus: async (jobId, status) => { jobStatuses.push({ jobId, status }); },
+            createResult:    async args => { createdResults.push(args); return createResult(args); },
             updateResult:    async () => {},
         },
         capabilityDescriptors: {
@@ -46,15 +71,19 @@ function makeRegistry({ developmentAdapters = true } = {}) {
         callbackAuth: null,
     });
 
+    // Each handler records that it ran (its side effect) and closes its job.
     const called = [];
     for (const hookName of ["phase-started", "case-created", "callback-received"]) {
         registry.hookSubscribers.set(hookName, ["svc-production", "svc-development"].map(serviceId => ({
             serviceId,
-            handler: async () => { called.push(`${serviceId}:${hookName}`); },
+            handler: async (context, { callback }) => {
+                called.push(`${serviceId}:${hookName}`);
+                return callback({ status: "completed" });
+            },
         })));
     }
 
-    return { registry, called, createdJobs, createdResults };
+    return { registry, called, createdJobs, createdResults, jobStatuses };
 }
 
 test("isServiceUsable: production adapters never, development ones with the variable", () => {
@@ -127,17 +156,95 @@ test("listings and descriptors: only usable services are offered", async () => {
     assert.equal(await registry.getServiceInstanceConfiguration("svc-production", "en_US"), null);
 });
 
-test("callbacks: accepted for a registered production adapter that is not usable", async () => {
-    const { registry, called, createdResults } = makeRegistry();
+test("callbacks: an existing job of an unusable production adapter still completes", async () => {
+    const { registry, called, createdResults, jobStatuses } = makeRegistry();
 
     assert.doesNotThrow(() => registry.authorizeCallbackCaller("svc-production", { clientId: "x" }));
-    const { outcomes } = await registry.dispatchServiceHook("callback-received", "svc-production", {
-        correlationId: JOB_UUID,
-    });
+    const { resultRecord, outcomes } = await registry.dispatchServiceHook(
+        "callback-received",
+        "svc-production",
+        { correlationId: JOB_UUID }
+    );
 
-    assert.equal(outcomes.length, 1);
+    assert.equal(resultRecord.job_id, JOB_UUID);
+    assert.deepEqual(outcomes.map(outcome => outcome.status), ["fulfilled"]);
     assert.deepEqual(called, ["svc-production:callback-received"]);
     assert.equal(createdResults[0].serviceId, "svc-production");
+    assert.deepEqual(jobStatuses.map(({ jobId, status }) => ({ jobId, status })), [
+        { jobId: JOB_UUID, status: "completed" },
+    ]);
+});
+
+// An unusable adapter must not act on a callback that matches none of its
+// jobs: its handler never runs, though the result is still recorded.
+const UNMATCHED_CALLBACKS = {
+    "no correlation id":                {},
+    "an unknown correlation id":        { correlationId: UNKNOWN_UUID },
+    "another service's correlation id": { correlationId: OTHER_JOB_UUID },
+};
+
+for (const [label, context] of Object.entries(UNMATCHED_CALLBACKS)) {
+    test(`callbacks: 409 and no handler for an unusable adapter with ${label}`, async () => {
+        const { registry, called, createdResults, jobStatuses } = makeRegistry();
+
+        await assert.rejects(
+            () => registry.dispatchServiceHook("callback-received", "svc-production", context),
+            { statusCode: 409 }
+        );
+
+        assert.deepEqual(called, []);
+        assert.deepEqual(jobStatuses, []);
+        assert.equal(createdResults.length, 1, "the callback is still recorded");
+    });
+}
+
+test("callbacks: 409 when the matched job belongs to another service", async () => {
+    const { registry, called } = makeRegistry({
+        createResult: async () => ({ id: RESULT_UUID, job_id: OTHER_JOB_UUID, service_id: "svc-development" }),
+    });
+
+    await assert.rejects(
+        () => registry.dispatchServiceHook("callback-received", "svc-production", {
+            correlationId: OTHER_JOB_UUID,
+        }),
+        { statusCode: 409 }
+    );
+    assert.deepEqual(called, []);
+});
+
+test("callbacks: 503 and no handler for an unusable adapter when the lookup fails", async () => {
+    for (const createResult of [
+        async () => { throw new Error("database unavailable"); },
+        async () => null,
+    ]) {
+        const { registry, called, jobStatuses } = makeRegistry({ createResult });
+
+        await assert.rejects(
+            () => registry.dispatchServiceHook("callback-received", "svc-production", {
+                correlationId: JOB_UUID,
+            }),
+            { statusCode: 503 }
+        );
+        assert.deepEqual(called, []);
+        assert.deepEqual(jobStatuses, []);
+    }
+});
+
+// Usable services keep the behavior they had before #812: their callbacks
+// are delivered with or without a matching job.
+test("callbacks: a usable adapter still receives callbacks without a matching job", async () => {
+    for (const createResult of [createResultLikeTheJobsService, async () => null]) {
+        const { registry, called } = makeRegistry({ createResult });
+
+        const { outcomes } = await registry.dispatchServiceHook(
+            "callback-received",
+            "svc-development",
+            {}
+        );
+
+        assert.equal(outcomes.length, 1);
+        assert.deepEqual(called, ["svc-development:callback-received"]);
+    }
 });
 
 test("callbacks: 404 for an adapter that is not registered", async () => {

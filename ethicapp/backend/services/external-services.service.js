@@ -255,6 +255,31 @@ function serviceConfigurationFor(serviceConfigurations, serviceId) {
     return isObject ? { ...configuration } : {};
 }
 
+// A callback for a service that is not usable is delivered only when it
+// correlates with a persisted job of that same service: createResult() matches
+// the correlation id against that service's jobs and returns the job_id. The
+// result row stays recorded either way. Throws 503 when the result or job
+// lookup failed (the caller may retry) and 409 without a matching job.
+function assertCallbackForExistingJob(resultRecord, serviceId) {
+    if (!resultRecord) {
+        const error = new Error(
+            `The callback for ${serviceId} could not be matched to a job; try again later.`
+        );
+        error.statusCode = 503;
+        throw error;
+    }
+
+    const belongsToService = resultRecord.service_id === undefined
+        || resultRecord.service_id === serviceId;
+    if (!resultRecord.job_id || !belongsToService) {
+        const error = new Error(
+            `External service ${serviceId} is not in use, and the callback matches none of its jobs.`
+        );
+        error.statusCode = 409;
+        throw error;
+    }
+}
+
 export class ExternalServicesRegistry {
     constructor({
         jobsService,
@@ -530,8 +555,8 @@ export class ExternalServicesRegistry {
     // Whether a registered adapter may receive events right now. Every
     // dispatch path (phase, case and global hooks), every listing and the
     // descriptor lookups ask this method, and nothing else decides it.
-    // Callbacks do not ask it: a callback for a job that already exists is
-    // always accepted, as long as its adapter is registered.
+    // Callbacks are the one exception: a callback for a job that already
+    // exists for its service is always delivered (dispatchServiceHook).
     //
     // Interim rule until #815: no production adapter is usable, since the
     // catalog has no `enabled` any more and the policy does not exist yet.
@@ -576,8 +601,9 @@ export class ExternalServicesRegistry {
         return this.services.get(serviceId) || null;
     }
 
-    // Callbacks are accepted for every registered adapter, usable or not, so
-    // jobs created before a service stopped being usable can still finish.
+    // Callback callers are authorized for every registered adapter, usable or
+    // not; dispatchServiceHook then delivers a callback for an unusable one
+    // only when it matches an existing job of that service.
     authorizeCallbackCaller(serviceId, authContext) {
         const service = this.services.get(serviceId);
         if (!service) {
@@ -713,8 +739,11 @@ export class ExternalServicesRegistry {
         });
     }
 
-    // Delivers an inbound callback to its adapter. Like authorizeCallbackCaller,
-    // it accepts every registered adapter: callbacks are not gated by usability.
+    // Delivers an inbound callback to its adapter. A usable service's handler
+    // always runs, as before. An unusable one's runs only for a job that
+    // already exists for that service (assertCallbackForExistingJob), so work
+    // created before it stopped being usable can finish while unsolicited
+    // callbacks cause no side effects.
     async dispatchServiceHook(hookName, serviceId, context) {
         if (!this.initialized) {
             await this.initialize();
@@ -741,6 +770,10 @@ export class ExternalServicesRegistry {
 
         if (resultRecord?.is_duplicate) {
             return { resultRecord, outcomes: [] };
+        }
+
+        if (!this.isServiceUsable(serviceId)) {
+            assertCallbackForExistingJob(resultRecord, serviceId);
         }
 
         const subscribers = this.hookSubscribers.get(hookName) || [];
