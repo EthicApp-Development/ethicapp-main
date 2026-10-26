@@ -299,11 +299,11 @@ function makeListingRegistry() {
         initialize:               async () => {},
         getServiceUiTranslations: async () => null,
         listServices:             () => [
-            { id: "case-tool",     enabled: true,  scopes: ["case"] },
-            { id: "chat-tool",     enabled: true,  scopes: ["chat"] },
-            { id: "review-tool",   enabled: true,  scopes: ["response", "chat"] },
-            { id: "disabled-case", enabled: false, scopes: ["case"] },
-            { id: "unscoped",      enabled: true,  scopes: [] },
+            { id: "case-tool",     usable: true,  scopes: ["case"] },
+            { id: "chat-tool",     usable: true,  scopes: ["chat"] },
+            { id: "review-tool",   usable: true,  scopes: ["response", "chat"] },
+            { id: "unusable-case", usable: false, scopes: ["case"] },
+            { id: "unscoped",      usable: true,  scopes: [] },
         ],
     };
 }
@@ -312,7 +312,7 @@ function listedIds(body) {
     return body.result.map(({ id }) => id);
 }
 
-test("listExternalServices: no scope lists every enabled service and no disabled one", async () => {
+test("listExternalServices: no scope lists every usable service and no other one", async () => {
     const { status, body } = await listExternalServices({
         scope:    undefined,
         registry: makeListingRegistry(),
@@ -322,12 +322,12 @@ test("listExternalServices: no scope lists every enabled service and no disabled
     assert.deepEqual(listedIds(body), ["case-tool", "chat-tool", "review-tool", "unscoped"]);
 });
 
-test("listExternalServices: an empty list when every service is disabled", async () => {
+test("listExternalServices: an empty list when no service is usable", async () => {
     const registry = {
         ...makeListingRegistry(),
         listServices: () => [
-            { id: "chat-tool",   enabled: false, scopes: ["chat"] },
-            { id: "review-tool", enabled: false, scopes: ["response", "chat"] },
+            { id: "chat-tool",   usable: false, scopes: ["chat"] },
+            { id: "review-tool", usable: false, scopes: ["response", "chat"] },
         ],
     };
 
@@ -339,7 +339,7 @@ test("listExternalServices: an empty list when every service is disabled", async
     }
 });
 
-test("listExternalServices: a scope lists only the enabled services that declare it", async () => {
+test("listExternalServices: a scope lists only the usable services that declare it", async () => {
     const { status, body } = await listExternalServices({
         scope:    "case",
         registry: makeListingRegistry(),
@@ -379,8 +379,8 @@ test("listExternalServices: each listed service carries its UI translations or n
     const registry = {
         ...makeListingRegistry(),
         listServices: () => [
-            { id: "case-tool", enabled: true, scopes: ["case"], ui: { component: "tool-panel" } },
-            { id: "chat-tool", enabled: true, scopes: ["chat"], ui: { component: null } },
+            { id: "case-tool", usable: true, scopes: ["case"], ui: { component: "tool-panel" } },
+            { id: "chat-tool", usable: true, scopes: ["chat"], ui: { component: null } },
         ],
         getServiceUiTranslations: async id => (id === "case-tool" ? translations : null),
     };
@@ -431,7 +431,7 @@ function availableConfiguration(overrides = {}) {
 function describedService(id, descriptorServiceId) {
     return {
         id,
-        enabled:    true,
+        usable:     true,
         scopes:     ["chat"],
         descriptor: descriptorServiceId ? { serviceId: descriptorServiceId } : null,
     };

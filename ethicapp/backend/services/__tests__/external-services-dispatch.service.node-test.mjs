@@ -18,11 +18,24 @@ function makeJobsServiceStub(overrides = {}) {
     };
 }
 
+// Adapters registered by these tests are never imported: each one gets an
+// empty register() and no UI texts.
+const importNoopAdapter = async () => ({
+    register:          async () => {},
+    getUiTranslations: () => null,
+});
+
+// Until the service policy (#815), only development adapters are usable, so
+// the services these tests dispatch to are development ones (#812).
 function makeRegistry(jobsServiceOverrides = {}) {
     const jobsService = makeJobsServiceStub(jobsServiceOverrides);
-    const registry = new ExternalServicesRegistry({ jobsService });
+    const registry = new ExternalServicesRegistry({
+        jobsService,
+        developmentAdapters: true,
+        importAdapter:       importNoopAdapter,
+    });
     registry.initialized = true;
-    registry.services.set("svc-a", { id: "svc-a", enabled: true });
+    registry.services.set("svc-a", { id: "svc-a", development: true });
     return { registry, jobsService };
 }
 
@@ -148,6 +161,7 @@ test("dispatchHook: creates each job with the id preset for its service", async 
             return { id: id ?? JOB_UUID };
         },
     });
+    registry.services.set("svc-b", { id: "svc-b", development: true });
 
     registry.hookSubscribers.set("case-created", ["svc-a", "svc-b"].map(serviceId => ({
         serviceId,
@@ -540,7 +554,7 @@ test("registerService: normalizes globalHooks (kebab-case, declared in hooks, de
         adapter:     "./adapters/not-imported.adapter.js",
         hooks:       ["case-created", "callback-received"],
         globalHooks: ["case-created", "Bad Name", "phase-started", "case-created"],
-        enabled:     false,
+        requires:    ["polyadic-agent"],
     }, "/nonexistent/manifest.json"));
 
     assert.deepEqual(registry.services.get("svc-global").globalHooks, ["case-created"]);
@@ -553,10 +567,10 @@ test("registerService: globalHooks defaults to [] when absent", async () => {
     const { registry } = makeRegistry();
 
     await registry.registerService({
-        id:      "svc-plain",
-        adapter: "./adapters/not-imported.adapter.js",
-        hooks:   ["phase-started"],
-        enabled: false,
+        id:       "svc-plain",
+        adapter:  "./adapters/not-imported.adapter.js",
+        hooks:    ["phase-started"],
+        requires: ["polyadic-agent"],
     }, "/nonexistent/manifest.json");
 
     assert.deepEqual(registry.services.get("svc-plain").globalHooks, []);
@@ -565,7 +579,7 @@ test("registerService: globalHooks defaults to [] when absent", async () => {
 test("listServices: exposes globalHooks and defaults it to [] for legacy entries", () => {
     const { registry } = makeRegistry();
     registry.services.set("svc-global", {
-        id: "svc-global", enabled: true, hooks: ["case-created"], globalHooks: ["case-created"],
+        id: "svc-global", development: true, hooks: ["case-created"], globalHooks: ["case-created"],
     });
 
     const listed = registry.listServices();
@@ -573,21 +587,21 @@ test("listServices: exposes globalHooks and defaults it to [] for legacy entries
     assert.deepEqual(listed.find(s => s.id === "svc-a").globalHooks, []);
 });
 
-test("getGloballyEnabledServiceIds: returns only enabled services that list the hook", () => {
+test("getUsableServiceIdsForGlobalHook: returns only usable services that list the hook", () => {
     const { registry } = makeRegistry();
-    registry.services.set("svc-global",   { id: "svc-global",   enabled: true,  globalHooks: ["case-created"] });
-    registry.services.set("svc-disabled", { id: "svc-disabled", enabled: false, globalHooks: ["case-created"] });
-    registry.services.set("svc-other",    { id: "svc-other",    enabled: true,  globalHooks: ["case-updated"] });
+    registry.services.set("svc-global",   { id: "svc-global",   development: true,  globalHooks: ["case-created"] });
+    registry.services.set("svc-disabled", { id: "svc-disabled", development: false, globalHooks: ["case-created"] });
+    registry.services.set("svc-other",    { id: "svc-other",    development: true,  globalHooks: ["case-updated"] });
 
-    assert.deepEqual(registry.getGloballyEnabledServiceIds("case-created"), ["svc-global"]);
-    assert.deepEqual(registry.getGloballyEnabledServiceIds("unknown-hook"), []);
+    assert.deepEqual(registry.getUsableServiceIdsForGlobalHook("case-created"), ["svc-global"]);
+    assert.deepEqual(registry.getUsableServiceIdsForGlobalHook("unknown-hook"), []);
 });
 
-test("dispatchGlobalHook: invokes only globally enabled subscribers and enriches context", async () => {
+test("dispatchGlobalHook: invokes only usable global subscribers and enriches context", async () => {
     const calledBy = [];
     let capturedContext = null;
     const { registry } = makeRegistry();
-    registry.services.set("svc-global", { id: "svc-global", enabled: true, globalHooks: ["case-created"] });
+    registry.services.set("svc-global", { id: "svc-global", development: true, globalHooks: ["case-created"] });
 
     registry.hookSubscribers.set("case-created", [
         { serviceId: "svc-global", handler: async (ctx) => { calledBy.push("svc-global"); capturedContext = ctx; } },
@@ -610,7 +624,7 @@ test("dispatchGlobalHook: creates a job with null activity columns", async () =>
     const { registry } = makeRegistry({
         createJob: async (args) => { calls.push(args); return { id: JOB_UUID }; },
     });
-    registry.services.set("svc-global", { id: "svc-global", enabled: true, globalHooks: ["case-created"] });
+    registry.services.set("svc-global", { id: "svc-global", development: true, globalHooks: ["case-created"] });
     registry.hookSubscribers.set("case-created", [
         { serviceId: "svc-global", handler: async () => {} },
     ]);
@@ -648,8 +662,8 @@ test("dispatchGlobalHook: isolates a throwing handler from other services", asyn
     const { registry } = makeRegistry({
         updateJobStatus: async (id, status) => { statusCalls.push({ id, status }); },
     });
-    registry.services.set("svc-broken",  { id: "svc-broken",  enabled: true, globalHooks: ["case-created"] });
-    registry.services.set("svc-healthy", { id: "svc-healthy", enabled: true, globalHooks: ["case-created"] });
+    registry.services.set("svc-broken",  { id: "svc-broken",  development: true, globalHooks: ["case-created"] });
+    registry.services.set("svc-healthy", { id: "svc-healthy", development: true, globalHooks: ["case-created"] });
     registry.hookSubscribers.set("case-created", [
         { serviceId: "svc-broken",  handler: async () => { throw new Error("adapter error"); } },
         { serviceId: "svc-healthy", handler: async () => { healthyCalled = true; } },
@@ -667,7 +681,7 @@ test("dispatchGlobalHook: isolates a throwing handler from other services", asyn
 test("dispatchHook: never consults globalHooks for activity hooks (regression)", async () => {
     let called = false;
     const { registry } = makeRegistry();
-    registry.services.set("svc-global", { id: "svc-global", enabled: true, globalHooks: ["phase-started"] });
+    registry.services.set("svc-global", { id: "svc-global", development: true, globalHooks: ["phase-started"] });
     registry.hookSubscribers.set("phase-started", [
         { serviceId: "svc-global", handler: async () => { called = true; } },
     ]);
@@ -686,11 +700,11 @@ test("registerService: keeps known scopes once and warns about each unknown one"
     const { registry } = makeRegistry();
 
     const { warnings } = await captureWarnings(() => registry.registerService({
-        id:      "svc-scoped",
-        adapter: "./adapters/not-imported.adapter.js",
-        hooks:   ["case-created"],
-        scopes:  ["case", "Case", "chat", "case", 7],
-        enabled: false,
+        id:       "svc-scoped",
+        adapter:  "./adapters/not-imported.adapter.js",
+        hooks:    ["case-created"],
+        scopes:   ["case", "Case", "chat", "case", 7],
+        requires: ["polyadic-agent"],
     }, "/nonexistent/manifest.json"));
 
     assert.deepEqual(registry.services.get("svc-scoped").scopes, ["case", "chat"]);
@@ -703,17 +717,17 @@ test("registerService: scopes defaults to [] when absent or not an array", async
     const { registry } = makeRegistry();
 
     await registry.registerService({
-        id:      "svc-plain",
-        adapter: "./adapters/not-imported.adapter.js",
-        hooks:   ["phase-started"],
-        enabled: false,
+        id:       "svc-plain",
+        adapter:  "./adapters/not-imported.adapter.js",
+        hooks:    ["phase-started"],
+        requires: ["polyadic-agent"],
     }, "/nonexistent/manifest.json");
     await registry.registerService({
-        id:      "svc-string",
-        adapter: "./adapters/not-imported.adapter.js",
-        hooks:   ["case-created"],
-        scopes:  "case",
-        enabled: false,
+        id:       "svc-string",
+        adapter:  "./adapters/not-imported.adapter.js",
+        hooks:    ["case-created"],
+        scopes:   "case",
+        requires: ["polyadic-agent"],
     }, "/nonexistent/manifest.json");
 
     assert.deepEqual(registry.services.get("svc-plain").scopes, []);
@@ -723,7 +737,7 @@ test("registerService: scopes defaults to [] when absent or not an array", async
 test("listServices: exposes scopes and defaults it to [] for legacy entries", () => {
     const { registry } = makeRegistry();
     registry.services.set("svc-scoped", {
-        id: "svc-scoped", enabled: true, hooks: ["case-created"], scopes: ["case"],
+        id: "svc-scoped", development: true, hooks: ["case-created"], scopes: ["case"],
     });
 
     const listed = registry.listServices();
@@ -740,8 +754,8 @@ test("registerService: keeps a valid descriptor link", async () => {
         id:         "svc-described",
         adapter:    "./adapters/not-imported.adapter.js",
         hooks:      ["phase-started"],
-        descriptor: { serviceId: " polyadic-agent ", path: "/polyadic-agent/api/capabilities" },
-        enabled:    false,
+        descriptor: { path: " /polyadic-agent/api/capabilities " },
+        requires:   ["polyadic-agent"],
     }, "/nonexistent/manifest.json");
 
     assert.deepEqual(registry.services.get("svc-described").descriptor, {
@@ -754,10 +768,10 @@ test("registerService: descriptor is null when absent", async () => {
     const { registry } = makeRegistry();
 
     await registry.registerService({
-        id:      "svc-plain",
-        adapter: "./adapters/not-imported.adapter.js",
-        hooks:   ["phase-started"],
-        enabled: false,
+        id:       "svc-plain",
+        adapter:  "./adapters/not-imported.adapter.js",
+        hooks:    ["phase-started"],
+        requires: ["polyadic-agent"],
     }, "/nonexistent/manifest.json");
 
     assert.equal(registry.services.get("svc-plain").descriptor, null);
@@ -767,26 +781,23 @@ test("registerService: drops an invalid descriptor link with a warning", async (
     const invalid = [
         "polyadic-agent",
         {},
-        { serviceId: "polyadic-agent" },
-        { path: "/polyadic-agent/api/capabilities" },
-        { serviceId: "", path: "/x/api/capabilities" },
-        { serviceId: "has space", path: "/x/api/capabilities" },
-        { serviceId: "svc", path: "x/api/capabilities" },
-        { serviceId: "svc", path: "https://evil.example/api/capabilities" },
-        { serviceId: "svc", path: "//evil.example/api/capabilities" },
-        { serviceId: "svc", path: "/x/../admin" },
-        { serviceId: "svc", path: "/x/api/capabilities?debug=1" },
-        { serviceId: "svc", path: "/x/api/capa bilities" },
+        { path: "" },
+        { path: "x/api/capabilities" },
+        { path: "https://evil.example/api/capabilities" },
+        { path: "//evil.example/api/capabilities" },
+        { path: "/x/../admin" },
+        { path: "/x/api/capabilities?debug=1" },
+        { path: "/x/api/capa bilities" },
     ];
 
     for (const descriptor of invalid) {
         const { registry } = makeRegistry();
         const { warnings } = await captureWarnings(() => registry.registerService({
-            id:      "svc-invalid",
-            adapter: "./adapters/not-imported.adapter.js",
-            hooks:   ["phase-started"],
+            id:       "svc-invalid",
+            adapter:  "./adapters/not-imported.adapter.js",
+            hooks:    ["phase-started"],
             descriptor,
-            enabled: false,
+            requires: ["polyadic-agent"],
         }, "/nonexistent/manifest.json"));
 
         const label = JSON.stringify(descriptor);
@@ -799,10 +810,10 @@ test("registerService: drops an invalid descriptor link with a warning", async (
 test("listServices: exposes the descriptor id but not its route", () => {
     const { registry } = makeRegistry();
     registry.services.set("svc-described", {
-        id:         "svc-described",
-        enabled:    true,
-        hooks:      ["phase-started"],
-        descriptor: {
+        id:          "svc-described",
+        development: true,
+        hooks:       ["phase-started"],
+        descriptor:  {
             serviceId: "argumentation-tutor",
             path:      "/argumentation-tutor/api/capabilities",
         },
@@ -824,7 +835,7 @@ test("getServiceDescriptor: returns a copy of the link, or null", () => {
         path:      "/argumentation-tutor/api/capabilities",
     };
     registry.services.set("svc-described", {
-        id: "svc-described", enabled: true, hooks: [], descriptor,
+        id: "svc-described", development: true, hooks: [], descriptor,
     });
 
     const link = registry.getServiceDescriptor("svc-described");
@@ -848,13 +859,14 @@ function makeDescriptorsStub(result) {
     };
 }
 
-test("getServiceInstanceConfiguration: delegates enabled services to the descriptor client", async () => {
+test("getServiceInstanceConfiguration: delegates usable services to the descriptor client", async () => {
     const descriptors = makeDescriptorsStub({ available: true, fields: [] });
     const registry = new ExternalServicesRegistry({
         jobsService:           makeJobsServiceStub(),
         capabilityDescriptors: descriptors,
+        developmentAdapters:   true,
     });
-    registry.services.set("svc-described", { id: "svc-described", enabled: true });
+    registry.services.set("svc-described", { id: "svc-described", development: true });
 
     const configuration = await registry.getServiceInstanceConfiguration("svc-described", "es_CL");
 
@@ -862,13 +874,13 @@ test("getServiceInstanceConfiguration: delegates enabled services to the descrip
     assert.deepEqual(descriptors.calls, [{ serviceId: "svc-described", locale: "es_CL" }]);
 });
 
-test("getServiceInstanceConfiguration: null for unknown and disabled services", async () => {
+test("getServiceInstanceConfiguration: null for unknown and unusable services", async () => {
     const descriptors = makeDescriptorsStub({ available: true, fields: [] });
     const registry = new ExternalServicesRegistry({
         jobsService:           makeJobsServiceStub(),
         capabilityDescriptors: descriptors,
     });
-    registry.services.set("svc-off", { id: "svc-off", enabled: false });
+    registry.services.set("svc-off", { id: "svc-off", development: false });
 
     assert.equal(await registry.getServiceInstanceConfiguration("svc-off", "en_US"), null);
     assert.equal(await registry.getServiceInstanceConfiguration("unknown", "en_US"), null);
@@ -893,7 +905,7 @@ test("registerService: ignores the deprecated capabilities key with one warning"
         hooks:        ["student-response-submitted"],
         scopes:       ["response"],
         capabilities: { processesStudentResponses: true },
-        enabled:      false,
+        requires:     ["polyadic-agent"],
     }, "/nonexistent/manifest.json"));
 
     assert.equal(Object.hasOwn(registry.services.get("svc-legacy"), "capabilities"), false);
@@ -906,11 +918,11 @@ test("registerService: no capabilities warning when the key is absent", async ()
     const { registry } = makeRegistry();
 
     const { warnings } = await captureWarnings(() => registry.registerService({
-        id:      "svc-current",
-        adapter: "./adapters/not-imported.adapter.js",
-        hooks:   ["student-response-submitted"],
-        scopes:  ["response"],
-        enabled: false,
+        id:       "svc-current",
+        adapter:  "./adapters/not-imported.adapter.js",
+        hooks:    ["student-response-submitted"],
+        scopes:   ["response"],
+        requires: ["polyadic-agent"],
     }, "/nonexistent/manifest.json"));
 
     assert.deepEqual(warnings, []);
@@ -929,7 +941,7 @@ function captureContexts(registry, hookName, serviceIds) {
 
 test("dispatchHook: each handler receives its own serviceConfiguration", async () => {
     const { registry } = makeRegistry();
-    registry.services.set("svc-b", { id: "svc-b", enabled: true });
+    registry.services.set("svc-b", { id: "svc-b", development: true });
     const contexts = captureContexts(registry, "phase-started", ["svc-a", "svc-b"]);
     const serviceConfigurations = { "svc-a": { llm_tier: "advanced" } };
 
@@ -961,7 +973,7 @@ test("dispatchHook: serviceConfiguration is {} when absent or not an object", as
 
 test("dispatchGlobalHook: hooks without a phase get an empty serviceConfiguration", async () => {
     const { registry } = makeRegistry();
-    registry.services.set("svc-a", { id: "svc-a", enabled: true, globalHooks: ["case-created"] });
+    registry.services.set("svc-a", { id: "svc-a", development: true, globalHooks: ["case-created"] });
     const contexts = captureContexts(registry, "case-created", ["svc-a"]);
 
     await registry.dispatchGlobalHook("case-created", { caseId: 9 });

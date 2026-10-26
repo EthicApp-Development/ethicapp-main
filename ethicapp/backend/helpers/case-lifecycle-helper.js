@@ -33,7 +33,7 @@ function parseServiceIds(value) {
 
 /**
  * Resolves the analysis services a teacher chose when creating a case. Each id
- * must name an enabled service with the `case` scope; a value that is not a
+ * must name a usable service with the `case` scope; a value that is not a
  * list of ids is invalid too.
  *
  * @param {unknown} value - The `analysisServiceIds` field of the request.
@@ -55,7 +55,7 @@ export async function resolveCaseAnalysisServiceIds(
     }
 
     await registry.initialize();
-    const availableServiceIds = registry.getEnabledServiceIdsForScope("case");
+    const availableServiceIds = registry.getUsableServiceIdsForScope("case");
     return {
         serviceIds,
         valid: serviceIds.every(serviceId => availableServiceIds.includes(serviceId)),

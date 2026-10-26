@@ -28,7 +28,8 @@ facade are still not implemented.
 
 ## Backend Architecture
 
-External services are registered through a manifest:
+External services are registered through a single adapter catalog, shipped
+as code (#812):
 
 ```text
 ethicapp/backend/external-services/manifest.json
@@ -44,10 +45,19 @@ Each manifest entry declares:
   list services by scope.
 - `ui`: `{ component }`, the EthicApp component that will show the service's
   analysis in the case view.
-- `descriptor`: `{ serviceId, path }`, the capability descriptor that the AI
-  service publishes (`GET <path>` under `AI_ADDITIONS_BASE_URL`). `serviceId` is
-  the descriptor's own id, mapped to the manifest `id` instead of renamed.
-- `enabled`: whether the adapter should be loaded.
+- `requires`: the AI Additions services the adapter talks to (`polyadic-agent`,
+  `argumentation-tutor`, `case-analyst`). Mandatory; the AI service policy
+  allows an adapter only when it allows all of them.
+- `development`: `true` for the mock adapters, which require no AI Additions
+  service (`requires: []`) and register only with
+  `EXTERNAL_SERVICES_DEVELOPMENT_ADAPTERS=true`.
+- `descriptor`: `{ path }`, the capability descriptor that the AI service
+  publishes (`GET <path>` under `AI_ADDITIONS_BASE_URL`). Its id is the one
+  service in `requires`, mapped to the catalog `id` instead of renamed.
+
+There is no `enabled`: the catalog lists adapters, and whether one may be used
+is decided at dispatch (`isServiceUsable()` in the registry). Until the AI
+service policy lands (#815), only development adapters are usable.
 
 Hook names are standardized as kebab-case identifiers. New adapters should use
 names such as `phase-started`, `phase-ended`, `activity-started`,
@@ -55,8 +65,9 @@ names such as `phase-started`, `phase-ended`, `activity-started`,
 `callback-received`.
 
 Adapters are ESM modules that export `register(...)`. During startup,
-`externalServicesRegistry.initialize()` loads the manifest, imports each enabled
-adapter, and lets it subscribe to hooks.
+`externalServicesRegistry.initialize()` validates the catalog, imports every
+production adapter (and the development ones when enabled), and lets it
+subscribe to hooks. Registering makes no outbound call.
 
 The current register contract is:
 
@@ -228,6 +239,8 @@ EthicApp dispatches hooks only to services enabled in the phase design:
 
 The registry accepts `enabledServiceIds` and filters subscribers by service id.
 This keeps phase and response hooks scoped to services selected by the teacher.
+It also drops the services that are not usable (`isServiceUsable()`, #812), so
+a design that selects one reaches nothing for it and creates no job.
 
 Each handler also receives `context.serviceConfiguration` (#734): the settings
 the phase stores for that service in

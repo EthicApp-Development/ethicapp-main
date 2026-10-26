@@ -10,28 +10,58 @@ shared AI Additions client instead of negotiating Keycloak tokens themselves.
 
 ## Runtime Model
 
-At startup, the registry reads `manifest.json` from this directory, or the path
-configured through `EXTERNAL_SERVICES_MANIFEST`.
+At startup, the registry reads `manifest.json` from this directory: the
+adapter catalog (#812).
 
-### Manifests per environment
+### The adapter catalog
 
-Three manifests ship with the image (#738). They list the same services and
-differ only in `enabled`; `__tests__/manifest.node-test.mjs` keeps them in sync.
+`manifest.json` lists the adapters EthicApp ships. It is code, not deployment
+configuration: there is one catalog for every environment, no `enabled` flag
+and no variable to choose another file. `catalog.js` validates it, and an
+invalid catalog stops startup (and the image build, through
+`__tests__/manifest.node-test.mjs` and `__tests__/catalog.node-test.mjs`).
 
-| Manifest | Enabled services | Used by |
-| --- | --- | --- |
-| `manifest.json` (default) | none | production, and any installation that does not set `EXTERNAL_SERVICES_MANIFEST` |
-| `manifest.staging.json` | the above plus `case-analyst` | staging (`EXTERNAL_SERVICES_MANIFEST=/app/backend/external-services/manifest.staging.json`) |
-| `manifest.development.json` | all, including the mock adapters | the root `docker-compose.yml` |
+- **Production adapters** declare the AI Additions services they require
+  (`requires`). All of them register at startup.
+- **Development adapters** (`development: true`) are the mocks. They talk to
+  `external-mock-service` or run in process, require no AI Additions service
+  (`requires: []`), and register only when
+  `EXTERNAL_SERVICES_DEVELOPMENT_ADAPTERS=true`. Only the root
+  `docker-compose.yml` sets it.
 
-The default enables nothing, so an installation uses no AI service unless it
-selects a manifest that enables one (#811). Epic #810 replaces the manifests
-with an operator-managed policy.
+Registering only subscribes handlers: it makes no outbound call
+(`__tests__/registration.node-test.mjs`). Whether a registered adapter
+receives events is decided at dispatch, by the registry's usability seam (see
+"Usability").
 
-When you add or change a service, edit the entry identically in all three and
-set `enabled` per environment. Designs keep the ids of disabled services; the
-editor does not offer them and nothing is dispatched to them (#686), so seeded
-activities that reference the mocks still load where the mocks are disabled.
+### Usability
+
+`registry.isServiceUsable(serviceId)` (with `usableServiceIds(serviceIds)`) is
+the one place that decides whether an adapter may receive events right now.
+`dispatchHook` (and so phase, activity and case hooks), `dispatchGlobalHook`,
+`getUsableServiceIdsForScope`, `getUsableServiceIdsForGlobalHook`,
+`listServices().usable`, `GET /external-services` and the capability
+descriptor lookups all ask it. The student activity descriptor lists only
+usable services.
+
+Interim rule until the AI service policy lands (#815, epic #810): **no
+production adapter is usable**. Development adapters are usable when
+`EXTERNAL_SERVICES_DEVELOPMENT_ADAPTERS=true`. #815 replaces the seam with the
+policy gate: an adapter is usable when the policy version in force (the
+session's pinned version, or the current one outside sessions) allows every
+service in its `requires`, and an AI Additions connection is configured.
+
+Callbacks are the one exception, for jobs that already exist.
+`POST /external-services/callbacks` is delivered to a usable adapter as
+before. For a registered adapter that is not usable, it is delivered only when
+`correlationId` matches a persisted job of that same service, so jobs created
+earlier can still finish. Otherwise the result is recorded, the handler does
+not run, and the endpoint answers `409` (no matching job) or `503` (the result
+or job lookup failed).
+
+Designs keep the ids of services that are not usable; the editor does not offer
+them and nothing is dispatched to them (#686), so seeded activities that
+reference the mocks still load where the mocks are not registered.
 
 Every service declares `callbackAuth`. The mock adapters never receive HTTP
 callbacks (they call the mock service synchronously), so they accept only
@@ -48,12 +78,11 @@ Each manifest entry describes one service:
   "adapter": "./adapters/ats-feedback.adapter.js",
   "hooks": ["student-response-submitted", "phase-ended", "callback-received"],
   "globalHooks": [],
+  "requires": ["argumentation-tutor"],
   "scopes": ["response"],
   "descriptor": {
-    "serviceId": "argumentation-tutor",
     "path": "/argumentation-tutor/api/capabilities"
   },
-  "enabled": true,
   "callbackAuth": {
     "allowedClientIds": ["argumentation-tutor-api"],
     "requiredRoles": []
@@ -65,14 +94,16 @@ Each manifest entry describes one service:
 | --- | --- | --- |
 | `id` | yes | Service identifier. Used as `serviceId` everywhere (jobs, callbacks, chat agent identity, design-level enablement). |
 | `adapter` | yes | Module path resolved relative to the manifest file. |
+| `requires` | yes | The AI Additions services the adapter talks to, by AI Additions id: `polyadic-agent`, `argumentation-tutor` or `case-analyst` (`AI_ADDITIONS_SERVICE_IDS` in `catalog.js`, the only list of them). A missing `requires`, an unknown or repeated id, or an empty list on a production adapter rejects the catalog. The service policy (#815) allows an adapter only when it allows all of them. |
+| `development` | no | `true` marks a development-only adapter (the mocks). It must declare `requires: []` and registers only with `EXTERNAL_SERVICES_DEVELOPMENT_ADAPTERS=true`. Defaults to `false`. |
 | `description` | no | Defaults to an empty string. The texts meant for case screens come from the adapter instead (see "UI translations"). |
 | `hooks` | no | Declarative list of the hooks the adapter subscribes to. Non-kebab-case names are dropped with a warning. The registry does not enforce that `subscribe()` calls match this list; it is exposed through `GET /external-services` for operators and the teacher UI, so keep it in sync with the adapter. |
 | `globalHooks` | no | Hooks the service opts into at manifest level, without an activity-design opt-in. Defaults to `[]`. Each name must be kebab-case and must also appear in `hooks`; other entries are dropped with a warning and duplicates are removed. Only consulted by `dispatchGlobalHook()` (see "Hook enablement"). Exposed through `GET /external-services`. |
 | `scopes` | no | Where the service operates: `case` (case documents), `response` (student responses) or `chat` (group chat). Defaults to `[]`. Unknown values are dropped with a warning and duplicates are removed. Screens list services by scope (see "Listing services"), so an entry without scopes appears in none of them; `__tests__/manifest.node-test.mjs` requires at least one. |
 | `ui` | no | `{ component }`: the kebab-case name of the EthicApp frontend component that will show the service's analysis in the case view. Defaults to `{ component: null }`; other names are dropped with a warning. The texts come from the adapter, not from the manifest (see "UI translations"). |
-| `descriptor` | no | `{ serviceId, path }`: the capability descriptor the service's AI backend publishes (#687). `serviceId` is the descriptor's `service.id`, which may differ from `id`: ids are mapped, not renamed, so stored designs, chat agents and jobs keep the manifest id. `path` is the descriptor route relative to `AI_ADDITIONS_BASE_URL`, for example `/polyadic-agent/api/capabilities`; it must be an absolute path without host, query or `..` segments. An invalid block is dropped with a warning. `GET /external-services` exposes `descriptor.serviceId` and a summary (see "Listing services"); the route stays internal (`getServiceDescriptor()`). |
+| `descriptor` | no | `{ path }`: the capability descriptor the service's AI backend publishes (#687). Its id (`service.id` in the descriptor) is the one AI Additions service in `requires`, so an adapter with a descriptor requires exactly one service; `descriptor.serviceId` is no longer accepted (#812). That id may differ from `id`: ids are mapped, not renamed, so stored designs, chat agents and jobs keep the manifest id. `path` is the descriptor route relative to `AI_ADDITIONS_BASE_URL`, for example `/polyadic-agent/api/capabilities`; it must be an absolute path without host, query or `..` segments. An invalid path is dropped with a warning. `GET /external-services` exposes `descriptor.serviceId` and a summary (see "Listing services"); the route stays internal (`getServiceDescriptor()`). |
 | `capabilities` | — | Removed (#726). Entries that still declare it log a deprecation warning and the key is ignored. A service that processes student responses declares the `response` scope instead; the student app shows the processing state for those services. |
-| `enabled` | no | Only `true` enables the service; a missing value means disabled (#811). Disabled services stay registered, and appear in the student activity descriptor with `enabled: false`, but `GET /external-services` does not list them and their adapter is never imported. |
+| `enabled` | — | Removed (#812). An entry that declares it rejects the catalog; usability is decided at dispatch (see "Usability"). |
 | `callbackAuth` | no | Inbound callback authorization. See below. |
 
 When `callbackAuth` is present, EthicApp verifies that the authenticated Keycloak
@@ -81,15 +112,18 @@ token's `realm_access.roles` before dispatching `callback-received`.
 
 ### Adapter registration
 
-For each enabled service, the registry imports the adapter module and calls its
-`register()` function once at startup. The function must be a named export
+For each registered service (every production adapter, and the development ones
+when `EXTERNAL_SERVICES_DEVELOPMENT_ADAPTERS=true`), the registry imports the
+adapter module and calls its `register()` function once at startup. Importing
+and registering must make no outbound call and open no connection: defer such
+work to the hook handlers. The function must be a named export
 (`export async function register(...)`); a `default.register` property is also
 accepted as a fallback. Modules without a callable `register` are skipped with a
 warning and never receive hooks.
 
 ```js
 export async function register({
-    service,                 // normalized manifest entry (id, description, hooks, globalHooks, scopes, ui, descriptor, enabled, adapter, callbackAuth)
+    service,                 // normalized manifest entry (id, description, hooks, globalHooks, scopes, ui, descriptor, requires, development, adapter, callbackAuth)
     subscribe,               // (hookName, handler) => void
     publishStudentResult,    // (payload) => Promise<boolean>
     publishGroupChatMessage, // (payload) => Promise<{ savedMessage, notificationPayload } | null>
@@ -192,22 +226,23 @@ const configuration = await externalServicesRegistry
 
 ### Listing services
 
-`GET /external-services` (role `P`) returns the enabled services without their
-adapter paths or callback settings. Disabled services (`"enabled": false`) are
-never listed:
+`GET /external-services` (role `P`) returns the usable services (see
+"Usability") without their adapter paths or callback settings. Services that
+are not usable are never listed:
 
-- Without `scope`, it returns every enabled service.
-- With `scope`, it returns only the enabled services that declare at least one
+- Without `scope`, it returns every usable service.
+- With `scope`, it returns only the usable services that declare at least one
   of the requested scopes. The parameter can be repeated
   (`?scope=response&scope=chat`). An unknown or empty scope answers `400`.
 
-The student activity descriptor still includes every registered service with
-its `enabled` flag (`listServices()`); the student app ignores disabled ones.
+Each listed service carries `requires`, `development` and `usable`. The
+student activity descriptor includes only the usable services
+(`listServices()`, filtered on `usable`).
 
 A design keeps the ids it stores in `phases[].externalServices.enabledServiceIds`
-when a service is disabled. The design editor neither shows nor drops them, so
-re-enabling the service restores the teacher's choice. While disabled, the
-service has no hook subscribers, so nothing is dispatched to it.
+when a service is not usable. The design editor neither shows nor drops them, so
+the teacher's choice comes back when the service is usable again. Meanwhile
+`dispatchHook` drops it, so nothing is dispatched to it and no job is created.
 
 Each entry carries `ui: { component, translations }`, where `translations` is
 the result of `getServiceUiTranslations()` or `null`. The design editor asks for
@@ -385,10 +420,9 @@ and editing the case never changes the choice.
 **Global hooks (manifest opt-in).** Hooks that fire outside an activity and
 need no teacher choice are dispatched with
 `registry.dispatchGlobalHook(hookName, context)`. Its audience is
-`registry.getGloballyEnabledServiceIds(hookName)`: every enabled service whose
-manifest entry lists `hookName` in `globalHooks`. Opting in is an operator
-decision taken in the manifest, like `enabled`; there is no teacher-facing UI
-for it. `dispatchGlobalHook` delegates to `dispatchHook`, so jobs,
+`registry.getUsableServiceIdsForGlobalHook(hookName)`: every usable service
+whose catalog entry lists `hookName` in `globalHooks`. Opting in is decided in
+the catalog; there is no teacher-facing UI for it. `dispatchGlobalHook` delegates to `dispatchHook`, so jobs,
 `correlationId`, `callback(result)` handling, and error isolation are identical.
 
 No hook uses this path today: `case-created` did until the services became a
@@ -502,7 +536,9 @@ authenticated by `middleware/external-services-callback-auth.middleware.js`
 }
 ```
 
-- `serviceId` is required and must match an enabled manifest entry.
+- `serviceId` is required and must match a registered catalog entry. For a
+  service that is not usable, `correlationId` must also match one of its
+  existing jobs (see "Usability", #812).
 - `eventType` defaults to `"result"`.
 - `correlationId` is matched against `external_service_jobs.id`; the response
   reports `correlationStatus: "matched"` or `"unknown"`.
@@ -542,7 +578,7 @@ and chosen service, holding the current result. Raw callbacks still go to
 
 Teachers choose the services when they create a case: `POST /cases` accepts
 `analysisServiceIds`, a JSON array of service ids, like `tag_ids`. Each id must
-name an enabled service with the `case` scope; otherwise, or when the value is
+name a usable service with the `case` scope; otherwise, or when the value is
 not such a list, the request answers `400 CASE_ANALYSIS_SERVICE_INVALID` before
 the PDF is stored. Each chosen service gets a `requested` row, already reserved
 for its first generation, and `case-created` is dispatched to those services
@@ -814,10 +850,11 @@ When implementing a new adapter:
 2. Export a named `register()` function and subscribe to the hooks the service
    needs. Only hooks listed in the Hook Catalog are dispatched; subscribing to
    an unknown name is silently inert.
-3. Add a service entry to `manifest.json`, `manifest.staging.json` and
-   `manifest.development.json` with the same hook list, `callbackAuth`, and the
-   `response` scope if the service processes student responses. Set `enabled`
-   per environment (see "Manifests per environment").
+3. Add a service entry to `manifest.json` with its hook list, `callbackAuth`,
+   `requires` (add a new AI Additions service id to `AI_ADDITIONS_SERVICE_IDS`
+   in `catalog.js` first), and the `response` scope if the service processes
+   student responses. Mark a mock with `development: true` and `requires: []`
+   (see "The adapter catalog").
 4. Use `aiAdditionsClient.requestJson()` for AI Additions HTTP calls and forward
    `context.correlationId` in outbound requests.
 5. Keep service-specific URL configuration under an `AI_ADDITIONS_<SERVICE>_*`

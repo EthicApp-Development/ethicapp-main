@@ -249,13 +249,17 @@ external-service adapters. Publish it with the full image set so deployment
 manifests can pin it, but deploy it only when mock integrations are
 intentionally enabled.
 
-The `ethicapp` image ships three external-services manifests (#738). The
-default, `manifest.json`, enables no external AI service, so an installation
-that sets nothing uses no AI (#811). Staging sets
-`EXTERNAL_SERVICES_MANIFEST=/app/backend/external-services/manifest.staging.json`
-to also enable Case Analyst. `manifest.development.json`, used by the local
-Compose stack, enables the mock adapters too; deploy `external-mock-service`
-only with it.
+The `ethicapp` image ships one external-services adapter catalog,
+`backend/external-services/manifest.json` (#812). It is code, not
+configuration: there is no per-environment manifest and no variable to select
+one. Every production adapter is registered at startup, but none receives
+events until the AI service policy of epic #810 allows it (#815), so an
+installation uses no AI service until then. The mock adapters are
+development-only: they are registered only with
+`EXTERNAL_SERVICES_DEVELOPMENT_ADAPTERS=true`, which only the local Compose
+stack sets, and they need `external-mock-service`. Leave the variable unset in
+every deployment. `EXTERNAL_SERVICES_MANIFEST` is removed: delete it from
+deployment environments when upgrading.
 
 `postgres` and `redis` are not built by this repository. Use the official images
 and pin the desired versions in the deployment repository.

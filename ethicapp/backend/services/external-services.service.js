@@ -11,6 +11,12 @@ import {
 import { saveChatMessage } from "../helpers/chat-helper.js";
 import { studentNotifications, teacherNotifications } from "../config/socket.config.js";
 import aiAdditionsClient from "./ai-additions-client.service.js";
+import {
+    assertValidCatalog,
+    developmentAdaptersEnabled,
+    validateCatalog,
+    validateCatalogEntry,
+} from "../external-services/catalog.js";
 import { CapabilityDescriptorsClient } from "./capability-descriptors.service.js";
 import {
     externalServiceJobsService,
@@ -138,35 +144,33 @@ function normalizeText(value) {
     return typeof value === "string" ? value.trim() : "";
 }
 
-const DESCRIPTOR_SERVICE_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*$/u;
-
 // `descriptor` links a service to the capability descriptor its AI service
-// publishes (#687, #725). `serviceId` is the descriptor's `service.id`, which may
-// differ from the manifest id: ids are mapped, not renamed, so stored designs and
-// jobs keep theirs. `path` is the descriptor route, relative to
-// AI_ADDITIONS_BASE_URL: an absolute path without host, query or `..` segments.
-function normalizeDescriptor(descriptor, serviceId) {
+// publishes (#687, #725). The catalog declares only its `path`, the descriptor
+// route relative to AI_ADDITIONS_BASE_URL: an absolute path without host, query
+// or `..` segments. Its `serviceId`, the descriptor's `service.id`, is the one AI
+// Additions service the adapter requires (#812). It may differ from the catalog
+// id: ids are mapped, not renamed, so stored designs and jobs keep theirs.
+function normalizeDescriptor(descriptor, requires, serviceId) {
     if (descriptor === undefined || descriptor === null) {
         return null;
     }
 
-    const descriptorServiceId = normalizeText(descriptor?.serviceId);
-    const descriptorPath      = normalizeText(descriptor?.path);
+    const descriptorPath = normalizeText(descriptor?.path);
     const isValidPath = descriptorPath.startsWith("/")
         && !descriptorPath.startsWith("//")
         && !/[\s?#\\]/u.test(descriptorPath)
         && !descriptorPath.split("/").includes("..");
 
-    if (!DESCRIPTOR_SERVICE_ID_PATTERN.test(descriptorServiceId) || !isValidPath) {
+    if (requires.length !== 1 || !isValidPath) {
         console.warn(
             `[external-services] Ignoring invalid descriptor in ${serviceId}: expected `
-            + "{ serviceId, path } with an id and an absolute path relative to "
-            + "AI_ADDITIONS_BASE_URL."
+            + "{ path } with an absolute path relative to AI_ADDITIONS_BASE_URL, and "
+            + "exactly one service in requires."
         );
         return null;
     }
 
-    return { serviceId: descriptorServiceId, path: descriptorPath };
+    return { serviceId: requires[0], path: descriptorPath };
 }
 
 // Adapters provide their own texts through getUiTranslations(): a label, a
@@ -251,6 +255,31 @@ function serviceConfigurationFor(serviceConfigurations, serviceId) {
     return isObject ? { ...configuration } : {};
 }
 
+// A callback for a service that is not usable is delivered only when it
+// correlates with a persisted job of that same service: createResult() matches
+// the correlation id against that service's jobs and returns the job_id. The
+// result row stays recorded either way. Throws 503 when the result or job
+// lookup failed (the caller may retry) and 409 without a matching job.
+function assertCallbackForExistingJob(resultRecord, serviceId) {
+    if (!resultRecord) {
+        const error = new Error(
+            `The callback for ${serviceId} could not be matched to a job; try again later.`
+        );
+        error.statusCode = 503;
+        throw error;
+    }
+
+    const belongsToService = resultRecord.service_id === undefined
+        || resultRecord.service_id === serviceId;
+    if (!resultRecord.job_id || !belongsToService) {
+        const error = new Error(
+            `External service ${serviceId} is not in use, and the callback matches none of its jobs.`
+        );
+        error.statusCode = 409;
+        throw error;
+    }
+}
+
 export class ExternalServicesRegistry {
     constructor({
         jobsService,
@@ -258,11 +287,18 @@ export class ExternalServicesRegistry {
         now = () => Date.now(),
         uiTranslationsTimeoutMs = UI_TRANSLATIONS_TIMEOUT_MS,
         capabilityDescriptors,
+        developmentAdapters,
+        importAdapter = href => import(href),
     } = {}) {
         this.initialized      = false;
         this.services         = new Map();
         this.hookSubscribers  = new Map();
         this._jobsService     = jobsService ?? externalServiceJobsService;
+
+        // Whether development adapters are registered (and usable). Read from
+        // EXTERNAL_SERVICES_DEVELOPMENT_ADAPTERS unless a test injects it.
+        this._developmentAdapters = developmentAdapters;
+        this._importAdapter       = importAdapter;
 
         this.uiTranslationProviders   = new Map();
         this.uiTranslationsCache      = new Map();
@@ -279,36 +315,50 @@ export class ExternalServicesRegistry {
         });
     }
 
-    async initialize(manifestPath = process.env.EXTERNAL_SERVICES_MANIFEST || DEFAULT_MANIFEST_PATH) {
+    get developmentAdaptersEnabled() {
+        return this._developmentAdapters ?? developmentAdaptersEnabled();
+    }
+
+    // Registers every adapter of the catalog (#812): all production adapters,
+    // and the development ones when EXTERNAL_SERVICES_DEVELOPMENT_ADAPTERS=true.
+    // Registering only subscribes handlers; it must make no outbound call.
+    // Whether an adapter receives events is decided at dispatch (isServiceUsable).
+    // `manifestPath` exists for tests; the application uses the shipped catalog.
+    async initialize(manifestPath = DEFAULT_MANIFEST_PATH) {
         if (this.initialized) {
             return;
         }
 
         this.manifestPath = manifestPath;
         const manifest = await this.readManifest(manifestPath);
-        const services = Array.isArray(manifest.services) ? manifest.services : [];
+        assertValidCatalog(validateCatalog(manifest), manifestPath);
 
-        for (const service of services) {
+        for (const service of manifest.services) {
             await this.registerService(service, manifestPath);
         }
 
         this.initialized = true;
-        console.info(`[external-services] Loaded ${this.services.size} service adapter(s).`);
+        console.info(`[external-services] Registered ${this.services.size} service adapter(s).`);
     }
 
+    // The catalog is shipped code: a missing or unreadable file stops startup.
     async readManifest(manifestPath) {
-        try {
-            const content = await fs.readFile(manifestPath, "utf8");
-            return JSON.parse(content);
-        } catch (error) {
-            console.warn(`[external-services] Manifest could not be loaded from ${manifestPath}.`, error);
-            return { services: [] };
-        }
+        const content = await fs.readFile(manifestPath, "utf8");
+        return JSON.parse(content);
     }
 
     async registerService(service, manifestPath) {
-        if (!service?.id || !service?.adapter) {
-            console.warn("[external-services] Skipping invalid service manifest entry.", service);
+        assertValidCatalog(
+            validateCatalogEntry(service).map(problem => `${service?.id ?? "entry"}: ${problem}`),
+            manifestPath
+        );
+
+        const development = service.development === true;
+        if (development && !this.developmentAdaptersEnabled) {
+            console.info(
+                `[external-services] Skipping development adapter ${service.id}: `
+                + "EXTERNAL_SERVICES_DEVELOPMENT_ADAPTERS is not true."
+            );
             return;
         }
 
@@ -328,10 +378,11 @@ export class ExternalServicesRegistry {
             globalHooks:  normalizeGlobalHooks(service.globalHooks, hooks, service.id),
             scopes:       normalizeScopes(service.scopes, service.id),
             ui:           normalizeUi(service.ui, service.id),
-            descriptor:   normalizeDescriptor(service.descriptor, service.id),
-            // Only an explicit `"enabled": true` enables a service: an
-            // installation must never use an AI service it did not opt into (#811).
-            enabled:      service.enabled === true,
+            descriptor:   normalizeDescriptor(service.descriptor, service.requires, service.id),
+            // The AI Additions services the adapter talks to (#812). The
+            // service policy (#815) allows an adapter only when it allows all.
+            requires:     [...service.requires],
+            development,
             adapter:      service.adapter,
             callbackAuth: service.callbackAuth && typeof service.callbackAuth === "object"
                 ? {
@@ -347,12 +398,8 @@ export class ExternalServicesRegistry {
 
         this.services.set(normalizedService.id, normalizedService);
 
-        if (!normalizedService.enabled) {
-            return;
-        }
-
         const adapterUrl = new URL(service.adapter, pathToFileURL(path.resolve(manifestPath)));
-        const adapterModule = await import(adapterUrl.href);
+        const adapterModule = await this._importAdapter(adapterUrl.href);
         const register = adapterModule.register || adapterModule.default?.register;
         const getUiTranslations = adapterModule.getUiTranslations
             || adapterModule.default?.getUiTranslations;
@@ -421,7 +468,8 @@ export class ExternalServicesRegistry {
             scopes = [],
             ui = { component: null },
             descriptor = null,
-            enabled,
+            requires = [],
+            development = false,
         }) => ({
             id,
             description,
@@ -431,7 +479,10 @@ export class ExternalServicesRegistry {
             ui,
             // Only the descriptor id leaves the registry; the route stays internal.
             descriptor: descriptor ? { serviceId: descriptor.serviceId } : null,
-            enabled,
+            requires,
+            development,
+            // Whether the service may receive events now (isServiceUsable).
+            usable:     this.isServiceUsable(id),
         }));
     }
 
@@ -442,12 +493,12 @@ export class ExternalServicesRegistry {
         return descriptor ? { ...descriptor } : null;
     }
 
-    // The normalized instance configuration that an enabled service's capability
+    // The normalized instance configuration that a usable service's capability
     // descriptor advertises, in the descriptor locale for `locale` (#727). Null for
-    // unknown or disabled services and for services without a descriptor;
+    // unknown or unusable services and for services without a descriptor;
     // `{ available: false, reason }` when the descriptor cannot be fetched.
     async getServiceInstanceConfiguration(serviceId, locale) {
-        if (!this.services.get(serviceId)?.enabled) {
+        if (!this.isServiceUsable(serviceId)) {
             return null;
         }
 
@@ -499,20 +550,45 @@ export class ExternalServicesRegistry {
         }
     }
 
-    getGloballyEnabledServiceIds(hookName) {
-        return Array.from(this.services.values())
-            .filter(service => service.enabled
-                && Array.isArray(service.globalHooks)
-                && service.globalHooks.includes(hookName))
-            .map(service => service.id);
+    // -- Usability seam (#812; replaced by the service policy gate in #815) --
+    //
+    // Whether a registered adapter may receive events right now. Every
+    // dispatch path (phase, case and global hooks), every listing and the
+    // descriptor lookups ask this method, and nothing else decides it.
+    // Callbacks are the one exception: a callback for a job that already
+    // exists for its service is always delivered (dispatchServiceHook).
+    //
+    // Interim rule until #815: no production adapter is usable, since the
+    // catalog has no `enabled` any more and the policy does not exist yet.
+    // Development adapters are usable when EXTERNAL_SERVICES_DEVELOPMENT_ADAPTERS
+    // is true. #815 replaces this method and usableServiceIds() with the policy
+    // gate (the services allowed by the session's pinned policy version).
+    isServiceUsable(serviceId) {
+        const service = this.services.get(serviceId);
+        if (!service) {
+            return false;
+        }
+
+        return service.development === true && this.developmentAdaptersEnabled;
     }
 
-    getEnabledServiceIdsForScope(scope) {
-        return Array.from(this.services.values())
-            .filter(service => service.enabled
-                && Array.isArray(service.scopes)
+    // The usable ids among `serviceIds`, without duplicates and in order.
+    usableServiceIds(serviceIds = []) {
+        return Array.from(new Set(serviceIds)).filter(serviceId => this.isServiceUsable(serviceId));
+    }
+
+    getUsableServiceIdsForGlobalHook(hookName) {
+        return this.usableServiceIds(Array.from(this.services.values())
+            .filter(service => Array.isArray(service.globalHooks)
+                && service.globalHooks.includes(hookName))
+            .map(service => service.id));
+    }
+
+    getUsableServiceIdsForScope(scope) {
+        return this.usableServiceIds(Array.from(this.services.values())
+            .filter(service => Array.isArray(service.scopes)
                 && service.scopes.includes(scope))
-            .map(service => service.id);
+            .map(service => service.id));
     }
 
     // The adapter's optional validateCaseAnalysisDocument(), which checks
@@ -525,15 +601,13 @@ export class ExternalServicesRegistry {
         return this.services.get(serviceId) || null;
     }
 
-    hasEnabledService(serviceId) {
-        const service = this.services.get(serviceId);
-        return Boolean(service?.enabled);
-    }
-
+    // Callback callers are authorized for every registered adapter, usable or
+    // not; dispatchServiceHook then delivers a callback for an unusable one
+    // only when it matches an existing job of that service.
     authorizeCallbackCaller(serviceId, authContext) {
         const service = this.services.get(serviceId);
-        if (!service?.enabled) {
-            const error = new Error(`Unknown or disabled external service: ${serviceId}`);
+        if (!service) {
+            const error = new Error(`Unknown external service: ${serviceId}`);
             error.statusCode = 404;
             throw error;
         }
@@ -623,7 +697,8 @@ export class ExternalServicesRegistry {
         }
     }
 
-    // Runs the handlers of `options.enabledServiceIds` for `hookName`. Each
+    // Runs the handlers of the usable services among `options.enabledServiceIds`
+    // for `hookName` (the others are dropped: see isServiceUsable). Each
     // handler's context carries `serviceConfiguration`, its entry in
     // `options.serviceConfigurations` (the phase's settings, #734) or {}.
     // `options.jobIds` maps service ids to job ids chosen by the caller, for
@@ -633,7 +708,7 @@ export class ExternalServicesRegistry {
             await this.initialize();
         }
 
-        const enabledServiceIds = new Set(options.enabledServiceIds || []);
+        const enabledServiceIds = new Set(this.usableServiceIds(options.enabledServiceIds || []));
         if (enabledServiceIds.size === 0) {
             return [];
         }
@@ -660,17 +735,22 @@ export class ExternalServicesRegistry {
         }
 
         return this.dispatchHook(hookName, context, {
-            enabledServiceIds: this.getGloballyEnabledServiceIds(hookName),
+            enabledServiceIds: this.getUsableServiceIdsForGlobalHook(hookName),
         });
     }
 
+    // Delivers an inbound callback to its adapter. A usable service's handler
+    // always runs, as before. An unusable one's runs only for a job that
+    // already exists for that service (assertCallbackForExistingJob), so work
+    // created before it stopped being usable can finish while unsolicited
+    // callbacks cause no side effects.
     async dispatchServiceHook(hookName, serviceId, context) {
         if (!this.initialized) {
             await this.initialize();
         }
 
-        if (!this.hasEnabledService(serviceId)) {
-            const error = new Error(`Unknown or disabled external service: ${serviceId}`);
+        if (!this.services.has(serviceId)) {
+            const error = new Error(`Unknown external service: ${serviceId}`);
             error.statusCode = 404;
             throw error;
         }
@@ -690,6 +770,10 @@ export class ExternalServicesRegistry {
 
         if (resultRecord?.is_duplicate) {
             return { resultRecord, outcomes: [] };
+        }
+
+        if (!this.isServiceUsable(serviceId)) {
+            assertCallbackForExistingJob(resultRecord, serviceId);
         }
 
         const subscribers = this.hookSubscribers.get(hookName) || [];

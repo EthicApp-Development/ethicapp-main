@@ -28,8 +28,8 @@ services:
       - NODE_ENV=development
       - ETHICAPP_WATCH_FRONTEND=true
       - EXTERNAL_MOCK_SERVICE_URL=http://external-mock-service:8510
-      # Every external service, mocks included (#738); images default to manifest.json.
-      - EXTERNAL_SERVICES_MANIFEST=/app/backend/external-services/manifest.development.json
+      # Registers the development-only mock adapters (#812); images leave them out.
+      - EXTERNAL_SERVICES_DEVELOPMENT_ADAPTERS=true
       - REDIS_APP_HOST=redis
       - REDIS_APP_PORT=6379
       - REDIS_CACHE_HOST=redis

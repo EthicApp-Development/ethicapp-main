@@ -210,9 +210,9 @@ test("dispatchCaseCreatedHook: dispatches and releases nothing without reservati
 
 function makeCaseRegistry(caseServiceIds) {
     const registry = {
-        initialized:                  false,
-        initialize:                   async () => { registry.initialized = true; },
-        getEnabledServiceIdsForScope: scope => (scope === "case" ? caseServiceIds : []),
+        initialized:                 false,
+        initialize:                  async () => { registry.initialized = true; },
+        getUsableServiceIdsForScope: scope => (scope === "case" ? caseServiceIds : []),
     };
     return registry;
 }
@@ -228,7 +228,7 @@ test("resolveCaseAnalysisServiceIds: no choice is valid and skips the registry",
     }
 });
 
-test("resolveCaseAnalysisServiceIds: accepts enabled case services once, trimmed", async () => {
+test("resolveCaseAnalysisServiceIds: accepts usable case services once, trimmed", async () => {
     const registry = makeCaseRegistry(["svc-case", "svc-other-case"]);
     const chosen = JSON.stringify(["svc-case", " svc-case ", "svc-other-case"]);
 
@@ -242,7 +242,7 @@ test("resolveCaseAnalysisServiceIds: accepts enabled case services once, trimmed
     );
 });
 
-test("resolveCaseAnalysisServiceIds: rejects ids that are not enabled case services", async () => {
+test("resolveCaseAnalysisServiceIds: rejects ids that are not usable case services", async () => {
     const registry = makeCaseRegistry(["svc-case"]);
 
     const choice = await resolveCaseAnalysisServiceIds(

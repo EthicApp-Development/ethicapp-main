@@ -129,7 +129,10 @@ export async function getStudentActivityDescriptor(sessionId) {
                 description,
                 design,
                 externalServices: {
-                    services: externalServicesRegistry.listServices(),
+                    // Only usable services: the student app waits for the
+                    // response processing of the services it is given.
+                    services: externalServicesRegistry.listServices()
+                        .filter(service => service.usable),
                 },
                 currentPhaseNumber,
                 currentPhaseId
