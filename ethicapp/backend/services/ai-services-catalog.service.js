@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 
 import aiAdditionsClient from "./ai-additions-client.service.js";
 import { isAiAdditionsNotConfigured } from "../helpers/ai-additions-connection.js";
+import { getConnection as getStoredConnection } from "../helpers/ai-service-policy.js";
 import { assertValidCatalog, validateCatalog } from "../external-services/catalog.js";
 
 /**
@@ -270,12 +271,16 @@ async function loadManifestFromDisk(manifestUrl = DEFAULT_MANIFEST_URL) {
 /**
  * @param {object} [options]
  * @param {import("./ai-additions-client.service.js").AiAdditionsClient} [options.client]
- *   Client bound to the stored connection; its `withConnection()` serves tests.
+ *   Source of the credentials, fetch and timers; every request goes through a
+ *   `withConnection()` copy bound to one connection snapshot.
+ * @param {() => Promise<object|null>} [options.getConnection]  Reads the stored
+ *   connection, uncached; defaults to the database.
  * @param {() => Promise<{ services: object[] }>} [options.loadAdapterCatalog]
  * @param {{ warn: Function }} [options.logger]
  */
 export function createAiServicesCatalogService({
     client = aiAdditionsClient,
+    getConnection = getStoredConnection,
     loadAdapterCatalog = loadManifestFromDisk,
     logger = console,
     catalogDeadlineMs = DEFAULT_CATALOG_DEADLINE_MS,
@@ -342,10 +347,16 @@ export function createAiServicesCatalogService({
     async function readCatalog({ locale } = {}) {
         const normalizedLocale = normalizeCatalogLocale(locale);
 
-        // Reading the connection is EthicApp's own business: a database
-        // failure propagates instead of being reported as an AI Additions error.
+        // The console reloads the catalog right after saving or removing the
+        // connection, so this read bypasses the shared client's connection
+        // cache: it reads the stored connection now and binds the token and
+        // the catalog request to that snapshot. Reading it is EthicApp's own
+        // business: a database failure propagates instead of being reported
+        // as an AI Additions error.
+        const connection = (await getConnection()) ?? null;
+        const snapshotClient = client.withConnection(connection);
         try {
-            await client.getEndpoints();
+            await snapshotClient.getEndpoints();
         } catch (error) {
             if (isAiAdditionsNotConfigured(error)) {
                 return { ok: false, error: AI_SERVICES_ERROR.NOT_CONFIGURED };
@@ -353,7 +364,7 @@ export function createAiServicesCatalogService({
             throw error;
         }
 
-        if (!hasClientCredentials(client)) {
+        if (!hasClientCredentials(snapshotClient)) {
             logger.warn("[ai-services] catalog read failed: "
                 + "error=unauthorized cause=MissingClientCredentials");
             return { ok: false, error: AI_SERVICES_ERROR.UNAUTHORIZED };
@@ -364,7 +375,7 @@ export function createAiServicesCatalogService({
         let catalog;
         try {
             catalog = await withDeadline(
-                fetchCatalog(client, normalizedLocale, catalogDeadlineMs),
+                fetchCatalog(snapshotClient, normalizedLocale, catalogDeadlineMs),
                 catalogDeadlineMs
             );
         } catch (error) {

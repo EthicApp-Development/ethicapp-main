@@ -118,6 +118,7 @@ function buildService({
     const client = new AiAdditionsClient({ env, fetchImpl, getConnection });
     return createAiServicesCatalogService({
         client,
+        getConnection,
         loadAdapterCatalog: async () => ADAPTER_CATALOG,
         ...options,
     });
@@ -129,6 +130,7 @@ async function request(service, {
     session = superAdminSession(),
     headers = {},
     body,
+    parseJson = true,
 }) {
     const app = express();
     app.use((req, res, next) => {
@@ -157,7 +159,7 @@ async function request(service, {
         const text = await response.text();
         assert.equal(text.includes(CLIENT_SECRET), false, "the response leaks the client secret");
         assert.equal(text.includes(ACCESS_TOKEN), false, "the response leaks the token");
-        return { status: response.status, body: text ? JSON.parse(text) : null };
+        return { status: response.status, body: parseJson && text ? JSON.parse(text) : text };
     } finally {
         await new Promise(resolve => server.close(resolve));
     }
@@ -369,6 +371,103 @@ describe("GET /api/admin/ai-services/catalog", () => {
     });
 });
 
+describe("GET /api/admin/ai-services/catalog right after the connection changes", () => {
+    // The stored connection as the console's PUT and DELETE change it, read
+    // through the real client with its default 5 s connection cache and a
+    // clock that never advances: nothing would expire on its own.
+    function connectionStore(initial) {
+        const store = { connection: initial };
+        const { calls, fetchImpl } = fakeAiAdditions({
+            catalog: url => jsonResponse({
+                contractVersion: "1",
+                services:        [catalogService(url.includes("host-a") ? "polyadic-agent" : "case-analyst")],
+            }),
+        });
+        const getConnection = async () => store.connection;
+        const client = new AiAdditionsClient({ env: ENV, fetchImpl, getConnection, now: () => 0 });
+        const service = createAiServicesCatalogService({
+            client,
+            getConnection,
+            loadAdapterCatalog: async () => ADAPTER_CATALOG,
+        });
+        // Warm the shared client's cache, as dispatch would.
+        const warm = () => client.readConnection();
+        return { store, calls, service, warm };
+    }
+
+    const hostA = { baseUrl: "http://host-a.test", keycloakPublicUrl: null };
+    const hostB = { baseUrl: "http://host-b.test", keycloakPublicUrl: null };
+
+    it("reads the new connection immediately after a save", async () => {
+        const { store, calls, service, warm } = connectionStore(hostA);
+        await warm();
+        assert.deepEqual((await getCatalog(service)).body.services.map(s => s.id), ["polyadic-agent"]);
+
+        store.connection = hostB;
+        const { body } = await getCatalog(service);
+
+        assert.deepEqual(body.services.map(s => s.id), ["case-analyst"]);
+        assert.equal(calls.at(-1).url, "http://host-b.test/catalog/v1/services");
+        assert.equal(calls.at(-2).url, `http://host-b.test${TOKEN_PATH}`);
+    });
+
+    it("answers not_configured immediately after the connection is removed", async () => {
+        const { store, calls, service, warm } = connectionStore(hostA);
+        await warm();
+        assert.equal((await getCatalog(service)).body.ok, true);
+        const requestsBefore = calls.length;
+
+        store.connection = null;
+
+        assert.deepEqual((await getCatalog(service)).body, { ok: false, error: "not_configured" });
+        assert.equal(calls.length, requestsBefore);
+    });
+
+    it("reads the first saved connection even while no connection is cached", async () => {
+        const { store, service, warm } = connectionStore(null);
+        await warm();
+        assert.deepEqual((await getCatalog(service)).body, { ok: false, error: "not_configured" });
+
+        store.connection = hostA;
+
+        const { body } = await getCatalog(service);
+        assert.equal(body.ok, true);
+        assert.deepEqual(body.services.map(s => s.id), ["polyadic-agent"]);
+    });
+});
+
+describe("letter case of the internal routes", () => {
+    it("serves only the canonical spelling", async () => {
+        const { calls, fetchImpl } = fakeAiAdditions();
+        const service = buildService({ fetchImpl });
+
+        for (const path of [
+            "/API/admin/ai-services/catalog?locale=es_CL",
+            "/api/Admin/ai-services/catalog?locale=es_CL",
+            "/api/admin/AI-SERVICES/CATALOG",
+        ]) {
+            const { status } = await request(service, { path, parseJson: false });
+            assert.equal(status, 404, path);
+        }
+        for (const path of [
+            "/api/Admin/ai-services/connection-test",
+            "/API/ADMIN/AI-SERVICES/CONNECTION-TEST",
+        ]) {
+            const { status } = await request(service, {
+                method:    "POST",
+                path,
+                body:      { baseUrl: "http://ai.example.org" },
+                parseJson: false,
+            });
+            assert.equal(status, 404, path);
+        }
+        assert.equal(calls.length, 0);
+
+        assert.equal((await getCatalog(service)).status, 200);
+        assert.equal((await postTest(service, { baseUrl: "http://ai.example.org" })).status, 200);
+    });
+});
+
 describe("POST /api/admin/ai-services/connection-test", () => {
     it("obtains a token and reads the catalog from the given URLs without the stored connection", async () => {
         const { calls, fetchImpl } = fakeAiAdditions();
@@ -398,16 +497,25 @@ describe("POST /api/admin/ai-services/connection-test", () => {
         assert.equal(storedReads, 0);
     });
 
-    it("does not reuse or fill the shared client's token cache", async () => {
-        const { calls, fetchImpl } = fakeAiAdditions();
-        const service = buildService({ fetchImpl });
+    it("leaves the shared client's connection and token caches alone", async () => {
+        const { fetchImpl } = fakeAiAdditions();
+        let sharedReads = 0;
+        const client = new AiAdditionsClient({
+            env:           ENV,
+            fetchImpl,
+            getConnection: async () => { sharedReads += 1; return STORED_CONNECTION; },
+        });
+        const service = createAiServicesCatalogService({
+            client,
+            getConnection:      async () => STORED_CONNECTION,
+            loadAdapterCatalog: async () => ADAPTER_CATALOG,
+        });
 
-        await getCatalog(service);
-        await postTest(service, { baseUrl: "http://ai.stored" });
-        await getCatalog(service);
+        assert.equal((await getCatalog(service)).body.ok, true);
+        assert.equal((await postTest(service, { baseUrl: "http://ai.stored" })).body.ok, true);
 
-        const tokenRequests = calls.filter(call => call.url.endsWith(TOKEN_PATH));
-        assert.equal(tokenRequests.length, 2);
+        assert.equal(sharedReads, 0);
+        assert.equal(client.tokenCache.token, null);
     });
 
     it("skips the catalog when no token was obtained: unreachable host", async () => {

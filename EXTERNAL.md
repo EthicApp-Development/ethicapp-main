@@ -207,14 +207,21 @@ The management console holds no AI Additions credentials. Its AI services page
 (#817) reads the AI Additions catalog and tests a connection through two
 ethicapp endpoints (#816, `controllers/admin/ai-services.js`). Like the
 impersonation start endpoint, they are reached over the internal network only:
-NGINX answers `404` for `/api/admin/` at the edge, which
-`npm run test:nginx-config` and `npm run test:nginx-edge` check. They require a
+NGINX answers `404` for `/api/admin/` at the edge in any letter case
+(`location ^~ /api/admin/` plus `location ~* ^/api/admin/`), except the exact
+`/api/admin/impersonation/stop`. `npm run test:nginx-config` and
+`npm run test:nginx-edge` check this. The ethicapp routers for `/api/admin/` are
+case-sensitive, so no other spelling reaches a handler. The endpoints require a
 session with role `S` (the console forwards the operator's cookie and identity
 headers); other roles get `403`.
 
 - `GET /api/admin/ai-services/catalog?locale=es_CL|en_US` reads
-  `GET <base_url>/catalog/v1/services` through the stored connection, with
-  `Accept-Language: es-CL` or `en-US`. It answers
+  `GET <base_url>/catalog/v1/services` with
+  `Accept-Language: es-CL` or `en-US`. It reads the stored connection from the
+  database on every call, bypassing the client's 5 s connection cache, and binds
+  the token and the catalog request to that snapshot. A catalog requested right
+  after the console saves or removes the connection therefore describes the new
+  one. It answers
   `{ ok: true, contractVersion, locale, services: [{ id, name, description, usesLlm, status, available, adapters }] }`,
   where `adapters` lists the non-development adapters of the catalog in
   `manifest.json` whose `requires` include the service, as `{ id, description }`.

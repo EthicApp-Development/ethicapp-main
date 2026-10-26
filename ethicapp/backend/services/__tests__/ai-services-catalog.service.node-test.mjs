@@ -147,6 +147,7 @@ test("each AI Additions service lists the shipped adapters that require it, with
 
 test("the default adapter catalog is the shipped manifest", async () => {
     const client = {
+        withConnection:          () => client,
         getEndpoints:            async () => ({ baseUrl: "http://ai.local" }),
         getKeycloakClientId:     () => "id",
         getKeycloakClientSecret: () => "secret",
@@ -163,7 +164,11 @@ test("the default adapter catalog is the shipped manifest", async () => {
             }],
         }),
     };
-    const service = createAiServicesCatalogService({ client, logger: { warn() {} } });
+    const service = createAiServicesCatalogService({
+        client,
+        getConnection: async () => ({ baseUrl: "http://ai.local" }),
+        logger:        { warn() {} },
+    });
 
     const result = await service.readCatalog({ locale: "en_US" });
 
