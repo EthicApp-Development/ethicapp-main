@@ -31,37 +31,69 @@ invalid catalog stops startup (and the image build, through
 
 Registering only subscribes handlers: it makes no outbound call
 (`__tests__/registration.node-test.mjs`). Whether a registered adapter
-receives events is decided at dispatch, by the registry's usability seam (see
+receives events is decided at dispatch, by the registry's policy gate (see
 "Usability").
 
-### Usability
+### Usability: the AI service policy gate
 
-`registry.isServiceUsable(serviceId)` (with `usableServiceIds(serviceIds)`) is
-the one place that decides whether an adapter may receive events right now.
-`dispatchHook` (and so phase, activity and case hooks), `dispatchGlobalHook`,
-`getUsableServiceIdsForScope`, `getUsableServiceIdsForGlobalHook`,
-`listServices().usable`, `GET /external-services` and the capability
-descriptor lookups all ask it. The student activity descriptor lists only
-usable services.
+`registry.effectiveServiceIds(requestedIds, policyVersion)` is the one place
+that decides whether an adapter may receive events (#815, epic #810):
 
-Interim rule until the AI service policy lands (#815, epic #810): **no
-production adapter is usable**. Development adapters are usable when
-`EXTERNAL_SERVICES_DEVELOPMENT_ADAPTERS=true`. #815 replaces the seam with the
-policy gate: an adapter is usable when the policy version in force (the
-session's pinned version, or the current one outside sessions) allows every
-service in its `requires`, and an AI Additions connection is configured.
+- **Production adapters** pass when every AI Additions service in their
+  `requires` is in `policyVersion.allowedServiceIds` and a usable AI Additions
+  connection is stored. "Usable" means a row exists and its URLs are valid
+  (`isValidAiAdditionsUrl` in `helpers/ai-additions-connection.js`; see
+  "Stored connection URLs" below). The connection is read through the AI
+  Additions client (`isConfigured()`, 5 s cache), and a failed read counts as
+  no connection.
+- **Development adapters** (the mocks, `requires: []`) need no AI Additions
+  service, so they pass whenever they are registered, which only happens with
+  `EXTERNAL_SERVICES_DEVELOPMENT_ADAPTERS=true`, whatever the policy or the
+  connection. Production installations never register them.
+
+Which version applies:
+
+| Path | Version |
+| --- | --- |
+| Session hooks (`phase-started`, `phase-ended`, `activity-started`, `activity-finished`, `student-response-submitted`, `chat-message-received`, and any hook other than `case-created`) | The version the session was pinned to at launch (`sessions.ai_service_policy_version_id`), found from `context.sessionId`. A hook without `sessionId` follows no version. |
+| `case-created` (`NON_SESSION_HOOKS`) | The current version. It only bounds the author's choice (`case_analyses`): the candidates are the services chosen for the case, never every allowed one. |
+| `GET /external-services`, `GET /external-services/:id/instance-configuration`, design saving, the case form's choice (`POST /cases`), regenerating a case analysis | The current version. |
+| The student activity descriptor | The session's pinned version. |
+| Callbacks | See below. |
+
+`dispatchHook` resolves the version itself (`resolveHookPolicyVersion`), so
+callers keep passing only the ids their design or case enables. The version is
+read only when a production adapter is among them. A launched session's pin
+never changes, so `getSessionPolicyVersionId` caches it per session, and
+versions are immutable, so `getPolicyVersion` caches them too. A policy that
+cannot be read allows no production adapter.
+
+Designs keep the ids of services that are not usable; nothing is dispatched to
+them. Saving a design that enables one answers with a `not_allowed` warning for
+it, and launching an activity lists them in `servicesNotRunning` (shown to the
+teacher as a notice on the activity dashboard). Neither is an error.
 
 Callbacks are the one exception, for jobs that already exist.
-`POST /external-services/callbacks` is delivered to a usable adapter as
-before. For a registered adapter that is not usable, it is delivered only when
-`correlationId` matches a persisted job of that same service, so jobs created
-earlier can still finish. Otherwise the result is recorded, the handler does
+`POST /external-services/callbacks` is delivered to an adapter usable under the
+current version as before. For a registered adapter that is not usable, it is
+delivered only when `correlationId` matches a persisted job of that same
+service, so jobs created earlier can still finish. Otherwise the result is recorded, the handler does
 not run, and the endpoint answers `409` (no matching job) or `503` (the result
 or job lookup failed).
 
-Designs keep the ids of services that are not usable; the editor does not offer
-them and nothing is dispatched to them (#686), so seeded activities that
-reference the mocks still load where the mocks are not registered.
+The editor does not offer services that are not usable (#686), so seeded
+activities that reference the mocks still load where the mocks are not
+registered.
+
+### Stored connection URLs
+
+The management console only saves valid URLs, but rows inserted by hand bypass
+it, and the database CHECK only requires `^https?://`. A `base_url` or
+`keycloak_public_url` whose raw value does not match `^https?://[^/?#\s]+`, or
+that contains a query string, a fragment, userinfo or whitespace, counts as no
+connection: the AI Additions client rejects every call with `not_configured`
+before sending anything, callbacks answer `503 not_configured`, and the gate
+lets no production adapter through. Path prefixes are allowed.
 
 Every service declares `callbackAuth`. The mock adapters never receive HTTP
 callbacks (they call the mock service synchronously), so they accept only
@@ -229,18 +261,20 @@ const configuration = await externalServicesRegistry
 
 ### Listing services
 
-`GET /external-services` (role `P`) returns the usable services (see
-"Usability") without their adapter paths or callback settings. Services that
-are not usable are never listed:
+`GET /external-services` (role `P`) returns the services usable under the
+current policy version (see "Usability"), without their adapter paths or
+callback settings. Services that are not usable are never listed:
 
 - Without `scope`, it returns every usable service.
 - With `scope`, it returns only the usable services that declare at least one
   of the requested scopes. The parameter can be repeated
   (`?scope=response&scope=chat`). An unknown or empty scope answers `400`.
 
-Each listed service carries `requires`, `development` and `usable`. The
-student activity descriptor includes only the usable services
-(`listServices()`, filtered on `usable`).
+Each listed service carries `requires`, `development` and `usable` (always
+`true`). `registry.listServices()` is the whole catalog, usable or not;
+`registry.listUsableServices({ policyVersion })` keeps the usable ones. The
+student activity descriptor includes only the services usable under the
+session's pinned version.
 
 A design keeps the ids it stores in `phases[].externalServices.enabledServiceIds`
 when a service is not usable. The design editor neither shows nor drops them, so
@@ -423,8 +457,8 @@ and editing the case never changes the choice.
 **Global hooks (manifest opt-in).** Hooks that fire outside an activity and
 need no teacher choice are dispatched with
 `registry.dispatchGlobalHook(hookName, context)`. Its audience is
-`registry.getUsableServiceIdsForGlobalHook(hookName)`: every usable service
-whose catalog entry lists `hookName` in `globalHooks`. Opting in is decided in
+every service whose catalog entry lists `hookName` in `globalHooks`, filtered
+by the policy gate like any other dispatch. Opting in is decided in
 the catalog; there is no teacher-facing UI for it. `dispatchGlobalHook` delegates to `dispatchHook`, so jobs,
 `correlationId`, `callback(result)` handling, and error isolation are identical.
 
@@ -581,7 +615,8 @@ and chosen service, holding the current result. Raw callbacks still go to
 
 Teachers choose the services when they create a case: `POST /cases` accepts
 `analysisServiceIds`, a JSON array of service ids, like `tag_ids`. Each id must
-name a usable service with the `case` scope; otherwise, or when the value is
+name a service with the `case` scope that is usable under the current policy
+version (the form lists `GET /external-services?scope=case`); otherwise, or when the value is
 not such a list, the request answers `400 CASE_ANALYSIS_SERVICE_INVALID` before
 the PDF is stored. Each chosen service gets a `requested` row, already reserved
 for its first generation, and `case-created` is dispatched to those services

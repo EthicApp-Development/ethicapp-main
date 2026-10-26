@@ -109,13 +109,28 @@ test("getCaseAnalysisValidator: the adapter's validator, or null without one", a
     assert.equal(registry.getCaseAnalysisValidator("svc-unknown"), null);
 });
 
-test("getUsableServiceIdsForScope: lists the usable services that declare the scope", () => {
-    const registry = new ExternalServicesRegistry({ jobsService: {}, developmentAdapters: true });
+test("getUsableServiceIdsForScope: lists the usable services that declare the scope", async () => {
+    // The current policy version allows nothing (#815).
+    const version = Object.freeze({ id: 1, allowedServiceIds: Object.freeze([]) });
+    const registry = new ExternalServicesRegistry({
+        jobsService:             {},
+        developmentAdapters:     true,
+        aiServicePolicy:         { getCurrentPolicyVersion: async () => version },
+        isAiAdditionsConfigured: async () => true,
+    });
     registry.services.set("case-a", { id: "case-a", development: true, scopes: ["case"] });
-    registry.services.set("case-prod", { id: "case-prod", development: false, scopes: ["case"] });
+    registry.services.set("case-prod", {
+        id: "case-prod", development: false, requires: ["case-analyst"], scopes: ["case"],
+    });
     registry.services.set("chat-a", { id: "chat-a", development: true, scopes: ["chat"] });
     registry.services.set("legacy", { id: "legacy", development: true });
 
-    assert.deepEqual(registry.getUsableServiceIdsForScope("case"), ["case-a"]);
-    assert.deepEqual(registry.getUsableServiceIdsForScope("response"), []);
+    assert.deepEqual(await registry.getUsableServiceIdsForScope("case"), ["case-a"]);
+    assert.deepEqual(await registry.getUsableServiceIdsForScope("response"), []);
+    assert.deepEqual(
+        await registry.getUsableServiceIdsForScope("case", {
+            policyVersion: { id: 2, allowedServiceIds: ["case-analyst"] },
+        }),
+        ["case-a", "case-prod"]
+    );
 });

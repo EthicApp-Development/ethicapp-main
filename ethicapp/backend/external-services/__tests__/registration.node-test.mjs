@@ -11,7 +11,12 @@ const MANIFEST_PATH = fileURLToPath(new URL("../manifest.json", import.meta.url)
 const PRODUCTION_IDS  = ["polyadic-devils-advocate", "argumentation-tutor-system", "case-analyst"];
 const DEVELOPMENT_IDS = ["mock-ai-response-review", "mock-chat-agent", "mock-case-analysis"];
 
-async function registerWithoutNetwork({ developmentAdapters, env } = {}) {
+async function registerWithoutNetwork({
+    developmentAdapters,
+    env,
+    aiServicePolicy,
+    isAiAdditionsConfigured = async () => false,
+} = {}) {
     const fetchCalls     = [];
     const originalFetch  = globalThis.fetch;
     const originalWarn   = console.warn;
@@ -38,7 +43,12 @@ async function registerWithoutNetwork({ developmentAdapters, env } = {}) {
     }
 
     try {
-        const registry = new ExternalServicesRegistry({ jobsService, developmentAdapters });
+        const registry = new ExternalServicesRegistry({
+            jobsService,
+            developmentAdapters,
+            aiServicePolicy,
+            isAiAdditionsConfigured,
+        });
         await registry.initialize(MANIFEST_PATH);
         // Let work an adapter started without awaiting it reach fetch() too.
         await new Promise(resolve => setTimeout(resolve, 20));
@@ -88,19 +98,51 @@ test("registration: development adapters register only with the development vari
     assert.deepEqual(on.fetchCalls, []);
 });
 
-// Interim rule until the service policy (#815): no production adapter is usable.
-test("registration: production adapters are registered but not usable before #815", async () => {
-    const { registry } = await registerWithoutNetwork({ developmentAdapters: true });
+// The policy gate (#815) over the shipped catalog: production adapters are
+// usable only when the current version allows what they require and a
+// connection exists; development adapters whenever they are registered.
+function policyAllowing(allowedServiceIds) {
+    const version = Object.freeze({ id: 2, allowedServiceIds: Object.freeze(allowedServiceIds) });
+    return {
+        getCurrentPolicyVersion:   async () => version,
+        getPolicyVersion:          async () => version,
+        getSessionPolicyVersionId: async () => version.id,
+    };
+}
 
+async function usableIds(registry) {
+    return (await registry.listUsableServices()).map(service => service.id).sort();
+}
+
+test("registration: the policy gate decides which shipped adapters are usable", async () => {
+    const everything = await registerWithoutNetwork({
+        developmentAdapters:     true,
+        aiServicePolicy:         policyAllowing(["polyadic-agent", "argumentation-tutor", "case-analyst"]),
+        isAiAdditionsConfigured: async () => true,
+    });
+    assert.deepEqual(await usableIds(everything.registry), [...PRODUCTION_IDS, ...DEVELOPMENT_IDS].sort());
+    assert.deepEqual(
+        await everything.registry.getUsableServiceIdsForScope("case"),
+        ["case-analyst", "mock-case-analysis"]
+    );
+
+    const caseAnalystOnly = await registerWithoutNetwork({
+        developmentAdapters:     false,
+        aiServicePolicy:         policyAllowing(["case-analyst"]),
+        isAiAdditionsConfigured: async () => true,
+    });
+    assert.deepEqual(await usableIds(caseAnalystOnly.registry), ["case-analyst"]);
+
+    const noConnection = await registerWithoutNetwork({
+        developmentAdapters:     true,
+        aiServicePolicy:         policyAllowing(["polyadic-agent", "argumentation-tutor", "case-analyst"]),
+        isAiAdditionsConfigured: async () => false,
+    });
+    assert.deepEqual(await usableIds(noConnection.registry), [...DEVELOPMENT_IDS].sort());
     for (const serviceId of PRODUCTION_IDS) {
-        assert.equal(registry.isServiceUsable(serviceId), false, serviceId);
+        assert.equal(await noConnection.registry.isServiceUsable(serviceId), false, serviceId);
     }
     for (const serviceId of DEVELOPMENT_IDS) {
-        assert.equal(registry.isServiceUsable(serviceId), true, serviceId);
+        assert.equal(await noConnection.registry.isServiceUsable(serviceId), true, serviceId);
     }
-    assert.deepEqual(registry.getUsableServiceIdsForScope("case"), ["mock-case-analysis"]);
-    assert.deepEqual(
-        registry.listServices().filter(service => service.usable).map(service => service.id).sort(),
-        [...DEVELOPMENT_IDS].sort()
-    );
 });

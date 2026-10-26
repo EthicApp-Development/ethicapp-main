@@ -12,6 +12,11 @@ import { saveChatMessage } from "../helpers/chat-helper.js";
 import { studentNotifications, teacherNotifications } from "../config/socket.config.js";
 import aiAdditionsClient from "./ai-additions-client.service.js";
 import {
+    getCurrentPolicyVersion,
+    getPolicyVersion,
+    getSessionPolicyVersionId,
+} from "../helpers/ai-service-policy.js";
+import {
     assertValidCatalog,
     developmentAdaptersEnabled,
     validateCatalog,
@@ -35,6 +40,17 @@ const UI_LOCALES = Object.freeze(["es_CL", "en_US"]);
 const UI_TRANSLATIONS_TIMEOUT_MS = 3000;
 const UI_TRANSLATIONS_TTL_MS     = 10 * 60 * 1000;
 const UI_TRANSLATIONS_RETRY_MS   = 60 * 1000;
+
+// Hooks that fire outside any session. They follow the current AI service
+// policy version; every other hook belongs to a session (`context.sessionId`)
+// and follows the version that session is pinned to (#815).
+export const NON_SESSION_HOOKS = Object.freeze(["case-created"]);
+
+const DEFAULT_AI_SERVICE_POLICY = Object.freeze({
+    getCurrentPolicyVersion,
+    getPolicyVersion,
+    getSessionPolicyVersionId,
+});
 
 const DEFAULT_CASE_ANALYSES_STORE = Object.freeze({
     markCaseAnalysisProcessing,
@@ -255,7 +271,8 @@ function serviceConfigurationFor(serviceConfigurations, serviceId) {
     return isObject ? { ...configuration } : {};
 }
 
-// A callback for a service that is not usable is delivered only when it
+// A callback for a service that is not usable (under the current policy
+// version, or without a connection) is delivered only when it
 // correlates with a persisted job of that same service: createResult() matches
 // the correlation id against that service's jobs and returns the job_id. The
 // result row stays recorded either way. Throws 503 when the result or job
@@ -289,6 +306,8 @@ export class ExternalServicesRegistry {
         capabilityDescriptors,
         developmentAdapters,
         importAdapter = href => import(href),
+        aiServicePolicy = DEFAULT_AI_SERVICE_POLICY,
+        isAiAdditionsConfigured = () => aiAdditionsClient.isConfigured(),
     } = {}) {
         this.initialized      = false;
         this.services         = new Map();
@@ -299,6 +318,11 @@ export class ExternalServicesRegistry {
         // EXTERNAL_SERVICES_DEVELOPMENT_ADAPTERS unless a test injects it.
         this._developmentAdapters = developmentAdapters;
         this._importAdapter       = importAdapter;
+
+        // The AI service policy gate (#815): the stored policy versions and
+        // session pins, and whether a usable AI Additions connection exists.
+        this._aiServicePolicy         = aiServicePolicy;
+        this._isAiAdditionsConfigured = isAiAdditionsConfigured;
 
         this.uiTranslationProviders   = new Map();
         this.uiTranslationsCache      = new Map();
@@ -323,7 +347,8 @@ export class ExternalServicesRegistry {
     // Registers every adapter of the catalog (#812): all production adapters,
     // and the development ones when EXTERNAL_SERVICES_DEVELOPMENT_ADAPTERS=true.
     // Registering only subscribes handlers; it must make no outbound call.
-    // Whether an adapter receives events is decided at dispatch (isServiceUsable).
+    // Whether an adapter receives events is decided at dispatch (the policy
+    // gate, effectiveServiceIds).
     // `manifestPath` exists for tests; the application uses the shipped catalog.
     async initialize(manifestPath = DEFAULT_MANIFEST_PATH) {
         if (this.initialized) {
@@ -482,8 +507,6 @@ export class ExternalServicesRegistry {
             descriptor: descriptor ? { serviceId: descriptor.serviceId } : null,
             requires,
             development,
-            // Whether the service may receive events now (isServiceUsable).
-            usable:     this.isServiceUsable(id),
         }));
     }
 
@@ -496,10 +519,12 @@ export class ExternalServicesRegistry {
 
     // The normalized instance configuration that a usable service's capability
     // descriptor advertises, in the descriptor locale for `locale` (#727). Null for
-    // unknown or unusable services and for services without a descriptor;
-    // `{ available: false, reason }` when the descriptor cannot be fetched.
-    async getServiceInstanceConfiguration(serviceId, locale) {
-        if (!this.isServiceUsable(serviceId)) {
+    // unknown or unusable services (under the current policy version, or
+    // `policyVersion` when the caller already read it) and for services without
+    // a descriptor; `{ available: false, reason }` when the descriptor cannot be
+    // fetched.
+    async getServiceInstanceConfiguration(serviceId, locale, { policyVersion } = {}) {
+        if (!await this.isServiceUsable(serviceId, { policyVersion })) {
             return null;
         }
 
@@ -551,45 +576,169 @@ export class ExternalServicesRegistry {
         }
     }
 
-    // -- Usability seam (#812; replaced by the service policy gate in #815) --
+    // -- AI service policy gate (#815, epic #810) --
     //
-    // Whether a registered adapter may receive events right now. Every
-    // dispatch path (phase, case and global hooks), every listing and the
-    // descriptor lookups ask this method, and nothing else decides it.
-    // Callbacks are the one exception: a callback for a job that already
+    // effectiveServiceIds() is the one place that decides whether a registered
+    // adapter may receive events. Every dispatch path (phase, activity, case
+    // and global hooks), every listing and the descriptor lookups go through
+    // it. Callbacks are the one exception: a callback for a job that already
     // exists for its service is always delivered (dispatchServiceHook).
     //
-    // Interim rule until #815: no production adapter is usable, since the
-    // catalog has no `enabled` any more and the policy does not exist yet.
-    // Development adapters are usable when EXTERNAL_SERVICES_DEVELOPMENT_ADAPTERS
-    // is true. #815 replaces this method and usableServiceIds() with the policy
-    // gate (the services allowed by the session's pinned policy version).
-    isServiceUsable(serviceId) {
-        const service = this.services.get(serviceId);
+    // - A production adapter passes when every AI Additions service in its
+    //   `requires` is in `policyVersion.allowedServiceIds` and a usable AI
+    //   Additions connection is stored (`isAiAdditionsConfigured`).
+    // - A development adapter (the mocks) requires no AI Additions service, so
+    //   it passes whenever it is registered, which only happens with
+    //   EXTERNAL_SERVICES_DEVELOPMENT_ADAPTERS=true, whatever the policy or the
+    //   connection.
+    //
+    // Which version applies is decided by resolveHookPolicyVersion() for
+    // hooks; listings, descriptor lookups and callbacks use the current one.
+
+    // Whether `service` is allowed by `policyVersion`, ignoring the connection.
+    isAllowedByPolicy(service, policyVersion) {
         if (!service) {
             return false;
         }
+        if (service.development === true) {
+            return this.developmentAdaptersEnabled;
+        }
 
-        return service.development === true && this.developmentAdaptersEnabled;
+        const allowed = Array.isArray(policyVersion?.allowedServiceIds)
+            ? policyVersion.allowedServiceIds
+            : [];
+        const requires = Array.isArray(service.requires) ? service.requires : [];
+        return requires.length > 0 && requires.every(id => allowed.includes(id));
     }
 
-    // The usable ids among `serviceIds`, without duplicates and in order.
-    usableServiceIds(serviceIds = []) {
-        return Array.from(new Set(serviceIds)).filter(serviceId => this.isServiceUsable(serviceId));
+    // Whether a usable AI Additions connection is stored. A failure to read it
+    // counts as no connection, so nothing is sent.
+    async hasAiAdditionsConnection() {
+        try {
+            return (await this._isAiAdditionsConfigured()) === true;
+        } catch (error) {
+            console.error("[external-services] Could not read the AI Additions connection.", error);
+            return false;
+        }
     }
 
-    getUsableServiceIdsForGlobalHook(hookName) {
+    /**
+     * The policy gate: the ids among `requestedIds` that may receive events
+     * under `policyVersion`, without duplicates and in order. Unknown ids are
+     * dropped. Production adapters also need a usable AI Additions connection;
+     * development adapters need neither the policy nor the connection.
+     * @param {string[]} requestedIds
+     * @param {{ allowedServiceIds: ReadonlyArray<string> } | null} policyVersion
+     *        null (no version could be read) allows no production adapter.
+     * @returns {Promise<string[]>}
+     */
+    async effectiveServiceIds(requestedIds = [], policyVersion = null) {
+        const allowed = Array.from(new Set(requestedIds))
+            .filter(serviceId => this.isAllowedByPolicy(this.services.get(serviceId), policyVersion));
+
+        const needsConnection = allowed.some(serviceId => !this.services.get(serviceId).development);
+        if (!needsConnection || await this.hasAiAdditionsConnection()) {
+            return allowed;
+        }
+
+        return allowed.filter(serviceId => this.services.get(serviceId).development);
+    }
+
+    // The current policy version, or null when it cannot be read.
+    async getCurrentPolicyVersion() {
+        try {
+            return await this._aiServicePolicy.getCurrentPolicyVersion();
+        } catch (error) {
+            console.error("[external-services] Could not read the current AI service policy.", error);
+            return null;
+        }
+    }
+
+    // A policy version by id, or null when it is unknown or cannot be read.
+    async getPolicyVersion(versionId) {
+        try {
+            return await this._aiServicePolicy.getPolicyVersion(versionId);
+        } catch (error) {
+            console.error(`[external-services] Could not read AI service policy version ${versionId}.`, error);
+            return null;
+        }
+    }
+
+    // The version a session is pinned to, or null when it cannot be read.
+    async getSessionPolicyVersion(sessionId) {
+        try {
+            const versionId = await this._aiServicePolicy.getSessionPolicyVersionId(sessionId);
+            return versionId === null ? null : await this._aiServicePolicy.getPolicyVersion(versionId);
+        } catch (error) {
+            console.error(
+                `[external-services] Could not read the AI service policy of session ${sessionId}.`,
+                error
+            );
+            return null;
+        }
+    }
+
+    // Which policy version a hook follows: the current one for
+    // NON_SESSION_HOOKS (case-created), the session's pinned version for every
+    // other hook. A session hook without `context.sessionId` follows no
+    // version, so only development adapters receive it.
+    async resolveHookPolicyVersion(hookName, context = {}) {
+        if (NON_SESSION_HOOKS.includes(hookName)) {
+            return this.getCurrentPolicyVersion();
+        }
+
+        const sessionId = context?.sessionId;
+        if (sessionId === undefined || sessionId === null) {
+            console.warn(
+                `[external-services] Hook ${hookName} has no sessionId, so it follows no AI `
+                + "service policy version."
+            );
+            return null;
+        }
+
+        return this.getSessionPolicyVersion(sessionId);
+    }
+
+    // The usable ids among `serviceIds` under `policyVersion`, or the current
+    // version when it is not given. The current version is read only when a
+    // production adapter is among them.
+    async usableServiceIds(serviceIds = [], { policyVersion } = {}) {
+        const ids = Array.from(new Set(serviceIds)).filter(serviceId => this.services.has(serviceId));
+        const needsPolicy = ids.some(serviceId => !this.services.get(serviceId).development);
+        const version = policyVersion !== undefined || !needsPolicy
+            ? policyVersion ?? null
+            : await this.getCurrentPolicyVersion();
+        return this.effectiveServiceIds(ids, version);
+    }
+
+    // Whether one service is usable (see usableServiceIds).
+    async isServiceUsable(serviceId, options = {}) {
+        return (await this.usableServiceIds([serviceId], options)).length === 1;
+    }
+
+    // The catalog entries of the usable services (see usableServiceIds), in
+    // catalog order. Teacher listings and the student descriptor use it.
+    async listUsableServices(options = {}) {
+        const services = this.listServices();
+        const usable = new Set(await this.usableServiceIds(
+            services.map(service => service.id),
+            options
+        ));
+        return services.filter(service => usable.has(service.id));
+    }
+
+    async getUsableServiceIdsForGlobalHook(hookName, options = {}) {
         return this.usableServiceIds(Array.from(this.services.values())
             .filter(service => Array.isArray(service.globalHooks)
                 && service.globalHooks.includes(hookName))
-            .map(service => service.id));
+            .map(service => service.id), options);
     }
 
-    getUsableServiceIdsForScope(scope) {
+    async getUsableServiceIdsForScope(scope, options = {}) {
         return this.usableServiceIds(Array.from(this.services.values())
             .filter(service => Array.isArray(service.scopes)
                 && service.scopes.includes(scope))
-            .map(service => service.id));
+            .map(service => service.id), options);
     }
 
     // The adapter's optional validateCaseAnalysisDocument(), which checks
@@ -698,9 +847,12 @@ export class ExternalServicesRegistry {
         }
     }
 
-    // Runs the handlers of the usable services among `options.enabledServiceIds`
-    // for `hookName` (the others are dropped: see isServiceUsable). Each
-    // handler's context carries `serviceConfiguration`, its entry in
+    // Runs the handlers of the effective services among
+    // `options.enabledServiceIds` for `hookName`: the policy gate
+    // (effectiveServiceIds) drops the others, under the version
+    // resolveHookPolicyVersion() picks for the hook (the session's pinned
+    // version, or the current one for case-created). Each handler's context
+    // carries `serviceConfiguration`, its entry in
     // `options.serviceConfigurations` (the phase's settings, #734) or {}.
     // `options.jobIds` maps service ids to job ids chosen by the caller, for
     // work it reserved before dispatching. The other services get a new id.
@@ -709,7 +861,20 @@ export class ExternalServicesRegistry {
             await this.initialize();
         }
 
-        const enabledServiceIds = new Set(this.usableServiceIds(options.enabledServiceIds || []));
+        const requestedIds = Array.from(new Set(options.enabledServiceIds || []))
+            .filter(serviceId => this.services.has(serviceId));
+        if (requestedIds.length === 0) {
+            return [];
+        }
+
+        // Only production adapters depend on the policy, so the version is
+        // read only when one of them is requested.
+        const needsPolicy = requestedIds.some(serviceId => !this.services.get(serviceId).development);
+        const policyVersion = needsPolicy
+            ? await this.resolveHookPolicyVersion(hookName, context)
+            : null;
+
+        const enabledServiceIds = new Set(await this.effectiveServiceIds(requestedIds, policyVersion));
         if (enabledServiceIds.size === 0) {
             return [];
         }
@@ -735,8 +900,12 @@ export class ExternalServicesRegistry {
             await this.initialize();
         }
 
+        // dispatchHook() applies the policy gate for this hook.
         return this.dispatchHook(hookName, context, {
-            enabledServiceIds: this.getUsableServiceIdsForGlobalHook(hookName),
+            enabledServiceIds: Array.from(this.services.values())
+                .filter(service => Array.isArray(service.globalHooks)
+                    && service.globalHooks.includes(hookName))
+                .map(service => service.id),
         });
     }
 
@@ -773,7 +942,9 @@ export class ExternalServicesRegistry {
             return { resultRecord, outcomes: [] };
         }
 
-        if (!this.isServiceUsable(serviceId)) {
+        // Usable under the current policy version; otherwise only callbacks
+        // for existing jobs of the service are delivered.
+        if (!await this.isServiceUsable(serviceId)) {
             assertCallbackForExistingJob(resultRecord, serviceId);
         }
 

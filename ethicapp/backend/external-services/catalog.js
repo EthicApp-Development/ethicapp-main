@@ -1,7 +1,8 @@
 // The adapter catalog (#812): `manifest.json` lists the adapters EthicApp
 // ships. It is code, not deployment configuration, so it has no `enabled` and
 // no per-environment variants. Whether an adapter may be used is decided at
-// dispatch (`isServiceUsable()` in the registry; the service policy of #815).
+// dispatch by the AI service policy gate (`effectiveServiceIds()` in the
+// registry, #815).
 
 // The AI Additions services an adapter may require, by their AI Additions id
 // (the id their capability descriptor and the AI Additions catalog use). This

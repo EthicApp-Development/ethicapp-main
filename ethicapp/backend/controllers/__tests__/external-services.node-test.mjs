@@ -294,8 +294,19 @@ test("processCallback: 500 on unexpected dispatchServiceHook error", async () =>
 
 // ─── listExternalServices ────────────────────────────────────────────────────
 
+const CURRENT_VERSION = Object.freeze({ id: 7, allowedServiceIds: Object.freeze([]) });
+
+// The policy gate of the fakes: the services flagged `usable` pass.
+const FAKE_GATE = Object.freeze({
+    getCurrentPolicyVersion: async () => CURRENT_VERSION,
+    async listUsableServices() {
+        return this.listServices().filter(service => service.usable);
+    },
+});
+
 function makeListingRegistry() {
     return {
+        ...FAKE_GATE,
         initialize:               async () => {},
         getServiceUiTranslations: async () => null,
         listServices:             () => [
@@ -440,6 +451,7 @@ function describedService(id, descriptorServiceId) {
 function makeDescribedRegistry(configurations) {
     const calls = [];
     return {
+        ...FAKE_GATE,
         calls,
         initialize:                      async () => {},
         getServiceUiTranslations:        async () => null,
@@ -497,6 +509,29 @@ test("listExternalServices: summarizes descriptors in the teacher's locale", asy
         { serviceId: "described-up", locale: "es_CL" },
         { serviceId: "described-down", locale: "es_CL" },
     ]);
+});
+
+test("listExternalServices: reads the current version once and lists under it (#815)", async () => {
+    const seen = [];
+    const registry = {
+        ...makeDescribedRegistry({ "described-up": availableConfiguration() }),
+        async listUsableServices(options) {
+            seen.push(["list", options.policyVersion]);
+            return this.listServices().filter(service => service.id !== "described-down");
+        },
+        async getServiceInstanceConfiguration(serviceId, locale, options) {
+            seen.push([serviceId, options.policyVersion]);
+            return availableConfiguration();
+        },
+    };
+
+    const { body } = await listExternalServices({ scope: "chat", registry, locale: "en_US" });
+
+    assert.deepEqual(body.result.map(({ id, usable }) => ({ id, usable })), [
+        { id: "described-up", usable: true },
+        { id: "plain", usable: true },
+    ]);
+    assert.deepEqual(seen, [["list", CURRENT_VERSION], ["described-up", CURRENT_VERSION]]);
 });
 
 test("listExternalServices: the summary leaks no descriptor internals", async () => {

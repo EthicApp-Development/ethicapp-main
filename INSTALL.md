@@ -319,8 +319,10 @@ The `ethicapp` image ships one external-services adapter catalog,
 `backend/external-services/manifest.json` (#812). It is code, not
 configuration: there is no per-environment manifest and no variable to select
 one. Every production adapter is registered at startup, but none receives
-events until the AI service policy of epic #810 allows it (#815), so an
-installation uses no AI service until then. The mock adapters are
+events until an AI Additions connection is stored and the AI service policy
+allows the services it requires (epic #810, #815), so an installation uses no
+AI service until the operator configures both in the management console.
+Activities keep the policy version current at their launch. The mock adapters are
 development-only: they are registered only with
 `EXTERNAL_SERVICES_DEVELOPMENT_ADAPTERS=true`, which only the local Compose
 stack sets, and they need `external-mock-service`. Leave the variable unset in

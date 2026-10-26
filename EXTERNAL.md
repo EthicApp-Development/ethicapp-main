@@ -56,8 +56,14 @@ Each manifest entry declares:
   service in `requires`, mapped to the catalog `id` instead of renamed.
 
 There is no `enabled`: the catalog lists adapters, and whether one may be used
-is decided at dispatch (`isServiceUsable()` in the registry). Until the AI
-service policy lands (#815), only development adapters are usable.
+is decided at dispatch by the AI service policy gate
+(`effectiveServiceIds()` in the registry, #815). A production adapter is usable
+when the policy version in force allows every service in its `requires` and a
+valid AI Additions connection is stored. Session hooks follow the version the
+session was pinned to at launch; `case-created`, the teacher listings and
+callbacks follow the current version. Development adapters are usable whenever
+they are registered. See `ethicapp/backend/external-services/README.md`,
+"Usability".
 
 Hook names are standardized as kebab-case identifiers. New adapters should use
 names such as `phase-started`, `phase-ended`, `activity-started`,
@@ -338,8 +344,10 @@ EthicApp dispatches hooks only to services enabled in the phase design:
 
 The registry accepts `enabledServiceIds` and filters subscribers by service id.
 This keeps phase and response hooks scoped to services selected by the teacher.
-It also drops the services that are not usable (`isServiceUsable()`, #812), so
-a design that selects one reaches nothing for it and creates no job.
+It also drops the services the AI service policy gate does not let through
+(`effectiveServiceIds()`, #815: the session's pinned policy version and the
+connection), so a design that selects one reaches nothing for it and creates no
+job.
 
 Each handler also receives `context.serviceConfiguration` (#734): the settings
 the phase stores for that service in
