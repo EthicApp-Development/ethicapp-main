@@ -1,9 +1,11 @@
 // Proves that ethicapp's internal-only /api/admin/ routes are not served at
 // the edge (#816): for both NGINX configurations, the location NGINX selects
-// for each of them is the blocking `location ^~ /api/admin/`, which returns
-// 404 without proxying. Location selection follows NGINX's rules: an exact
-// match wins; otherwise the longest prefix, which stops the search when it is
-// `^~`; otherwise the first matching regex; otherwise that longest prefix.
+// for each of them, in any letter case, is one of the two blocking locations
+// (`^~ /api/admin/` and `~* ^/api/admin/`), which return 404 without
+// proxying. Location selection follows NGINX's rules: an exact match wins;
+// otherwise the longest prefix, which stops the search when it is `^~`;
+// otherwise the first matching regex in file order; otherwise that longest
+// prefix. Prefix and exact matches are case-sensitive; `~*` regexes are not.
 //
 // `npm run test:nginx-edge` checks the same thing against a running NGINX.
 import assert from "node:assert/strict";
@@ -18,6 +20,18 @@ const INTERNAL_ROUTES = [
     "/api/admin/ai-services/",
     "/api/admin/impersonation/professor/12",
 ];
+
+// Spellings that a case-insensitive router would accept.
+function caseVariants(uri) {
+    return [
+        uri.toUpperCase(),
+        uri.replace("/api/", "/API/"),
+        uri.replace("/admin/", "/Admin/"),
+        uri.replace("/ai-services/", "/AI-Services/").replace("/impersonation/", "/Impersonation/"),
+    ].filter(variant => variant !== uri);
+}
+
+const STOP_PATH = "/api/admin/impersonation/stop";
 
 // Splits a configuration into words, `{`, `}` and `;`, without comments.
 function tokenize(text) {
@@ -117,6 +131,12 @@ function serverLocations(path) {
             const location = second === undefined
                 ? { modifier: "", pattern: first }
                 : { modifier: first, pattern: second };
+            // selectLocation() does not model nested locations.
+            assert.equal(
+                directive.children.some(child => child.name === "location"),
+                false,
+                `nested locations in ${path} are not modeled by this test`
+            );
             return { ...location, directives: directive.children };
         })
         .filter(location => !location.pattern.startsWith("@"));
@@ -160,43 +180,64 @@ describe("internal /api/admin/ routes at the NGINX edge", () => {
     for (const config of CONFIGS) {
         describe(config, () => {
             const locations = serverLocations(config);
-            const blocking = locations.find(location => location.modifier === "^~"
+            const blockingPrefix = locations.find(location => location.modifier === "^~"
                 && location.pattern === "/api/admin/");
+            const blockingRegex = locations.find(location => location.modifier === "~*"
+                && location.pattern === "^/api/admin/");
 
-            it("has a blocking /api/admin/ location that answers 404 without proxying", () => {
-                assert.ok(blocking, "missing `location ^~ /api/admin/`");
-                const names = blocking.directives.map(directive => directive.name);
-                assert.ok(
-                    blocking.directives.some(directive => directive.name === "return"
-                        && directive.args[0] === "404"),
-                    "the location must `return 404`"
-                );
-                for (const forbidden of ["proxy_pass", "fastcgi_pass", "uwsgi_pass", "grpc_pass", "alias", "root"]) {
-                    assert.equal(names.includes(forbidden), false, `the location must not use ${forbidden}`);
-                }
-            });
-
-            for (const uri of INTERNAL_ROUTES) {
-                it(`blocks ${uri}`, () => {
-                    assert.equal(selectLocation(locations, uri), blocking);
+            for (const [label, blocking] of [
+                ["^~ /api/admin/", blockingPrefix],
+                ["~* ^/api/admin/", blockingRegex],
+            ]) {
+                it(`has a blocking \`location ${label}\` that answers 404 without proxying`, () => {
+                    assert.ok(blocking, `missing \`location ${label}\``);
+                    const names = blocking.directives.map(directive => directive.name);
+                    assert.ok(
+                        blocking.directives.some(directive => directive.name === "return"
+                            && directive.args[0] === "404"),
+                        "the location must `return 404`"
+                    );
+                    for (const forbidden of [
+                        "proxy_pass", "fastcgi_pass", "uwsgi_pass", "grpc_pass", "alias", "root",
+                    ]) {
+                        assert.equal(names.includes(forbidden), false, `must not use ${forbidden}`);
+                    }
                 });
             }
 
-            it("exposes no /api/admin/ai-services/ path through a more specific location", () => {
-                const exposing = locations.filter(location => location !== blocking
-                    && location.modifier !== "~" && location.modifier !== "~*"
-                    && (location.pattern.startsWith("/api/admin/ai-services")
-                        || "/api/admin/ai-services/".startsWith(location.pattern))
-                    && location.pattern.length > "/api/admin/".length);
-                assert.deepEqual(exposing.map(location => location.pattern), []);
+            for (const uri of INTERNAL_ROUTES) {
+                it(`blocks ${uri}`, () => {
+                    assert.equal(selectLocation(locations, uri), blockingPrefix);
+                });
+
+                it(`blocks other spellings of ${uri}`, () => {
+                    for (const variant of caseVariants(uri)) {
+                        // `/api/admin/` itself spelled in lower case stays on the prefix.
+                        const expected = variant.startsWith("/api/admin/")
+                            ? blockingPrefix
+                            : blockingRegex;
+                        assert.equal(selectLocation(locations, variant), expected, variant);
+                    }
+                });
+            }
+
+            it("tries the case-insensitive block before any other regex that could match", () => {
+                const regexes = locations.filter(location => location.modifier.startsWith("~"));
+                for (const uri of INTERNAL_ROUTES.flatMap(caseVariants)) {
+                    assert.equal(regexes.find(location => matches(location, uri)), blockingRegex, uri);
+                }
             });
 
-            it("keeps impersonation stop as the only exact /api/admin/ exception", () => {
+            it("keeps impersonation stop as the only /api/admin/ exception", () => {
                 const exceptions = locations
-                    .filter(location => location !== blocking && location.pattern.startsWith("/api/admin/"))
+                    .filter(location => location !== blockingPrefix && location !== blockingRegex
+                        && location.pattern.toLowerCase().includes("/api/admin"))
                     .map(location => `${location.modifier} ${location.pattern}`);
-                assert.deepEqual(exceptions, ["= /api/admin/impersonation/stop"]);
-                assert.notEqual(selectLocation(locations, "/api/admin/impersonation/stop"), blocking);
+                assert.deepEqual(exceptions, [`= ${STOP_PATH}`]);
+
+                const stop = selectLocation(locations, STOP_PATH);
+                assert.equal(stop.modifier, "=");
+                assert.ok(stop.directives.some(directive => directive.name === "proxy_pass"));
             });
         });
     }
@@ -207,14 +248,20 @@ describe("internal /api/admin/ routes at the NGINX edge", () => {
             { modifier: "", pattern: "/api/" },
             { modifier: "^~", pattern: "/static/" },
             { modifier: "~", pattern: "^/api/.+\\.png$" },
+            { modifier: "~*", pattern: "^/api/.+\\.(png|jpg)$" },
+            { modifier: "~*", pattern: "^/other/" },
             { modifier: "=", pattern: "/api/exact" },
         ];
         const pick = uri => selectLocation(locations, uri).pattern;
 
         assert.equal(pick("/api/exact"), "/api/exact");
+        assert.equal(pick("/API/exact"), "/");
         assert.equal(pick("/api/x.png"), "^/api/.+\\.png$");
+        assert.equal(pick("/api/x.jpg"), "^/api/.+\\.(png|jpg)$");
         assert.equal(pick("/static/x.png"), "/static/");
+        assert.equal(pick("/STATIC/x.txt"), "/");
         assert.equal(pick("/api/x"), "/api/");
-        assert.equal(pick("/other"), "/");
+        assert.equal(pick("/OTHER/x"), "^/other/");
+        assert.equal(pick("/elsewhere"), "/");
     });
 });

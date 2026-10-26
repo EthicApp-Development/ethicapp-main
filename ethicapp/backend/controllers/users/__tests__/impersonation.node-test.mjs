@@ -23,7 +23,7 @@ function impersonatingAdminSession(overrides = {}) {
 
 // Runs one request against the router with a fake session and reports what
 // happened to it.
-async function postStop(session, headers = {}) {
+async function postStop(session, headers = {}, path = "/api/admin/impersonation/stop") {
     const state = { destroyed: false };
     const app = express();
     app.use((req, res, next) => {
@@ -45,7 +45,7 @@ async function postStop(session, headers = {}) {
     const { port } = server.address();
 
     try {
-        const response = await fetch(`http://127.0.0.1:${port}/api/admin/impersonation/stop`, {
+        const response = await fetch(`http://127.0.0.1:${port}${path}`, {
             method:   "POST",
             redirect: "manual",
             headers:  { Accept: "text/html", ...headers },
@@ -131,6 +131,27 @@ describe("POST /api/admin/impersonation/stop", () => {
         const { response } = await postStop(session);
 
         assert.equal(response.status, 500);
+    });
+});
+
+describe("letter case of the impersonation routes", () => {
+    // NGINX blocks or exposes /api/admin/ by its exact spelling, so the router
+    // must not answer other spellings that the edge would proxy.
+    it("answers other spellings with 404", async () => {
+        for (const path of [
+            "/API/admin/impersonation/stop",
+            "/api/Admin/impersonation/stop",
+            "/api/admin/impersonation/professor/12".toUpperCase(),
+            "/api/Admin/impersonation/professor/12",
+        ]) {
+            const { response, destroyed } = await postStop(
+                impersonatingAdminSession(),
+                { Accept: "application/json" },
+                path,
+            );
+            assert.equal(response.status, 404, path);
+            assert.equal(destroyed, false);
+        }
     });
 });
 

@@ -63,7 +63,9 @@ function sendInternalError(res, route, error) {
  * @param {{ readCatalog: Function, testConnection: Function }} [options.catalogService]
  */
 export function createAiServicesRouter({ catalogService = aiServicesCatalogService } = {}) {
-    const router = express.Router();
+    // Case-sensitive like NGINX's locations: `/API/admin/...` must not reach
+    // these handlers through the edge's general proxy.
+    const router = express.Router({ caseSensitive: true });
 
     router.get("/api/admin/ai-services/catalog", requireSuperAdmin, async (req, res) => {
         try {

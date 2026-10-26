@@ -7,7 +7,9 @@ import {
     legacySessionCookieOptions,
 } from "../../config/session.config.js";
 
-const router = express.Router();
+// Case-sensitive like NGINX's locations: only the exact spellings the edge
+// knows about (`/api/admin/...`) reach these handlers.
+const router = express.Router({ caseSensitive: true });
 
 const MANAGEMENT_CONSOLE_USERS_PATH = "/mng/users";
 
