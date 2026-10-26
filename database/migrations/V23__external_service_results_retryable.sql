@@ -10,14 +10,14 @@
 -- for deduplication, as before.
 
 ALTER TABLE external_service_results
-    DROP CONSTRAINT IF EXISTS external_service_results_status_check;
+DROP CONSTRAINT IF EXISTS external_service_results_status_check;
 
 ALTER TABLE external_service_results
-    ADD CONSTRAINT external_service_results_status_check
-    CHECK (status IN (
-        'callback-received',
-        'completed',
-        'failed',
-        'unknown-correlation',
-        'retryable'
-    ));
+ADD CONSTRAINT external_service_results_status_check
+CHECK (status IN (
+    'callback-received',
+    'completed',
+    'failed',
+    'unknown-correlation',
+    'retryable'
+));
