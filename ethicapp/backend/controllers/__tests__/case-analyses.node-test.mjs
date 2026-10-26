@@ -61,12 +61,12 @@ function makeDependencies(overrides = {}) {
     };
 
     const dependencies = {
-        getOwnedCase:     async (caseId, userId) => (userId === OWNER_ID ? CASE_ROW : null),
-        listAnalyses:     async () => rows,
-        getAnalysis:      async ({ serviceId }) => findRow(serviceId),
-        getValidator:     async () => null,
-        isServiceEnabled: async () => true,
-        getCaseText:      async () => "The case text.",
+        getOwnedCase:    async (caseId, userId) => (userId === OWNER_ID ? CASE_ROW : null),
+        listAnalyses:    async () => rows,
+        getAnalysis:     async ({ serviceId }) => findRow(serviceId),
+        getValidator:    async () => null,
+        isServiceUsable: async () => true,
+        getCaseText:     async () => "The case text.",
         saveReviewed,
         reserveGeneration,
         dispatchGeneration,
@@ -278,7 +278,7 @@ test("generateCaseAnalysisForOwner: 409 when the reservation is refused", async 
 });
 
 test("generateCaseAnalysisForOwner: 503 when the service is disabled", async () => {
-    const { dependencies, calls } = makeDependencies({ isServiceEnabled: async () => false });
+    const { dependencies, calls } = makeDependencies({ isServiceUsable: async () => false });
 
     const { status, body } = await generateCaseAnalysisForOwner({
         caseId:    7,

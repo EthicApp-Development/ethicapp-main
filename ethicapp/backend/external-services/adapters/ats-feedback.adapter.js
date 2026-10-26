@@ -2,7 +2,6 @@ import * as config from "../../config/database.config.js";
 import * as rpg2 from "../../db/rest-pg-2.js";
 import { getPhaseDesignByPhaseId } from "../../helpers/designs-helper.js";
 import { getCaseIdBySessionId } from "../../helpers/sessions-helper.js";
-import { getCaseDocumentRawText } from "../../helpers/case-document-content-helper.js";
 import defaultAiAdditionsClient from "../../services/ai-additions-client.service.js";
 import {
     buildArgumentClientContext,
@@ -146,6 +145,11 @@ async function resolveCaseData(sessionId) {
             return { caseId: null, rawText: "" };
         }
 
+        // Lazy import: the content helper opens a Redis connection when loaded,
+        // and registering the adapter at startup must have no side effects.
+        const { getCaseDocumentRawText } = await import(
+            "../../helpers/case-document-content-helper.js"
+        );
         const rawText = normalizeText(await getCaseDocumentRawText(caseId));
         return { caseId, rawText };
     } catch (error) {

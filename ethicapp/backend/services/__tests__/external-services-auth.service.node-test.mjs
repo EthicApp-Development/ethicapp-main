@@ -7,7 +7,7 @@ function registerTestService(id, callbackAuth = null) {
         id,
         description: "test service",
         hooks: ["callback-received"],
-        enabled: true,
+        requires: ["polyadic-agent"],
         adapter: "./test-adapter.js",
         callbackAuth,
     });
@@ -71,7 +71,7 @@ test("listServices does not expose the removed capabilities key", () => {
         hooks:        ["student-response-submitted"],
         scopes:       ["response"],
         capabilities: { processesStudentResponses: true },
-        enabled:      true,
+        requires:     ["polyadic-agent"],
         adapter:      "./test-adapter.js",
         callbackAuth: null,
     });

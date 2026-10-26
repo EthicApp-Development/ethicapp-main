@@ -32,10 +32,10 @@ function makeStore({ processingRow = { status: "processing" } } = {}) {
 async function registerCaseTool(store) {
     const registry = new ExternalServicesRegistry({ jobsService: {}, caseAnalysesStore: store });
     await captureWarnings(() => registry.registerService({
-        id:      "svc-case",
-        adapter: "./case-analysis-tool.adapter.js",
-        scopes:  ["case"],
-        enabled: true,
+        id:       "svc-case",
+        adapter:  "./case-analysis-tool.adapter.js",
+        scopes:   ["case"],
+        requires: ["case-analyst"],
     }, FIXTURES_MANIFEST));
     return registry;
 }
@@ -98,10 +98,10 @@ test("caseAnalyses.markProcessing: null when the job is no longer the reserved o
 test("getCaseAnalysisValidator: the adapter's validator, or null without one", async () => {
     const registry = await registerCaseTool(makeStore().store);
     await registry.registerService({
-        id:      "svc-chat",
-        adapter: "./untranslated-tool.adapter.js",
-        scopes:  ["chat"],
-        enabled: true,
+        id:       "svc-chat",
+        adapter:  "./untranslated-tool.adapter.js",
+        scopes:   ["chat"],
+        requires: ["case-analyst"],
     }, FIXTURES_MANIFEST);
 
     assert.equal(registry.getCaseAnalysisValidator("svc-case"), validateCaseAnalysisDocument);
@@ -109,13 +109,13 @@ test("getCaseAnalysisValidator: the adapter's validator, or null without one", a
     assert.equal(registry.getCaseAnalysisValidator("svc-unknown"), null);
 });
 
-test("getEnabledServiceIdsForScope: lists the enabled services that declare the scope", () => {
-    const registry = new ExternalServicesRegistry({ jobsService: {} });
-    registry.services.set("case-a", { id: "case-a", enabled: true, scopes: ["case"] });
-    registry.services.set("case-off", { id: "case-off", enabled: false, scopes: ["case"] });
-    registry.services.set("chat-a", { id: "chat-a", enabled: true, scopes: ["chat"] });
-    registry.services.set("legacy", { id: "legacy", enabled: true });
+test("getUsableServiceIdsForScope: lists the usable services that declare the scope", () => {
+    const registry = new ExternalServicesRegistry({ jobsService: {}, developmentAdapters: true });
+    registry.services.set("case-a", { id: "case-a", development: true, scopes: ["case"] });
+    registry.services.set("case-prod", { id: "case-prod", development: false, scopes: ["case"] });
+    registry.services.set("chat-a", { id: "chat-a", development: true, scopes: ["chat"] });
+    registry.services.set("legacy", { id: "legacy", development: true });
 
-    assert.deepEqual(registry.getEnabledServiceIdsForScope("case"), ["case-a"]);
-    assert.deepEqual(registry.getEnabledServiceIdsForScope("response"), []);
+    assert.deepEqual(registry.getUsableServiceIdsForScope("case"), ["case-a"]);
+    assert.deepEqual(registry.getUsableServiceIdsForScope("response"), []);
 });

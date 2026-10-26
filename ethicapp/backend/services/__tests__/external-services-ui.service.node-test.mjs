@@ -32,7 +32,7 @@ function makeRegistry(options = {}) {
 // ─── ui.component (manifest) ─────────────────────────────────────────────────
 
 test("registerService: keeps a kebab-case ui.component, drops others with a warning", async () => {
-    const registry = makeRegistry();
+    const registry = makeRegistry({ importAdapter: async () => ({ register: async () => {} }) });
     const entries  = [
         ["svc-panel", { component: "case-tool-panel" }],
         ["svc-camel", { component: "CaseToolPanel" }],
@@ -41,7 +41,7 @@ test("registerService: keeps a kebab-case ui.component, drops others with a warn
 
     const { warnings } = await captureWarnings(async () => {
         for (const [id, ui] of entries) {
-            const entry = { id, adapter: "./unused.adapter.js", ui, enabled: false };
+            const entry = { id, adapter: "./unused.adapter.js", ui, requires: ["case-analyst"] };
             await registry.registerService(entry, FIXTURES_MANIFEST);
         }
     });
@@ -53,24 +53,12 @@ test("registerService: keeps a kebab-case ui.component, drops others with a warn
     assert.ok(warnings[0].includes("CaseToolPanel"));
 });
 
-// #811: only an explicit "enabled": true enables a service.
-test("registerService: without enabled, a service is disabled and not imported", async () => {
-    const registry = makeRegistry();
-    // The adapter path does not exist: importing it would fail.
-    const entry = { id: "svc-implicit", adapter: "./missing.adapter.js" };
-    await registry.registerService(entry, FIXTURES_MANIFEST);
-
-    assert.equal(registry.services.get("svc-implicit").enabled, false);
-    assert.deepEqual(registry.getGloballyEnabledServiceIds("case-created"), []);
-    assert.equal([...registry.hookSubscribers.values()].flat().length, 0);
-});
-
 test("listServices: exposes ui and defaults it to { component: null } for legacy entries", () => {
     const registry = makeRegistry();
     registry.services.set("svc-panel", {
-        id: "svc-panel", enabled: true, ui: { component: "case-tool-panel" },
+        id: "svc-panel", development: true, ui: { component: "case-tool-panel" },
     });
-    registry.services.set("svc-legacy", { id: "svc-legacy", enabled: true });
+    registry.services.set("svc-legacy", { id: "svc-legacy", development: true });
 
     const listed = registry.listServices();
     assert.deepEqual(listed.find(s => s.id === "svc-panel").ui, { component: "case-tool-panel" });
@@ -83,10 +71,10 @@ test("registerService: serves the texts of the adapter's getUiTranslations()", a
     const registry = makeRegistry();
 
     await registry.registerService({
-        id:      "svc-case",
-        adapter: "./translated-case-tool.adapter.js",
-        scopes:  ["case"],
-        enabled: true,
+        id:       "svc-case",
+        adapter:  "./translated-case-tool.adapter.js",
+        scopes:   ["case"],
+        requires: ["case-analyst"],
     }, FIXTURES_MANIFEST);
 
     assert.deepEqual(await registry.getServiceUiTranslations("svc-case"), TRANSLATIONS);
@@ -99,9 +87,9 @@ test("registerService: warns only for case-scoped adapters without translations"
         for (const [id, scopes] of [["svc-case", ["case"]], ["svc-chat", ["chat"]]]) {
             await registry.registerService({
                 id,
-                adapter: "./untranslated-tool.adapter.js",
+                adapter:  "./untranslated-tool.adapter.js",
                 scopes,
-                enabled: true,
+                requires: ["case-analyst"],
             }, FIXTURES_MANIFEST);
         }
     });

@@ -124,9 +124,10 @@ function summarizeDescriptor(service, configuration) {
     };
 }
 
-// Only enabled services are listed (#686): disabled ones are not offered to
-// teachers. With `scope` (one value or several), the list is narrowed to the
-// services that declare at least one of those scopes. Each service carries the
+// Only usable services are listed (#686, #812; see the registry's
+// isServiceUsable): the others are not offered to teachers. With `scope` (one
+// value or several), the list is narrowed to the services that declare at least
+// one of those scopes. Each service carries the
 // UI translations its adapter provides, or null, and a summary of its capability
 // descriptor in `locale` (#728), or null when it declares none.
 export async function listExternalServices({ scope, registry, locale = "en_US" }) {
@@ -140,7 +141,7 @@ export async function listExternalServices({ scope, registry, locale = "en_US" }
     }
 
     await registry.initialize();
-    const services = registry.listServices().filter(service => service.enabled
+    const services = registry.listServices().filter(service => service.usable
         && (scopes.length === 0
             || service.scopes.some(serviceScope => scopes.includes(serviceScope))));
 
@@ -166,7 +167,7 @@ export async function listExternalServices({ scope, registry, locale = "en_US" }
 }
 
 // The instance configuration a service's capability descriptor advertises, for
-// the design editor (#728). 404 for unknown or disabled services and services
+// the design editor (#728). 404 for unknown or unusable services and services
 // without a descriptor; `available: false` when the descriptor cannot be
 // fetched. The service's runtime configuration and its routes stay internal.
 export async function getExternalServiceInstanceConfiguration({

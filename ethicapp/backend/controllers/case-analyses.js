@@ -58,9 +58,9 @@ async function getValidator(serviceId) {
     return externalServicesRegistry.getCaseAnalysisValidator(serviceId);
 }
 
-async function isServiceEnabled(serviceId) {
+async function isServiceUsable(serviceId) {
     await externalServicesRegistry.initialize();
-    return externalServicesRegistry.hasEnabledService(serviceId);
+    return externalServicesRegistry.isServiceUsable(serviceId);
 }
 
 // A new generation replays case-created for the reserved service only, so the
@@ -79,7 +79,7 @@ const defaultDependencies = {
     saveReviewed:      saveReviewedCaseAnalysis,
     reserveGeneration: reserveCaseAnalysisGeneration,
     getValidator,
-    isServiceEnabled,
+    isServiceUsable,
     getCaseText,
     dispatchGeneration,
 };
@@ -234,7 +234,7 @@ export async function generateCaseAnalysisForOwner({
         return analysisNotFound();
     }
 
-    if (!await dependencies.isServiceEnabled(serviceId)) {
+    if (!await dependencies.isServiceUsable(serviceId)) {
         return errorResponse(
             503,
             "The analysis service is not enabled.",
