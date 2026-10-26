@@ -138,6 +138,54 @@ test("dispatchHook: continues if createJob rejects — jobId null in context", a
     assert.equal(capturedContext.correlationId, null);
 });
 
+test("dispatchHook: creates each job with the id preset for its service", async () => {
+    const PRESET_UUID = "b1c2d3e4-0000-4000-8000-000000000013";
+    const createdIds  = new Map();
+    const contexts    = new Map();
+    const { registry } = makeRegistry({
+        createJob: async ({ id, serviceId }) => {
+            createdIds.set(serviceId, id);
+            return { id: id ?? JOB_UUID };
+        },
+    });
+
+    registry.hookSubscribers.set("case-created", ["svc-a", "svc-b"].map(serviceId => ({
+        serviceId,
+        handler: async (ctx) => { contexts.set(serviceId, ctx); },
+    })));
+
+    await registry.dispatchHook("case-created", { caseId: 7 }, {
+        enabledServiceIds: ["svc-a", "svc-b"],
+        jobIds:            { "svc-a": PRESET_UUID },
+    });
+
+    assert.equal(createdIds.get("svc-a"), PRESET_UUID);
+    assert.equal(createdIds.get("svc-b"), null);
+    assert.equal(contexts.get("svc-a").jobId, PRESET_UUID);
+    assert.equal(contexts.get("svc-a").correlationId, PRESET_UUID);
+    assert.equal(contexts.get("svc-b").jobId, JOB_UUID);
+});
+
+test("dispatchHook: keeps the preset id in context when createJob rejects", async () => {
+    const PRESET_UUID = "b1c2d3e4-0000-4000-8000-000000000014";
+    let capturedContext = null;
+    const { registry } = makeRegistry({
+        createJob: async () => { throw new Error("db down"); },
+    });
+
+    registry.hookSubscribers.set("case-created", [
+        { serviceId: "svc-a", handler: async (ctx) => { capturedContext = ctx; } },
+    ]);
+
+    await registry.dispatchHook("case-created", { caseId: 7 }, {
+        enabledServiceIds: ["svc-a"],
+        jobIds:            { "svc-a": PRESET_UUID },
+    });
+
+    assert.equal(capturedContext.jobId, PRESET_UUID);
+    assert.equal(capturedContext.correlationId, PRESET_UUID);
+});
+
 test("dispatchHook: returns [] when enabledServiceIds is empty", async () => {
     const { registry } = makeRegistry();
     const result = await registry.dispatchHook("phase-started", {}, {});

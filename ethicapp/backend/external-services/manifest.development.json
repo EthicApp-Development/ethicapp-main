@@ -82,13 +82,24 @@
         "case-created",
         "callback-received"
       ],
-      "globalHooks": [
+      "scopes": ["case"],
+      "enabled": true,
+      "callbackAuth": {
+        "allowedClientIds": ["case-analyst-api"],
+        "requiredRoles": []
+      }
+    },
+    {
+      "id": "mock-case-analysis",
+      "description": "Development adapter that analyses case documents in process: word count and an excerpt.",
+      "adapter": "./adapters/mock-case-analysis.adapter.js",
+      "hooks": [
         "case-created"
       ],
       "scopes": ["case"],
       "enabled": true,
       "callbackAuth": {
-        "allowedClientIds": ["case-analyst-api"],
+        "allowedClientIds": ["ethicapp-external-mock"],
         "requiredRoles": []
       }
     }

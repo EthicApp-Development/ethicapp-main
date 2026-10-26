@@ -88,6 +88,7 @@ const MANIFESTS = {
         "argumentation-tutor-system",
         "case-analyst",
         "mock-ai-response-review",
+        "mock-case-analysis",
         "mock-chat-agent",
         "polyadic-devils-advocate",
     ],

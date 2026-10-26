@@ -66,7 +66,8 @@ export async function register({
   subscribe,
   publishStudentResult,
   publishGroupChatMessage,
-  aiAdditionsClient
+  aiAdditionsClient,
+  caseAnalyses
 }) {
   // Subscribe to hooks here.
 }
@@ -80,6 +81,11 @@ teachers read about the service: a label, a description and a case-view tab
 title in `es_CL` and `en_US`. The service owns those texts and the adapter
 obtains them. See "UI translations" in
 `ethicapp/backend/external-services/README.md`.
+
+Case-scoped adapters record their results through `caseAnalyses`
+(`markProcessing`, `complete` and `fail`, bound to their service) and may export
+`validateCaseAnalysisDocument()` to accept teacher edits. See "Case Analyses"
+in the same README.
 
 Current registry implementation:
 
@@ -229,6 +235,14 @@ the phase stores for that service in
 when there are none or the hook has no phase. Adapters pass these values to
 the AI service when they create rooms or sessions; a key that is not set means
 the service default.
+
+`case-created` follows the same rule for cases: it reaches only the services the
+teacher chose when creating the case (`analysisServiceIds` in `POST /cases`).
+They store their results in `case_analyses`, which the case creator reads,
+edits and regenerates through `/cases/:id/analyses`. Each generation is reserved
+in `case_analyses` before it is dispatched, so concurrent generations and
+teacher edits cannot overlap it; a reservation that its adapter does not start
+is released.
 
 Current event hooks:
 

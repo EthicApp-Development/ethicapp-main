@@ -27,7 +27,12 @@ import {
     pdfRenderJobSelectSql,
 } from "../helpers/pdf-render-jobs-helper.js";
 import { moveUploadedFile, pdfUpload, removeUploadedFile } from "../middleware/upload.js";
-import { buildCaseCreatedContext, dispatchCaseCreatedHook } from "../helpers/case-lifecycle-helper.js";
+import {
+    buildCaseCreatedContext,
+    dispatchCaseCreatedHook,
+    resolveCaseAnalysisServiceIds,
+} from "../helpers/case-lifecycle-helper.js";
+import { insertRequestedCaseAnalyses } from "../helpers/case-analyses-helper.js";
 import {
     caseVideoSummariesFromIds,
     caseVideosJsonSql,
@@ -782,6 +787,17 @@ router.post("/cases", pdfUpload, async (req, res) => {
         });
     }
 
+    // Analyses are chosen only here: editing the case never changes them.
+    const analysisChoice = await resolveCaseAnalysisServiceIds(req.body.analysisServiceIds);
+    if (!analysisChoice.valid) {
+        await removeUploadedFile(req.file);
+        return res.status(400).json({
+            status:  "err",
+            message: "Each analysis service must be an enabled case-scoped service.",
+            code:    "CASE_ANALYSIS_SERVICE_INVALID",
+        });
+    }
+
     const parsedVideos = parseCaseVideoIds(req.body.videos);
     if (!parsedVideos.ok) {
         await removeUploadedFile(req.file);
@@ -868,13 +884,20 @@ router.post("/cases", pdfUpload, async (req, res) => {
         }
         createdCase.documents = caseDocumentSummariesFromDocuments(documentSave.documents || []);
 
+        // Each chosen analysis is reserved for its first generation, dispatched below.
+        const reservations = await insertRequestedCaseAnalyses({
+            caseId,
+            serviceIds: analysisChoice.serviceIds,
+            userId:     req.session.uid,
+        });
+
         const renderJob = await enqueueCaseRenderSafely(createdCase);
 
         // Fire-and-forget: the helper isolates adapter failures from this request.
         dispatchCaseCreatedHook(buildCaseCreatedContext(createdCase, {
             userId:         req.session.uid,
             pdfRenderJobId: renderJob?.pdf_render_job_id ?? null,
-        }));
+        }), { reservations });
 
         return res.status(201).json({
             status: "ok",
