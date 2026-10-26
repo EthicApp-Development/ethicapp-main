@@ -17,6 +17,8 @@ const TOKEN_EXPIRY_SAFETY_WINDOW_MS = 30000;
 // console can change it at any time; a few seconds bounds how long EthicApp
 // keeps calling a host the operator just replaced or removed.
 const DEFAULT_CONNECTION_TTL_MS = 5000;
+// How many times one request restarts when the connection changes under it.
+const MAX_CONNECTION_RESTARTS = 2;
 
 function normalizeText(value) {
     if (value === null || value === undefined) {
@@ -30,6 +32,11 @@ function normalizeText(value) {
 function readPositiveInteger(value, fallback, minimum = 1) {
     const configured = Number(value);
     return Number.isInteger(configured) && configured >= minimum ? configured : fallback;
+}
+
+// Tokens are bound to the connection (and token URL) they were obtained from.
+function tokenKey(endpoints) {
+    return `${endpoints.fingerprint}\n${endpoints.tokenUrl}`;
 }
 
 function safeJsonParse(value) {
@@ -87,8 +94,9 @@ export class AiAdditionsClient {
         this.clearTimeoutImpl = clearTimeoutImpl;
         this.connectionCache = { connection: null, fingerprint: null, expiresAtMs: 0 };
         this.connectionRequest = null;
-        this.tokenCache = { token: null, tokenUrl: null, expiresAtMs: 0 };
+        this.tokenCache = { token: null, key: null, expiresAtMs: 0, sequence: 0 };
         this.tokenRequest = null;
+        this.tokenSequence = 0;
     }
 
     /**
@@ -204,7 +212,8 @@ export class AiAdditionsClient {
     }
 
     clearAccessToken() {
-        this.tokenCache = { token: null, tokenUrl: null, expiresAtMs: 0 };
+        // Token requests started before this point can no longer fill the cache.
+        this.tokenCache = { token: null, key: null, expiresAtMs: 0, sequence: this.tokenSequence };
         this.tokenRequest = null;
     }
 
@@ -214,19 +223,30 @@ export class AiAdditionsClient {
      * @throws {AiAdditionsNotConfiguredError} without a connection.
      */
     async getAccessToken() {
-        const { tokenUrl } = await this.getEndpoints();
+        return this.getAccessTokenFor(await this.getEndpoints());
+    }
+
+    /**
+     * A bearer token issued by the Keycloak of one endpoint snapshot. The
+     * cache and the pending request are keyed by that snapshot, so a token is
+     * only ever reused for the connection it was obtained from.
+     * @param {import("../helpers/ai-additions-connection.js").AiAdditionsEndpoints} endpoints
+     */
+    async getAccessTokenFor(endpoints) {
+        const key = tokenKey(endpoints);
 
         if (
             this.tokenCache.token
-            && this.tokenCache.tokenUrl === tokenUrl
+            && this.tokenCache.key === key
             && this.tokenCache.expiresAtMs > this.now() + TOKEN_EXPIRY_SAFETY_WINDOW_MS
         ) {
             return this.tokenCache.token;
         }
 
-        if (!this.tokenRequest || this.tokenRequest.tokenUrl !== tokenUrl) {
-            const request = this.requestAccessToken(tokenUrl);
-            this.tokenRequest = { tokenUrl, request };
+        if (!this.tokenRequest || this.tokenRequest.key !== key) {
+            this.tokenSequence += 1;
+            const request = this.requestAccessToken(endpoints.tokenUrl, key, this.tokenSequence);
+            this.tokenRequest = { key, request };
         }
 
         const pending = this.tokenRequest;
@@ -239,7 +259,7 @@ export class AiAdditionsClient {
         }
     }
 
-    async requestAccessToken(tokenUrl) {
+    async requestAccessToken(tokenUrl, key, sequence) {
         const clientId = this.getKeycloakClientId();
         const clientSecret = this.getKeycloakClientSecret();
 
@@ -273,9 +293,16 @@ export class AiAdditionsClient {
             throw new Error("AI Additions Keycloak token endpoint did not return access_token.");
         }
 
+        // A request that resolves late (for a previous connection, or started
+        // before the cache was cleared) must not replace a newer token.
+        if (sequence <= this.tokenCache.sequence) {
+            return accessToken;
+        }
+
         this.tokenCache = {
             token:       accessToken,
-            tokenUrl,
+            key,
+            sequence,
             expiresAtMs: this.now()
                 + (Number.isFinite(expiresIn) ? expiresIn * 1000 : DEFAULT_TOKEN_TTL_MS),
         };
@@ -333,23 +360,38 @@ export class AiAdditionsClient {
         authenticated = true,
         timeoutMs = this.getHttpTimeoutMs(),
     } = {}) {
+        // One attempt uses one endpoint snapshot for the URL and the token, so
+        // a token is never sent to a host other than the one it was issued
+        // for. If the connection changed while the token was obtained, the
+        // attempt restarts from a fresh snapshot instead of mixing them.
         const execute = async () => {
-            const url = await this.resolveServiceUrl(basePath, pathname);
-            const requestHeaders = {
-                "Content-Type": "application/json",
-                ...headers,
-            };
+            for (let restarts = 0; ; restarts += 1) {
+                const endpoints = await this.getEndpoints();
+                const url = joinUrl(endpoints.baseUrl, basePath, pathname);
+                const requestHeaders = {
+                    "Content-Type": "application/json",
+                    ...headers,
+                };
 
-            if (authenticated) {
-                requestHeaders.Authorization = `Bearer ${await this.getAccessToken()}`;
+                if (authenticated) {
+                    const token = await this.getAccessTokenFor(endpoints);
+                    const current = await this.getEndpoints();
+                    if (current.fingerprint !== endpoints.fingerprint) {
+                        if (restarts >= MAX_CONNECTION_RESTARTS) {
+                            throw new Error("The AI Additions connection kept changing during the request.");
+                        }
+                        continue;
+                    }
+                    requestHeaders.Authorization = `Bearer ${token}`;
+                }
+
+                return this.fetchJsonRaw(url, {
+                    method,
+                    headers: requestHeaders,
+                    body:    body == null ? null : JSON.stringify(body),
+                    timeoutMs,
+                });
             }
-
-            return this.fetchJsonRaw(url, {
-                method,
-                headers: requestHeaders,
-                body:    body == null ? null : JSON.stringify(body),
-                timeoutMs,
-            });
         };
 
         try {

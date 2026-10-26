@@ -716,13 +716,19 @@ included). Adapters let it fail their job; descriptors report
 without the connection and removing the connection stops all AI traffic.
 
 When the connection changes, the cached token is dropped, cached descriptors
-no longer apply, and the callback verifier drops its JWKS keys.
+no longer apply, and the callback verifier drops its JWKS keys. JWKS keys and
+pending JWKS fetches are kept per URL, so a response from the previous host
+can never verify tokens for the current one.
 
 ### The client
 
 The client uses the Keycloak client credentials flow and:
 
-- caches access tokens per token URL until shortly before expiry;
+- caches access tokens per connection until shortly before expiry;
+- uses one snapshot of the connection per request attempt for both the URL and
+  the token, so a token is never sent to a host other than the one that issued
+  it; if the connection changes while the token is obtained, the attempt
+  restarts;
 - coalesces concurrent token requests;
 - adds the `Authorization: Bearer ...` header to authenticated requests;
 - retries once after `401` by clearing the cached token.

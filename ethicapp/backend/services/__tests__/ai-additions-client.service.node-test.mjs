@@ -248,3 +248,133 @@ test("withConnection: tests an unsaved connection with its own token cache", asy
     assert.equal(stored.withConnection(null) instanceof AiAdditionsClient, true);
     await assert.rejects(() => stored.withConnection(null).getAccessToken(), { code: "not_configured" });
 });
+
+// ─── A token only goes to the host that issued it (PR #828 review) ───────────
+
+function deferred() {
+    let resolve;
+    const promise = new Promise((done) => { resolve = done; });
+    return { promise, resolve };
+}
+
+// Tokens name the host that issued them; every service call records the host
+// it went to and the host of the token it carried.
+function hostBoundFetch({ onToken = async () => {}, onService = () => null } = {}) {
+    const serviceCalls = [];
+    let issued = 0;
+    const fetchImpl = async (url, options) => {
+        const host = new URL(url).host;
+        if (url.includes("/protocol/openid-connect/token")) {
+            issued += 1;
+            await onToken(host, issued);
+            return jsonResponse({ access_token: `${host}#${issued}`, expires_in: 300 });
+        }
+        const authorization = options.headers.Authorization ?? "";
+        const call = { host, url, tokenHost: authorization.replace(/^Bearer /u, "").split("#")[0] };
+        serviceCalls.push(call);
+        return onService(call, serviceCalls.length) ?? jsonResponse({ ok: true });
+    };
+    return { fetchImpl, serviceCalls };
+}
+
+function assertTokensStayWithTheirHost(serviceCalls) {
+    assert.ok(serviceCalls.length > 0);
+    for (const call of serviceCalls) {
+        assert.equal(call.tokenHost, call.host, `a token issued by ${call.tokenHost} was sent to ${call.host}`);
+    }
+}
+
+test("a connection change at the TTL boundary never sends a token to another host", async () => {
+    let now = 0;
+    let connection = { baseUrl: "http://old.test" };
+    const { fetchImpl, serviceCalls } = hostBoundFetch({
+        // While the token for old.test is being obtained, the operator moves
+        // the connection and the cached connection expires.
+        onToken: async (host) => {
+            if (host === "old.test") {
+                connection = { baseUrl: "http://new.test" };
+                now = 5001;
+            }
+        },
+    });
+    const client = makeClient({ fetchImpl, now: () => now });
+    client.getConnection = async () => connection;
+
+    await client.getEndpoints();
+    now = 4999;
+    await client.requestJson("/rooms", { method: "POST", basePath: "/polyadic-agent/api" });
+
+    assertTokensStayWithTheirHost(serviceCalls);
+    assert.deepEqual(serviceCalls.map(call => call.url), ["http://new.test/polyadic-agent/api/rooms"]);
+});
+
+test("a token request pending during a connection change is not used for the new host", async () => {
+    let connection = { baseUrl: "http://old.test" };
+    const heldOldToken = deferred();
+    const { fetchImpl, serviceCalls } = hostBoundFetch({
+        onToken: async (host) => {
+            if (host === "old.test") {
+                await heldOldToken.promise;
+            }
+        },
+    });
+    const client = makeClient({ fetchImpl, connectionTtlMs: 0 });
+    client.getConnection = async () => connection;
+
+    const first = client.requestJson("/a");
+    await new Promise(resolve => setImmediate(resolve));
+    connection = { baseUrl: "http://new.test" };
+    await client.requestJson("/b");
+    heldOldToken.resolve();
+    await first;
+
+    assertTokensStayWithTheirHost(serviceCalls);
+    assert.deepEqual(serviceCalls.map(call => call.host), ["new.test", "new.test"]);
+    assert.equal(client.tokenCache.key.startsWith("http://new.test"), true, "the late token did not replace the current one");
+});
+
+test("the retry after a 401 uses one snapshot of the connection current at retry time", async () => {
+    let connection = { baseUrl: "http://old.test" };
+    const { fetchImpl, serviceCalls } = hostBoundFetch({
+        onService: (call, count) => {
+            if (count === 1) {
+                connection = { baseUrl: "http://new.test" };
+                return jsonResponse({ error: "expired" }, 401);
+            }
+            return null;
+        },
+    });
+    const client = makeClient({ fetchImpl, connectionTtlMs: 0 });
+    client.getConnection = async () => connection;
+
+    const result = await client.requestJson("/rooms");
+
+    assert.deepEqual(result, { ok: true });
+    assertTokensStayWithTheirHost(serviceCalls);
+    assert.deepEqual(serviceCalls.map(call => call.host), ["old.test", "new.test"]);
+});
+
+test("a connection that keeps changing fails the request instead of mixing hosts", async () => {
+    let flips = 0;
+    const { fetchImpl, serviceCalls } = hostBoundFetch();
+    const client = makeClient({ fetchImpl, connectionTtlMs: 0 });
+    client.getConnection = async () => {
+        flips += 1;
+        return { baseUrl: `http://host-${flips}.test` };
+    };
+
+    await assert.rejects(() => client.requestJson("/rooms"), /kept changing/u);
+    assert.deepEqual(serviceCalls, []);
+});
+
+test("withConnection: the bound connection never changes between snapshots", async () => {
+    const { fetchImpl, serviceCalls } = hostBoundFetch();
+    const stored = makeClient({ fetchImpl, connection: { baseUrl: "http://stored.test" } });
+    const candidate = stored.withConnection({ baseUrl: "http://candidate.test" });
+
+    await candidate.requestJson("/catalog/v1/services");
+    await stored.requestJson("/x");
+
+    assertTokensStayWithTheirHost(serviceCalls);
+    assert.deepEqual(serviceCalls.map(call => call.host), ["candidate.test", "stored.test"]);
+});
