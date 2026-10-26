@@ -73,13 +73,15 @@
                                      ng-class="{active: dc.isCaseTabSelected()}"
                                      ng-if="dc.hasAssociatedCaseTab()">
                                     <case-document-viewer case-item="dc.associatedCase" frameless="true"></case-document-viewer>
+                                    <case-material case-item="dc.associatedCase"></case-material>
                                 </div>
                                 <div role="tabpanel" class="tab-pane" style="margin-bottom: 2em; padding:1em; border-bottom: 1px solid #ddd; border-left: 1px solid #ddd; border-right: 1px solid #ddd;"
                                      ng-class="{active: dc.isPhaseTabSelected(phase)}"
                                      id="phase-{{ $index }}" 
                                      ng-if="dc.dashboardPhaseData.length > 0"
                                      ng-repeat="phase in dc.dashboardPhaseData track by $index">
-                                    <phase-description phase-number="phase.descriptor.number" design-object="dc.designObj"></phase-description>
+                                    <phase-description phase-number="phase.descriptor.number" design-object="dc.designObj"
+                                        case-videos="dc.associatedCase.videos"></phase-description>
                                     <phase-state
                                         phase-data="phase"
                                         design-type="dc.designObj.type"
@@ -109,7 +111,7 @@
                 <h4 style="margin-top:1em; margin-bottom:2em">
                     {{ 'design_explanation_text' | translate }}
                 </h4>
-                <design-viewer design="dc.designObj"></design-viewer>
+                <design-viewer design="dc.designObj" case-videos="dc.associatedCase.videos"></design-viewer>
             </div>
         </div>
     </div>

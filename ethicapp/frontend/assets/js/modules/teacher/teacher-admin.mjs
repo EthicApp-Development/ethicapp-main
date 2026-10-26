@@ -5,6 +5,7 @@ import { ActivityCatalogService } from "../../services/activity-catalog.service.
 import { DesignStateService } from "../../services/design-state.service.js";
 import { DesignCatalogService } from "../../services/design-catalog.service.js";
 import { DesignPublicationService } from "../../services/design-publication.service.js";
+import { CaseVideoPickerService } from "../../services/case-video-picker.service.js";
 import { CasesCatalogService } from "../../services/cases-catalog.service.js";
 import { ExternalServicesCatalogService } from "../../services/external-services-catalog.service.js";
 import { LanguageCatalogService } from "../../services/language-catalog.service.js";
@@ -36,6 +37,7 @@ app.factory("ActivityStateService", ["$http", "TeacherSocketService", ActivitySt
     .factory("ActivityCatalogService", ["$http", ActivityCatalogService])
     .factory("DesignCatalogService", ["$rootScope", "$http", DesignCatalogService])
     .factory("DesignPublicationService", ["$uibModal", "DesignCatalogService", "CasesCatalogService", DesignPublicationService])
+    .factory("CaseVideoPickerService", ["$uibModal", CaseVideoPickerService])
     .factory("DesignStateService", ["$rootScope", "$http", DesignStateService])
     .factory("ExternalServicesCatalogService",
         ["$http", "LanguageCatalogService", ExternalServicesCatalogService])
@@ -162,7 +164,7 @@ app.controller("ErrorController",
 app.controller("DesignEditorController", 
     ["$scope", "$translate", "$timeout", "$routeParams", "DesignStateService",
         "DesignCatalogService", "CasesCatalogService", "LanguageCatalogService",
-        "ExternalServicesCatalogService", "toast", DesignEditorController]);
+        "ExternalServicesCatalogService", "toast", "$rootScope", DesignEditorController]);
 app.controller("VoidController", [VoidController]);
 app.controller("ProfileController", ["$scope", "$translate", "toast", "UserProfileService", "LanguageCatalogService", ProfileController]);
 
@@ -204,6 +206,12 @@ import { designDescriptionComponent } from "../../components/design-description.
 import rankingItemEditorComponent from "../../components/ranking-item-editor.component.js";
 import sdItemEditorComponent from "../../components/sd-item-editor.component.js";
 import groupingModeSelectorComponent from "../../components/grouping-mode-selector.component.js";
+import serviceConfigurationFormComponent
+    from "../../components/service-configuration-form.component.js";
+import phaseExternalServicesSummaryComponent
+    from "../../components/phase-external-services-summary.component.js";
+import richTextComponent from "../../components/rich-text.component.js";
+import richTextEditorComponent from "../../components/rich-text-editor.component.js";
 import previousPhasesSelectorComponent from "../../components/previous-phases-selector.component.js";
 import numericInputWithSpinbuttonComponent from "../../components/numeric-input-with-spinbutton.component.js";
 import phaseMoverComponent from "../../components/phase-mover.component.js";
@@ -215,8 +223,12 @@ import designItemComponent from '../../components/design-item.component.js';
 import caseSearchSelectorComponent from "../../components/case-search-selector.component.js";
 import caseCardComponent from "../../components/case-card.component.js";
 import caseDocumentViewerComponent from "../../components/case-document-viewer.component.js";
+import caseMaterialComponent from "../../components/case-material.component.js";
+import videoFacadeComponent from "../../components/video-facade.component.js";
 import caseAuthorEditorComponent from "../../components/case-author-editor.component.js";
 import caseFormEditorComponent from "../../components/case-form-editor.component.js";
+import caseAttachedDocumentsEditorComponent
+    from "../../components/case-attached-documents-editor.component.js";
 import caseRightsEditorComponent from "../../components/case-rights-editor.component.js";
 import tagSelectorComponent from "../../components/tag-selector.component.js";
 import phaseInstructionsEditComponent from "../../components/phase-instructions-edit.component.js";
@@ -226,6 +238,10 @@ import teacherToastComponent from "../../components/teacher-toast.component.js";
 app.component('activityDescription', activityDescriptionComponent);
 app.component('designDescription', designDescriptionComponent);
 app.component('groupingModeSelector', groupingModeSelectorComponent);
+app.component("serviceConfigurationForm", serviceConfigurationFormComponent);
+app.component("phaseExternalServicesSummary", phaseExternalServicesSummaryComponent);
+app.component("richText", richTextComponent);
+app.component("richTextEditor", richTextEditorComponent);
 app.component('previousPhasesSelector', previousPhasesSelectorComponent);
 app.component('numericInputWithSpinbutton', numericInputWithSpinbuttonComponent);
 app.component('phaseMover', phaseMoverComponent);
@@ -239,8 +255,11 @@ app.component('designItem', designItemComponent);
 app.component("caseSearchSelector", caseSearchSelectorComponent);
 app.component("caseCard", caseCardComponent);
 app.component("caseDocumentViewer", caseDocumentViewerComponent);
+app.component("caseMaterial", caseMaterialComponent);
+app.component("videoFacade", videoFacadeComponent);
 app.component("caseAuthorEditor", caseAuthorEditorComponent);
 app.component("caseFormEditor", caseFormEditorComponent);
+app.component("caseAttachedDocumentsEditor", caseAttachedDocumentsEditorComponent);
 app.component("caseRightsEditor", caseRightsEditorComponent);
 app.component("tagSelector", tagSelectorComponent);
 app.component("phaseInstructionsEdit", phaseInstructionsEditComponent);

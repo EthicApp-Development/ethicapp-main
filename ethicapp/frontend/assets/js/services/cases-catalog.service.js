@@ -1,4 +1,28 @@
+import { caseDocumentsPayload } from "../helpers/case-documents-form.js";
+import { caseVideosPayload } from "../helpers/case-videos-form.js";
+
 let CasesCatalogService = ($rootScope, $http) => {
+    let videoSupport = null;
+    let documentSupport = null;
+
+    // Sends `videos` only when the list changed: the case API keeps the videos
+    // of a case when the field is absent (#781).
+    function appendCaseVideos(formData, caseData) {
+        const videoIds = caseVideosPayload(caseData.videos, caseData.initialVideoIds);
+        if (videoIds) {
+            formData.append("videos", JSON.stringify(videoIds));
+        }
+    }
+
+    // Sends `documents` only when the ordered list changed: the case API keeps
+    // the documents of a case when the field is absent (#792).
+    function appendCaseDocuments(formData, caseData) {
+        const urls = caseDocumentsPayload(caseData.documents, caseData.initialDocumentKeys);
+        if (urls) {
+            formData.append("documents", JSON.stringify(urls));
+        }
+    }
+
     function appendCaseSharingFields(formData, caseData) {
         formData.append("authors", JSON.stringify(caseData.authors || []));
         formData.append("visibility", caseData.visibility || "private");
@@ -10,6 +34,8 @@ let CasesCatalogService = ($rootScope, $http) => {
         formData.append("permission_statement", caseData.permissionStatement || "");
         formData.append("commercial_source", caseData.commercialSource || "");
         formData.append("tag_ids", JSON.stringify((caseData.tags || []).map(tag => tag.id)));
+        appendCaseVideos(formData, caseData);
+        appendCaseDocuments(formData, caseData);
     }
 
     const service = {
@@ -102,6 +128,38 @@ let CasesCatalogService = ($rootScope, $http) => {
                 service.licenses = Array.isArray(response.data.result) ? response.data.result : [];
             }
             return service.licenses;
+        },
+
+        // Whether this installation can look videos up on YouTube (#780).
+        async getCaseVideoSupport() {
+            if (!videoSupport) {
+                const response = await $http.get("/cases/videos/support");
+                videoSupport = { enabled: response.data?.enabled === true };
+            }
+            return videoSupport;
+        },
+
+        // `{ youtubeVideoId, url, metadata, availability }` of a pasted URL;
+        // rejects with the response of a failed lookup (#780).
+        async previewCaseVideo(url) {
+            const response = await $http.post("/cases/videos/preview", { url });
+            return response.data;
+        },
+
+        // Whether this installation can check Google documents (#791).
+        async getCaseDocumentSupport() {
+            if (!documentSupport) {
+                const response = await $http.get("/cases/documents/support");
+                documentSupport = { enabled: response.data?.enabled === true };
+            }
+            return documentSupport;
+        },
+
+        // `{ kind, product, id, resourceKey, url, name, mimeType, modifiedTime }`
+        // of a pasted URL; rejects with the response of a failed check (#791).
+        async previewCaseDocument(url) {
+            const response = await $http.post("/cases/documents/preview", { url });
+            return response.data;
         },
 
         async createCase(caseData) {

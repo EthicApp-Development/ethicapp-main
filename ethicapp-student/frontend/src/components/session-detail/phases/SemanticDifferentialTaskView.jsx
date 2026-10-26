@@ -1,3 +1,5 @@
+import RichText from '../../common/RichText.jsx';
+
 export default function SemanticDifferentialTaskView({
   task,
   disabled,
@@ -76,7 +78,7 @@ export default function SemanticDifferentialTaskView({
 
   return (
     <article>
-      <p className="fw-semibold mb-2">{task.title}</p>
+      <RichText className="fw-semibold mb-2" text={task.title} contentType={task.titleContentType} />
       <div className="row align-items-center g-2 mb-3">
         <div className="col-3 text-start">
           <small className="text-muted">{task.leftPole}</small>

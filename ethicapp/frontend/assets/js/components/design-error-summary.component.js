@@ -1,7 +1,10 @@
 const designErrorSummaryComponent = {
     bindings: {
-        validationErrors: '<',
-        scrollTo: '&'
+        validationErrors: "<",
+        // Embedded videos the design's case does not hold (#787): warnings
+        // that do not make the design invalid.
+        videoWarnings:    "<?",
+        scrollTo:         "&",
     },
     template: `
 <div class="panel panel-default">
@@ -86,8 +89,24 @@ const designErrorSummaryComponent = {
                     </ul>
                 </div>
 
-                <hr style="margin-bottom:1em">                        
+                <hr style="margin-bottom:1em">
             </div>
+        </div>
+        <div class="design-video-warnings" ng-if="$ctrl.videoWarnings.length > 0">
+            <h5>{{ 'design_video_warnings_title' | translate }}</h5>
+            <ul class="list-group">
+                <li class="list-group-item design-video-warning"
+                    ng-repeat="warning in $ctrl.videoWarnings track by $index"
+                    data-video-id="{{ warning.videoId }}"
+                    ng-click="$ctrl.scrollTo({ phaseKey: 'phase_' + warning.phaseNumber })">
+                    <span class="text-warning">
+                        <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+                        {{ 'design_video_not_in_case' | translate:{
+                            phase: warning.phaseNumber, question: warning.questionNumber } }}
+                        <strong class="design-video-warning-title">{{ warning.title }}</strong>
+                    </span>
+                </li>
+            </ul>
         </div>
     </div>
 </div>

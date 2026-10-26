@@ -7,11 +7,17 @@ import defaultAiAdditionsClient from "../../services/ai-additions-client.service
 import {
     buildArgumentClientContext,
     buildFeedbackPayloadFromExternalResult,
+    createAtsSession,
+    differentialQuestionText,
+    getUiTranslations,
+    phaseInstructionsText,
+    questionTextFromPhaseDesign,
 } from "./ats-feedback.utils.js";
 
 export {
     buildArgumentClientContext,
     buildFeedbackPayloadFromExternalResult,
+    getUiTranslations,
 };
 
 const DEFAULT_ATS_BASE_PATH = "/argumentation-tutor/api/v2";
@@ -115,8 +121,8 @@ async function resolveSessionMetadata(context) {
     const sessionDescription = normalizeText(sessionRow?.descr);
     const caseData = await resolveCaseData(context.sessionId);
     const phaseDesign = await getPhaseDesignByPhaseId(context.phaseId);
-    const phaseInstructions = normalizeText(phaseDesign?.instructions);
-    const questionFromDesign = resolveQuestionTextFromPhaseDesign(phaseDesign);
+    const phaseInstructions = phaseInstructionsText(phaseDesign);
+    const questionFromDesign = questionTextFromPhaseDesign(phaseDesign);
     const questionText = questionFromDesign || await resolveQuestionText(context);
 
     const caseText = caseData.rawText || sessionDescription || phaseInstructions || questionText || "Ethical discussion prompt.";
@@ -151,22 +157,6 @@ async function resolveCaseData(sessionId) {
     }
 }
 
-function resolveQuestionTextFromPhaseDesign(phaseDesign) {
-    const questions = Array.isArray(phaseDesign?.questions) ? phaseDesign.questions : [];
-    if (questions.length === 0) {
-        return "";
-    }
-
-    for (const question of questions) {
-        const questionText = normalizeText(question?.q_text);
-        if (questionText) {
-            return questionText;
-        }
-    }
-
-    return "";
-}
-
 async function resolveQuestionText(context) {
     const questionId = Number(context?.questionId);
     const phaseId = Number(context?.phaseId);
@@ -197,7 +187,7 @@ async function resolveQuestionText(context) {
     const row = await rpg2.singleSQL({
         dbcon: config.dbconnString,
         sql:   `
-            SELECT title
+            SELECT title, title_content_type
             FROM differential
             WHERE id = $1
               AND stageid = $2
@@ -209,42 +199,34 @@ async function resolveQuestionText(context) {
         ],
     });
 
-    return normalizeText(row?.title);
+    return differentialQuestionText(row);
 }
 
+// Returns `{ sessionId, creation }`; `creation` is set only for the call that
+// created the phase's session, and null when it already existed.
 async function getOrCreateAtsSession(context) {
     const cacheKey = phaseCacheKey(context);
     const cachedSessionId = atsSessionByPhase.get(cacheKey);
 
     if (cachedSessionId) {
-        return cachedSessionId;
+        return { sessionId: cachedSessionId, creation: null };
     }
 
     const inflightCreation = atsSessionCreationByPhase.get(cacheKey);
     if (inflightCreation) {
-        return inflightCreation;
+        return { sessionId: (await inflightCreation).sessionId, creation: null };
     }
 
     const creationPromise = (async () => {
         const metadata = await resolveSessionMetadata(context);
-
-        const response = await fetchAtsJson("/sessions", {
-            method: "POST",
-            body:   {
-                case_id:    metadata.caseId,
-                case_title: metadata.caseTitle,
-                case_text:  metadata.caseText,
-                question:   metadata.question,
-            },
+        const created = await createAtsSession({
+            metadata,
+            serviceConfiguration: context.serviceConfiguration,
+            request:              body => fetchAtsJson("/sessions", { method: "POST", body }),
         });
 
-        const sessionId = normalizeText(response?.session_id);
-        if (!sessionId) {
-            throw new Error("ATS did not return a session_id.");
-        }
-
-        atsSessionByPhase.set(cacheKey, sessionId);
-        return sessionId;
+        atsSessionByPhase.set(cacheKey, created.sessionId);
+        return created;
     })();
 
     atsSessionCreationByPhase.set(cacheKey, creationPromise);
@@ -278,7 +260,7 @@ async function deleteAtsSession(atsSessionId) {
 
 
 async function submitArgumentToAts(context, responseText, groupId) {
-    const atsSessionId = await getOrCreateAtsSession(context);
+    const { sessionId: atsSessionId, creation } = await getOrCreateAtsSession(context);
 
     const response = await fetchAtsJson(`/sessions/${encodeURIComponent(atsSessionId)}/arguments`, {
         method: "POST",
@@ -299,6 +281,7 @@ async function submitArgumentToAts(context, responseText, groupId) {
         taskId,
         mode:                   "arguments",
         revisedArgumentPreview: responseText,
+        sessionCreation:        creation,
     };
 }
 
@@ -312,7 +295,7 @@ function isMissingPreviousAnalysisError(error) {
 }
 
 async function submitArgumentComparisonToAts(context, responseText, groupId) {
-    const atsSessionId = await getOrCreateAtsSession(context);
+    const { sessionId: atsSessionId, creation } = await getOrCreateAtsSession(context);
 
     try {
         const response = await fetchAtsJson(`/sessions/${encodeURIComponent(atsSessionId)}/arguments/compare`, {
@@ -335,6 +318,7 @@ async function submitArgumentComparisonToAts(context, responseText, groupId) {
             mode:                   "compare",
             initialArgumentPreview: normalizeText(response?.initial_argument_preview),
             revisedArgumentPreview: responseText,
+            sessionCreation:        creation,
         };
     } catch (error) {
         if (!isMissingPreviousAnalysisError(error)) {
@@ -381,7 +365,7 @@ async function publishFeedbackToStudent({ context, feedbackPayload, status, publ
     });
 }
 
-async function processStudentResponse({ context, callback }) {
+async function processStudentResponse({ context, callback, reportInstantiation }) {
     const responseText = extractResponseText(context);
     if (!responseText) {
         await callback({
@@ -393,8 +377,14 @@ async function processStudentResponse({ context, callback }) {
     }
 
     const groupId = await resolveGroupId(context);
-    await submitArgumentWithFlow(context, responseText, groupId);
+    const submission = await submitArgumentWithFlow(context, responseText, groupId);
     incrementSubmissionCount(context);
+    // The response that created the phase's tutor session records the tutor's
+    // report on its job (#737); the job completes later, with the tutor's callback.
+    if (submission?.sessionCreation && typeof reportInstantiation === "function") {
+        await reportInstantiation(submission.sessionCreation);
+    }
+    return submission;
 }
 
 async function processPhaseEnded({ context, callback }) {
@@ -475,9 +465,9 @@ async function processExternalResult({ context, callback, publishStudentResult }
 export async function register({ subscribe, publishStudentResult, aiAdditionsClient: providedAiAdditionsClient }) {
     aiAdditionsClient = providedAiAdditionsClient || defaultAiAdditionsClient;
 
-    subscribe("student-response-submitted", async (context, { callback }) => {
+    subscribe("student-response-submitted", async (context, { callback, reportInstantiation }) => {
         try {
-            await processStudentResponse({ context, callback });
+            return await processStudentResponse({ context, callback, reportInstantiation });
         } catch (error) {
             await callback({
                 hook:   "student-response-submitted",

@@ -19,6 +19,11 @@ function normalizeQuestion(question, index) {
             || question?.title
             || question?.label
             || null,
+        // How to read the text (#765): a missing value means text/plain.
+        contentType: question?.contentType
+            || question?.q_text_content_type
+            || question?.titleContentType
+            || null,
         leftPole: question?.leftPole
             || question?.left_pole
             || question?.l_pole
@@ -52,6 +57,7 @@ function createModalController() {
 
         $ctrl.response = data.response;
         $ctrl.phaseData = data.phaseData;
+        $ctrl.caseVideos = data.caseVideos;
         $ctrl.questions = (data.phaseData?.descriptor?.questions || [])
             .map((question, index) => normalizeQuestion(question, index));
 
@@ -74,7 +80,9 @@ function createModalController() {
     }];
 }
 
-export function openSemanticDifferentialIndividualResponseModal($uibModal, response, phaseData) {
+// `caseVideos`: the activity case's videos (#785), for the videos in questions.
+export function openSemanticDifferentialIndividualResponseModal($uibModal, response, phaseData,
+    caseVideos = null) {
     if (!response || !phaseData) {
         return null;
     }
@@ -89,7 +97,7 @@ export function openSemanticDifferentialIndividualResponseModal($uibModal, respo
         controllerAs: "$ctrl",
         controller: createModalController(),
         resolve: {
-            data: () => ({ response, phaseData }),
+            data: () => ({ response, phaseData, caseVideos }),
         },
     });
 }

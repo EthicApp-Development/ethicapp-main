@@ -13,6 +13,30 @@ shared AI Additions client instead of negotiating Keycloak tokens themselves.
 At startup, the registry reads `manifest.json` from this directory, or the path
 configured through `EXTERNAL_SERVICES_MANIFEST`.
 
+### Manifests per environment
+
+Three manifests ship with the image (#738). They list the same services and
+differ only in `enabled`; `__tests__/manifest.node-test.mjs` keeps them in sync.
+
+| Manifest | Enabled services | Used by |
+| --- | --- | --- |
+| `manifest.json` (default) | none | production, and any installation that does not set `EXTERNAL_SERVICES_MANIFEST` |
+| `manifest.staging.json` | the above plus `case-analyst` | staging (`EXTERNAL_SERVICES_MANIFEST=/app/backend/external-services/manifest.staging.json`) |
+| `manifest.development.json` | all, including the mock adapters | the root `docker-compose.yml` |
+
+The default enables nothing, so an installation uses no AI service unless it
+selects a manifest that enables one (#811). Epic #810 replaces the manifests
+with an operator-managed policy.
+
+When you add or change a service, edit the entry identically in all three and
+set `enabled` per environment. Designs keep the ids of disabled services; the
+editor does not offer them and nothing is dispatched to them (#686), so seeded
+activities that reference the mocks still load where the mocks are disabled.
+
+Every service declares `callbackAuth`. The mock adapters never receive HTTP
+callbacks (they call the mock service synchronously), so they accept only
+`ethicapp-external-mock`, a client id that no environment provisions.
+
 ### Manifest entries
 
 Each manifest entry describes one service:
@@ -48,7 +72,7 @@ Each manifest entry describes one service:
 | `ui` | no | `{ component }`: the kebab-case name of the EthicApp frontend component that will show the service's analysis in the case view. Defaults to `{ component: null }`; other names are dropped with a warning. The texts come from the adapter, not from the manifest (see "UI translations"). |
 | `descriptor` | no | `{ serviceId, path }`: the capability descriptor the service's AI backend publishes (#687). `serviceId` is the descriptor's `service.id`, which may differ from `id`: ids are mapped, not renamed, so stored designs, chat agents and jobs keep the manifest id. `path` is the descriptor route relative to `AI_ADDITIONS_BASE_URL`, for example `/polyadic-agent/api/capabilities`; it must be an absolute path without host, query or `..` segments. An invalid block is dropped with a warning. `GET /external-services` exposes `descriptor.serviceId` and a summary (see "Listing services"); the route stays internal (`getServiceDescriptor()`). |
 | `capabilities` | — | Removed (#726). Entries that still declare it log a deprecation warning and the key is ignored. A service that processes student responses declares the `response` scope instead; the student app shows the processing state for those services. |
-| `enabled` | no | Defaults to `true`. Disabled services stay registered, and appear in the student activity descriptor with `enabled: false`, but `GET /external-services` does not list them and their adapter is never imported. |
+| `enabled` | no | Only `true` enables the service; a missing value means disabled (#811). Disabled services stay registered, and appear in the student activity descriptor with `enabled: false`, but `GET /external-services` does not list them and their adapter is never imported. |
 | `callbackAuth` | no | Inbound callback authorization. See below. |
 
 When `callbackAuth` is present, EthicApp verifies that the authenticated Keycloak
@@ -239,17 +263,84 @@ teacher's locale, for the design editor (#728):
 - `runtime_configuration`, adapter and descriptor paths, callback settings and
   credentials are never returned.
 
+### Configuration validation
+
+`POST /designs` and `PATCH /designs/:id` validate each phase's
+`externalServices.configurations` (#729) against the services' capability
+descriptors before saving (#731, `services/service-configuration-validation.service.js`).
+Only services listed in that phase's `enabledServiceIds` are checked;
+configurations of other services are kept as they are.
+
+Each value is checked for its field's `type`, enum membership, `minimum`,
+`maximum` and `step`, `max_length` and `pattern`, and every `required` field
+needs a value. Keys the descriptor does not define are errors. `null` means
+"use the service default".
+
+A save with errors answers `400`:
+
+```json
+{
+  "status": "err",
+  "code": "INVALID_SERVICE_CONFIGURATION",
+  "message": "Some external service settings are not valid.",
+  "errors": [
+    { "phaseIndex": 0, "serviceId": "polyadic-devils-advocate", "field": "llm_tier", "code": "not_in_enum", "value": "premium" }
+  ],
+  "warnings": []
+}
+```
+
+- `phaseIndex` is the 0-based index in `design.phases`; `serviceId` is the
+  manifest id; `field` is the descriptor field key.
+- Error `code`: `invalid_type`, `not_in_enum`, `below_minimum`,
+  `above_maximum`, `step_mismatch`, `too_long`, `pattern_mismatch`,
+  `required`, `unknown_field`.
+
+A successful save answers `{ "status": "ok", ..., "warnings": [...] }`. Warnings
+never block a save:
+
+| `code` | Meaning | Extra keys |
+| --- | --- | --- |
+| `deprecated_field` | The field is deprecated. | `value`, `supersededBy` (field key) |
+| `deprecated_value` | The enum value is deprecated. | `value`, `supersededBy` (value) |
+| `no_longer_accepted` | The stored design already had this problem (same service, field, `reason` and value): the service retired the field or value, or tightened a limit. The teacher did not introduce it, so it does not block the save; the service warns or substitutes at instantiation. | `reason` (an error code), `value` |
+| `not_validated` | The configuration was stored without validation (`field` is `null`). | `reason`: `unreachable`, `invalid_descriptor`, `unsupported_contract_version`, `service_id_mismatch`, or `no_descriptor` (unknown, disabled, or no descriptor) |
+
+The descriptors are read in English through the descriptor cache, so a save
+adds at most one request per service. The design editor's settings form (#732)
+applies the same rules as the teacher types (they live in
+`ethicapp/common/modules/service-configuration-rules.js`, shared by both) and
+shows the `errors` of a `400` next to their fields.
+
 ### Handler signature
 
-Every hook handler receives `(context, { callback })`:
+Every hook handler receives `(context, { callback, reportInstantiation })`:
 
 - `context` is the object built by the dispatch site plus registry-injected
   fields. For hooks dispatched through `dispatchHook()` the registry adds
-  `serviceId`, `jobId`, `correlationId` (equal to `jobId`), and
-  `enabledServiceIds`. For `callback-received` it adds `serviceId`, `jobId`
-  (the correlated job, if any), `resultId`, and `isDuplicate`.
+  `serviceId`, `jobId`, `correlationId` (equal to `jobId`),
+  `enabledServiceIds` and `serviceConfiguration`. For `callback-received` it
+  adds `serviceId`, `jobId` (the correlated job, if any), `resultId`,
+  `isDuplicate` and `serviceConfiguration: {}`.
+- `context.serviceConfiguration` (#734) is the settings object the design
+  stores for this service in the hook's phase
+  (`phases[n].externalServices.configurations[serviceId]`, validated against
+  the service's capability descriptor on save, #731): descriptor field keys to
+  scalars, holding only what the teacher set. It is `{}` when nothing is
+  stored and for hooks without a phase (`case-created`, `activity-finished`,
+  `callback-received`). It is read from the design when the hook fires and is
+  a copy, so changing it has no effect. Adapters map it into the AI service's
+  payload; unset keys mean "service default".
 - `callback(result)` records the adapter outcome against the job (see
   "Jobs and `callback(result)`" below).
+- `reportInstantiation(report)` stores what an AI service reported when the
+  adapter created a room or session for this job (see "Instantiation reports"
+  below). It is only passed to handlers run by `dispatchHook()`.
+
+Phase hooks are dispatched through `helpers/external-service-dispatch.js`
+(`dispatchPhaseHook(hookName, context)`), which reads the phase's enabled
+services and their settings with `getPhaseExternalServices(phaseId)`
+(`helpers/designs-helper.js`, built on `helpers/phase-external-services.js`).
 
 Handlers run concurrently with `Promise.allSettled`; a throwing handler marks
 its job as `failed` and never affects other services or the originating HTTP
@@ -361,6 +452,40 @@ posts its result. Jobs and results are queryable through
 `serviceId`, `hookName`, `sessionId`, `phaseId`, `status`, `from`, `to`, and
 `limit` query filters.
 
+### Instantiation reports
+
+When an adapter creates a room or session, the AI service reports its
+lifecycle verdicts on the settings it received (#133): deprecated values it
+still accepts, retired values it substituted, unsupported fields that put it in
+degraded mode. The adapter passes that report to `reportInstantiation(report)`,
+and the registry stores it in `external_service_jobs.instantiation_report`
+(jsonb, migration V17, #737) on the job that triggered the creation. It does not
+change the job status, so asynchronous jobs can report before they complete.
+
+```json
+{
+  "warnings": [
+    { "field": "model", "verdict": "deprecated", "suggested_field": "llm_tier",
+      "suggested_value": "basic", "message": "model is deprecated; use llm_tier instead",
+      "room": "ethicapp-s12-p34-g5" }
+  ],
+  "degraded": false,
+  "configurationRejected": false,
+  "rooms": [{ "room": "ethicapp-s12-p34-g5", "degraded": false, "configurationRejected": false }]
+}
+```
+
+- `warnings`, `degraded` and `configurationRejected` (the service refused the
+  configured settings and the adapter fell back to defaults) are always
+  present. Other keys are adapter-specific: Polyadic adds `rooms` (one entry per
+  room; `rejection` holds the service's error when settings were refused) and
+  tags each warning with its `room`. The Argumentation Tutor adds `llmTier` and
+  the resolved `model`.
+- A report with warnings, degraded mode or rejected settings is also logged as
+  one `[external-services] Instantiation report.` line with its job id.
+- `NULL` means the job instantiated nothing. Teachers do not see these reports
+  yet.
+
 ## Inbound Callbacks
 
 Providers post results to `POST /external-services/callbacks`. The request is
@@ -409,7 +534,7 @@ The registry provides two helper publishers to adapters:
 ## Case Analyses
 
 Case-scoped services analyse case documents. Their results live in
-`case_analyses` (`database/migrations/V17__case_analyses.sql`): one row per case
+`case_analyses` (`database/migrations/V21__case_analyses.sql`): one row per case
 and chosen service, holding the current result. Raw callbacks still go to
 `external_service_results`.
 
@@ -423,6 +548,13 @@ the PDF is stored. Each chosen service gets a `requested` row, already reserved
 for its first generation, and `case-created` is dispatched to those services
 only, under the reserved job ids. Editing, importing, or duplicating a case
 never changes or requests analyses.
+
+Two decisions bound each analysis. The installation decides which services may
+be offered at all: only services its manifest enables are valid, and the
+default manifest enables none (#811). Within that, the case author decides, per
+case, whether the case is analysed and by which services; nothing is analysed
+without that choice. Epic #810 moves the installation's decision to a policy
+managed in the management console, and keeps the author's choice.
 
 ### Statuses
 
@@ -682,9 +814,10 @@ When implementing a new adapter:
 2. Export a named `register()` function and subscribe to the hooks the service
    needs. Only hooks listed in the Hook Catalog are dispatched; subscribing to
    an unknown name is silently inert.
-3. Add a service entry to `manifest.json` with the same hook list, including
-   `callbackAuth` if the service posts inbound callbacks and the `response`
-   scope if the service processes student responses.
+3. Add a service entry to `manifest.json`, `manifest.staging.json` and
+   `manifest.development.json` with the same hook list, `callbackAuth`, and the
+   `response` scope if the service processes student responses. Set `enabled`
+   per environment (see "Manifests per environment").
 4. Use `aiAdditionsClient.requestJson()` for AI Additions HTTP calls and forward
    `context.correlationId` in outbound requests.
 5. Keep service-specific URL configuration under an `AI_ADDITIONS_<SERVICE>_*`

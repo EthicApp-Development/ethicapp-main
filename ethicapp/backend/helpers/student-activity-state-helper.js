@@ -2,6 +2,10 @@ import * as config from "../config/database.config.js";
 import * as rpg2 from "../db/rest-pg-2.js"
 import redisClient from "../db/redis.js";
 import { responseFactories } from  "../../common/modules/design-types.js";
+import {
+    phaseInstructions,
+    resolveTextContentType,
+} from "../../common/modules/text-content-types.js";
 import * as DesignsHelper from "../helpers/designs-helper.js"
 import * as ActivitiesHelper from "../helpers/activities-helper.js"
 import externalServicesRegistry from "../services/external-services.service.js";
@@ -28,9 +32,7 @@ export const buildInitialPhaseState = async function (phaseId) {
             phase: {
                 id: phaseId,
                 number: phaseNumber,
-                instructions: typeof phaseDesign?.instructions === "string"
-                    ? phaseDesign.instructions
-                    : (typeof phaseDesign?.question === "string" ? phaseDesign.question : ""),
+                ...phaseInstructions(phaseDesign, phaseDesign?.question),
                 features: {
                     chat: phaseDesign.chat,
                     anonymity: phaseDesign.anonymous,
@@ -237,9 +239,7 @@ export async function getStudentActivityPhases(sessionId) {
             return {
                 id: phase.id,
                 number: phase.number,
-                instructions: typeof phaseDesign.instructions === "string"
-                    ? phaseDesign.instructions
-                    : (typeof phase.instructions === "string" ? phase.instructions : ""),
+                ...phaseInstructions(phaseDesign, phase.instructions),
                 features: {
                     mode: phase.mode,
                     chat: phase.chat,
@@ -552,6 +552,7 @@ export async function getStudentActivityTasks_semanticDifferential(sessionId, ph
             d.stageid AS phase_id,
             d.id AS task_id,
             d.title AS task_title,
+            d.title_content_type AS task_title_content_type,
             d.tleft AS left_pole,
             d.tright AS right_pole,
             d.orden AS order,
@@ -582,14 +583,15 @@ export async function getStudentActivityTasks_semanticDifferential(sessionId, ph
             }
 
             tasksByPhase[task.phase_number].push({
-                id: task.task_id,
-                title: task.task_title,
-                leftPole: task.left_pole,
-                rightPole: task.right_pole,
-                order: task.order,
+                id:                    task.task_id,
+                title:                 task.task_title,
+                titleContentType:      resolveTextContentType(task.task_title_content_type),
+                leftPole:              task.left_pole,
+                rightPole:             task.right_pole,
+                order:                 task.order,
                 requiresJustification: task.requires_justification,
-                numValues: task.num_values,
-                minWordCount: task.min_word_count,
+                numValues:             task.num_values,
+                minWordCount:          task.min_word_count,
             });
         });
 
@@ -1020,13 +1022,14 @@ function attachResponsesToTasks(phaseRows, taskRows, responseRows, participantsB
 
         const task = designType === "semantic_differential"
             ? {
-                taskId: Number(row.task_id),
-                order: Number(row.task_order),
-                title: row.task_title,
-                leftPole: row.left_pole,
-                rightPole: row.right_pole,
-                numValues: row.num_values,
-                responses: [],
+                taskId:           Number(row.task_id),
+                order:            Number(row.task_order),
+                title:            row.task_title,
+                titleContentType: resolveTextContentType(row.task_title_content_type),
+                leftPole:         row.left_pole,
+                rightPole:        row.right_pole,
+                numValues:        row.num_values,
+                responses:        [],
             }
             : {
                 taskId: Number(row.task_id),
@@ -1107,6 +1110,7 @@ const previousGroupResponseHandlers = {
                 SELECT st.number AS phase_number,
                        d.id AS task_id,
                        d.title AS task_title,
+                       d.title_content_type AS task_title_content_type,
                        d.tleft AS left_pole,
                        d.tright AS right_pole,
                        d.orden AS task_order,
@@ -1905,6 +1909,7 @@ export async function getTasksForPhase_semanticDifferential(phaseId) {
         SELECT
             d.id AS task_id,
             d.title AS task_title,
+            d.title_content_type AS task_title_content_type,
             d.tleft AS left_pole,
             d.tright AS right_pole,
             d.orden AS task_order,
@@ -1926,14 +1931,15 @@ export async function getTasksForPhase_semanticDifferential(phaseId) {
 
         // Transform the results into a list of tasks
         const tasks = results.map(task => ({
-            id: task.task_id,
-            title: task.task_title,
-            leftPole: task.left_pole,
-            rightPole: task.right_pole,
-            order: task.task_order,
+            id:                    task.task_id,
+            title:                 task.task_title,
+            titleContentType:      resolveTextContentType(task.task_title_content_type),
+            leftPole:              task.left_pole,
+            rightPole:             task.right_pole,
+            order:                 task.task_order,
             requiresJustification: task.requires_justification,
-            numValues: task.num_values,
-            minWordCount: task.min_word_count,
+            numValues:             task.num_values,
+            minWordCount:          task.min_word_count,
         }));
 
         return { tasks };

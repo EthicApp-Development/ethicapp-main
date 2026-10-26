@@ -13,6 +13,13 @@ function SDItemEditController() {
         }
     };
     
+    // The editor reports text/markdown (#767).
+    vm.setQuestionText = function(text, contentType) {
+        vm.question.q_text = text;
+        vm.question.q_text_content_type = contentType;
+        vm.validateItem();
+    };
+
     vm.validateItem = function() {
         vm.normalizeJustificationSettings();
 
@@ -136,15 +143,17 @@ function SDItemEditController() {
 
 const sdItemEditorComponent = {
     bindings: {
-        phaseNumber: '<?',
-        question: '=',
-        questionNumber: '=',
-        validateCallback: '&?',
-        showSeparator: '<?',
+        phaseNumber:      "<?",
+        question:         "=",
+        questionNumber:   "=",
+        validateCallback: "&?",
+        showSeparator:    "<?",
+        // The design's case videos (#787), for the question text's editor.
+        caseVideos:       "<?",
     },
-    transclude: true,
-    templateUrl: "/assets/static/views/teacher/fragments/sd-item-editor.template.html",   
-    controller: SDItemEditController,
+    transclude:  true,
+    templateUrl: "/assets/static/views/teacher/fragments/sd-item-editor.template.html",
+    controller:  SDItemEditController,
 };
 
 export default sdItemEditorComponent;

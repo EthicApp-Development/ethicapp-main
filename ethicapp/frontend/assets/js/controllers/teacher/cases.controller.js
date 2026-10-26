@@ -1,4 +1,17 @@
 /*eslint func-style: ["error", "expression"]*/
+import {
+    caseVideoFieldErrorKeys,
+    caseVideoIds,
+    caseVideoSaveErrorKey,
+    caseVideosFromCase,
+} from "../../helpers/case-videos-form.js";
+import {
+    caseDocumentFieldErrorKeys,
+    caseDocumentKeys,
+    caseDocumentSaveErrorKey,
+    caseDocumentsFromCase,
+} from "../../helpers/case-documents-form.js";
+
 export function CasesController($scope, $routeParams, $window, $interval, $translate, toast,
     CasesCatalogService, LanguageCatalogService, UserProfileService) {
     const vm = this;
@@ -70,6 +83,16 @@ export function CasesController($scope, $routeParams, $window, $interval, $trans
             languageCode: LanguageCatalogService.getDefaultLanguageCode(vm.languages, "es_CL"),
             tags: [],
             uploadErrorKey: "",
+
+            includesVideos:   false,
+            videos:           [],
+            initialVideoIds:  [],
+            videoFieldErrors: {},
+
+            includesDocuments:   false,
+            documents:           [],
+            initialDocumentKeys: [],
+            documentFieldErrors: {},
         };
     };
     vm.form = vm.createEmptyCaseForm();
@@ -145,6 +168,14 @@ export function CasesController($scope, $routeParams, $window, $interval, $trans
         vm.form.languageCode = caseObj.languageCode || "es_CL";
         vm.form.hasLaunchedDesignActivity = caseObj.hasLaunchedDesignActivity === true;
         vm.form.tags = Array.isArray(caseObj.tags) ? caseObj.tags : [];
+        vm.form.videos = caseVideosFromCase(caseObj);
+        vm.form.initialVideoIds = caseVideoIds(vm.form.videos);
+        vm.form.includesVideos = vm.form.videos.length > 0;
+        vm.form.videoFieldErrors = {};
+        vm.form.documents = caseDocumentsFromCase(caseObj);
+        vm.form.initialDocumentKeys = caseDocumentKeys(vm.form.documents);
+        vm.form.includesDocuments = vm.form.documents.length > 0;
+        vm.form.documentFieldErrors = {};
         await vm.refreshDocumentProcessingStatuses();
         vm.syncDocumentProcessingPolling();
         $scope.$applyAsync();
@@ -333,6 +364,15 @@ export function CasesController($scope, $routeParams, $window, $interval, $trans
     };
 
     vm.getCaseSaveErrorMessageKey = function(error) {
+        const videoErrorKey = caseVideoSaveErrorKey(error);
+        if (videoErrorKey) {
+            return videoErrorKey;
+        }
+        const documentErrorKey = caseDocumentSaveErrorKey(error);
+        if (documentErrorKey) {
+            return documentErrorKey;
+        }
+
         switch (error?.data?.code) {
         case "CASE_PDF_REQUIRED":
             return "ethical_cases_validation_pdf_required";
@@ -356,9 +396,21 @@ export function CasesController($scope, $routeParams, $window, $interval, $trans
         ].includes(messageKey);
     };
 
+    // Marks the videos a save refused, next to each one in the list.
+    vm.showCaseVideoErrors = function(error) {
+        vm.form.videoFieldErrors = caseVideoFieldErrorKeys(error);
+    };
+
+    // Marks the attached documents a save refused, next to each one.
+    vm.showCaseDocumentErrors = function(error) {
+        vm.form.documentFieldErrors = caseDocumentFieldErrorKeys(error);
+    };
+
     vm.createCase = async function() {
         try {
             vm.form.uploadErrorKey = "";
+            vm.form.videoFieldErrors = {};
+            vm.form.documentFieldErrors = {};
             await CasesCatalogService.createCase(vm.form);
             vm.showInfoToast(vm.translate("ethical_cases_create_success"));
             $scope.navigateTo("/cases");
@@ -368,6 +420,8 @@ export function CasesController($scope, $routeParams, $window, $interval, $trans
             if (vm.isCaseUploadError(messageKey)) {
                 vm.form.uploadErrorKey = messageKey;
             }
+            vm.showCaseVideoErrors(error);
+            vm.showCaseDocumentErrors(error);
             vm.showErrorToast(vm.translate(messageKey));
             $scope.$applyAsync();
         }
@@ -381,7 +435,11 @@ export function CasesController($scope, $routeParams, $window, $interval, $trans
 
         try {
             vm.form.uploadErrorKey = "";
+            vm.form.videoFieldErrors = {};
+            vm.form.documentFieldErrors = {};
             await CasesCatalogService.updateCase(caseId, vm.form);
+            vm.form.initialVideoIds = caseVideoIds(vm.form.videos);
+            vm.form.initialDocumentKeys = caseDocumentKeys(vm.form.documents);
             vm.showInfoToast(vm.translate("ethical_cases_update_success"));
             $scope.$applyAsync();
         } catch (error) {
@@ -392,6 +450,8 @@ export function CasesController($scope, $routeParams, $window, $interval, $trans
             if (vm.isCaseUploadError(messageKey)) {
                 vm.form.uploadErrorKey = messageKey;
             }
+            vm.showCaseVideoErrors(error);
+            vm.showCaseDocumentErrors(error);
             vm.showErrorToast(vm.translate(messageKey));
             $scope.$applyAsync();
         }

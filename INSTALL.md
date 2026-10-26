@@ -83,6 +83,71 @@ RECAPTCHA_SECRET_KEY=your-classic-secret
 RECAPTCHA_VERIFY_URL=https://www.google.com/recaptcha/api/siteverify
 ```
 
+## Case Videos (YouTube Data API)
+
+Cases can list YouTube videos (epic #779). `ethicapp` looks up their title,
+description and duration with the YouTube Data API v3, using a Google Cloud API
+key:
+
+```bash
+GOOGLE_API_KEY=change-this-in-production
+YOUTUBE_DATA_API_TIMEOUT_MS=8000
+YOUTUBE_METADATA_CACHE_TTL_SECONDS=86400
+```
+
+To create the key, enable the YouTube Data API v3 in a Google Cloud project,
+create an API key there, and restrict it to that API. The case documents below
+reuse the same key, which then needs the Drive API in its restriction too. The
+key is a backend-only secret.
+
+Without `GOOGLE_API_KEY`, case video support is off: teachers cannot add videos,
+and `GET /cases/videos/support` answers `{ "enabled": false }`.
+
+Metadata is cached in the cache Redis (`REDIS_CACHE_*`) for
+`YOUTUBE_METADATA_CACHE_TTL_SECONDS`, 24 hours by default. Values above 2592000
+(30 days, YouTube's storage limit for API data) are capped. Each lookup that
+misses the cache costs 1 unit of the project's YouTube quota, 10,000 units a day
+by default, for up to 50 videos. Teachers' URL previews are limited to 30 a
+minute per teacher.
+
+## Case Documents (Google Drive API)
+
+Cases can list Google Docs, Sheets, Slides and Drive files shared as "Anyone
+with the link", and documents published to the web (epic #789). `ethicapp`
+checks that each one opens for anyone, and reads its name, with the same
+`GOOGLE_API_KEY`:
+
+```bash
+GOOGLE_API_KEY=change-this-in-production
+GOOGLE_DOCUMENT_TIMEOUT_MS=8000
+GOOGLE_DOCUMENT_CACHE_TTL_SECONDS=900
+```
+
+The Google Cloud project of the key must enable the Google Drive API, and a key
+restricted by API must allow the Drive API next to the YouTube Data API v3. A
+key restricted by IP address must allow both the server's IPv4 and IPv6 egress
+addresses: a request from an address outside the list fails with HTTP 403, so
+new documents cannot be added and existing ones show as not verified.
+
+How a document is checked:
+
+- A Drive file is looked up with the Drive API v3 `files.get`, with the key in
+  the `X-Goog-Api-Key` header. When the API answers 404, an anonymous request to
+  the document's URL tells a restricted document (401, or a redirect to the
+  Google sign-in page) from a missing one (404).
+- A document published to the web is checked with an anonymous request to its
+  published URL only, and its name is read from the page title.
+
+Without `GOOGLE_API_KEY`, document attachments are off, published links
+included: teachers cannot add documents, and `GET /cases/documents/support`
+answers `{ "enabled": false }`.
+
+Results are cached in the cache Redis (`REDIS_CACHE_*`): an available document
+for `GOOGLE_DOCUMENT_CACHE_TTL_SECONDS`, 15 minutes by default and at most 86400
+(one day); a document found not public or missing for 120 seconds. Failed
+checks (timeouts, HTTP 403, 429 or 5xx) are not cached. Teachers' URL previews
+are limited to 30 a minute per teacher.
+
 ## Redis Topology
 
 Production deployments use two Redis instances:
@@ -183,6 +248,14 @@ mapping.
 external-service adapters. Publish it with the full image set so deployment
 manifests can pin it, but deploy it only when mock integrations are
 intentionally enabled.
+
+The `ethicapp` image ships three external-services manifests (#738). The
+default, `manifest.json`, enables no external AI service, so an installation
+that sets nothing uses no AI (#811). Staging sets
+`EXTERNAL_SERVICES_MANIFEST=/app/backend/external-services/manifest.staging.json`
+to also enable Case Analyst. `manifest.development.json`, used by the local
+Compose stack, enables the mock adapters too; deploy `external-mock-service`
+only with it.
 
 `postgres` and `redis` are not built by this repository. Use the official images
 and pin the desired versions in the deployment repository.

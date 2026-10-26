@@ -91,10 +91,18 @@
         },
         "externalServices": { "$ref": "#/$defs/externalServices" },
         "instructions": {
+          "description": "Phase instructions written by the teacher, interpreted as instructionsContentType says.",
           "type": "string",
           "minLength": 1
-        }
+        },
+        "instructionsContentType": { "$ref": "#/$defs/textContentType" }
       }
+    },
+
+    "textContentType": {
+      "description": "How a teacher-written text is interpreted (#762). A missing value means text/plain: the text is shown as written, line breaks included, and never interpreted as Markdown. text/markdown is the CommonMark subset described in rich-text/README.md.",
+      "type": "string",
+      "enum": ["text/plain", "text/markdown"]
     },
 
     "externalServices": {
@@ -148,9 +156,11 @@
       "required": ["q_text", "ans_format"],
       "properties": {
         "q_text": {
+          "description": "Question text written by the teacher, interpreted as q_text_content_type says.",
           "type": "string",
           "minLength": 1
         },
+        "q_text_content_type": { "$ref": "#/$defs/textContentType" },
         "ans_format": {
           "type": "object",
           "required": [

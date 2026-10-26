@@ -113,6 +113,47 @@ Given the mix of legacy code, prototype-quality code, and AI-assisted developmen
   - risks/limitations,
   - verification steps.
 
+### Epics and sub-issues
+
+Work that spans several PRs is tracked as an epic with sub-issues. Epics #687 and #760 are the reference examples.
+
+The epic:
+
+- **Title and labels.** `[Epic] <goal>`, labeled `epic` plus the kind of work (for example `enhancement`).
+- **Body sections:**
+  - Goal;
+  - Current state, with file and line references;
+  - Scope;
+  - Out of scope;
+  - Decisions, dated, which close the open questions;
+  - Open questions, while any remain;
+  - Deployment: migrations, environment variables, `ethicapp-deployment` sync;
+  - Context;
+  - Sub-issues.
+- **Sub-issues section:**
+  - a checklist grouped by area, one line per sub-issue;
+  - each line gives the issue, its saga number and what it depends on, by saga number. For example: `- [ ] #763 (03/08): ... Depends on 02.`;
+  - when a sub-issue is done, its line is checked and records the PR that closed it (`#729 (06/15, via #747)`).
+
+Each sub-issue:
+
+- **Title.** It carries the saga number in the suggested order: `[Epic <epic number> · <NN>/<total>] <title>`, for example `[Epic 760 · 03/08] Carry text content types into activity phases and student payloads`. An item added later gets a letter suffix (`04b`), so existing numbers stay stable.
+- **Body.** It starts with `Parent epic: #<epic number>`, followed by these sections:
+  - Summary;
+  - Current state;
+  - Proposed approach;
+  - Acceptance criteria;
+  - Dependencies;
+  - Notes, optional.
+- **Linking.** It is linked to the epic as a GitHub sub-issue, in addition to the checklist.
+
+A PR that implements a sub-issue:
+
+- **Title.** It carries the same saga prefix as its sub-issue: `[Epic <epic number> · <NN>/<total>] <title>`, for example `[Epic 760 · 03/08] Carry text content types into activity phases and student payloads`.
+- **Body.** It starts with `Part of epic #<epic number>. Closes #<sub-issue number>.`, followed by the PR description sections above.
+
+Issues are written in English. A PR merged into a branch other than the default branch does not close its issue automatically. Close the issue by hand, with a comment naming the PR and the merge commit, and check its line in the epic.
+
 ## 5) Constraints and do-not rules
 
 - **Do not** introduce dependencies with known security risks or dependencies that are obsolete.

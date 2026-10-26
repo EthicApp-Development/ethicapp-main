@@ -1,14 +1,16 @@
 <div class="panel panel-default" style="margin-top:1em">
     <div class="panel-body">
         <div class="form-group">
-            <label for="questionText">{{ 'questionText' | translate }}</label>
-            <textarea id="questionText"
-                      class="form-control"
-                      rows="2"
-                      ng-class="{'input-warning': !$ctrl.question.q_text}"
-                      placeholder="{{ 'title' | translate }}"
-                      ng-model="$ctrl.question.q_text"
-                      ng-change="$ctrl.validateItem()"></textarea>
+            <label>{{ 'questionText' | translate }}</label>
+            <rich-text-editor
+                text="$ctrl.question.q_text"
+                content-type="$ctrl.question.q_text_content_type"
+                label="{{ 'questionText' | translate }}"
+                placeholder="{{ 'title' | translate }}"
+                invalid="!$ctrl.question.q_text"
+                videos="$ctrl.caseVideos"
+                on-change="$ctrl.setQuestionText(text, contentType)">
+            </rich-text-editor>
         </div>
 
         <div class="row">

@@ -3,13 +3,13 @@
 import express from "express";
 import * as config from "../config/database.config.js";
 import * as rpg2 from "../db/rest-pg-2.js";
-import { getDesignTypeByPhaseId, getPhaseDesignByPhaseId } from "../helpers/designs-helper.js";
+import { getDesignTypeByPhaseId } from "../helpers/designs-helper.js";
+import { dispatchPhaseHook } from "../helpers/external-service-dispatch.js";
 import { getStatusCode } from "../../common/modules/session-status.js";
 import { messageCountHandlers,
     chatTranscriptHandlers,
     saveChatMessage } from "../helpers/chat-helper.js";
 import { studentNotifications, teacherNotifications } from "../config/socket.config.js";
-import externalServicesRegistry from "../services/external-services.service.js";
 
 const router = express.Router();
 
@@ -207,31 +207,10 @@ router.post("/phases/:id/question/:question_id/chat_messages", async (req, res) 
 
 async function dispatchIncomingChatMessageHook(context) {
     try {
-        const phaseDesign = await getPhaseDesignByPhaseId(context.phaseId);
-        const enabledServiceIds = getEnabledExternalServiceIds(phaseDesign);
-
-        if (enabledServiceIds.length === 0) {
-            return;
-        }
-
-        await externalServicesRegistry.dispatchHook("chat-message-received", context, {
-            enabledServiceIds,
-        });
+        await dispatchPhaseHook("chat-message-received", context);
     } catch (error) {
         console.error("[external-services] Error dispatching incoming chat message hook.", error);
     }
-}
-
-function getEnabledExternalServiceIds(phaseDesign) {
-    const enabledServiceIds = phaseDesign?.externalServices?.enabledServiceIds;
-
-    if (!Array.isArray(enabledServiceIds)) {
-        return [];
-    }
-
-    return enabledServiceIds
-        .map(serviceId => String(serviceId).trim())
-        .filter(Boolean);
 }
 
 async function resolveGroupChatAccessContext({ groupId, phaseId = null, questionId, userId, role }) {

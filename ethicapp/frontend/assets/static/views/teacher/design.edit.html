@@ -49,6 +49,7 @@
                 <div class="col-md-12">
                     <design-error-summary
                         validation-errors="dec.validationErrors"
+                        video-warnings="dec.videoWarnings"
                         scroll-to="dec.scrollToPhase(phaseKey)">
                     </design-error-summary>
                 </div>
@@ -145,15 +146,30 @@
                         <div class="col-md-12">
                             <h4>{{ 'external_services_title' | translate }}</h4>
                             <p class="help-block">{{ 'external_services_phase_help' | translate }}</p>
-                            <div class="checkbox" ng-repeat="service in dec.externalServices track by service.id">
-                                <label>
-                                    <input
-                                        type="checkbox"
-                                        ng-checked="dec.isExternalServiceEnabled(phase, service.id)"
-                                        ng-click="dec.setExternalServiceEnabled(phase, service.id, !dec.isExternalServiceEnabled(phase, service.id))">
-                                    <strong>{{ service.id }}</strong>
-                                    <span ng-if="service.description"> - {{ service.description }}</span>
-                                </label>
+                            <div class="external-service-option" ng-repeat="service in dec.externalServices track by service.id">
+                                <div class="checkbox">
+                                    <label>
+                                        <input
+                                            type="checkbox"
+                                            ng-disabled="dec.design.locked"
+                                            ng-checked="dec.isExternalServiceEnabled(phase, service.id)"
+                                            ng-click="dec.setExternalServiceEnabled(phase, service.id, !dec.isExternalServiceEnabled(phase, service.id))">
+                                        <strong>{{ dec.serviceLabel(service) }}</strong>
+                                        <span ng-if="dec.serviceDescription(service)"> - {{ dec.serviceDescription(service) }}</span>
+                                    </label>
+                                </div>
+                                <p class="help-block external-service-llm-notice" ng-if="dec.serviceUsesLlm(service)">
+                                    {{ 'external_services_llm_notice' | translate }}
+                                </p>
+                                <service-configuration-form
+                                    ng-if="dec.isExternalServiceEnabled(phase, service.id) && service.descriptor"
+                                    phase="phase"
+                                    service-id="service.id"
+                                    stored-configurations="dec.storedConfigurationsFor(service.id)"
+                                    server-errors="dec.serverErrorsFor(phase, service.id)"
+                                    read-only="dec.design.locked"
+                                    on-errors-change="dec.setServiceSettingErrors(phase, serviceId, count)">
+                                </service-configuration-form>
                             </div>
                         </div>
                     </div>
@@ -189,6 +205,7 @@
                                                 question="item"
                                                 question-number="$index+1"
                                                 show-separator="false"
+                                                case-videos="dec.caseVideos"
                                                 validate-callback="dec.handleValidationResult(result)">
                                                 <div class="row">
                                                     <div class="col-xs-6">

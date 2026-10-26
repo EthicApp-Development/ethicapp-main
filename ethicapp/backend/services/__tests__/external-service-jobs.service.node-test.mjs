@@ -441,3 +441,18 @@ test("updateResult: omits sanitizedPayload and adapterResult when not provided",
     assert.ok(!sql.includes("adapter_result"));
     assert.equal(params.length, 2);
 });
+
+// ─── recordInstantiationReport (#737) ────────────────────────────────────────
+
+test("recordInstantiationReport: stores the report as jsonb on the job", async () => {
+    const db  = makeDbQueue([]);
+    const svc = new ExternalServiceJobsService({ dbQuery: db });
+    const report = { warnings: [{ field: "model", verdict: "deprecated" }], degraded: false };
+
+    await svc.recordInstantiationReport(JOB_UUID, report);
+
+    assert.equal(db.calls.length, 1);
+    assert.match(db.calls[0].sql, /SET instantiation_report = \$2::jsonb/u);
+    assert.deepEqual(db.calls[0].params, [JOB_UUID, JSON.stringify(report)]);
+});
+

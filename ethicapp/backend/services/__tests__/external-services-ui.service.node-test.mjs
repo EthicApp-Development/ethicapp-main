@@ -53,6 +53,18 @@ test("registerService: keeps a kebab-case ui.component, drops others with a warn
     assert.ok(warnings[0].includes("CaseToolPanel"));
 });
 
+// #811: only an explicit "enabled": true enables a service.
+test("registerService: without enabled, a service is disabled and not imported", async () => {
+    const registry = makeRegistry();
+    // The adapter path does not exist: importing it would fail.
+    const entry = { id: "svc-implicit", adapter: "./missing.adapter.js" };
+    await registry.registerService(entry, FIXTURES_MANIFEST);
+
+    assert.equal(registry.services.get("svc-implicit").enabled, false);
+    assert.deepEqual(registry.getGloballyEnabledServiceIds("case-created"), []);
+    assert.equal([...registry.hookSubscribers.values()].flat().length, 0);
+});
+
 test("listServices: exposes ui and defaults it to { component: null } for legacy entries", () => {
     const registry = makeRegistry();
     registry.services.set("svc-panel", {

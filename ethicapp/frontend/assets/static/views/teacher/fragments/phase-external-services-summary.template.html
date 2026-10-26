@@ -1,0 +1,98 @@
+<div class="phase-external-services-summary" ng-if="$ctrl.hasServices">
+    <h4>{{ 'external_services_title' | translate }}</h4>
+    <p class="help-block" ng-if="$ctrl.loading && $ctrl.services.length === 0">
+        {{ 'service_settings_loading' | translate }}
+    </p>
+
+    <div class="phase-external-service" ng-repeat="service in $ctrl.services track by service.id">
+        <p class="phase-external-service-name">
+            <strong>{{ service.name || ((service.status === 'not_available'
+                ? 'service_summary_unavailable_service_name'
+                : 'service_summary_unnamed_service') | translate) }}</strong>
+        </p>
+        <p class="help-block external-service-llm-notice" ng-if="service.usesLlm">
+            {{ 'external_services_llm_notice' | translate }}
+        </p>
+
+        <div ng-if="service.status === 'ready'">
+            <p class="help-block" ng-if="service.stale">{{ 'service_settings_stale' | translate }}</p>
+            <ul class="list-with-dots phase-external-service-settings">
+                <li ng-repeat="row in service.rows track by row.key">
+                    <strong>{{ row.label }}:</strong>
+                    <span ng-if="row.booleanValue !== null">{{ (row.booleanValue ? 'yes_label' : 'no_label') | translate }}</span>
+                    <span ng-if="row.booleanValue === null && row.text !== null">{{ row.text }}</span>
+                    <span class="text-muted" ng-if="row.isDefault">({{ 'service_summary_default_value' | translate }})</span>
+                    <div class="help-block service-configuration-lifecycle" ng-if="row.notice">
+                        <i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
+                        {{ ('service_setting_notice_' + row.notice.kind) | translate }}<span
+                            ng-if="row.notice.kind === 'retired_value' && row.notice.defaultText">: {{ row.notice.defaultText }}</span><span
+                            ng-if="row.notice.kind === 'retired_value' && !row.notice.defaultText">.</span>
+                        <span ng-if="row.notice.kind === 'no_longer_valid'">
+                            {{ ('service_setting_error_' + row.notice.reason) | translate:row.errorParams }}
+                        </span>
+                    </div>
+                </li>
+            </ul>
+            <div class="service-configuration-retired" ng-if="service.retiredFields.length > 0">
+                <p class="help-block">
+                    <i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
+                    <strong>{{ 'service_settings_retired_title' | translate }}</strong>
+                    {{ 'service_settings_retired_help' | translate }}
+                    <button
+                        type="button"
+                        class="btn btn-link btn-xs phase-external-service-details-toggle"
+                        ng-click="service.showDetails = !service.showDetails"
+                        aria-expanded="{{ service.showDetails ? 'true' : 'false' }}">
+                        {{ (service.showDetails ? 'service_summary_hide_details' : 'service_summary_show_details') | translate }}
+                    </button>
+                </p>
+                <ul class="list-unstyled phase-external-service-raw" ng-if="service.showDetails">
+                    <li ng-repeat="setting in service.retiredFields track by setting.key">
+                        <code>{{ setting.key }}</code>: {{ setting.text }}
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <div ng-if="service.status !== 'ready'">
+            <p class="help-block service-configuration-lifecycle" role="status"
+                ng-if="service.status === 'unavailable' || service.status === 'not_available'">
+                <i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
+                {{ (service.status === 'unavailable' ? 'service_summary_unavailable' : 'service_summary_not_available') | translate }}
+                <button
+                    ng-if="service.hasDetails"
+                    type="button"
+                    class="btn btn-link btn-xs phase-external-service-details-toggle"
+                    ng-click="service.showDetails = !service.showDetails"
+                    aria-expanded="{{ service.showDetails ? 'true' : 'false' }}">
+                    {{ (service.showDetails ? 'service_summary_hide_details' : 'service_summary_show_details') | translate }}
+                </button>
+            </p>
+            <p class="help-block" ng-if="service.status === 'no_settings' && service.hasDetails">
+                <button
+                    ng-if="service.hasDetails"
+                    type="button"
+                    class="btn btn-link btn-xs phase-external-service-details-toggle"
+                    ng-click="service.showDetails = !service.showDetails"
+                    aria-expanded="{{ service.showDetails ? 'true' : 'false' }}">
+                    {{ (service.showDetails ? 'service_summary_hide_details' : 'service_summary_show_details') | translate }}
+                </button>
+            </p>
+            <!-- Technical data, only on request: the service id when it has no
+                 friendly name, and the stored settings as key: value. -->
+            <ul class="list-unstyled phase-external-service-stored phase-external-service-raw"
+                ng-if="service.hasDetails && service.showDetails">
+                <li ng-if="!service.name">
+                    {{ 'service_summary_service_id' | translate }}: <code>{{ service.id }}</code>
+                </li>
+                <li ng-repeat="setting in service.storedRows track by setting.key">
+                    <code>{{ setting.key }}</code>: {{ setting.text }}
+                </li>
+            </ul>
+            <p class="help-block" ng-if="service.status !== 'no_settings' && service.storedRows.length === 0">
+                {{ 'service_summary_uses_defaults' | translate }}
+            </p>
+        </div>
+    </div>
+    <hr>
+</div>

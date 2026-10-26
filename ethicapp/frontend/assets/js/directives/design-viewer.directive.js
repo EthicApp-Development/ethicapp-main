@@ -2,7 +2,9 @@ let designViewerDirective = function() {
     return {
         restrict: 'E',
         scope: {
-            design: '<'
+            design:     "<",
+            // The case's videos (#785), for the videos in the phase texts.
+            caseVideos: "<",
         },
         bindToController: true,
         controllerAs: 'ctrl',

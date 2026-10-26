@@ -228,6 +228,29 @@ function createCaseAnalysesAccess(store, serviceId) {
     };
 }
 
+// An instantiation report with its common keys normalized, or null when there
+// is nothing to record (#737).
+function normalizeInstantiationReport(report) {
+    if (report === null || typeof report !== "object" || Array.isArray(report)) {
+        return null;
+    }
+    return {
+        ...report,
+        warnings:              Array.isArray(report.warnings) ? report.warnings : [],
+        degraded:              report.degraded === true,
+        configurationRejected: report.configurationRejected === true,
+    };
+}
+
+// The settings a phase stores for one service (#734): a copy, so a handler
+// cannot change the design, or {} for hooks without a phase or settings.
+function serviceConfigurationFor(serviceConfigurations, serviceId) {
+    const configuration = serviceConfigurations?.[serviceId];
+    const isObject = configuration !== null && typeof configuration === "object"
+        && !Array.isArray(configuration);
+    return isObject ? { ...configuration } : {};
+}
+
 export class ExternalServicesRegistry {
     constructor({
         jobsService,
@@ -306,7 +329,9 @@ export class ExternalServicesRegistry {
             scopes:       normalizeScopes(service.scopes, service.id),
             ui:           normalizeUi(service.ui, service.id),
             descriptor:   normalizeDescriptor(service.descriptor, service.id),
-            enabled:      service.enabled !== false,
+            // Only an explicit `"enabled": true` enables a service: an
+            // installation must never use an AI service it did not opt into (#811).
+            enabled:      service.enabled === true,
             adapter:      service.adapter,
             callbackAuth: service.callbackAuth && typeof service.callbackAuth === "object"
                 ? {
@@ -540,11 +565,7 @@ export class ExternalServicesRegistry {
     }
 
     async _dispatchOneHandler({
-        hookName,
-        serviceId,
-        handler,
-        context,
-        enabledServiceIds,
+        hookName, serviceId, handler, context, enabledServiceIds, serviceConfigurations,
         presetJobId = null,
     }) {
         const job = await this._jobsService.createJob({
@@ -566,8 +587,9 @@ export class ExternalServicesRegistry {
             ...context,
             serviceId,
             jobId,
-            correlationId:     jobId,
-            enabledServiceIds: Array.from(enabledServiceIds),
+            correlationId:        jobId,
+            enabledServiceIds:    Array.from(enabledServiceIds),
+            serviceConfiguration: serviceConfigurationFor(serviceConfigurations, serviceId),
         };
 
         if (jobId) {
@@ -584,6 +606,12 @@ export class ExternalServicesRegistry {
                     result,
                     context: serviceContext,
                 }),
+                reportInstantiation: report => this.recordInstantiationReport({
+                    hookName,
+                    serviceId,
+                    jobId,
+                    report,
+                }),
             });
         } catch (err) {
             if (jobId) {
@@ -595,6 +623,9 @@ export class ExternalServicesRegistry {
         }
     }
 
+    // Runs the handlers of `options.enabledServiceIds` for `hookName`. Each
+    // handler's context carries `serviceConfiguration`, its entry in
+    // `options.serviceConfigurations` (the phase's settings, #734) or {}.
     // `options.jobIds` maps service ids to job ids chosen by the caller, for
     // work it reserved before dispatching. The other services get a new id.
     async dispatchHook(hookName, context, options = {}) {
@@ -610,14 +641,11 @@ export class ExternalServicesRegistry {
         const jobIds = options.jobIds || {};
         const subscribers = this.hookSubscribers.get(hookName) || [];
         const selectedSubscribers = subscribers.filter(({ serviceId }) => enabledServiceIds.has(serviceId));
+        const serviceConfigurations = options.serviceConfigurations || {};
 
         return Promise.allSettled(selectedSubscribers.map(({ serviceId, handler }) =>
             this._dispatchOneHandler({
-                hookName,
-                serviceId,
-                handler,
-                context,
-                enabledServiceIds,
+                hookName, serviceId, handler, context, enabledServiceIds, serviceConfigurations,
                 presetJobId: Object.hasOwn(jobIds, serviceId) ? jobIds[serviceId] : null,
             })
         ));
@@ -673,9 +701,11 @@ export class ExternalServicesRegistry {
             const serviceContext = {
                 ...context,
                 serviceId,
-                jobId:       resultRecord?.job_id      ?? null,
-                resultId:    resultRecord?.id          ?? null,
-                isDuplicate: resultRecord?.is_duplicate ?? false,
+                jobId:                resultRecord?.job_id      ?? null,
+                resultId:             resultRecord?.id          ?? null,
+                isDuplicate:          resultRecord?.is_duplicate ?? false,
+                // Callbacks are not tied to a phase design (#734).
+                serviceConfiguration: {},
             };
 
             try {
@@ -698,6 +728,38 @@ export class ExternalServicesRegistry {
         }));
 
         return { resultRecord, outcomes };
+    }
+
+    // Stores on the job what an AI service reported when an adapter created a
+    // room or session for it (#737): `{ warnings, degraded,
+    // configurationRejected, ...details }`. It does not change the job status.
+    // Warnings, degraded mode and rejected settings are also logged.
+    async recordInstantiationReport({ hookName, serviceId, jobId, report }) {
+        const normalized = normalizeInstantiationReport(report);
+        if (!normalized) {
+            return null;
+        }
+
+        if (jobId) {
+            await this._jobsService
+                .recordInstantiationReport(jobId, normalized)
+                .catch(err => console.error(
+                    "[external-services] Failed to store an instantiation report.", err));
+        }
+
+        const worthLogging = normalized.warnings.length > 0 || normalized.degraded
+            || normalized.configurationRejected;
+        if (worthLogging) {
+            console.warn("[external-services] Instantiation report.", JSON.stringify({
+                serviceId,
+                hookName,
+                jobId:                 jobId ?? null,
+                degraded:              normalized.degraded,
+                configurationRejected: normalized.configurationRejected,
+                warnings:              normalized.warnings,
+            }));
+        }
+        return normalized;
     }
 
     async recordCallbackResult({ hookName, serviceId, result, context }) {

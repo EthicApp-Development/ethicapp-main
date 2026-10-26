@@ -123,6 +123,15 @@ Current Argumentation Tutor adapter:
 ethicapp/backend/external-services/adapters/ats-feedback.adapter.js
 ```
 
+It creates one tutor session per EthicApp session and phase, on the first
+student response. When the phase configures `llm_tier`
+(`context.serviceConfiguration`, #734), the creation request sends it (#736);
+otherwise the tutor uses its default tier. The deprecated `model` is not sent.
+The tutor's `llm_tier`, resolved `model`, `warnings` and `degraded` come back
+in the `student-response-submitted` handler's result as `sessionCreation`. If
+the tutor rejects the configured tier (400), the session is created with its
+defaults and reported with `configurationRejected: true`.
+
 Current Polyadic Agents bridge adapter:
 
 ```text
@@ -160,9 +169,22 @@ on translating EthicApp hook context into service-specific requests.
 
 The Polyadic Agents bridge uses `AI_ADDITIONS_POLYADIC_AGENTS_API_BASE_URL`,
 defaulting to `${AI_ADDITIONS_BASE_URL}/polyadic-agent/api`, and creates one
-Polyadic REST room per EthicApp session/phase/group. Its default pipeline type is
-`abogado-del-diablo`, configurable through
-`AI_ADDITIONS_POLYADIC_AGENTS_PIPELINE_TYPE`.
+Polyadic REST room per EthicApp session/phase/group. When it creates a room's
+session (#735) it sends:
+
+- the phase's configured settings (`context.serviceConfiguration`, #734), such
+  as `pipeline_type`, `llm_tier`, `session_duration_seconds` or
+  `agent_nickname`;
+- for settings the phase does not configure, EthicApp's defaults: the pipeline
+  from `AI_ADDITIONS_POLYADIC_AGENTS_PIPELINE_TYPE` (default
+  `abogado-del-diablo`), and the guide nickname and `locale` (`es-CL` or
+  `en-US`) from the design language. The deprecated `idioma` is no longer sent.
+
+Anything still unset takes Polyadic's defaults. Polyadic's `warnings` and
+`degraded` flags come back per room in the `phase-started` job result
+(`payload.rooms`). If Polyadic rejects the configured settings (400, a value a
+newer rule no longer accepts), the room is created again with EthicApp's
+defaults and reported with `configurationRejected: true`.
 
 Polyadic callbacks target the unified callback endpoint:
 
@@ -206,6 +228,13 @@ EthicApp dispatches hooks only to services enabled in the phase design:
 
 The registry accepts `enabledServiceIds` and filters subscribers by service id.
 This keeps phase and response hooks scoped to services selected by the teacher.
+
+Each handler also receives `context.serviceConfiguration` (#734): the settings
+the phase stores for that service in
+`externalServices.configurations[serviceId]` (see "Design Schema"), or `{}`
+when there are none or the hook has no phase. Adapters pass these values to
+the AI service when they create rooms or sessions; a key that is not set means
+the service default.
 
 `case-created` follows the same rule for cases: it reaches only the services the
 teacher chose when creating the case (`analysisServiceIds` in `POST /cases`).
@@ -476,6 +505,42 @@ When a teacher enables a service for a phase, the service id is added to
 `phase.externalServices.enabledServiceIds`. That configuration is saved as part
 of the design JSON. Per-service settings go in `configurations` (see "Design
 Schema"); turning a service off keeps them.
+
+Settings form (#732): when an enabled service has a capability descriptor, the
+editor shows its fields below the service, in the UI language
+(`components/service-configuration-form.component.js`,
+`fragments/service-configuration-form.template.html`,
+`helpers/service-configuration-form.js`):
+
+- one control per field: a select for `enum`, a number input for `integer` and
+  `number`, a checkbox for `boolean`, a text input or textarea for `text`;
+  grouped by `group`, ordered by `order`, with the description as help text;
+- defaults show as placeholders; only values the teacher sets are stored, and
+  "Use default" removes a value;
+- deprecated fields and enum values are offered only while a design stores
+  them;
+- lifecycle notices (#733) for stored values, matching the server's save
+  warnings (#731): a deprecated field or value says so and offers a switch to
+  its `superseded_by` replacement; a retired enum value stays visible in the
+  select, flagged with the default the service applies instead; a value that
+  breaks a current rule says the service may refuse it; settings the
+  descriptor no longer defines are listed with a "Remove" button. Notices never
+  block saving;
+- values are checked as the teacher types with the server's rules
+  (`common/modules/service-configuration-rules.js`); errors block saving, and
+  the server's field errors (#731) show next to their fields;
+- when the service does not respond, a notice lists the stored values, which
+  are kept unchanged;
+- locked designs show the settings read-only;
+- services that use a language model carry a notice.
+
+The design and activity views show the same settings read-only (#757):
+`components/phase-external-services-summary.component.js` lists, below each
+phase that enables services, each service's name and its settings in the UI
+language, with defaults marked and the editor's lifecycle notices. When a
+service does not respond, or is not available in the installation, the view
+shows a notice and the stored settings as `key: value`. Phases without
+services show nothing.
 
 The student frontend listens for `onExternalServiceResult` in:
 

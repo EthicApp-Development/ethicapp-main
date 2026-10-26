@@ -26,6 +26,8 @@
 
 If you want to start making contributions rightaway or already have solved an issue and want to raise a new pull request then please check our ourganizations [git workflow guide](https://github.com/EthicApp-Development/organization/blob/master/Guidelines/git-workflow.md) on how to commit, raise issues and PRs the right way.
 
+Work that spans several pull requests is tracked as an epic with numbered sub-issues. See "Epics and sub-issues" in [AGENTS.md](AGENTS.md#4-engineering-conventions-and-pr-expectations) for the title and body format.
+
 ## 2. Getting started
 
 If you intent to contribute (thank you), after reviewing this file, please check the [organization repo](https://github.com/EthicApp-Development/organization) for detailed information about coding styles, git guidelines and governance, as well as a more detailed description of the project and its goals. Head for issues labeled `enhancement` to start your first contributions or raise an issue of your own interest that might prove useful to the overall project.
