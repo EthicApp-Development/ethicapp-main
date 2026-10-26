@@ -15,6 +15,7 @@
     "link:case-authors": "node scripts/link-case-authors-to-users.js",
     "worker:pdf-render": "node workers/pdf-render-worker.js",
     "test": "node --test \"**/*.node-test.mjs\"",
+    "test:integration": "node --test \"**/*.integration-test.mjs\"",
     "test:uploads": "node --test middleware/__tests__/upload.node-test.mjs"
   },
   "dependencies": {
