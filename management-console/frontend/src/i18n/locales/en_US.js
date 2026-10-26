@@ -29,6 +29,31 @@ export default {
     M: 'Male',
     O: 'Other'
   },
+  sensitiveAction: {
+    defaultTitle: 'Confirm this action',
+    loading: 'Checking how to confirm...',
+    passwordIntro: 'To confirm, enter your administrator password and complete the reCAPTCHA.',
+    passwordHelp: 'The password of the administrator account you are signed in with.',
+    passkeyIntro: 'To confirm, use your administrator passkey.',
+    passkeyHelp: 'Your browser will ask for your passkey when you confirm.',
+    passkeyUnsupported: 'This administrator has passkeys, so sensitive actions must be confirmed with one, but this browser does not support passkeys. Use a browser that does.',
+    fields: {
+      adminPassword: 'Administrator password'
+    },
+    actions: {
+      cancel: 'Cancel',
+      close: 'Close',
+      confirm: 'Confirm',
+      confirmWithPasskey: 'Confirm with passkey'
+    },
+    errors: {
+      invalidPassword: 'The administrator password is not correct. Nothing was changed.',
+      invalidPasskey: 'The passkey could not be verified. Nothing was changed.',
+      invalidRecaptcha: 'The reCAPTCHA check failed. Complete it again. Nothing was changed.',
+      passkeyRequired: 'This administrator has passkeys, so this action must be confirmed with a passkey. Nothing was changed.',
+      passkeyFailed: 'The passkey confirmation did not complete. Nothing was changed; you can try again.'
+    }
+  },
   pages: {
     aiServices: {
       heading: 'AI services',
@@ -84,11 +109,15 @@ export default {
             skipped: 'Not attempted'
           }
         },
+        confirmSave: {
+          title: 'Save the AI Additions connection?',
+          body: 'EthicApp will reach AI Additions at {{baseUrl}}.',
+          details: 'Running activities follow the new connection.'
+        },
         remove: {
           title: 'Remove the AI Additions connection?',
           body: 'This stops every AI call immediately, including in activities that are running now.',
           policyKept: 'The allowed services and their history are kept, and apply again if a connection is saved later.',
-          cancel: 'Cancel',
           confirm: 'Remove and stop all AI'
         }
       },
@@ -121,6 +150,12 @@ export default {
           usesLlm: 'Uses an LLM',
           availability: 'Availability',
           adapters: 'EthicApp adapters it enables'
+        },
+        confirmSave: {
+          title: 'Save a new policy version?',
+          allowed: 'The new version allows these services: {{services}}.',
+          none: 'The new version allows no services.',
+          confirm: 'Save version'
         },
         errors: {
           unknownIds: 'AI Additions does not offer these services: {{ids}}.',
@@ -180,9 +215,6 @@ export default {
       heading: 'Account details',
       back: 'Back',
       roleHelp: 'Only student/professor role transitions are allowed.',
-      adminPasswordHelp: 'You must confirm your administrator password to apply changes.',
-      passkeyConfirmationHelp: 'Sensitive actions will ask for your administrator passkey instead of password and reCAPTCHA.',
-      passkeyUnsupported: 'This administrator has passkeys configured, but this browser does not support passkey confirmation.',
       saveSuccess: 'User updated successfully.',
       saveError: 'Unable to update user.',
       passwordResetSuccess: 'Password recovery email was sent.',
@@ -196,8 +228,24 @@ export default {
         status: 'Account status',
         lastLogin: 'Last login',
         email: 'Email',
-        emailConfirmation: 'Confirm email',
-        adminPassword: 'Administrator password'
+        emailConfirmation: 'Confirm email'
+      },
+      confirm: {
+        save: {
+          title: 'Save the changes to this account?',
+          body: 'The account of {{name}} will be updated.',
+          confirm: 'Save changes'
+        },
+        passwordReset: {
+          title: 'Send a password recovery email?',
+          body: 'A password recovery email will be sent to {{email}}.',
+          confirm: 'Send email'
+        },
+        impersonation: {
+          title: 'Sign in as this professor?',
+          body: 'You will use EthicApp as {{name}} until you go back to the management console.',
+          confirm: 'Sign in as professor'
+        }
       },
       status: {
         active: 'Active account',

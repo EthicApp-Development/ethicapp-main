@@ -5,7 +5,6 @@ import { Alert, Button, Card, Form, Spinner } from 'react-bootstrap';
 import { useI18n } from '../../app/providers.jsx';
 import { formatDateTime } from '../diagnostics/formatters.js';
 import ConnectionTestResult from './ConnectionTestResult.jsx';
-import RemoveConnectionModal from './RemoveConnectionModal.jsx';
 
 function formValuesFrom(connection) {
   return {
@@ -30,13 +29,14 @@ function NoConnectionNotice() {
 
 // Connection form: test unsaved URLs, save them, or remove the connection.
 // The handlers come from the page and return promises; errors carry `code`.
+// onSave and onRemove ask for the administrator's confirmation first and
+// resolve to a falsy value when it is cancelled.
 function ConnectionSection({ connection, onTest, onSave, onRemove }) {
   const { t, locale } = useI18n();
   const [values, setValues] = useState(() => formValuesFrom(connection));
   const [busyAction, setBusyAction] = useState('');
   const [testResult, setTestResult] = useState(null);
   const [feedback, setFeedback] = useState(null);
-  const [confirmingRemoval, setConfirmingRemoval] = useState(false);
 
   function updateField(field) {
     return (event) => setValues((current) => ({ ...current, [field]: event.target.value }));
@@ -65,14 +65,18 @@ function ConnectionSection({ connection, onTest, onSave, onRemove }) {
     event.preventDefault();
     return run('save', async () => {
       const saved = await onSave(values);
+      if (!saved) {
+        return;
+      }
       setValues(formValuesFrom(saved));
       setFeedback({ variant: 'success', text: t('pages.aiServices.connection.saveSuccess') });
     });
   };
 
   const handleRemove = () => run('remove', async () => {
-    await onRemove();
-    setConfirmingRemoval(false);
+    if (!(await onRemove())) {
+      return;
+    }
     setValues(formValuesFrom(null));
     setTestResult(null);
     setFeedback({ variant: 'success', text: t('pages.aiServices.connection.removeSuccess') });
@@ -123,7 +127,8 @@ function ConnectionSection({ connection, onTest, onSave, onRemove }) {
               {t('pages.aiServices.connection.actions.save')}
             </Button>
             {connection ? (
-              <Button variant="outline-danger" onClick={() => setConfirmingRemoval(true)} disabled={busy}>
+              <Button variant="outline-danger" onClick={handleRemove} disabled={busy}>
+                {busyAction === 'remove' ? <Spinner size="sm" className="me-2" /> : null}
                 {t('pages.aiServices.connection.actions.remove')}
               </Button>
             ) : null}
@@ -132,13 +137,6 @@ function ConnectionSection({ connection, onTest, onSave, onRemove }) {
 
         {testResult ? <ConnectionTestResult result={testResult} /> : null}
       </Card.Body>
-
-      <RemoveConnectionModal
-        show={confirmingRemoval}
-        busy={busyAction === 'remove'}
-        onCancel={() => setConfirmingRemoval(false)}
-        onConfirm={handleRemove}
-      />
     </Card>
   );
 }

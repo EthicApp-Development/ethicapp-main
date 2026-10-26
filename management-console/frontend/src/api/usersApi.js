@@ -1,4 +1,4 @@
-import { isLoginResponse, redirectToLogin } from './sessionRedirect.js';
+import { isSessionExpiredResponse, redirectToLogin } from './sessionRedirect.js';
 
 function toQueryString(params) {
   const searchParams = new URLSearchParams();
@@ -12,19 +12,22 @@ function toQueryString(params) {
   return searchParams.toString();
 }
 
+// Errors thrown for a failed response carry `code`: the backend `error`
+// value (for example PASSKEY_REQUIRED) or SESSION_EXPIRED.
 export async function parseJson(response) {
-  if (response.status === 401 || isLoginResponse(response)) {
-    redirectToLogin();
-    throw new Error('SESSION_EXPIRED');
-  }
-
   const contentType = response.headers.get('content-type') || '';
   const json = contentType.includes('application/json')
     ? await response.json().catch(() => ({}))
     : {};
 
+  if (isSessionExpiredResponse(response, json)) {
+    redirectToLogin();
+    throw Object.assign(new Error('SESSION_EXPIRED'), { code: 'SESSION_EXPIRED' });
+  }
+
   if (!response.ok) {
-    throw new Error(json.error || 'Request failed');
+    const message = json.error || 'Request failed';
+    throw Object.assign(new Error(message), { code: message });
   }
 
   return json;

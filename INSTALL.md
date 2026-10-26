@@ -217,7 +217,10 @@ EthicApp's AI features come from a separate deployment, EthicApp AI Additions
 (`ethicapp-ai-additions`). Whether an installation uses them, and which ones,
 is data that the operator edits in the management console, at
 `/mng/ai-services` (role `S`). The deployment only provides the AI Additions
-client credentials (epic #810).
+client credentials (epic #810). Saving or removing the connection and saving a
+policy version require the operator's confirmation, like the other sensitive
+console actions: their passkey when they have one, otherwise their password and
+reCAPTCHA (#841).
 
 - **Adapter catalog (code).** The `ethicapp` image ships one catalog,
   `backend/external-services/manifest.json`. Every production adapter

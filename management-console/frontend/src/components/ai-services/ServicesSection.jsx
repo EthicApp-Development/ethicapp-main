@@ -20,6 +20,8 @@ function saveErrorText(error, t) {
 
 // Allowed-services editor. Saving appends a new policy version; the page
 // remounts this section (keyed by the current version id) after each save.
+// onSave asks for the administrator's confirmation first and resolves to a
+// falsy value when it is cancelled.
 function ServicesSection({ hasConnection, catalogState, currentVersion, onSave, onRetryCatalog }) {
   const { t } = useI18n();
   const currentIds = currentVersion?.allowedServiceIds || [];
@@ -55,7 +57,11 @@ function ServicesSection({ hasConnection, catalogState, currentVersion, onSave, 
     setSaving(true);
     setFeedback(null);
     try {
-      await onSave({ allowedServiceIds, note });
+      // The section remounts after a save; a cancelled confirmation leaves
+      // the selection as it was.
+      if (!(await onSave({ allowedServiceIds, note }))) {
+        setSaving(false);
+      }
     } catch (error) {
       setFeedback(saveErrorText(error, t));
       setSaving(false);

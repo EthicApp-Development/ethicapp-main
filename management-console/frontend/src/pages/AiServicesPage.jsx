@@ -12,14 +12,23 @@ import {
   testConnection
 } from '../api/aiServicesApi.js';
 import ConnectionSection from '../components/ai-services/ConnectionSection.jsx';
+import {
+  removeConnectionConfirmation,
+  saveConnectionConfirmation,
+  savePolicyConfirmation
+} from '../components/ai-services/aiServicesConfirmations.js';
 import HistorySection from '../components/ai-services/HistorySection.jsx';
 import ServicesSection from '../components/ai-services/ServicesSection.jsx';
 import { serviceNamesById } from '../components/ai-services/aiServicesFormat.js';
 import { IDLE_CATALOG, connectionKeyOf, createCatalogLoader } from '../components/ai-services/catalogLoader.js';
+import SensitiveActionConfirmModal from '../components/common/SensitiveActionConfirmModal.jsx';
+import { useSensitiveActionConfirmation } from '../components/common/useSensitiveActionConfirmation.js';
 
 // AI services page (epic #810): the AI Additions connection, the allowed
 // services saved as append-only policy versions, and their history. This
 // component only loads data and wires handlers; each section renders itself.
+// Every write first asks for the administrator's step-up confirmation (#841);
+// the write handlers resolve to a falsy value when it is cancelled.
 function AiServicesPage() {
   const { t, locale } = useI18n();
   const [loading, setLoading] = useState(true);
@@ -29,6 +38,7 @@ function AiServicesPage() {
   const [catalogState, setCatalogState] = useState(IDLE_CATALOG);
   const [policySaved, setPolicySaved] = useState(false);
   const [catalogLoader] = useState(() => createCatalogLoader({ fetchCatalog, setState: setCatalogState }));
+  const { requestConfirmation, modalProps } = useSensitiveActionConfirmation();
 
   const loadCatalogFor = useCallback((targetConnection) => catalogLoader.load({
     connectionKey: connectionKeyOf(targetConnection),
@@ -64,25 +74,6 @@ function AiServicesPage() {
     };
   }, [loadCatalogFor, t]);
 
-  const handleSaveConnection = useCallback(async (values) => {
-    const saved = await saveConnection(values);
-    setConnection(saved);
-    loadCatalogFor(saved);
-    return saved;
-  }, [loadCatalogFor]);
-
-  const handleRemoveConnection = useCallback(async () => {
-    await removeConnection();
-    setConnection(null);
-    catalogLoader.reset();
-  }, [catalogLoader]);
-
-  const handleSavePolicy = useCallback(async (input) => {
-    await createPolicyVersion(input);
-    setPolicy(await fetchPolicy());
-    setPolicySaved(true);
-  }, []);
-
   // Defense in depth: show a catalog only for the connection it was read for.
   const currentCatalog = catalogState.connectionKey === connectionKeyOf(connection)
     ? catalogState
@@ -92,6 +83,40 @@ function AiServicesPage() {
     () => serviceNamesById(currentCatalog.result?.ok ? currentCatalog.result.services : []),
     [currentCatalog.result]
   );
+
+  const handleSaveConnection = useCallback(async (values) => {
+    const outcome = await requestConfirmation(saveConnectionConfirmation({ t, values, saveConnection }));
+    if (!outcome.confirmed) {
+      return null;
+    }
+
+    const saved = outcome.result;
+    setConnection(saved);
+    loadCatalogFor(saved);
+    return saved;
+  }, [loadCatalogFor, requestConfirmation, t]);
+
+  const handleRemoveConnection = useCallback(async () => {
+    const outcome = await requestConfirmation(removeConnectionConfirmation({ t, removeConnection }));
+    if (!outcome.confirmed) {
+      return false;
+    }
+
+    setConnection(null);
+    catalogLoader.reset();
+    return true;
+  }, [catalogLoader, requestConfirmation, t]);
+
+  const handleSavePolicy = useCallback(async (input) => {
+    const outcome = await requestConfirmation(savePolicyConfirmation({ t, input, namesById, createPolicyVersion }));
+    if (!outcome.confirmed) {
+      return false;
+    }
+
+    setPolicy(await fetchPolicy());
+    setPolicySaved(true);
+    return true;
+  }, [namesById, requestConfirmation, t]);
 
   return (
     <>
@@ -138,6 +163,8 @@ function AiServicesPage() {
           <HistorySection versions={policy.versions} namesById={namesById} />
         </>
       ) : null}
+
+      <SensitiveActionConfirmModal {...modalProps} />
     </>
   );
 }
