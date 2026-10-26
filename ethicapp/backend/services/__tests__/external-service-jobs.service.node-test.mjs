@@ -414,8 +414,9 @@ test("createResult: with eventId, first delivery — inserts row and is_duplicat
 test("createResult: with eventId, conflict — fetches existing row and marks is_duplicate true", async () => {
     const EVENT_UUID  = "e1e2e3e4-0000-4000-8000-000000000099";
     const existingRow = { id: RESULT_UUID, job_id: JOB_UUID, status: RESULT_STATUS.CALLBACK_RECEIVED };
-    // call 0: INSERT returns [] (ON CONFLICT DO NOTHING hit); call 1: SELECT existing row
-    const db  = makeDbQueue([], [existingRow]);
+    // call 0: INSERT returns [] (ON CONFLICT DO NOTHING hit); call 1: the
+    // retryable claim matches nothing (#815); call 2: SELECT existing row
+    const db  = makeDbQueue([], [], [existingRow]);
     const svc = new ExternalServiceJobsService({ dbQuery: db });
 
     const result = await svc.createResult({
@@ -425,10 +426,12 @@ test("createResult: with eventId, conflict — fetches existing row and marks is
         eventId:       EVENT_UUID,
     });
 
-    assert.equal(db.calls.length, 2);
-    assert.ok(db.calls[1].sql.includes("event_id = $2"), "fallback SELECT must query by event_id");
-    assert.equal(db.calls[1].params[0], "polyadic-devils-advocate");
-    assert.equal(db.calls[1].params[1], EVENT_UUID);
+    assert.equal(db.calls.length, 3);
+    assert.ok(db.calls[1].sql.includes("AND status = $6"), "the claim only matches retryable rows");
+    assert.equal(db.calls[1].params[5], RESULT_STATUS.RETRYABLE);
+    assert.ok(db.calls[2].sql.includes("event_id = $2"), "fallback SELECT must query by event_id");
+    assert.equal(db.calls[2].params[0], "polyadic-devils-advocate");
+    assert.equal(db.calls[2].params[1], EVENT_UUID);
     assert.equal(result?.is_duplicate, true);
     assert.equal(result?.id, RESULT_UUID);
 });

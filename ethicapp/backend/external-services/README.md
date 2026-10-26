@@ -109,9 +109,12 @@ never the request's own values:
    phase state or the design) answers `503`, so the caller may retry. Without a
    connection the middleware already answers `503 not_configured`.
 
-No handler runs when a callback is refused; the result is recorded and marked
-failed. Development adapters follow the same rules (they need no connection,
-as for dispatch); the mocks never receive HTTP callbacks.
+No handler runs when a callback is refused. A refusal for a transient cause
+(`503`: the pinned version, the connection, the phase state or the design
+could not be read) stores the result as `retryable`
+(`V23__external_service_results_retryable.sql`). Every other refusal (`409`)
+marks it `failed`. Development adapters follow the same rules (they need no
+connection, as for dispatch); the mocks never receive HTTP callbacks.
 
 Targets per adapter:
 - Polyadic: the room `ethicapp-s<session>-p<phase>-g<group>`.
@@ -625,7 +628,15 @@ authenticated by `middleware/external-services-callback-auth.middleware.js`
 - `correlationId` is matched against `external_service_jobs.id`; the response
   reports `correlationStatus: "matched"` or `"unknown"`.
 - `eventId`, when provided, must be a UUID. A repeated `eventId` for the same
-  service is recorded as a duplicate and is **not** dispatched to the adapter.
+  service is recorded as a duplicate and is **not** dispatched to the adapter
+  (`202`, `isDuplicate: true`), with one exception (#815): when the earlier
+  attempt was refused with `503` before any handler ran, its result is
+  `retryable`, and the retry claims it back with one atomic
+  `UPDATE ... WHERE service_id = $1 AND event_id = $2 AND status = 'retryable'`.
+  The claimer is authorized and delivered again; concurrent retries that lose
+  the claim get the usual duplicate answer (`202`, nothing delivered), so the
+  sender stops retrying while the claimer carries the event to completion or to
+  another `503`. Events delivered or refused with `409` stay duplicates.
 
 The registry creates an `external_service_results` row, then dispatches
 `callback-received` only to the subscribers of the named service with the

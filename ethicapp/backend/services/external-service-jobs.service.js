@@ -18,6 +18,9 @@ export const RESULT_STATUS = Object.freeze({
     COMPLETED:           "completed",
     FAILED:              "failed",
     UNKNOWN_CORRELATION: "unknown-correlation",
+    // Refused before any handler ran, for a transient cause (#815): a retry
+    // with the same eventId claims it back (createResult).
+    RETRYABLE:           "retryable",
 });
 
 const TERMINAL_JOB_STATUSES = new Set([
@@ -177,7 +180,7 @@ export class ExternalServiceJobsService {
             }
         }
 
-        const rows = await this._db(
+        let rows = await this._db(
             `INSERT INTO external_service_results
                  (job_id, correlation_id, service_id, hook_name, status,
                   session_id, phase_id, question_id, group_id, user_id,
@@ -194,7 +197,25 @@ export class ExternalServiceJobsService {
             ]
         );
 
-        // Empty result with a provided eventId means (service_id, event_id) already exists.
+        // Empty result with a provided eventId means (service_id, event_id)
+        // already exists. A retryable one (refused before any handler ran,
+        // for a transient cause) is claimed back by exactly one retry: the
+        // UPDATE only matches while the row is still retryable, and Postgres
+        // re-checks that condition after a concurrent claim commits. The
+        // claimer processes the event again; everyone else gets a duplicate.
+        let claimed = false;
+        if (rows.length === 0 && eventId !== null) {
+            rows = await this._db(
+                `UPDATE external_service_results
+                 SET status = $3, job_id = $4, correlation_id = $5, processed_at = NULL
+                 WHERE service_id = $1 AND event_id = $2 AND status = $6
+                 RETURNING id, job_id, correlation_id, service_id, hook_name,
+                           status, received_at`,
+                [serviceId, eventId, resultStatus, jobId, correlationId, RESULT_STATUS.RETRYABLE]
+            );
+            claimed = rows.length > 0;
+        }
+
         if (rows.length === 0 && eventId !== null) {
             const existing = await this._db(
                 `SELECT id, job_id, correlation_id, service_id, hook_name, status, received_at
@@ -211,6 +232,9 @@ export class ExternalServiceJobsService {
 
         const result = rows[0] || null;
 
+        if (result && claimed) {
+            result.is_retry = true;
+        }
         if (result && jobContext) {
             result.job = jobContext;
         }

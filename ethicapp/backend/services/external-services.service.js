@@ -1024,8 +1024,14 @@ export class ExternalServicesRegistry {
                 });
             }
         } catch (error) {
+            // No handler ran. A transient refusal (503) leaves the event
+            // retryable, so a retry with the same eventId is processed again;
+            // any other refusal is final.
+            const transient = error.statusCode === 503;
             await this._jobsService
-                .updateResult(resultRecord.id, { status: RESULT_STATUS.FAILED })
+                .updateResult(resultRecord.id, {
+                    status: transient ? RESULT_STATUS.RETRYABLE : RESULT_STATUS.FAILED,
+                })
                 .catch(() => null);
             throw error.statusCode ? error : Object.assign(error, { statusCode: 400 });
         }
