@@ -283,7 +283,7 @@ test("dispatchServiceHook: falls back to rawBody when requestPayload absent", as
     const { registry } = makeRegistry({
         createResult: async (args) => {
             createResultCalls.push(args);
-            return { id: RESULT_UUID, job_id: null };
+            return { id: RESULT_UUID, job_id: JOB_UUID };
         },
     });
 
@@ -294,7 +294,7 @@ test("dispatchServiceHook: falls back to rawBody when requestPayload absent", as
     await registry.dispatchServiceHook(
         "callback-received",
         "svc-a",
-        { rawBody: { raw: true } }
+        { correlationId: JOB_UUID, rawBody: { raw: true } }
     );
 
     assert.deepEqual(createResultCalls[0].rawPayload, { raw: true });

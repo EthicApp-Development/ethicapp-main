@@ -173,6 +173,44 @@ test("createResult: matching correlationId — resolves job, updates job status"
     assert.equal(db.calls[2].params[1], JOB_STATUS.CALLBACK_RECEIVED);
 });
 
+test("createResult: returns the matched job's context as the trusted destination", async () => {
+    const jobRow = {
+        id:          JOB_UUID,
+        status:      JOB_STATUS.DISPATCHED,
+        session_id:  1,
+        phase_id:    2,
+        question_id: 3,
+        group_id:    4,
+        user_id:     5,
+    };
+    const db  = makeDbQueue([jobRow], [{ id: RESULT_UUID, job_id: JOB_UUID }], []);
+    const svc = new ExternalServiceJobsService({ dbQuery: db });
+
+    const result = await svc.createResult({
+        correlationId: JOB_UUID,
+        serviceId:     "polyadic-devils-advocate",
+        sessionId:     99,
+        rawPayload:    {},
+    });
+
+    assert.deepEqual({ ...result.job }, {
+        id: JOB_UUID, sessionId: 1, phaseId: 2, questionId: 3, groupId: 4, userId: 5,
+    });
+});
+
+test("createResult: no job context without a matching job", async () => {
+    const db  = makeDbQueue([], [{ id: RESULT_UUID, job_id: null }]);
+    const svc = new ExternalServiceJobsService({ dbQuery: db });
+
+    const result = await svc.createResult({
+        correlationId: JOB_UUID,
+        serviceId:     "polyadic-devils-advocate",
+        rawPayload:    {},
+    });
+
+    assert.equal(result.job, undefined);
+});
+
 test("createResult: propagates job context to result when caller omits it", async () => {
     const jobRow    = {
         id:          JOB_UUID,

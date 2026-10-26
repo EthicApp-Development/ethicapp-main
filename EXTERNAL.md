@@ -474,7 +474,7 @@ payload:
 |---|---|---|
 | `serviceId` | Yes | Identifier of the calling service, must match a registered service. |
 | `eventType` | No | Type label for the event; defaults to `"result"`. |
-| `correlationId` | No | The job UUID returned by EthicApp when the job was dispatched. Used to correlate callbacks to outbound jobs. |
+| `correlationId` | Yes in practice | The job UUID returned by EthicApp when the job was dispatched. A callback without a job of its service is recorded but never delivered (`409`). |
 | `eventId` | No | A UUID minted by the caller for this specific emission attempt. When provided, EthicApp uses `(serviceId, eventId)` as a deduplication key so that network retries of the same event are idempotent. Distinct `eventId` values on the same job are each processed independently. Omitting `eventId` falls back to terminal-state deduplication: any callback on a job that has already reached a terminal status is treated as a duplicate. |
 | `payload` | No | Arbitrary service-specific data. |
 
@@ -486,7 +486,15 @@ the caller against the per-service `callbackAuth` manifest entry.
 
 The controller dispatches the `callback-received` hook with
 `dispatchServiceHook(...)`, which selects only subscribers belonging to the target
-service id.
+service id. A handler runs only when `correlationId` matches a persisted job of
+that service (otherwise `409`, or `503` when the lookup fails), and only when the
+destination the payload names (the adapter's `getCallbackTarget()`, for example
+the Polyadic room `ethicapp-s<session>-p<phase>-g<group>`) equals the job's
+session, phase, question, group and user (otherwise `409`). The handler receives
+the job's destination, not the request's. This holds whatever the current AI
+service policy allows, so a newer policy cannot open a session pinned to an
+older one, while a job dispatched earlier still completes (#815). See
+`ethicapp/backend/external-services/README.md`, "Usability".
 
 Current callback controller:
 

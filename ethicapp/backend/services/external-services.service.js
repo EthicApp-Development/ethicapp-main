@@ -271,12 +271,11 @@ function serviceConfigurationFor(serviceConfigurations, serviceId) {
     return isObject ? { ...configuration } : {};
 }
 
-// A callback for a service that is not usable (under the current policy
-// version, or without a connection) is delivered only when it
-// correlates with a persisted job of that same service: createResult() matches
-// the correlation id against that service's jobs and returns the job_id. The
-// result row stays recorded either way. Throws 503 when the result or job
-// lookup failed (the caller may retry) and 409 without a matching job.
+// A callback is delivered only when it correlates with a persisted job of that
+// same service (#815): createResult() matches the correlation id against that
+// service's jobs and returns the job. The result row stays recorded either
+// way. Throws 503 when the result or job lookup failed (the caller may retry)
+// and 409 without a matching job.
 function assertCallbackForExistingJob(resultRecord, serviceId) {
     if (!resultRecord) {
         const error = new Error(
@@ -291,6 +290,39 @@ function assertCallbackForExistingJob(resultRecord, serviceId) {
     if (!resultRecord.job_id || !belongsToService) {
         const error = new Error(
             `External service ${serviceId} is not in use, and the callback matches none of its jobs.`
+        );
+        error.statusCode = 409;
+        throw error;
+    }
+}
+
+// The destination fields a callback target may name. Each one the payload
+// names must equal the job's own value; a job without that value (null)
+// accepts no target for it.
+const CALLBACK_TARGET_FIELDS = Object.freeze(["sessionId", "phaseId", "questionId", "groupId", "userId"]);
+
+function sameId(left, right) {
+    return left !== null && left !== undefined && Number(left) === Number(right);
+}
+
+/**
+ * Checks that the destination a callback payload names stays inside the job
+ * it correlates with (#815). `target` comes from the adapter's
+ * `getCallbackTarget(requestPayload)`; fields it leaves null or undefined are
+ * not named. Throws 409 when a named field differs from the job's.
+ * @param {{ sessionId, phaseId, questionId, groupId, userId }} job
+ * @param {object|null} target
+ * @param {string} serviceId
+ */
+export function assertCallbackTargetWithinJob(job, target, serviceId) {
+    const mismatched = CALLBACK_TARGET_FIELDS.filter(field => {
+        const named = target?.[field];
+        return named !== null && named !== undefined && !sameId(job?.[field], named);
+    });
+
+    if (mismatched.length > 0) {
+        const error = new Error(
+            `The callback for ${serviceId} targets a ${mismatched.join(", ")} other than its job's.`
         );
         error.statusCode = 409;
         throw error;
@@ -330,6 +362,9 @@ export class ExternalServicesRegistry {
         this._uiTranslationsTimeoutMs = uiTranslationsTimeoutMs;
 
         this.caseAnalysisValidators = new Map();
+        // serviceId -> getCallbackTarget(requestPayload): the destination a
+        // callback payload names, checked against its job (#815).
+        this.callbackTargetResolvers = new Map();
         this._caseAnalysesStore     = caseAnalysesStore;
 
         this._capabilityDescriptors = capabilityDescriptors ?? new CapabilityDescriptorsClient({
@@ -431,6 +466,8 @@ export class ExternalServicesRegistry {
             || adapterModule.default?.getUiTranslations;
         const validateCaseAnalysisDocument = adapterModule.validateCaseAnalysisDocument
             || adapterModule.default?.validateCaseAnalysisDocument;
+        const getCallbackTarget = adapterModule.getCallbackTarget
+            || adapterModule.default?.getCallbackTarget;
 
         if (typeof getUiTranslations === "function") {
             this.uiTranslationProviders.set(normalizedService.id, getUiTranslations);
@@ -443,6 +480,10 @@ export class ExternalServicesRegistry {
 
         if (typeof validateCaseAnalysisDocument === "function") {
             this.caseAnalysisValidators.set(normalizedService.id, validateCaseAnalysisDocument);
+        }
+
+        if (typeof getCallbackTarget === "function") {
+            this.callbackTargetResolvers.set(normalizedService.id, getCallbackTarget);
         }
 
         if (typeof register !== "function") {
@@ -581,8 +622,9 @@ export class ExternalServicesRegistry {
     // effectiveServiceIds() is the one place that decides whether a registered
     // adapter may receive events. Every dispatch path (phase, activity, case
     // and global hooks), every listing and the descriptor lookups go through
-    // it. Callbacks are the one exception: a callback for a job that already
-    // exists for its service is always delivered (dispatchServiceHook).
+    // it. Callbacks are the one exception: they need a job of their service,
+    // whatever the policy, and may only target that job's destination
+    // (dispatchServiceHook).
     //
     // - A production adapter passes when every AI Additions service in its
     //   `requires` is in `policyVersion.allowedServiceIds` and a usable AI
@@ -752,8 +794,8 @@ export class ExternalServicesRegistry {
     }
 
     // Callback callers are authorized for every registered adapter, usable or
-    // not; dispatchServiceHook then delivers a callback for an unusable one
-    // only when it matches an existing job of that service.
+    // not; dispatchServiceHook then delivers a callback only when it matches
+    // an existing job of that service and stays inside that job's target.
     authorizeCallbackCaller(serviceId, authContext) {
         const service = this.services.get(serviceId);
         if (!service) {
@@ -909,11 +951,13 @@ export class ExternalServicesRegistry {
         });
     }
 
-    // Delivers an inbound callback to its adapter. A usable service's handler
-    // always runs, as before. An unusable one's runs only for a job that
-    // already exists for that service (assertCallbackForExistingJob), so work
-    // created before it stopped being usable can finish while unsolicited
-    // callbacks cause no side effects.
+    // Delivers an inbound callback to its adapter, only for a job that already
+    // exists for that service (assertCallbackForExistingJob, #815), and only
+    // when the payload's target stays inside that job
+    // (assertCallbackTargetWithinJob). The handler's context carries the job's
+    // session, phase, question, group and user. Work created before its
+    // service stopped being allowed can finish, while unsolicited callbacks
+    // cause no side effects.
     async dispatchServiceHook(hookName, serviceId, context) {
         if (!this.initialized) {
             await this.initialize();
@@ -942,10 +986,28 @@ export class ExternalServicesRegistry {
             return { resultRecord, outcomes: [] };
         }
 
-        // Usable under the current policy version; otherwise only callbacks
-        // for existing jobs of the service are delivered.
-        if (!await this.isServiceUsable(serviceId)) {
-            assertCallbackForExistingJob(resultRecord, serviceId);
+        // Every callback needs a persisted job of its service, whatever the
+        // current policy allows: the job proves the work was dispatched under
+        // the destination session's pinned version. A genuine job still
+        // completes after a newer version removes its service.
+        assertCallbackForExistingJob(resultRecord, serviceId);
+
+        // The destination is the job's, never the payload's: a payload that
+        // names another session, phase, question, group or user is refused
+        // before any handler runs.
+        const job = resultRecord.job ?? { id: resultRecord.job_id };
+        try {
+            const resolveTarget = this.callbackTargetResolvers.get(serviceId);
+            assertCallbackTargetWithinJob(
+                job,
+                resolveTarget ? resolveTarget(context.requestPayload ?? {}) : null,
+                serviceId
+            );
+        } catch (error) {
+            await this._jobsService
+                .updateResult(resultRecord.id, { status: RESULT_STATUS.FAILED })
+                .catch(() => null);
+            throw error.statusCode ? error : Object.assign(error, { statusCode: 400 });
         }
 
         const subscribers = this.hookSubscribers.get(hookName) || [];
@@ -956,6 +1018,13 @@ export class ExternalServicesRegistry {
         const outcomes = await Promise.allSettled(selectedSubscribers.map(async ({ handler }) => {
             const serviceContext = {
                 ...context,
+                // The trusted destination, from the job (#815).
+                sessionId:            job.sessionId  ?? null,
+                phaseId:              job.phaseId    ?? null,
+                questionId:           job.questionId ?? null,
+                groupId:              job.groupId    ?? null,
+                userId:               job.userId     ?? null,
+                job,
                 serviceId,
                 jobId:                resultRecord?.job_id      ?? null,
                 resultId:             resultRecord?.id          ?? null,

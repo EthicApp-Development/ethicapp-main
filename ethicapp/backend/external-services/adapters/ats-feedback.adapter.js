@@ -22,6 +22,24 @@ export {
 // The Argumentation Tutor API under the AI Additions connection's base URL (#814).
 export const ATS_API_BASE_PATH = "/argumentation-tutor/api/v2";
 
+function positiveIdOrNull(value) {
+    const id = Number(value);
+    return Number.isSafeInteger(id) && id > 0 ? id : null;
+}
+
+// The destination an ATS callback names: the student (and the session, phase
+// and question) its feedback is published to. The registry refuses the
+// callback when they differ from the student-response job it correlates with
+// (#815). `groupId` is not a destination here: it is only reported back.
+export function getCallbackTarget(requestPayload) {
+    return {
+        sessionId:  positiveIdOrNull(requestPayload?.sessionId),
+        phaseId:    positiveIdOrNull(requestPayload?.phaseId),
+        questionId: positiveIdOrNull(requestPayload?.questionId),
+        userId:     positiveIdOrNull(requestPayload?.userId),
+    };
+}
+
 const atsSessionByPhase = new Map();
 const atsSessionCreationByPhase = new Map();
 const atsSubmissionCountByPhaseUser = new Map();

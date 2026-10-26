@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { ExternalServicesRegistry } from "../external-services.service.js";
+import {
+    assertCallbackTargetWithinJob,
+    ExternalServicesRegistry,
+} from "../external-services.service.js";
+import { getCallbackTarget } from "../../external-services/adapters/polyadic-bridge.adapter.js";
 import { AiAdditionsClient } from "../ai-additions-client.service.js";
 import {
     dispatchCaseCreatedHook,
@@ -32,20 +36,31 @@ const VERSIONS = new Map([
 const SESSION_PINS = new Map([[10, 2], [11, 1]]);
 
 // Persisted jobs and the service each belongs to.
+// The svc-production job was dispatched for session 10 (pinned to version 2),
+// phase 2, question 4, group 3, user 5.
 const JOBS = new Map([
-    [JOB_UUID, "svc-production"],
-    [OTHER_JOB_UUID, "svc-development"],
+    [JOB_UUID, {
+        serviceId: "svc-production", sessionId: 10, phaseId: 2, questionId: 4, groupId: 3, userId: 5,
+    }],
+    [OTHER_JOB_UUID, {
+        serviceId: "svc-development", sessionId: 10, phaseId: 2, questionId: null, groupId: 3, userId: null,
+    }],
 ]);
 
 // Like the real createResult(): the correlation id matches a job only when
-// that job belongs to the calling service; the result is recorded either way.
+// that job belongs to the calling service, and the match carries the job's
+// context; the result is recorded either way.
 async function createResultLikeTheJobsService({ correlationId, serviceId }) {
-    const matches = Boolean(correlationId) && JOBS.get(correlationId) === serviceId;
+    const stored = correlationId ? JOBS.get(correlationId) : null;
+    const matches = Boolean(stored) && stored.serviceId === serviceId;
+    const context = { ...stored };
+    delete context.serviceId;
     return {
         id:         RESULT_UUID,
         job_id:     matches ? correlationId : null,
         service_id: serviceId,
         status:     matches ? "callback_received" : "unknown_correlation",
+        ...(matches ? { job: { id: correlationId, ...context } } : {}),
     };
 }
 
@@ -517,100 +532,178 @@ test("stored connection with valid URLs and a path prefix: the gate lets the ser
 });
 
 // ─── callbacks ───────────────────────────────────────────────────────────────
+//
+// Every callback needs a persisted job of its service, whatever the current
+// policy allows, and its payload may only target that job's destination.
 
-test("callbacks: an existing job of a service the current version removed still completes", async () => {
-    const { registry, called, createdResults, jobStatuses } = makeRegistry({
+// A Polyadic-like callback handler: it publishes into the group its payload's
+// room names, and the registry checks that room against the job.
+function withPublishingHandler(registry) {
+    const published = [];
+    registry.callbackTargetResolvers.set("svc-production", getCallbackTarget);
+    registry.hookSubscribers.set("callback-received", [{
+        serviceId: "svc-production",
+        handler:   async (context, { callback }) => {
+            published.push({ room: context.requestPayload?.room, job: context.job });
+            return callback({ status: "completed" });
+        },
+    }]);
+    return published;
+}
+
+test("callbacks: a session pinned to version 1 gets nothing without a job, even when the current version allows the service", async () => {
+    for (const correlationId of [undefined, UNKNOWN_UUID]) {
+        const { registry, createdResults } = makeRegistry({ policy: makePolicy({ currentVersionId: 2 }) });
+        const published = withPublishingHandler(registry);
+
+        await assert.rejects(
+            () => registry.dispatchServiceHook("callback-received", "svc-production", {
+                correlationId,
+                requestPayload: { room: "ethicapp-s11-p2-g3", evaluations: [{}] },
+            }),
+            { statusCode: 409 }
+        );
+        assert.deepEqual(published, [], String(correlationId));
+        assert.equal(createdResults.length, 1, "the callback is still recorded");
+    }
+});
+
+test("callbacks: a correlation id of another service's job is rejected", async () => {
+    const { registry } = makeRegistry();
+    const published = withPublishingHandler(registry);
+
+    await assert.rejects(
+        () => registry.dispatchServiceHook("callback-received", "svc-production", {
+            correlationId:  OTHER_JOB_UUID,
+            requestPayload: { room: "ethicapp-s10-p2-g3" },
+        }),
+        { statusCode: 409 }
+    );
+    assert.deepEqual(published, []);
+});
+
+const OTHER_TARGETS = {
+    "another session": "ethicapp-s11-p2-g3",
+    "another phase":   "ethicapp-s10-p9-g3",
+    "another group":   "ethicapp-s10-p2-g8",
+};
+
+for (const [label, room] of Object.entries(OTHER_TARGETS)) {
+    test(`callbacks: a valid job whose payload targets ${label} is rejected before publishing`, async () => {
+        const updatedResults = [];
+        const { registry } = makeRegistry();
+        registry._jobsService.updateResult = async (id, update) => { updatedResults.push(update.status); };
+        const published = withPublishingHandler(registry);
+
+        await assert.rejects(
+            () => registry.dispatchServiceHook("callback-received", "svc-production", {
+                correlationId:  JOB_UUID,
+                requestPayload: { room },
+            }),
+            { statusCode: 409 }
+        );
+        assert.deepEqual(published, []);
+        assert.deepEqual(updatedResults, ["failed"]);
+    });
+}
+
+test("callbacks: a payload naming a target its job lacks is rejected", () => {
+    assert.throws(
+        () => assertCallbackTargetWithinJob({ sessionId: 10, phaseId: 2, groupId: null }, {
+            sessionId: 10, phaseId: 2, groupId: 3,
+        }, "svc"),
+        { statusCode: 409 }
+    );
+    assert.doesNotThrow(() => assertCallbackTargetWithinJob(
+        { sessionId: 10, phaseId: 2, groupId: 3 },
+        { sessionId: "10", phaseId: 2, groupId: undefined, userId: null },
+        "svc"
+    ));
+    assert.doesNotThrow(() => assertCallbackTargetWithinJob({ sessionId: 10 }, null, "svc"));
+});
+
+test("callbacks: the handler gets the job's destination, not the request's", async () => {
+    const { registry } = makeRegistry();
+    let seen = null;
+    registry.hookSubscribers.set("callback-received", [{
+        serviceId: "svc-production",
+        handler:   async context => { seen = context; },
+    }]);
+
+    await registry.dispatchServiceHook("callback-received", "svc-production", {
+        correlationId: JOB_UUID,
+        sessionId:     99,
+        groupId:       99,
+    });
+
+    assert.deepEqual(
+        { sessionId:  seen.sessionId, phaseId:    seen.phaseId, questionId: seen.questionId,
+            groupId:    seen.groupId, userId:     seen.userId },
+        { sessionId: 10, phaseId: 2, questionId: 4, groupId: 3, userId: 5 }
+    );
+    assert.equal(seen.job.id, JOB_UUID);
+});
+
+test("callbacks: a genuine job still completes after the current version removes its service", async () => {
+    const { registry, createdResults, jobStatuses } = makeRegistry({
         policy: makePolicy({ currentVersionId: 3 }),
     });
+    const published = withPublishingHandler(registry);
 
     assert.doesNotThrow(() => registry.authorizeCallbackCaller("svc-production", { clientId: "x" }));
     const { resultRecord, outcomes } = await registry.dispatchServiceHook(
         "callback-received",
         "svc-production",
-        { correlationId: JOB_UUID }
+        { correlationId: JOB_UUID, requestPayload: { room: "ethicapp-s10-p2-g3" } }
     );
 
     assert.equal(resultRecord.job_id, JOB_UUID);
     assert.deepEqual(outcomes.map(outcome => outcome.status), ["fulfilled"]);
-    assert.deepEqual(called, ["svc-production:callback-received"]);
+    assert.deepEqual(published.map(({ room, job }) => ({ room, sessionId: job.sessionId })), [
+        { room: "ethicapp-s10-p2-g3", sessionId: 10 },
+    ]);
     assert.equal(createdResults[0].serviceId, "svc-production");
     assert.deepEqual(jobStatuses.map(({ jobId, status }) => ({ jobId, status })), [
         { jobId: JOB_UUID, status: "completed" },
     ]);
 });
 
-// A service that is not usable must not act on a callback that matches none
-// of its jobs: its handler never runs, though the result is still recorded.
-const UNMATCHED_CALLBACKS = {
-    "no correlation id":                {},
-    "an unknown correlation id":        { correlationId: UNKNOWN_UUID },
-    "another service's correlation id": { correlationId: OTHER_JOB_UUID },
-};
-
-for (const [label, context] of Object.entries(UNMATCHED_CALLBACKS)) {
-    test(`callbacks: 409 and no handler for a service not allowed now with ${label}`, async () => {
-        const { registry, called, createdResults, jobStatuses } = makeRegistry({
-            policy: makePolicy({ currentVersionId: 3 }),
-        });
-
-        await assert.rejects(
-            () => registry.dispatchServiceHook("callback-received", "svc-production", context),
-            { statusCode: 409 }
-        );
-
-        assert.deepEqual(called, []);
-        assert.deepEqual(jobStatuses, []);
-        assert.equal(createdResults.length, 1, "the callback is still recorded");
-    });
-}
-
-test("callbacks: 409 when the matched job belongs to another service", async () => {
-    const { registry, called } = makeRegistry({
-        policy:       makePolicy({ currentVersionId: 3 }),
-        createResult: async () => ({ id: RESULT_UUID, job_id: OTHER_JOB_UUID, service_id: "svc-development" }),
-    });
-
-    await assert.rejects(
-        () => registry.dispatchServiceHook("callback-received", "svc-production", {
-            correlationId: OTHER_JOB_UUID,
-        }),
-        { statusCode: 409 }
-    );
-    assert.deepEqual(called, []);
-});
-
-test("callbacks: 503 and no handler for a service not allowed now when the lookup fails", async () => {
+test("callbacks: a failed job lookup publishes nothing (503)", async () => {
     for (const createResult of [
         async () => { throw new Error("database unavailable"); },
         async () => null,
     ]) {
-        const { registry, called, jobStatuses } = makeRegistry({
-            policy: makePolicy({ currentVersionId: 3 }),
-            createResult,
-        });
+        const { registry, jobStatuses } = makeRegistry({ createResult });
+        const published = withPublishingHandler(registry);
 
         await assert.rejects(
             () => registry.dispatchServiceHook("callback-received", "svc-production", {
-                correlationId: JOB_UUID,
+                correlationId:  JOB_UUID,
+                requestPayload: { room: "ethicapp-s10-p2-g3" },
             }),
             { statusCode: 503 }
         );
-        assert.deepEqual(called, []);
+        assert.deepEqual(published, []);
         assert.deepEqual(jobStatuses, []);
     }
 });
 
-// Usable services keep the behavior they had before #812: their callbacks
-// are delivered with or without a matching job.
-test("callbacks: a usable service still receives callbacks without a matching job", async () => {
-    for (const serviceId of ["svc-production", "svc-development"]) {
-        const { registry, called } = makeRegistry({ policy: makePolicy({ currentVersionId: 2 }) });
+// Development adapters follow the same rule: the mocks never receive HTTP
+// callbacks, so requiring a job costs them nothing.
+test("callbacks: development adapters also need a job of their own", async () => {
+    const without = makeRegistry();
+    await assert.rejects(
+        () => without.registry.dispatchServiceHook("callback-received", "svc-development", {}),
+        { statusCode: 409 }
+    );
+    assert.deepEqual(without.called, []);
 
-        const { outcomes } = await registry.dispatchServiceHook("callback-received", serviceId, {});
-
-        assert.equal(outcomes.length, 1);
-        assert.deepEqual(called, [`${serviceId}:callback-received`]);
-    }
+    const withJob = makeRegistry();
+    const { outcomes } = await withJob.registry.dispatchServiceHook(
+        "callback-received", "svc-development", { correlationId: OTHER_JOB_UUID }
+    );
+    assert.equal(outcomes.length, 1);
+    assert.deepEqual(withJob.called, ["svc-development:callback-received"]);
 });
 
 test("callbacks: 404 for an adapter that is not registered", async () => {
@@ -650,4 +743,24 @@ test("registerService: a development adapter is skipped, and not imported, witho
     }
 
     assert.deepEqual(imported, ["file:///catalog/adapters/mock.adapter.js"]);
+});
+
+test("adapters name their callback target from the payload", async () => {
+    const ats = await import("../../external-services/adapters/ats-feedback.adapter.js");
+    const mock = await import("../../external-services/adapters/mock-ai-response-review.adapter.js");
+
+    assert.deepEqual(getCallbackTarget({ room: "ethicapp-s1-p2-g3" }), {
+        sessionId: 1, phaseId: 2, groupId: 3,
+    });
+    assert.deepEqual(getCallbackTarget({ room: "elsewhere" }), {});
+    assert.deepEqual(
+        ats.getCallbackTarget({ sessionId: "1", phaseId: 2, questionId: 3, userId: 4, groupId: 9 }),
+        { sessionId: 1, phaseId: 2, questionId: 3, userId: 4 }
+    );
+    assert.deepEqual(ats.getCallbackTarget({}), {
+        sessionId: null, phaseId: null, questionId: null, userId: null,
+    });
+    assert.deepEqual(mock.getCallbackTarget({ userId: 4 }), {
+        sessionId: null, phaseId: null, questionId: null, userId: 4,
+    });
 });

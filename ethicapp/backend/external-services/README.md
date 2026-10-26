@@ -73,13 +73,35 @@ them. Saving a design that enables one answers with a `not_allowed` warning for
 it, and launching an activity lists them in `servicesNotRunning` (shown to the
 teacher as a notice on the activity dashboard). Neither is an error.
 
-Callbacks are the one exception, for jobs that already exist.
-`POST /external-services/callbacks` is delivered to an adapter usable under the
-current version as before. For a registered adapter that is not usable, it is
-delivered only when `correlationId` matches a persisted job of that same
-service, so jobs created earlier can still finish. Otherwise the result is recorded, the handler does
-not run, and the endpoint answers `409` (no matching job) or `503` (the result
-or job lookup failed).
+Callbacks are the one exception to the gate: they are not checked against any
+policy version, because the job they belong to was dispatched under the right
+one. Instead, `POST /external-services/callbacks` runs a handler only when:
+
+1. `correlationId` matches a persisted job of that same service
+   (`assertCallbackForExistingJob`). This holds for every adapter, development
+   ones included, whatever the current policy allows; the mocks never receive
+   HTTP callbacks, so it costs them nothing. Without a matching job the result
+   is recorded, no handler runs, and the endpoint answers `409`; when the
+   result or job lookup fails it answers `503`. Without a connection the
+   middleware already answers `503 not_configured`.
+2. The destination the payload names stays inside that job
+   (`assertCallbackTargetWithinJob`). An adapter that publishes callbacks
+   exports `getCallbackTarget(requestPayload)`, returning the `sessionId`,
+   `phaseId`, `questionId`, `groupId` and `userId` the payload targets; each
+   field it names must equal the job's, and a job without that field accepts
+   no target for it. Otherwise the result is marked failed and the endpoint
+   answers `409`.
+   - Polyadic: the room `ethicapp-s<session>-p<phase>-g<group>` (its callbacks
+     echo the `chat-message-received` job id).
+   - Argumentation Tutor and the mock response review: the `sessionId`,
+     `phaseId`, `questionId` and `userId` their feedback is published to
+     (the `student-response-submitted` job).
+   - Case Analyst: none; its callback handler only records the result.
+
+The handler's context carries the job's destination (`sessionId`, `phaseId`,
+`questionId`, `groupId`, `userId`) and the job itself (`context.job`), never
+values from the request. A genuine job still completes after a newer policy
+version removes its service, so work started earlier can finish.
 
 The editor does not offer services that are not usable (#686), so seeded
 activities that reference the mocks still load where the mocks are not
@@ -573,9 +595,9 @@ authenticated by `middleware/external-services-callback-auth.middleware.js`
 }
 ```
 
-- `serviceId` is required and must match a registered catalog entry. For a
-  service that is not usable, `correlationId` must also match one of its
-  existing jobs (see "Usability", #812).
+- `serviceId` is required and must match a registered catalog entry.
+  `correlationId` must match one of that service's existing jobs, and the
+  payload may only target that job's destination (see "Usability", #815).
 - `eventType` defaults to `"result"`.
 - `correlationId` is matched against `external_service_jobs.id`; the response
   reports `correlationStatus: "matched"` or `"unknown"`.

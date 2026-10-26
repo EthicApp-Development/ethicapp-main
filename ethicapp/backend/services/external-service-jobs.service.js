@@ -132,6 +132,7 @@ export class ExternalServiceJobsService {
     }) {
         let jobId        = null;
         let jobStatus    = null;
+        let jobContext   = null;
         let resultStatus = RESULT_STATUS.UNKNOWN_CORRELATION;
 
         if (correlationId) {
@@ -146,6 +147,16 @@ export class ExternalServiceJobsService {
                 jobId        = job.id;
                 jobStatus    = job.status;
                 resultStatus = RESULT_STATUS.CALLBACK_RECEIVED;
+                // The trusted destination of the callback: what the job was
+                // dispatched for, never what the payload claims (#815).
+                jobContext   = Object.freeze({
+                    id:         job.id,
+                    sessionId:  job.session_id  ?? null,
+                    phaseId:    job.phase_id    ?? null,
+                    questionId: job.question_id ?? null,
+                    groupId:    job.group_id    ?? null,
+                    userId:     job.user_id     ?? null,
+                });
                 // Propagate job context to result when caller did not provide it.
                 sessionId    = sessionId  ?? job.session_id;
                 phaseId      = phaseId    ?? job.phase_id;
@@ -188,6 +199,10 @@ export class ExternalServiceJobsService {
         }
 
         const result = rows[0] || null;
+
+        if (result && jobContext) {
+            result.job = jobContext;
+        }
 
         if (result && jobStatus !== null) {
             result.job_prior_status = jobStatus;
