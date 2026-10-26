@@ -201,6 +201,45 @@ The shared client obtains and caches client-credentials tokens, attaches Bearer
 authorization headers, and retries once after a `401`. Adapter code should focus
 on translating EthicApp hook context into service-specific requests.
 
+### Internal endpoints for the management console
+
+The management console holds no AI Additions credentials. Its AI services page
+(#817) reads the AI Additions catalog and tests a connection through two
+ethicapp endpoints (#816, `controllers/admin/ai-services.js`). Like the
+impersonation start endpoint, they are reached over the internal network only:
+NGINX answers `404` for `/api/admin/` at the edge, which
+`npm run test:nginx-config` and `npm run test:nginx-edge` check. They require a
+session with role `S` (the console forwards the operator's cookie and identity
+headers); other roles get `403`.
+
+- `GET /api/admin/ai-services/catalog?locale=es_CL|en_US` reads
+  `GET <base_url>/catalog/v1/services` through the stored connection, with
+  `Accept-Language: es-CL` or `en-US`. It answers
+  `{ ok: true, contractVersion, locale, services: [{ id, name, description, usesLlm, status, available, adapters }] }`,
+  where `adapters` lists the non-development adapters of the catalog in
+  `manifest.json` whose `requires` include the service, as `{ id, description }`.
+- `POST /api/admin/ai-services/connection-test` with
+  `{ baseUrl, keycloakPublicUrl? }` obtains a token and reads the catalog
+  against those URLs without saving them, with its own token cache. It answers
+  `{ ok, token: { ok, error? }, catalog: { ok, error?, skipped? }, serviceCount }`;
+  `catalog.skipped` is `true` when no token was obtained. Both URLs must be
+  `http(s)://<authority>[/<path>]`, with no userinfo, query or fragment;
+  anything else gets `400`.
+
+Failures are typed results with status `200`:
+
+| Code | Cause |
+| --- | --- |
+| `not_configured` | No stored connection (catalog only); no request is sent. |
+| `unreachable` | Network error, DNS failure, timeout, or a `502`/`503`/`504` from the gateway. |
+| `unauthorized` | `401`/`403` from the token endpoint or the catalog, or no client credentials in the environment. |
+| `invalid_response` | Any other status, a non-JSON body, a token response without `access_token`, or a catalog outside contract version `1`. |
+
+Each step answers within the console's timeouts (12 s for the catalog; 8 s for
+the token and 8 s for the catalog in the test). Neither route logs tokens,
+secrets or response bodies: a failure is logged as its code, plus the HTTP
+status or the error class.
+
 The Polyadic Agents bridge calls `base_url/polyadic-agent/api` and creates one
 Polyadic REST room per EthicApp session/phase/group. When it creates a room's
 session (#735) it sends:
