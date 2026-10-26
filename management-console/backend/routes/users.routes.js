@@ -11,6 +11,7 @@ import {
   verifyAdminPasswordWithAuthBackend
 } from '../services/authBackend.service.js';
 import { impersonateProfessorInEthicapp } from '../services/ethicapp.service.js';
+import { createSensitiveActionVerifier } from '../services/sensitive-action.service.js';
 
 export function createUsersRouter({
   requireManagementRoleMiddleware = requireManagementRole,
@@ -27,60 +28,12 @@ export function createUsersRouter({
 } = {}) {
   const router = express.Router();
 
-  async function verifySensitiveAction(req, res) {
-    if (req.body.passkey_assertion) {
-      const isPasskeyValid = await verifyAdminPasskeyWithAuthBackendService({
-        assertion: req.body.passkey_assertion,
-        cookie: req.headers.cookie,
-        language: req.headers['accept-language'],
-        ...(req.headers.origin ? { origin: req.headers.origin } : {})
-      });
-
-      if (!isPasskeyValid) {
-        res.status(401).json({ error: 'Invalid administrator passkey' });
-        return false;
-      }
-
-      return true;
-    }
-
-    const passkeysResult = await listAdminPasskeysWithAuthBackendService({
-      cookie: req.headers.cookie,
-      language: req.headers['accept-language']
-    });
-
-    if ((passkeysResult.passkeys || []).length > 0) {
-      res.status(401).json({ error: 'PASSKEY_REQUIRED' });
-      return false;
-    }
-
-    const adminPassword = String(req.body.admin_password || '');
-    const recaptchaToken = String(req.body.recaptcha_token || '');
-
-    const isHuman = await verifyRecaptchaTokenService({
-      token: recaptchaToken,
-      remoteIp: req.ip,
-      userAgent: req.get('user-agent') || ''
-    });
-
-    if (!isHuman) {
-      res.status(400).json({ error: 'Invalid recaptcha token' });
-      return false;
-    }
-
-    const isAdminPasswordValid = await verifyAdminPasswordWithAuthBackendService({
-      password: adminPassword,
-      cookie: req.headers.cookie,
-      language: req.headers['accept-language']
-    });
-
-    if (!isAdminPasswordValid) {
-      res.status(401).json({ error: 'Invalid administrator password' });
-      return false;
-    }
-
-    return true;
-  }
+  const verifySensitiveAction = createSensitiveActionVerifier({
+    verifyRecaptchaTokenService,
+    listAdminPasskeysService: listAdminPasskeysWithAuthBackendService,
+    verifyAdminPasswordService: verifyAdminPasswordWithAuthBackendService,
+    verifyAdminPasskeyService: verifyAdminPasskeyWithAuthBackendService
+  });
 
   router.get('/mng/api/users', requireManagementRoleMiddleware, async (req, res, next) => {
   try {

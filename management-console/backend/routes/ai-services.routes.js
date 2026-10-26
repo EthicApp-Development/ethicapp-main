@@ -10,6 +10,7 @@ import {
   fetchAiServicesCatalogFromEthicapp,
   testAiAdditionsConnectionInEthicapp
 } from '../services/ethicapp.service.js';
+import { createSensitiveActionVerifier } from '../services/sensitive-action.service.js';
 
 const BASE_PATH = '/mng/api/ai-services';
 
@@ -41,7 +42,8 @@ export function createAiServicesRouter({
   requireManagementRoleMiddleware = requireManagementRole,
   store = aiServicesStore,
   fetchCatalogService = fetchAiServicesCatalogFromEthicapp,
-  testConnectionService = testAiAdditionsConnectionInEthicapp
+  testConnectionService = testAiAdditionsConnectionInEthicapp,
+  verifySensitiveAction = createSensitiveActionVerifier()
 } = {}) {
   const router = express.Router();
 
@@ -55,9 +57,21 @@ export function createAiServicesRouter({
     }
   });
 
+  // The three writes below decide whether and where the installation sends
+  // data to external AI services, so each one requires the administrator's
+  // step-up confirmation (services/sensitive-action.service.js) in the body:
+  // `passkey_assertion`, or `admin_password` plus `recaptcha_token`. The
+  // input (and, for a policy, its ids against the catalog) is checked first,
+  // so a request that would be refused anyway never consumes a confirmation.
+
   router.put(`${BASE_PATH}/connection`, async (req, res, next) => {
     try {
       const input = parseConnectionInput(req.body);
+
+      if (!(await verifySensitiveAction(req, res))) {
+        return undefined;
+      }
+
       const connection = await store.saveConnection({ ...input, userId: authenticatedUserId(req) });
       return res.status(200).json({ connection });
     } catch (error) {
@@ -69,11 +83,11 @@ export function createAiServicesRouter({
   });
 
   // Removing the connection stops every AI call, including in running
-  // sessions, so the request must confirm it explicitly.
+  // sessions.
   router.delete(`${BASE_PATH}/connection`, async (req, res, next) => {
     try {
-      if (req.body?.confirm !== true) {
-        return res.status(400).json({ error: 'CONFIRMATION_REQUIRED' });
+      if (!(await verifySensitiveAction(req, res))) {
+        return undefined;
       }
 
       const removed = await store.deleteConnection();
@@ -137,6 +151,10 @@ export function createAiServicesRouter({
         if (unknownServiceIds.length > 0) {
           return res.status(400).json({ error: 'UNKNOWN_SERVICE_IDS', unknownServiceIds });
         }
+      }
+
+      if (!(await verifySensitiveAction(req, res))) {
+        return undefined;
       }
 
       const version = await store.createPolicyVersion({ ...input, userId: authenticatedUserId(req) });

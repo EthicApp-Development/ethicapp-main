@@ -3,9 +3,17 @@ import express from 'express';
 import { describe, it } from 'node:test';
 
 import { csrfProtection } from '../../middleware/csrfProtection.js';
+import { createSensitiveActionVerifier } from '../../services/sensitive-action.service.js';
 import { createAiServicesRouter, normalizeLocale } from '../ai-services.routes.js';
 
 const CSRF_TOKEN = 'test-csrf-token';
+const VALID_PASSWORD = 'admin-secret';
+const VALID_RECAPTCHA = 'valid-recaptcha';
+const VALID_PASSKEY_ID = 'valid-passkey';
+
+// Step-up confirmations accepted by the fake verifier services below.
+const PASSWORD_CONFIRMATION = Object.freeze({ admin_password: VALID_PASSWORD, recaptcha_token: VALID_RECAPTCHA });
+const PASSKEY_CONFIRMATION = Object.freeze({ passkey_assertion: { id: VALID_PASSKEY_ID, response: {} } });
 
 async function withServer(app, callback) {
   const server = app.listen(0, '127.0.0.1');
@@ -62,8 +70,36 @@ function createFakeStore() {
   };
 }
 
-function createTestApp({ session = { uid: 7, role: 'S' }, overrides = {} } = {}) {
+// Real verifier over fake auth-backend and reCAPTCHA services. A passkey
+// assertion with another id is rejected the way auth-backend does (a 401).
+function createFakeVerifier({ passkeys = [] } = {}) {
+  const calls = { recaptcha: [], password: [], passkey: [] };
+
+  const verifySensitiveAction = createSensitiveActionVerifier({
+    listAdminPasskeysService: async () => ({ passkeys }),
+    verifyRecaptchaTokenService: async ({ token }) => {
+      calls.recaptcha.push(token);
+      return token === VALID_RECAPTCHA;
+    },
+    verifyAdminPasswordService: async ({ password }) => {
+      calls.password.push(password);
+      return password === VALID_PASSWORD;
+    },
+    verifyAdminPasskeyService: async ({ assertion }) => {
+      calls.passkey.push(assertion.id);
+      if (assertion.id !== VALID_PASSKEY_ID) {
+        throw Object.assign(new Error('PASSKEY_AUTHENTICATION_FAILED'), { status: 401 });
+      }
+      return true;
+    }
+  });
+
+  return { calls, verifySensitiveAction };
+}
+
+function createTestApp({ session = { uid: 7, role: 'S' }, overrides = {}, passkeys = [] } = {}) {
   const fake = createFakeStore();
+  const verifier = createFakeVerifier({ passkeys });
   const serviceCalls = { catalog: [], test: [] };
   const app = express();
 
@@ -83,6 +119,7 @@ function createTestApp({ session = { uid: 7, role: 'S' }, overrides = {} } = {})
       serviceCalls.test.push(payload);
       return { ok: true, error: null, token: { ok: true }, catalog: { ok: true }, serviceCount: 2 };
     },
+    verifySensitiveAction: verifier.verifySensitiveAction,
     ...overrides
   }));
   app.use((err, req, res, next) => {
@@ -92,7 +129,7 @@ function createTestApp({ session = { uid: 7, role: 'S' }, overrides = {} } = {})
     return res.status(500).json({ error: err.message });
   });
 
-  return { app, calls: fake.calls, serviceCalls };
+  return { app, calls: fake.calls, serviceCalls, stepUpCalls: verifier.calls };
 }
 
 function jsonRequest(method, body, { csrf = true } = {}) {
@@ -109,19 +146,19 @@ function jsonRequest(method, body, { csrf = true } = {}) {
 
 const ENDPOINTS = [
   ['GET', '/connection', undefined],
-  ['PUT', '/connection', { baseUrl: 'https://ai.example.org' }],
-  ['DELETE', '/connection', { confirm: true }],
+  ['PUT', '/connection', { baseUrl: 'https://ai.example.org', ...PASSWORD_CONFIRMATION }],
+  ['DELETE', '/connection', { ...PASSWORD_CONFIRMATION }],
   ['POST', '/connection/test', { baseUrl: 'https://ai.example.org' }],
   ['GET', '/catalog', undefined],
   ['GET', '/policy', undefined],
-  ['POST', '/policy', { allowedServiceIds: [] }]
+  ['POST', '/policy', { allowedServiceIds: [], ...PASSWORD_CONFIRMATION }]
 ];
 
 describe('management-console AI services routes', () => {
   describe('authorization', () => {
     for (const role of ['P', 'A']) {
       it(`rejects role ${role} on every endpoint without touching data`, async () => {
-        const { app, calls, serviceCalls } = createTestApp({ session: { uid: 9, role } });
+        const { app, calls, serviceCalls, stepUpCalls } = createTestApp({ session: { uid: 9, role } });
 
         await withServer(app, async (baseUrl) => {
           for (const [method, path, body] of ENDPOINTS) {
@@ -134,6 +171,7 @@ describe('management-console AI services routes', () => {
         assert.equal(calls.deleteConnection, 0);
         assert.equal(calls.createPolicyVersion.length, 0);
         assert.equal(serviceCalls.catalog.length + serviceCalls.test.length, 0);
+        assert.equal(stepUpCalls.recaptcha.length + stepUpCalls.password.length, 0);
       });
     }
 
@@ -178,7 +216,8 @@ describe('management-console AI services routes', () => {
 
         const saved = await fetch(`${baseUrl}/mng/api/ai-services/connection`, jsonRequest('PUT', {
           baseUrl: ' https://ai.example.org/ ',
-          keycloakPublicUrl: ''
+          keycloakPublicUrl: '',
+          ...PASSWORD_CONFIRMATION
         }));
         assert.equal(saved.status, 200);
         assert.equal((await saved.json()).connection.baseUrl, 'https://ai.example.org');
@@ -210,12 +249,15 @@ describe('management-console AI services routes', () => {
     ];
 
     for (const [body, code] of invalidInputs) {
-      it(`rejects ${JSON.stringify(body)} with ${code} before writing or testing`, async () => {
-        const { app, calls, serviceCalls } = createTestApp();
+      it(`rejects ${JSON.stringify(body)} with ${code} before confirming, writing or testing`, async () => {
+        const { app, calls, serviceCalls, stepUpCalls } = createTestApp();
 
         await withServer(app, async (baseUrl) => {
           for (const [method, path] of [['PUT', '/connection'], ['POST', '/connection/test']]) {
-            const response = await fetch(`${baseUrl}/mng/api/ai-services${path}`, jsonRequest(method, body));
+            const response = await fetch(
+              `${baseUrl}/mng/api/ai-services${path}`,
+              jsonRequest(method, { ...body, ...PASSWORD_CONFIRMATION })
+            );
             assert.equal(response.status, 400);
             assert.deepEqual(await response.json(), { error: code });
           }
@@ -223,29 +265,22 @@ describe('management-console AI services routes', () => {
 
         assert.equal(calls.saveConnection.length, 0);
         assert.equal(serviceCalls.test.length, 0);
+        assert.equal(stepUpCalls.recaptcha.length + stepUpCalls.password.length, 0);
       });
     }
-
-    it('refuses to delete the connection without explicit confirmation', async () => {
-      const { app, calls } = createTestApp();
-
-      await withServer(app, async (baseUrl) => {
-        for (const body of [undefined, {}, { confirm: 'true' }, { confirm: false }]) {
-          const response = await fetch(`${baseUrl}/mng/api/ai-services/connection`, jsonRequest('DELETE', body));
-          assert.equal(response.status, 400);
-          assert.deepEqual(await response.json(), { error: 'CONFIRMATION_REQUIRED' });
-        }
-      });
-
-      assert.equal(calls.deleteConnection, 0);
-    });
 
     it('deletes the connection when confirmed', async () => {
       const { app, calls } = createTestApp();
 
       await withServer(app, async (baseUrl) => {
-        await fetch(`${baseUrl}/mng/api/ai-services/connection`, jsonRequest('PUT', { baseUrl: 'http://ai-additions:8080' }));
-        const response = await fetch(`${baseUrl}/mng/api/ai-services/connection`, jsonRequest('DELETE', { confirm: true }));
+        await fetch(`${baseUrl}/mng/api/ai-services/connection`, jsonRequest('PUT', {
+          baseUrl: 'http://ai-additions:8080',
+          ...PASSWORD_CONFIRMATION
+        }));
+        const response = await fetch(
+          `${baseUrl}/mng/api/ai-services/connection`,
+          jsonRequest('DELETE', { ...PASSWORD_CONFIRMATION })
+        );
         assert.equal(response.status, 200);
         assert.deepEqual(await response.json(), { removed: true, connection: null });
       });
@@ -335,7 +370,8 @@ describe('management-console AI services routes', () => {
       await withServer(app, async (baseUrl) => {
         const response = await fetch(`${baseUrl}/mng/api/ai-services/policy`, jsonRequest('POST', {
           allowedServiceIds: ['polyadic-agent', 'argumentation-tutor', 'polyadic-agent'],
-          note: '  Pilot  '
+          note: '  Pilot  ',
+          ...PASSWORD_CONFIRMATION
         }));
         assert.equal(response.status, 201);
         assert.equal((await response.json()).version.id, 2);
@@ -356,7 +392,8 @@ describe('management-console AI services routes', () => {
 
       await withServer(app, async (baseUrl) => {
         const response = await fetch(`${baseUrl}/mng/api/ai-services/policy`, jsonRequest('POST', {
-          allowedServiceIds: ['polyadic-agent', 'made-up-service']
+          allowedServiceIds: ['polyadic-agent', 'made-up-service'],
+          ...PASSWORD_CONFIRMATION
         }));
         assert.equal(response.status, 400);
         assert.deepEqual(await response.json(), {
@@ -375,7 +412,8 @@ describe('management-console AI services routes', () => {
 
       await withServer(app, async (baseUrl) => {
         const response = await fetch(`${baseUrl}/mng/api/ai-services/policy`, jsonRequest('POST', {
-          allowedServiceIds: ['polyadic-agent']
+          allowedServiceIds: ['polyadic-agent'],
+          ...PASSWORD_CONFIRMATION
         }));
         assert.equal(response.status, 409);
         assert.deepEqual(await response.json(), { error: 'CATALOG_UNAVAILABLE', catalogError: 'unreachable' });
@@ -392,7 +430,8 @@ describe('management-console AI services routes', () => {
       await withServer(app, async (baseUrl) => {
         const response = await fetch(`${baseUrl}/mng/api/ai-services/policy`, jsonRequest('POST', {
           allowedServiceIds: [],
-          note: 'Stop AI'
+          note: 'Stop AI',
+          ...PASSWORD_CONFIRMATION
         }));
         assert.equal(response.status, 201);
       });
@@ -416,7 +455,10 @@ describe('management-console AI services routes', () => {
         const { app, calls } = createTestApp();
 
         await withServer(app, async (baseUrl) => {
-          const response = await fetch(`${baseUrl}/mng/api/ai-services/policy`, jsonRequest('POST', body));
+          const response = await fetch(
+            `${baseUrl}/mng/api/ai-services/policy`,
+            jsonRequest('POST', { ...body, ...PASSWORD_CONFIRMATION })
+          );
           assert.equal(response.status, 400);
           assert.equal((await response.json()).error, code);
         });
@@ -424,5 +466,163 @@ describe('management-console AI services routes', () => {
         assert.equal(calls.createPolicyVersion.length, 0);
       });
     }
+  });
+
+  describe('step-up confirmation', () => {
+    const WRITE_ROUTES = [
+      {
+        name: 'saving the connection',
+        method: 'PUT',
+        path: '/connection',
+        body: { baseUrl: 'https://ai.example.org' },
+        appliedStatus: 200,
+        changeCount: (calls) => calls.saveConnection.length
+      },
+      {
+        name: 'removing the connection',
+        method: 'DELETE',
+        path: '/connection',
+        body: {},
+        appliedStatus: 200,
+        changeCount: (calls) => calls.deleteConnection
+      },
+      {
+        name: 'saving a policy version',
+        method: 'POST',
+        path: '/policy',
+        body: { allowedServiceIds: ['polyadic-agent'], note: 'Pilot' },
+        appliedStatus: 201,
+        changeCount: (calls) => calls.createPolicyVersion.length
+      }
+    ];
+
+    async function send(app, route, confirmation) {
+      return withServer(app, async (baseUrl) => {
+        const response = await fetch(
+          `${baseUrl}/mng/api/ai-services${route.path}`,
+          jsonRequest(route.method, { ...route.body, ...confirmation })
+        );
+        return { status: response.status, body: await response.json() };
+      });
+    }
+
+    for (const route of WRITE_ROUTES) {
+      describe(route.name, () => {
+        it('is refused without a confirmation, even with the former confirm flag', async () => {
+          const { app, calls } = createTestApp();
+
+          const response = await send(app, route, { confirm: true });
+
+          assert.equal(response.status, 400);
+          assert.deepEqual(response.body, { error: 'Invalid recaptcha token' });
+          assert.equal(route.changeCount(calls), 0);
+        });
+
+        it('answers 401 PASSKEY_REQUIRED without a confirmation when the administrator has passkeys', async () => {
+          const { app, calls } = createTestApp({ passkeys: [{ id: 1 }] });
+
+          const response = await send(app, route, {});
+
+          assert.equal(response.status, 401);
+          assert.deepEqual(response.body, { error: 'PASSKEY_REQUIRED' });
+          assert.equal(route.changeCount(calls), 0);
+        });
+
+        it('refuses the password fallback with 401 PASSKEY_REQUIRED when the administrator has passkeys', async () => {
+          const { app, calls, stepUpCalls } = createTestApp({ passkeys: [{ id: 1 }] });
+
+          const response = await send(app, route, PASSWORD_CONFIRMATION);
+
+          assert.equal(response.status, 401);
+          assert.deepEqual(response.body, { error: 'PASSKEY_REQUIRED' });
+          assert.equal(route.changeCount(calls), 0);
+          assert.equal(stepUpCalls.recaptcha.length + stepUpCalls.password.length, 0);
+        });
+
+        it('refuses a wrong password with 401', async () => {
+          const { app, calls } = createTestApp();
+
+          const response = await send(app, route, { admin_password: 'wrong', recaptcha_token: VALID_RECAPTCHA });
+
+          assert.equal(response.status, 401);
+          assert.deepEqual(response.body, { error: 'Invalid administrator password' });
+          assert.equal(route.changeCount(calls), 0);
+        });
+
+        it('refuses a failed reCAPTCHA with 400 before checking the password', async () => {
+          const { app, calls, stepUpCalls } = createTestApp();
+
+          const response = await send(app, route, { admin_password: VALID_PASSWORD, recaptcha_token: 'bad-token' });
+
+          assert.equal(response.status, 400);
+          assert.deepEqual(response.body, { error: 'Invalid recaptcha token' });
+          assert.equal(route.changeCount(calls), 0);
+          assert.equal(stepUpCalls.password.length, 0);
+        });
+
+        it('refuses a passkey that auth-backend rejects with 401', async () => {
+          const { app, calls } = createTestApp({ passkeys: [{ id: 1 }] });
+
+          const response = await send(app, route, { passkey_assertion: { id: 'other-passkey', response: {} } });
+
+          assert.equal(response.status, 401);
+          assert.deepEqual(response.body, { error: 'Invalid administrator passkey' });
+          assert.equal(route.changeCount(calls), 0);
+        });
+
+        it('applies the change with the right password and reCAPTCHA', async () => {
+          const { app, calls, stepUpCalls } = createTestApp();
+
+          const response = await send(app, route, PASSWORD_CONFIRMATION);
+
+          assert.equal(response.status, route.appliedStatus);
+          assert.equal(route.changeCount(calls), 1);
+          assert.deepEqual(stepUpCalls.recaptcha, [VALID_RECAPTCHA]);
+          assert.deepEqual(stepUpCalls.password, [VALID_PASSWORD]);
+        });
+
+        it('applies the change with a valid passkey, without reCAPTCHA or password', async () => {
+          const { app, calls, stepUpCalls } = createTestApp({ passkeys: [{ id: 1 }] });
+
+          const response = await send(app, route, PASSKEY_CONFIRMATION);
+
+          assert.equal(response.status, route.appliedStatus);
+          assert.equal(route.changeCount(calls), 1);
+          assert.deepEqual(stepUpCalls.passkey, [VALID_PASSKEY_ID]);
+          assert.equal(stepUpCalls.recaptcha.length + stepUpCalls.password.length, 0);
+        });
+      });
+    }
+
+    it('keeps the stored values free of confirmation fields', async () => {
+      const { app, calls } = createTestApp();
+
+      await send(app, WRITE_ROUTES[0], PASSWORD_CONFIRMATION);
+      await send(app, WRITE_ROUTES[2], PASSWORD_CONFIRMATION);
+
+      assert.deepEqual(calls.saveConnection, [{ baseUrl: 'https://ai.example.org', keycloakPublicUrl: null, userId: 7 }]);
+      assert.deepEqual(calls.createPolicyVersion, [{ allowedServiceIds: ['polyadic-agent'], note: 'Pilot', userId: 7 }]);
+    });
+
+    it('checks policy ids against the catalog before asking for the confirmation', async () => {
+      const { app, calls, stepUpCalls } = createTestApp();
+
+      const response = await send(app, { ...WRITE_ROUTES[2], body: { allowedServiceIds: ['made-up-service'] } }, PASSWORD_CONFIRMATION);
+
+      assert.equal(response.status, 400);
+      assert.equal(response.body.error, 'UNKNOWN_SERVICE_IDS');
+      assert.equal(calls.createPolicyVersion.length, 0);
+      assert.equal(stepUpCalls.recaptcha.length + stepUpCalls.password.length, 0);
+    });
+
+    it('does not ask for a confirmation to test a connection', async () => {
+      const { app, serviceCalls, stepUpCalls } = createTestApp({ passkeys: [{ id: 1 }] });
+
+      const response = await send(app, { method: 'POST', path: '/connection/test', body: { baseUrl: 'https://ai.example.org' } }, {});
+
+      assert.equal(response.status, 200);
+      assert.equal(serviceCalls.test.length, 1);
+      assert.equal(stepUpCalls.recaptcha.length + stepUpCalls.passkey.length, 0);
+    });
   });
 });
