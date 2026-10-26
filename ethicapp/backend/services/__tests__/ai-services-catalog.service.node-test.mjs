@@ -8,7 +8,6 @@ import {
     adaptersByRequiredService,
     classifyAiAdditionsError,
     createAiServicesCatalogService,
-    isValidConnectionUrl,
     normalizeCatalogLocale,
     parseCatalogResponse,
 } from "../ai-services-catalog.service.js";
@@ -25,25 +24,6 @@ test("locales follow the canonical rule: Spanish only when asked for", () => {
     for (const value of [undefined, null, "", "en_US", "pt-BR", "esperanto"]) {
         assert.equal(normalizeCatalogLocale(value), "en_US", String(value));
         assert.equal(acceptLanguageFor(value), "en-US", String(value));
-    }
-});
-
-test("connection URLs need http(s), an explicit authority and no query, fragment or userinfo", () => {
-    for (const value of [
-        "http://ethicapp-ai-additions:8010",
-        "https://ai.example.org/",
-        "https://ai.example.org/prefix/path",
-        "  https://ai.example.org  ",
-    ]) {
-        assert.equal(isValidConnectionUrl(value), true, value);
-    }
-    for (const value of [
-        undefined, null, 1, "", "ai.example.org", "file:///etc/passwd", "http:ai.example.org",
-        "http:///ai.example.org", "http://user@ai.example.org", "http://ai.example.org?x",
-        "http://ai.example.org/#x", "http://ai.example.org/./x", "http://ai.example.org\\x",
-        "http://ai example.org", `https://ai.example.org/${"a".repeat(2048)}`,
-    ]) {
-        assert.equal(isValidConnectionUrl(value), false, String(value));
     }
 });
 

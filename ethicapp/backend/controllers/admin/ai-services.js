@@ -1,9 +1,8 @@
 import express from "express";
 
+import { isValidAiAdditionsUrl } from "../../helpers/ai-additions-connection.js";
 import { isSuperAdminSession } from "../../helpers/auth-helper.js";
-import aiServicesCatalogService, {
-    isValidConnectionUrl,
-} from "../../services/ai-services-catalog.service.js";
+import aiServicesCatalogService from "../../services/ai-services-catalog.service.js";
 
 /**
  * Internal endpoints for the management console's AI services page (#816).
@@ -42,10 +41,10 @@ function invalidConnectionTestField(body) {
     if (!body || typeof body !== "object" || Array.isArray(body)) {
         return "body";
     }
-    if (!isValidConnectionUrl(body.baseUrl)) {
+    if (!isValidAiAdditionsUrl(body.baseUrl)) {
         return "baseUrl";
     }
-    if (!isAbsent(body.keycloakPublicUrl) && !isValidConnectionUrl(body.keycloakPublicUrl)) {
+    if (!isAbsent(body.keycloakPublicUrl) && !isValidAiAdditionsUrl(body.keycloakPublicUrl)) {
         return "keycloakPublicUrl";
     }
     return null;

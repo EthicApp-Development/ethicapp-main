@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
@@ -7,55 +8,36 @@ import {
     isValidAiAdditionsUrl,
 } from "../ai-additions-connection.js";
 
-// Stored connection URLs (#815 refinement): the rule of the management
-// console, `^https?://[^/?#\s]+` on the raw value, with no query string,
-// fragment or userinfo. Path prefixes are allowed.
+// The one AI Additions connection URL rule (#834). The management console
+// passes the same cases (it keeps a byte-identical copy of this file). In the
+// Docker test stage the file is copied to /canonical-schemas.
+const URL_CASES_URL = new URL(
+    "../../../../canonical-schemas/ai-additions-connection/url-cases.json", import.meta.url
+);
+const { cases: URL_CASES } = JSON.parse(readFileSync(URL_CASES_URL, "utf8"));
+const VALID_CASES = URL_CASES.filter(({ valid }) => valid);
+const INVALID_CASES = URL_CASES.filter(({ valid }) => !valid);
 
-const VALID_URLS = [
-    "http://ai-additions",
-    "http://ai-additions:8080",
-    "https://ai.example.org",
-    "https://ai.example.org/",
-    "https://ai.example.org/ai-additions",
-    "https://ai.example.org/keycloak/",
-    "HTTPS://AI.EXAMPLE.ORG",
-    "http://10.0.0.5:3000/prefix",
-    "http://[::1]:8080",
-];
-
-const INVALID_URLS = {
-    "a query string":          "https://ai.example.org?tenant=1",
-    "a query after a path":    "https://ai.example.org/keycloak?x=1",
-    "an empty query":          "https://ai.example.org/?",
-    "a fragment":              "https://ai.example.org#section",
-    "a fragment after a path": "https://ai.example.org/path#x",
-    "userinfo":                "https://user:secret@ai.example.org",
-    "a user name":             "https://user@ai.example.org",
-    "an empty userinfo":       "https://@ai.example.org",
-    "no authority":            "https:///ai-additions",
-    "a scheme only":           "https://",
-    "a single slash":          "https:/ai.example.org",
-    "no scheme":               "ai.example.org",
-    "another scheme":          "ftp://ai.example.org",
-    "a leading space":         " https://ai.example.org",
-    "a trailing space":        "https://ai.example.org ",
-    "an inner space":          "https://ai.example.org/a b",
-    "an empty string":         "",
-    "a non-string":            42,
-    "null":                    null,
-};
-
-test("isValidAiAdditionsUrl: accepts http(s) URLs with an authority and a path prefix", () => {
-    for (const url of VALID_URLS) {
-        assert.equal(isValidAiAdditionsUrl(url), true, url);
-    }
+test("the shared URL cases cover both outcomes", () => {
+    assert.ok(VALID_CASES.length > 0);
+    assert.ok(INVALID_CASES.length > 0);
 });
 
-for (const [label, url] of Object.entries(INVALID_URLS)) {
-    test(`isValidAiAdditionsUrl: rejects ${label}`, () => {
-        assert.equal(isValidAiAdditionsUrl(url), false, String(url));
+for (const { name, url, valid, reason } of URL_CASES) {
+    test(`isValidAiAdditionsUrl: ${valid ? "accepts" : "rejects"} ${name}`, () => {
+        assert.equal(isValidAiAdditionsUrl(url), valid, `${JSON.stringify(url)}: ${reason}`);
     });
 }
+
+test("isValidAiAdditionsUrl: rejects undefined", () => {
+    assert.equal(isValidAiAdditionsUrl(undefined), false);
+});
+
+test("deriveAiAdditionsEndpoints: the base URL is the console's stored form", () => {
+    for (const { url, normalized } of VALID_CASES) {
+        assert.equal(deriveAiAdditionsEndpoints({ baseUrl: url }).baseUrl, normalized, url);
+    }
+});
 
 test("isUsableAiAdditionsConnection: checks base_url and, when set, keycloak_public_url", () => {
     assert.equal(isUsableAiAdditionsConnection(null), false);
@@ -70,16 +52,16 @@ test("isUsableAiAdditionsConnection: checks base_url and, when set, keycloak_pub
     }), true);
 });
 
-for (const [label, url] of Object.entries(INVALID_URLS)) {
+for (const { name, url } of INVALID_CASES) {
     if (url === "" || url === null) {
         continue;
     }
 
-    test(`deriveAiAdditionsEndpoints: not_configured for a base_url with ${label}`, () => {
+    test(`deriveAiAdditionsEndpoints: not_configured for a base_url with ${name}`, () => {
         assert.throws(() => deriveAiAdditionsEndpoints({ baseUrl: url }), { code: "not_configured" });
     });
 
-    test(`deriveAiAdditionsEndpoints: not_configured for a keycloak_public_url with ${label}`, () => {
+    test(`deriveAiAdditionsEndpoints: not_configured for a keycloak_public_url with ${name}`, () => {
         assert.throws(
             () => deriveAiAdditionsEndpoints({ baseUrl: "https://ai.example.org", keycloakPublicUrl: url }),
             { code: "not_configured" }

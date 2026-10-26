@@ -237,9 +237,12 @@ headers); other roles get `403`.
   cache. It answers
   `{ ok, token: { ok, error? }, issuer: { ok, error?, skipped?, expected, actual? }, catalog: { ok, error?, skipped? }, serviceCount }`;
   `ok` is `true` only when all three steps pass. `issuer.skipped` and
-  `catalog.skipped` are `true` when no token was obtained. Both URLs must be
-  `http(s)://<authority>[/<path>]`, with no userinfo, query or fragment;
-  anything else gets `400`.
+  `catalog.skipped` are `true` when no token was obtained. Both URLs must
+  follow the console's connection URL rule (`isValidAiAdditionsUrl`, #834):
+  `http(s)://<authority>[/<path>]`, with no userinfo, query, fragment,
+  backslash, whitespace or `.`/`..` segment, a valid host and port, and at
+  most 2048 characters; anything else gets `400`. The same rule decides
+  whether a stored connection is usable.
 
 The issuer step (#834) catches a wrong Keycloak public URL before it is saved.
 Tokens are always requested through `base_url`, so the token step succeeds

@@ -1,7 +1,10 @@
 import fs from "node:fs/promises";
 
 import aiAdditionsClient from "./ai-additions-client.service.js";
-import { isAiAdditionsNotConfigured } from "../helpers/ai-additions-connection.js";
+import {
+    isAiAdditionsNotConfigured,
+    isValidAiAdditionsUrl,
+} from "../helpers/ai-additions-connection.js";
 import { getConnection as getStoredConnection } from "../helpers/ai-service-policy.js";
 import { assertValidCatalog, validateCatalog } from "../external-services/catalog.js";
 
@@ -50,44 +53,6 @@ const NETWORK_ERROR_CODES = new Set([
     "UND_ERR_SOCKET",
 ]);
 
-const MAX_CONNECTION_URL_LENGTH = 2048;
-// http(s)://<authority>[/<path>] on the raw text: an explicit authority
-// without userinfo, an optional path prefix, no query, fragment, backslash or
-// whitespace. Same rule as the console (management-console PR #830).
-const CONNECTION_URL_PATTERN = /^https?:\/\/([^/?#@\\\s]+)(\/[^?#\\\s]*)?$/iu;
-
-/**
- * Whether a connection URL typed by the operator is acceptable for a test.
- * The WHATWG parser repairs forms such as `http:host`, so the raw text is
- * checked first.
- * @param {unknown} value
- * @returns {boolean}
- */
-export function isValidConnectionUrl(value) {
-    if (typeof value !== "string") {
-        return false;
-    }
-
-    const trimmed = value.trim();
-    const match = CONNECTION_URL_PATTERN.exec(trimmed);
-    if (!match || trimmed.length > MAX_CONNECTION_URL_LENGTH) {
-        return false;
-    }
-
-    const path = match[2] || "";
-    if (path.split("/").some(segment => segment === "." || segment === "..")) {
-        return false;
-    }
-
-    try {
-        const parsed = new URL(trimmed);
-        return Boolean(parsed.hostname) && !parsed.username && !parsed.password
-            && !parsed.search && !parsed.hash;
-    } catch {
-        return false;
-    }
-}
-
 function withoutTrailingSlash(value) {
     return value.endsWith("/") ? value.slice(0, -1) : value;
 }
@@ -120,7 +85,7 @@ export function readUnverifiedIssuer(token) {
     }
 
     const issuer = payload.iss;
-    return isValidConnectionUrl(issuer) && issuer === issuer.trim() ? issuer : null;
+    return isValidAiAdditionsUrl(issuer) && issuer === issuer.trim() ? issuer : null;
 }
 
 /**
@@ -465,7 +430,7 @@ export function createAiServicesCatalogService({
      * unsaved connection. Nothing is stored, and the shared client's token
      * cache is not touched.
      * @param {{ baseUrl: string, keycloakPublicUrl?: string|null, locale?: string }} input
-     *   URLs already validated with `isValidConnectionUrl`.
+     *   URLs already validated with `isValidAiAdditionsUrl`.
      * @returns {Promise<object>} `{ ok, token: { ok, error? }, issuer: { ok, error?,
      *   skipped?, expected, actual? }, catalog: { ok, error?, skipped? }, serviceCount }`.
      */

@@ -1,0 +1,348 @@
+{
+  "description": "Boundary cases of the AI Additions connection URL rule (#834). A base_url or keycloak_public_url is valid when, after trimming surrounding whitespace, it matches ^https?://([^/?#@\\\\\\s]+)(/[^?#\\\\\\s]*)?$ (case-insensitive), has no . or .. path segment, is at most 2048 characters long and parses as a URL with a non-empty host. normalized is the value the management console stores: trimmed, without trailing slashes. ethicapp (isValidAiAdditionsUrl) and the management console (normalizeConnectionUrl) must both pass every case; the console keeps a byte-identical copy of this file.",
+  "cases": [
+    {
+      "name": "http",
+      "url": "http://ai-additions",
+      "valid": true,
+      "normalized": "http://ai-additions",
+      "reason": "http is allowed, for internal networks."
+    },
+    {
+      "name": "https",
+      "url": "https://ai.example.org",
+      "valid": true,
+      "normalized": "https://ai.example.org",
+      "reason": "https is allowed."
+    },
+    {
+      "name": "uppercase scheme and host",
+      "url": "HTTPS://AI.EXAMPLE.ORG",
+      "valid": true,
+      "normalized": "HTTPS://AI.EXAMPLE.ORG",
+      "reason": "The scheme is case-insensitive; the value is kept as typed."
+    },
+    {
+      "name": "mixed-case scheme",
+      "url": "Http://ai.example.org",
+      "valid": true,
+      "normalized": "Http://ai.example.org",
+      "reason": "The scheme is case-insensitive."
+    },
+    {
+      "name": "host with port",
+      "url": "http://ai-additions:8080",
+      "valid": true,
+      "normalized": "http://ai-additions:8080",
+      "reason": "An explicit port is part of the authority."
+    },
+    {
+      "name": "highest port",
+      "url": "http://ai.example.org:65535",
+      "valid": true,
+      "normalized": "http://ai.example.org:65535",
+      "reason": "65535 is a valid port."
+    },
+    {
+      "name": "IPv4 literal with a path prefix",
+      "url": "http://10.0.0.5:3000/prefix",
+      "valid": true,
+      "normalized": "http://10.0.0.5:3000/prefix",
+      "reason": "IP literals are hosts."
+    },
+    {
+      "name": "IPv6 literal with port",
+      "url": "http://[::1]:8080",
+      "valid": true,
+      "normalized": "http://[::1]:8080",
+      "reason": "Bracketed IPv6 literals are hosts."
+    },
+    {
+      "name": "IPv6 literal",
+      "url": "https://[2001:db8::1]",
+      "valid": true,
+      "normalized": "https://[2001:db8::1]",
+      "reason": "Bracketed IPv6 literals are hosts."
+    },
+    {
+      "name": "Docker-internal name",
+      "url": "http://ethicapp-ai-additions:8010",
+      "valid": true,
+      "normalized": "http://ethicapp-ai-additions:8010",
+      "reason": "Single-label service names are hosts."
+    },
+    {
+      "name": "path prefix",
+      "url": "https://ai.example.org/ai-additions",
+      "valid": true,
+      "normalized": "https://ai.example.org/ai-additions",
+      "reason": "A path prefix is allowed; derived paths are appended to it."
+    },
+    {
+      "name": "nested path prefix",
+      "url": "https://ai.example.org/a/b",
+      "valid": true,
+      "normalized": "https://ai.example.org/a/b",
+      "reason": "A path prefix may have several segments."
+    },
+    {
+      "name": "trailing slash",
+      "url": "https://ai.example.org/",
+      "valid": true,
+      "normalized": "https://ai.example.org",
+      "reason": "Trailing slashes are accepted and dropped."
+    },
+    {
+      "name": "several trailing slashes after a path",
+      "url": "https://ai.example.org/prefix//",
+      "valid": true,
+      "normalized": "https://ai.example.org/prefix",
+      "reason": "Trailing slashes are accepted and dropped."
+    },
+    {
+      "name": "segments that contain dots among other characters",
+      "url": "https://ai.example.org/v1.2/..x",
+      "valid": true,
+      "normalized": "https://ai.example.org/v1.2/..x",
+      "reason": "Only segments that are exactly . or .. are dot segments."
+    },
+    {
+      "name": "@ in the path",
+      "url": "https://ai.example.org/a@b",
+      "valid": true,
+      "normalized": "https://ai.example.org/a@b",
+      "reason": "An @ after the authority is not userinfo."
+    },
+    {
+      "name": "spaces around",
+      "url": "  https://ai.example.org  ",
+      "valid": true,
+      "normalized": "https://ai.example.org",
+      "reason": "Surrounding whitespace is trimmed."
+    },
+    {
+      "name": "tab and newline around",
+      "url": "\thttps://ai.example.org\n",
+      "valid": true,
+      "normalized": "https://ai.example.org",
+      "reason": "Surrounding whitespace is trimmed."
+    },
+    {
+      "name": "2048 characters",
+      "url": "https://ai.example.org/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "valid": true,
+      "normalized": "https://ai.example.org/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "reason": "2048 characters is the maximum length."
+    },
+    {
+      "name": "port 65536",
+      "url": "http://ai.example.org:65536",
+      "valid": false,
+      "reason": "The port is out of range, so the URL does not parse."
+    },
+    {
+      "name": "non-numeric port",
+      "url": "http://ai.example.org:abc",
+      "valid": false,
+      "reason": "The port is not a number, so the URL does not parse."
+    },
+    {
+      "name": "port without a host",
+      "url": "http://:8080",
+      "valid": false,
+      "reason": "The authority has no host."
+    },
+    {
+      "name": "query string",
+      "url": "https://ai.example.org?q=1",
+      "valid": false,
+      "reason": "A query would move the derived paths into the query."
+    },
+    {
+      "name": "query after a path",
+      "url": "https://ai.example.org/keycloak?x=1",
+      "valid": false,
+      "reason": "A query would move the derived paths into the query."
+    },
+    {
+      "name": "empty query",
+      "url": "https://ai.example.org/?",
+      "valid": false,
+      "reason": "An empty query is still a query."
+    },
+    {
+      "name": "fragment",
+      "url": "https://ai.example.org#f",
+      "valid": false,
+      "reason": "A fragment would hide the derived paths."
+    },
+    {
+      "name": "fragment after a path",
+      "url": "https://ai.example.org/path#x",
+      "valid": false,
+      "reason": "A fragment would hide the derived paths."
+    },
+    {
+      "name": "empty fragment",
+      "url": "https://ai.example.org#",
+      "valid": false,
+      "reason": "An empty fragment is still a fragment."
+    },
+    {
+      "name": "user name",
+      "url": "https://user@ai.example.org",
+      "valid": false,
+      "reason": "Userinfo is not allowed."
+    },
+    {
+      "name": "user name and password",
+      "url": "https://user:secret@ai.example.org",
+      "valid": false,
+      "reason": "Userinfo is not allowed."
+    },
+    {
+      "name": "password only",
+      "url": "https://:secret@ai.example.org",
+      "valid": false,
+      "reason": "Userinfo is not allowed."
+    },
+    {
+      "name": "empty userinfo",
+      "url": "https://@ai.example.org",
+      "valid": false,
+      "reason": "Userinfo is not allowed, even empty."
+    },
+    {
+      "name": "backslash in the authority",
+      "url": "http://ai.example.org\\x",
+      "valid": false,
+      "reason": "Parsers disagree on backslashes."
+    },
+    {
+      "name": "backslash in the path",
+      "url": "http://ai.example.org/a\\b",
+      "valid": false,
+      "reason": "Parsers disagree on backslashes."
+    },
+    {
+      "name": "space in the host",
+      "url": "http://ai example.org",
+      "valid": false,
+      "reason": "Whitespace inside the URL is not allowed."
+    },
+    {
+      "name": "space in the path",
+      "url": "https://ai.example.org/a b",
+      "valid": false,
+      "reason": "Whitespace inside the URL is not allowed."
+    },
+    {
+      "name": "tab in the path",
+      "url": "https://ai.example.org/a\tb",
+      "valid": false,
+      "reason": "Whitespace inside the URL is not allowed."
+    },
+    {
+      "name": "dot segment",
+      "url": "http://ai.example.org/./x",
+      "valid": false,
+      "reason": "URL parsers resolve dot segments, string concatenation does not."
+    },
+    {
+      "name": "dot-dot segment",
+      "url": "http://ai.example.org/a/../b",
+      "valid": false,
+      "reason": "URL parsers resolve dot segments, string concatenation does not."
+    },
+    {
+      "name": "trailing dot segment",
+      "url": "http://ai.example.org/.",
+      "valid": false,
+      "reason": "Dot segments are not allowed."
+    },
+    {
+      "name": "trailing dot-dot segment",
+      "url": "http://ai.example.org/..",
+      "valid": false,
+      "reason": "Dot segments are not allowed."
+    },
+    {
+      "name": "scheme without slashes",
+      "url": "http:ai.example.org",
+      "valid": false,
+      "reason": "The WHATWG parser repairs it, string concatenation does not."
+    },
+    {
+      "name": "scheme with one slash",
+      "url": "http:/ai.example.org",
+      "valid": false,
+      "reason": "The WHATWG parser repairs it, string concatenation does not."
+    },
+    {
+      "name": "empty authority",
+      "url": "http:///ai.example.org",
+      "valid": false,
+      "reason": "The authority is empty."
+    },
+    {
+      "name": "scheme only",
+      "url": "https://",
+      "valid": false,
+      "reason": "There is no authority."
+    },
+    {
+      "name": "another scheme",
+      "url": "ftp://ai.example.org",
+      "valid": false,
+      "reason": "Only http and https are allowed."
+    },
+    {
+      "name": "file scheme",
+      "url": "file:///etc/passwd",
+      "valid": false,
+      "reason": "Only http and https are allowed."
+    },
+    {
+      "name": "no scheme",
+      "url": "ai.example.org",
+      "valid": false,
+      "reason": "The scheme is required."
+    },
+    {
+      "name": "scheme-relative",
+      "url": "//ai.example.org",
+      "valid": false,
+      "reason": "The scheme is required."
+    },
+    {
+      "name": "2049 characters",
+      "url": "https://ai.example.org/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "valid": false,
+      "reason": "Longer than 2048 characters."
+    },
+    {
+      "name": "empty string",
+      "url": "",
+      "valid": false,
+      "reason": "A value is required."
+    },
+    {
+      "name": "whitespace only",
+      "url": "   ",
+      "valid": false,
+      "reason": "A value is required."
+    },
+    {
+      "name": "null",
+      "url": null,
+      "valid": false,
+      "reason": "Not a string."
+    },
+    {
+      "name": "number",
+      "url": 42,
+      "valid": false,
+      "reason": "Not a string."
+    }
+  ]
+}
