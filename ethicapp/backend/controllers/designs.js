@@ -19,7 +19,8 @@ import {
     normalizeCaseDocumentSummaries,
 } from "../helpers/case-documents.js";
 import { copyReadyDesignAnalyses } from "../helpers/design-analyses-helper.js";
-import { scheduleDesignAnalysesOnSave } from "../helpers/design-analyses-lifecycle-helper.js";
+import { scheduleDesignAnalyses } from "../helpers/design-analyses-lifecycle-helper.js";
+import { DESIGN_HOOK_TRIGGERS } from "../helpers/design-analysis-hooks.js";
 import {
     designLockedRefusal,
     designUpdateRefusal,
@@ -425,9 +426,9 @@ async function copyCaseForUser(client, sourceCaseId, userId, visibility = PRIVAT
 }
 
 // After a design copy is committed (#848): its case is rendered when it has no
-// render yet, so analyses and screens get its text, and the copy requests the
-// analyses it did not inherit, as a save would. Both run in the background,
-// after the answer.
+// render yet, so analyses and screens get its text, and the copy, a new
+// design, requests the analyses it did not inherit (design-created). Both run
+// in the background, after the answer.
 function scheduleCopyFollowUp(designId, caseId, userId) {
     if (caseId) {
         ensureCasePdfRenderJob(caseId, { metadata: { reason: "design_copied" } })
@@ -436,7 +437,7 @@ function scheduleCopyFollowUp(designId, caseId, userId) {
                 error,
             }));
     }
-    scheduleDesignAnalysesOnSave(designId, { userId });
+    scheduleDesignAnalyses(designId, { trigger: DESIGN_HOOK_TRIGGERS.CREATED, userId });
 }
 
 router.get("/designs/:id", async (req, res) => {
@@ -572,7 +573,10 @@ router.post("/designs", async (req, res) => {
                 warnings: configurationCheck.warnings,
             });
             // Design analyses run in the background, after the answer (#848).
-            scheduleDesignAnalysesOnSave(result.id, { userId: sessionUid });
+            scheduleDesignAnalyses(result.id, {
+                trigger: DESIGN_HOOK_TRIGGERS.CREATED,
+                userId:  sessionUid,
+            });
             return response;
         } else {
             return res.status(500).json({ status: "err", message: "Failed to create design." });
@@ -696,7 +700,10 @@ router.patch("/designs/:id", async (req, res) => {
             warnings: configurationCheck.warnings,
         });
         // Design analyses run in the background, after the answer (#848).
-        scheduleDesignAnalysesOnSave(designId, { userId: sessionUid });
+        scheduleDesignAnalyses(designId, {
+            trigger: DESIGN_HOOK_TRIGGERS.UPDATED,
+            userId:  sessionUid,
+        });
         return response;
     } catch (err) {
         console.error("Error in /designs/:id PATCH:", err);
