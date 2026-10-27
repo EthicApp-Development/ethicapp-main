@@ -8,6 +8,8 @@
 // generic panel.
 export const CASE_ANALYSIS_COMPONENTS = Object.freeze({
     "mock-case-analysis": "mock-case-analysis-view",
+    // Case Analyst: case evaluation (#844).
+    "case-evaluation":    "case-evaluation-view",
 });
 
 const ELEMENT_NAME_PATTERN = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)+$/;
@@ -22,6 +24,19 @@ const ERROR_KEYS = Object.freeze({
     "superseded":             "case_analysis_error_superseded",
     "timeout":                "case_analysis_error_timeout",
     "adapter-error":          "case_analysis_error_adapter_error",
+    // Case Analyst adapters (#844): requests, results and the service's
+    // public error codes.
+    "empty-case-text":        "case_analysis_error_empty_case_text",
+    "case-text-too-long":     "case_analysis_error_case_text_too_long",
+    "request-failed":         "case_analysis_error_request_failed",
+    "request-rejected":       "case_analysis_error_request_rejected",
+    "invalid-result":         "case_analysis_error_invalid_result",
+    "service-llm-error":      "case_analysis_error_service_llm_error",
+    "service-llm-refusal":    "case_analysis_error_service_llm_refusal",
+    "service-invalid-output": "case_analysis_error_service_invalid_output",
+    "service-timeout":        "case_analysis_error_service_timeout",
+    "service-worker-lost":    "case_analysis_error_service_worker_lost",
+    "service-internal-error": "case_analysis_error_service_internal_error",
 });
 
 const INDICATORS = Object.freeze({

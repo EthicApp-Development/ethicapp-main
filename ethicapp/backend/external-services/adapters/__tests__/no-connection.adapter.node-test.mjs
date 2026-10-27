@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { AiAdditionsClient } from "../../../services/ai-additions-client.service.js";
 import * as atsFeedback from "../ats-feedback.adapter.js";
-import * as caseAnalyst from "../case-analyst.adapter.js";
+import * as caseEvaluation from "../case-analyst-evaluation.adapter.js";
 import * as polyadicBridge from "../polyadic-bridge.adapter.js";
 
 function noConnectionClient(requests) {
@@ -148,16 +148,36 @@ test("argumentation tutor: every API request rejects with not_configured", async
     assert.deepEqual(requests, []);
 });
 
-test("case analyst: case-created fails with not_configured", async () => {
+test("case evaluation: case-created fails the started generation with not_configured", async () => {
     const requests = [];
-    const dispatch = await registerAdapter(caseAnalyst, "case-analyst", noConnectionClient(requests));
+    const failures = [];
+    const caseAnalyses = {
+        markProcessing: async ({ jobId }) => ({ status: "processing", jobId }),
+        complete:       async () => { throw new Error("nothing may be completed"); },
+        fail:           async args => { failures.push(args); return { status: "failed" }; },
+    };
+    const dispatch = await registerAdapter(caseEvaluation, "case-analyst-evaluation",
+        noConnectionClient(requests), {
+            caseAnalyses,
+            caseEvaluationDependencies: {
+                waitForCaseDocumentText: async () => ({ status: "ready", text: "Case text." }),
+            },
+        });
 
-    const { callbacks } = await quietly(() => dispatch("case-created", { caseId: 42 }));
+    const { callbacks, thrown } = await quietly(() => dispatch("case-created", {
+        caseId: 42,
+        jobId:  "job-42",
+        title:  "A case",
+    }));
 
+    assert.equal(thrown, null);
+    assert.deepEqual(requests, []);
+    assert.deepEqual(failures, [{
+        jobId:        "job-42",
+        errorCode:    "request-failed",
+        errorMessage: "The AI Additions connection is not configured.",
+    }]);
     assert.equal(callbacks.length, 1);
     assert.equal(callbacks[0].status, "failed");
     assert.match(callbacks[0].error, /not configured/u);
-    assert.deepEqual(requests, []);
-    await assert.rejects(() => caseAnalyst.getCaseAnalystBaseUrl(noConnectionClient(requests)),
-        { code: "not_configured" });
 });

@@ -3385,6 +3385,106 @@ tr.group-summary {
     overflow-wrap: anywhere;
 }
 
+/* Case Analyst: case evaluation tab (#844). */
+.case-evaluation-view {
+    overflow-wrap: anywhere;
+}
+
+.case-evaluation-section {
+    margin-top: 20px;
+}
+
+.case-evaluation-heading {
+    margin: 0 0 10px;
+    font-size: 18px;
+}
+
+.case-evaluation-subheading {
+    margin: 12px 0 6px;
+    font-size: 15px;
+    font-weight: bold;
+}
+
+.case-evaluation-summary {
+    font-size: 15px;
+    line-height: 1.5;
+}
+
+.case-evaluation-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.case-evaluation-item {
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.case-evaluation-issue {
+    margin-bottom: 12px;
+}
+
+.case-evaluation-issue-title {
+    margin: 8px 0;
+}
+
+.case-evaluation-priority {
+    display: inline-block;
+    margin-bottom: 4px;
+}
+
+.case-evaluation-label {
+    margin: 8px 0 2px;
+    font-size: 12px;
+    font-weight: bold;
+    color: #666;
+    text-transform: uppercase;
+}
+
+.case-evaluation-text {
+    margin: 0 0 6px;
+    white-space: pre-line;
+}
+
+.case-evaluation-quote {
+    margin: 4px 0;
+    padding: 4px 12px;
+    font-size: inherit;
+    font-style: italic;
+    border-left: 3px solid #ccc;
+}
+
+.case-evaluation-sources {
+    margin: 8px 0 0;
+}
+
+.case-evaluation-evaluator {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin-bottom: 8px;
+    background-color: #fff;
+}
+
+.case-evaluation-evaluator-summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 12px;
+    min-height: 44px;
+    padding: 10px 12px;
+    cursor: pointer;
+}
+
+.case-evaluation-evaluator-name {
+    font-weight: bold;
+}
+
+.case-evaluation-criterion {
+    padding: 0 12px 8px;
+    border-top: 1px solid #eee;
+}
+
 .case-material-document-link {
     display: flex;
     align-items: center;

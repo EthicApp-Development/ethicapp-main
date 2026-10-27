@@ -1,0 +1,79 @@
+<div class="case-evaluation-view">
+    <p class="text-muted small">{{ 'case_evaluation_note' | translate }}</p>
+
+    <section class="case-evaluation-section">
+        <h4 class="case-evaluation-heading">{{ 'case_evaluation_summary_title' | translate }}</h4>
+        <p class="case-evaluation-summary" ng-if="$ctrl.view.summary">{{ $ctrl.view.summary }}</p>
+
+        <div ng-if="$ctrl.view.recommendations.length > 0">
+            <h5 class="case-evaluation-subheading">{{ 'case_evaluation_recommendations_title' | translate }}</h5>
+            <ol class="case-evaluation-list">
+                <li class="case-evaluation-item" ng-repeat="item in $ctrl.view.recommendations">
+                    <span class="label label-default case-evaluation-priority">
+                        {{ 'case_evaluation_priority' | translate:{ priority: item.priority } }}
+                    </span>
+                    <p class="case-evaluation-text">{{ item.recommendation }}</p>
+                    <div class="case-evaluation-quotes" ng-if="item.caseEvidence.length > 0">
+                        <p class="case-evaluation-label">{{ 'case_evaluation_case_evidence' | translate }}</p>
+                        <blockquote class="case-evaluation-quote" ng-repeat="quote in item.caseEvidence">{{ quote }}</blockquote>
+                    </div>
+                </li>
+            </ol>
+        </div>
+    </section>
+
+    <section class="case-evaluation-section">
+        <h4 class="case-evaluation-heading">{{ 'case_evaluation_issues_title' | translate }}</h4>
+        <p class="text-muted" ng-if="$ctrl.view.issues.length === 0">{{ 'case_evaluation_no_issues' | translate }}</p>
+        <ol class="case-evaluation-list" ng-if="$ctrl.view.issues.length > 0">
+            <li class="panel panel-default case-evaluation-issue" ng-repeat="issue in $ctrl.view.issues">
+                <div class="panel-body">
+                    <span class="label label-warning case-evaluation-priority">
+                        {{ 'case_evaluation_priority' | translate:{ priority: issue.priority } }}
+                    </span>
+                    <p class="case-evaluation-issue-title"><strong>{{ issue.issue }}</strong></p>
+                    <div ng-if="issue.selectionReason">
+                        <p class="case-evaluation-label">{{ 'case_evaluation_selection_reason' | translate }}</p>
+                        <p class="case-evaluation-text">{{ issue.selectionReason }}</p>
+                    </div>
+                    <div class="case-evaluation-quotes" ng-if="issue.caseEvidence.length > 0">
+                        <p class="case-evaluation-label">{{ 'case_evaluation_case_evidence' | translate }}</p>
+                        <blockquote class="case-evaluation-quote" ng-repeat="quote in issue.caseEvidence">{{ quote }}</blockquote>
+                    </div>
+                    <div ng-if="issue.recommendation">
+                        <p class="case-evaluation-label">{{ 'case_evaluation_recommendation' | translate }}</p>
+                        <p class="case-evaluation-text">{{ issue.recommendation }}</p>
+                    </div>
+                    <p class="text-muted small case-evaluation-sources" ng-if="issue.supportedBy.length > 0">
+                        {{ 'case_evaluation_supported_by' | translate }}:
+                        <span ng-repeat="source in issue.supportedBy">{{ source.criterion.key ? (source.criterion.key | translate) : source.criterion.fallback }}{{ $last ? '' : ', ' }}</span>
+                    </p>
+                </div>
+            </li>
+        </ol>
+    </section>
+
+    <section class="case-evaluation-section" ng-if="$ctrl.view.evaluators.length > 0">
+        <h4 class="case-evaluation-heading">{{ 'case_evaluation_criteria_title' | translate }}</h4>
+        <p class="text-muted small">{{ 'case_evaluation_criteria_help' | translate }}</p>
+        <details class="case-evaluation-evaluator" ng-repeat="group in $ctrl.view.evaluators">
+            <summary class="case-evaluation-evaluator-summary">
+                <span class="case-evaluation-evaluator-name">{{ group.label.key ? (group.label.key | translate) : group.label.fallback }}</span>
+                <span class="text-muted small">{{ group.countKey | translate:{ count: group.results.length } }}</span>
+            </summary>
+            <div class="case-evaluation-criterion" ng-repeat="result in group.results"
+               >
+                <h5 class="case-evaluation-subheading">{{ result.label.key ? (result.label.key | translate) : result.label.fallback }}</h5>
+                <p class="case-evaluation-text">{{ result.feedback }}</p>
+                <div class="case-evaluation-quotes" ng-if="result.evidence.length > 0">
+                    <p class="case-evaluation-label">{{ 'case_evaluation_case_evidence' | translate }}</p>
+                    <blockquote class="case-evaluation-quote" ng-repeat="quote in result.evidence">{{ quote }}</blockquote>
+                </div>
+                <div ng-if="result.suggestion">
+                    <p class="case-evaluation-label">{{ 'case_evaluation_suggestion' | translate }}</p>
+                    <p class="case-evaluation-text">{{ result.suggestion }}</p>
+                </div>
+            </div>
+        </details>
+    </section>
+</div>

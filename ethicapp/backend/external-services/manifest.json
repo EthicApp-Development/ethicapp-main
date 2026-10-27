@@ -75,15 +75,16 @@
       }
     },
     {
-      "id": "case-analyst",
-      "description": "Skeleton adapter for the Case Analyst AI service; acknowledges newly created cases.",
-      "adapter": "./adapters/case-analyst.adapter.js",
+      "id": "case-analyst-evaluation",
+      "description": "Case Analyst case evaluation: feedback for the case author on the case as discussion material.",
+      "adapter": "./adapters/case-analyst-evaluation.adapter.js",
       "requires": ["case-analyst"],
       "hooks": [
         "case-created",
         "callback-received"
       ],
       "scopes": ["case"],
+      "ui": { "component": "case-evaluation" },
       "callbackAuth": {
         "allowedClientIds": ["case-analyst-api"],
         "requiredRoles": []
