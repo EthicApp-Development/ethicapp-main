@@ -8,6 +8,7 @@ import { DesignPublicationService } from "../../services/design-publication.serv
 import { CaseVideoPickerService } from "../../services/case-video-picker.service.js";
 import { CasesCatalogService } from "../../services/cases-catalog.service.js";
 import { CaseAnalysesService } from "../../services/case-analyses.service.js";
+import { DesignAnalysesService } from "../../services/design-analyses.service.js";
 import { ExternalServicesCatalogService } from "../../services/external-services-catalog.service.js";
 import { LanguageCatalogService } from "../../services/language-catalog.service.js";
 import { TagCatalogService } from "../../services/tag-catalog.service.js";
@@ -45,6 +46,7 @@ app.factory("ActivityStateService", ["$http", "TeacherSocketService", ActivitySt
     .factory("UserProfileService", ["$http", "$rootScope", "Upload", UserProfileService])
     .factory("CasesCatalogService", ["$rootScope", "$http", CasesCatalogService])
     .factory("CaseAnalysesService", ["$http", CaseAnalysesService])
+    .factory("DesignAnalysesService", ["$http", DesignAnalysesService])
     .factory("LanguageCatalogService", ["$http", "$translate", LanguageCatalogService])
     .factory("TagCatalogService", ["$http", "$translate", TagCatalogService]);
 app.service("toast", ["$rootScope", "$timeout", TeacherToastService]);
@@ -239,6 +241,9 @@ import mockCaseAnalysisViewComponent from "../../components/mock-case-analysis-v
 import caseEvaluationViewComponent from "../../components/case-evaluation-view.component.js";
 import caseEvidenceInventoryViewComponent
     from "../../components/case-evidence-inventory-view.component.js";
+// The claim typology of a design, in the design view (#849).
+import claimTypologyPanelComponent from "../../components/claim-typology-panel.component.js";
+import claimTypologyQuestionsComponent from "../../components/claim-typology-questions.component.js";
 import videoFacadeComponent from "../../components/video-facade.component.js";
 import caseAuthorEditorComponent from "../../components/case-author-editor.component.js";
 import caseFormEditorComponent from "../../components/case-form-editor.component.js";
@@ -278,6 +283,8 @@ app.component("mockCaseAnalysisView", mockCaseAnalysisViewComponent);
 // Case Analyst: case evaluation (#844).
 app.component("caseEvaluationView", caseEvaluationViewComponent);
 app.component("caseEvidenceInventoryView", caseEvidenceInventoryViewComponent);
+app.component("claimTypologyPanel", claimTypologyPanelComponent);
+app.component("claimTypologyQuestions", claimTypologyQuestionsComponent);
 app.component("videoFacade", videoFacadeComponent);
 app.component("caseAuthorEditor", caseAuthorEditorComponent);
 app.component("caseFormEditor", caseFormEditorComponent);

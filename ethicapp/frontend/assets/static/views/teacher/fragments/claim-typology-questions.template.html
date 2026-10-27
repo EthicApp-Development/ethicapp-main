@@ -1,0 +1,57 @@
+<section class="claim-typology-questions" aria-label="{{ 'claim_typology_title' | translate }}">
+    <h5 class="claim-typology-questions-title">
+        <i class="fa-solid fa-sitemap" aria-hidden="true"></i>
+        {{ 'claim_typology_title' | translate }}
+    </h5>
+
+    <div class="claim-typology-question" ng-repeat="question in $ctrl.questions track by question.id">
+        <p class="claim-typology-question-heading">
+            <strong>{{ 'claim_typology_question_heading' | translate:{ number: question.questionNumber } }}</strong>
+            <span class="claim-typology-question-text">{{ question.text }}</span>
+        </p>
+
+        <p class="text-warning small" ng-if="question.outOfDate">
+            <i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i>
+            {{ 'claim_typology_question_out_of_date' | translate }}
+        </p>
+
+        <p class="text-muted small" ng-if="!question.typology && $ctrl.isPending()">
+            <i class="fa-solid fa-circle-notch fa-spin" aria-hidden="true"></i>
+            {{ 'claim_typology_question_pending' | translate }}
+        </p>
+
+        <p class="text-muted small" ng-if="!question.typology && !$ctrl.isPending()">
+            {{ 'claim_typology_question_missing' | translate }}
+        </p>
+
+        <div ng-if="question.typology">
+            <p class="claim-typology-focal-action">
+                <span class="text-muted">{{ 'claim_typology_focal_action' | translate }}:</span>
+                {{ question.typology.focalAction }}
+            </p>
+
+            <ul class="list-unstyled claim-typology-types">
+                <li class="claim-typology-type" ng-repeat="type in question.typology.types track by $index">
+                    <p class="claim-typology-type-heading">
+                        <span class="label {{ type.stance.labelClass }}">{{ type.stance.key | translate }}</span>
+                        <strong>{{ type.label }}</strong>
+                        <span class="text-muted small">{{ type.id }}</span>
+                    </p>
+                    <p class="claim-typology-type-description">{{ type.description }}</p>
+                    <p class="claim-typology-type-example small" ng-if="type.exampleStatement">
+                        <span class="text-muted">{{ 'claim_typology_example' | translate }}:</span>
+                        <q>{{ type.exampleStatement }}</q>
+                    </p>
+                    <div class="claim-typology-type-evidence small" ng-if="type.evidence.length > 0">
+                        <span class="text-muted">{{ 'claim_typology_evidence' | translate }}:</span>
+                        <ul class="claim-typology-evidence-list">
+                            <li ng-repeat="fact in type.evidence track by fact.id">
+                                <strong>{{ fact.id }}</strong><span ng-if="fact.statement">: {{ fact.statement }}</span>
+                            </li>
+                        </ul>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </div>
+</section>
