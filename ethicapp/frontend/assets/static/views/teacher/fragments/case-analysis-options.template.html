@@ -1,0 +1,43 @@
+<fieldset class="case-analysis-options" ng-if="$ctrl.hasServices()">
+    <legend>{{ 'case_analysis_section' | translate }}</legend>
+    <div class="checkbox case-form-field">
+        <label for="caseAnalysisEnabled">
+            <input
+                id="caseAnalysisEnabled"
+                type="checkbox"
+                ng-model="$ctrl.formModel.analysisEnabled"
+                aria-describedby="caseAnalysisHelp">
+            {{ 'case_analysis_enable' | translate }}
+        </label>
+        <p id="caseAnalysisHelp" class="help-block">
+            <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+            {{ 'case_analysis_creation_only_help' | translate }}
+        </p>
+    </div>
+
+    <div class="case-form-field" ng-if="$ctrl.isEnabled()" role="group" aria-labelledby="caseAnalysisToolsLabel">
+        <p id="caseAnalysisToolsLabel"><strong>{{ 'case_analysis_tools_label' | translate }}</strong></p>
+        <div class="checkbox" ng-repeat="service in $ctrl.services track by service.id">
+            <label for="{{ $ctrl.getServiceControlId(service) }}">
+                <input
+                    id="{{ $ctrl.getServiceControlId(service) }}"
+                    type="checkbox"
+                    ng-model="$ctrl.formModel.analysisSelection[service.id]"
+                    ng-attr-aria-invalid="{{ $ctrl.shouldShowSelectionError() ? 'true' : undefined }}"
+                    ng-attr-aria-describedby="{{ $ctrl.shouldShowSelectionError() ? 'caseAnalysisSelectionError' : undefined }}">
+                <strong>{{ $ctrl.serviceLabel(service) }}</strong>
+                <span ng-if="$ctrl.serviceDescription(service)"> - {{ $ctrl.serviceDescription(service) }}</span>
+            </label>
+            <p class="help-block" ng-if="$ctrl.serviceUsesLlm(service)">
+                {{ 'case_analysis_llm_notice' | translate }}
+            </p>
+        </div>
+        <p id="caseAnalysisSelectionError" class="help-block text-danger" ng-if="$ctrl.shouldShowSelectionError()" role="alert">
+            {{ 'case_analysis_validation_select_tool' | translate }}
+        </p>
+        <div class="alert alert-info">
+            <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+            {{ 'case_analysis_data_notice' | translate }}
+        </div>
+    </div>
+</fieldset>

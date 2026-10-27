@@ -12,6 +12,7 @@ import {
     removeCaseVideo,
 } from "../helpers/case-videos-form.js";
 import { moveFocusDirection } from "../helpers/ordered-list.js";
+import { hasMissingCaseAnalysisSelection } from "../helpers/case-analysis-options.js";
 
 const CaseFormEditorController = function($scope, $window, $timeout, $translate,
     CasesCatalogService) {
@@ -43,7 +44,8 @@ const CaseFormEditorController = function($scope, $window, $timeout, $translate,
 
         vm.hasAttemptedSubmit = true;
         vm.ensureAuthors();
-        if (!form || !vm.isFormValid(form) || vm.hasDuplicateAuthorEmails() || !vm.onSave) {
+        if (!form || !vm.isFormValid(form) || vm.hasDuplicateAuthorEmails()
+            || vm.hasMissingAnalysisSelection() || !vm.onSave) {
             return;
         }
 
@@ -53,6 +55,11 @@ const CaseFormEditorController = function($scope, $window, $timeout, $translate,
 
     vm.isFormValid = function(form) {
         return form.$valid && !vm.hasMissingRequiredPdf();
+    };
+
+    // AI analyses are chosen only when a case is created (#650).
+    vm.hasMissingAnalysisSelection = function() {
+        return vm.showAnalysisOptions === true && hasMissingCaseAnalysisSelection(vm.formModel);
     };
 
     vm.shouldShowError = function(control) {
@@ -402,16 +409,17 @@ const CaseFormEditorController = function($scope, $window, $timeout, $translate,
 
 const caseFormEditorComponent = {
     bindings: {
-        formModel:      "=",
-        submitLabelKey: "@",
-        isPdfRequired:  "<",
-        showCurrentPdf: "<",
-        licenses:       "<",
-        languages:      "<",
-        currentUserProfile: "<",
-        onSave:         "&",
-        onCancel:       "&",
-        onPdfSelected:  "&",
+        formModel:           "=",
+        submitLabelKey:      "@",
+        isPdfRequired:       "<",
+        showCurrentPdf:      "<",
+        showAnalysisOptions: "<",
+        licenses:            "<",
+        languages:           "<",
+        currentUserProfile:  "<",
+        onSave:              "&",
+        onCancel:            "&",
+        onPdfSelected:       "&",
     },
     controller: [
         "$scope", "$window", "$timeout", "$translate", "CasesCatalogService",

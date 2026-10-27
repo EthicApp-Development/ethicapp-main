@@ -1,3 +1,4 @@
+import { caseAnalysisServiceIdsPayload } from "../helpers/case-analysis-options.js";
 import { caseDocumentsPayload } from "../helpers/case-documents-form.js";
 import { caseVideosPayload } from "../helpers/case-videos-form.js";
 
@@ -167,6 +168,11 @@ let CasesCatalogService = ($rootScope, $http) => {
             formData.append("title", caseData.title);
             formData.append("pdf", caseData.pdf);
             appendCaseSharingFields(formData, caseData);
+            // Only creation sends the AI analyses chosen for the case (#650).
+            const analysisServiceIds = caseAnalysisServiceIdsPayload(caseData);
+            if (analysisServiceIds) {
+                formData.append("analysisServiceIds", analysisServiceIds);
+            }
 
             const response = await $http.post("/cases", formData, {
                 headers: { "Content-Type": undefined },
