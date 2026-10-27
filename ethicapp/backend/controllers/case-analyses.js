@@ -63,6 +63,28 @@ async function isServiceUsable(serviceId) {
     return externalServicesRegistry.isServiceUsable(serviceId);
 }
 
+/**
+ * What the case view needs to show each chosen service's tab (#651): the
+ * frontend component named in the manifest (`ui.component`), the adapter's UI
+ * texts (`tabTitle`, `label`) in both UI locales, and whether the service is
+ * usable now, so the view offers "Generate again" only when it can be
+ * accepted. Returns a Map keyed by service id.
+ */
+export async function describeServices(serviceIds, registry = externalServicesRegistry) {
+    await registry.initialize();
+    const usable = new Set(await registry.usableServiceIds(serviceIds));
+
+    const entries = await Promise.all(serviceIds.map(async serviceId => [serviceId, {
+        ui: {
+            component:    registry.getServiceById(serviceId)?.ui?.component ?? null,
+            translations: await registry.getServiceUiTranslations(serviceId),
+        },
+        usable: usable.has(serviceId),
+    }]));
+
+    return new Map(entries);
+}
+
 // A new generation replays case-created for the reserved service only, so the
 // other services chosen for the case are not triggered again.
 function dispatchGeneration(caseRow, reservation) {
@@ -82,6 +104,7 @@ const defaultDependencies = {
     isServiceUsable,
     getCaseText,
     dispatchGeneration,
+    describeServices:  serviceIds => describeServices(serviceIds),
 };
 
 function errorResponse(status, message, code, extra = {}) {
@@ -123,7 +146,31 @@ function okResponse(result, status = 200) {
     return { status, body: { status: "ok", result } };
 }
 
-// Lists the services chosen for the case with their status, without documents.
+const UNDESCRIBED_SERVICE = Object.freeze({
+    ui:     Object.freeze({ component: null, translations: null }),
+    usable: false,
+});
+
+// The service descriptions never block the listing: without them the case
+// view falls back to the service id and the generic panel.
+async function describeServicesSafely(serviceIds, dependencies) {
+    if (serviceIds.length === 0 || !dependencies.describeServices) {
+        return new Map();
+    }
+
+    try {
+        return await dependencies.describeServices(serviceIds);
+    } catch (error) {
+        console.warn("[case-analyses] Could not describe the analysis services.", error);
+        return new Map();
+    }
+}
+
+/**
+ * Lists the services chosen for the case with their status, without
+ * documents. Each entry also carries `ui: { component, translations }` and
+ * `usable` (see describeServices), for the case view tabs.
+ */
 export async function listCaseAnalysesForOwner({
     caseId,
     userId,
@@ -134,7 +181,15 @@ export async function listCaseAnalysesForOwner({
     }
 
     const rows = await dependencies.listAnalyses(caseId);
-    return okResponse(rows.map(row => serializeCaseAnalysis(row)));
+    const descriptions = await describeServicesSafely(
+        rows.map(row => row.service_id),
+        dependencies
+    );
+
+    return okResponse(rows.map(row => {
+        const { ui, usable } = descriptions.get(row.service_id) ?? UNDESCRIBED_SERVICE;
+        return { ...serializeCaseAnalysis(row), ui, usable };
+    }));
 }
 
 export async function getCaseAnalysisForOwner({

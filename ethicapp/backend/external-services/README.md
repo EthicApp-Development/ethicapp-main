@@ -263,7 +263,7 @@ Each manifest entry describes one service:
 | `hooks` | no | Declarative list of the hooks the adapter subscribes to. Non-kebab-case names are dropped with a warning. The registry does not enforce that `subscribe()` calls match this list; it is exposed through `GET /external-services` for operators and the teacher UI, so keep it in sync with the adapter. |
 | `globalHooks` | no | Hooks the service opts into at manifest level, without an activity-design opt-in. Defaults to `[]`. Each name must be kebab-case and must also appear in `hooks`; other entries are dropped with a warning and duplicates are removed. Only consulted by `dispatchGlobalHook()` (see "Hook enablement"). Exposed through `GET /external-services`. |
 | `scopes` | no | Where the service operates: `case` (case documents), `design` (activity designs, see "Design Analyses"), `response` (student responses) or `chat` (group chat). Defaults to `[]`. Unknown values are dropped with a warning and duplicates are removed. Screens list services by scope (see "Listing services"), so an entry without scopes appears in none of them; `__tests__/manifest.node-test.mjs` requires at least one. |
-| `ui` | no | `{ component }`: the kebab-case name of the EthicApp frontend component that will show the service's analysis in the case view. Defaults to `{ component: null }`; other names are dropped with a warning. The texts come from the adapter, not from the manifest (see "UI translations"). |
+| `ui` | no | `{ component }`: the kebab-case name of the EthicApp frontend component that shows the service's analysis in its case view tab (see "Case view tabs"). Defaults to `{ component: null }`; other names are dropped with a warning. The texts come from the adapter, not from the manifest (see "UI translations"). |
 | `descriptor` | no | `{ path }`: the capability descriptor the service's AI backend publishes (#687). Its id (`service.id` in the descriptor) is the one AI Additions service in `requires`, so an adapter with a descriptor requires exactly one service; `descriptor.serviceId` is no longer accepted (#812). That id may differ from `id`: ids are mapped, not renamed, so stored designs, chat agents and jobs keep the manifest id. `path` is the descriptor route relative to the AI Additions connection's `base_url`, for example `/polyadic-agent/api/capabilities`; it must be an absolute path without host, query or `..` segments. An invalid path is dropped with a warning. `GET /external-services` exposes `descriptor.serviceId` and a summary (see "Listing services"); the route stays internal (`getServiceDescriptor()`). |
 | `capabilities` | — | Removed (#726). Entries that still declare it log a deprecation warning and the key is ignored. A service that processes student responses declares the `response` scope instead; the student app shows the processing state for those services. |
 | `enabled` | — | Removed (#812). An entry that declares it rejects the catalog; usability is decided at dispatch (see "Usability"). |
@@ -854,7 +854,7 @@ teachers `404 CASE_NOT_FOUND`. Services not chosen for the case answer
 
 | Endpoint | Description |
 | --- | --- |
-| `GET /cases/:id/analyses` | The chosen services with status and timestamps, without documents. |
+| `GET /cases/:id/analyses` | The chosen services with status and timestamps, without documents. Each entry also carries `ui: { component, translations }`, as in `GET /external-services`, and `usable`, whether the service is usable now (see "Case view tabs"). |
 | `GET /cases/:id/analyses/:serviceId` | One analysis with its document. |
 | `PUT /cases/:id/analyses/:serviceId` | Body `{ document }`, validated by the adapter. Answers `405 CASE_ANALYSIS_NOT_EDITABLE` without a validator, `400 CASE_ANALYSIS_DOCUMENT_INVALID` with `details`, and `409 CASE_ANALYSIS_PROCESSING` while a generation is in flight. Records `reviewed_at` and `reviewed_by`. |
 | `POST /cases/:id/analyses/:serviceId/generate` | Reserves a new generation, replays `case-created` for that service only, and answers `202` with the reserved analysis. Answers `409 CASE_ANALYSIS_PROCESSING` while a generation is in flight and `503 CASE_ANALYSIS_SERVICE_DISABLED` when the service is disabled. It also recovers stale generations. |
@@ -862,6 +862,33 @@ teachers `404 CASE_NOT_FOUND`. Services not chosen for the case answer
 `mock-case-analysis` (`adapters/mock-case-analysis.adapter.js`) is the reference
 implementation: it runs in the web process, counts the words of the case, and
 stores an excerpt.
+
+### Case view tabs
+
+The teacher case view (#651) shows the case text as its first and default tab,
+then one tab per chosen service, in the order of `GET /cases/:id/analyses`.
+Cases without analyses show no tab bar. The tab title is the adapter's
+`tabTitle` in the UI language, or its `label`, or the service id. An analysis
+tab loads its document (`GET /cases/:id/analyses/:serviceId`) only when it is
+opened, and the list is polled while a generation is in flight.
+
+AngularJS cannot load a component named by the manifest, so the frontend keeps
+an allowlist from `ui.component` to registered components
+(`CASE_ANALYSIS_COMPONENTS` in `ethicapp/frontend/assets/js/helpers/case-analyses.js`).
+A service whose component is missing or not in the allowlist gets the generic
+panel, which shows the document's fields read-only. Either way the tab shows
+the status, the latest error and "Generate again" (with a confirmation), which
+is offered only when the service is `usable`.
+
+To add a view for a new service:
+
+1. Declare `ui: { component: "<name>" }` in its manifest entry.
+2. Register an AngularJS component in `ethicapp/frontend/assets/js/modules/teacher/teacher-admin.mjs` with
+   the bindings `analysis` (the analysis with its `document`), `caseItem` and
+   `onAnalysisUpdated` (call it with the analysis a `PUT` returns).
+3. Map `<name>` to the component's element name in `CASE_ANALYSIS_COMPONENTS`.
+
+`mock-case-analysis` has one (`mock-case-analysis-view`).
 
 ## Design Analyses
 

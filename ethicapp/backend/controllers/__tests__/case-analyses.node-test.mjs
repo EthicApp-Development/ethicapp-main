@@ -5,6 +5,7 @@ import express from "express";
 
 import caseAnalysesRouter, {
     createCaseAnalysesRouter,
+    describeServices,
     generateCaseAnalysisForOwner,
     getCaseAnalysisForOwner,
     listCaseAnalysesForOwner,
@@ -102,6 +103,106 @@ test("listCaseAnalysesForOwner: lists the chosen services without documents", as
         generatedAt:    "2026-10-22T10:05:00.000Z",
         reviewedAt:     null,
         updatedAt:      "2026-10-22T10:05:00.000Z",
+        ui:             { component: null, translations: null },
+        usable:         false,
+    });
+});
+
+test("listCaseAnalysesForOwner: adds each service's UI metadata and usability", async () => {
+    const translations = {
+        es_CL: { label: "Revisión", description: "Revisa el caso.", tabTitle: "Revisión" },
+        en_US: { label: "Check", description: "Checks the case.", tabTitle: "Check" },
+    };
+    const described = [];
+    const { dependencies } = makeDependencies({
+        describeServices: async (serviceIds) => {
+            described.push(serviceIds);
+            return new Map([
+                ["svc-ready", { ui: { component: "check-view", translations }, usable: true }],
+            ]);
+        },
+    });
+
+    const { status, body } = await listCaseAnalysesForOwner({
+        caseId: 7,
+        userId: OWNER_ID,
+        dependencies,
+    });
+
+    assert.equal(status, 200);
+    assert.deepEqual(described, [["svc-ready", "svc-busy", "svc-stale", "svc-new"]]);
+    assert.deepEqual(body.result[0].ui, { component: "check-view", translations });
+    assert.equal(body.result[0].usable, true);
+    // Services without a description fall back to no component, no texts and not usable.
+    assert.deepEqual(body.result[1].ui, { component: null, translations: null });
+    assert.equal(body.result[1].usable, false);
+});
+
+test("listCaseAnalysesForOwner: lists the analyses when describing services fails", async () => {
+    const { dependencies } = makeDependencies({
+        describeServices: async () => {
+            throw new Error("registry unavailable");
+        },
+    });
+
+    const originalWarn = console.warn;
+    console.warn = () => {};
+    let response;
+    try {
+        response = await listCaseAnalysesForOwner({ caseId: 7, userId: OWNER_ID, dependencies });
+    } finally {
+        console.warn = originalWarn;
+    }
+
+    assert.equal(response.status, 200);
+    assert.equal(response.body.result.length, 4);
+    assert.ok(response.body.result.every(analysis => analysis.ui.component === null
+        && analysis.usable === false));
+});
+
+test("listCaseAnalysesForOwner: does not describe services when none was chosen", async () => {
+    let describeCalls = 0;
+    const { dependencies } = makeDependencies({
+        listAnalyses:     async () => [],
+        describeServices: async () => {
+            describeCalls += 1;
+            return new Map();
+        },
+    });
+
+    const { status, body } = await listCaseAnalysesForOwner({
+        caseId: 7,
+        userId: OWNER_ID,
+        dependencies,
+    });
+
+    assert.equal(status, 200);
+    assert.deepEqual(body.result, []);
+    assert.equal(describeCalls, 0);
+});
+
+test("describeServices: reads component, UI texts and usability from the registry", async () => {
+    const translations = {
+        es_CL: { label: "Prueba", description: "Prueba.", tabTitle: "Prueba" },
+        en_US: { label: "Mock", description: "Mock.", tabTitle: "Mock" },
+    };
+    const services = { "svc-mock": { ui: { component: "mock-view" } } };
+    const registry = {
+        initialize:               async () => {},
+        usableServiceIds:         async ids => ids.filter(id => id === "svc-mock"),
+        getServiceById:           id => services[id] ?? null,
+        getServiceUiTranslations: async id => (id === "svc-mock" ? translations : null),
+    };
+
+    const descriptions = await describeServices(["svc-mock", "svc-unknown"], registry);
+
+    assert.deepEqual(descriptions.get("svc-mock"), {
+        ui:     { component: "mock-view", translations },
+        usable: true,
+    });
+    assert.deepEqual(descriptions.get("svc-unknown"), {
+        ui:     { component: null, translations: null },
+        usable: false,
     });
 });
 

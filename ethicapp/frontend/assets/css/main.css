@@ -3299,6 +3299,92 @@ tr.group-summary {
     overflow-wrap: anywhere;
 }
 
+/* Case view tabs (#651): the case text, then one tab per analysis chosen for
+   the case. The tab bar scrolls sideways on phones (teacher-index-tabs). */
+.case-view-tabs-bar {
+    margin-bottom: 16px;
+}
+
+.case-view-tab-status {
+    margin-left: 4px;
+}
+
+.case-view-tabs-retry {
+    margin-left: 8px;
+}
+
+.case-analysis-panel-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+    margin-bottom: 12px;
+}
+
+.case-analysis-panel-status {
+    font-weight: 600;
+}
+
+.case-analysis-panel-dates {
+    font-size: 12px;
+}
+
+.case-analysis-generate-button,
+.case-analysis-generate-progress {
+    margin-left: auto;
+}
+
+.case-analysis-confirm-text {
+    margin-bottom: 10px;
+}
+
+.case-analysis-confirm-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+/* Fields of an analysis shown without a dedicated view: label above value on
+   phones, side by side from 768px. */
+.case-analysis-generic-fields {
+    margin: 0;
+}
+
+.case-analysis-generic-field {
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+    overflow-wrap: anywhere;
+}
+
+.case-analysis-generic-field dd {
+    margin: 0;
+}
+
+.case-analysis-generic-field pre {
+    max-height: 480px;
+    margin: 0;
+    overflow: auto;
+    white-space: pre-wrap;
+}
+
+@media (width >= 768px) {
+    .case-analysis-generic-field {
+        display: grid;
+        grid-template-columns: minmax(120px, 1fr) 3fr;
+        gap: 12px;
+    }
+}
+
+.mock-case-analysis-excerpt-title {
+    margin-top: 16px;
+    font-size: 16px;
+}
+
+.mock-case-analysis-excerpt {
+    font-size: inherit;
+    overflow-wrap: anywhere;
+}
+
 .case-material-document-link {
     display: flex;
     align-items: center;

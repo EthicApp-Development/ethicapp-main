@@ -99,6 +99,7 @@
         "case-created"
       ],
       "scopes": ["case"],
+      "ui": { "component": "mock-case-analysis" },
       "callbackAuth": {
         "allowedClientIds": ["ethicapp-external-mock"],
         "requiredRoles": []

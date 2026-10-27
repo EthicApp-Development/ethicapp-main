@@ -1,0 +1,15 @@
+<div class="mock-case-analysis-view">
+    <p class="text-muted small">{{ 'case_analysis_mock_note' | translate }}</p>
+    <dl class="case-analysis-generic-fields">
+        <div class="case-analysis-generic-field">
+            <dt>{{ 'case_analysis_mock_word_count' | translate }}</dt>
+            <dd>{{ $ctrl.document().wordCount }}</dd>
+        </div>
+        <div class="case-analysis-generic-field">
+            <dt>{{ 'case_analysis_mock_character_count' | translate }}</dt>
+            <dd>{{ $ctrl.document().characterCount }}</dd>
+        </div>
+    </dl>
+    <h4 class="mock-case-analysis-excerpt-title">{{ 'case_analysis_mock_excerpt' | translate }}</h4>
+    <blockquote class="mock-case-analysis-excerpt">{{ $ctrl.document().excerpt }}</blockquote>
+</div>
