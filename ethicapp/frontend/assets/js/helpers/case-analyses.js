@@ -7,9 +7,11 @@
 // teacher-admin.mjs. Services whose component is missing or not listed get the
 // generic panel.
 export const CASE_ANALYSIS_COMPONENTS = Object.freeze({
-    "mock-case-analysis": "mock-case-analysis-view",
+    "mock-case-analysis":      "mock-case-analysis-view",
     // Case Analyst: case evaluation (#844).
-    "case-evaluation":    "case-evaluation-view",
+    "case-evaluation":         "case-evaluation-view",
+    // Case Analyst: evidence inventory (#652).
+    "case-evidence-inventory": "case-evidence-inventory-view",
 });
 
 const ELEMENT_NAME_PATTERN = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)+$/;

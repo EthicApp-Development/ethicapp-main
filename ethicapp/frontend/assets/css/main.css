@@ -3485,6 +3485,63 @@ tr.group-summary {
     border-top: 1px solid #eee;
 }
 
+/* Evidence inventory tab (#652): facts by theme with their literal quotes,
+   exclusions, and the review form. Long quotes wrap on phones. */
+.case-evidence-inventory {
+    overflow-wrap: anywhere;
+}
+
+.case-evidence-inventory-header,
+.case-evidence-inventory-edit-item-header,
+.case-evidence-inventory-form-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.case-evidence-inventory-header {
+    margin-bottom: 8px;
+}
+
+.case-evidence-inventory-edit-button {
+    margin-left: auto;
+}
+
+.case-evidence-inventory-section-title {
+    margin-top: 20px;
+    font-size: 16px;
+}
+
+.case-evidence-inventory-group-title {
+    padding-bottom: 4px;
+    border-bottom: 1px solid #b5c2fd;
+    font-weight: bold;
+}
+
+.case-evidence-inventory-item {
+    margin-bottom: 12px;
+}
+
+.case-evidence-inventory-line {
+    margin-bottom: 4px;
+}
+
+.case-evidence-inventory-quote {
+    padding-left: 12px;
+    font-style: italic;
+}
+
+.case-evidence-inventory-edit-item-header {
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.case-evidence-inventory-fieldset,
+.case-evidence-inventory-form-actions {
+    margin-top: 20px;
+}
+
 .case-material-document-link {
     display: flex;
     align-items: center;
