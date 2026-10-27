@@ -1,12 +1,14 @@
 import { query as defaultQuery } from '../config/database.js';
 
 // Data access for the AI Additions connection and the append-only AI service
-// policy (database/migrations/V22__ai_service_policy.sql). The console is the
+// policy (database/migrations/V22__ai_service_policy.sql, and V26 for the
+// adapters a version switches off). The console is the
 // only writer of both tables; ethicapp only pins sessions to a version.
 
 const MAX_URL_LENGTH = 2048;
 const MAX_NOTE_LENGTH = 1000;
 const MAX_ALLOWED_SERVICES = 100;
+const MAX_DISABLED_ADAPTERS = 100;
 const SERVICE_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/;
 
 export class AiServicesValidationError extends Error {
@@ -91,27 +93,45 @@ export function parseConnectionInput(body = {}) {
   return { baseUrl, keycloakPublicUrl };
 }
 
-// Validates { allowedServiceIds, note } from a request body. Ids are trimmed
-// and deduplicated, keeping the first-seen order.
-export function parsePolicyInput(body = {}) {
-  const { allowedServiceIds, note } = body;
-
-  if (!Array.isArray(allowedServiceIds) || allowedServiceIds.length > MAX_ALLOWED_SERVICES) {
-    throw new AiServicesValidationError('INVALID_ALLOWED_SERVICE_IDS');
+// Trims and deduplicates a list of ids, keeping the first-seen order, or
+// throws `code` when it is not an array of at most `maxLength` valid ids.
+function parseIdList(value, { code, maxLength }) {
+  if (!Array.isArray(value) || value.length > maxLength) {
+    throw new AiServicesValidationError(code);
   }
 
   const ids = [];
-  for (const rawId of allowedServiceIds) {
+  for (const rawId of value) {
     const id = typeof rawId === 'string' ? rawId.trim() : '';
 
     if (!SERVICE_ID_PATTERN.test(id)) {
-      throw new AiServicesValidationError('INVALID_ALLOWED_SERVICE_IDS');
+      throw new AiServicesValidationError(code);
     }
 
     if (!ids.includes(id)) {
       ids.push(id);
     }
   }
+
+  return ids;
+}
+
+// Validates { allowedServiceIds, disabledAdapterIds?, note } from a request
+// body. allowedServiceIds are AI Additions service ids; disabledAdapterIds
+// (#864) are the EthicApp adapters of those services that the version
+// switches off, and default to none. Ids are trimmed and deduplicated,
+// keeping the first-seen order.
+export function parsePolicyInput(body = {}) {
+  const { allowedServiceIds, disabledAdapterIds = [], note } = body;
+
+  const ids = parseIdList(allowedServiceIds, {
+    code: 'INVALID_ALLOWED_SERVICE_IDS',
+    maxLength: MAX_ALLOWED_SERVICES
+  });
+  const disabledIds = parseIdList(disabledAdapterIds ?? [], {
+    code: 'INVALID_DISABLED_ADAPTER_IDS',
+    maxLength: MAX_DISABLED_ADAPTERS
+  });
 
   if (note !== undefined && note !== null && typeof note !== 'string') {
     throw new AiServicesValidationError('INVALID_NOTE');
@@ -123,7 +143,7 @@ export function parsePolicyInput(body = {}) {
     throw new AiServicesValidationError('INVALID_NOTE');
   }
 
-  return { allowedServiceIds: ids, note: trimmedNote || null };
+  return { allowedServiceIds: ids, disabledAdapterIds: disabledIds, note: trimmedNote || null };
 }
 
 function toUserSummary(row, prefix) {
@@ -158,6 +178,7 @@ function toPolicyVersion(row) {
   return {
     id: Number(row.id),
     allowedServiceIds: row.allowed_service_ids || [],
+    disabledAdapterIds: row.disabled_adapter_ids || [],
     note: row.note,
     createdAt: row.created_at,
     createdBy: toUserSummary(row, 'created_by'),
@@ -186,6 +207,7 @@ export const POLICY_HISTORY_SQL = `
   SELECT
     v.id,
     v.allowed_service_ids,
+    v.disabled_adapter_ids,
     v.note,
     v.created_at,
     u.id AS created_by_id,
@@ -238,14 +260,15 @@ export function createAiServicesStore({ query = defaultQuery } = {}) {
   }
 
   // Versions are append-only: this only ever inserts a new row.
-  async function createPolicyVersion({ allowedServiceIds, note, userId }) {
+  async function createPolicyVersion({ allowedServiceIds, disabledAdapterIds = [], note, userId }) {
     const result = await query(
       `
-        INSERT INTO ai_service_policy_versions (allowed_service_ids, note, created_by)
-        VALUES ($1::text[], $2, $3)
+        INSERT INTO ai_service_policy_versions
+          (allowed_service_ids, disabled_adapter_ids, note, created_by)
+        VALUES ($1::text[], $2::text[], $3, $4)
         RETURNING id
       `,
-      [allowedServiceIds, note, userId]
+      [allowedServiceIds, disabledAdapterIds, note, userId]
     );
     const versionId = Number(result.rows[0].id);
     const history = await getPolicyHistory();

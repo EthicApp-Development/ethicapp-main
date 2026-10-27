@@ -162,8 +162,23 @@ describe('AI services store input validation', () => {
   it('trims and deduplicates service ids and turns a blank note into null', () => {
     assert.deepEqual(parsePolicyInput({ allowedServiceIds: [' a ', 'b', 'a'], note: '   ' }), {
       allowedServiceIds: ['a', 'b'],
+      disabledAdapterIds: [],
       note: null
     });
+  });
+
+  it('trims and deduplicates switched-off adapter ids, which default to none', () => {
+    assert.deepEqual(parsePolicyInput({
+      allowedServiceIds: ['case-analyst'],
+      disabledAdapterIds: [' case-analyst-claim-typology', 'case-analyst-claim-typology']
+    }).disabledAdapterIds, ['case-analyst-claim-typology']);
+    assert.deepEqual(parsePolicyInput({ allowedServiceIds: [], disabledAdapterIds: null }).disabledAdapterIds, []);
+    for (const disabledAdapterIds of ['case-analyst-claim-typology', [''], [7], Array.from({ length: 101 }, (_, i) => `a${i}`)]) {
+      assert.throws(
+        () => parsePolicyInput({ allowedServiceIds: [], disabledAdapterIds }),
+        (error) => error.code === 'INVALID_DISABLED_ADAPTER_IDS'
+      );
+    }
   });
 });
 
@@ -228,7 +243,8 @@ describe('AI services store queries', () => {
       rows: [
         {
           id: '2',
-          allowed_service_ids: ['polyadic-agent'],
+          allowed_service_ids: ['polyadic-agent', 'case-analyst'],
+          disabled_adapter_ids: ['case-analyst-claim-typology'],
           note: 'Pilot',
           created_at: '2026-10-26T10:00:00.000Z',
           created_by_id: 7,
@@ -255,23 +271,37 @@ describe('AI services store queries', () => {
     assert.deepEqual(history.versions[0].createdBy, { id: 7, name: 'ops@example.org' });
     assert.equal(history.versions[0].launchedSessionCount, 4);
     assert.equal(history.versions[1].createdBy, null);
+    assert.deepEqual(history.versions[0].disabledAdapterIds, ['case-analyst-claim-typology']);
+    assert.deepEqual(history.versions[1].disabledAdapterIds, []);
   });
 
   it('creates a version with an INSERT only, never an UPDATE or DELETE', async () => {
     const { query, calls } = createFakeQuery([
       { rows: [{ id: '3' }] },
-      { rows: [{ id: '3', allowed_service_ids: ['a'], note: null, created_at: 'now', created_by_id: 7, launched_session_count: 0 }] }
+      {
+        rows: [{
+          id: '3',
+          allowed_service_ids: ['a'],
+          disabled_adapter_ids: ['a-adapter'],
+          note: null,
+          created_at: 'now',
+          created_by_id: 7,
+          launched_session_count: 0
+        }]
+      }
     ]);
 
     const version = await createAiServicesStore({ query }).createPolicyVersion({
       allowedServiceIds: ['a'],
+      disabledAdapterIds: ['a-adapter'],
       note: null,
       userId: 7
     });
 
     assert.equal(version.id, 3);
-    assert.match(calls[0].sql, /^INSERT INTO ai_service_policy_versions \(allowed_service_ids, note, created_by\) VALUES \(\$1::text\[\], \$2, \$3\) RETURNING id$/);
-    assert.deepEqual(calls[0].params, [['a'], null, 7]);
+    assert.deepEqual(version.disabledAdapterIds, ['a-adapter']);
+    assert.match(calls[0].sql, /^INSERT INTO ai_service_policy_versions \(allowed_service_ids, disabled_adapter_ids, note, created_by\) VALUES \(\$1::text\[\], \$2::text\[\], \$3, \$4\) RETURNING id$/);
+    assert.deepEqual(calls[0].params, [['a'], ['a-adapter'], null, 7]);
     assert.ok(calls.every((call) => !/\b(UPDATE|DELETE)\b/.test(call.sql)));
   });
 });

@@ -54,7 +54,16 @@ const catalogBody = {
     status: 'active',
     available: true,
     descriptorPath: '/polyadic-agent/api/capabilities',
-    adapters: [{ id: 'polyadic-agents', description: 'Agentes en el chat', requires: ['polyadic-agent'] }]
+    adapters: [
+      {
+        id: 'polyadic-agents',
+        label: 'Agentes de discusión',
+        description: 'Agentes en el chat',
+        scopes: ['chat', 'unknown-scope'],
+        requires: ['polyadic-agent']
+      },
+      { id: 'polyadic-older', description: 'Sin etiqueta ni ámbitos' }
+    ]
   }]
 };
 
@@ -75,7 +84,10 @@ describe('ethicapp AI services catalog client', () => {
         usesLlm: true,
         status: 'active',
         available: true,
-        adapters: [{ id: 'polyadic-agents', description: 'Agentes en el chat' }]
+        adapters: [
+          { id: 'polyadic-agents', label: 'Agentes de discusión', description: 'Agentes en el chat', scopes: ['chat'] },
+          { id: 'polyadic-older', label: null, description: 'Sin etiqueta ni ámbitos', scopes: [] }
+        ]
       }]
     });
     assert.equal(calls[0].url, 'http://ethicapp:8501/api/admin/ai-services/catalog?locale=es_CL');

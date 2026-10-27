@@ -144,12 +144,23 @@ function optionalString(value) {
   return typeof value === 'string' ? value : null;
 }
 
+// The scopes an EthicApp adapter can work on (SERVICE_SCOPES in ethicapp's
+// external-services.service.js); the console groups adapters by them.
+export const ADAPTER_SCOPES = Object.freeze(['case', 'design', 'response', 'chat']);
+
 function sanitizeAdapter(adapter) {
   if (!adapter || typeof adapter.id !== 'string' || !adapter.id) {
     return null;
   }
 
-  return { id: adapter.id, description: optionalString(adapter.description) };
+  return {
+    id: adapter.id,
+    label: optionalString(adapter.label),
+    description: optionalString(adapter.description),
+    scopes: Array.isArray(adapter.scopes)
+      ? ADAPTER_SCOPES.filter((scope) => adapter.scopes.includes(scope))
+      : []
+  };
 }
 
 function sanitizeService(service) {
