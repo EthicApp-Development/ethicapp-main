@@ -11,6 +11,7 @@ import {
     caseDocumentSaveErrorKey,
     caseDocumentsFromCase,
 } from "../../helpers/case-documents-form.js";
+import { caseAnalysisSaveErrorKey } from "../../helpers/case-analysis-options.js";
 
 export function CasesController($scope, $routeParams, $window, $interval, $translate, toast,
     CasesCatalogService, LanguageCatalogService, UserProfileService) {
@@ -93,6 +94,10 @@ export function CasesController($scope, $routeParams, $window, $interval, $trans
             documents:           [],
             initialDocumentKeys: [],
             documentFieldErrors: {},
+
+            // AI analyses, offered only by the creation form (#650).
+            analysisEnabled:   false,
+            analysisSelection: {},
         };
     };
     vm.form = vm.createEmptyCaseForm();
@@ -371,6 +376,10 @@ export function CasesController($scope, $routeParams, $window, $interval, $trans
         const documentErrorKey = caseDocumentSaveErrorKey(error);
         if (documentErrorKey) {
             return documentErrorKey;
+        }
+        const analysisErrorKey = caseAnalysisSaveErrorKey(error);
+        if (analysisErrorKey) {
+            return analysisErrorKey;
         }
 
         switch (error?.data?.code) {

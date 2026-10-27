@@ -296,6 +296,11 @@
         form-model="$ctrl.formModel"
         is-locked="$ctrl.isLocked()">
     </case-attached-documents-editor>
+    <case-analysis-options
+        ng-if="$ctrl.showAnalysisOptions"
+        form-model="$ctrl.formModel"
+        has-attempted-submit="$ctrl.hasAttemptedSubmit">
+    </case-analysis-options>
     <div class="case-form-actions">
         <button type="submit" class="btn btn-primary" ng-disabled="$ctrl.isLocked()">{{ $ctrl.submitLabelKey | translate }}</button>
         <button type="button" class="btn btn-default" ng-click="$ctrl.onCancel()">{{ 'cancel' | translate }}</button>
