@@ -135,6 +135,16 @@ export default {
         available: 'Disponible',
         unavailable: 'No disponible',
         noAdapters: 'Ninguno',
+        adaptersHelp: 'Desactiva un adaptador para detener ese análisis o función mientras el resto del servicio sigue funcionando.',
+        adapterNeedsService: 'Permite el servicio para activar o desactivar sus adaptadores.',
+        enableAdapter: 'Activar {{name}}',
+        scopes: {
+          case: 'Análisis de casos',
+          design: 'Análisis de diseños',
+          response: 'Respuestas',
+          chat: 'Chat',
+          other: 'Otros'
+        },
         note: 'Nota (opcional)',
         notePlaceholder: '¿Por qué este cambio? Por ejemplo, el curso o estudio para el que es.',
         save: 'Guardar como nueva versión',
@@ -148,6 +158,7 @@ export default {
           title: '¿Guardar una nueva versión de la política?',
           allowed: 'La nueva versión permite estos servicios: {{services}}.',
           none: 'La nueva versión no permite ningún servicio.',
+          disabledAdapters: 'Estos adaptadores quedan desactivados: {{adapters}}.',
           confirm: 'Guardar versión'
         },
         columns: {
@@ -159,7 +170,8 @@ export default {
         },
         errors: {
           unknownIds: 'AI Additions no ofrece estos servicios: {{ids}}.',
-          catalogUnavailable: 'No fue posible leer el catálogo para verificar los servicios seleccionados.'
+          catalogUnavailable: 'No fue posible leer el catálogo para verificar los servicios seleccionados.',
+          unknownAdapterIds: 'Estos adaptadores no pertenecen a los servicios permitidos, así que no se pueden desactivar: {{ids}}.'
         }
       },
       history: {
@@ -169,11 +181,13 @@ export default {
         current: 'Actual',
         systemAuthor: 'Sistema',
         noServices: 'Ningún servicio',
+        noDisabledAdapters: 'Ninguno',
         columns: {
           version: 'Versión',
           date: 'Fecha',
           author: 'Autor',
           allowed: 'Servicios permitidos',
+          disabledAdapters: 'Adaptadores desactivados',
           note: 'Nota',
           sessions: 'Sesiones lanzadas'
         }

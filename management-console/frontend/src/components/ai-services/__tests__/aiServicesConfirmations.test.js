@@ -67,6 +67,21 @@ describe('AI services confirmations', () => {
     expect(none.description).toBe('pages.aiServices.services.confirmSave.none');
   });
 
+  it('names the switched-off adapters in the policy confirmation', () => {
+    const namesById = serviceNamesById([{ id: 'case-analyst', name: 'Case Analyst' }]);
+    const adapterNamesById = new Map([['case-analyst-claim-typology', 'Claim typology']]);
+    const request = savePolicyConfirmation({
+      t,
+      input: { allowedServiceIds: ['case-analyst'], disabledAdapterIds: ['case-analyst-claim-typology'], note: '' },
+      namesById,
+      adapterNamesById,
+      createPolicyVersion: vi.fn()
+    });
+
+    expect(request.description).toContain('"services":"Case Analyst"');
+    expect(request.description).toContain('pages.aiServices.services.confirmSave.disabledAdapters {"adapters":"Claim typology"}');
+  });
+
   it('uses keys defined in both locales', () => {
     const keys = [
       'pages.aiServices.connection.confirmSave.title',
@@ -76,6 +91,7 @@ describe('AI services confirmations', () => {
       'pages.aiServices.services.confirmSave.title',
       'pages.aiServices.services.confirmSave.allowed',
       'pages.aiServices.services.confirmSave.none',
+      'pages.aiServices.services.confirmSave.disabledAdapters',
       'pages.aiServices.services.confirmSave.confirm'
     ];
     for (const key of keys) {
@@ -111,6 +127,11 @@ describe('AI services API writes', () => {
     await saveConnection({ baseUrl: 'https://ai.example.org', keycloakPublicUrl: '' }, PASSWORD_STEP_UP);
     await removeConnection(PASSKEY_STEP_UP);
     await createPolicyVersion({ allowedServiceIds: ['polyadic-agent'], note: 'Pilot' }, PASSWORD_STEP_UP);
+    await createPolicyVersion({
+      allowedServiceIds: ['case-analyst'],
+      disabledAdapterIds: ['case-analyst-claim-typology'],
+      note: ''
+    }, PASSKEY_STEP_UP);
 
     expect(requests).toEqual([
       {
@@ -122,7 +143,17 @@ describe('AI services API writes', () => {
       {
         url: '/mng/api/ai-services/policy',
         method: 'POST',
-        body: { allowedServiceIds: ['polyadic-agent'], note: 'Pilot', ...PASSWORD_STEP_UP }
+        body: { allowedServiceIds: ['polyadic-agent'], disabledAdapterIds: [], note: 'Pilot', ...PASSWORD_STEP_UP }
+      },
+      {
+        url: '/mng/api/ai-services/policy',
+        method: 'POST',
+        body: {
+          allowedServiceIds: ['case-analyst'],
+          disabledAdapterIds: ['case-analyst-claim-typology'],
+          note: '',
+          ...PASSKEY_STEP_UP
+        }
       }
     ]);
   });

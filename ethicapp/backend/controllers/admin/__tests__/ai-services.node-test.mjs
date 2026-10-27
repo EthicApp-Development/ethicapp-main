@@ -61,14 +61,41 @@ function tokenResponse(url, claims = {}) {
     });
 }
 
+// A manifest entry; `scopes` is left out when not given.
+function adapter(id, description, requires, scopes, extra = {}) {
+    return { id, description, requires, ...(scopes ? { scopes } : {}), ...extra };
+}
+
 const ADAPTER_CATALOG = Object.freeze({
     services: [
-        { id: "mock-chat-agent", description: "Mock", development: true, requires: [] },
-        { id: "polyadic-devils-advocate", description: "Devil's advocate", requires: ["polyadic-agent"] },
-        { id: "argumentation-tutor-system", description: "ATS", requires: ["argumentation-tutor"] },
-        { id: "polyadic-second", description: "Second Polyadic adapter", requires: ["polyadic-agent"] },
+        adapter("mock-chat-agent", "Mock", [], ["chat"], { development: true }),
+        adapter("polyadic-devils-advocate", "Devil's advocate", ["polyadic-agent"], ["chat"]),
+        adapter("argumentation-tutor-system", "ATS", ["argumentation-tutor"], ["response"]),
+        adapter("polyadic-second", "Second Polyadic adapter", ["polyadic-agent"]),
+        adapter("case-analyst-evaluation", "Evaluation", ["case-analyst"], ["case"]),
+        adapter("case-analyst-claim-typology", "Typology", ["case-analyst"], ["design"]),
     ],
 });
+
+// The adapters' getUiTranslations() texts (#864). The tutor has none, and the
+// second Polyadic adapter fails to give them.
+function adapterTexts(label) {
+    return {
+        es_CL: { label: `${label} (es)`, description: `Descripción de ${label}` },
+        en_US: { label: `${label} (en)`, description: `Description of ${label}` },
+    };
+}
+const ADAPTER_TRANSLATIONS = Object.freeze({
+    "polyadic-devils-advocate":    adapterTexts("Discussion agents"),
+    "case-analyst-evaluation":     adapterTexts("Case evaluation"),
+    "case-analyst-claim-typology": adapterTexts("Claim typology"),
+});
+async function loadAdapterTranslations(adapterId) {
+    if (adapterId === "polyadic-second") {
+        throw new Error("unavailable");
+    }
+    return ADAPTER_TRANSLATIONS[adapterId] ?? null;
+}
 
 function catalogService(id, overrides = {}) {
     return {
@@ -168,6 +195,7 @@ function buildService({
         client,
         getConnection,
         loadAdapterCatalog: async () => ADAPTER_CATALOG,
+        loadAdapterTranslations,
         ...options,
     });
 }
@@ -236,7 +264,7 @@ async function closedPort() {
 }
 
 describe("GET /api/admin/ai-services/catalog", () => {
-    it("returns the catalog with availability and the adapters each service enables", async () => {
+    it("returns the catalog with availability and each service's adapters, scoped and localized", async () => {
         const { calls, fetchImpl } = fakeAiAdditions();
 
         const { status, body } = await getCatalog(buildService({ fetchImpl }));
@@ -255,8 +283,18 @@ describe("GET /api/admin/ai-services/catalog", () => {
                     status:      "available",
                     available:   true,
                     adapters:    [
-                        { id: "polyadic-devils-advocate", description: "Devil's advocate" },
-                        { id: "polyadic-second", description: "Second Polyadic adapter" },
+                        {
+                            id:          "polyadic-devils-advocate",
+                            scopes:      ["chat"],
+                            label:       "Discussion agents (es)",
+                            description: "Descripción de Discussion agents",
+                        },
+                        {
+                            id:          "polyadic-second",
+                            scopes:      [],
+                            label:       null,
+                            description: "Second Polyadic adapter",
+                        },
                     ],
                 },
                 {
@@ -266,7 +304,12 @@ describe("GET /api/admin/ai-services/catalog", () => {
                     usesLlm:     false,
                     status:      "unavailable",
                     available:   false,
-                    adapters:    [{ id: "argumentation-tutor-system", description: "ATS" }],
+                    adapters:    [{
+                        id:          "argumentation-tutor-system",
+                        scopes:      ["response"],
+                        label:       null,
+                        description: "ATS",
+                    }],
                 },
                 {
                     id:          "case-analyst",
@@ -275,7 +318,20 @@ describe("GET /api/admin/ai-services/catalog", () => {
                     usesLlm:     true,
                     status:      "available",
                     available:   true,
-                    adapters:    [],
+                    adapters:    [
+                        {
+                            id:          "case-analyst-evaluation",
+                            scopes:      ["case"],
+                            label:       "Case evaluation (es)",
+                            description: "Descripción de Case evaluation",
+                        },
+                        {
+                            id:          "case-analyst-claim-typology",
+                            scopes:      ["design"],
+                            label:       "Claim typology (es)",
+                            description: "Descripción de Claim typology",
+                        },
+                    ],
                 },
             ],
         });

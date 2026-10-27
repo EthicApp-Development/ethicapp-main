@@ -36,7 +36,17 @@ async function withServer(app, callback) {
 
 const catalogServices = [
   { id: 'polyadic-agent', name: 'Polyadic agent', usesLlm: true, available: true, adapters: [] },
-  { id: 'argumentation-tutor', name: 'Argumentation tutor', usesLlm: true, available: false, adapters: [] }
+  { id: 'argumentation-tutor', name: 'Argumentation tutor', usesLlm: true, available: false, adapters: [] },
+  {
+    id: 'case-analyst',
+    name: 'Case Analyst',
+    usesLlm: true,
+    available: true,
+    adapters: [
+      { id: 'case-analyst-evaluation', label: 'Case evaluation', scopes: ['case'] },
+      { id: 'case-analyst-claim-typology', label: 'Claim typology', scopes: ['design'] }
+    ]
+  }
 ];
 
 function createFakeStore() {
@@ -382,9 +392,68 @@ describe('management-console AI services routes', () => {
 
       assert.deepEqual(calls.createPolicyVersion, [{
         allowedServiceIds: ['polyadic-agent', 'argumentation-tutor'],
+        disabledAdapterIds: [],
         note: 'Pilot',
         userId: 7
       }]);
+    });
+
+    it('appends a version that switches adapters of an allowed service off', async () => {
+      const { app, calls, serviceCalls } = createTestApp();
+
+      await withServer(app, async (baseUrl) => {
+        const response = await fetch(`${baseUrl}/mng/api/ai-services/policy`, jsonRequest('POST', {
+          allowedServiceIds: ['case-analyst'],
+          disabledAdapterIds: [' case-analyst-claim-typology ', 'case-analyst-claim-typology'],
+          ...PASSWORD_CONFIRMATION
+        }));
+        assert.equal(response.status, 201);
+        assert.deepEqual((await response.json()).version.disabledAdapterIds, ['case-analyst-claim-typology']);
+      });
+
+      assert.equal(serviceCalls.catalog.length, 1);
+      assert.deepEqual(calls.createPolicyVersion, [{
+        allowedServiceIds: ['case-analyst'],
+        disabledAdapterIds: ['case-analyst-claim-typology'],
+        note: null,
+        userId: 7
+      }]);
+    });
+
+    it('rejects switching off adapters that are unknown or belong to a service the version does not allow', async () => {
+      const { app, calls } = createTestApp();
+
+      await withServer(app, async (baseUrl) => {
+        const response = await fetch(`${baseUrl}/mng/api/ai-services/policy`, jsonRequest('POST', {
+          allowedServiceIds: ['polyadic-agent'],
+          disabledAdapterIds: ['case-analyst-claim-typology', 'made-up-adapter'],
+          ...PASSWORD_CONFIRMATION
+        }));
+        assert.equal(response.status, 400);
+        assert.deepEqual(await response.json(), {
+          error: 'UNKNOWN_ADAPTER_IDS',
+          unknownAdapterIds: ['case-analyst-claim-typology', 'made-up-adapter']
+        });
+      });
+
+      assert.equal(calls.createPolicyVersion.length, 0);
+    });
+
+    it('checks switched-off adapters against the catalog even when no service is allowed', async () => {
+      const { app, calls } = createTestApp({
+        overrides: { fetchCatalogService: async () => ({ ok: false, error: 'unreachable' }) }
+      });
+
+      await withServer(app, async (baseUrl) => {
+        const response = await fetch(`${baseUrl}/mng/api/ai-services/policy`, jsonRequest('POST', {
+          allowedServiceIds: [],
+          disabledAdapterIds: ['case-analyst-claim-typology'],
+          ...PASSWORD_CONFIRMATION
+        }));
+        assert.equal(response.status, 409);
+      });
+
+      assert.equal(calls.createPolicyVersion.length, 0);
     });
 
     it('rejects ids that are not in the live catalog', async () => {
@@ -437,7 +506,12 @@ describe('management-console AI services routes', () => {
       });
 
       assert.equal(serviceCalls.catalog.length, 0);
-      assert.deepEqual(calls.createPolicyVersion, [{ allowedServiceIds: [], note: 'Stop AI', userId: 7 }]);
+      assert.deepEqual(calls.createPolicyVersion, [{
+        allowedServiceIds: [],
+        disabledAdapterIds: [],
+        note: 'Stop AI',
+        userId: 7
+      }]);
     });
 
     const invalidPolicies = [
@@ -446,6 +520,8 @@ describe('management-console AI services routes', () => {
       [{ allowedServiceIds: [''] }, 'INVALID_ALLOWED_SERVICE_IDS'],
       [{ allowedServiceIds: [42] }, 'INVALID_ALLOWED_SERVICE_IDS'],
       [{ allowedServiceIds: ['bad id'] }, 'INVALID_ALLOWED_SERVICE_IDS'],
+      [{ allowedServiceIds: [], disabledAdapterIds: 'case-analyst-claim-typology' }, 'INVALID_DISABLED_ADAPTER_IDS'],
+      [{ allowedServiceIds: [], disabledAdapterIds: ['bad id'] }, 'INVALID_DISABLED_ADAPTER_IDS'],
       [{ allowedServiceIds: [], note: 12 }, 'INVALID_NOTE'],
       [{ allowedServiceIds: [], note: 'x'.repeat(1001) }, 'INVALID_NOTE']
     ];
@@ -601,7 +677,12 @@ describe('management-console AI services routes', () => {
       await send(app, WRITE_ROUTES[2], PASSWORD_CONFIRMATION);
 
       assert.deepEqual(calls.saveConnection, [{ baseUrl: 'https://ai.example.org', keycloakPublicUrl: null, userId: 7 }]);
-      assert.deepEqual(calls.createPolicyVersion, [{ allowedServiceIds: ['polyadic-agent'], note: 'Pilot', userId: 7 }]);
+      assert.deepEqual(calls.createPolicyVersion, [{
+        allowedServiceIds: ['polyadic-agent'],
+        disabledAdapterIds: [],
+        note: 'Pilot',
+        userId: 7
+      }]);
     });
 
     it('checks policy ids against the catalog before asking for the confirmation', async () => {
@@ -613,6 +694,36 @@ describe('management-console AI services routes', () => {
       assert.equal(response.body.error, 'UNKNOWN_SERVICE_IDS');
       assert.equal(calls.createPolicyVersion.length, 0);
       assert.equal(stepUpCalls.recaptcha.length + stepUpCalls.password.length, 0);
+    });
+
+    it('checks switched-off adapters against the catalog before asking for the confirmation', async () => {
+      const { app, calls, stepUpCalls } = createTestApp();
+
+      const response = await send(app, {
+        ...WRITE_ROUTES[2],
+        body: { allowedServiceIds: ['case-analyst'], disabledAdapterIds: ['made-up-adapter'] }
+      }, PASSWORD_CONFIRMATION);
+
+      assert.equal(response.status, 400);
+      assert.equal(response.body.error, 'UNKNOWN_ADAPTER_IDS');
+      assert.equal(calls.createPolicyVersion.length, 0);
+      assert.equal(stepUpCalls.recaptcha.length + stepUpCalls.password.length, 0);
+    });
+
+    it('asks for the confirmation before saving switched-off adapters', async () => {
+      const { app, calls } = createTestApp();
+      const route = {
+        ...WRITE_ROUTES[2],
+        body: { allowedServiceIds: ['case-analyst'], disabledAdapterIds: ['case-analyst-claim-typology'] }
+      };
+
+      const refused = await send(app, route, {});
+      assert.equal(refused.status, 400);
+      assert.equal(calls.createPolicyVersion.length, 0);
+
+      const applied = await send(app, route, PASSWORD_CONFIRMATION);
+      assert.equal(applied.status, 201);
+      assert.deepEqual(calls.createPolicyVersion[0].disabledAdapterIds, ['case-analyst-claim-typology']);
     });
 
     it('does not ask for a confirmation to test a connection', async () => {

@@ -129,13 +129,15 @@ export function createAiServicesRouter({
   });
 
   // Saving always appends a new version. Ids are checked against the live
-  // catalog; when the catalog cannot be read, only an empty set is accepted,
-  // so an operator can always turn AI off.
+  // catalog: allowed ids must be services it offers, and switched-off ids
+  // (#864) must be EthicApp adapters of the allowed services. When the
+  // catalog cannot be read, only an empty version is accepted, so an operator
+  // can always turn AI off.
   router.post(`${BASE_PATH}/policy`, async (req, res, next) => {
     try {
       const input = parsePolicyInput(req.body);
 
-      if (input.allowedServiceIds.length > 0) {
+      if (input.allowedServiceIds.length > 0 || input.disabledAdapterIds.length > 0) {
         const catalog = await fetchCatalogService({
           locale: normalizeLocale(req.headers['accept-language']),
           ...requestIdentity(req)
@@ -150,6 +152,16 @@ export function createAiServicesRouter({
 
         if (unknownServiceIds.length > 0) {
           return res.status(400).json({ error: 'UNKNOWN_SERVICE_IDS', unknownServiceIds });
+        }
+
+        const allowedIds = new Set(input.allowedServiceIds);
+        const switchableAdapterIds = new Set(catalog.services
+          .filter((service) => allowedIds.has(service.id))
+          .flatMap((service) => service.adapters.map((adapter) => adapter.id)));
+        const unknownAdapterIds = input.disabledAdapterIds.filter((id) => !switchableAdapterIds.has(id));
+
+        if (unknownAdapterIds.length > 0) {
+          return res.status(400).json({ error: 'UNKNOWN_ADAPTER_IDS', unknownAdapterIds });
         }
       }
 

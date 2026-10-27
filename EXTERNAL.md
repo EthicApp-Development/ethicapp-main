@@ -41,13 +41,15 @@ Each manifest entry declares:
 - `description`: teacher-facing description.
 - `adapter`: ESM module path relative to the manifest.
 - `hooks`: hook names supported by the service.
-- `scopes`: where the service operates: `case`, `response` or `chat`. Screens
-  list services by scope.
+- `scopes`: where the service operates: `case`, `design`, `response` or
+  `chat`. Screens list services by scope, and the management console groups
+  the adapters of each AI Additions service by scope.
 - `ui`: `{ component }`, the EthicApp component that will show the service's
   analysis in the case view.
 - `requires`: the AI Additions services the adapter talks to (`polyadic-agent`,
   `argumentation-tutor`, `case-analyst`). Mandatory; the AI service policy
-  allows an adapter only when it allows all of them.
+  allows an adapter only when it allows all of them and does not switch the
+  adapter itself off.
 - `development`: `true` for the mock adapters, which require no AI Additions
   service (`requires: []`) and register only with
   `EXTERNAL_SERVICES_DEVELOPMENT_ADAPTERS=true`.
@@ -58,10 +60,12 @@ Each manifest entry declares:
 There is no `enabled`: the catalog lists adapters, and whether one may be used
 is decided at dispatch by the AI service policy gate
 (`effectiveServiceIds()` in the registry, #815). A production adapter is usable
-when the policy version in force allows every service in its `requires` and a
-valid AI Additions connection is stored. Session hooks follow the version the
-session was pinned to at launch; `case-created`, the teacher listings and
-callbacks follow the current version. Development adapters are usable whenever
+when the policy version in force allows every service in its `requires`, does
+not list the adapter in its `disabled_adapter_ids` (#864, V26), and a valid AI
+Additions connection is stored. Session hooks follow the version the session
+was pinned to at launch; case and design hooks, the teacher listings and
+callbacks follow the current version. Switching an adapter off in a new
+version therefore never affects a running activity's session hooks. Development adapters are usable whenever
 they are registered. See `ethicapp/backend/external-services/README.md`,
 "Usability".
 
@@ -196,7 +200,8 @@ The remaining `AI_ADDITIONS_*` variables are:
   `AI_ADDITIONS_POLYADIC_AGENTS_PIPELINE_TYPE`.
 
 Operators configure the connection, and the AI service policy that decides
-which services may be used, on the management console's AI services page;
+which services may be used and which of their adapters are switched off, on
+the management console's AI services page;
 `INSTALL.md` ("AI Services (AI Additions)") covers the installation scenarios
 and the local development setup.
 
@@ -227,7 +232,14 @@ headers); other roles get `403`.
   one. It answers
   `{ ok: true, contractVersion, locale, services: [{ id, name, description, usesLlm, status, available, adapters }] }`,
   where `adapters` lists the non-development adapters of the catalog in
-  `manifest.json` whose `requires` include the service, as `{ id, description }`.
+  `manifest.json` whose `requires` include the service, as
+  `{ id, scopes, label, description }`. `scopes` comes from the manifest;
+  `label` and `description` are the adapter's `getUiTranslations()` texts in
+  the requested locale (#864). When an adapter gives none, `label` is `null`
+  and `description` is the manifest's. The console groups the adapters by
+  scope (case analyses, design analyses, responses, chat) and offers a switch
+  for each, so it shows, for example, that Case Analyst runs three case
+  analyses and one design analysis (the claim typology).
 - `POST /api/admin/ai-services/connection-test` with
   `{ baseUrl, keycloakPublicUrl? }` obtains a token, checks its issuer and
   reads the catalog against those URLs without saving them, with its own token

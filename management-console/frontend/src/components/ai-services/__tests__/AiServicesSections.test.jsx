@@ -7,7 +7,14 @@ import ConnectionSection from '../ConnectionSection.jsx';
 import ConnectionTestResult from '../ConnectionTestResult.jsx';
 import HistorySection from '../HistorySection.jsx';
 import ServicesSection from '../ServicesSection.jsx';
-import { aiErrorKey, issuerMismatchHint, serviceNamesById } from '../aiServicesFormat.js';
+import {
+  adapterNamesById,
+  adaptersByScope,
+  aiErrorKey,
+  issuerMismatchHint,
+  serviceNamesById,
+  switchableAdapterIds
+} from '../aiServicesFormat.js';
 
 // Without an I18n provider, t() returns the translation key, so assertions
 // look for keys instead of localized text.
@@ -25,7 +32,7 @@ const catalog = {
       usesLlm: true,
       status: 'active',
       available: true,
-      adapters: [{ id: 'polyadic-agents', description: 'Agents in the chat' }]
+      adapters: [{ id: 'polyadic-agents', label: 'Discussion agents', description: 'Agents in the chat', scopes: ['chat'] }]
     },
     {
       id: 'argumentation-tutor',
@@ -35,9 +42,36 @@ const catalog = {
       status: 'maintenance',
       available: false,
       adapters: []
+    },
+    {
+      id: 'case-analyst',
+      name: 'Case Analyst',
+      description: 'Analyses cases',
+      usesLlm: true,
+      status: 'active',
+      available: true,
+      adapters: [
+        { id: 'case-analyst-evaluation', label: 'Case evaluation', description: null, scopes: ['case'] },
+        { id: 'case-analyst-evidence-inventory', label: 'Evidence inventory', description: null, scopes: ['case'] },
+        { id: 'case-analyst-claim-typology', label: 'Claim typology', description: null, scopes: ['design'] },
+        { id: 'case-analyst-topic-listing', label: 'Topic listing', description: null, scopes: ['case'] }
+      ]
     }
   ]
 };
+
+// Whether the input with `id` is rendered checked.
+function isChecked(html, id) {
+  const tag = html.match(new RegExp(`<input[^>]*id="${id}"[^>]*>`))?.[0];
+  if (!tag) {
+    throw new Error(`no input ${id}`);
+  }
+  return tag.includes('checked=""');
+}
+
+function isDisabled(html, id) {
+  return html.match(new RegExp(`<input[^>]*id="${id}"[^>]*>`))[0].includes('disabled=""');
+}
 
 function renderServices(props) {
   return renderToStaticMarkup(
@@ -296,6 +330,41 @@ describe('AI services allowed-services section', () => {
     expect(html).not.toContain('pages.aiServices.services.disallowAll');
   });
 
+  it('groups each service\'s adapters by scope, with Case Analyst under case and design analyses', () => {
+    const html = renderServices({
+      currentVersion: {
+        id: 5,
+        allowedServiceIds: ['polyadic-agent', 'case-analyst'],
+        disabledAdapterIds: ['case-analyst-claim-typology']
+      }
+    });
+
+    const caseAnalyst = html.slice(html.indexOf('data-testid="ai-adapters-case-analyst"'));
+    const caseHeading = caseAnalyst.indexOf('pages.aiServices.services.scopes.case');
+    const designHeading = caseAnalyst.indexOf('pages.aiServices.services.scopes.design');
+    expect(caseHeading).toBeGreaterThan(-1);
+    expect(designHeading).toBeGreaterThan(caseHeading);
+    expect(caseAnalyst.indexOf('Evidence inventory')).toBeGreaterThan(caseHeading);
+    expect(caseAnalyst.indexOf('Evidence inventory')).toBeLessThan(designHeading);
+    expect(caseAnalyst.indexOf('Claim typology')).toBeGreaterThan(designHeading);
+    expect(html).toContain('pages.aiServices.services.scopes.chat');
+    expect(html).toContain('pages.aiServices.services.adaptersHelp');
+
+    expect(isChecked(html, 'ai-adapter-enabled-case-analyst-case-case-analyst-evaluation')).toBe(true);
+    expect(isChecked(html, 'ai-adapter-enabled-case-analyst-design-case-analyst-claim-typology')).toBe(false);
+    expect(isDisabled(html, 'ai-adapter-enabled-case-analyst-design-case-analyst-claim-typology')).toBe(false);
+    expect(isChecked(html, 'ai-adapter-enabled-polyadic-agent-chat-polyadic-agents')).toBe(true);
+  });
+
+  it('only lets adapters of allowed services be switched', () => {
+    const html = renderServices();
+
+    expect(isDisabled(html, 'ai-adapter-enabled-case-analyst-case-case-analyst-evaluation')).toBe(true);
+    expect(isChecked(html, 'ai-adapter-enabled-case-analyst-case-case-analyst-evaluation')).toBe(false);
+    expect(isDisabled(html, 'ai-adapter-enabled-polyadic-agent-chat-polyadic-agents')).toBe(false);
+    expect(html).toContain('pages.aiServices.services.adapterNeedsService');
+  });
+
   it('asks for a connection before listing services', () => {
     const html = renderServices({ hasConnection: false, catalogState: { loading: false, result: null } });
     expect(html).toContain('pages.aiServices.services.noConnection');
@@ -308,6 +377,7 @@ describe('AI services history section', () => {
     const html = renderToStaticMarkup(
       <HistorySection
         namesById={serviceNamesById(catalog.services)}
+        adapterNamesById={adapterNamesById(catalog.services)}
         versions={[
           {
             id: 2,
@@ -315,7 +385,8 @@ describe('AI services history section', () => {
             note: 'Pilot course',
             createdAt: '2026-10-26T10:00:00.000Z',
             createdBy: { id: 7, name: 'Ada Lovelace' },
-            launchedSessionCount: 4
+            launchedSessionCount: 4,
+            disabledAdapterIds: ['case-analyst-claim-typology', 'retired-adapter']
           },
           {
             id: 1,
@@ -330,6 +401,9 @@ describe('AI services history section', () => {
     );
 
     expect(html).toContain('Polyadic agent, retired-service');
+    expect(html).toContain('Claim typology, retired-adapter');
+    expect(html).toContain('pages.aiServices.history.columns.disabledAdapters');
+    expect(html).toContain('pages.aiServices.history.noDisabledAdapters');
     expect(html).toContain('Ada Lovelace');
     expect(html).toContain('Pilot course');
     expect(html).toContain('pages.aiServices.history.systemAuthor');
@@ -349,6 +423,10 @@ describe('AI services translations', () => {
   it('uses the Spanish labels from the issue', () => {
     expect(esCL.pages.aiServices.services.columns.usesLlm).toBe('Usa un LLM');
     expect(esCL.pages.aiServices.services.columns.allowed).toBe('Permitido');
+    expect(esCL.pages.aiServices.services.scopes.case).toBe('Análisis de casos');
+    expect(esCL.pages.aiServices.services.scopes.design).toBe('Análisis de diseños');
+    expect(enUS.pages.aiServices.services.scopes.case).toBe('Case analyses');
+    expect(enUS.pages.aiServices.services.scopes.design).toBe('Design analyses');
   });
 
   it('points missing client credentials to the EthicApp deployment in both locales', () => {
@@ -365,5 +443,34 @@ describe('AI services translations', () => {
   it('maps unknown error codes to the generic message', () => {
     expect(aiErrorKey('something_else')).toBe('pages.aiServices.errors.generic');
     expect(enUS.pages.aiServices.errors.generic).toBeTruthy();
+  });
+});
+
+describe('AI services adapter helpers', () => {
+  it('groups adapters by scope in a fixed order, leaving empty groups out', () => {
+    const groups = adaptersByScope([
+      { id: 'typology', scopes: ['design'] },
+      { id: 'evaluation', scopes: ['case'] },
+      { id: 'both', scopes: ['response', 'chat'] },
+      { id: 'unscoped' }
+    ]);
+    expect(groups.map((group) => [group.scope, group.adapters.map((adapter) => adapter.id)])).toEqual([
+      ['case', ['evaluation']],
+      ['design', ['typology']],
+      ['response', ['both']],
+      ['chat', ['both']],
+      ['other', ['unscoped']]
+    ]);
+  });
+
+  it('names adapters by label and lists the adapters of allowed services', () => {
+    const names = adapterNamesById([{ id: 's', adapters: [{ id: 'a', label: 'Label' }, { id: 'b', label: null }] }]);
+    expect([...names]).toEqual([['a', 'Label'], ['b', 'b']]);
+    expect([...switchableAdapterIds(catalog.services, new Set(['case-analyst']))]).toEqual([
+      'case-analyst-evaluation',
+      'case-analyst-evidence-inventory',
+      'case-analyst-claim-typology',
+      'case-analyst-topic-listing'
+    ]);
   });
 });

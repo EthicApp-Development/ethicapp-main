@@ -3,7 +3,8 @@ import * as rpg2 from "../db/rest-pg-2.js";
 
 /**
  * Storage of the AI Additions connection and of the versioned AI service
- * policy (see database/migrations/V22__ai_service_policy.sql).
+ * policy (see database/migrations/V22__ai_service_policy.sql, and V26 for the
+ * adapters a version switches off).
  *
  * - The connection is a single, unversioned row. No row means no connection,
  *   and then EthicApp makes no AI calls. It is read on every call, never
@@ -36,13 +37,18 @@ import * as rpg2 from "../db/rest-pg-2.js";
  * @property {number} id                                Version id; the highest is current.
  * @property {ReadonlyArray<string>} allowedServiceIds  AI Additions service ids allowed.
  *                                                      Empty means no service is allowed.
+ * @property {ReadonlyArray<string>} disabledAdapterIds EthicApp adapter ids switched off
+ *                                                      although their services are
+ *                                                      allowed (#864, V26). Empty means
+ *                                                      none is switched off.
  * @property {string|null} note                         Operator note.
  * @property {Date} createdAt                           When the version was saved.
  * @property {number|null} createdBy                    User id of its author; null for
  *                                                      the seed version 1.
  */
 
-const VERSION_COLUMNS = "id, allowed_service_ids, note, created_at, created_by";
+const VERSION_COLUMNS =
+    "id, allowed_service_ids, disabled_adapter_ids, note, created_at, created_by";
 const DEFAULT_SESSION_CACHE_SIZE = 10000;
 
 function toConnection(row) {
@@ -64,11 +70,12 @@ function toPolicyVersion(row) {
     }
 
     return Object.freeze({
-        id:                Number(row.id),
-        allowedServiceIds: Object.freeze([...(row.allowed_service_ids ?? [])]),
-        note:              row.note ?? null,
-        createdAt:         row.created_at,
-        createdBy:         row.created_by ?? null,
+        id:                 Number(row.id),
+        allowedServiceIds:  Object.freeze([...(row.allowed_service_ids ?? [])]),
+        disabledAdapterIds: Object.freeze([...(row.disabled_adapter_ids ?? [])]),
+        note:               row.note ?? null,
+        createdAt:          row.created_at,
+        createdBy:          row.created_by ?? null,
     });
 }
 

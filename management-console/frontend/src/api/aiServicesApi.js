@@ -71,6 +71,6 @@ export function fetchPolicy() {
   return getJson('/policy');
 }
 
-export async function createPolicyVersion({ allowedServiceIds, note }, stepUp = {}) {
-  return (await sendJson('POST', '/policy', { allowedServiceIds, note, ...stepUp })).version;
+export async function createPolicyVersion({ allowedServiceIds, disabledAdapterIds = [], note }, stepUp = {}) {
+  return (await sendJson('POST', '/policy', { allowedServiceIds, disabledAdapterIds, note, ...stepUp })).version;
 }

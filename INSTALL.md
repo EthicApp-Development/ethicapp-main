@@ -231,17 +231,23 @@ reCAPTCHA (#841).
   `ai_additions_connection`: where EthicApp reaches AI Additions. Without it,
   EthicApp makes no AI call.
 - **AI service policy (data).** An append-only list of versions,
-  `ai_service_policy_versions`, each naming the AI Additions services allowed.
-  Saving a policy creates a new version; versions are never edited.
+  `ai_service_policy_versions`, each naming the AI Additions services allowed
+  and, among the EthicApp adapters of those services, the ones it switches off
+  (`disabled_adapter_ids`, V26, #864). Allowing Case Analyst, for example,
+  enables three case analyses and the design claim typology; each can be
+  switched off on its own. Saving a policy creates a new version; versions are
+  never edited, and versions saved before V26 switch nothing off.
 
 ### Pinning
 
 Each session is pinned to the policy version that is current when its
 activity is launched. Its phase hooks reach an adapter only when the phase's
 design enables the adapter, the pinned version allows every service the
-adapter requires, and a connection is stored. A new version therefore affects
+adapter requires and does not switch the adapter off, and a connection is
+stored. A new version therefore affects
 activities launched afterwards; running activities keep their version. Case
-analyses (`case-created`) follow the version current when the case is created.
+analyses (`case-created`) follow the version current when the case is created,
+and design analyses the version current when the design is saved.
 The connection is not versioned: running activities follow it when it changes,
 and removing it stops every AI call at once, inbound callbacks included. Design
 editors and case forms offer only the services the current version allows, and
@@ -318,9 +324,13 @@ effect.
    environment. No request was sent, so the cause is not on the AI Additions
    side. The catalog under "Allowed services" reports the same code.
 5. Save the connection.
-6. Under "Allowed services", tick the services to allow, add an optional note
-   and select "Save as a new version". Activities launched from now on use
-   them.
+6. Under "Allowed services", tick the services to allow. Each service lists
+   the EthicApp adapters it enables, grouped by scope (case analyses, design
+   analyses, responses, chat), with a switch for each: switch off the ones
+   this installation should not run. Add an optional note and select "Save as
+   a new version". Activities launched from now on use them. The version
+   history shows the services each version allows and the adapters it
+   switches off.
 
 Removing the connection ("Remove connection") turns AI off again for every
 activity. The policy history is kept and applies again if a connection is
