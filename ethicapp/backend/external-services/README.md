@@ -310,9 +310,9 @@ adapter). The registry never passes them, so they must have safe defaults.
 
 Adapters may also export pure helpers for testing; only `register` and the
 optional `getUiTranslations` (see "UI translations"),
-`validateCaseAnalysisDocument` (see "Case Analyses") and
-`validateDesignAnalysisDocument` (see "Design Analyses") are part of the
-registry contract. The adapter should subscribe only to hooks it handles.
+`validateCaseAnalysisDocument` (see "Case Analyses"),
+`validateDesignAnalysisDocument` and `designAnalysisInput` (see "Design
+Analyses") are part of the registry contract. The adapter should subscribe only to hooks it handles.
 
 Hook names are part of the adapter interface and must use kebab-case
 (`/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/`). Subscriptions and manifest entries with
@@ -565,7 +565,7 @@ failures are isolated from teacher and student requests.
 | `student-response-submitted` | Student response endpoints in `controllers/activities/activities-student.js` | Services enabled for the phase | `sessionId`, `phaseId`, `userId`, `questionId`, `designType`, `requestPayload`, `responsePayload` |
 | `chat-message-received` | `controllers/group-messages.js` after a group chat message is saved | Services enabled for the phase | `sessionId`, `phaseId`, `questionId`, `groupId`, `userId`, `parentId`, `content`, `savedMessage`, `notificationPayload`, `designType` |
 | `case-created` | `POST /cases` after the case, authors, tags, analyses, and render job are persisted, and `POST /cases/:id/analyses/:serviceId/generate` (`helpers/case-lifecycle-helper.js`) | Services chosen for the case when it was created; generate reaches one of them | `caseId`, `caseUuid`, `userId` (creator), `title`, `pdfPath`, `languageCode`, `visibility`, `pdfRenderJobId` |
-| `design-saved` | `POST /designs/:id/analyses/:serviceId/generate` (`helpers/design-analyses-lifecycle-helper.js`); dispatching it when a design is saved comes with #848 | The reserved design-scoped service only | `designId`, `userId` (requester), `caseId`, `languageCode` (the case's), `design` (the design document) |
+| `design-saved` | After `POST /designs` and `PATCH /designs/:id` answer, after `POST /designs/:id/duplicate` (duplicate or import) commits the copy, and from `POST /designs/:id/analyses/:serviceId/generate` (`helpers/design-analyses-lifecycle-helper.js`) | Each design-scoped service whose generation was reserved, one dispatch per service (see "Design Analyses") | `designId`, `userId` (requester), `caseId`, `languageCode` (the case's), `design` (the design document), `analysisInput` and `inputHash` (from the service's `designAnalysisInput()`) |
 | `callback-received` | `POST /external-services/callbacks` | Only the service named in the callback body | `serviceId`, `eventType`, `correlationId`, `eventId`, `requestPayload`, `rawBody`, `auth` |
 
 ### Hook enablement
@@ -878,32 +878,132 @@ the current generation (see "Statuses" and "Reserving generations" above). The
 statements both tables share live in `helpers/analyses-store-helper.js`; the
 design ones are wrapped in `helpers/design-analyses-helper.js`. What differs:
 
-- **No choice in advance.** Rows are not created when the design is created.
-  The first reservation of a service for a design creates its row
-  (`reserveDesignAnalysisGeneration()`, one `INSERT ... ON CONFLICT DO UPDATE`
-  that refuses a generation in flight), and later reservations replace the
-  previous document when their result arrives. Until then the previous
+- **No choice in advance.** Teachers choose nothing: saving a design requests
+  the analyses of every design-scoped service that applies (see "Analyses on
+  save"). The first reservation of a service for a design creates its row,
+  in one `INSERT ... ON CONFLICT DO UPDATE`, and later reservations replace
+  the previous document when their result arrives. Until then the previous
   document stays readable, with status `requested` or `processing`.
 - **Input hash.** Each reservation records `input_hash`, the hash of the input
-  of that generation as the adapter computes it, so a save with an unchanged
-  input can skip the generation (#848). An explicit generation records `NULL`
-  until #848 adds the adapters' input export.
+  of that generation as the adapter computes it (see "Input export"), so a
+  save with an unchanged input runs nothing. An adapter without an input
+  export records `NULL`.
 - **Request.** `requested_at` and `requested_by` describe the latest request,
   not the first one.
 - **Locked designs.** A design used by a launched activity (`designs.locked`)
-  keeps its analyses as they are: generating or editing answers
-  `409 DESIGN_LOCKED`.
+  keeps its analyses as they are. It cannot be saved, so it requests nothing,
+  and generating or editing answers `409 DESIGN_LOCKED`.
+
+### Input export
+
+A design-scoped adapter exports
+
+```js
+export function designAnalysisInput({ design, designCase }) {
+    // null: the service does not apply to this design.
+    // { input, hash }: what the generation works on, and the hash of
+    // everything that determines its result.
+}
+```
+
+It may be async. `design` is the saved design document. `designCase` is
+`{ id, title, languageCode, contentHash }`, or `null` when the design has no
+case (`helpers/design-analysis-input-helper.js`):
+
+- `contentHash` is the SHA-256 of the case PDF (`sha256:<hex>`), which
+  determines the case text. It is taken from the case's render job
+  (`pdf_render_jobs.source_sha256`) or, without one, from the file, so it is
+  available while the case is still rendering, and a copied case has the same
+  one. It is `null` when the case has no readable PDF.
+- The case text itself is not in `designCase`. A handler that needs it waits
+  for it with `waitForCaseDocumentText(caseId)`
+  (`helpers/case-document-render-helper.js`), as `mock-case-analysis` does.
+
+The adapter computes `hash` with `hashAnalysisInput(value)`
+(`helpers/analysis-input-hash.js`): the SHA-256 of the value's JSON with
+sorted keys, as `sha256:<hex>`. The value covers everything the result depends
+on, for example the case's `contentHash` and language and the selected
+questions with their text hashes. It leaves out what differs between a design
+and its copies, such as design and case ids, so a copy keeps the same hash.
+`input` reaches the handler as `context.analysisInput`, together with
+`context.inputHash`, so the handler works on exactly what was hashed.
+
+The registry collects the export (`getDesignAnalysisInputBuilder(serviceId)`).
+An adapter with the `design` scope and no export logs a warning: saving a
+design never runs it, and an explicit generation runs it with `input_hash`
+`NULL`.
+
+`helpers/design-tutor-questions.js` selects the questions the Argumentation
+Tutor discusses (`selectTutorQuestions(design)`): the non-empty semantic
+differential questions of the phases that enable `argumentation-tutor-system`,
+as plain text. Questions have no stable ids, so they are identified by
+position, 1-based as at runtime: `phaseNumber` is `stages.number`,
+`questionNumber` is `differential.orden`, and the id is
+`p<phaseNumber>-q<questionNumber>`. Each question carries `textHash`, the
+SHA-256 of its text, so a result can tell which questions changed.
+
+### Analyses on save
+
+`requestDesignAnalysesOnSave(designId)`
+(`helpers/design-analyses-lifecycle-helper.js`) runs in the background
+(`scheduleDesignAnalysesOnSave()`) after `POST /designs` and
+`PATCH /designs/:id` answer, so saving never waits for it. It reads the
+design as stored and:
+
+1. requests nothing for a locked design, a design whose document is not
+   `valid: true`, or a design without a case;
+2. takes the design-scoped services usable under the current policy version
+   (`getUsableServiceIdsForScope("design")`) that export
+   `designAnalysisInput()`;
+3. asks each one for its input. A service that answers `null` does not apply
+   and gets nothing;
+4. reserves a generation with `reserveDesignAnalysisForSavedInput()`, which
+   reserves nothing when the stored analysis has the same `input_hash` and
+   either its generation is in flight (and not stale) or it is `ready` without
+   an error. A ready analysis with an error keeps the document of an earlier
+   input, so it is requested again, and so is a failed one;
+5. dispatches `design-saved` to that service only, under the job id of its
+   reservation, with its `analysisInput` and `inputHash`.
+
+A save with a changed input while a generation is in flight supersedes it:
+the new reservation takes a new job id, and the older job's `markProcessing`,
+`complete` and `fail` find no row. A save with the same input while one is in
+flight does nothing. Errors of one service are logged and do not affect the
+others or the save.
+
+### Copies
+
+Duplicating or importing a design (`POST /designs/:id/duplicate`) copies the
+source's `ready` analyses to the copy, in the transaction that creates it
+(`copyReadyDesignAnalyses()`): document, schema, input hash, request and
+generation times, and the error of a latest generation that failed while
+keeping the document. Job ids, requesters and review fields are not copied.
+An activity launched right away from the copy therefore has its analyses.
+
+After the copy is committed, it runs the same request as a save. The copied
+case has the same PDF, so the input hash of a copied ready analysis matches
+and nothing runs for it. Services that apply but had no ready analysis on the
+source (in flight, failed, or never requested) are requested for the copy. The
+copied case is also queued for rendering when it has no render job
+(`ensureCasePdfRenderJob()`), so handlers can wait for its text.
 
 ### Dispatch
 
-Generations are dispatched with the `design-saved` hook
-(`helpers/design-analyses-lifecycle-helper.js`), one of `NON_SESSION_HOOKS`, so
-it follows the current policy version. `dispatchDesignSavedHook(context, {
-reservations })` sends it to each reserved service under the job id of its
-reservation and releases a reservation its adapter did not start, as
-`case-created` does. Today only `POST /designs/:id/analyses/:serviceId/generate`
-dispatches it; #848 dispatches it when a design is saved and copies analyses
-with duplicated designs.
+Generations are dispatched with the `design-saved` hook, one of
+`NON_SESSION_HOOKS`, so it follows the current policy version.
+`dispatchDesignSavedHook(context, { reservations })` sends it to each reserved
+service under the job id of its reservation and releases a reservation its
+adapter did not start, as `case-created` does.
+
+### Development adapter
+
+`mock-design-analysis` (development only) applies to designs with a case and
+at least one tutor question. Its input is the case's language and
+`contentHash` and the selected tutor questions, and its `mock-design-analysis/v1`
+document holds `phaseCount` (tutor phases with questions), `questionCount` and
+`questions` (`id`, `phaseNumber`, `questionNumber`, `text`, `textHash`,
+`wordCount`). It calls no external service, so it exercises analyses on save,
+unchanged saves, copies and regeneration locally.
 
 ### Recording results from an adapter
 
@@ -935,7 +1035,7 @@ teachers `404 DESIGN_NOT_FOUND`, also for public designs.
 | `GET /designs/:id/analyses` | The design's analyses with status and timestamps, without documents. |
 | `GET /designs/:id/analyses/:serviceId` | One analysis with its document. `404 DESIGN_ANALYSIS_NOT_FOUND` when the design has none from that service. |
 | `PUT /designs/:id/analyses/:serviceId` | Body `{ document }`, validated by the adapter. Answers `405 DESIGN_ANALYSIS_NOT_EDITABLE` without a validator (every service today), `409 DESIGN_LOCKED` on a locked design, `400 DESIGN_ANALYSIS_DOCUMENT_INVALID` with `details`, and `409 DESIGN_ANALYSIS_PROCESSING` while a generation is in flight. |
-| `POST /designs/:id/analyses/:serviceId/generate` | Reserves a new generation, sends `design-saved` to that service only, and answers `202` with the reserved analysis. Answers `404 DESIGN_ANALYSIS_SERVICE_NOT_FOUND` when the service is not registered with the `design` scope, `409 DESIGN_LOCKED` on a locked design, `503 DESIGN_ANALYSIS_SERVICE_DISABLED` when the service is not usable, and `409 DESIGN_ANALYSIS_PROCESSING` while a generation is in flight. It also recovers stale generations. |
+| `POST /designs/:id/analyses/:serviceId/generate` | Reserves a new generation with the input hash of the service's `designAnalysisInput()`, sends `design-saved` to that service only, and answers `202` with the reserved analysis. It runs whatever the stored input hash. Answers `404 DESIGN_ANALYSIS_SERVICE_NOT_FOUND` when the service is not registered with the `design` scope, `409 DESIGN_LOCKED` on a locked design, `503 DESIGN_ANALYSIS_SERVICE_DISABLED` when the service is not usable, `409 DESIGN_ANALYSIS_NOT_APPLICABLE` when its input export answers `null` for the design, and `409 DESIGN_ANALYSIS_PROCESSING` while a generation is in flight. It also recovers stale generations. |
 
 ## AI Additions Authentication
 

@@ -74,7 +74,7 @@ Current integration suites:
   docker rm -f -v ethicapp-it-pg && docker network rm ethicapp-it
   ```
 
-  The first suite covers the activity launch transaction and the AI service policy pin, including two concurrent launches of the same session. Others cover pending callback results and their concurrent claim (V23), and room-scoped jobs (V24): opening, supersession, closing, and the refusal of a callback to a closed room job; and design analyses (V25): reservation, in-flight and stale generations, conditional completion and failure, replacement of the previous document, and deletion with the design.
+  The first suite covers the activity launch transaction and the AI service policy pin, including two concurrent launches of the same session. Others cover pending callback results and their concurrent claim (V23), and room-scoped jobs (V24): opening, supersession, closing, and the refusal of a callback to a closed room job; and design analyses (V25): reservation, in-flight and stale generations, conditional completion and failure, replacement of the previous document, deletion with the design, reservation on save (unchanged input hash, supersession of a generation in flight), and the copy of ready analyses to a duplicated design.
 
 ### 1.3. End-to-End and Smoke Tests
 

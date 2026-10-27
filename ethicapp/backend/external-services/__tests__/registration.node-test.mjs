@@ -9,7 +9,12 @@ import { ExternalServicesRegistry } from "../../services/external-services.servi
 const MANIFEST_PATH = fileURLToPath(new URL("../manifest.json", import.meta.url));
 
 const PRODUCTION_IDS  = ["polyadic-devils-advocate", "argumentation-tutor-system", "case-analyst"];
-const DEVELOPMENT_IDS = ["mock-ai-response-review", "mock-chat-agent", "mock-case-analysis"];
+const DEVELOPMENT_IDS = [
+    "mock-ai-response-review",
+    "mock-chat-agent",
+    "mock-case-analysis",
+    "mock-design-analysis",
+];
 
 async function registerWithoutNetwork({
     developmentAdapters,
@@ -124,6 +129,14 @@ test("registration: the policy gate decides which shipped adapters are usable", 
     assert.deepEqual(
         await everything.registry.getUsableServiceIdsForScope("case"),
         ["case-analyst", "mock-case-analysis"]
+    );
+    assert.deepEqual(
+        await everything.registry.getUsableServiceIdsForScope("design"),
+        ["mock-design-analysis"]
+    );
+    assert.equal(
+        typeof everything.registry.getDesignAnalysisInputBuilder("mock-design-analysis"),
+        "function"
     );
 
     const caseAnalystOnly = await registerWithoutNetwork({

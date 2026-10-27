@@ -90,6 +90,12 @@ async function getFileMetadata(publicPath) {
     };
 }
 
+// The SHA-256 (hex) of an uploaded file, as pdf_render_jobs.source_sha256
+// records it for the PDF of a case.
+export async function getUploadSha256(publicPath) {
+    return (await getFileMetadata(publicPath)).sha256;
+}
+
 export async function enqueueCasePdfRenderJob({ caseId, pdfPath, metadata = {} }) {
     if (!Number.isSafeInteger(Number(caseId)) || Number(caseId) <= 0) {
         throw new Error("caseId must be a positive integer.");
@@ -181,4 +187,32 @@ export async function enqueueCasePdfRenderJob({ caseId, pdfPath, metadata = {} }
     });
 
     return result;
+}
+
+/**
+ * Queues the render of a case's PDF unless the case has no PDF or already has
+ * a render job. Copying a design copies its case and its PDF (#848), so the
+ * copy needs its own render for its text and page images.
+ *
+ * @returns {Promise<Object|null>} The queued job, or null when none was needed.
+ */
+export async function ensureCasePdfRenderJob(caseId, { metadata = {} } = {}) {
+    const row = await rpg2.singleSQL({
+        dbcon: config.dbconnString,
+        sql:   `
+            SELECT c.pdf_path, prj.id AS pdf_render_job_id
+            FROM ethical_cases AS c
+            LEFT JOIN pdf_render_jobs AS prj
+                ON prj.owner_type = 'case'
+               AND prj.owner_id = c.id
+            WHERE c.id = $1;
+        `,
+        sqlParams: [rpg2.param("plain", Number(caseId))],
+    });
+
+    if (!row?.pdf_path || row.pdf_render_job_id) {
+        return null;
+    }
+
+    return enqueueCasePdfRenderJob({ caseId, pdfPath: row.pdf_path, metadata });
 }

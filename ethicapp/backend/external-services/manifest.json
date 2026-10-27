@@ -103,6 +103,21 @@
         "allowedClientIds": ["ethicapp-external-mock"],
         "requiredRoles": []
       }
+    },
+    {
+      "id": "mock-design-analysis",
+      "description": "Development adapter that analyses designs in process: counts the phases and questions that use the Argumentation Tutor.",
+      "adapter": "./adapters/mock-design-analysis.adapter.js",
+      "development": true,
+      "requires": [],
+      "hooks": [
+        "design-saved"
+      ],
+      "scopes": ["design"],
+      "callbackAuth": {
+        "allowedClientIds": ["ethicapp-external-mock"],
+        "requiredRoles": []
+      }
     }
   ]
 }

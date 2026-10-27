@@ -1,7 +1,9 @@
-// Integration tests for design analyses (#847), against a real PostgreSQL
-// database with migrations V1-V25 applied: the reservation upsert, its
-// in-flight and stale conditions, the conditional completion and failure, and
-// the cascade on design deletion cannot be checked with fakes.
+// Integration tests for design analyses (#847, #848), against a real
+// PostgreSQL database with migrations V1-V25 applied: the reservation upserts
+// (explicit and on save, with their input hash, in-flight, superseding and
+// stale conditions), the conditional completion and failure, the copy of
+// ready analyses, and the cascade on design deletion cannot be checked with
+// fakes.
 //
 // Run with `npm run test:integration`, setting ETHICAPP_INTEGRATION_DATABASE_URL
 // to a disposable database.
@@ -13,11 +15,13 @@ import pg from "pg";
 
 import {
     completeDesignAnalysis,
+    copyReadyDesignAnalyses,
     failDesignAnalysis,
     getDesignAnalysis,
     listDesignAnalyses,
     markDesignAnalysisProcessing,
     releaseUnstartedDesignAnalysis,
+    reserveDesignAnalysisForSavedInput,
     reserveDesignAnalysisGeneration,
     saveReviewedDesignAnalysis,
 } from "../design-analyses-helper.js";
@@ -233,4 +237,173 @@ test("design analyses: of concurrent reservations exactly one is accepted", { sk
     ));
 
     assert.equal(results.filter(Boolean).length, 1);
+});
+
+// ─── analyses on save (#848) ─────────────────────────────────────────────────
+
+const saveReserve = (ids, inputHash) =>
+    reserveDesignAnalysisForSavedInput({ ...ids, inputHash }, query);
+
+test("design analyses on save: the first save creates the row; an unchanged ready input runs nothing", { skip: SKIP_REASON }, async () => {
+    const { designId, serviceId, userId } = await createDesign();
+    const ids = { designId, serviceId };
+
+    const first = await reserveDesignAnalysisForSavedInput({ ...ids, inputHash: "hash-1", userId }, query);
+    assert.equal(first.status, "requested");
+    assert.equal(first.input_hash, "hash-1");
+
+    await markDesignAnalysisProcessing({ ...ids, jobId: first.job_id }, query);
+    await completeDesignAnalysis({
+        serviceId, jobId: first.job_id, documentSchema: "claim-typology/v1", document: { version: 1 },
+    }, query);
+
+    assert.equal(await saveReserve(ids, "hash-1"), null, "the same input is already analysed");
+    const changed = await saveReserve(ids, "hash-2");
+    assert.ok(changed, "a changed input runs again");
+    assert.equal(changed.input_hash, "hash-2");
+    assert.deepEqual((await getDesignAnalysis(ids, query)).document, { version: 1 },
+        "the previous document stays readable");
+});
+
+test("design analyses on save: the same input in flight is not duplicated; a changed one supersedes it", { skip: SKIP_REASON }, async () => {
+    const { designId, serviceId } = await createDesign();
+    const ids = { designId, serviceId };
+
+    const first = await saveReserve(ids, "hash-1");
+    assert.equal(await saveReserve(ids, "hash-1"), null, "requested with the same input");
+
+    await markDesignAnalysisProcessing({ ...ids, jobId: first.job_id }, query);
+    assert.equal(await saveReserve(ids, "hash-1"), null, "processing with the same input");
+
+    // An explicit regeneration still answers 409 while in flight.
+    assert.equal(await reserveDesignAnalysisGeneration({ ...ids, inputHash: "hash-2" }, query), null);
+
+    const second = await saveReserve(ids, "hash-2");
+    assert.ok(second, "a changed input supersedes the generation in flight");
+    assert.notEqual(second.job_id, first.job_id);
+    assert.equal(second.status, "requested");
+
+    assert.equal(await completeDesignAnalysis({
+        serviceId, jobId: first.job_id, documentSchema: "claim-typology/v1", document: { late: true },
+    }, query), null, "the superseded job's late result is not stored");
+    assert.equal(await failDesignAnalysis({ serviceId, jobId: first.job_id, errorCode: "late" }, query), null);
+
+    await markDesignAnalysisProcessing({ ...ids, jobId: second.job_id }, query);
+    await completeDesignAnalysis({
+        serviceId, jobId: second.job_id, documentSchema: "claim-typology/v1", document: { version: 2 },
+    }, query);
+    const row = await getDesignAnalysis(ids, query);
+    assert.equal(row.status, "ready");
+    assert.equal(row.input_hash, "hash-2");
+    assert.deepEqual(row.document, { version: 2 });
+});
+
+test("design analyses on save: a failed, unstarted or stale generation of the same input runs again", { skip: SKIP_REASON }, async () => {
+    const { designId, serviceId } = await createDesign();
+    const ids = { designId, serviceId };
+
+    // Failed without a document.
+    const failedRun = await saveReserve(ids, "hash-1");
+    await markDesignAnalysisProcessing({ ...ids, jobId: failedRun.job_id }, query);
+    await failDesignAnalysis({ serviceId, jobId: failedRun.job_id, errorCode: "timeout" }, query);
+    const retried = await saveReserve(ids, "hash-1");
+    assert.ok(retried, "a failed analysis runs again");
+
+    // Ready with an older document, after its latest generation was not started.
+    await markDesignAnalysisProcessing({ ...ids, jobId: retried.job_id }, query);
+    await completeDesignAnalysis({
+        serviceId, jobId: retried.job_id, documentSchema: "claim-typology/v1", document: { version: 1 },
+    }, query);
+    const unstarted = await saveReserve(ids, "hash-2");
+    await releaseUnstartedDesignAnalysis({ ...ids, jobId: unstarted.job_id }, query);
+    const row = await getDesignAnalysis(ids, query);
+    assert.equal(row.status, "ready");
+    assert.equal(row.input_hash, "hash-2");
+    assert.equal(row.error_code, "generation-not-started");
+    assert.ok(await saveReserve(ids, "hash-2"), "the document is not the one of hash-2");
+
+    // Stale with the same input.
+    await makeStale(ids);
+    assert.ok(await saveReserve(ids, "hash-2"), "a stale generation does not block");
+});
+
+test("design analyses on save: a row stored without an input hash is regenerated", { skip: SKIP_REASON }, async () => {
+    const { designId, serviceId } = await createDesign();
+    const ids = { designId, serviceId };
+
+    await generate(ids, { inputHash: null, document: { version: 1 } });
+
+    assert.ok(await saveReserve(ids, "hash-1"));
+});
+
+test("design analyses on save: of concurrent saves with the same input one reserves", { skip: SKIP_REASON }, async () => {
+    const { designId, serviceId } = await createDesign();
+
+    const results = await Promise.all(Array.from({ length: 5 }, () =>
+        saveReserve({ designId, serviceId }, "hash-1")
+    ));
+
+    assert.equal(results.filter(Boolean).length, 1);
+});
+
+test("design analyses: a copy gets the source's ready analyses only", { skip: SKIP_REASON }, async () => {
+    const source = await createDesign();
+    const [copy] = await dbQuery(`
+        INSERT INTO designs (creator, design)
+        VALUES ($1, '{}'::jsonb)
+        RETURNING id;
+    `, [source.userId]);
+    const services = {
+        ready:     `${source.serviceId}-ready`,
+        failedRun: `${source.serviceId}-failed-run`,
+        inFlight:  `${source.serviceId}-in-flight`,
+        failed:    `${source.serviceId}-failed`,
+    };
+    const ids = serviceId => ({ designId: source.designId, serviceId });
+
+    await generate(ids(services.ready), { inputHash: "hash-ready", document: { version: 1 } });
+    const readyRow = await getDesignAnalysis(ids(services.ready), query);
+
+    await generate(ids(services.failedRun), { inputHash: "hash-1", document: { version: 1 } });
+    const failedRun = await reserveDesignAnalysisGeneration(
+        { ...ids(services.failedRun), inputHash: "hash-2" },
+        query
+    );
+    await markDesignAnalysisProcessing({ ...ids(services.failedRun), jobId: failedRun.job_id }, query);
+    await failDesignAnalysis({ serviceId: services.failedRun, jobId: failedRun.job_id, errorCode: "timeout" }, query);
+
+    await generate(ids(services.inFlight), { inputHash: "hash-1", document: { version: 1 } });
+    await reserveDesignAnalysisGeneration({ ...ids(services.inFlight), inputHash: "hash-2" }, query);
+
+    const failed = await reserveDesignAnalysisGeneration({ ...ids(services.failed), inputHash: "h" }, query);
+    await markDesignAnalysisProcessing({ ...ids(services.failed), jobId: failed.job_id }, query);
+    await failDesignAnalysis({ serviceId: services.failed, jobId: failed.job_id, errorCode: "timeout" }, query);
+
+    const copied = await copyReadyDesignAnalyses(
+        { sourceDesignId: source.designId, targetDesignId: copy.id },
+        query
+    );
+    assert.deepEqual(copied.map(row => row.service_id).sort(), [services.failedRun, services.ready].sort());
+
+    const copyReady = await getDesignAnalysis({ designId: copy.id, serviceId: services.ready }, query);
+    assert.equal(copyReady.status, "ready");
+    assert.deepEqual(copyReady.document, { version: 1 });
+    assert.equal(copyReady.document_schema, "claim-typology/v1");
+    assert.equal(copyReady.input_hash, "hash-ready");
+    assert.equal(copyReady.generated_at.getTime(), readyRow.generated_at.getTime());
+    assert.equal(copyReady.job_id, null);
+    assert.equal(copyReady.requested_by, null);
+    assert.equal(copyReady.reviewed_at, null);
+
+    // The copy's unchanged save runs nothing; its failed run is requested again.
+    assert.equal(await saveReserve({ designId: copy.id, serviceId: services.ready }, "hash-ready"), null);
+    const copyFailedRun = await getDesignAnalysis({ designId: copy.id, serviceId: services.failedRun }, query);
+    assert.equal(copyFailedRun.error_code, "timeout");
+    assert.ok(await saveReserve({ designId: copy.id, serviceId: services.failedRun }, "hash-2"));
+
+    // Copying again keeps what the copy already has.
+    assert.deepEqual(await copyReadyDesignAnalyses(
+        { sourceDesignId: source.designId, targetDesignId: copy.id },
+        query
+    ), []);
 });

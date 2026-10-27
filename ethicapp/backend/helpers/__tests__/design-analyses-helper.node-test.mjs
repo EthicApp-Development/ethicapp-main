@@ -4,11 +4,13 @@ import test from "node:test";
 import { generationInFlight } from "../analyses-store-helper.js";
 import {
     completeDesignAnalysis,
+    copyReadyDesignAnalyses,
     failDesignAnalysis,
     getDesignAnalysis,
     listDesignAnalyses,
     markDesignAnalysisProcessing,
     releaseUnstartedDesignAnalysis,
+    reserveDesignAnalysisForSavedInput,
     reserveDesignAnalysisGeneration,
     saveReviewedDesignAnalysis,
     STALE_GENERATION_INTERVAL,
@@ -101,9 +103,65 @@ test("reserveDesignAnalysisGeneration: creates or re-reserves the row in one sta
             + "ON CONFLICT (design_id, service_id) DO UPDATE"
     ));
     assert.match(calls[0].sql, /SET status = 'requested', job_id = EXCLUDED\.job_id, input_hash = EXCLUDED\.input_hash/);
-    assert.ok(calls[0].sql.includes(`WHERE NOT ${generationInFlight("da").replace(/\s+/g, " ")} RETURNING`));
+    assert.ok(calls[0].sql.includes(`WHERE NOT (${generationInFlight("da").replace(/\s+/g, " ")}) RETURNING`));
     assert.match(calls[0].sql, /AS is_stale\s*,\s*job_id\s*;$/);
     assert.doesNotMatch(calls[0].sql, /document =/, "the previous document is kept");
+    assert.doesNotMatch(calls[0].sql, /IS NOT DISTINCT FROM/, "it runs whatever the stored hash");
+});
+
+test("reserveDesignAnalysisForSavedInput: skips a covered input, supersedes a changed one", async () => {
+    const { query, calls } = makeQuery([{ status: "requested", job_id: JOB_ID }]);
+
+    const row = await reserveDesignAnalysisForSavedInput(
+        { designId: 5, serviceId: "svc-a", inputHash: "sha256:new", userId: 3 },
+        query
+    );
+
+    assert.deepEqual(row, { status: "requested", job_id: JOB_ID });
+    assert.equal(calls.length, 1, "the check and the reservation are the same statement");
+    assert.deepEqual(calls[0].sqlParams, [5, "svc-a", "sha256:new", 3]);
+    assert.ok(calls[0].sql.includes(
+        "INSERT INTO design_analyses AS da (design_id, service_id, job_id, input_hash, requested_by)"
+    ));
+    // Refused only when the stored row has the same hash and its generation
+    // is in flight or succeeded: a different hash supersedes a generation in
+    // flight.
+    assert.ok(calls[0].sql.includes(
+        "WHERE NOT (da.input_hash IS NOT DISTINCT FROM EXCLUDED.input_hash AND "
+            + `(${generationInFlight("da").replace(/\s+/g, " ")} OR `
+            + "(da.status = 'ready' AND da.error_code IS NULL))) RETURNING"
+    ));
+});
+
+test("reserveDesignAnalysisForSavedInput: requires an input hash", async () => {
+    const { query, calls } = makeQuery([]);
+
+    for (const inputHash of [undefined, null, ""]) {
+        await assert.rejects(
+            reserveDesignAnalysisForSavedInput({ designId: 5, serviceId: "svc-a", inputHash }, query),
+            TypeError
+        );
+    }
+    assert.equal(calls.length, 0);
+});
+
+test("copyReadyDesignAnalyses: copies ready rows with their hash, without job or review", async () => {
+    const { query, calls } = makeQuery([{ service_id: "svc-a" }]);
+
+    const rows = await copyReadyDesignAnalyses({ sourceDesignId: 5, targetDesignId: 9 }, query);
+
+    assert.deepEqual(rows, [{ service_id: "svc-a" }]);
+    assert.deepEqual(calls[0].sqlParams, [5, 9]);
+    assert.ok(calls[0].sql.includes(
+        "INSERT INTO design_analyses (design_id, service_id, status, document_schema, document, "
+            + "input_hash, error_code, error_message, requested_at, generated_at) "
+            + "SELECT $2, source.service_id, 'ready',"
+    ));
+    assert.ok(calls[0].sql.includes(
+        "WHERE source.design_id = $1 AND source.status = 'ready' AND source.document IS NOT NULL"
+    ));
+    assert.match(calls[0].sql, /ON CONFLICT \(design_id, service_id\) DO NOTHING/);
+    assert.doesNotMatch(calls[0].sql, /job_id|reviewed_|requested_by/);
 });
 
 test("reserveDesignAnalysisGeneration: without a hash or user both are NULL", async () => {
