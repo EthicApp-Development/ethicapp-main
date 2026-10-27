@@ -22,7 +22,10 @@ const DESIGN_ROW = {
     case_id:            42,
     case_language_code: "es",
     design:             { phases: [] },
+    design_fingerprint: "fingerprint-1",
 };
+// The design snapshot its reservations are bound to.
+const DESIGN_SNAPSHOT = { fingerprint: "fingerprint-1", caseId: 42 };
 const LOCKED_DESIGN_ROW = { ...DESIGN_ROW, locked: true };
 
 const READY_ROW = {
@@ -65,14 +68,17 @@ function makeDependencies(overrides = {}) {
         calls.reserveGeneration.push(args);
         const row = findRow(args.serviceId);
         if (row && isInFlight(row)) {
-            return null;
+            return { designChanged: false, reservation: null };
         }
         return {
-            ...(row ?? READY_ROW),
-            service_id: args.serviceId,
-            status:     "requested",
-            document:   row?.document ?? null,
-            job_id:     JOB_ID,
+            designChanged: false,
+            reservation:   {
+                ...(row ?? READY_ROW),
+                service_id: args.serviceId,
+                status:     "requested",
+                document:   row?.document ?? null,
+                job_id:     JOB_ID,
+            },
         };
     };
     const dispatchGeneration = (designRow, reservation, options) => {
@@ -302,12 +308,15 @@ test("generateDesignAnalysisForOwner: 202 for settled, stale and new analyses", 
     }
 
     // The input hash is stored even when it equals the stored one: an
-    // explicit regeneration always runs.
-    assert.deepEqual(calls.reserveGeneration, [
-        { designId: 5, serviceId: "svc-ready", inputHash: "sha256:input", userId: OWNER_ID },
-        { designId: 5, serviceId: "svc-stale", inputHash: "sha256:input", userId: OWNER_ID },
-        { designId: 5, serviceId: "svc-new", inputHash: "sha256:input", userId: OWNER_ID },
-    ]);
+    // explicit regeneration always runs. Each reservation is bound to the
+    // design row the input was prepared from.
+    assert.deepEqual(calls.reserveGeneration, ["svc-ready", "svc-stale", "svc-new"].map(serviceId => ({
+        designId:       5,
+        serviceId,
+        inputHash:      "sha256:input",
+        userId:         OWNER_ID,
+        designSnapshot: DESIGN_SNAPSHOT,
+    })));
     assert.deepEqual(
         calls.dispatchGeneration.map(({ designRow, reservation, options }) => [
             designRow, reservation.service_id, reservation.job_id, options,
@@ -354,6 +363,28 @@ test("generateDesignAnalysisForOwner: 409 when the service does not apply to the
     assert.equal(body.code, "DESIGN_ANALYSIS_NOT_APPLICABLE");
     assert.deepEqual(resolved, [[DESIGN_ROW, "svc-new"]]);
     assert.equal(calls.reserveGeneration.length, 0);
+    assert.equal(calls.dispatchGeneration.length, 0);
+});
+
+test("generateDesignAnalysisForOwner: 409 DESIGN_CHANGED when a save changed the design meanwhile", async () => {
+    const { dependencies, calls } = makeDependencies({
+        reserveGeneration: async args => {
+            calls.reserveGeneration.push(args);
+            return { designChanged: true, reservation: null };
+        },
+    });
+
+    const { status, body } = await generateDesignAnalysisForOwner({
+        designId:  5,
+        serviceId: "svc-ready",
+        userId:    OWNER_ID,
+        dependencies,
+    });
+
+    assert.equal(status, 409);
+    assert.equal(body.code, "DESIGN_CHANGED");
+    assert.match(body.message, /Try again/);
+    assert.deepEqual(calls.reserveGeneration[0].designSnapshot, DESIGN_SNAPSHOT);
     assert.equal(calls.dispatchGeneration.length, 0);
 });
 
@@ -533,7 +564,7 @@ function makeAnalysisTable() {
             await roundTrip();
             const row = rows.get(serviceId);
             if (row && isInFlight(row)) {
-                return null;
+                return { designChanged: false, reservation: null };
             }
             const reserved = {
                 ...(row ?? { service_id: serviceId, document: null, is_stale: false }),
@@ -541,7 +572,7 @@ function makeAnalysisTable() {
                 job_id: `job-${++jobCount}`,
             };
             rows.set(serviceId, reserved);
-            return { ...reserved };
+            return { designChanged: false, reservation: { ...reserved } };
         },
     };
 }

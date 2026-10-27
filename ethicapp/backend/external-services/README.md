@@ -971,6 +971,19 @@ the new reservation takes a new job id, and the older job's `markProcessing`,
 flight does nothing. Errors of one service are logged and do not affect the
 others or the save.
 
+**Overlapping saves.** Preparing an input takes time (policy, case, adapter),
+and job ids order reservations, not saves. Each reservation is therefore bound
+to the design row its input was prepared from: the row's fingerprint
+(`md5(design::text)`, computed by PostgreSQL from the stored jsonb on both
+sides, see `designFingerprintSql()`) and its `case_id`. The reservation
+statement locks that design row (`FOR SHARE`) and reserves nothing when the
+row no longer matches or is locked (`designChanged: true`). Under READ
+COMMITTED, a save's reservation always runs after its own update commits, so
+an older save either reserves before the newer update and is superseded by
+the newer save's reservation, or runs after it and is rejected. A rejected
+save does nothing (outcome `design-changed`): the newer save owns the
+analysis.
+
 ### Copies
 
 Duplicating or importing a design (`POST /designs/:id/duplicate`) copies the
@@ -980,12 +993,14 @@ generation times, and the error of a latest generation that failed while
 keeping the document. Job ids, requesters and review fields are not copied.
 An activity launched right away from the copy therefore has its analyses.
 
-After the copy is committed, it runs the same request as a save. The copied
-case has the same PDF, so the input hash of a copied ready analysis matches
-and nothing runs for it. Services that apply but had no ready analysis on the
-source (in flight, failed, or never requested) are requested for the copy. The
-copied case is also queued for rendering when it has no render job
-(`ensureCasePdfRenderJob()`), so handlers can wait for its text.
+After the copy is committed, it runs the same request as a save, with the
+same binding to the design row, so a save of the copy that overlaps it wins.
+The copied case has the same PDF, so the input hash of a copied ready
+analysis matches and nothing runs for it. Services that apply but had no
+ready analysis on the source (in flight, failed, or never requested) are
+requested for the copy. The copied case is also queued for rendering when it
+has no render job (`ensureCasePdfRenderJob()`), so handlers can wait for its
+text.
 
 ### Dispatch
 
@@ -1035,7 +1050,7 @@ teachers `404 DESIGN_NOT_FOUND`, also for public designs.
 | `GET /designs/:id/analyses` | The design's analyses with status and timestamps, without documents. |
 | `GET /designs/:id/analyses/:serviceId` | One analysis with its document. `404 DESIGN_ANALYSIS_NOT_FOUND` when the design has none from that service. |
 | `PUT /designs/:id/analyses/:serviceId` | Body `{ document }`, validated by the adapter. Answers `405 DESIGN_ANALYSIS_NOT_EDITABLE` without a validator (every service today), `409 DESIGN_LOCKED` on a locked design, `400 DESIGN_ANALYSIS_DOCUMENT_INVALID` with `details`, and `409 DESIGN_ANALYSIS_PROCESSING` while a generation is in flight. |
-| `POST /designs/:id/analyses/:serviceId/generate` | Reserves a new generation with the input hash of the service's `designAnalysisInput()`, sends `design-saved` to that service only, and answers `202` with the reserved analysis. It runs whatever the stored input hash. Answers `404 DESIGN_ANALYSIS_SERVICE_NOT_FOUND` when the service is not registered with the `design` scope, `409 DESIGN_LOCKED` on a locked design, `503 DESIGN_ANALYSIS_SERVICE_DISABLED` when the service is not usable, `409 DESIGN_ANALYSIS_NOT_APPLICABLE` when its input export answers `null` for the design, and `409 DESIGN_ANALYSIS_PROCESSING` while a generation is in flight. It also recovers stale generations. |
+| `POST /designs/:id/analyses/:serviceId/generate` | Reserves a new generation with the input hash of the service's `designAnalysisInput()`, sends `design-saved` to that service only, and answers `202` with the reserved analysis. It runs whatever the stored input hash. Answers `404 DESIGN_ANALYSIS_SERVICE_NOT_FOUND` when the service is not registered with the `design` scope, `409 DESIGN_LOCKED` on a locked design, `503 DESIGN_ANALYSIS_SERVICE_DISABLED` when the service is not usable, `409 DESIGN_ANALYSIS_NOT_APPLICABLE` when its input export answers `null` for the design, `409 DESIGN_CHANGED` when a save changed (or a launch locked) the design while the input was prepared (try again), and `409 DESIGN_ANALYSIS_PROCESSING` while a generation is in flight. It also recovers stale generations. |
 
 ## AI Additions Authentication
 

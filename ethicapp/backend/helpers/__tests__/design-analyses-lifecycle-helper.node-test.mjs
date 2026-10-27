@@ -117,8 +117,9 @@ test("dispatchDesignSavedHook: nothing is dispatched without reservations", asyn
 
 const SAVED_ROW = {
     ...DESIGN_ROW,
-    id:     5,
-    design: { valid: true, type: "semantic_differential", phases: [] },
+    id:                 5,
+    design:             { valid: true, type: "semantic_differential", phases: [] },
+    design_fingerprint: "fingerprint-1",
 };
 
 const DESIGN_CASE = { id: 42, title: "A case", languageCode: "es", contentHash: "sha256:pdf" };
@@ -130,14 +131,22 @@ const DESIGN_CASE = { id: 42, title: "A case", languageCode: "es", contentHash: 
 function makeStore(rows = {}) {
     let jobCounter = 0;
     const reserved = [];
+    const snapshots = [];
+    // The stored design's fingerprint, which a later save may change.
+    const currentDesign = { fingerprint: SAVED_ROW.design_fingerprint };
 
     const covered = row => (["requested", "processing"].includes(row.status) && !row.is_stale)
         || (row.status === "ready" && !row.error_code);
 
-    const reserve = async ({ designId, serviceId, inputHash, userId }) => {
+    const reserve = async ({ designId, serviceId, inputHash, userId, designSnapshot }) => {
+        snapshots.push(designSnapshot);
+        if (designSnapshot.fingerprint !== currentDesign.fingerprint) {
+            return { designChanged: true, reservation: null };
+        }
+
         const row = rows[serviceId];
         if (row && row.input_hash === inputHash && covered(row)) {
-            return null;
+            return { designChanged: false, reservation: null };
         }
 
         jobCounter += 1;
@@ -151,10 +160,13 @@ function makeStore(rows = {}) {
             job_id:     jobId,
         };
         reserved.push({ designId, serviceId, inputHash, userId });
-        return { design_id: designId, service_id: serviceId, job_id: jobId, status: "requested" };
+        return {
+            designChanged: false,
+            reservation:   { design_id: designId, service_id: serviceId, job_id: jobId, status: "requested" },
+        };
     };
 
-    return { rows, reserve, reserved };
+    return { rows, reserve, reserved, snapshots, currentDesign };
 }
 
 // A registry whose design-scoped services are `inputs`: service id ->
@@ -297,6 +309,35 @@ test("requestDesignAnalysesOnSave: a failed generation of the same input runs ag
     const result = await requestDesignAnalysesOnSave(5, { dependencies });
 
     assert.equal(result.services[0].outcome, "requested");
+});
+
+test("requestDesignAnalysesOnSave: reservations are bound to the design row that was read", async () => {
+    const { dependencies, store } = makeSaveDependencies();
+
+    await requestDesignAnalysesOnSave(5, { dependencies });
+
+    assert.deepEqual(store.snapshots, [{ fingerprint: "fingerprint-1", caseId: 42 }]);
+});
+
+test("requestDesignAnalysesOnSave: a save overtaken by a newer save reserves and dispatches nothing", async () => {
+    const store = makeStore();
+    let releaseCase;
+    const caseGate = new Promise(resolve => { releaseCase = resolve; });
+    const { dependencies, dispatched } = makeSaveDependencies({ store });
+    dependencies.loadCase = async () => {
+        await caseGate;
+        return DESIGN_CASE;
+    };
+
+    const olderSave = requestDesignAnalysesOnSave(5, { dependencies });
+    // A newer save stores another design while the older one loads its case.
+    store.currentDesign.fingerprint = "fingerprint-2";
+    releaseCase();
+
+    const result = await olderSave;
+    assert.deepEqual(result.services, [{ serviceId: "svc-design", outcome: "design-changed" }]);
+    assert.deepEqual(store.reserved, []);
+    assert.deepEqual(dispatched, []);
 });
 
 test("requestDesignAnalysesOnSave: invalid, locked, case-less and missing designs request nothing", async () => {

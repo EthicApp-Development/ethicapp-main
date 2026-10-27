@@ -3,6 +3,7 @@ import * as rpg2 from "../db/rest-pg-2.js";
 import externalServicesRegistry from "../services/external-services.service.js";
 import { dispatchReservedGenerations } from "./analysis-dispatch-helper.js";
 import {
+    designFingerprintSql,
     releaseUnstartedDesignAnalysis,
     reserveDesignAnalysisForSavedInput,
 } from "./design-analyses-helper.js";
@@ -42,6 +43,7 @@ export const DESIGN_ANALYSIS_OUTCOMES = Object.freeze({
     REQUESTED:      "requested",
     UNCHANGED:      "unchanged",
     NOT_APPLICABLE: "not-applicable",
+    DESIGN_CHANGED: "design-changed",
     ERROR:          "error",
 });
 
@@ -137,11 +139,16 @@ export async function resolveDesignAnalysisInput(
     });
 }
 
-async function getDesignRow(designId) {
-    const rows = await rpg2.execSQL({
+/**
+ * The design row a save prepares its analyses from, with the fingerprint that
+ * binds their reservations to it (designSnapshotOf()).
+ */
+export async function readDesignForAnalyses(designId, query = rpg2.execSQL) {
+    const rows = await query({
         dbcon: config.dbconnString,
         sql:   `
             SELECT d.id, d.creator, d.locked, d.case_id, d.design,
+                   ${designFingerprintSql("d")} AS design_fingerprint,
                    c.language_code AS case_language_code
             FROM designs AS d
             LEFT JOIN ethical_cases AS c
@@ -154,12 +161,28 @@ async function getDesignRow(designId) {
     return rows[0] || null;
 }
 
+/**
+ * The snapshot a reservation is bound to: the fingerprint and case of the
+ * design row its input was prepared from. The reservation is rejected when
+ * the stored design no longer matches it (see reservationSql() in
+ * design-analyses-helper.js).
+ *
+ * @param {Object} designRow - A row with `design_fingerprint` and `case_id`.
+ * @returns {{fingerprint: string|null, caseId: number|null}}
+ */
+export function designSnapshotOf(designRow) {
+    return {
+        fingerprint: designRow?.design_fingerprint ?? null,
+        caseId:      toPositiveInteger(designRow?.case_id),
+    };
+}
+
 const defaultSaveDependencies = {
-    getDesignRow,
-    loadCase: loadDesignCase,
-    registry: externalServicesRegistry,
-    reserve:  reserveDesignAnalysisForSavedInput,
-    dispatch: dispatchDesignSavedHook,
+    getDesignRow: designId => readDesignForAnalyses(designId),
+    loadCase:     loadDesignCase,
+    registry:     externalServicesRegistry,
+    reserve:      reserveDesignAnalysisForSavedInput,
+    dispatch:     dispatchDesignSavedHook,
 };
 
 async function requestServiceAnalysis(serviceId, { designRow, design, designCase, userId, deps }) {
@@ -174,12 +197,18 @@ async function requestServiceAnalysis(serviceId, { designRow, design, designCase
             return { serviceId, outcome: DESIGN_ANALYSIS_OUTCOMES.NOT_APPLICABLE };
         }
 
-        const reservation = await deps.reserve({
+        const { designChanged, reservation } = await deps.reserve({
             designId,
             serviceId,
-            inputHash: analysis.hash,
+            inputHash:      analysis.hash,
             userId,
+            designSnapshot: designSnapshotOf(designRow),
         });
+        // A newer save changed the design while this one prepared its input:
+        // that save owns the analysis.
+        if (designChanged) {
+            return { serviceId, outcome: DESIGN_ANALYSIS_OUTCOMES.DESIGN_CHANGED };
+        }
         if (!reservation) {
             return { serviceId, outcome: DESIGN_ANALYSIS_OUTCOMES.UNCHANGED };
         }
@@ -214,6 +243,11 @@ async function requestServiceAnalysis(serviceId, { designRow, design, designCase
  * analysis already covers that input hash (see
  * reserveDesignAnalysisForSavedInput()). A generation in flight for a
  * different input is superseded.
+ *
+ * Each reservation is bound to the design row read here
+ * (designSnapshotOf()): when a newer save changes the design while this one
+ * prepares its inputs, this one reserves nothing (`design-changed`), so it
+ * can never supersede the newer save's generation with an older input.
  *
  * Errors of one service are logged and do not affect the others. The
  * returned promise settles when every dispatched handler has settled.

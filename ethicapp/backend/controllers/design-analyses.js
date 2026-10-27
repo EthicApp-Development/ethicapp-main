@@ -3,6 +3,7 @@ import * as config from "../config/database.config.js";
 import * as rpg2 from "../db/rest-pg-2.js";
 import { requireRole } from "../helpers/auth-helper.js";
 import {
+    designFingerprintSql,
     getDesignAnalysis,
     listDesignAnalyses,
     reserveDesignAnalysisGeneration,
@@ -10,6 +11,7 @@ import {
 } from "../helpers/design-analyses-helper.js";
 import {
     buildDesignSavedContext,
+    designSnapshotOf,
     dispatchDesignSavedHook,
     resolveDesignAnalysisInput,
 } from "../helpers/design-analyses-lifecycle-helper.js";
@@ -36,6 +38,7 @@ async function getOwnedDesign(designId, userId) {
         dbcon: config.dbconnString,
         sql:   `
             SELECT d.id, d.creator, d.locked, d.case_id, d.design,
+                   ${designFingerprintSql("d")} AS design_fingerprint,
                    c.language_code AS case_language_code
             FROM designs AS d
             LEFT JOIN ethical_cases AS c
@@ -280,13 +283,23 @@ export async function generateDesignAnalysisForOwner({
     }
 
     // One conditional statement checks and reserves, so of two concurrent
-    // requests only one is accepted.
-    const reservation = await dependencies.reserveGeneration({
+    // requests only one is accepted. It is bound to the design read above: a
+    // save that changed the design while the input was prepared owns the
+    // analysis.
+    const { designChanged, reservation } = await dependencies.reserveGeneration({
         designId,
         serviceId,
-        inputHash: analysis.hash,
+        inputHash:      analysis.hash,
         userId,
+        designSnapshot: designSnapshotOf(designRow),
     });
+    if (designChanged) {
+        return errorResponse(
+            409,
+            "The design changed while the analysis was being requested. Try again.",
+            "DESIGN_CHANGED"
+        );
+    }
     if (!reservation) {
         return analysisProcessing();
     }

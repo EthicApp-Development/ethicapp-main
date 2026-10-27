@@ -21,10 +21,20 @@ import {
     listDesignAnalyses,
     markDesignAnalysisProcessing,
     releaseUnstartedDesignAnalysis,
-    reserveDesignAnalysisForSavedInput,
-    reserveDesignAnalysisGeneration,
+    reserveDesignAnalysisForSavedInput as reserveForSavedInputResult,
+    reserveDesignAnalysisGeneration as reserveGenerationResult,
     saveReviewedDesignAnalysis,
 } from "../design-analyses-helper.js";
+import {
+    designSnapshotOf,
+    readDesignForAnalyses,
+    requestDesignAnalysesOnSave,
+} from "../design-analyses-lifecycle-helper.js";
+import {
+    designAnalysisInput as mockDesignAnalysisInput,
+    buildMockDesignAnalysis,
+    MOCK_DESIGN_ANALYSIS_SCHEMA,
+} from "../../external-services/adapters/mock-design-analysis.adapter.js";
 
 const DATABASE_URL = process.env.ETHICAPP_INTEGRATION_DATABASE_URL;
 const SKIP_REASON = DATABASE_URL
@@ -60,6 +70,24 @@ async function createDesign() {
         RETURNING id;
     `, [user.id]);
     return { userId: user.id, designId: design.id, serviceId: `svc-design-${suffix}` };
+}
+
+// The snapshot of the design as stored now, as a reader of the design would
+// bind its reservation to.
+async function currentSnapshot(designId) {
+    return designSnapshotOf(await readDesignForAnalyses(designId, query));
+}
+
+// Reservations bound to the current design, returning the reserved row or
+// null, for the tests that are not about the design snapshot.
+async function reserveDesignAnalysisGeneration(args) {
+    const designSnapshot = args.designSnapshot ?? await currentSnapshot(args.designId);
+    return (await reserveGenerationResult({ ...args, designSnapshot }, query)).reservation;
+}
+
+async function reserveDesignAnalysisForSavedInput(args) {
+    const designSnapshot = args.designSnapshot ?? await currentSnapshot(args.designId);
+    return (await reserveForSavedInputResult({ ...args, designSnapshot }, query)).reservation;
 }
 
 // Ages a row past the 15-minute stale window.
@@ -406,4 +434,218 @@ test("design analyses: a copy gets the source's ready analyses only", { skip: SK
         { sourceDesignId: source.designId, targetDesignId: copy.id },
         query
     ), []);
+});
+
+// ─── saves that overlap (#848 review) ────────────────────────────────────────
+
+function deferred() {
+    let resolve;
+    const promise = new Promise(done => { resolve = done; });
+    return { promise, resolve };
+}
+
+const TUTOR_PHASE = { externalServices: { enabledServiceIds: ["argumentation-tutor-system"] } };
+
+function tutorDesign(questionText) {
+    return {
+        type:   "semantic_differential",
+        valid:  true,
+        phases: [{ ...TUTOR_PHASE, questions: [{ q_text: questionText }] }],
+    };
+}
+
+// A valid design with a case and one tutor question, as a save stores it.
+async function createSavedDesign(questionText) {
+    const { userId, designId, serviceId } = await createDesign();
+    const [ethicalCase] = await dbQuery(`
+        INSERT INTO ethical_cases
+            (title, author_firstname, author_lastname, author_email, pdf_path, creator)
+        VALUES ('A case', 'Ana', 'Author', 'ana@integration.test', '/uploads/cases/x/case.pdf', $1)
+        RETURNING id;
+    `, [userId]);
+    await dbQuery(`
+        UPDATE designs
+        SET design = $2::jsonb,
+            case_id = $3
+        WHERE id = $1;
+    `, [designId, JSON.stringify(tutorDesign(questionText)), ethicalCase.id]);
+    return { userId, designId, serviceId, caseId: ethicalCase.id };
+}
+
+// The content update of PATCH /designs/:id.
+async function saveDesign(designId, questionText) {
+    await dbQuery(`
+        UPDATE designs
+        SET design = $2::jsonb
+        WHERE id = $1
+          AND locked IS NOT TRUE;
+    `, [designId, JSON.stringify(tutorDesign(questionText))]);
+}
+
+/**
+ * Runs the save-time request of a design against the database, with the mock
+ * design analysis as the only design-scoped service. `caseLoaded` holds the
+ * save between reading the design and reserving; `generationStarted` and
+ * `storeResult` hold its generation between starting and storing its result.
+ */
+function runSaveRequest(ids, { designRead, caseLoaded, generationStarted, storeResult } = {}) {
+    const completions = [];
+    const result = requestDesignAnalysesOnSave(ids.designId, {
+        dependencies: {
+            getDesignRow: async designId => {
+                const row = await readDesignForAnalyses(designId, query);
+                designRead?.resolve();
+                return row;
+            },
+            loadCase: async caseId => {
+                await caseLoaded;
+                return { id: caseId, title: "A case", languageCode: "es", contentHash: "sha256:pdf" };
+            },
+            registry: {
+                initialize:                    async () => {},
+                getUsableServiceIdsForScope:   async () => [ids.serviceId],
+                getDesignAnalysisInputBuilder: () => mockDesignAnalysisInput,
+            },
+            reserve:  args => reserveForSavedInputResult(args, query),
+            dispatch: async (context, { reservations: [reservation] }) => {
+                const jobId = reservation.job_id;
+                const started = await markDesignAnalysisProcessing(
+                    { designId: ids.designId, serviceId: ids.serviceId, jobId },
+                    query
+                );
+                generationStarted?.resolve();
+                await storeResult;
+                completions.push(started && await completeDesignAnalysis({
+                    serviceId:      ids.serviceId,
+                    jobId,
+                    documentSchema: MOCK_DESIGN_ANALYSIS_SCHEMA,
+                    document:       buildMockDesignAnalysis(context.analysisInput),
+                }, query));
+                return [];
+            },
+        },
+    });
+    return { result, completions };
+}
+
+const storedQuestion = async ids =>
+    (await getDesignAnalysis(ids, query))?.document?.questions?.[0]?.text ?? null;
+
+test("design analyses on save: a save overtaken before reserving reserves nothing", { skip: SKIP_REASON }, async () => {
+    const ids = await createSavedDesign("OLD question");
+
+    // Save A reads the old design and stops before reserving.
+    const designReadA = deferred();
+    const caseLoadedA = deferred();
+    const saveA = runSaveRequest(ids, { designRead: designReadA, caseLoaded: caseLoadedA.promise });
+    await designReadA.promise;
+
+    // Save B stores the new question, reserves and completes.
+    await saveDesign(ids.designId, "NEW question");
+    const saveB = runSaveRequest(ids);
+    const resultB = await saveB.result;
+    assert.equal(resultB.services[0].outcome, "requested");
+    assert.equal(await storedQuestion(ids), "NEW question");
+
+    // Save A resumes: its reservation is rejected.
+    caseLoadedA.resolve();
+    const resultA = await saveA.result;
+    assert.deepEqual(resultA.services, [{ serviceId: ids.serviceId, outcome: "design-changed" }]);
+
+    const row = await getDesignAnalysis(ids, query);
+    assert.equal(row.status, "ready");
+    assert.equal(row.job_id, resultB.services[0].jobId);
+    assert.equal(await storedQuestion(ids), "NEW question");
+});
+
+test("design analyses on save: a save that reserved first is superseded, and its late result dropped", { skip: SKIP_REASON }, async () => {
+    const ids = await createSavedDesign("OLD question");
+
+    // Save A reserves and starts its generation, which answers late.
+    const startedA = deferred();
+    const resultArrivesA = deferred();
+    const saveA = runSaveRequest(ids, {
+        generationStarted: startedA,
+        storeResult:       resultArrivesA.promise,
+    });
+    await startedA.promise;
+
+    // Save B stores the new question, supersedes A and completes.
+    await saveDesign(ids.designId, "NEW question");
+    const resultB = await runSaveRequest(ids).result;
+    assert.equal(resultB.services[0].outcome, "requested");
+
+    resultArrivesA.resolve();
+    const resultA = await saveA.result;
+    assert.equal(resultA.services[0].outcome, "requested");
+    assert.deepEqual(saveA.completions, [null], "the superseded job stores nothing");
+
+    const row = await getDesignAnalysis(ids, query);
+    assert.equal(row.status, "ready");
+    assert.equal(row.job_id, resultB.services[0].jobId);
+    assert.equal(await storedQuestion(ids), "NEW question");
+});
+
+test("design analyses on save: a reservation waits for a save in progress, then checks the saved design", { skip: SKIP_REASON }, async () => {
+    const ids = await createSavedDesign("OLD question");
+    const snapshotA = await currentSnapshot(ids.designId);
+    const reserveA = () => reserveForSavedInputResult(
+        { ...ids, inputHash: "hash-old", designSnapshot: snapshotA },
+        query
+    );
+
+    // A save whose update is not committed yet holds the design row.
+    const rolledBack = await getPool().connect();
+    try {
+        await rolledBack.query("BEGIN;");
+        await rolledBack.query("UPDATE designs SET design = $2::jsonb WHERE id = $1;", [
+            ids.designId, JSON.stringify(tutorDesign("DISCARDED question")),
+        ]);
+        const pending = reserveA();
+        await new Promise(resolve => setTimeout(resolve, 100));
+        await rolledBack.query("ROLLBACK;");
+        const result = await pending;
+        assert.equal(result.designChanged, false, "the design did not change");
+        assert.ok(result.reservation);
+    } finally {
+        rolledBack.release();
+    }
+
+    const committed = await getPool().connect();
+    try {
+        await committed.query("BEGIN;");
+        await committed.query("UPDATE designs SET design = $2::jsonb WHERE id = $1;", [
+            ids.designId, JSON.stringify(tutorDesign("NEW question")),
+        ]);
+        const pending = reserveForSavedInputResult(
+            { ...ids, inputHash: "hash-old-2", designSnapshot: snapshotA },
+            query
+        );
+        await new Promise(resolve => setTimeout(resolve, 100));
+        await committed.query("COMMIT;");
+        assert.deepEqual(await pending, { designChanged: true, reservation: null });
+    } finally {
+        committed.release();
+    }
+
+    assert.equal((await getDesignAnalysis(ids, query)).input_hash, "hash-old");
+});
+
+test("design analyses: an explicit generation from an outdated or locked design reserves nothing", { skip: SKIP_REASON }, async () => {
+    const ids = await createSavedDesign("OLD question");
+    const outdated = await currentSnapshot(ids.designId);
+    await saveDesign(ids.designId, "NEW question");
+
+    assert.deepEqual(
+        await reserveGenerationResult({ ...ids, inputHash: "hash-1", designSnapshot: outdated }, query),
+        { designChanged: true, reservation: null }
+    );
+
+    const current = await currentSnapshot(ids.designId);
+    await dbQuery("UPDATE designs SET locked = true WHERE id = $1;", [ids.designId]);
+    assert.deepEqual(
+        await reserveGenerationResult({ ...ids, inputHash: "hash-1", designSnapshot: current }, query),
+        { designChanged: true, reservation: null }
+    );
+    assert.equal(await getDesignAnalysis(ids, query), null);
 });
