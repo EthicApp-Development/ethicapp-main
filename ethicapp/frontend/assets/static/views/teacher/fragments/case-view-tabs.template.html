@@ -1,0 +1,75 @@
+<div class="case-view-tabs">
+    <div class="alert alert-warning case-view-tabs-alert" ng-if="$ctrl.listFailed" role="alert">
+        <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+        {{ 'case_analysis_list_failed' | translate }}
+        <button type="button" class="btn btn-default btn-sm case-view-tabs-retry" ng-click="$ctrl.refresh()">
+            {{ 'case_analysis_retry' | translate }}
+        </button>
+    </div>
+
+    <div class="teacher-index-tabs case-view-tabs-bar" ng-if="$ctrl.hasAnalysisTabs()">
+        <ul class="nav nav-tabs" role="tablist" aria-label="{{ 'case_analysis_tabs_label' | translate }}">
+            <li role="presentation" ng-class="{ 'active': $ctrl.isActive(null) }">
+                <a
+                    href=""
+                    role="tab"
+                    id="{{ $ctrl.tabId(null) }}"
+                    aria-controls="{{ $ctrl.panelId(null) }}"
+                    aria-selected="{{ $ctrl.isActive(null) }}"
+                    tabindex="{{ $ctrl.isActive(null) ? 0 : -1 }}"
+                    ng-click="$ctrl.selectTab(null)"
+                    ng-keydown="$ctrl.onTabKeydown($event, null)">
+                    <i class="fa-solid fa-book" aria-hidden="true"></i>
+                    {{ 'case_analysis_tab_case_text' | translate }}
+                </a>
+            </li>
+            <li
+                role="presentation"
+                ng-repeat="analysis in $ctrl.analyses track by analysis.serviceId"
+                ng-class="{ 'active': $ctrl.isActive(analysis.serviceId) }">
+                <a
+                    href=""
+                    role="tab"
+                    id="{{ $ctrl.tabId(analysis.serviceId) }}"
+                    aria-controls="{{ $ctrl.panelId(analysis.serviceId) }}"
+                    aria-selected="{{ $ctrl.isActive(analysis.serviceId) }}"
+                    tabindex="{{ $ctrl.isActive(analysis.serviceId) ? 0 : -1 }}"
+                    ng-click="$ctrl.selectTab(analysis.serviceId)"
+                    ng-keydown="$ctrl.onTabKeydown($event, analysis.serviceId)">
+                    {{ $ctrl.tabTitle(analysis) }}
+                    <i
+                        class="case-view-tab-status {{ $ctrl.indicator(analysis).iconClass }}"
+                        aria-hidden="true"
+                        title="{{ $ctrl.indicator(analysis).statusKey | translate }}"></i>
+                    <span class="sr-only">({{ $ctrl.indicator(analysis).statusKey | translate }})</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+
+    <!-- The case text stays rendered while other tabs are open, so its pages
+         are not loaded again when the teacher comes back to it. -->
+    <div
+        id="{{ $ctrl.panelId(null) }}"
+        class="case-view-tab-panel"
+        ng-attr-role="{{ $ctrl.hasAnalysisTabs() ? 'tabpanel' : undefined }}"
+        ng-attr-aria-labelledby="{{ $ctrl.hasAnalysisTabs() ? $ctrl.tabId(null) : undefined }}"
+        ng-show="$ctrl.isActive(null)">
+        <ng-transclude></ng-transclude>
+    </div>
+
+    <div
+        ng-repeat="analysis in $ctrl.analyses track by analysis.serviceId"
+        ng-if="$ctrl.isActive(analysis.serviceId)"
+        id="{{ $ctrl.panelId(analysis.serviceId) }}"
+        class="case-view-tab-panel"
+        role="tabpanel"
+        aria-labelledby="{{ $ctrl.tabId(analysis.serviceId) }}">
+        <case-analysis-panel
+            case-item="$ctrl.caseItem"
+            summary="analysis"
+            on-analysis-changed="$ctrl.handleAnalysisChanged(analysis)"
+            on-refresh-requested="$ctrl.refresh()">
+        </case-analysis-panel>
+    </div>
+</div>

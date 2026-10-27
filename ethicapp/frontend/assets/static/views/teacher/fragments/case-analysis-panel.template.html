@@ -1,0 +1,130 @@
+<div class="panel panel-default case-analysis-panel">
+    <div class="panel-body">
+        <div class="case-analysis-panel-header">
+            <span class="case-analysis-panel-status">
+                <i class="{{ $ctrl.indicator().iconClass }}" aria-hidden="true"></i>
+                {{ $ctrl.indicator().statusKey | translate }}
+            </span>
+            <span class="text-muted case-analysis-panel-dates">
+                <span ng-if="$ctrl.summary.generatedAt">
+                    {{ 'case_analysis_generated_at' | translate:{ date: ($ctrl.summary.generatedAt | date:'yyyy-MM-dd HH:mm') } }}
+                </span>
+                <span ng-if="$ctrl.summary.reviewedAt">
+                    · {{ 'case_analysis_reviewed_at' | translate:{ date: ($ctrl.summary.reviewedAt | date:'yyyy-MM-dd HH:mm') } }}
+                </span>
+            </span>
+            <button
+                type="button"
+                class="btn btn-default btn-sm case-analysis-generate-button"
+                ng-if="$ctrl.canGenerate() && !$ctrl.confirmingGenerate"
+                ng-click="$ctrl.askToGenerate()">
+                <i class="fa-solid fa-rotate" aria-hidden="true"></i>
+                {{ 'case_analysis_generate_again' | translate }}
+            </button>
+            <span class="case-analysis-generate-progress text-muted" ng-if="$ctrl.generating">
+                <i class="fa-solid fa-circle-notch fa-spin" aria-hidden="true"></i>
+                {{ 'case_analysis_generate_requesting' | translate }}
+            </span>
+        </div>
+
+        <div class="alert alert-info case-analysis-confirm" ng-if="$ctrl.confirmingGenerate" role="group"
+            aria-label="{{ 'case_analysis_generate_again' | translate }}">
+            <p class="case-analysis-confirm-text" ng-if="$ctrl.hasDocument()">
+                {{ 'case_analysis_generate_confirm_replace' | translate }}
+            </p>
+            <p class="case-analysis-confirm-text" ng-if="!$ctrl.hasDocument()">
+                {{ 'case_analysis_generate_confirm' | translate }}
+            </p>
+            <div class="case-analysis-confirm-actions">
+                <button type="button" class="btn btn-primary btn-sm" ng-click="$ctrl.confirmGenerate()">
+                    {{ 'case_analysis_generate_confirm_action' | translate }}
+                </button>
+                <button type="button" class="btn btn-default btn-sm" ng-click="$ctrl.cancelGenerate()">
+                    {{ 'cancel' | translate }}
+                </button>
+            </div>
+        </div>
+
+        <div class="alert alert-{{ $ctrl.notice.type }}" ng-if="$ctrl.notice" role="alert">
+            {{ $ctrl.notice.key | translate }}
+        </div>
+
+        <div role="status">
+            <div class="alert alert-info" ng-if="$ctrl.state() === 'pending'">
+                <i class="fa-solid fa-circle-notch fa-spin" aria-hidden="true"></i>
+                {{ 'case_analysis_pending_message' | translate }}
+                <span ng-if="$ctrl.hasDocument()">{{ 'case_analysis_previous_result_note' | translate }}</span>
+            </div>
+
+            <div class="alert alert-warning" ng-if="$ctrl.state() === 'stuck'">
+                <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+                {{ 'case_analysis_stuck_message' | translate }}
+            </div>
+        </div>
+
+        <div class="alert alert-danger" ng-if="$ctrl.state() === 'failed'">
+            <p>
+                <i class="fa-solid fa-circle-xmark" aria-hidden="true"></i>
+                <strong>{{ 'case_analysis_failed_message' | translate }}</strong>
+                {{ $ctrl.errorKey() | translate }}
+            </p>
+            <p class="small" ng-if="$ctrl.errorMessage()">
+                {{ 'case_analysis_error_detail' | translate:{ message: $ctrl.errorMessage() } }}
+            </p>
+        </div>
+
+        <div class="alert alert-warning" ng-if="$ctrl.latestGenerationFailed()">
+            <p>
+                <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+                <strong>{{ 'case_analysis_latest_failed_message' | translate }}</strong>
+                {{ $ctrl.errorKey() | translate }}
+            </p>
+            <p class="small" ng-if="$ctrl.errorMessage()">
+                {{ 'case_analysis_error_detail' | translate:{ message: $ctrl.errorMessage() } }}
+            </p>
+        </div>
+
+        <p class="text-muted small" ng-if="$ctrl.isServiceUnavailable() && $ctrl.state() !== 'pending'">
+            <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+            {{ 'case_analysis_service_unavailable_note' | translate }}
+        </p>
+
+        <p class="text-muted" ng-if="$ctrl.loading && !$ctrl.detail">
+            <i class="fa-solid fa-circle-notch fa-spin" aria-hidden="true"></i>
+            {{ 'loading' | translate }}
+        </p>
+
+        <div class="alert alert-warning" ng-if="$ctrl.loadFailed" role="alert">
+            {{ 'case_analysis_load_failed' | translate }}
+            <button type="button" class="btn btn-default btn-sm" ng-click="$ctrl.loadDetail()">
+                {{ 'case_analysis_retry' | translate }}
+            </button>
+        </div>
+
+        <div class="case-analysis-content" ng-if="$ctrl.hasDocument()">
+            <case-analysis-component-host
+                ng-if="$ctrl.hasRegisteredComponent()"
+                component="$ctrl.componentName()"
+                analysis="$ctrl.detail"
+                case-item="$ctrl.caseItem"
+                on-analysis-updated="$ctrl.handleAnalysisUpdated(analysis)">
+            </case-analysis-component-host>
+
+            <div class="case-analysis-generic" ng-if="!$ctrl.hasRegisteredComponent()">
+                <p class="text-muted small">{{ 'case_analysis_generic_note' | translate }}</p>
+                <p class="text-muted" ng-if="$ctrl.genericFields.length === 0">
+                    {{ 'case_analysis_generic_empty' | translate }}
+                </p>
+                <dl class="case-analysis-generic-fields" ng-if="$ctrl.genericFields.length > 0">
+                    <div class="case-analysis-generic-field" ng-repeat="field in $ctrl.genericFields">
+                        <dt ng-if="field.key !== null">{{ field.key }}</dt>
+                        <dd>
+                            <pre ng-if="field.structured">{{ field.text }}</pre>
+                            <span ng-if="!field.structured">{{ field.text }}</span>
+                        </dd>
+                    </div>
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>

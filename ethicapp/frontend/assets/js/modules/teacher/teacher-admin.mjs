@@ -7,6 +7,7 @@ import { DesignCatalogService } from "../../services/design-catalog.service.js";
 import { DesignPublicationService } from "../../services/design-publication.service.js";
 import { CaseVideoPickerService } from "../../services/case-video-picker.service.js";
 import { CasesCatalogService } from "../../services/cases-catalog.service.js";
+import { CaseAnalysesService } from "../../services/case-analyses.service.js";
 import { ExternalServicesCatalogService } from "../../services/external-services-catalog.service.js";
 import { LanguageCatalogService } from "../../services/language-catalog.service.js";
 import { TagCatalogService } from "../../services/tag-catalog.service.js";
@@ -43,6 +44,7 @@ app.factory("ActivityStateService", ["$http", "TeacherSocketService", ActivitySt
         ["$http", "LanguageCatalogService", ExternalServicesCatalogService])
     .factory("UserProfileService", ["$http", "$rootScope", "Upload", UserProfileService])
     .factory("CasesCatalogService", ["$rootScope", "$http", CasesCatalogService])
+    .factory("CaseAnalysesService", ["$http", CaseAnalysesService])
     .factory("LanguageCatalogService", ["$http", "$translate", LanguageCatalogService])
     .factory("TagCatalogService", ["$http", "$translate", TagCatalogService]);
 app.service("toast", ["$rootScope", "$timeout", TeacherToastService]);
@@ -183,6 +185,8 @@ import { designViewerDirective } from '../../directives/design-viewer.directive.
 import copyToClipboardDirective from '../../directives/copy-to-clipboard.directive.js';
 import tooltipDirective from   '../../directives/tooltip.directive.js';
 import holdToConfirmDirective from "../../directives/hold-to-confirm.directive.js";
+import { caseAnalysisComponentHostDirective }
+    from "../../directives/case-analysis-component-host.directive.js";
 
 app.directive("connectedUsers", connectedUsersDirective);
 app.directive("activityControls", activityControlsDirective);
@@ -198,6 +202,7 @@ app.directive("tooltip", ["$translate", "$timeout", tooltipDirective]);
 app.directive("copyToClipboard", copyToClipboardDirective);
 app.directive("phaseDeleter", ["$translate", phaseDeleterDirective]);
 app.directive("holdToConfirm", ["$timeout", holdToConfirmDirective]);
+app.directive("caseAnalysisComponentHost", ["$compile", caseAnalysisComponentHostDirective]);
 
 app.controller("ConnectedUsersDirectiveController", ["$scope", "ActivityStateService", 
     ConnectedUsersDirectiveController]);
@@ -225,6 +230,11 @@ import caseSearchSelectorComponent from "../../components/case-search-selector.c
 import caseCardComponent from "../../components/case-card.component.js";
 import caseDocumentViewerComponent from "../../components/case-document-viewer.component.js";
 import caseMaterialComponent from "../../components/case-material.component.js";
+import caseViewTabsComponent from "../../components/case-view-tabs.component.js";
+import caseAnalysisPanelComponent from "../../components/case-analysis-panel.component.js";
+// Components of analysis tabs, compiled by `ui.component` through the allowlist
+// in helpers/case-analyses.js (CASE_ANALYSIS_COMPONENTS).
+import mockCaseAnalysisViewComponent from "../../components/mock-case-analysis-view.component.js";
 import videoFacadeComponent from "../../components/video-facade.component.js";
 import caseAuthorEditorComponent from "../../components/case-author-editor.component.js";
 import caseFormEditorComponent from "../../components/case-form-editor.component.js";
@@ -258,6 +268,9 @@ app.component("caseSearchSelector", caseSearchSelectorComponent);
 app.component("caseCard", caseCardComponent);
 app.component("caseDocumentViewer", caseDocumentViewerComponent);
 app.component("caseMaterial", caseMaterialComponent);
+app.component("caseViewTabs", caseViewTabsComponent);
+app.component("caseAnalysisPanel", caseAnalysisPanelComponent);
+app.component("mockCaseAnalysisView", mockCaseAnalysisViewComponent);
 app.component("videoFacade", videoFacadeComponent);
 app.component("caseAuthorEditor", caseAuthorEditorComponent);
 app.component("caseFormEditor", caseFormEditorComponent);
