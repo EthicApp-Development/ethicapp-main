@@ -4,6 +4,7 @@ import test from "node:test";
 import { sha256Text } from "../analysis-input-hash.js";
 import {
     ARGUMENTATION_TUTOR_SERVICE_ID,
+    findTutorQuestion,
     selectTutorQuestions,
     tutorQuestionId,
 } from "../design-tutor-questions.js";
@@ -70,4 +71,21 @@ test("selectTutorQuestions: another service can be named", () => {
 test("tutorQuestionId and the tutor's service id", () => {
     assert.equal(tutorQuestionId(3, 12), "p3-q12");
     assert.equal(ARGUMENTATION_TUTOR_SERVICE_ID, "argumentation-tutor-system");
+});
+
+test("findTutorQuestion: the tutor question at a runtime position (#850)", () => {
+    const design = {
+        type:   "semantic_differential",
+        phases: [
+            { questions: [{ q_text: "No tutor here." }] },
+            { ...TUTOR, questions: [{ q_text: " " }, { q_text: "Should Ana report it?" }] },
+        ],
+    };
+
+    assert.equal(findTutorQuestion(design, { phaseNumber: 2, questionNumber: 2 }).text,
+        "Should Ana report it?");
+    assert.equal(findTutorQuestion(design, { phaseNumber: 2, questionNumber: 1 }), null);
+    assert.equal(findTutorQuestion(design, { phaseNumber: 1, questionNumber: 1 }), null);
+    assert.equal(findTutorQuestion(design, { phaseNumber: null, questionNumber: 2 }), null);
+    assert.equal(findTutorQuestion(null, { phaseNumber: 2, questionNumber: 2 }), null);
 });
