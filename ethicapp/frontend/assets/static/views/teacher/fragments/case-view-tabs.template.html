@@ -69,7 +69,7 @@
             case-item="$ctrl.caseItem"
             summary="analysis"
             on-analysis-changed="$ctrl.handleAnalysisChanged(analysis)"
-            on-refresh-requested="$ctrl.refresh()">
+            on-generate="$ctrl.generateAnalysis(serviceId)">
         </case-analysis-panel>
     </div>
 </div>

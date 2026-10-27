@@ -129,10 +129,12 @@ function CaseAnalysisPanelController($scope, CaseAnalysesService) {
         vm.confirmingGenerate = false;
     };
 
+    // The case view tabs send the request and apply its result, so an
+    // accepted generation is followed even if this panel closes meanwhile.
+    // The panel only shows the outcome while it is open.
     vm.confirmGenerate = async function() {
-        const caseId = vm.caseItem?.id;
         const serviceId = vm.summary?.serviceId;
-        if (!caseId || !serviceId || vm.generating) {
+        if (!serviceId || vm.generating) {
             return;
         }
 
@@ -141,17 +143,9 @@ function CaseAnalysisPanelController($scope, CaseAnalysesService) {
         vm.notice = null;
 
         try {
-            const { outcome, analysis } = await CaseAnalysesService
-                .generateAnalysis(caseId, serviceId);
-            if (destroyed) {
-                return;
-            }
-            if (outcome === "accepted") {
-                vm.onAnalysisChanged({ analysis });
-            } else {
+            const outcome = await vm.onGenerate({ serviceId });
+            if (!destroyed && outcome !== "accepted") {
                 vm.notice = GENERATE_NOTICES[outcome] || GENERATE_NOTICES.error;
-                // Another tab or a teacher may have changed it: show the current state.
-                vm.onRefreshRequested();
             }
         } catch (error) {
             console.error("[caseAnalysisPanel] Could not request a new generation.", error);
@@ -179,10 +173,10 @@ function CaseAnalysisPanelController($scope, CaseAnalysesService) {
 
 export default {
     bindings: {
-        caseItem:           "<",
-        summary:            "<",
-        onAnalysisChanged:  "&",
-        onRefreshRequested: "&",
+        caseItem:          "<",
+        summary:           "<",
+        onAnalysisChanged: "&",
+        onGenerate:        "&",
     },
     controller:  ["$scope", "CaseAnalysesService", CaseAnalysisPanelController],
     templateUrl: "/assets/static/views/teacher/fragments/case-analysis-panel.template.html",

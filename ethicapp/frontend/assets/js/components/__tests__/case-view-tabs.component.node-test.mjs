@@ -10,15 +10,34 @@ const CaseAnalysisPanelController = caseAnalysisPanelComponent.controller.at(-1)
 
 const flush = () => new Promise(resolve => setImmediate(resolve));
 
-function fakeInterval() {
+// $timeout with a delay is a poll and is kept until the test fires it; without
+// a delay (moving the focus) it runs at once.
+function fakeTimeout() {
     const timers = new Set();
-    const $interval = (callback) => {
-        const timer = { callback };
+    const $timeout = (callback, delay) => {
+        if (delay === undefined) {
+            callback();
+            return null;
+        }
+        const timer = { callback, delay };
         timers.add(timer);
         return timer;
     };
-    $interval.cancel = timer => timers.delete(timer);
-    return { $interval, timers };
+    $timeout.cancel = timer => timers.delete(timer);
+    const fire = () => {
+        const [timer] = timers;
+        timers.delete(timer);
+        timer.callback();
+    };
+    return { $timeout, timers, fire };
+}
+
+function deferred() {
+    let resolve;
+    const promise = new Promise((res) => {
+        resolve = res;
+    });
+    return { promise, resolve };
 }
 
 function analysis(overrides = {}) {
@@ -33,10 +52,13 @@ function analysis(overrides = {}) {
     };
 }
 
-function createTabs(listResults) {
+// `listResults` are returned in order (the last one repeats); a deferred()
+// entry keeps its request pending until the test resolves it.
+function createTabs(listResults, { generate } = {}) {
     const results = [...listResults];
     const calls = [];
-    const { $interval, timers } = fakeInterval();
+    const generateCalls = [];
+    const { $timeout, timers, fire } = fakeTimeout();
     const service = {
         listAnalyses: async (caseId) => {
             calls.push(caseId);
@@ -44,17 +66,19 @@ function createTabs(listResults) {
             if (next instanceof Error) {
                 throw next;
             }
-            return next;
+            return next?.promise ?? next;
+        },
+        generateAnalysis: async (caseId, serviceId) => {
+            generateCalls.push({ caseId, serviceId });
+            return generate?.promise ?? generate;
         },
     };
     const $scope = { $applyAsync: () => {} };
     const $element = [{ querySelector: () => null }];
-    const $timeout = callback => callback();
     const languageCatalog = { getCurrentUiLanguageCode: () => "es_CL" };
 
-    const vm = new CaseViewTabsController($scope, $element, $interval, $timeout, service,
-        languageCatalog);
-    return { vm, calls, timers };
+    const vm = new CaseViewTabsController($scope, $element, $timeout, service, languageCatalog);
+    return { vm, calls, generateCalls, timers, fire };
 }
 
 function openCase(vm, caseId = 7) {
@@ -76,7 +100,7 @@ describe("caseViewTabs", () => {
     });
 
     it("opens on the case text and polls only while a generation is in flight", async () => {
-        const { vm, timers } = createTabs([
+        const { vm, timers, fire } = createTabs([
             [analysis({ status: "processing" })],
             [analysis()],
         ]);
@@ -87,8 +111,9 @@ describe("caseViewTabs", () => {
         assert.equal(vm.hasAnalysisTabs(), true);
         assert.equal(vm.isActive(null), true);
         assert.equal(timers.size, 1);
+        assert.equal([...timers][0].delay, 5000);
 
-        [...timers][0].callback();
+        fire();
         await flush();
 
         assert.equal(vm.analyses[0].status, "ready");
@@ -101,6 +126,70 @@ describe("caseViewTabs", () => {
         openCase(vm);
         await flush();
 
+        assert.equal(timers.size, 0);
+    });
+
+    it("applies a list response slower than the poll interval and then stops", async () => {
+        const slow = deferred();
+        const { vm, calls, timers, fire } = createTabs([
+            [analysis({ status: "processing" })],
+            slow,
+            [analysis()],
+        ]);
+
+        openCase(vm);
+        await flush();
+        fire();
+        await flush();
+
+        // The request is pending: no further poll is scheduled meanwhile, and
+        // a refresh asked for now waits for it instead of overlapping.
+        assert.equal(calls.length, 2);
+        assert.equal(timers.size, 0);
+        const queued = vm.refresh();
+        assert.equal(calls.length, 2);
+
+        slow.resolve([analysis()]);
+        await queued;
+
+        assert.equal(calls.length, 3);
+        assert.equal(vm.analyses[0].status, "ready");
+        assert.equal(timers.size, 0);
+    });
+
+    it("ignores a slow list response that predates an accepted generation", async () => {
+        const slow = deferred();
+        const { vm, calls, timers } = createTabs([
+            [analysis()],
+            slow,
+            [analysis({ status: "requested" })],
+        ]);
+
+        openCase(vm);
+        await flush();
+        const pending = vm.refresh();
+        await flush();
+
+        vm.handleAnalysisChanged({ serviceId: "mock-case-analysis", status: "requested" });
+        slow.resolve([analysis()]);
+        await pending;
+
+        assert.equal(calls.length, 3);
+        assert.equal(vm.analyses[0].status, "requested");
+        assert.equal(timers.size, 1);
+    });
+
+    it("drops list responses after the view is destroyed", async () => {
+        const slow = deferred();
+        const { vm, timers } = createTabs([slow]);
+
+        openCase(vm);
+        await flush();
+        vm.$onDestroy();
+        slow.resolve([analysis({ status: "processing" })]);
+        await flush();
+
+        assert.deepEqual(vm.analyses, []);
         assert.equal(timers.size, 0);
     });
 
@@ -183,25 +272,22 @@ describe("caseViewTabs", () => {
 });
 
 function createPanel({ detail, generate } = {}) {
-    const calls = { get: 0, generate: 0, changed: [], refresh: 0 };
+    const calls = { get: 0, generate: [] };
     const service = {
         getAnalysis: async () => {
             calls.get += 1;
             return detail;
         },
-        generateAnalysis: async () => {
-            calls.generate += 1;
-            if (generate instanceof Error) {
-                throw generate;
-            }
-            return generate;
-        },
     };
     const vm = new CaseAnalysisPanelController({ $applyAsync: () => {} }, service);
     vm.caseItem = { id: 7 };
-    vm.onAnalysisChanged = ({ analysis: changed }) => calls.changed.push(changed);
-    vm.onRefreshRequested = () => {
-        calls.refresh += 1;
+    vm.onAnalysisChanged = () => {};
+    vm.onGenerate = async ({ serviceId }) => {
+        calls.generate.push(serviceId);
+        if (generate instanceof Error) {
+            throw generate;
+        }
+        return generate;
     };
     return { vm, calls };
 }
@@ -255,36 +341,31 @@ describe("caseAnalysisPanel", () => {
         assert.equal(vm.canGenerate(), false);
     });
 
-    it("hands an accepted generation to the tabs", async () => {
-        const reserved = { serviceId: "mock-case-analysis", status: "requested" };
-        const generate = { outcome: "accepted", analysis: reserved };
-        const { vm, calls } = createPanel({ generate });
+    it("asks the tabs to generate after the confirmation", async () => {
+        const { vm, calls } = createPanel({ generate: "accepted" });
         vm.summary = analysis({ status: "failed" });
 
         vm.askToGenerate();
         assert.equal(vm.confirmingGenerate, true);
         await vm.confirmGenerate();
 
-        assert.equal(calls.generate, 1);
-        assert.deepEqual(calls.changed, [reserved]);
+        assert.deepEqual(calls.generate, ["mock-case-analysis"]);
         assert.equal(vm.confirmingGenerate, false);
         assert.equal(vm.generating, false);
         assert.equal(vm.notice, null);
     });
 
-    it("explains a busy (409) or disabled (503) service and refreshes the tabs", async () => {
+    it("explains a busy (409) or disabled (503) service", async () => {
         for (const [outcome, key] of [
             ["busy", "case_analysis_generate_busy"],
             ["disabled", "case_analysis_generate_disabled"],
         ]) {
-            const { vm, calls } = createPanel({ generate: { outcome, analysis: null } });
+            const { vm } = createPanel({ generate: outcome });
             vm.summary = analysis({ status: "failed" });
 
             await vm.confirmGenerate();
 
             assert.equal(vm.notice.key, key);
-            assert.equal(calls.refresh, 1);
-            assert.deepEqual(calls.changed, []);
         }
     });
 
@@ -301,5 +382,65 @@ describe("caseAnalysisPanel", () => {
 
         assert.equal(vm.notice.key, "case_analysis_generate_failed");
         assert.equal(vm.generating, false);
+    });
+});
+
+// The panel wired to the tabs as the template does (on-generate).
+function openPanel(tabs) {
+    const { vm } = createPanel();
+    vm.onGenerate = ({ serviceId }) => tabs.generateAnalysis(serviceId);
+    vm.onAnalysisChanged = ({ analysis: changed }) => tabs.handleAnalysisChanged(changed);
+    setSummary(vm, tabs.analyses[0]);
+    return vm;
+}
+
+describe("caseViewTabs with caseAnalysisPanel", () => {
+    it("follows an accepted generation after its panel was closed", async () => {
+        const request = deferred();
+        const { vm: tabs, generateCalls, timers } = createTabs([[analysis()]], {
+            generate: request,
+        });
+        openCase(tabs);
+        await flush();
+        tabs.selectTab("mock-case-analysis");
+
+        const panel = openPanel(tabs);
+        const generating = panel.confirmGenerate();
+
+        // The teacher goes back to the case text before the POST answers.
+        tabs.selectTab(null);
+        panel.$onDestroy();
+        request.resolve({
+            outcome:  "accepted",
+            analysis: { serviceId: "mock-case-analysis", status: "requested", stale: false },
+        });
+        await generating;
+        await flush();
+
+        assert.deepEqual(generateCalls, [{ caseId: 7, serviceId: "mock-case-analysis" }]);
+        assert.equal(tabs.analyses[0].status, "requested");
+        assert.equal(timers.size, 1);
+
+        // Opening the tab again shows the generation and offers no other one.
+        tabs.selectTab("mock-case-analysis");
+        const reopened = openPanel(tabs);
+        assert.equal(reopened.state(), "pending");
+        assert.equal(reopened.canGenerate(), false);
+    });
+
+    it("refreshes the list when the service answers busy", async () => {
+        const { vm: tabs, calls } = createTabs([
+            [analysis({ status: "failed" })],
+            [analysis({ status: "processing" })],
+        ], { generate: { outcome: "busy", analysis: null } });
+        openCase(tabs);
+        await flush();
+
+        const outcome = await tabs.generateAnalysis("mock-case-analysis");
+        await flush();
+
+        assert.equal(outcome, "busy");
+        assert.equal(calls.length, 2);
+        assert.equal(tabs.analyses[0].status, "processing");
     });
 });

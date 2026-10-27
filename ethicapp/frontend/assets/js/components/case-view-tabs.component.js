@@ -15,7 +15,7 @@ import {
 
 let instanceCount = 0;
 
-function CaseViewTabsController($scope, $element, $interval, $timeout, CaseAnalysesService,
+function CaseViewTabsController($scope, $element, $timeout, CaseAnalysesService,
     LanguageCatalogService) {
     const vm = this;
     instanceCount += 1;
@@ -23,8 +23,14 @@ function CaseViewTabsController($scope, $element, $interval, $timeout, CaseAnaly
 
     let destroyed = false;
     let loadedCaseId = null;
+    // The next poll, scheduled only after the previous list request settles.
     let poll = null;
-    let listSequence = 0;
+    // The list request in flight; at most one runs at a time.
+    let refreshing = null;
+    let refreshAgain = false;
+    // Bumped by every local change to the list (an accepted generation), so a
+    // list response requested before it cannot undo it.
+    let localRevision = 0;
 
     vm.analyses = [];
     vm.activeServiceId = null;
@@ -49,41 +55,45 @@ function CaseViewTabsController($scope, $element, $interval, $timeout, CaseAnaly
 
     vm.$onDestroy = function() {
         destroyed = true;
-        stopPolling();
+        cancelPoll();
     };
 
-    function startPolling() {
-        if (!poll) {
-            poll = $interval(() => vm.refresh(), CASE_ANALYSES_POLL_INTERVAL_MS);
-        }
-    }
-
-    function stopPolling() {
+    function cancelPoll() {
         if (poll) {
-            $interval.cancel(poll);
+            $timeout.cancel(poll);
             poll = null;
         }
     }
 
-    function syncPolling() {
-        if (!destroyed && vm.analyses.some(isCaseAnalysisInFlight)) {
-            startPolling();
+    // Polls again after CASE_ANALYSES_POLL_INTERVAL_MS while a generation is
+    // in flight. Called when a request settles, so polls never overlap.
+    function schedulePoll() {
+        cancelPoll();
+        if (destroyed || refreshing || !vm.analyses.some(isCaseAnalysisInFlight)) {
             return;
         }
-        stopPolling();
+        poll = $timeout(() => {
+            poll = null;
+            vm.refresh();
+        }, CASE_ANALYSES_POLL_INTERVAL_MS);
     }
 
-    vm.refresh = async function() {
+    // One list request. Its response is dropped when the view is gone, the
+    // case changed, or the list changed locally meanwhile (then it runs again).
+    async function loadOnce() {
         const caseId = loadedCaseId;
         if (!caseId) {
-            stopPolling();
             return;
         }
 
-        const sequence = ++listSequence;
+        const revision = localRevision;
         try {
             const analyses = await CaseAnalysesService.listAnalyses(caseId);
-            if (destroyed || sequence !== listSequence || caseId !== loadedCaseId) {
+            if (destroyed || caseId !== loadedCaseId) {
+                return;
+            }
+            if (revision !== localRevision) {
+                refreshAgain = true;
                 return;
             }
             vm.analyses = analyses;
@@ -92,15 +102,36 @@ function CaseViewTabsController($scope, $element, $interval, $timeout, CaseAnaly
                 vm.activeServiceId = null;
             }
         } catch (error) {
-            if (destroyed || sequence !== listSequence) {
+            if (destroyed || caseId !== loadedCaseId) {
                 return;
             }
             console.error("[caseViewTabs] Could not load the case analyses.", error);
             vm.listFailed = true;
         }
+    }
 
-        syncPolling();
-        $scope.$applyAsync();
+    // Reloads the list. A call while a request is in flight runs one more
+    // request after it, instead of a concurrent one.
+    vm.refresh = function() {
+        if (refreshing) {
+            refreshAgain = true;
+            return refreshing;
+        }
+
+        cancelPoll();
+        refreshing = (async () => {
+            try {
+                do {
+                    refreshAgain = false;
+                    await loadOnce();
+                } while (refreshAgain && !destroyed);
+            } finally {
+                refreshing = null;
+            }
+            schedulePoll();
+            $scope.$applyAsync();
+        })();
+        return refreshing;
     };
 
     vm.hasAnalysisTabs = function() {
@@ -170,8 +201,33 @@ function CaseViewTabsController($scope, $element, $interval, $timeout, CaseAnaly
     };
 
     vm.handleAnalysisChanged = function(analysis) {
+        localRevision += 1;
         vm.analyses = mergeCaseAnalysis(vm.analyses, analysis);
-        syncPolling();
+        schedulePoll();
+    };
+
+    /**
+     * Requests a new generation for an analysis and applies its result here,
+     * so it is kept and followed even when the panel that asked for it was
+     * closed meanwhile. Resolves with the outcome ("accepted", "busy" or
+     * "disabled") for the panel's notice; rejects when the request fails.
+     */
+    vm.generateAnalysis = async function(serviceId) {
+        const caseId = loadedCaseId;
+        const { outcome, analysis } = await CaseAnalysesService
+            .generateAnalysis(caseId, serviceId);
+        if (destroyed || caseId !== loadedCaseId) {
+            return outcome;
+        }
+
+        if (outcome === "accepted") {
+            vm.handleAnalysisChanged(analysis);
+        } else {
+            // A generation in flight or a disabled service: show the current state.
+            vm.refresh();
+        }
+        $scope.$applyAsync();
+        return outcome;
     };
 }
 
@@ -181,8 +237,8 @@ export default {
     },
     transclude: true,
     controller: [
-        "$scope", "$element", "$interval", "$timeout", "CaseAnalysesService",
-        "LanguageCatalogService", CaseViewTabsController,
+        "$scope", "$element", "$timeout", "CaseAnalysesService", "LanguageCatalogService",
+        CaseViewTabsController,
     ],
     templateUrl: "/assets/static/views/teacher/fragments/case-view-tabs.template.html",
 };
