@@ -244,6 +244,8 @@ import caseEvidenceInventoryViewComponent
 // The claim typology of a design, in the design view (#849).
 import claimTypologyPanelComponent from "../../components/claim-typology-panel.component.js";
 import claimTypologyQuestionsComponent from "../../components/claim-typology-questions.component.js";
+// Case Analyst: topic listing (#845).
+import caseTopicListingViewComponent from "../../components/case-topic-listing-view.component.js";
 import videoFacadeComponent from "../../components/video-facade.component.js";
 import caseAuthorEditorComponent from "../../components/case-author-editor.component.js";
 import caseFormEditorComponent from "../../components/case-form-editor.component.js";
@@ -286,6 +288,8 @@ app.component("caseEvidenceInventoryView", caseEvidenceInventoryViewComponent);
 // The claim typology of a design, in the design view (#849).
 app.component("claimTypologyPanel", claimTypologyPanelComponent);
 app.component("claimTypologyQuestions", claimTypologyQuestionsComponent);
+// Case Analyst: topic listing (#845).
+app.component("caseTopicListingView", caseTopicListingViewComponent);
 app.component("videoFacade", videoFacadeComponent);
 app.component("caseAuthorEditor", caseAuthorEditorComponent);
 app.component("caseFormEditor", caseFormEditorComponent);

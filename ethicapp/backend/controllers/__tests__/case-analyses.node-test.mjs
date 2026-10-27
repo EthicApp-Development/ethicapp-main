@@ -288,6 +288,8 @@ test("saveCaseAnalysisForOwner: stores the document and schema from the validato
     assert.equal(validatorCalls[0].context.caseId, 7);
     assert.equal(validatorCalls[0].context.languageCode, "en");
     assert.equal(validatorCalls[0].caseText, "The case text.");
+    // The stored document the edit replaces (#845).
+    assert.deepEqual(validatorCalls[0].context.currentDocument, { words: 12 });
     assert.deepEqual(calls.saveReviewed, [{
         caseId:         7,
         serviceId:      "svc-ready",

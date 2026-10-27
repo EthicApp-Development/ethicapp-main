@@ -12,6 +12,8 @@ export const CASE_ANALYSIS_COMPONENTS = Object.freeze({
     "case-evaluation":         "case-evaluation-view",
     // Case Analyst: evidence inventory (#652).
     "case-evidence-inventory": "case-evidence-inventory-view",
+    // Case Analyst: topic listing (#845).
+    "case-topic-listing":      "case-topic-listing-view",
 });
 
 const ELEMENT_NAME_PATTERN = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)+$/;

@@ -883,9 +883,11 @@ adapter maps its module's codes (`SERVICE_ERROR_CODES` in
 ### Teacher edits
 
 An adapter may export
-`validateCaseAnalysisDocument(document, { caseId, languageCode, getCaseText })`.
-It returns `{ document, documentSchema }` with the document to store, or
-`{ errors }`. Services without it accept no edits.
+`validateCaseAnalysisDocument(document, { caseId, languageCode, getCaseText, currentDocument })`.
+`currentDocument` is the stored document the edit replaces, or `null`, so an
+adapter can keep what the teacher does not edit (for example how the draft was
+generated). It returns `{ document, documentSchema }` with the document to
+store, or `{ errors }`. Services without it accept no edits.
 
 ### API
 
@@ -1043,6 +1045,60 @@ the facts by theme with their quotes, marks the quotes the server did not
 find, and lets the teacher edit, add and remove facts and exclusions and save
 them as reviewed (`reviewedAt`). Edits are offered only while no fresh
 generation is in flight; "Generate again" comes from the surrounding panel.
+
+### Topic listing (Case Analyst)
+
+`case-analyst-topic-listing` (`adapters/case-analyst-topic-listing.adapter.js`,
+#845) stores the topics participants must address when they discuss the case,
+for the teacher to review and edit. It ports the "pedagogical minute" of Justin
+Pinto's Case Analyst prototype, which kept the list in the browser only. It
+requires the AI Additions service `case-analyst` and its callbacks come from
+the Keycloak client `case-analyst-api`. The contract is defined in
+ethicapp-ai-additions, `case-analyst/app/modules/topic_listing/` (`schemas/`,
+`examples/`) and `case-analyst/README.md` ("Topic listing").
+
+The request follows the case evaluation's steps above, with
+`schemaVersion: "topic-listing-request/v1"`, the path
+`/case-analyst/api/v1/topic-listings` and
+`clientContext.service: "case-analyst-topic-listing"`. Case Analyst answers
+`202 { taskId, status: "queued" }` and takes about twenty seconds. The same
+failures before the result fail the generation with the same codes.
+
+The result is a `callback-received` with serviceId
+`case-analyst-topic-listing`, `correlationId` = the job id, and a
+`topic-listing-result/v1` payload:
+
+- `completed`: `topicListing` is stored as a `topic-listing/v1` document:
+  `{ schemaVersion, language, topics: [{ id, topic, description }], generation? }`,
+  1 to 20 topics, ids `T1`, `T2`... (at most 6 characters), non-blank
+  `topic` (at most 160 characters) and `description` (at most 600), no other
+  keys. The adapter checks the whole document, including that ids are unique,
+  which JSON Schema cannot express (`helpers/topic-listing-document.js`); a
+  document that fails the check fails the generation with `invalid-result`.
+- `failed`: the error carries Case Analyst's core codes ("Bounded jobs" in its
+  README), recorded as the shared `service-<code>`: `llm_request_failed` and
+  `llm_not_configured` are `service-llm-error`, `llm_refused` is
+  `service-llm-refusal`, `llm_output_invalid` and `llm_output_truncated` are
+  `service-invalid-output`, and `timeout`, `worker_lost` and `internal_error`
+  keep their names. An unknown code is `service-internal-error`.
+- Uncorrelated and late results are handled as for the case evaluation.
+
+Teacher edits (`PUT`, `validateCaseAnalysisDocument`) are checked against the
+same constraints. The validator trims the texts and drops keys a topic does
+not define. It keeps every id the edit sends, in the order sent, and never
+renumbers the listing. A topic without an id is new and gets the number after
+the highest id of the edit and of the stored listing, so a topic removed in the
+same edit does not lend its id to a new one. `generation` describes the
+generated draft, so it is copied from the stored listing (`currentDocument`)
+and never taken from the edit. Invalid edits answer `400` with the problems as
+`details`, for example a duplicate id, a blank text or more than 20 topics.
+
+The tab component `case-topic-listing` (`case-topic-listing-view`, helpers in
+`ethicapp/frontend/assets/js/helpers/topic-listing.js`) lists the topics with
+their ids, shows whether the listing is a draft or reviewed, and edits it:
+change, add, remove and reorder topics with up and down buttons that keep the
+keyboard focus and announce each move. Saving stores the listing as reviewed
+through `PUT`. Edit is not offered while a fresh generation is in flight.
 
 ## Design Analyses
 

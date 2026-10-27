@@ -120,7 +120,12 @@ test("each AI Additions service lists the shipped adapters that require it, with
     assert.deepEqual(ids("argumentation-tutor"), ["argumentation-tutor-system"]);
     assert.deepEqual(
         ids("case-analyst"),
-        ["case-analyst-evaluation", "case-analyst-evidence-inventory", "case-analyst-claim-typology"]
+        [
+            "case-analyst-evaluation",
+            "case-analyst-evidence-inventory",
+            "case-analyst-claim-typology",
+            "case-analyst-topic-listing",
+        ]
     );
     for (const list of adapters.values()) {
         for (const adapter of list) {
