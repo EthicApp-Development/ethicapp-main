@@ -189,7 +189,7 @@ describe("claim typology labels", () => {
     });
 
     it("explains error codes, falling back to a generic text", () => {
-        assert.equal(claimTypologyErrorKey("service-failed"), "claim_typology_error_service_failed");
+        assert.equal(claimTypologyErrorKey("adapter-error"), "case_analysis_error_adapter_error");
         assert.equal(claimTypologyErrorKey("timeout"), "case_analysis_error_timeout");
         assert.equal(claimTypologyErrorKey("toString"), "case_analysis_error_generic");
         assert.equal(claimTypologyErrorKey(null), "case_analysis_error_generic");

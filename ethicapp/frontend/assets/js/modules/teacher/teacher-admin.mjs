@@ -283,6 +283,7 @@ app.component("mockCaseAnalysisView", mockCaseAnalysisViewComponent);
 // Case Analyst: case evaluation (#844).
 app.component("caseEvaluationView", caseEvaluationViewComponent);
 app.component("caseEvidenceInventoryView", caseEvidenceInventoryViewComponent);
+// The claim typology of a design, in the design view (#849).
 app.component("claimTypologyPanel", claimTypologyPanelComponent);
 app.component("claimTypologyQuestions", claimTypologyQuestionsComponent);
 app.component("videoFacade", videoFacadeComponent);

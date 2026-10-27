@@ -14,6 +14,8 @@ import {
     loadEvidenceInventory,
     MAX_CLAIM_TYPOLOGY_QUESTIONS,
     register,
+    requestFailure,
+    serviceFailure,
 } from "../case-analyst-claim-typology.adapter.js";
 
 const JOB_ID = "c1a2b3c4-0000-4000-8000-000000000849";
@@ -322,7 +324,7 @@ test("design-saved: skips a generation that is no longer reserved", async () => 
 test("design-saved: fails without input or without the case text", async () => {
     const missing = makeDesignAnalyses();
     await runDesignSaved({ designAnalyses: missing.designAnalyses, context: { analysisInput: null } });
-    assert.equal(missing.calls[1].args.errorCode, "missing-input");
+    assert.equal(missing.calls[1].args.errorCode, "adapter-error");
 
     for (const status of ["no-document", "render-failed", "superseded", "timeout"]) {
         const { designAnalyses, calls } = makeDesignAnalyses();
@@ -352,8 +354,9 @@ test("design-saved: fails without input or without the case text", async () => {
 
 test("design-saved: records why the request could not be sent", async () => {
     const cases = [
-        [new AiAdditionsNotConfiguredError(), "not-configured"],
+        [new AiAdditionsNotConfiguredError(), "request-failed"],
         [Object.assign(new Error("HTTP 422"), { statusCode: 422 }), "request-rejected"],
+        [Object.assign(new Error("HTTP 401"), { statusCode: 401 }), "request-rejected"],
         [Object.assign(new Error("HTTP 502"), { statusCode: 502 }), "request-failed"],
         [new Error("socket hang up"), "request-failed"],
     ];
@@ -474,7 +477,7 @@ test("callback-received: a superseded job's result is not stored", async () => {
     assert.equal(results[0].status, "skipped");
 });
 
-test("callback-received: records a failed result with Case Analyst's message and code", async () => {
+test("callback-received: records a failed result as service-<code> with its message", async () => {
     const { designAnalyses, calls } = makeDesignAnalyses();
 
     const results = await runCallback({
@@ -492,8 +495,8 @@ test("callback-received: records a failed result with Case Analyst's message and
         name: "fail",
         args: {
             jobId:        JOB_ID,
-            errorCode:    "service-failed",
-            errorMessage: "The model refused the request. (llm_refused)",
+            errorCode:    "service-llm-refusal",
+            errorMessage: "The model refused the request.",
         },
     }]);
     assert.equal(results[0].status, "failed");
@@ -551,4 +554,38 @@ test("getUiTranslations: Spanish and English texts", async () => {
         assert.ok(translations[locale].description);
         assert.ok(translations[locale].tabTitle);
     }
+});
+
+test("serviceFailure: public and core codes map to service-<code>; unknown ones are internal", () => {
+    const cases = [
+        ["llm_error", "service-llm-error"],
+        ["llm_request_failed", "service-llm-error"],
+        ["llm_refusal", "service-llm-refusal"],
+        ["llm_refused", "service-llm-refusal"],
+        ["invalid_output", "service-invalid-output"],
+        ["llm_output_truncated", "service-invalid-output"],
+        ["timeout", "service-timeout"],
+        ["worker_lost", "service-worker-lost"],
+        ["internal_error", "service-internal-error"],
+    ];
+    for (const [code, errorCode] of cases) {
+        assert.deepEqual(serviceFailure({ code, message: " Sanitized. " }), {
+            errorCode, errorMessage: "Sanitized.",
+        });
+    }
+
+    assert.deepEqual(serviceFailure({ code: "toString", message: "Odd." }), {
+        errorCode: "service-internal-error", errorMessage: "Odd. (toString)",
+    });
+    assert.equal(serviceFailure(null).errorCode, "service-internal-error");
+    assert.equal(serviceFailure(null).errorMessage, "Case Analyst could not generate the claim typology.");
+});
+
+test("requestFailure: 4xx is rejected; no connection, network and 5xx failed", () => {
+    assert.equal(requestFailure({ statusCode: 404 }).errorCode, "request-rejected");
+    assert.equal(requestFailure({ statusCode: 500 }).errorCode, "request-failed");
+    assert.equal(requestFailure(new AiAdditionsNotConfiguredError()).errorMessage,
+        "The AI Additions connection is not configured.");
+    assert.equal(requestFailure(new Error("socket hang up")).errorMessage,
+        "Case Analyst could not be reached.");
 });

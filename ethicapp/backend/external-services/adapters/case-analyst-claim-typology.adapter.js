@@ -5,9 +5,7 @@ import {
     ARGUMENTATION_TUTOR_SERVICE_ID,
     selectTutorQuestions,
 } from "../../helpers/design-tutor-questions.js";
-import defaultAiAdditionsClient, {
-    isAiAdditionsNotConfigured,
-} from "../../services/ai-additions-client.service.js";
+import defaultAiAdditionsClient from "../../services/ai-additions-client.service.js";
 
 // Claim typology from Case Analyst (#849, epic #846): the plausible types of
 // answer to each question of the phases that use the Argumentation Tutor. One
@@ -64,32 +62,48 @@ const UI_TRANSLATIONS = {
     },
 };
 
-// Error codes recorded on the analysis (design_analyses.error_code). The
-// codes of waitForCaseDocumentText() (no-document, render-failed, superseded,
-// timeout) are recorded as they are.
+// Error codes recorded on the analysis (design_analyses.error_code), from the
+// adapters' shared vocabulary (README, "Error codes"). The codes of
+// waitForCaseDocumentText() (no-document, render-failed, superseded, timeout)
+// are recorded as they are, and a failed result as `service-<code>`
+// (SERVICE_ERROR_CODES).
 export const CLAIM_TYPOLOGY_ERRORS = Object.freeze({
-    MISSING_INPUT:      "missing-input",
     EMPTY_CASE_TEXT:    "empty-case-text",
     CASE_TEXT_TOO_LONG: "case-text-too-long",
-    NOT_CONFIGURED:     "not-configured",
     REQUEST_REJECTED:   "request-rejected",
     REQUEST_FAILED:     "request-failed",
-    SERVICE_FAILED:     "service-failed",
     INVALID_RESULT:     "invalid-result",
     ADAPTER_ERROR:      "adapter-error",
 });
 
 // The messages recorded with each code, by code.
 const ERROR_MESSAGES = Object.freeze({
-    "missing-input":      "The generation carries no analysis input.",
     "empty-case-text":    "The case document has no text.",
     "case-text-too-long": `The case text exceeds ${MAX_CASE_TEXT_LENGTH} characters.`,
-    "not-configured":     "No AI Additions connection is configured.",
-    "request-rejected":   "Case Analyst rejected the claim typology request.",
-    "request-failed":     "The claim typology request could not be sent to Case Analyst.",
     "invalid-result":     "Case Analyst sent a result that is not a claim typology.",
     "adapter-error":      "The claim typology adapter failed unexpectedly.",
 });
+
+// The public error codes of a failed `claim-typology-result/v1`, recorded
+// under codes of their own: Case Analyst's `timeout` is not the render
+// timeout of the case document. The result schema also names the core codes
+// behind them (llm_refused, llm_output_invalid...), which map to the same
+// public code. Unknown codes are internal errors.
+export const SERVICE_ERROR_CODES = Object.freeze({
+    llm_error:            "service-llm-error",
+    llm_request_failed:   "service-llm-error",
+    llm_not_configured:   "service-llm-error",
+    llm_refusal:          "service-llm-refusal",
+    llm_refused:          "service-llm-refusal",
+    invalid_output:       "service-invalid-output",
+    llm_output_invalid:   "service-invalid-output",
+    llm_output_truncated: "service-invalid-output",
+    timeout:              "service-timeout",
+    worker_lost:          "service-worker-lost",
+    internal_error:       "service-internal-error",
+});
+
+const UNKNOWN_SERVICE_ERROR = "service-internal-error";
 
 const CASE_TEXT_ERRORS = Object.freeze({
     "no-document":   "The case has no document to analyse.",
@@ -278,15 +292,35 @@ export function buildClaimTypologyRequest({ designId, caseId, jobId, input, case
     return request;
 }
 
-// Why the request could not be sent, as an analysis error.
-function requestFailure(error) {
-    if (isAiAdditionsNotConfigured(error)) {
-        return failure(CLAIM_TYPOLOGY_ERRORS.NOT_CONFIGURED);
+/**
+ * Why the request could not be sent: Case Analyst refused it
+ * (`request-rejected`, a 4xx such as a 422 validation error) or could not be
+ * reached (`request-failed`: no AI Additions connection, a network error, a
+ * timeout or a 5xx).
+ */
+export function requestFailure(error) {
+    const statusCode = Number(error?.statusCode);
+
+    if (statusCode >= 400 && statusCode < 500) {
+        return failure(
+            CLAIM_TYPOLOGY_ERRORS.REQUEST_REJECTED,
+            `Case Analyst rejected the claim typology request (HTTP ${statusCode}).`
+        );
     }
-    if (error?.statusCode === 422 || error?.statusCode === 400) {
-        return failure(CLAIM_TYPOLOGY_ERRORS.REQUEST_REJECTED);
+
+    if (error?.code === "not_configured") {
+        return failure(
+            CLAIM_TYPOLOGY_ERRORS.REQUEST_FAILED,
+            "The AI Additions connection is not configured."
+        );
     }
-    return failure(CLAIM_TYPOLOGY_ERRORS.REQUEST_FAILED);
+
+    return failure(
+        CLAIM_TYPOLOGY_ERRORS.REQUEST_FAILED,
+        Number.isInteger(statusCode) && statusCode > 0
+            ? `Case Analyst could not take the claim typology request (HTTP ${statusCode}).`
+            : "Case Analyst could not be reached."
+    );
 }
 
 // The case text, or the analysis error that explains why there is none.
@@ -342,7 +376,10 @@ async function processDesignSaved({ context, callback, designAnalyses }) {
         if (!caseId || !Array.isArray(input?.questions) || input.questions.length === 0) {
             await failGeneration({
                 designAnalyses, callback, jobId,
-                error: failure(CLAIM_TYPOLOGY_ERRORS.MISSING_INPUT),
+                error: failure(
+                    CLAIM_TYPOLOGY_ERRORS.ADAPTER_ERROR,
+                    "The generation carries no analysis input."
+                ),
             });
             return;
         }
@@ -437,14 +474,23 @@ export function claimTypologyDocument(result) {
     };
 }
 
-// A failed result's error, kept as Case Analyst reported it: its sanitized
-// message, with its code for diagnosis.
-function serviceFailure(result) {
-    const code = typeof result?.error?.code === "string" ? result.error.code : "unknown";
-    const message = typeof result?.error?.message === "string" && result.error.message.trim()
-        ? result.error.message.trim()
-        : "Case Analyst could not generate the claim typology.";
-    return failure(CLAIM_TYPOLOGY_ERRORS.SERVICE_FAILED, `${message} (${code})`);
+/**
+ * The error code and message recorded for a failed result: `service-<code>`
+ * with Case Analyst's sanitized message. An unknown code is an internal error,
+ * and its code is kept in the message for diagnosis.
+ */
+export function serviceFailure(error) {
+    const code = isPlainObject(error) && typeof error.code === "string" ? error.code : null;
+    const known = code !== null && Object.hasOwn(SERVICE_ERROR_CODES, code);
+    const reported = isPlainObject(error) && typeof error.message === "string"
+        ? error.message.trim()
+        : "";
+    const message = reported || "Case Analyst could not generate the claim typology.";
+
+    return failure(
+        known ? SERVICE_ERROR_CODES[code] : UNKNOWN_SERVICE_ERROR,
+        known || code === null ? message : `${message} (${code})`
+    );
 }
 
 async function processExternalResult({ context, callback, designAnalyses }) {
@@ -467,7 +513,7 @@ async function processExternalResult({ context, callback, designAnalyses }) {
         const failed = result.schemaVersion === CLAIM_TYPOLOGY_RESULT_SCHEMA
             && result.status === "failed";
         const error = failed
-            ? serviceFailure(result)
+            ? serviceFailure(result.error)
             : failure(CLAIM_TYPOLOGY_ERRORS.INVALID_RESULT);
         const stored = await designAnalyses.fail({ jobId, ...error });
         await callback({

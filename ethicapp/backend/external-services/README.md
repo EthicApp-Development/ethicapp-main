@@ -1236,13 +1236,17 @@ the Argumentation Tutor uses when it gives feedback. It requires
   unchanged, and the adapter adds to each typology `questionTextHash`, the
   hash of the question text it answers, taken from
   `clientContext.questionTextHashes` (null when missing). A failed result is
-  recorded as `service-failed` with Case Analyst's message and code. A
+  recorded with Case Analyst's sanitized message. A
   callback that matches no job is refused by the registry, since the adapter
   exports no `getCallbackTarget()`.
-- **Errors.** `no-document`, `render-failed`, `superseded`, `timeout` (case
-  text), `empty-case-text`, `case-text-too-long` (over 200,000 characters),
-  `not-configured`, `request-rejected` (`400`/`422`), `request-failed`,
-  `service-failed`, `invalid-result`, `missing-input` and `adapter-error`.
+- **Errors.** The adapters' shared codes (see "Error codes" under "Case
+  Analyses"): the render outcomes (`no-document`, `render-failed`,
+  `superseded`, `timeout`), `empty-case-text`, `case-text-too-long` (over
+  200,000 characters), `request-rejected` (a 4xx), `request-failed` (no
+  connection, a network error or a 5xx), `service-<code>` for a failed result
+  (the core codes the result schema names, such as `llm_refused`, map to
+  their public code; unknown ones are `service-internal-error`),
+  `invalid-result` and `adapter-error`.
 
 The teacher's design view shows the typology read-only
 (`components/claim-typology-panel.component.js` and

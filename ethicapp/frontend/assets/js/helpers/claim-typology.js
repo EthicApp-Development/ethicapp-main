@@ -6,7 +6,11 @@
 
 import { TEXT_MARKDOWN } from "../../../../common/modules/text-content-types.js";
 import { toPlainText } from "./rich-text.js";
-import { caseAnalysisState, isCaseAnalysisInFlight } from "./case-analyses.js";
+import {
+    caseAnalysisErrorKey,
+    caseAnalysisState,
+    isCaseAnalysisInFlight,
+} from "./case-analyses.js";
 
 export const CLAIM_TYPOLOGY_SERVICE_ID = "case-analyst-claim-typology";
 export const CLAIM_TYPOLOGY_SCHEMA = "claim-typology/v1";
@@ -26,23 +30,6 @@ const STANCES = Object.freeze({
 const UNKNOWN_STANCE = Object.freeze({
     key:        "claim_typology_stance_unknown",
     labelClass: "label-default",
-});
-
-const ERROR_KEYS = Object.freeze({
-    "generation-not-started": "case_analysis_error_generation_not_started",
-    "no-document":            "case_analysis_error_no_document",
-    "render-failed":          "case_analysis_error_render_failed",
-    "superseded":             "case_analysis_error_superseded",
-    "timeout":                "case_analysis_error_timeout",
-    "adapter-error":          "case_analysis_error_adapter_error",
-    "missing-input":          "claim_typology_error_missing_input",
-    "empty-case-text":        "claim_typology_error_empty_case_text",
-    "case-text-too-long":     "claim_typology_error_case_text_too_long",
-    "not-configured":         "claim_typology_error_not_configured",
-    "request-rejected":       "claim_typology_error_request_rejected",
-    "request-failed":         "claim_typology_error_request_failed",
-    "service-failed":         "claim_typology_error_service_failed",
-    "invalid-result":         "claim_typology_error_invalid_result",
 });
 
 // The answers of POST .../generate, as DesignAnalysesService reports them.
@@ -227,10 +214,10 @@ export function claimTypologyView({ analysis, questions }) {
 }
 
 // The translation key that explains an error code of the typology.
+// Analyses of cases and designs share the adapters' error codes, so the
+// mapping lives in one place (ERROR_KEYS in case-analyses.js).
 export function claimTypologyErrorKey(errorCode) {
-    return (typeof errorCode === "string" && Object.hasOwn(ERROR_KEYS, errorCode))
-        ? ERROR_KEYS[errorCode]
-        : "case_analysis_error_generic";
+    return caseAnalysisErrorKey(errorCode);
 }
 
 // The notice for an answer of the generate endpoint other than "accepted".
