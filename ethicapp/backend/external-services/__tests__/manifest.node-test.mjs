@@ -48,6 +48,7 @@ test("catalog: each adapter requires its AI Additions service; mocks are develop
         "argumentation-tutor-system": { development: false, requires: ["argumentation-tutor"] },
         "case-analyst":               { development: false, requires: ["case-analyst"] },
         "mock-case-analysis":         { development: true, requires: [] },
+        "mock-design-analysis":       { development: true, requires: [] },
     });
 });
 
@@ -104,6 +105,25 @@ test("catalog: every case-scoped service provides UI translations", async () => 
         assert.ok(
             await registry.getServiceUiTranslations(service.id),
             `${service.id} provides no valid es_CL and en_US translations`
+        );
+    }
+});
+
+// Design screens show each design-scoped service by its translated texts, and
+// saving a design runs only services that say whether they apply (#848).
+test("catalog: every design-scoped service provides UI translations and an input export", async () => {
+    const registry = await registerCatalog();
+    const designServices = manifest.services.filter(service => service.scopes?.includes("design"));
+
+    for (const service of designServices) {
+        assert.ok(
+            await registry.getServiceUiTranslations(service.id),
+            `${service.id} provides no valid es_CL and en_US translations`
+        );
+        assert.equal(
+            typeof registry.getDesignAnalysisInputBuilder(service.id),
+            "function",
+            `${service.id} exports no designAnalysisInput()`
         );
     }
 });

@@ -18,11 +18,14 @@ import {
     copyCaseDocuments,
     normalizeCaseDocumentSummaries,
 } from "../helpers/case-documents.js";
+import { copyReadyDesignAnalyses } from "../helpers/design-analyses-helper.js";
+import { scheduleDesignAnalysesOnSave } from "../helpers/design-analyses-lifecycle-helper.js";
 import {
     designLockedRefusal,
     designUpdateRefusal,
     UPDATE_UNLOCKED_DESIGN_SQL,
 } from "../helpers/design-update.js";
+import { ensureCasePdfRenderJob } from "../helpers/pdf-render-jobs-helper.js";
 import externalServicesRegistry from "../services/external-services.service.js";
 import {
     designEnabledServiceIds,
@@ -421,6 +424,21 @@ async function copyCaseForUser(client, sourceCaseId, userId, visibility = PRIVAT
     return inserted.rows[0].id;
 }
 
+// After a design copy is committed (#848): its case is rendered when it has no
+// render yet, so analyses and screens get its text, and the copy requests the
+// analyses it did not inherit, as a save would. Both run in the background,
+// after the answer.
+function scheduleCopyFollowUp(designId, caseId, userId) {
+    if (caseId) {
+        ensureCasePdfRenderJob(caseId, { metadata: { reason: "design_copied" } })
+            .catch(error => console.error("Unable to queue PDF render job for a copied case:", {
+                caseId,
+                error,
+            }));
+    }
+    scheduleDesignAnalysesOnSave(designId, { userId });
+}
+
 router.get("/designs/:id", async (req, res) => {
     try {
         // Extract the design ID from request parameters
@@ -548,7 +566,14 @@ router.post("/designs", async (req, res) => {
         // Check if the design was successfully created
         if (result && result.id) {
             await replaceDesignTags(result.id, parsedTagIds, sessionUid);
-            return res.json({ status: "ok", id: result.id, warnings: configurationCheck.warnings });
+            const response = res.json({
+                status:   "ok",
+                id:       result.id,
+                warnings: configurationCheck.warnings,
+            });
+            // Design analyses run in the background, after the answer (#848).
+            scheduleDesignAnalysesOnSave(result.id, { userId: sessionUid });
+            return response;
         } else {
             return res.status(500).json({ status: "err", message: "Failed to create design." });
         }
@@ -665,11 +690,14 @@ router.patch("/designs/:id", async (req, res) => {
         }
         await replaceDesignTags(designId, parsedTagIds, sessionUid);
 
-        return res.json({
+        const response = res.json({
             status:   "ok",
             message:  "Design updated successfully",
             warnings: configurationCheck.warnings,
         });
+        // Design analyses run in the background, after the answer (#848).
+        scheduleDesignAnalysesOnSave(designId, { userId: sessionUid });
+        return response;
     } catch (err) {
         console.error("Error in /designs/:id PATCH:", err);
         return res.status(500).json({ status: "err", message: "Internal Server Error" });
@@ -1103,10 +1131,19 @@ router.post("/designs/:id/duplicate", async (req, res) => {
                 ON CONFLICT (design_id, tag_id) DO UPDATE
                 SET assigned_by = EXCLUDED.assigned_by;
             `, [result.rows[0].id, design.id, sessionUid]);
+
+            // The copy keeps the source's ready analyses (#848).
+            await copyReadyDesignAnalyses(
+                { sourceDesignId: design.id, targetDesignId: result.rows[0].id },
+                ({ sql, sqlParams }) => client.query(sql, sqlParams).then(({ rows }) => rows)
+            );
             await client.query("COMMIT");
 
             if (result.rows[0]?.id) {
-                return res.json({ status: "ok", id: result.rows[0].id, caseId: copiedCaseId });
+                const copyId = result.rows[0].id;
+                const response = res.json({ status: "ok", id: copyId, caseId: copiedCaseId });
+                scheduleCopyFollowUp(copyId, copiedCaseId, sessionUid);
+                return response;
             }
 
             return res.status(500).json({ status: "err", message: "Failed to duplicate design" });

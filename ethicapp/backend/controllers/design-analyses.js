@@ -3,6 +3,7 @@ import * as config from "../config/database.config.js";
 import * as rpg2 from "../db/rest-pg-2.js";
 import { requireRole } from "../helpers/auth-helper.js";
 import {
+    designFingerprintSql,
     getDesignAnalysis,
     listDesignAnalyses,
     reserveDesignAnalysisGeneration,
@@ -10,7 +11,9 @@ import {
 } from "../helpers/design-analyses-helper.js";
 import {
     buildDesignSavedContext,
+    designSnapshotOf,
     dispatchDesignSavedHook,
+    resolveDesignAnalysisInput,
 } from "../helpers/design-analyses-lifecycle-helper.js";
 import { designLockedRefusal } from "../helpers/design-update.js";
 import externalServicesRegistry from "../services/external-services.service.js";
@@ -35,6 +38,7 @@ async function getOwnedDesign(designId, userId) {
         dbcon: config.dbconnString,
         sql:   `
             SELECT d.id, d.creator, d.locked, d.case_id, d.design,
+                   ${designFingerprintSql("d")} AS design_fingerprint,
                    c.language_code AS case_language_code
             FROM designs AS d
             LEFT JOIN ethical_cases AS c
@@ -66,10 +70,11 @@ async function isServiceUsable(serviceId) {
     return externalServicesRegistry.isServiceUsable(serviceId);
 }
 
-// A new generation sends design-saved to the reserved service only.
-function dispatchGeneration(designRow, reservation, { userId }) {
+// A new generation sends design-saved to the reserved service only, with the
+// input its adapter computed.
+function dispatchGeneration(designRow, reservation, { userId, analysis }) {
     return dispatchDesignSavedHook(
-        buildDesignSavedContext(designRow, { userId }),
+        buildDesignSavedContext(designRow, { userId, analysis }),
         { reservations: [reservation] }
     );
 }
@@ -83,6 +88,7 @@ const defaultDependencies = {
     isDesignService,
     getValidator,
     isServiceUsable,
+    resolveInput:      resolveDesignAnalysisInput,
     dispatchGeneration,
 };
 
@@ -265,21 +271,41 @@ export async function generateDesignAnalysisForOwner({
         );
     }
 
+    // The same input a save computes (#848), so a later save with an
+    // unchanged design runs nothing. It runs whatever the stored input hash.
+    const analysis = await dependencies.resolveInput(designRow, serviceId);
+    if (!analysis) {
+        return errorResponse(
+            409,
+            "The analysis service does not apply to this design.",
+            "DESIGN_ANALYSIS_NOT_APPLICABLE"
+        );
+    }
+
     // One conditional statement checks and reserves, so of two concurrent
-    // requests only one is accepted. No input hash is computed here yet: the
-    // adapters' input export comes with analyses on save (#848).
-    const reservation = await dependencies.reserveGeneration({
+    // requests only one is accepted. It is bound to the design read above: a
+    // save that changed the design while the input was prepared owns the
+    // analysis.
+    const { designChanged, reservation } = await dependencies.reserveGeneration({
         designId,
         serviceId,
-        inputHash: null,
+        inputHash:      analysis.hash,
         userId,
+        designSnapshot: designSnapshotOf(designRow),
     });
+    if (designChanged) {
+        return errorResponse(
+            409,
+            "The design changed while the analysis was being requested. Try again.",
+            "DESIGN_CHANGED"
+        );
+    }
     if (!reservation) {
         return analysisProcessing();
     }
 
     // Fire-and-forget: the adapter records its progress in the analysis row.
-    dependencies.dispatchGeneration(designRow, reservation, { userId });
+    dependencies.dispatchGeneration(designRow, reservation, { userId, analysis });
 
     return okResponse(serializeDesignAnalysis(reservation), 202);
 }

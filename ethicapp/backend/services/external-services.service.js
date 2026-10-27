@@ -482,6 +482,9 @@ export class ExternalServicesRegistry {
 
         this.caseAnalysisValidators   = new Map();
         this.designAnalysisValidators = new Map();
+        // serviceId -> designAnalysisInput({ design, designCase }): whether a
+        // design-scoped adapter applies to a design, and its input (#848).
+        this.designAnalysisInputBuilders = new Map();
         // serviceId -> getCallbackTarget(requestPayload): the destination a
         // callback payload names, checked against its job (#815).
         this.callbackTargetResolvers = new Map();
@@ -589,6 +592,8 @@ export class ExternalServicesRegistry {
             || adapterModule.default?.validateCaseAnalysisDocument;
         const validateDesignAnalysisDocument = adapterModule.validateDesignAnalysisDocument
             || adapterModule.default?.validateDesignAnalysisDocument;
+        const designAnalysisInput = adapterModule.designAnalysisInput
+            || adapterModule.default?.designAnalysisInput;
         const getCallbackTarget = adapterModule.getCallbackTarget
             || adapterModule.default?.getCallbackTarget;
 
@@ -612,6 +617,15 @@ export class ExternalServicesRegistry {
 
         if (typeof validateDesignAnalysisDocument === "function") {
             this.designAnalysisValidators.set(normalizedService.id, validateDesignAnalysisDocument);
+        }
+
+        if (typeof designAnalysisInput === "function") {
+            this.designAnalysisInputBuilders.set(normalizedService.id, designAnalysisInput);
+        } else if (normalizedService.scopes.includes("design")) {
+            console.warn(
+                `[external-services] Adapter ${service.adapter} exports no designAnalysisInput(), `
+                + `so saving a design never runs ${normalizedService.id}.`
+            );
         }
 
         if (typeof getCallbackTarget === "function") {
@@ -931,6 +945,13 @@ export class ExternalServicesRegistry {
     // teacher edits of its design analyses, or null when it accepts none.
     getDesignAnalysisValidator(serviceId) {
         return this.designAnalysisValidators.get(serviceId) || null;
+    }
+
+    // The adapter's optional designAnalysisInput(), which says whether it
+    // applies to a design and computes its input and input hash (#848), or
+    // null when it exports none.
+    getDesignAnalysisInputBuilder(serviceId) {
+        return this.designAnalysisInputBuilders.get(serviceId) || null;
     }
 
     getServiceById(serviceId) {

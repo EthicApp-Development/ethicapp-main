@@ -22,7 +22,10 @@ const DESIGN_ROW = {
     case_id:            42,
     case_language_code: "es",
     design:             { phases: [] },
+    design_fingerprint: "fingerprint-1",
 };
+// The design snapshot its reservations are bound to.
+const DESIGN_SNAPSHOT = { fingerprint: "fingerprint-1", caseId: 42 };
 const LOCKED_DESIGN_ROW = { ...DESIGN_ROW, locked: true };
 
 const READY_ROW = {
@@ -45,6 +48,9 @@ const STALE_ROW = { ...BUSY_ROW, service_id: "svc-stale", is_stale: true };
 // Services registered with the `design` scope; "svc-new" has no row yet.
 const DESIGN_SERVICES = ["svc-ready", "svc-busy", "svc-stale", "svc-new"];
 
+// What the adapter's designAnalysisInput() returns for DESIGN_ROW.
+const ANALYSIS_INPUT = { input: { questions: ["p1-q1"] }, hash: "sha256:input" };
+
 // The condition of reserveDesignAnalysisGeneration() and saveReviewedDesignAnalysis().
 const isInFlight = row => ["requested", "processing"].includes(row.status) && !row.is_stale;
 
@@ -62,14 +68,17 @@ function makeDependencies(overrides = {}) {
         calls.reserveGeneration.push(args);
         const row = findRow(args.serviceId);
         if (row && isInFlight(row)) {
-            return null;
+            return { designChanged: false, reservation: null };
         }
         return {
-            ...(row ?? READY_ROW),
-            service_id: args.serviceId,
-            status:     "requested",
-            document:   row?.document ?? null,
-            job_id:     JOB_ID,
+            designChanged: false,
+            reservation:   {
+                ...(row ?? READY_ROW),
+                service_id: args.serviceId,
+                status:     "requested",
+                document:   row?.document ?? null,
+                job_id:     JOB_ID,
+            },
         };
     };
     const dispatchGeneration = (designRow, reservation, options) => {
@@ -83,6 +92,7 @@ function makeDependencies(overrides = {}) {
         isDesignService: async serviceId => DESIGN_SERVICES.includes(serviceId),
         getValidator:    async () => null,
         isServiceUsable: async () => true,
+        resolveInput:    async () => ANALYSIS_INPUT,
         saveReviewed,
         reserveGeneration,
         dispatchGeneration,
@@ -297,19 +307,85 @@ test("generateDesignAnalysisForOwner: 202 for settled, stale and new analyses", 
         assert.equal(body.result.serviceId, serviceId);
     }
 
-    assert.deepEqual(calls.reserveGeneration, [
-        { designId: 5, serviceId: "svc-ready", inputHash: null, userId: OWNER_ID },
-        { designId: 5, serviceId: "svc-stale", inputHash: null, userId: OWNER_ID },
-        { designId: 5, serviceId: "svc-new", inputHash: null, userId: OWNER_ID },
-    ]);
+    // The input hash is stored even when it equals the stored one: an
+    // explicit regeneration always runs. Each reservation is bound to the
+    // design row the input was prepared from.
+    assert.deepEqual(calls.reserveGeneration, ["svc-ready", "svc-stale", "svc-new"].map(serviceId => ({
+        designId:       5,
+        serviceId,
+        inputHash:      "sha256:input",
+        userId:         OWNER_ID,
+        designSnapshot: DESIGN_SNAPSHOT,
+    })));
     assert.deepEqual(
         calls.dispatchGeneration.map(({ designRow, reservation, options }) => [
             designRow, reservation.service_id, reservation.job_id, options,
         ]),
         ["svc-ready", "svc-stale", "svc-new"].map(serviceId => [
-            DESIGN_ROW, serviceId, JOB_ID, { userId: OWNER_ID },
+            DESIGN_ROW, serviceId, JOB_ID, { userId: OWNER_ID, analysis: ANALYSIS_INPUT },
         ])
     );
+});
+
+test("generateDesignAnalysisForOwner: an adapter without an input export stores no hash", async () => {
+    const { dependencies, calls } = makeDependencies({
+        resolveInput: async () => ({ input: null, hash: null }),
+    });
+
+    const { status } = await generateDesignAnalysisForOwner({
+        designId:  5,
+        serviceId: "svc-new",
+        userId:    OWNER_ID,
+        dependencies,
+    });
+
+    assert.equal(status, 202);
+    assert.equal(calls.reserveGeneration[0].inputHash, null);
+});
+
+test("generateDesignAnalysisForOwner: 409 when the service does not apply to the design", async () => {
+    const resolved = [];
+    const { dependencies, calls } = makeDependencies({
+        resolveInput: async (designRow, serviceId) => {
+            resolved.push([designRow, serviceId]);
+            return null;
+        },
+    });
+
+    const { status, body } = await generateDesignAnalysisForOwner({
+        designId:  5,
+        serviceId: "svc-new",
+        userId:    OWNER_ID,
+        dependencies,
+    });
+
+    assert.equal(status, 409);
+    assert.equal(body.code, "DESIGN_ANALYSIS_NOT_APPLICABLE");
+    assert.deepEqual(resolved, [[DESIGN_ROW, "svc-new"]]);
+    assert.equal(calls.reserveGeneration.length, 0);
+    assert.equal(calls.dispatchGeneration.length, 0);
+});
+
+test("generateDesignAnalysisForOwner: 409 DESIGN_CHANGED when a save changed the design meanwhile", async () => {
+    const { dependencies, calls } = makeDependencies({
+        reserveGeneration: async args => {
+            calls.reserveGeneration.push(args);
+            return { designChanged: true, reservation: null };
+        },
+    });
+
+    const { status, body } = await generateDesignAnalysisForOwner({
+        designId:  5,
+        serviceId: "svc-ready",
+        userId:    OWNER_ID,
+        dependencies,
+    });
+
+    assert.equal(status, 409);
+    assert.equal(body.code, "DESIGN_CHANGED");
+    assert.match(body.message, /Try again/);
+    assert.deepEqual(calls.reserveGeneration[0].designSnapshot, DESIGN_SNAPSHOT);
+    assert.equal(calls.dispatchGeneration.length, 0);
 });
 
 test("generateDesignAnalysisForOwner: 409 while a generation is in flight", async () => {
@@ -488,7 +564,7 @@ function makeAnalysisTable() {
             await roundTrip();
             const row = rows.get(serviceId);
             if (row && isInFlight(row)) {
-                return null;
+                return { designChanged: false, reservation: null };
             }
             const reserved = {
                 ...(row ?? { service_id: serviceId, document: null, is_stale: false }),
@@ -496,7 +572,7 @@ function makeAnalysisTable() {
                 job_id: `job-${++jobCount}`,
             };
             rows.set(serviceId, reserved);
-            return { ...reserved };
+            return { designChanged: false, reservation: { ...reserved } };
         },
     };
 }
