@@ -5,6 +5,8 @@ export function DesignViewerController($scope, $routeParams, $window, DesignCata
     vm.design = null;
     vm.associatedCase = null;
     vm.isDesignUnavailable = false;
+    // The claim typology shown in each phase (#849), from claim-typology-panel.
+    vm.claimTypology = null;
 
     vm.init = async function() {
         vm.designId = Number($routeParams.id);
@@ -54,6 +56,10 @@ export function DesignViewerController($scope, $routeParams, $window, DesignCata
         return caseItem.title;
     };
 
+    vm.handleClaimTypologyView = function(view) {
+        vm.claimTypology = view;
+    };
+
     vm.goBack = function() {
         if ($window.history.length > 1) {
             $window.history.back();
@@ -64,11 +70,11 @@ export function DesignViewerController($scope, $routeParams, $window, DesignCata
     };
     
     vm.handleLaunch = function() {
-        $scope.navigateTo('/activities/new/' + vm.designId);
+        $scope.navigateTo("/activities/new/" + vm.designId);
     };
 
     vm.handleEdit = function() {
-        $scope.navigateTo('/designs/' + vm.designId + '/edit');
+        $scope.navigateTo("/designs/" + vm.designId + "/edit");
     };
 
     vm.designPublic = async function(design) {
@@ -82,4 +88,4 @@ export function DesignViewerController($scope, $routeParams, $window, DesignCata
     };
 
     vm.init();
-};
+}

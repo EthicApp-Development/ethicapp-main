@@ -1,14 +1,16 @@
 let designViewerDirective = function() {
     return {
-        restrict: 'E',
-        scope: {
-            design:     "<",
+        restrict: "E",
+        scope:    {
+            design:        "<",
             // The case's videos (#785), for the videos in the phase texts.
-            caseVideos: "<",
+            caseVideos:    "<",
+            // The claim typology of the tutor questions, by phase (#849).
+            claimTypology: "<",
         },
         bindToController: true,
-        controllerAs: 'ctrl',
-        controller: function($scope) {
+        controllerAs:     "ctrl",
+        controller:       function($scope) {
             const ctrl = this;
 
             ctrl.$onInit = function() {

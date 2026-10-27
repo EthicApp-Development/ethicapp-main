@@ -13,6 +13,7 @@ const PRODUCTION_IDS  = [
     "argumentation-tutor-system",
     "case-analyst-evaluation",
     "case-analyst-evidence-inventory",
+    "case-analyst-claim-typology",
 ];
 const DEVELOPMENT_IDS = [
     "mock-ai-response-review",
@@ -137,7 +138,7 @@ test("registration: the policy gate decides which shipped adapters are usable", 
     );
     assert.deepEqual(
         await everything.registry.getUsableServiceIdsForScope("design"),
-        ["mock-design-analysis"]
+        ["mock-design-analysis", "case-analyst-claim-typology"]
     );
     assert.equal(
         typeof everything.registry.getDesignAnalysisInputBuilder("mock-design-analysis"),
@@ -151,7 +152,7 @@ test("registration: the policy gate decides which shipped adapters are usable", 
     });
     assert.deepEqual(
         await usableIds(caseAnalystOnly.registry),
-        ["case-analyst-evaluation", "case-analyst-evidence-inventory"]
+        ["case-analyst-claim-typology", "case-analyst-evaluation", "case-analyst-evidence-inventory"]
     );
 
     const noConnection = await registerWithoutNetwork({

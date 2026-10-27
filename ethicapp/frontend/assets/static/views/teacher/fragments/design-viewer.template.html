@@ -9,6 +9,11 @@
             </div>
             <phase-description phase-number="$index + 1" design-object="ctrl.design"
                 case-videos="ctrl.caseVideos"></phase-description>
+            <claim-typology-questions
+                ng-if="ctrl.claimTypology.byPhase[$index + 1]"
+                questions="ctrl.claimTypology.byPhase[$index + 1]"
+                state="ctrl.claimTypology.state">
+            </claim-typology-questions>
         </div>
     </div>      
 </div>

@@ -40,6 +40,10 @@
                     </p>
                 </div>
             </div>
+            <claim-typology-panel
+                design="dvc.design"
+                on-view-changed="dvc.handleClaimTypologyView(view)">
+            </claim-typology-panel>
         </div>
     </div>
     <div class="row" ng-if="!dvc.isDesignUnavailable && dvc.design">
@@ -47,7 +51,8 @@
             <h4 style="margin-top:1em; margin-bottom:2em">
                 {{ 'design_explanation_text' | translate }}
             </h4>
-            <design-viewer design="dvc.design" case-videos="dvc.associatedCase.videos"></design-viewer>            
+            <design-viewer design="dvc.design" case-videos="dvc.associatedCase.videos"
+                claim-typology="dvc.claimTypology"></design-viewer>            
         </div>
     </div>
 </div>

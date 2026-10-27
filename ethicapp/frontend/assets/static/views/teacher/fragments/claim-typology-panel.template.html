@@ -1,0 +1,112 @@
+<div class="panel panel-default claim-typology-panel" ng-if="$ctrl.isVisible()">
+    <div class="panel-body">
+        <div class="claim-typology-panel-header">
+            <h4 class="claim-typology-panel-title">{{ 'claim_typology_title' | translate }}</h4>
+            <span class="claim-typology-panel-status" ng-if="$ctrl.analysis">
+                <i class="{{ $ctrl.indicator().iconClass }}" aria-hidden="true"></i>
+                {{ $ctrl.indicator().statusKey | translate }}
+            </span>
+            <span class="text-muted small" ng-if="$ctrl.analysis.generatedAt">
+                {{ 'case_analysis_generated_at' | translate:{ date: ($ctrl.analysis.generatedAt | date:'yyyy-MM-dd HH:mm') } }}
+            </span>
+            <button
+                type="button"
+                class="btn btn-default btn-sm claim-typology-generate-button"
+                ng-if="$ctrl.canGenerate() && !$ctrl.confirmingGenerate"
+                ng-click="$ctrl.askToGenerate()">
+                <i class="fa-solid fa-rotate" aria-hidden="true"></i>
+                <span ng-if="$ctrl.analysis">{{ 'case_analysis_generate_again' | translate }}</span>
+                <span ng-if="!$ctrl.analysis">{{ 'claim_typology_generate' | translate }}</span>
+            </button>
+            <span class="text-muted" ng-if="$ctrl.generating">
+                <i class="fa-solid fa-circle-notch fa-spin" aria-hidden="true"></i>
+                {{ 'case_analysis_generate_requesting' | translate }}
+            </span>
+        </div>
+
+        <p class="text-muted small">{{ 'claim_typology_intro' | translate }}</p>
+
+        <div class="alert alert-info" ng-if="$ctrl.confirmingGenerate" role="group"
+            aria-label="{{ 'case_analysis_generate_again' | translate }}">
+            <p>{{ 'claim_typology_generate_confirm' | translate }}</p>
+            <div class="claim-typology-confirm-actions">
+                <button type="button" class="btn btn-primary btn-sm" ng-click="$ctrl.confirmGenerate()">
+                    {{ 'case_analysis_generate_confirm_action' | translate }}
+                </button>
+                <button type="button" class="btn btn-default btn-sm" ng-click="$ctrl.cancelGenerate()">
+                    {{ 'cancel' | translate }}
+                </button>
+            </div>
+        </div>
+
+        <div class="alert alert-{{ $ctrl.notice.type }}" ng-if="$ctrl.notice" role="alert">
+            {{ $ctrl.notice.key | translate }}
+        </div>
+
+        <div class="alert alert-warning" ng-if="$ctrl.loadFailed" role="alert">
+            {{ 'case_analysis_load_failed' | translate }}
+            <button type="button" class="btn btn-default btn-sm" ng-click="$ctrl.load()">
+                {{ 'case_analysis_retry' | translate }}
+            </button>
+        </div>
+
+        <div role="status">
+            <p class="text-muted" ng-if="$ctrl.state() === 'none' && !$ctrl.loadFailed">
+                <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+                {{ 'claim_typology_not_generated' | translate }}
+            </p>
+
+            <div class="alert alert-info" ng-if="$ctrl.state() === 'pending'">
+                <i class="fa-solid fa-circle-notch fa-spin" aria-hidden="true"></i>
+                {{ 'claim_typology_pending' | translate }}
+                <span ng-if="$ctrl.hasDocument()">{{ 'case_analysis_previous_result_note' | translate }}</span>
+            </div>
+
+            <div class="alert alert-warning" ng-if="$ctrl.state() === 'stuck'">
+                <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+                {{ 'case_analysis_stuck_message' | translate }}
+            </div>
+        </div>
+
+        <div class="alert alert-danger" ng-if="$ctrl.state() === 'failed'">
+            <p>
+                <i class="fa-solid fa-circle-xmark" aria-hidden="true"></i>
+                <strong>{{ 'claim_typology_failed' | translate }}</strong>
+                {{ $ctrl.errorKey() | translate }}
+            </p>
+            <p class="small" ng-if="$ctrl.errorMessage()">
+                {{ 'case_analysis_error_detail' | translate:{ message: $ctrl.errorMessage() } }}
+            </p>
+        </div>
+
+        <div class="alert alert-warning" ng-if="$ctrl.latestGenerationFailed()">
+            <p>
+                <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+                <strong>{{ 'claim_typology_latest_failed' | translate }}</strong>
+                {{ $ctrl.errorKey() | translate }}
+            </p>
+            <p class="small" ng-if="$ctrl.errorMessage()">
+                {{ 'case_analysis_error_detail' | translate:{ message: $ctrl.errorMessage() } }}
+            </p>
+        </div>
+
+        <p class="text-warning" ng-if="$ctrl.view.outOfDateCount > 0">
+            <i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i>
+            {{ 'claim_typology_out_of_date_summary' | translate:{ count: $ctrl.view.outOfDateCount } }}
+        </p>
+
+        <p class="text-muted" ng-if="$ctrl.view.missingCount > 0">
+            <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+            {{ 'claim_typology_missing_summary' | translate:{ count: $ctrl.view.missingCount } }}
+        </p>
+
+        <p class="text-muted small" ng-if="$ctrl.isLocked()">
+            <i class="fa-solid fa-lock" aria-hidden="true"></i>
+            {{ 'claim_typology_locked_note' | translate }}
+        </p>
+
+        <p class="small" ng-if="$ctrl.hasDocument()">
+            {{ 'claim_typology_where_note' | translate }}
+        </p>
+    </div>
+</div>
