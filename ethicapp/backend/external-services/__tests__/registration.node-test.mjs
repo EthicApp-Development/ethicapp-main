@@ -8,7 +8,11 @@ import { ExternalServicesRegistry } from "../../services/external-services.servi
 
 const MANIFEST_PATH = fileURLToPath(new URL("../manifest.json", import.meta.url));
 
-const PRODUCTION_IDS  = ["polyadic-devils-advocate", "argumentation-tutor-system", "case-analyst"];
+const PRODUCTION_IDS  = [
+    "polyadic-devils-advocate",
+    "argumentation-tutor-system",
+    "case-analyst-evaluation",
+];
 const DEVELOPMENT_IDS = [
     "mock-ai-response-review",
     "mock-chat-agent",
@@ -128,7 +132,7 @@ test("registration: the policy gate decides which shipped adapters are usable", 
     assert.deepEqual(await usableIds(everything.registry), [...PRODUCTION_IDS, ...DEVELOPMENT_IDS].sort());
     assert.deepEqual(
         await everything.registry.getUsableServiceIdsForScope("case"),
-        ["case-analyst", "mock-case-analysis"]
+        ["case-analyst-evaluation", "mock-case-analysis"]
     );
     assert.deepEqual(
         await everything.registry.getUsableServiceIdsForScope("design"),
@@ -144,7 +148,7 @@ test("registration: the policy gate decides which shipped adapters are usable", 
         aiServicePolicy:         policyAllowing(["case-analyst"]),
         isAiAdditionsConfigured: async () => true,
     });
-    assert.deepEqual(await usableIds(caseAnalystOnly.registry), ["case-analyst"]);
+    assert.deepEqual(await usableIds(caseAnalystOnly.registry), ["case-analyst-evaluation"]);
 
     const noConnection = await registerWithoutNetwork({
         developmentAdapters:     true,

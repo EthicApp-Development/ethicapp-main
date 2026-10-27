@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "case-evaluation-result/v1",
+  "taskId": "5a6b7c8d-9e0f-4a1b-8c2d-3e4f5a6b7c8d",
+  "status": "failed",
+  "clientContext": {
+    "service": "case-analyst-evaluation",
+    "correlationId": "4f0c2a8e-6b1d-4c39-9f57-2d8f0b6c1a90",
+    "caseId": "128"
+  },
+  "error": {
+    "code": "timeout",
+    "message": "The evaluation exceeded its time limit."
+  }
+}

@@ -1,0 +1,178 @@
+{
+  "schemaVersion": "case-evaluation-result/v1",
+  "taskId": "0b8e5d2c-7f41-4a9e-b3c6-1d2e3f4a5b6c",
+  "status": "completed",
+  "clientContext": {
+    "service": "case-analyst-evaluation",
+    "correlationId": "4f0c2a8e-6b1d-4c39-9f57-2d8f0b6c1a90",
+    "caseId": "128"
+  },
+  "evaluation": {
+    "schemaVersion": "case-evaluation/v1",
+    "language": "es_CL",
+    "evaluations": [
+      {
+        "evaluator": "prompt001",
+        "prompt": "prompt001Narrative/v2",
+        "results": [
+          {
+            "criterion": "writing_clarity",
+            "feedback": "El texto es claro y comprensible para la audiencia. No se observan errores de escritura que dificulten la lectura.",
+            "evidence": [],
+            "suggestion": ""
+          },
+          {
+            "criterion": "narrative_structure",
+            "feedback": "La narración presenta el contexto, los actores y el problema en un orden fácil de seguir. Se entiende qué se le pide a Camila y qué está en juego.",
+            "evidence": [],
+            "suggestion": ""
+          }
+        ]
+      },
+      {
+        "evaluator": "prompt002",
+        "prompt": "prompt002Realism/v2",
+        "results": [
+          {
+            "criterion": "case_realism",
+            "feedback": "La situación es verosímil: la presión comercial y la dependencia económica de una estudiante que trabaja son plausibles en el contexto chileno.",
+            "evidence": [],
+            "suggestion": ""
+          }
+        ]
+      },
+      {
+        "evaluator": "prompt003",
+        "prompt": "prompt003Dilemmatic/v2",
+        "results": [
+          {
+            "criterion": "ethical_conflict",
+            "feedback": "El caso presenta una tensión clara entre la lealtad al empleador, la necesidad económica y la prohibición de discriminar por edad.",
+            "evidence": [],
+            "suggestion": ""
+          },
+          {
+            "criterion": "decision_complexity",
+            "feedback": "La decisión parece tener una respuesta legal evidente, lo que puede reducir la deliberación. El texto no muestra costos concretos de negarse más allá de la beca.",
+            "evidence": [
+              "que su beca depende de mantener ese trabajo"
+            ],
+            "suggestion": "Precisar qué consecuencias concretas enfrentaría Camila si se niega, para que la decisión no se resuelva solo con la norma legal."
+          }
+        ]
+      },
+      {
+        "evaluator": "prompt004",
+        "prompt": "prompt004Polarizing/v2",
+        "results": [
+          {
+            "criterion": "viewpoint_divergence",
+            "feedback": "Es probable que surjan posiciones distintas sobre la responsabilidad de quien programa frente a quien decide.",
+            "evidence": [],
+            "suggestion": ""
+          },
+          {
+            "criterion": "position_defensibility",
+            "feedback": "La postura de hacer el cambio es difícil de defender porque la norma legal la descarta de inmediato.",
+            "evidence": [
+              "la ley chilena prohíbe la discriminación arbitraria por edad en el empleo"
+            ],
+            "suggestion": "Mostrar alguna razón plausible de la empresa que no sea solo un prejuicio, para que ambas posiciones sean defendibles."
+          }
+        ]
+      },
+      {
+        "evaluator": "prompt005",
+        "prompt": "prompt005CharComplex/v2",
+        "results": [
+          {
+            "criterion": "character_depth",
+            "feedback": "Camila tiene motivaciones comprensibles y en conflicto. El jefe aparece solo como portador de un prejuicio.",
+            "evidence": [
+              "se adaptan peor a los cambios"
+            ],
+            "suggestion": "Dar al jefe una motivación adicional plausible, como una exigencia del cliente."
+          },
+          {
+            "criterion": "perspective_complexity",
+            "feedback": "Las perspectivas de Camila, del jefe y del compañero se distinguen con claridad.",
+            "evidence": [],
+            "suggestion": ""
+          }
+        ]
+      },
+      {
+        "evaluator": "prompt006",
+        "prompt": "prompt006Immersive/v2",
+        "results": [
+          {
+            "criterion": "reader_identification",
+            "feedback": "Estudiantes que trabajan o han hecho práctica pueden identificarse con facilidad con Camila.",
+            "evidence": [],
+            "suggestion": ""
+          },
+          {
+            "criterion": "personal_engagement",
+            "feedback": "La dependencia de la beca vuelve la situación cercana y relevante para la audiencia.",
+            "evidence": [],
+            "suggestion": ""
+          }
+        ]
+      },
+      {
+        "evaluator": "prompt007",
+        "prompt": "prompt007Pertinent/v2",
+        "results": [
+          {
+            "criterion": "audience_relevance",
+            "feedback": "El caso es pertinente para estudiantes de distintas carreras: no exige conocimientos técnicos para entender el problema.",
+            "evidence": [],
+            "suggestion": ""
+          },
+          {
+            "criterion": "pedagogical_alignment",
+            "feedback": "El caso permite identificar conflictos, reconocer perspectivas y argumentar, en línea con los objetivos declarados.",
+            "evidence": [],
+            "suggestion": ""
+          }
+        ]
+      }
+    ],
+    "synthesis": {
+      "prompt": "promptSynthesizer/v2",
+      "selectedIssues": [
+        {
+          "priority": 1,
+          "issue": "La norma legal citada en el caso resuelve la decisión de antemano y debilita la deliberación.",
+          "selectionReason": "Dos evaluadores señalan que la posición de hacer el cambio no es defendible, lo que limita la discusión.",
+          "caseEvidence": [
+            "la ley chilena prohíbe la discriminación arbitraria por edad en el empleo"
+          ],
+          "recommendation": "Mostrar una razón plausible de la empresa para el filtro, o costos concretos de negarse, de modo que ambas posiciones puedan defenderse.",
+          "supportedBy": [
+            {
+              "evaluator": "prompt003",
+              "criterion": "decision_complexity"
+            },
+            {
+              "evaluator": "prompt004",
+              "criterion": "position_defensibility"
+            }
+          ]
+        }
+      ],
+      "finalFeedback": {
+        "summary": "El caso es claro, verosímil y cercano a la audiencia. Su principal debilidad es que la norma legal deja una sola posición defendible.",
+        "recommendations": [
+          {
+            "priority": 1,
+            "recommendation": "Mostrar una razón plausible de la empresa para el filtro, o costos concretos de negarse, de modo que ambas posiciones puedan defenderse.",
+            "caseEvidence": [
+              "la ley chilena prohíbe la discriminación arbitraria por edad en el empleo"
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

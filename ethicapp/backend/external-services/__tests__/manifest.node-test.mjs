@@ -46,7 +46,7 @@ test("catalog: each adapter requires its AI Additions service; mocks are develop
         "mock-chat-agent":            { development: true, requires: [] },
         "polyadic-devils-advocate":   { development: false, requires: ["polyadic-agent"] },
         "argumentation-tutor-system": { development: false, requires: ["argumentation-tutor"] },
-        "case-analyst":               { development: false, requires: ["case-analyst"] },
+        "case-analyst-evaluation":    { development: false, requires: ["case-analyst"] },
         "mock-case-analysis":         { development: true, requires: [] },
         "mock-design-analysis":       { development: true, requires: [] },
     });
@@ -162,4 +162,22 @@ test("catalog: AI services provide UI translations", async () => {
         assert.ok(translations, `${serviceId} provides no valid es_CL and en_US translations`);
         assert.notEqual(translations.es_CL.label, translations.en_US.label, serviceId);
     }
+});
+
+// ─── Case Analyst: case evaluation (#844) ────────────────────────────────────
+
+test("catalog: the case evaluation is a read-only case analysis called back by Case Analyst", async () => {
+    const entry = manifest.services.find(service => service.id === "case-analyst-evaluation");
+
+    assert.ok(entry, "case-analyst-evaluation is in the catalog");
+    assert.equal(manifest.services.some(service => service.id === "case-analyst"), false);
+    assert.deepEqual(entry.requires, ["case-analyst"]);
+    assert.deepEqual(entry.scopes, ["case"]);
+    assert.deepEqual(entry.hooks, ["case-created", "callback-received"]);
+    assert.deepEqual(entry.ui, { component: "case-evaluation" });
+    assert.deepEqual(entry.callbackAuth.allowedClientIds, ["case-analyst-api"]);
+
+    // Without a validator, teacher edits answer 405.
+    const registry = await registerCatalog();
+    assert.equal(registry.getCaseAnalysisValidator("case-analyst-evaluation"), null);
 });

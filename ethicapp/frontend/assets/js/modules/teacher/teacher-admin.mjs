@@ -235,6 +235,8 @@ import caseAnalysisPanelComponent from "../../components/case-analysis-panel.com
 // Components of analysis tabs, compiled by `ui.component` through the allowlist
 // in helpers/case-analyses.js (CASE_ANALYSIS_COMPONENTS).
 import mockCaseAnalysisViewComponent from "../../components/mock-case-analysis-view.component.js";
+// Case Analyst: case evaluation (#844).
+import caseEvaluationViewComponent from "../../components/case-evaluation-view.component.js";
 import videoFacadeComponent from "../../components/video-facade.component.js";
 import caseAuthorEditorComponent from "../../components/case-author-editor.component.js";
 import caseFormEditorComponent from "../../components/case-form-editor.component.js";
@@ -271,6 +273,8 @@ app.component("caseMaterial", caseMaterialComponent);
 app.component("caseViewTabs", caseViewTabsComponent);
 app.component("caseAnalysisPanel", caseAnalysisPanelComponent);
 app.component("mockCaseAnalysisView", mockCaseAnalysisViewComponent);
+// Case Analyst: case evaluation (#844).
+app.component("caseEvaluationView", caseEvaluationViewComponent);
 app.component("videoFacade", videoFacadeComponent);
 app.component("caseAuthorEditor", caseAuthorEditorComponent);
 app.component("caseFormEditor", caseFormEditorComponent);
