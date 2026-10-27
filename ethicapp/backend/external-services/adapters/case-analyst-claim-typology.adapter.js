@@ -5,6 +5,13 @@ import {
     ARGUMENTATION_TUTOR_SERVICE_ID,
     selectTutorQuestions,
 } from "../../helpers/design-tutor-questions.js";
+import {
+    CLAIM_TYPOLOGY_SCHEMA,
+    CLAIM_TYPOLOGY_SERVICE_ID,
+    EVIDENCE_INVENTORY_SCHEMA,
+    EVIDENCE_INVENTORY_SERVICE_ID,
+    loadEvidenceInventory,
+} from "../../helpers/tutor-claim-typology.js";
 import defaultAiAdditionsClient from "../../services/ai-additions-client.service.js";
 
 // Claim typology from Case Analyst (#849, epic #846): the plausible types of
@@ -19,15 +26,19 @@ import defaultAiAdditionsClient from "../../services/ai-additions-client.service
 //   Analyst posts its result.
 // - callback-received: stores the completed document, or records the failure.
 
-export const CLAIM_TYPOLOGY_SERVICE_ID = "case-analyst-claim-typology";
-export const CLAIM_TYPOLOGY_SCHEMA = "claim-typology/v1";
+// The service id and the stored schemas are shared with the Argumentation
+// Tutor adapter, which passes each question's typology to the tutor (#850).
+// The case's evidence inventory (#652) is a case analysis; when the case has
+// one, the request carries it so that claim types cite its facts (EV#).
+export {
+    CLAIM_TYPOLOGY_SCHEMA,
+    CLAIM_TYPOLOGY_SERVICE_ID,
+    EVIDENCE_INVENTORY_SCHEMA,
+    EVIDENCE_INVENTORY_SERVICE_ID,
+    loadEvidenceInventory,
+};
 export const CLAIM_TYPOLOGY_REQUEST_SCHEMA = "claim-typology-request/v1";
 export const CLAIM_TYPOLOGY_RESULT_SCHEMA = "claim-typology-result/v1";
-
-// The case's evidence inventory (#652), a case analysis. When the case has
-// one, the request carries it so that claim types cite its facts (EV#).
-export const EVIDENCE_INVENTORY_SERVICE_ID = "case-analyst-evidence-inventory";
-export const EVIDENCE_INVENTORY_SCHEMA = "evidence-inventory/v1";
 
 // claim-typology-request/v1 accepts 1 to 30 questions. A design with more
 // tutor questions gets a typology for its first 30, in design order.
@@ -147,35 +158,6 @@ export function caseAnalystLanguage(languageCode) {
 async function isTutorUsable() {
     const { default: registry } = await import("../../services/external-services.service.js");
     return registry.isServiceUsable(ARGUMENTATION_TUTOR_SERVICE_ID);
-}
-
-function isEvidenceInventory(document) {
-    return isPlainObject(document)
-        && document.schemaVersion === EVIDENCE_INVENTORY_SCHEMA
-        && Array.isArray(document.facts);
-}
-
-/**
- * The case's evidence inventory, when it has one: the stored document of its
- * `case-analyst-evidence-inventory` analysis. A generation in flight keeps
- * the previous document, which is still the case's inventory, so any stored
- * inventory is used. `hash` identifies its content: a regenerated or edited
- * inventory changes the typology's input hash.
- *
- * @returns {Promise<{document: Object, hash: string}|null>}
- */
-export async function loadEvidenceInventory(caseId, { getAnalysis = getCaseAnalysis } = {}) {
-    if (!toPositiveInteger(caseId)) {
-        return null;
-    }
-
-    const row = await getAnalysis({ caseId, serviceId: EVIDENCE_INVENTORY_SERVICE_ID });
-    const document = row?.document ?? null;
-    if (!isEvidenceInventory(document)) {
-        return null;
-    }
-
-    return { document, hash: hashAnalysisInput(document) };
 }
 
 /**

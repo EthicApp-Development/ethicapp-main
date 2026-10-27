@@ -264,9 +264,11 @@ export function differentialQuestionText(row) {
 /**
  * The body of POST /sessions (#736). The only setting sent is the configured
  * `llm_tier` (#734); the deprecated `model` is not sent, and new designs are
- * not offered it (#733). An unset tier takes the tutor's default.
+ * not offered it (#733). An unset tier takes the tutor's default. The
+ * question's claim typology (#850), when it has one, goes as the session
+ * input `claim_typology` (tutor-claim-typology/v1).
  */
-export function buildAtsSessionPayload(metadata, serviceConfiguration = {}) {
+export function buildAtsSessionPayload(metadata, serviceConfiguration = {}, claimTypology = null) {
     const body = {
         case_id:    metadata.caseId,
         case_title: metadata.caseTitle,
@@ -278,7 +280,35 @@ export function buildAtsSessionPayload(metadata, serviceConfiguration = {}) {
     if (llmTier) {
         body.llm_tier = llmTier;
     }
+    if (claimTypology) {
+        body.claim_typology = claimTypology;
+    }
     return body;
+}
+
+// The outcomes of a claim typology offered to the tutor (#850).
+export const CLAIM_TYPOLOGY_OUTCOMES = Object.freeze({
+    USED:        "used",
+    REJECTED:    "rejected",
+    UNSUPPORTED: "unsupported",
+});
+
+// How the tutor names the typology when it refuses one: `400 {"error":
+// "Invalid claim typology", "errors": [...]}` (ethicapp-ai-additions#204).
+const CLAIM_TYPOLOGY_NAME = /claim[ _]typology/iu;
+
+/**
+ * Which optional part of a session body the tutor refused with a 400, so it
+ * can be left out: `claim_typology` when the error names it, or when it is
+ * the only optional part sent, otherwise `llm_tier`. null when the body has
+ * no optional part left.
+ */
+function rejectedOptionalField(error, body) {
+    const named = CLAIM_TYPOLOGY_NAME.test(JSON.stringify(error?.responseBody ?? null));
+    if (body.claim_typology && (named || !body.llm_tier)) {
+        return "claim_typology";
+    }
+    return body.llm_tier ? "llm_tier" : null;
 }
 
 /**
@@ -287,25 +317,55 @@ export function buildAtsSessionPayload(metadata, serviceConfiguration = {}) {
  * warnings, degraded, configurationRejected }`. The tutor answers 400 when a
  * configured value fails its format rules; the session is then created once
  * more with the tutor's defaults and `configurationRejected` says so.
+ *
+ * When a claim typology is offered (#850), `creation.claimTypology` says what
+ * became of it: `used` (the tutor stored it and answered
+ * `claim_typology_used: true`), `rejected` (the tutor answered 400 about it,
+ * and the session was created without it; `claimTypologyRejection` holds the
+ * answer) or `unsupported` (the session was created without using it: a tutor
+ * that predates ethicapp-ai-additions#204 reports the unknown key as an
+ * unsupported setting, creates the session in degraded mode and ignores it).
+ *
  * @param {(body: object) => Promise<object>} request POST /sessions
  */
-export async function createAtsSession({ metadata, serviceConfiguration = {}, request }) {
-    const body = buildAtsSessionPayload(metadata, serviceConfiguration);
-    let response;
+export async function createAtsSession({
+    metadata,
+    serviceConfiguration = {},
+    claimTypology = null,
+    request,
+}) {
+    let configuration = serviceConfiguration;
+    let typology = claimTypology;
     let configurationRejected = false;
     let rejection = null;
+    let claimTypologyRejection;
+    let response;
 
-    try {
-        response = await request(body);
-    } catch (error) {
-        if (Number(error?.statusCode) !== 400 || !body.llm_tier) {
-            throw error;
+    for (;;) {
+        const body = buildAtsSessionPayload(metadata, configuration, typology);
+        try {
+            response = await request(body);
+            break;
+        } catch (error) {
+            const field = Number(error?.statusCode) === 400
+                ? rejectedOptionalField(error, body)
+                : null;
+            if (!field) {
+                throw error;
+            }
+
+            if (field === "claim_typology") {
+                typology = null;
+                claimTypologyRejection = error.responseBody ?? null;
+                continue;
+            }
+
+            console.warn("[ats-feedback] The tutor rejected the configured settings; "
+                + "creating the session with its defaults.", error.responseBody ?? error);
+            configuration = {};
+            configurationRejected = true;
+            rejection = error.responseBody ?? null;
         }
-        console.warn("[ats-feedback] The tutor rejected the configured settings; "
-            + "creating the session with its defaults.", error.responseBody ?? error);
-        configurationRejected = true;
-        rejection = error.responseBody ?? null;
-        response = await request(buildAtsSessionPayload(metadata));
     }
 
     const sessionId = normalizeText(response?.session_id);
@@ -313,15 +373,57 @@ export async function createAtsSession({ metadata, serviceConfiguration = {}, re
         throw new Error("ATS did not return a session_id.");
     }
 
+    const creation = {
+        llmTier:  response?.llm_tier ?? null,
+        model:    response?.model ?? null,
+        warnings: Array.isArray(response?.warnings) ? response.warnings : [],
+        degraded: response?.degraded === true,
+        configurationRejected,
+        ...(configurationRejected ? { rejection } : {}),
+    };
+
+    if (claimTypology) {
+        if (claimTypologyRejection !== undefined) {
+            creation.claimTypology = CLAIM_TYPOLOGY_OUTCOMES.REJECTED;
+            creation.claimTypologyRejection = claimTypologyRejection;
+        } else {
+            creation.claimTypology = response?.claim_typology_used === true
+                ? CLAIM_TYPOLOGY_OUTCOMES.USED
+                : CLAIM_TYPOLOGY_OUTCOMES.UNSUPPORTED;
+        }
+    }
+
+    return { sessionId, creation };
+}
+
+const CLAIM_TYPE_ID_PATTERN = /^AF[1-9][0-9]*$/u;
+// The tutor writes at most 600 characters (ethicapp-ai-additions#204).
+const MAX_CLAIM_TYPE_RATIONALE_LENGTH = 600;
+
+/**
+ * The claim type the tutor matched in an evaluation (#850,
+ * ethicapp-ai-additions#204): `claimTypeId` (`AF#` or null) and the short
+ * `claimTypeRationale` meant for teachers. The tutor sends them as top-level
+ * keys of the callback payload of an analysis; a nested feedback object is
+ * also read. null when the evaluation reports neither, as evaluations of
+ * sessions without a typology do.
+ *
+ * @returns {{claimTypeId: string|null, claimTypeRationale: string|null}|null}
+ */
+export function claimTypeFromExternalResult(requestPayload) {
+    const root = requestPayload && typeof requestPayload === "object" ? requestPayload : {};
+    const reportsClaimType = candidate => candidate && typeof candidate === "object"
+        && (Object.hasOwn(candidate, "claimTypeId")
+            || Object.hasOwn(candidate, "claimTypeRationale"));
+    const source = [root, root.payload?.feedback, root.payload].find(reportsClaimType);
+    if (!source) {
+        return null;
+    }
+
+    const id = normalizeText(source.claimTypeId);
+    const rationale = normalizeText(source.claimTypeRationale);
     return {
-        sessionId,
-        creation: {
-            llmTier:  response?.llm_tier ?? null,
-            model:    response?.model ?? null,
-            warnings: Array.isArray(response?.warnings) ? response.warnings : [],
-            degraded: response?.degraded === true,
-            configurationRejected,
-            ...(configurationRejected ? { rejection } : {}),
-        },
+        claimTypeId:        CLAIM_TYPE_ID_PATTERN.test(id) ? id : null,
+        claimTypeRationale: rationale ? rationale.slice(0, MAX_CLAIM_TYPE_RATIONALE_LENGTH) : null,
     };
 }

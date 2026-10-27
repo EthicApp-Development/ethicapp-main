@@ -71,3 +71,16 @@ export function selectTutorQuestions(
 
     return selected;
 }
+
+/**
+ * One tutor question of a design, by its runtime position (#850): the phase's
+ * `stages.number` and the question's `differential.orden`.
+ *
+ * @returns {{id: string, phaseNumber: number, questionNumber: number,
+ *     text: string, textHash: string}|null} As selectTutorQuestions() returns
+ *     it, or null when the position holds no tutor question.
+ */
+export function findTutorQuestion(design, { phaseNumber, questionNumber } = {}) {
+    const id = tutorQuestionId(phaseNumber, questionNumber);
+    return selectTutorQuestions(design).find(question => question.id === id) ?? null;
+}

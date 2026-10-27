@@ -692,8 +692,9 @@ change the job status, so asynchronous jobs can report before they complete.
   configured settings and the adapter fell back to defaults) are always
   present. Other keys are adapter-specific: Polyadic adds `rooms` (one entry per
   room; `rejection` holds the service's error when settings were refused) and
-  tags each warning with its `room`. The Argumentation Tutor adds `llmTier` and
-  the resolved `model`.
+  tags each warning with its `room`. The Argumentation Tutor adds `llmTier`,
+  the resolved `model`, the `questionKey` of the session and what became of
+  the question's claim typology (see "The tutor and the claim typology").
 - A report with warnings, degraded mode or rejected settings is also logged as
   one `[external-services] Instantiation report.` line with its job id.
 - `NULL` means the job instantiated nothing. Teachers do not see these reports
@@ -1312,6 +1313,74 @@ action and claim types (stance, description, example statement and cited
 evidence, with the statements of the case's current evidence inventory)
 inside its phase. A typology whose `questionTextHash` differs from the hash of
 the current question text is marked out of date.
+
+### The tutor and the claim typology
+
+The Argumentation Tutor adapter (`adapters/ats-feedback.adapter.js`, #850)
+opens one tutor session per EthicApp session, phase and question, so each
+answer is evaluated against its own question.
+
+- **Session key.** The first response to a question creates its session. The
+  key is `<sessionId>:<phaseId>:<question key>`, where the question key is the
+  positional id `p<stages.number>-q<differential.orden>`
+  (`tutorQuestionKey()`), or `question-<runtime id>` when the runtime question
+  does not map to a position (for example a ranking item). The submission
+  counters that choose between a first analysis and a comparison are kept per
+  question and student, so a student's second answer to a question is
+  compared with their first answer to the same question. `phase-ended`
+  deletes the sessions of every question of the phase.
+- **Question text.** The session's `question` is the design's question at that
+  position as plain text (`findTutorQuestion()` in
+  `helpers/design-tutor-questions.js`), the same text the typology answers.
+  Without one it is the runtime question's text, then the phase's first
+  question, then its instructions, as before #850.
+- **Typology.** When the design's `case-analyst-claim-typology` analysis holds
+  a typology for that question whose `questionTextHash` matches the hash of
+  the question text, the session receives it as `claim_typology`
+  (`helpers/tutor-claim-typology.js`). A document kept while a new generation
+  is in flight is used under the same condition. The tutor's
+  `tutor-claim-typology/v1` (ethicapp-ai-additions#204) accepts no other key,
+  so the adapter sends `schemaVersion`, `focalAction`, at most eight
+  `types[{id, label, description, stance, exampleStatement?,
+  relatedEvidenceIds?}]` with unique ids and a known stance, and
+  `relatedFacts[{id, statement}]` with the facts of the case's evidence
+  inventory that those types cite. Cited facts the current inventory no longer
+  has are left out. `questionId`, `phaseId` and `questionTextHash` are not
+  sent.
+
+  ```json
+  {
+    "schemaVersion": "tutor-claim-typology/v1",
+    "focalAction": "tell his mother about the accident",
+    "types": [
+      { "id": "AF1", "label": "Tell her now", "description": "...",
+        "stance": "in_favor", "relatedEvidenceIds": ["EV3"] }
+    ],
+    "relatedFacts": [{ "id": "EV3", "statement": "..." }]
+  }
+  ```
+- **Fallbacks.** A design without the analysis, a question without a
+  typology, an out-of-date typology or a failure to read it creates the
+  session as before, without the field. When the tutor answers
+  `400 {"error": "Invalid claim typology"}`, the session is created again
+  without it. A tutor that predates #204 reports `claim_typology` as an
+  unsupported setting and ignores it; a session whose answer lacks
+  `claim_typology_used: true` counts as such, and the next sessions are
+  created without a typology for ten minutes
+  (`CLAIM_TYPOLOGY_UNSUPPORTED_RETRY_MS`). Each of these two outcomes is
+  logged once per process.
+- **Report.** The instantiation report of the response that created the
+  session carries `questionKey` and `claimTypology`: `used`, `rejected` (with
+  `claimTypologyRejection`), `unsupported`, `withheld` (not offered during
+  the ten minutes) or `absent`, with `claimTypologyReason` (`no-question`,
+  `no-analysis`, `no-typology`, `out-of-date`, `invalid` or `load-failed`).
+- **Evaluations.** With a typology, the tutor's result callback carries
+  `claimTypeId` (`AF#` or null) and `claimTypeRationale` (up to 600
+  characters) at the top level of its payload. The `callback-received`
+  handler records both in the result's `adapter_result`
+  (`external_service_results`, next to the raw payload). The feedback
+  published to the student keeps its shape and never includes them. No
+  teacher screen shows them yet.
 
 ### Recording results from an adapter
 
