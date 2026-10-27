@@ -118,7 +118,10 @@ test("each AI Additions service lists the shipped adapters that require it, with
 
     assert.deepEqual(ids("polyadic-agent"), ["polyadic-devils-advocate"]);
     assert.deepEqual(ids("argumentation-tutor"), ["argumentation-tutor-system"]);
-    assert.deepEqual(ids("case-analyst"), ["case-analyst-evaluation"]);
+    assert.deepEqual(
+        ids("case-analyst"),
+        ["case-analyst-evaluation", "case-analyst-evidence-inventory"]
+    );
     for (const list of adapters.values()) {
         for (const adapter of list) {
             assert.equal(adapter.id.startsWith("mock-"), false);

@@ -42,13 +42,14 @@ test("catalog: each adapter requires its AI Additions service; mocks are develop
     ]));
 
     assert.deepEqual(declared, {
-        "mock-ai-response-review":    { development: true, requires: [] },
-        "mock-chat-agent":            { development: true, requires: [] },
-        "polyadic-devils-advocate":   { development: false, requires: ["polyadic-agent"] },
-        "argumentation-tutor-system": { development: false, requires: ["argumentation-tutor"] },
-        "case-analyst-evaluation":    { development: false, requires: ["case-analyst"] },
-        "mock-case-analysis":         { development: true, requires: [] },
-        "mock-design-analysis":       { development: true, requires: [] },
+        "mock-ai-response-review":         { development: true, requires: [] },
+        "mock-chat-agent":                 { development: true, requires: [] },
+        "polyadic-devils-advocate":        { development: false, requires: ["polyadic-agent"] },
+        "argumentation-tutor-system":      { development: false, requires: ["argumentation-tutor"] },
+        "case-analyst-evaluation":         { development: false, requires: ["case-analyst"] },
+        "case-analyst-evidence-inventory": { development: false, requires: ["case-analyst"] },
+        "mock-case-analysis":              { development: true, requires: [] },
+        "mock-design-analysis":            { development: true, requires: [] },
     });
 });
 
