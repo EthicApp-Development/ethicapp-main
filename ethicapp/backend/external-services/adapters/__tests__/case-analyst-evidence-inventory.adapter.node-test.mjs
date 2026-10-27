@@ -211,7 +211,7 @@ test("buildEvidenceInventoryRequest: follows the Case Analyst request envelope",
         caseId:        7,
         caseTitle:     "",
         caseText:      "x",
-        languageCode:  null,
+        languageCode:  "pt_BR",
         correlationId: JOB_ID,
     });
     assert.equal(untitled.case.title, "Case 7");
@@ -225,7 +225,9 @@ test("normalizeCaseLanguage: Spanish only for es and es_*, English otherwise", (
     assert.equal(normalizeCaseLanguage("en_US"), "en_US");
     assert.equal(normalizeCaseLanguage("pt_BR"), "en_US");
     assert.equal(normalizeCaseLanguage("estonian"), "en_US");
-    assert.equal(normalizeCaseLanguage(null), "en_US");
+    // A case without a language code has the column default.
+    assert.equal(normalizeCaseLanguage(null), "es_CL");
+    assert.equal(normalizeCaseLanguage(" "), "es_CL");
 });
 
 test("getUiTranslations: labels, descriptions and tab titles in both UI locales", async () => {
@@ -430,6 +432,23 @@ test("callback-received: ignores the result of a superseded generation", async (
     assert.equal(row.status, "requested");
     assert.equal(row.document, previous);
     assert.equal(row.error_code, null);
+});
+
+test("callback-received: refuses a result that names another request", async () => {
+    const { row, calls, caseAnalyses } = createCaseAnalysisRow({ status: "processing" });
+    const { dispatch } = await registerAdapter({ caseAnalyses });
+    const context = resultContext({});
+    context.requestPayload.clientContext = { ...context.requestPayload.clientContext, correlationId: NEWER_JOB };
+
+    const callbacks = await dispatch("callback-received", context);
+
+    assert.deepEqual(callbacks, [{
+        hook:   "callback-received",
+        status: "failed",
+        reason: "correlation-mismatch",
+    }]);
+    assert.deepEqual(calls, []);
+    assert.equal(row.status, "processing");
 });
 
 test("callback-received: records a failed generation with the service's code and message", async () => {

@@ -146,9 +146,15 @@ function toPositiveInteger(value) {
 /**
  * The output language Case Analyst accepts (`es_CL` or `en_US`), following
  * the repository locale policy: Spanish for `es` and `es_*`, English otherwise.
+ * A case without a language code is `es_CL`, the column default (as in the
+ * case evaluation adapter).
  */
 export function normalizeCaseLanguage(languageCode) {
-    return /^es(?:[_-]|$)/iu.test(normalizeText(languageCode)) ? "es_CL" : "en_US";
+    const code = normalizeText(languageCode);
+    if (!code) {
+        return "es_CL";
+    }
+    return /^es(?:[_-]|$)/iu.test(code) ? "es_CL" : "en_US";
 }
 
 export async function getUiTranslations() {
@@ -372,6 +378,18 @@ async function processResult({ context, callback, caseAnalyses }) {
             hook:   CALLBACK_RECEIVED_HOOK,
             status: "failed",
             reason: "missing-correlation-id",
+        });
+        return;
+    }
+
+    // The echoed client context must name the same request as the callback;
+    // otherwise the result is refused and the analysis left as it is.
+    const echoedJobId = payload.clientContext?.correlationId;
+    if (echoedJobId !== undefined && echoedJobId !== null && String(echoedJobId) !== jobId) {
+        await callback({
+            hook:   CALLBACK_RECEIVED_HOOK,
+            status: "failed",
+            reason: "correlation-mismatch",
         });
         return;
     }
