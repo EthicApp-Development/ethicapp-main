@@ -59,7 +59,7 @@
         <details class="case-evaluation-evaluator" ng-repeat="group in $ctrl.view.evaluators">
             <summary class="case-evaluation-evaluator-summary">
                 <span class="case-evaluation-evaluator-name">{{ group.label.key ? (group.label.key | translate) : group.label.fallback }}</span>
-                <span class="text-muted small">{{ 'case_evaluation_criteria_count' | translate:{ count: group.results.length } }}</span>
+                <span class="text-muted small">{{ group.countKey | translate:{ count: group.results.length } }}</span>
             </summary>
             <div class="case-evaluation-criterion" ng-repeat="result in group.results"
                >

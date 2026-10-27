@@ -29,7 +29,7 @@ export const CASE_EVALUATION_RESULT_SCHEMA  = "case-evaluation-result/v1";
 
 const CASE_CREATED_HOOK      = "case-created";
 const CALLBACK_RECEIVED_HOOK = "callback-received";
-const CLIENT_SERVICE         = "ethicapp";
+const CLIENT_SERVICE         = "case-analyst-evaluation";
 const LOG_PREFIX             = "[case-analyst-evaluation]";
 
 // Limits of the request envelope (case-request-envelope/v1).
@@ -345,7 +345,7 @@ async function processCaseCreated({ context, callback, caseAnalyses, waitForCase
         if (!text.trim()) {
             await failStarted({
                 ...failure,
-                errorCode:    "no-text",
+                errorCode:    "empty-case-text",
                 errorMessage: "The case document has no text to evaluate.",
             });
             return;

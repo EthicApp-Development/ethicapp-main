@@ -26,7 +26,7 @@ const ERROR_KEYS = Object.freeze({
     "adapter-error":          "case_analysis_error_adapter_error",
     // Case Analyst adapters (#844): requests, results and the service's
     // public error codes.
-    "no-text":                "case_analysis_error_no_text",
+    "empty-case-text":        "case_analysis_error_empty_case_text",
     "case-text-too-long":     "case_analysis_error_case_text_too_long",
     "request-failed":         "case_analysis_error_request_failed",
     "request-rejected":       "case_analysis_error_request_rejected",

@@ -6,6 +6,7 @@ import {
     buildCaseEvaluationView,
     CASE_EVALUATION_CRITERIA,
     CASE_EVALUATION_EVALUATORS,
+    criteriaCountKey,
     criterionLabel,
     evaluatorLabel,
 } from "../case-evaluation.js";
@@ -105,6 +106,10 @@ describe("buildCaseEvaluationView", () => {
         const view = buildCaseEvaluationView(evaluationDocument());
 
         assert.deepEqual(view.evaluators.map(group => group.evaluator), ["prompt001", "prompt003"]);
+        assert.deepEqual(view.evaluators.map(group => group.countKey), [
+            "case_evaluation_criteria_count_other",
+            "case_evaluation_criteria_count_one",
+        ]);
         assert.deepEqual(view.evaluators[0].results.map(result => result.criterion),
             ["writing_clarity", "tone_balance"]);
         assert.deepEqual(view.evaluators[1].results[0], {
@@ -130,6 +135,14 @@ describe("buildCaseEvaluationView", () => {
 });
 
 describe("labels", () => {
+    it("counts criteria in the singular for one", () => {
+        assert.equal(criteriaCountKey(1), "case_evaluation_criteria_count_one");
+        assert.equal(criteriaCountKey(0), "case_evaluation_criteria_count_other");
+        assert.equal(criteriaCountKey(3), "case_evaluation_criteria_count_other");
+        assert.equal(LOCALES.es_CL.case_evaluation_criteria_count_one, "{{count}} criterio");
+        assert.equal(LOCALES.en_US.case_evaluation_criteria_count_one, "{{count}} criterion");
+    });
+
     it("translates known criteria and evaluators and builds a label for new ones", () => {
         assert.deepEqual(criterionLabel("ethical_conflict"),
             { key: "case_evaluation_criterion_ethical_conflict", fallback: "ethical_conflict" });
@@ -144,6 +157,8 @@ describe("labels", () => {
         const keys = [
             ...CASE_EVALUATION_CRITERIA.map(criterion => criterionLabel(criterion).key),
             ...CASE_EVALUATION_EVALUATORS.map(evaluator => evaluatorLabel(evaluator).key),
+            criteriaCountKey(1),
+            criteriaCountKey(2),
         ];
 
         for (const [locale, catalog] of Object.entries(LOCALES)) {
@@ -160,9 +175,13 @@ describe("case analysis registration", () => {
         assert.equal(resolveCaseAnalysisComponent("case-evaluation"), "case-evaluation-view");
     });
 
-    it("explains every error code of the Case Analyst adapters in both locales", () => {
+    it("explains every code of the shared error vocabulary in both locales", () => {
         const codes = [
-            "no-text",
+            "no-document",
+            "render-failed",
+            "superseded",
+            "timeout",
+            "empty-case-text",
             "case-text-too-long",
             "request-failed",
             "request-rejected",
@@ -173,6 +192,8 @@ describe("case analysis registration", () => {
             "service-timeout",
             "service-worker-lost",
             "service-internal-error",
+            "adapter-error",
+            "generation-not-started",
         ];
 
         for (const code of codes) {

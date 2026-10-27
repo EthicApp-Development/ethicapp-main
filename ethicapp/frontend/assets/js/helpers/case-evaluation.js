@@ -32,6 +32,13 @@ export const CASE_EVALUATION_CRITERIA = Object.freeze([
     "pedagogical_alignment",
 ]);
 
+// The translation key of "{{count}} criteria", singular for one.
+export function criteriaCountKey(count) {
+    return count === 1
+        ? "case_evaluation_criteria_count_one"
+        : "case_evaluation_criteria_count_other";
+}
+
 function isPlainObject(value) {
     return value !== null && typeof value === "object" && !Array.isArray(value);
 }
@@ -130,7 +137,7 @@ export function buildCaseEvaluationView(document) {
         const id = text(evaluation.evaluator);
         let group = byEvaluator.get(id);
         if (!group) {
-            group = { evaluator: id, label: evaluatorLabel(id), results: [] };
+            group = { evaluator: id, label: evaluatorLabel(id), results: [], countKey: null };
             byEvaluator.set(id, group);
             evaluators.push(group);
         }
@@ -147,6 +154,8 @@ export function buildCaseEvaluationView(document) {
             .filter(isPlainObject)
             .map(selectedIssue)
             .sort(byPriority),
-        evaluators: evaluators.filter(group => group.results.length > 0),
+        evaluators: evaluators
+            .filter(group => group.results.length > 0)
+            .map(group => ({ ...group, countKey: criteriaCountKey(group.results.length) })),
     };
 }

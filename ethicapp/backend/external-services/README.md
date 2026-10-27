@@ -839,6 +839,33 @@ or `no-document`, `render-failed`, `superseded`, or `timeout`. The wait runs in
 the web process: a restart drops it and leaves the analysis `processing` until
 it is stale, and generating again recovers it.
 
+### Error codes
+
+Adapters record failures with the codes below, so the case view can explain
+each one in the teacher's language: `ERROR_KEYS` in
+`ethicapp/frontend/assets/js/helpers/case-analyses.js` maps every code to a
+`case_analysis_error_*` key defined in both locales. Other codes show a generic
+explanation. `error_message` holds an English detail, shown under it.
+
+| `error_code` | Meaning |
+| --- | --- |
+| `no-document` | The case has no document. |
+| `render-failed` | The PDF worker could not extract the case text. |
+| `superseded` | A newer document replaced the case document during the wait. |
+| `timeout` | The case text was not extracted in time (the render wait, not the AI service). |
+| `empty-case-text` | The extracted text is blank. |
+| `case-text-too-long` | The text is longer than the AI service accepts. |
+| `request-rejected` | The AI service answered the request with a 4xx, for example a 422 validation error. |
+| `request-failed` | No AI Additions connection, a network error, a request timeout or a 5xx. |
+| `service-<code>` | The AI service's failed result, with its sanitized public code: `service-llm-error`, `service-llm-refusal`, `service-invalid-output`, `service-timeout`, `service-worker-lost`, `service-internal-error`. |
+| `invalid-result` | The callback payload or its document cannot be read. |
+| `adapter-error` | The adapter failed unexpectedly after starting the generation. |
+| `generation-not-started` | Set by the registry: the adapter did not start the reserved generation. |
+
+The `service-` prefix keeps the AI service's codes apart from EthicApp's own,
+for example its `timeout` from the render `timeout`. A new code needs an
+`ERROR_KEYS` entry and keys in `es_CL` and `en_US`.
+
 ### Teacher edits
 
 An adapter may export
@@ -906,7 +933,8 @@ On `case-created` the adapter:
 2. posts a `case-evaluation-request/v1` to
    `/case-analyst/api/v1/evaluations`:
    `case: { id, title, text, language }` and
-   `clientContext: { service: "ethicapp", correlationId: <jobId>, caseId }`.
+   `clientContext: { service: "case-analyst-evaluation", correlationId: <jobId>, caseId }`
+   (`service` is the adapter id, as Case Analyst's envelope documents).
    Ids are strings, the title is cut to 500 characters, and `language` is the
    case's `language_code` normalized by the canonical rule (`es_*` is `es_CL`,
    anything else `en_US`; a case without one is `es_CL`). EthicApp sends no
@@ -914,15 +942,10 @@ On `case-created` the adapter:
 3. leaves the job `dispatched`. Case Analyst answers `202 { taskId }` and
    takes about two and a half minutes.
 
-Failures before the result arrives fail the generation:
-
-| `error_code` | Cause |
-| --- | --- |
-| `no-document`, `render-failed`, `superseded`, `timeout` | The case text is not available (render wait). |
-| `no-text` | The extracted text is blank. |
-| `case-text-too-long` | The text is longer than the 200,000 characters Case Analyst accepts. |
-| `request-rejected` | Case Analyst answered 4xx, for example a 422 validation error. |
-| `request-failed` | No AI Additions connection, a network error, a timeout or a 5xx. |
+Failures before the result arrives fail the generation with the codes of
+"Error codes": the render outcomes, `empty-case-text`, `case-text-too-long`
+(over the 200,000 characters Case Analyst accepts), `request-rejected` and
+`request-failed`.
 
 The result is a `callback-received` with serviceId `case-analyst-evaluation`,
 `correlationId` = the job id, and a `case-evaluation-result/v1` payload:
@@ -932,10 +955,7 @@ The result is a `callback-received` with serviceId `case-analyst-evaluation`,
   evaluations with their criteria, synthesis); a payload or evaluation that
   fails the check fails the generation with `invalid-result`.
 - `failed`: the generation fails with the service's message and its public
-  code prefixed with `service-` (`service-llm-error`, `service-llm-refusal`,
-  `service-invalid-output`, `service-timeout`, `service-worker-lost`,
-  `service-internal-error`). The prefix keeps the service timeout apart from
-  the render `timeout`.
+  code prefixed with `service-`; an unknown code is `service-internal-error`.
 - A result whose `clientContext.correlationId` differs from its job is refused
   and leaves the analysis as it is. A result of a superseded generation is
   only kept in `external_service_results` (the callback reports `skipped`).
@@ -947,8 +967,7 @@ validator and `PUT` answers `405`. The tab component `case-evaluation`
 feedback and the issues worth revising first, then the feedback of each
 evaluator by criterion. Criterion and evaluator names are translated with
 `case_evaluation_criterion_*` and `case_evaluation_evaluator_*`; a criterion
-added by a new prompt version is shown by its name. The error codes above have
-translated explanations in `case-analyses.js` (`ERROR_KEYS`).
+added by a new prompt version is shown by its name.
 
 ## Design Analyses
 

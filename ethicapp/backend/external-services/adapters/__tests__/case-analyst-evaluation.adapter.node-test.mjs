@@ -27,7 +27,7 @@ const FAILED_RESULT    = await readFixture("case-evaluation-result-failed.json")
 function resultFor(example, overrides = {}) {
     return {
         ...structuredClone(example),
-        clientContext: { service: "ethicapp", correlationId: JOB_ID, caseId: "7" },
+        clientContext: { service: "case-analyst-evaluation", correlationId: JOB_ID, caseId: "7" },
         ...overrides,
     };
 }
@@ -183,7 +183,7 @@ test("buildCaseEvaluationRequest: the envelope without context, with string ids"
                 text:     "Daniel is a junior nurse.",
                 language: "en_US",
             },
-            clientContext: { service: "ethicapp", correlationId: JOB_ID, caseId: "7" },
+            clientContext: { service: "case-analyst-evaluation", correlationId: JOB_ID, caseId: "7" },
         }
     );
 });
@@ -218,7 +218,7 @@ test("case-created: starts the generation, waits for the text and posts one requ
                 text:     "Camila trabaja en una empresa.",
                 language: "es_CL",
             },
-            clientContext: { service: "ethicapp", correlationId: JOB_ID, caseId: "7" },
+            clientContext: { service: "case-analyst-evaluation", correlationId: JOB_ID, caseId: "7" },
         },
     }]);
     assert.equal(CASE_ANALYST_API_BASE_PATH, "/case-analyst/api/v1");
@@ -287,7 +287,7 @@ test("case-created: a document without text fails the generation with the render
 });
 
 test("case-created: blank or oversized text fails before any request", async () => {
-    for (const [text, errorCode] of [["  \n ", "no-text"], ["x".repeat(200001), "case-text-too-long"]]) {
+    for (const [text, errorCode] of [["  \n ", "empty-case-text"], ["x".repeat(200001), "case-text-too-long"]]) {
         const { caseAnalyses, calls } = makeCaseAnalyses();
         const { dispatch, aiAdditionsClient } = await registerAdapter({
             caseAnalyses,
