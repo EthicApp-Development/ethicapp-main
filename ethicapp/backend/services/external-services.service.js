@@ -779,7 +779,8 @@ export class ExternalServicesRegistry {
     // against its destination session's pinned version (dispatchServiceHook).
     //
     // - A production adapter passes when every AI Additions service in its
-    //   `requires` is in `policyVersion.allowedServiceIds` and a usable AI
+    //   `requires` is in `policyVersion.allowedServiceIds`, its own id is not
+    //   in `policyVersion.disabledAdapterIds` (#864), and a usable AI
     //   Additions connection is stored (`isAiAdditionsConfigured`).
     // - A development adapter (the mocks) requires no AI Additions service, so
     //   it passes whenever it is registered, which only happens with
@@ -789,7 +790,9 @@ export class ExternalServicesRegistry {
     // Which version applies is decided by resolveHookPolicyVersion() for
     // hooks; listings, descriptor lookups and callbacks use the current one.
 
-    // Whether `service` is allowed by `policyVersion`, ignoring the connection.
+    // Whether `service` is allowed by `policyVersion`, ignoring the connection:
+    // its AI Additions services are allowed and the version does not switch
+    // the adapter itself off.
     isAllowedByPolicy(service, policyVersion) {
         if (!service) {
             return false;
@@ -801,8 +804,13 @@ export class ExternalServicesRegistry {
         const allowed = Array.isArray(policyVersion?.allowedServiceIds)
             ? policyVersion.allowedServiceIds
             : [];
+        const disabled = Array.isArray(policyVersion?.disabledAdapterIds)
+            ? policyVersion.disabledAdapterIds
+            : [];
         const requires = Array.isArray(service.requires) ? service.requires : [];
-        return requires.length > 0 && requires.every(id => allowed.includes(id));
+        return requires.length > 0
+            && requires.every(id => allowed.includes(id))
+            && !disabled.includes(service.id);
     }
 
     // Whether a usable AI Additions connection is stored. A failure to read it
@@ -822,7 +830,8 @@ export class ExternalServicesRegistry {
      * dropped. Production adapters also need a usable AI Additions connection;
      * development adapters need neither the policy nor the connection.
      * @param {string[]} requestedIds
-     * @param {{ allowedServiceIds: ReadonlyArray<string> } | null} policyVersion
+     * @param {{ allowedServiceIds: ReadonlyArray<string>,
+     *           disabledAdapterIds?: ReadonlyArray<string> } | null} policyVersion
      *        null (no version could be read) allows no production adapter.
      * @returns {Promise<string[]>}
      */

@@ -21,11 +21,12 @@ function makeDb(...answers) {
 }
 
 const VERSION_ROW = {
-    id:                  "3",
-    allowed_service_ids: ["polyadic-agent"],
-    note:                "Pilot",
-    created_at:          new Date("2026-10-26T10:00:00Z"),
-    created_by:          7,
+    id:                   "3",
+    allowed_service_ids:  ["polyadic-agent", "case-analyst"],
+    disabled_adapter_ids: ["case-analyst-claim-typology"],
+    note:                 "Pilot",
+    created_at:           new Date("2026-10-26T10:00:00Z"),
+    created_by:           7,
 };
 
 // ─── connection ──────────────────────────────────────────────────────────────
@@ -91,7 +92,7 @@ test("getCurrentPolicyVersion: reads the highest id every time", async () => {
 
     const second = await store.getCurrentPolicyVersion();
     assert.equal(second.id, 3);
-    assert.deepEqual(second.allowedServiceIds, ["polyadic-agent"]);
+    assert.deepEqual(second.allowedServiceIds, ["polyadic-agent", "case-analyst"]);
     assert.equal(calls.length, 2);
     assert.match(calls[0].sql, /FROM ai_service_policy_versions ORDER BY id DESC LIMIT 1;$/);
 });
@@ -109,15 +110,32 @@ test("getPolicyVersion: maps the row to a frozen version", async () => {
 
     const version = await store.getPolicyVersion(3);
     assert.deepEqual(version, {
-        id:                3,
-        allowedServiceIds: ["polyadic-agent"],
-        note:              "Pilot",
-        createdAt:         VERSION_ROW.created_at,
-        createdBy:         7,
+        id:                 3,
+        allowedServiceIds:  ["polyadic-agent", "case-analyst"],
+        disabledAdapterIds: ["case-analyst-claim-typology"],
+        note:               "Pilot",
+        createdAt:          VERSION_ROW.created_at,
+        createdBy:          7,
     });
     assert.ok(Object.isFrozen(version));
     assert.ok(Object.isFrozen(version.allowedServiceIds));
+    assert.ok(Object.isFrozen(version.disabledAdapterIds));
     assert.deepEqual(calls[0].params, [3]);
+    assert.match(calls[0].sql, /SELECT id, allowed_service_ids, disabled_adapter_ids, note,/);
+});
+
+test("getPolicyVersion: a version that switches no adapter off disables nothing", async () => {
+    const { getDb } = makeDb([{ ...VERSION_ROW, disabled_adapter_ids: [] }], [{
+        id:                  "4",
+        allowed_service_ids: ["case-analyst"],
+        note:                null,
+        created_at:          new Date(0),
+        created_by:          null,
+    }]);
+    const store = createAiServicePolicyStore({ getDb });
+
+    assert.deepEqual((await store.getPolicyVersion(3)).disabledAdapterIds, []);
+    assert.deepEqual((await store.getPolicyVersion(4)).disabledAdapterIds, []);
 });
 
 test("getPolicyVersion: versions are cached without expiry", async () => {
