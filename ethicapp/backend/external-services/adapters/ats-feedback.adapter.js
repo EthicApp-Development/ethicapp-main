@@ -1,11 +1,16 @@
 import * as config from "../../config/database.config.js";
 import * as rpg2 from "../../db/rest-pg-2.js";
-import { getPhaseDesignByPhaseId } from "../../helpers/designs-helper.js";
-import { getCaseIdBySessionId } from "../../helpers/sessions-helper.js";
+import { findTutorQuestion, tutorQuestionId } from "../../helpers/design-tutor-questions.js";
+import {
+    loadTutorClaimTypology,
+    TYPOLOGY_ABSENT_REASONS,
+} from "../../helpers/tutor-claim-typology.js";
 import defaultAiAdditionsClient from "../../services/ai-additions-client.service.js";
 import {
     buildArgumentClientContext,
     buildFeedbackPayloadFromExternalResult,
+    claimTypeFromExternalResult,
+    CLAIM_TYPOLOGY_OUTCOMES,
     createAtsSession,
     differentialQuestionText,
     getUiTranslations,
@@ -21,6 +26,18 @@ export {
 
 // The Argumentation Tutor API under the AI Additions connection's base URL (#814).
 export const ATS_API_BASE_PATH = "/argumentation-tutor/api/v2";
+
+// A tutor that ignored a claim typology as an unsupported setting is not sent
+// one again for this long; the first session after it offers one again, in
+// case the tutor was upgraded.
+export const CLAIM_TYPOLOGY_UNSUPPORTED_RETRY_MS = 10 * 60 * 1000;
+
+// What the instantiation report says about the claim typology of a session,
+// besides the outcomes of an offered one (CLAIM_TYPOLOGY_OUTCOMES).
+const CLAIM_TYPOLOGY_NOT_OFFERED = Object.freeze({
+    ABSENT:   "absent",
+    WITHHELD: "withheld",
+});
 
 function positiveIdOrNull(value) {
     const id = Number(value);
@@ -40,9 +57,6 @@ export function getCallbackTarget(requestPayload) {
     };
 }
 
-const atsSessionByPhase = new Map();
-const atsSessionCreationByPhase = new Map();
-const atsSubmissionCountByPhaseUser = new Map();
 let aiAdditionsClient = defaultAiAdditionsClient;
 
 function normalizeText(value) {
@@ -78,22 +92,71 @@ export async function requestAtsJson(pathname, { method = "GET", body = null } =
     });
 }
 
-function phaseCacheKey(context) {
-    return `${context.sessionId}:${context.phaseId}`;
+/**
+ * The key of the question a response answers, within its phase (#850): the
+ * positional id `p<stages.number>-q<differential.orden>` when the runtime
+ * question maps back to its position in the design, otherwise its runtime id
+ * (`question-<id>`, for example a ranking item), or `phase` for a response
+ * without a question.
+ */
+export function tutorQuestionKey(context, position = {}) {
+    const phaseNumber = positiveIdOrNull(position?.phaseNumber);
+    const questionNumber = positiveIdOrNull(position?.questionNumber);
+    if (phaseNumber && questionNumber) {
+        return tutorQuestionId(phaseNumber, questionNumber);
+    }
+
+    const questionId = positiveIdOrNull(context?.questionId);
+    return questionId ? `question-${questionId}` : "phase";
 }
 
-function phaseUserCacheKey(context) {
-    return `${context.sessionId}:${context.phaseId}:${context.userId}`;
-}
+/**
+ * The texts of the tutor session of one question (#850): the case, and that
+ * question's own text. The question is the design's question at the response's
+ * position (the text its claim typology answers), else the runtime question's
+ * text, else the phase's first question, as before #850.
+ *
+ * @param {Object} args
+ * @param {Object} args.context - The hook context.
+ * @param {Object} args.position - `{ phaseNumber, questionNumber }`.
+ * @param {Object} args.sessionContext - From loadSessionContext().
+ * @param {Object|null} args.tutorQuestion - From findTutorQuestion().
+ * @param {string} [args.runtimeQuestionText] - The runtime question's text.
+ */
+export function composeSessionMetadata({
+    context,
+    position,
+    sessionContext,
+    tutorQuestion,
+    runtimeQuestionText = "",
+}) {
+    const phases = sessionContext?.design?.phases;
+    const phaseNumber = positiveIdOrNull(position?.phaseNumber);
+    const phaseDesign = phaseNumber && Array.isArray(phases)
+        ? phases[phaseNumber - 1] ?? null
+        : null;
 
-function getSubmissionCount(context) {
-    return atsSubmissionCountByPhaseUser.get(phaseUserCacheKey(context)) || 0;
-}
+    const phaseInstructions = phaseInstructionsText(phaseDesign);
+    const questionText = normalizeText(tutorQuestion?.text)
+        || normalizeText(runtimeQuestionText)
+        || questionTextFromPhaseDesign(phaseDesign);
+    const caseId = positiveIdOrNull(sessionContext?.caseId);
 
-function incrementSubmissionCount(context) {
-    const cacheKey = phaseUserCacheKey(context);
-    const currentCount = atsSubmissionCountByPhaseUser.get(cacheKey) || 0;
-    atsSubmissionCountByPhaseUser.set(cacheKey, currentCount + 1);
+    return {
+        caseId: caseId
+            ? `ethicapp-case-${caseId}`
+            : `ethicapp-session-${context.sessionId}-phase-${context.phaseId}`,
+        caseTitle: normalizeText(sessionContext?.sessionTitle)
+            || `EthicApp session ${context.sessionId}`,
+        caseText: normalizeText(sessionContext?.caseText)
+            || normalizeText(sessionContext?.sessionDescription)
+            || phaseInstructions
+            || questionText
+            || "Ethical discussion prompt.",
+        question: questionText
+            || phaseInstructions
+            || "Provide your ethical justification for the submitted response.",
+    };
 }
 
 async function resolveGroupId(context) {
@@ -122,61 +185,98 @@ async function resolveGroupId(context) {
     return Number.isInteger(groupId) && groupId > 0 ? groupId : null;
 }
 
-async function resolveSessionMetadata(context) {
-    const sessionRow = await rpg2.singleSQL({
+/**
+ * Where the runtime question sits in the design (#850): its phase's
+ * `stages.number` and, for semantic differential questions, its
+ * `differential.orden`. Either is null when it cannot be read.
+ */
+async function resolveQuestionPosition(context) {
+    const phaseId = positiveIdOrNull(context?.phaseId);
+    if (!phaseId) {
+        return { phaseNumber: null, questionNumber: null };
+    }
+
+    const questionId = context?.designType === "ranking"
+        ? null
+        : positiveIdOrNull(context?.questionId);
+    const row = await rpg2.singleSQL({
         dbcon: config.dbconnString,
         sql:   `
-            SELECT id, name, descr
-            FROM sessions
-            WHERE id = $1
+            SELECT st.number AS phase_number,
+                   d.orden AS question_number
+            FROM stages AS st
+            LEFT JOIN differential AS d
+                ON d.id = $2::integer
+               AND d.stageid = st.id
+            WHERE st.id = $1
             LIMIT 1
         `,
-        sqlParams: [rpg2.param("plain", Number(context.sessionId))],
+        sqlParams: [
+            rpg2.param("plain", phaseId),
+            rpg2.param("plain", questionId),
+        ],
     });
 
-    const sessionTitle = normalizeText(sessionRow?.name) || `EthicApp session ${context.sessionId}`;
-    const sessionDescription = normalizeText(sessionRow?.descr);
-    const caseData = await resolveCaseData(context.sessionId);
-    const phaseDesign = await getPhaseDesignByPhaseId(context.phaseId);
-    const phaseInstructions = phaseInstructionsText(phaseDesign);
-    const questionFromDesign = questionTextFromPhaseDesign(phaseDesign);
-    const questionText = questionFromDesign || await resolveQuestionText(context);
-
-    const caseText = caseData.rawText || sessionDescription || phaseInstructions || questionText || "Ethical discussion prompt.";
-    const question = questionText || phaseInstructions || "Provide your ethical justification for the submitted response.";
-    const caseId = caseData.caseId
-        ? `ethicapp-case-${caseData.caseId}`
-        : `ethicapp-session-${context.sessionId}-phase-${context.phaseId}`;
-
     return {
-        caseId,
-        caseTitle: sessionTitle,
-        caseText,
-        question,
+        phaseNumber:    positiveIdOrNull(row?.phase_number),
+        questionNumber: positiveIdOrNull(row?.question_number),
     };
 }
 
-async function resolveCaseData(sessionId) {
-    try {
-        const caseId = await getCaseIdBySessionId(sessionId);
-        if (!Number.isInteger(caseId) || caseId <= 0) {
-            return { caseId: null, rawText: "" };
-        }
+// The case text, or "" when it cannot be read (the session then falls back
+// to the session's description).
+async function loadCaseText(caseId) {
+    if (!positiveIdOrNull(caseId)) {
+        return "";
+    }
 
+    try {
         // Lazy import: the content helper opens a Redis connection when loaded,
         // and registering the adapter at startup must have no side effects.
         const { getCaseDocumentRawText } = await import(
             "../../helpers/case-document-content-helper.js"
         );
-        const rawText = normalizeText(await getCaseDocumentRawText(caseId));
-        return { caseId, rawText };
+        return normalizeText(await getCaseDocumentRawText(caseId));
     } catch (error) {
-        console.warn("[external-services][ats] Unable to load case raw text. Falling back to session metadata.", {
-            sessionId,
+        console.warn("[external-services][ats] Unable to load case raw text. "
+            + "Falling back to session metadata.", {
+            caseId,
             error: normalizeText(error?.message) || "Unknown error",
         });
-        return { caseId: null, rawText: "" };
+        return "";
     }
+}
+
+/**
+ * What a tutor session is built from: the EthicApp session's name and
+ * description, the activity's design (id, document and case) and the case
+ * text.
+ */
+async function loadSessionContext(context) {
+    const row = await rpg2.singleSQL({
+        dbcon: config.dbconnString,
+        sql:   `
+            SELECT s.name, s.descr, ds.id AS design_id, ds.design, ds.case_id
+            FROM sessions AS s
+            LEFT JOIN activity AS a
+                ON a.session = s.id
+            LEFT JOIN designs AS ds
+                ON ds.id = a.design
+            WHERE s.id = $1
+            LIMIT 1
+        `,
+        sqlParams: [rpg2.param("plain", Number(context.sessionId))],
+    });
+
+    const caseId = positiveIdOrNull(row?.case_id);
+    return {
+        sessionTitle:       normalizeText(row?.name),
+        sessionDescription: normalizeText(row?.descr),
+        designId:           positiveIdOrNull(row?.design_id),
+        design:             row?.design ?? null,
+        caseId,
+        caseText:           await loadCaseText(caseId),
+    };
 }
 
 async function resolveQuestionText(context) {
@@ -224,86 +324,15 @@ async function resolveQuestionText(context) {
     return differentialQuestionText(row);
 }
 
-// Returns `{ sessionId, creation }`; `creation` is set only for the call that
-// created the phase's session, and null when it already existed.
-async function getOrCreateAtsSession(context) {
-    const cacheKey = phaseCacheKey(context);
-    const cachedSessionId = atsSessionByPhase.get(cacheKey);
-
-    if (cachedSessionId) {
-        return { sessionId: cachedSessionId, creation: null };
-    }
-
-    const inflightCreation = atsSessionCreationByPhase.get(cacheKey);
-    if (inflightCreation) {
-        return { sessionId: (await inflightCreation).sessionId, creation: null };
-    }
-
-    const creationPromise = (async () => {
-        const metadata = await resolveSessionMetadata(context);
-        const created = await createAtsSession({
-            metadata,
-            serviceConfiguration: context.serviceConfiguration,
-            request:              body => requestAtsJson("/sessions", { method: "POST", body }),
-        });
-
-        atsSessionByPhase.set(cacheKey, created.sessionId);
-        return created;
-    })();
-
-    atsSessionCreationByPhase.set(cacheKey, creationPromise);
-
-    try {
-        return await creationPromise;
-    } finally {
-        atsSessionCreationByPhase.delete(cacheKey);
-    }
-}
-
-async function deleteAtsSession(atsSessionId) {
-    if (!normalizeText(atsSessionId)) {
-        return { deleted: false, reason: "missing-session-id" };
-    }
-
-    try {
-        await requestAtsJson(`/sessions/${encodeURIComponent(atsSessionId)}`, {
-            method: "DELETE",
-        });
-
-        return { deleted: true, reason: null };
-    } catch (error) {
-        if (Number(error?.statusCode) === 404) {
-            return { deleted: false, reason: "not-found" };
-        }
-
-        throw error;
-    }
-}
-
-
-async function submitArgumentToAts(context, responseText, groupId) {
-    const { sessionId: atsSessionId, creation } = await getOrCreateAtsSession(context);
-
-    const response = await requestAtsJson(`/sessions/${encodeURIComponent(atsSessionId)}/arguments`, {
-        method: "POST",
-        body:   {
-            argument:       responseText,
-            user_id:        String(context.userId),
-            client_context: buildArgumentClientContext(context, groupId),
-        },
-    });
-
-    const taskId = normalizeText(response?.task_id);
-    if (!taskId) {
-        throw new Error("ATS did not return a task_id.");
-    }
-
+function createDependencies(overrides = {}) {
     return {
-        atsSessionId,
-        taskId,
-        mode:                   "arguments",
-        revisedArgumentPreview: responseText,
-        sessionCreation:        creation,
+        resolveGroupId,
+        resolveQuestionPosition,
+        loadSessionContext,
+        resolveQuestionText,
+        loadClaimTypology: loadTutorClaimTypology,
+        now:               () => Date.now(),
+        ...overrides,
     };
 }
 
@@ -314,54 +343,6 @@ function isMissingPreviousAnalysisError(error) {
 
     const responseError = normalizeText(error?.responseBody?.error).toLowerCase();
     return responseError.includes("no previous analysis") || responseError.includes("no previous argument");
-}
-
-async function submitArgumentComparisonToAts(context, responseText, groupId) {
-    const { sessionId: atsSessionId, creation } = await getOrCreateAtsSession(context);
-
-    try {
-        const response = await requestAtsJson(`/sessions/${encodeURIComponent(atsSessionId)}/arguments/compare`, {
-            method: "POST",
-            body:   {
-                revised_argument: responseText,
-                user_id:          String(context.userId),
-                client_context:   buildArgumentClientContext(context, groupId),
-            },
-        });
-
-        const taskId = normalizeText(response?.task_id);
-        if (!taskId) {
-            throw new Error("ATS did not return a task_id.");
-        }
-
-        return {
-            atsSessionId,
-            taskId,
-            mode:                   "compare",
-            initialArgumentPreview: normalizeText(response?.initial_argument_preview),
-            revisedArgumentPreview: responseText,
-            sessionCreation:        creation,
-        };
-    } catch (error) {
-        if (!isMissingPreviousAnalysisError(error)) {
-            throw error;
-        }
-
-        const fallback = await submitArgumentToAts(context, responseText, groupId);
-        return {
-            ...fallback,
-            mode: "arguments-fallback",
-        };
-    }
-}
-
-async function submitArgumentWithFlow(context, responseText, groupId) {
-    const submissionCount = getSubmissionCount(context);
-    if (submissionCount === 0) {
-        return submitArgumentToAts(context, responseText, groupId);
-    }
-
-    return submitArgumentComparisonToAts(context, responseText, groupId);
 }
 
 async function publishFeedbackToStudent({ context, feedbackPayload, status, publishStudentResult }) {
@@ -387,111 +368,410 @@ async function publishFeedbackToStudent({ context, feedbackPayload, status, publ
     });
 }
 
-async function processStudentResponse({ context, callback, reportInstantiation }) {
-    const responseText = extractResponseText(context);
-    if (!responseText) {
-        await callback({
-            hook:   "student-response-submitted",
-            status: "skipped",
-            reason: "No free-text response was found to send to ATS.",
-        });
-        return;
+/**
+ * The adapter's handlers and the tutor sessions they keep in memory.
+ *
+ * Each EthicApp session, phase and question has its own tutor session (#850),
+ * created lazily by the first response to the question, with that question's
+ * text and, when the design has an up-to-date one, its claim typology. Keys are
+ * `<sessionId>:<phaseId>:<question key>` (tutorQuestionKey()), and the
+ * submission counters that choose between a first analysis and a comparison
+ * add `:<userId>`. `phase-ended` deletes the phase's tutor sessions.
+ */
+function createAtsFeedbackHandlers({ dependencies, publishStudentResult }) {
+    const atsSessionByQuestion = new Map();
+    const atsSessionCreationByQuestion = new Map();
+    const atsSubmissionCountByQuestionUser = new Map();
+    const loggedTypologyOutcomes = new Set();
+    let claimTypologyWithheldUntil = 0;
+
+    function logTypologyOutcomeOnce(outcome, message, details) {
+        if (loggedTypologyOutcomes.has(outcome)) {
+            return;
+        }
+        loggedTypologyOutcomes.add(outcome);
+        console.warn(`[external-services][ats] ${message}`, details);
     }
 
-    // Fails fast with `not_configured` when no AI Additions connection is stored.
-    await aiAdditionsClient.getEndpoints();
-    const groupId = await resolveGroupId(context);
-    const submission = await submitArgumentWithFlow(context, responseText, groupId);
-    incrementSubmissionCount(context);
-    // The response that created the phase's tutor session records the tutor's
-    // report on its job (#737); the job completes later, with the tutor's callback.
-    if (submission?.sessionCreation && typeof reportInstantiation === "function") {
-        await reportInstantiation(submission.sessionCreation);
-    }
-    return submission;
-}
-
-async function processPhaseEnded({ context, callback }) {
-    const cachePrefix = `${context.sessionId}:${context.phaseId}:`;
-    const removedKeys = [];
-    const phaseKey = `${context.sessionId}:${context.phaseId}`;
-    const atsSessionId = atsSessionByPhase.get(phaseKey) || null;
-    let atsDeleteResult = { deleted: false, reason: "not-cached" };
-
-    if (atsSessionId) {
-        atsDeleteResult = await deleteAtsSession(atsSessionId);
-    }
-
-    for (const key of atsSubmissionCountByPhaseUser.keys()) {
-        if (!key.startsWith(cachePrefix)) {
-            continue;
+    // The claim typology offered to the session of a question, and why there
+    // is none otherwise. Loading it never fails the response.
+    async function questionClaimTypology({ sessionContext, tutorQuestion }) {
+        if (!tutorQuestion) {
+            return { claimTypology: null, reason: TYPOLOGY_ABSENT_REASONS.NO_QUESTION };
         }
 
-        atsSubmissionCountByPhaseUser.delete(key);
-        removedKeys.push(key);
+        try {
+            return await dependencies.loadClaimTypology({
+                designId: sessionContext?.designId ?? null,
+                caseId:   sessionContext?.caseId ?? null,
+                question: tutorQuestion,
+            });
+        } catch (error) {
+            console.warn("[external-services][ats] Unable to load the claim typology; "
+                + "the tutor session is created without it.", {
+                designId:   sessionContext?.designId ?? null,
+                questionId: tutorQuestion.id,
+                error:      normalizeText(error?.message) || "Unknown error",
+            });
+            return { claimTypology: null, reason: TYPOLOGY_ABSENT_REASONS.LOAD_FAILED };
+        }
     }
 
-    atsSessionByPhase.delete(phaseKey);
-    atsSessionCreationByPhase.delete(phaseKey);
+    // What the instantiation report says about the typology, and what this
+    // creation teaches about the tutor's support for it.
+    function claimTypologyReport({ typology, offered, creation, questionKey }) {
+        if (!typology.claimTypology) {
+            return {
+                claimTypology:       CLAIM_TYPOLOGY_NOT_OFFERED.ABSENT,
+                claimTypologyReason: typology.reason,
+            };
+        }
+        if (!offered) {
+            return { claimTypology: CLAIM_TYPOLOGY_NOT_OFFERED.WITHHELD };
+        }
 
-    await callback({
-        hook:    "phase-ended",
-        status:  "completed",
-        payload: {
-            clearedSubmissionCounters: removedKeys.length,
-            clearedAtsSession:         atsDeleteResult.deleted || Boolean(atsSessionId),
-            atsSessionDeleteReason:    atsDeleteResult.reason,
-            atsSessionId,
-            sessionId:                 Number(context.sessionId) || null,
-            phaseId:                   Number(context.phaseId) || null,
-        },
-    });
-}
+        if (creation.claimTypology === CLAIM_TYPOLOGY_OUTCOMES.UNSUPPORTED) {
+            claimTypologyWithheldUntil = dependencies.now() + CLAIM_TYPOLOGY_UNSUPPORTED_RETRY_MS;
+            logTypologyOutcomeOnce(
+                CLAIM_TYPOLOGY_OUTCOMES.UNSUPPORTED,
+                "The tutor does not support claim typologies; "
+                    + "its sessions are created without them.",
+                { questionKey }
+            );
+        } else if (creation.claimTypology === CLAIM_TYPOLOGY_OUTCOMES.REJECTED) {
+            logTypologyOutcomeOnce(
+                CLAIM_TYPOLOGY_OUTCOMES.REJECTED,
+                "The tutor rejected a claim typology; the session was created without it.",
+                { questionKey, rejection: creation.claimTypologyRejection ?? null }
+            );
+        }
+        return {};
+    }
 
-async function processExternalResult({ context, callback, publishStudentResult }) {
-    const requestPayload = context?.requestPayload && typeof context.requestPayload === "object"
-        ? context.requestPayload
-        : {};
-    const payloadGroupId = Number(requestPayload?.groupId);
-    const groupId = Number.isInteger(payloadGroupId) && payloadGroupId > 0
-        ? payloadGroupId
-        : await resolveGroupId({
-            phaseId: Number(requestPayload?.phaseId) || context.phaseId,
-            userId:  Number(requestPayload?.userId) || context.userId,
+    async function createQuestionSession(context, position, questionKey) {
+        const sessionContext = await dependencies.loadSessionContext(context);
+        const tutorQuestion = findTutorQuestion(sessionContext?.design, position);
+        const runtimeQuestionText = tutorQuestion
+            ? ""
+            : await dependencies.resolveQuestionText(context);
+        const metadata = composeSessionMetadata({
+            context,
+            position,
+            sessionContext,
+            tutorQuestion,
+            runtimeQuestionText,
         });
 
-    const fallbackContext = {
-        sessionId:  Number(requestPayload?.sessionId) || context.sessionId,
-        phaseId:    Number(requestPayload?.phaseId) || context.phaseId,
-        questionId: Number(requestPayload?.questionId) || context.questionId,
-        userId:     Number(requestPayload?.userId) || context.userId,
-    };
+        const typology = await questionClaimTypology({ sessionContext, tutorQuestion });
+        const offered = typology.claimTypology !== null
+            && dependencies.now() >= claimTypologyWithheldUntil;
 
-    const feedbackPayload = buildFeedbackPayloadFromExternalResult(requestPayload, fallbackContext);
-    await publishFeedbackToStudent({
-        context: fallbackContext,
-        feedbackPayload,
-        status:  normalizeText(requestPayload?.status) || "completed",
+        const created = await createAtsSession({
+            metadata,
+            serviceConfiguration: context.serviceConfiguration,
+            claimTypology:        offered ? typology.claimTypology : null,
+            request:              body => requestAtsJson("/sessions", { method: "POST", body }),
+        });
+
+        const report = claimTypologyReport({
+            typology,
+            offered,
+            creation: created.creation,
+            questionKey,
+        });
+        return {
+            sessionId: created.sessionId,
+            creation:  { ...created.creation, questionKey, ...report },
+        };
+    }
+
+    // Returns `{ sessionId, creation }`; `creation` is set only for the call
+    // that created the question's session, and null when it already existed.
+    async function getOrCreateAtsSession(context, { position, questionKey }) {
+        const cacheKey = `${context.sessionId}:${context.phaseId}:${questionKey}`;
+
+        const cachedSessionId = atsSessionByQuestion.get(cacheKey);
+        if (cachedSessionId) {
+            return { sessionId: cachedSessionId, creation: null };
+        }
+
+        const inflightCreation = atsSessionCreationByQuestion.get(cacheKey);
+        if (inflightCreation) {
+            return { sessionId: (await inflightCreation).sessionId, creation: null };
+        }
+
+        const creationPromise = (async () => {
+            const created = await createQuestionSession(context, position, questionKey);
+            atsSessionByQuestion.set(cacheKey, created.sessionId);
+            return created;
+        })();
+
+        atsSessionCreationByQuestion.set(cacheKey, creationPromise);
+
+        try {
+            return await creationPromise;
+        } finally {
+            atsSessionCreationByQuestion.delete(cacheKey);
+        }
+    }
+
+    function submissionCountKey(context, questionKey) {
+        return `${context.sessionId}:${context.phaseId}:${questionKey}:${context.userId}`;
+    }
+
+    async function submitArgumentToAts(context, responseText, groupId, question) {
+        const { sessionId: atsSessionId, creation } = await getOrCreateAtsSession(
+            context, question
+        );
+
+        const sessionPath = `/sessions/${encodeURIComponent(atsSessionId)}`;
+        const response = await requestAtsJson(`${sessionPath}/arguments`, {
+            method: "POST",
+            body:   {
+                argument:       responseText,
+                user_id:        String(context.userId),
+                client_context: buildArgumentClientContext(context, groupId),
+            },
+        });
+
+        const taskId = normalizeText(response?.task_id);
+        if (!taskId) {
+            throw new Error("ATS did not return a task_id.");
+        }
+
+        return {
+            atsSessionId,
+            taskId,
+            mode:                   "arguments",
+            revisedArgumentPreview: responseText,
+            sessionCreation:        creation,
+            questionKey:            question.questionKey,
+        };
+    }
+
+    async function submitArgumentComparisonToAts(context, responseText, groupId, question) {
+        const { sessionId: atsSessionId, creation } = await getOrCreateAtsSession(
+            context, question
+        );
+
+        try {
+            const sessionPath = `/sessions/${encodeURIComponent(atsSessionId)}`;
+            const response = await requestAtsJson(`${sessionPath}/arguments/compare`, {
+                method: "POST",
+                body:   {
+                    revised_argument: responseText,
+                    user_id:          String(context.userId),
+                    client_context:   buildArgumentClientContext(context, groupId),
+                },
+            });
+
+            const taskId = normalizeText(response?.task_id);
+            if (!taskId) {
+                throw new Error("ATS did not return a task_id.");
+            }
+
+            return {
+                atsSessionId,
+                taskId,
+                mode:                   "compare",
+                initialArgumentPreview: normalizeText(response?.initial_argument_preview),
+                revisedArgumentPreview: responseText,
+                sessionCreation:        creation,
+                questionKey:            question.questionKey,
+            };
+        } catch (error) {
+            if (!isMissingPreviousAnalysisError(error)) {
+                throw error;
+            }
+
+            const fallback = await submitArgumentToAts(context, responseText, groupId, question);
+            return {
+                ...fallback,
+                mode: "arguments-fallback",
+            };
+        }
+    }
+
+    // The first response of a student to a question is analysed; later ones
+    // are compared with the previous one, in the same question's session.
+    async function submitArgumentWithFlow(context, responseText, groupId) {
+        const position = await dependencies.resolveQuestionPosition(context);
+        const question = { position, questionKey: tutorQuestionKey(context, position) };
+        const countKey = submissionCountKey(context, question.questionKey);
+        const submissionCount = atsSubmissionCountByQuestionUser.get(countKey) || 0;
+
+        const submission = submissionCount === 0
+            ? await submitArgumentToAts(context, responseText, groupId, question)
+            : await submitArgumentComparisonToAts(context, responseText, groupId, question);
+
+        atsSubmissionCountByQuestionUser.set(countKey, submissionCount + 1);
+        return submission;
+    }
+
+    async function processStudentResponse({ context, callback, reportInstantiation }) {
+        const responseText = extractResponseText(context);
+        if (!responseText) {
+            await callback({
+                hook:   "student-response-submitted",
+                status: "skipped",
+                reason: "No free-text response was found to send to ATS.",
+            });
+            return;
+        }
+
+        // Fails fast with `not_configured` when no AI Additions connection is stored.
+        await aiAdditionsClient.getEndpoints();
+        const groupId = await dependencies.resolveGroupId(context);
+        const submission = await submitArgumentWithFlow(context, responseText, groupId);
+        // The response that created the question's tutor session records the
+        // tutor's report on its job (#737); the job completes later, with the
+        // tutor's callback.
+        if (submission?.sessionCreation && typeof reportInstantiation === "function") {
+            await reportInstantiation(submission.sessionCreation);
+        }
+        return submission;
+    }
+
+    async function deleteAtsSession(atsSessionId) {
+        if (!normalizeText(atsSessionId)) {
+            return { deleted: false, reason: "missing-session-id" };
+        }
+
+        try {
+            await requestAtsJson(`/sessions/${encodeURIComponent(atsSessionId)}`, {
+                method: "DELETE",
+            });
+
+            return { deleted: true, reason: null };
+        } catch (error) {
+            if (Number(error?.statusCode) === 404) {
+                return { deleted: false, reason: "not-found" };
+            }
+
+            throw error;
+        }
+    }
+
+    function clearPhaseKeys(map, prefix) {
+        const removed = [];
+        for (const key of [...map.keys()]) {
+            if (key.startsWith(prefix)) {
+                map.delete(key);
+                removed.push(key);
+            }
+        }
+        return removed;
+    }
+
+    async function processPhaseEnded({ context, callback }) {
+        const prefix = `${context.sessionId}:${context.phaseId}:`;
+        const phaseSessions = [...atsSessionByQuestion.entries()]
+            .filter(([key]) => key.startsWith(prefix));
+
+        const atsSessions = [];
+        let deleteError = null;
+        for (const [key, atsSessionId] of phaseSessions) {
+            const questionKey = key.slice(prefix.length);
+            try {
+                const result = await deleteAtsSession(atsSessionId);
+                atsSessions.push({ questionKey, atsSessionId, ...result });
+            } catch (error) {
+                deleteError = deleteError ?? error;
+                atsSessions.push({ questionKey, atsSessionId, deleted: false, reason: "error" });
+            }
+        }
+
+        const removedCounters = clearPhaseKeys(atsSubmissionCountByQuestionUser, prefix);
+        clearPhaseKeys(atsSessionByQuestion, prefix);
+        clearPhaseKeys(atsSessionCreationByQuestion, prefix);
+
+        // The phase's sessions are forgotten either way; a failed deletion
+        // fails the job, as before #850.
+        if (deleteError) {
+            throw deleteError;
+        }
+
+        await callback({
+            hook:    "phase-ended",
+            status:  "completed",
+            payload: {
+                clearedSubmissionCounters: removedCounters.length,
+                clearedAtsSessions:        atsSessions.length,
+                atsSessions,
+                sessionId:                 Number(context.sessionId) || null,
+                phaseId:                   Number(context.phaseId) || null,
+            },
+        });
+    }
+
+    async function processExternalResult({ context, callback }) {
+        const requestPayload = context?.requestPayload && typeof context.requestPayload === "object"
+            ? context.requestPayload
+            : {};
+        const payloadGroupId = Number(requestPayload?.groupId);
+        const groupId = Number.isInteger(payloadGroupId) && payloadGroupId > 0
+            ? payloadGroupId
+            : await dependencies.resolveGroupId({
+                phaseId: Number(requestPayload?.phaseId) || context.phaseId,
+                userId:  Number(requestPayload?.userId) || context.userId,
+            });
+
+        const fallbackContext = {
+            sessionId:  Number(requestPayload?.sessionId) || context.sessionId,
+            phaseId:    Number(requestPayload?.phaseId) || context.phaseId,
+            questionId: Number(requestPayload?.questionId) || context.questionId,
+            userId:     Number(requestPayload?.userId) || context.userId,
+        };
+
+        // The student's feedback is unchanged: the matched claim type is for
+        // teachers, and is only recorded with the result (#850).
+        const feedbackPayload = buildFeedbackPayloadFromExternalResult(
+            requestPayload, fallbackContext
+        );
+        await publishFeedbackToStudent({
+            context: fallbackContext,
+            feedbackPayload,
+            status:  normalizeText(requestPayload?.status) || "completed",
+            publishStudentResult,
+        });
+
+        await callback({
+            hook:    "callback-received",
+            status:  "completed",
+            payload: {
+                groupId,
+                publishedToUserId: Number(fallbackContext.userId) || null,
+                feedbackTitle:     feedbackPayload.title,
+                ...claimTypeFromExternalResult(requestPayload),
+            },
+        });
+    }
+
+    return { processStudentResponse, processPhaseEnded, processExternalResult };
+}
+
+/**
+ * @param {Object} args - See "Adapter registration" in the README.
+ * @param {Object} [args.atsFeedbackDependencies] - Test-only overrides of the
+ *     database reads and the clock (createDependencies()).
+ */
+export async function register({
+    subscribe,
+    publishStudentResult,
+    aiAdditionsClient: providedAiAdditionsClient,
+    atsFeedbackDependencies = {},
+}) {
+    aiAdditionsClient = providedAiAdditionsClient || defaultAiAdditionsClient;
+    const handlers = createAtsFeedbackHandlers({
+        dependencies: createDependencies(atsFeedbackDependencies),
         publishStudentResult,
     });
 
-    await callback({
-        hook:    "callback-received",
-        status:  "completed",
-        payload: {
-            groupId,
-            publishedToUserId: Number(fallbackContext.userId) || null,
-            feedbackTitle:     feedbackPayload.title,
-        },
-    });
-}
-
-export async function register({ subscribe, publishStudentResult, aiAdditionsClient: providedAiAdditionsClient }) {
-    aiAdditionsClient = providedAiAdditionsClient || defaultAiAdditionsClient;
-
     subscribe("student-response-submitted", async (context, { callback, reportInstantiation }) => {
         try {
-            return await processStudentResponse({ context, callback, reportInstantiation });
+            return await handlers.processStudentResponse({
+                context, callback, reportInstantiation,
+            });
         } catch (error) {
             await callback({
                 hook:   "student-response-submitted",
@@ -503,7 +783,7 @@ export async function register({ subscribe, publishStudentResult, aiAdditionsCli
 
     subscribe("callback-received", async (context, { callback }) => {
         try {
-            await processExternalResult({ context, callback, publishStudentResult });
+            await handlers.processExternalResult({ context, callback });
         } catch (error) {
             await callback({
                 hook:   "callback-received",
@@ -515,7 +795,7 @@ export async function register({ subscribe, publishStudentResult, aiAdditionsCli
 
     subscribe("phase-ended", async (context, { callback }) => {
         try {
-            await processPhaseEnded({ context, callback });
+            await handlers.processPhaseEnded({ context, callback });
         } catch (error) {
             await callback({
                 hook:   "phase-ended",

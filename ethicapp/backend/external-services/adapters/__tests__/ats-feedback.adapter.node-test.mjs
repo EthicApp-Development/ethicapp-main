@@ -5,6 +5,7 @@ import {
     buildAtsSessionPayload,
     buildFeedbackPayloadFromAtsStatus,
     buildFeedbackPayloadFromExternalResult,
+    claimTypeFromExternalResult,
     createAtsSession,
     differentialQuestionText,
     phaseInstructionsText,
@@ -217,6 +218,165 @@ test("createAtsSession does not retry other failures", async () => {
     }), /did not return a session_id/u);
 });
 
+// ─── Claim typology in the session (#850) ───────────────────────────────────
+
+const CLAIM_TYPOLOGY = Object.freeze({
+    schemaVersion: "tutor-claim-typology/v1",
+    focalAction:   "report the error",
+    types:         [{ id: "AF1", label: "Report", description: "d", stance: "in_favor" }],
+});
+
+function badRequest(responseBody) {
+    const error = new Error("HTTP 400");
+    error.statusCode = 400;
+    error.responseBody = responseBody;
+    return error;
+}
+
+async function withoutWarnings(run) {
+    const originalWarn = console.warn;
+    console.warn = () => {};
+    try {
+        return await run();
+    } finally {
+        console.warn = originalWarn;
+    }
+}
+
+test("buildAtsSessionPayload sends the claim typology as claim_typology", () => {
+    const body = buildAtsSessionPayload(METADATA, {}, CLAIM_TYPOLOGY);
+
+    assert.deepEqual(body.claim_typology, CLAIM_TYPOLOGY);
+    assert.equal(Object.hasOwn(buildAtsSessionPayload(METADATA, {}, null), "claim_typology"), false);
+});
+
+test("createAtsSession reports a claim typology the tutor took", async () => {
+    const bodies = [];
+    const created = await createAtsSession({
+        metadata:      METADATA,
+        claimTypology: CLAIM_TYPOLOGY,
+        request:       async (body) => {
+            bodies.push(body);
+            return {
+                session_id: "ats-1", warnings: [], degraded: false, claim_typology_used: true,
+            };
+        },
+    });
+
+    assert.equal(bodies.length, 1);
+    assert.deepEqual(bodies[0].claim_typology, CLAIM_TYPOLOGY);
+    assert.equal(created.creation.claimTypology, "used");
+});
+
+test("createAtsSession reports a typology the tutor did not confirm as unsupported", async () => {
+    const created = await createAtsSession({
+        metadata:      METADATA,
+        claimTypology: CLAIM_TYPOLOGY,
+        request:       async () => ({ session_id: "ats-1", warnings: [], degraded: false }),
+    });
+
+    assert.equal(created.creation.claimTypology, "unsupported");
+});
+
+test("createAtsSession reports a tutor that ignores the typology as unsupported", async () => {
+    const warning = { field: "claim_typology", verdict: "unsupported", message: "unknown field" };
+    const created = await createAtsSession({
+        metadata:      METADATA,
+        claimTypology: CLAIM_TYPOLOGY,
+        request:       async () => ({ session_id: "ats-1", warnings: [warning], degraded: true }),
+    });
+
+    assert.equal(created.sessionId, "ats-1");
+    assert.equal(created.creation.claimTypology, "unsupported");
+    assert.equal(created.creation.configurationRejected, false);
+});
+
+test("createAtsSession retries without a rejected typology and keeps the tier", async () => {
+    const bodies = [];
+    const rejection = { error: "Invalid claim typology", errors: ["types: too many"] };
+
+    const created = await createAtsSession({
+        metadata:             METADATA,
+        serviceConfiguration: { llm_tier: "advanced" },
+        claimTypology:        CLAIM_TYPOLOGY,
+        request:              async (body) => {
+            bodies.push(body);
+            if (bodies.length === 1) {
+                throw badRequest(rejection);
+            }
+            return { session_id: "ats-2", llm_tier: "advanced", warnings: [] };
+        },
+    });
+
+    assert.equal(bodies.length, 2);
+    assert.equal(Object.hasOwn(bodies[1], "claim_typology"), false);
+    assert.equal(bodies[1].llm_tier, "advanced");
+    assert.equal(created.creation.claimTypology, "rejected");
+    assert.deepEqual(created.creation.claimTypologyRejection, rejection);
+    assert.equal(created.creation.configurationRejected, false);
+});
+
+test("createAtsSession drops the tier first when the 400 does not name the typology", async () => {
+    const bodies = [];
+
+    const created = await withoutWarnings(() => createAtsSession({
+        metadata:             METADATA,
+        serviceConfiguration: { llm_tier: "legacy" },
+        claimTypology:        CLAIM_TYPOLOGY,
+        request:              async (body) => {
+            bodies.push(body);
+            if (bodies.length === 1) {
+                throw badRequest({ error: "Invalid instance configuration", errors: { llm_tier: "x" } });
+            }
+            return { session_id: "ats-3", warnings: [], claim_typology_used: true };
+        },
+    }));
+
+    assert.equal(bodies.length, 2);
+    assert.equal(Object.hasOwn(bodies[1], "llm_tier"), false);
+    assert.deepEqual(bodies[1].claim_typology, CLAIM_TYPOLOGY);
+    assert.equal(created.creation.configurationRejected, true);
+    assert.equal(created.creation.claimTypology, "used");
+});
+
+test("createAtsSession gives up once nothing optional is left to drop", async () => {
+    let calls = 0;
+    await assert.rejects(createAtsSession({
+        metadata:      METADATA,
+        claimTypology: CLAIM_TYPOLOGY,
+        request:       async () => {
+            calls += 1;
+            throw badRequest({ error: "Missing required fields: question" });
+        },
+    }), /HTTP 400/u);
+
+    assert.equal(calls, 2, "the typology is dropped once, then the error is final");
+});
+
+test("claimTypeFromExternalResult reads the matched claim type for teachers", () => {
+    assert.deepEqual(
+        claimTypeFromExternalResult({ claimTypeId: "AF2", claimTypeRationale: "  Argues for it. " }),
+        { claimTypeId: "AF2", claimTypeRationale: "Argues for it." }
+    );
+    assert.deepEqual(
+        claimTypeFromExternalResult({ payload: { feedback: { claimTypeId: null, claimTypeRationale: "None fits." } } }),
+        { claimTypeId: null, claimTypeRationale: "None fits." }
+    );
+    assert.deepEqual(
+        claimTypeFromExternalResult({ claimTypeId: "anything" }),
+        { claimTypeId: null, claimTypeRationale: null }
+    );
+    assert.equal(claimTypeFromExternalResult({ summary: "No typology." }), null);
+    assert.equal(claimTypeFromExternalResult(null), null);
+});
+
+test("the student's feedback does not carry the claim type", () => {
+    const feedback = buildFeedbackPayloadFromExternalResult(
+        { userId: 4, claimTypeId: "AF1", claimTypeRationale: "x", summary: "s" }, {}
+    );
+
+    assert.equal(JSON.stringify(feedback).includes("claimType"), false);
+});
 
 // ─── Plain texts (#768) ─────────────────────────────────────────────────────
 
