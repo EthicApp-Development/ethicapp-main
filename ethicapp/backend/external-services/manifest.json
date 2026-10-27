@@ -136,6 +136,22 @@
         "allowedClientIds": ["ethicapp-external-mock"],
         "requiredRoles": []
       }
+    },
+    {
+      "id": "case-analyst-claim-typology",
+      "description": "Case Analyst claim typology: the plausible types of answer to the questions of a design's Argumentation Tutor phases, stored as a design analysis.",
+      "adapter": "./adapters/case-analyst-claim-typology.adapter.js",
+      "requires": ["case-analyst"],
+      "hooks": [
+        "design-saved",
+        "callback-received"
+      ],
+      "scopes": ["design"],
+      "ui": { "component": "claim-typology" },
+      "callbackAuth": {
+        "allowedClientIds": ["case-analyst-api"],
+        "requiredRoles": []
+      }
     }
   ]
 }

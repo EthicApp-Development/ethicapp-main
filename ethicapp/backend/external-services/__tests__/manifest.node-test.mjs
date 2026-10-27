@@ -50,6 +50,7 @@ test("catalog: each adapter requires its AI Additions service; mocks are develop
         "case-analyst-evidence-inventory": { development: false, requires: ["case-analyst"] },
         "mock-case-analysis":              { development: true, requires: [] },
         "mock-design-analysis":            { development: true, requires: [] },
+        "case-analyst-claim-typology":     { development: false, requires: ["case-analyst"] },
     });
 });
 

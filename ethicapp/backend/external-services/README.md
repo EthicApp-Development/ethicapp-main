@@ -1201,6 +1201,58 @@ document holds `phaseCount` (tutor phases with questions), `questionCount` and
 `wordCount`). It calls no external service, so it exercises analyses on save,
 unchanged saves, copies and regeneration locally.
 
+### Claim typology adapter
+
+`case-analyst-claim-typology` (`adapters/case-analyst-claim-typology.adapter.js`,
+#849) stores Case Analyst's claim typology (ethicapp-ai-additions#192) as a
+design analysis: the plausible types of answer to each tutor question, which
+the Argumentation Tutor uses when it gives feedback. It requires
+`case-analyst` and has the `design` scope; its callbacks come from the
+`case-analyst-api` Keycloak client.
+
+- **Input.** `designAnalysisInput()` applies to designs with a case and at
+  least one tutor question (`selectTutorQuestions()`), and only while the
+  current policy also allows `argumentation-tutor-system`
+  (`registry.isServiceUsable()`). Case Analyst accepts 1 to 30 questions, so
+  a design with more sends its first 30, in design order, and logs a warning.
+  When the case has an evidence inventory (its `case-analyst-evidence-inventory`
+  analysis holds an `evidence-inventory/v1` document, whatever the status of a
+  generation in flight), the input carries it.
+- **Hash.** The case language as Case Analyst receives it (`es_CL` for `es`
+  and `es_*`, `en_US` otherwise), the case `contentHash`, each question's id
+  and text hash, and the hash of the inventory document. A copy of the design
+  keeps the hash; an edited question, a new case PDF, or a regenerated or
+  edited inventory changes it, so the next valid save runs the typology again.
+- **Request.** The `design-saved` handler starts the generation, waits for the
+  case text (`waitForCaseDocumentText()`) and sends one
+  `POST /claim-typologies` with `basePath: "/case-analyst/api/v1"`: a
+  `claim-typology-request/v1` with `case{id, title, text, language}`,
+  `questions[{id: "p<phase>-q<question>", phaseId: <phase number>, text}]`,
+  the optional `evidenceInventory` and
+  `clientContext{service, correlationId: <job id>, designId, caseId,
+  questionTextHashes}`. The job stays `dispatched` until the callback.
+- **Callback.** A completed `claim-typology-result/v1` is stored with
+  `documentSchema: "claim-typology/v1"`. Case Analyst returns `clientContext`
+  unchanged, and the adapter adds to each typology `questionTextHash`, the
+  hash of the question text it answers, taken from
+  `clientContext.questionTextHashes` (null when missing). A failed result is
+  recorded as `service-failed` with Case Analyst's message and code. A
+  callback that matches no job is refused by the registry, since the adapter
+  exports no `getCallbackTarget()`.
+- **Errors.** `no-document`, `render-failed`, `superseded`, `timeout` (case
+  text), `empty-case-text`, `case-text-too-long` (over 200,000 characters),
+  `not-configured`, `request-rejected` (`400`/`422`), `request-failed`,
+  `service-failed`, `invalid-result`, `missing-input` and `adapter-error`.
+
+The teacher's design view shows the typology read-only
+(`components/claim-typology-panel.component.js` and
+`claim-typology-questions.component.js` in the frontend). The panel shows the
+generation state and "Generate again"; each tutor question shows its focal
+action and claim types (stance, description, example statement and cited
+evidence, with the statements of the case's current evidence inventory)
+inside its phase. A typology whose `questionTextHash` differs from the hash of
+the current question text is marked out of date.
+
 ### Recording results from an adapter
 
 `register()` receives `designAnalyses`, bound to the adapter's own service, with
