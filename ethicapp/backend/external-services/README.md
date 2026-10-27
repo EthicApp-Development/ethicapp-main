@@ -55,9 +55,10 @@ Which version applies:
 
 | Path | Version |
 | --- | --- |
-| Session hooks (`phase-started`, `phase-ended`, `activity-started`, `activity-finished`, `student-response-submitted`, `chat-message-received`, and any hook other than `case-created`) | The version the session was pinned to at launch (`sessions.ai_service_policy_version_id`), found from `context.sessionId`. A hook without `sessionId` follows no version. |
+| Session hooks (`phase-started`, `phase-ended`, `activity-started`, `activity-finished`, `student-response-submitted`, `chat-message-received`, and any hook other than `case-created` and `design-saved`) | The version the session was pinned to at launch (`sessions.ai_service_policy_version_id`), found from `context.sessionId`. A hook without `sessionId` follows no version. |
 | `case-created` (`NON_SESSION_HOOKS`) | The current version. It only bounds the author's choice (`case_analyses`): the candidates are the services chosen for the case, never every allowed one. |
-| `GET /external-services`, `GET /external-services/:id/instance-configuration`, design saving, the case form's choice (`POST /cases`), regenerating a case analysis | The current version. |
+| `design-saved` (`NON_SESSION_HOOKS`) | The current version. Only the reserved design analyses receive it (see "Design Analyses"). |
+| `GET /external-services`, `GET /external-services/:id/instance-configuration`, design saving, the case form's choice (`POST /cases`), regenerating a case or design analysis | The current version. |
 | The student activity descriptor | The session's pinned version. |
 | Callbacks | See below. |
 
@@ -261,7 +262,7 @@ Each manifest entry describes one service:
 | `description` | no | Defaults to an empty string. The texts meant for case screens come from the adapter instead (see "UI translations"). |
 | `hooks` | no | Declarative list of the hooks the adapter subscribes to. Non-kebab-case names are dropped with a warning. The registry does not enforce that `subscribe()` calls match this list; it is exposed through `GET /external-services` for operators and the teacher UI, so keep it in sync with the adapter. |
 | `globalHooks` | no | Hooks the service opts into at manifest level, without an activity-design opt-in. Defaults to `[]`. Each name must be kebab-case and must also appear in `hooks`; other entries are dropped with a warning and duplicates are removed. Only consulted by `dispatchGlobalHook()` (see "Hook enablement"). Exposed through `GET /external-services`. |
-| `scopes` | no | Where the service operates: `case` (case documents), `response` (student responses) or `chat` (group chat). Defaults to `[]`. Unknown values are dropped with a warning and duplicates are removed. Screens list services by scope (see "Listing services"), so an entry without scopes appears in none of them; `__tests__/manifest.node-test.mjs` requires at least one. |
+| `scopes` | no | Where the service operates: `case` (case documents), `design` (activity designs, see "Design Analyses"), `response` (student responses) or `chat` (group chat). Defaults to `[]`. Unknown values are dropped with a warning and duplicates are removed. Screens list services by scope (see "Listing services"), so an entry without scopes appears in none of them; `__tests__/manifest.node-test.mjs` requires at least one. |
 | `ui` | no | `{ component }`: the kebab-case name of the EthicApp frontend component that will show the service's analysis in the case view. Defaults to `{ component: null }`; other names are dropped with a warning. The texts come from the adapter, not from the manifest (see "UI translations"). |
 | `descriptor` | no | `{ path }`: the capability descriptor the service's AI backend publishes (#687). Its id (`service.id` in the descriptor) is the one AI Additions service in `requires`, so an adapter with a descriptor requires exactly one service; `descriptor.serviceId` is no longer accepted (#812). That id may differ from `id`: ids are mapped, not renamed, so stored designs, chat agents and jobs keep the manifest id. `path` is the descriptor route relative to the AI Additions connection's `base_url`, for example `/polyadic-agent/api/capabilities`; it must be an absolute path without host, query or `..` segments. An invalid path is dropped with a warning. `GET /external-services` exposes `descriptor.serviceId` and a summary (see "Listing services"); the route stays internal (`getServiceDescriptor()`). |
 | `capabilities` | — | Removed (#726). Entries that still declare it log a deprecation warning and the key is ignored. A service that processes student responses declares the `response` scope instead; the student app shows the processing state for those services. |
@@ -291,6 +292,7 @@ export async function register({
     publishGroupChatMessage, // (payload) => Promise<{ savedMessage, notificationPayload } | null>
     aiAdditionsClient,       // shared AI Additions HTTP client
     caseAnalyses,            // markProcessing/complete/fail for this service's case analyses
+    designAnalyses,          // markProcessing/complete/fail for this service's design analyses
     roomJobs,                // create/open/fail for this service's room jobs (see "Room jobs")
 }) {
     subscribe("student-response-submitted", async (context, { callback }) => {
@@ -307,9 +309,10 @@ dependency injection (for example `polyadicBridgeDependencies` in the Polyadic
 adapter). The registry never passes them, so they must have safe defaults.
 
 Adapters may also export pure helpers for testing; only `register` and the
-optional `getUiTranslations` (see "UI translations") and
-`validateCaseAnalysisDocument` (see "Case Analyses") are part of the registry
-contract. The adapter should subscribe only to hooks it handles.
+optional `getUiTranslations` (see "UI translations"),
+`validateCaseAnalysisDocument` (see "Case Analyses") and
+`validateDesignAnalysisDocument` (see "Design Analyses") are part of the
+registry contract. The adapter should subscribe only to hooks it handles.
 
 Hook names are part of the adapter interface and must use kebab-case
 (`/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/`). Subscriptions and manifest entries with
@@ -414,8 +417,9 @@ the teacher's choice comes back when the service is usable again. Meanwhile
 
 Each entry carries `ui: { component, translations }`, where `translations` is
 the result of `getServiceUiTranslations()` or `null`. The design editor asks for
-`?scope=response&scope=chat`, so services that only work on cases are not
-offered as phase options.
+`?scope=response&scope=chat`, so services that only work on cases or designs
+are not offered as phase options. `?scope=design` lists the services that
+analyse designs.
 
 Each entry also carries `descriptor`: `null` when the service declares no
 capability descriptor, otherwise a summary in the teacher's locale (#728):
@@ -561,6 +565,7 @@ failures are isolated from teacher and student requests.
 | `student-response-submitted` | Student response endpoints in `controllers/activities/activities-student.js` | Services enabled for the phase | `sessionId`, `phaseId`, `userId`, `questionId`, `designType`, `requestPayload`, `responsePayload` |
 | `chat-message-received` | `controllers/group-messages.js` after a group chat message is saved | Services enabled for the phase | `sessionId`, `phaseId`, `questionId`, `groupId`, `userId`, `parentId`, `content`, `savedMessage`, `notificationPayload`, `designType` |
 | `case-created` | `POST /cases` after the case, authors, tags, analyses, and render job are persisted, and `POST /cases/:id/analyses/:serviceId/generate` (`helpers/case-lifecycle-helper.js`) | Services chosen for the case when it was created; generate reaches one of them | `caseId`, `caseUuid`, `userId` (creator), `title`, `pdfPath`, `languageCode`, `visibility`, `pdfRenderJobId` |
+| `design-saved` | `POST /designs/:id/analyses/:serviceId/generate` (`helpers/design-analyses-lifecycle-helper.js`); dispatching it when a design is saved comes with #848 | The reserved design-scoped service only | `designId`, `userId` (requester), `caseId`, `languageCode` (the case's), `design` (the design document) |
 | `callback-received` | `POST /external-services/callbacks` | Only the service named in the callback body | `serviceId`, `eventType`, `correlationId`, `eventId`, `requestPayload`, `rawBody`, `auth` |
 
 ### Hook enablement
@@ -584,6 +589,11 @@ Analyses"): `dispatchCaseCreatedHook(context, { reservations })` dispatches each
 reserved analysis to its service only (`enabledServiceIds`), under the job id of
 its reservation (`jobIds`). A case created without a choice dispatches nothing,
 and editing the case never changes the choice.
+
+**Design hooks (reserved generations).** `design-saved` reaches only the
+design-scoped services whose generation was reserved in `design_analyses`
+(`dispatchDesignSavedHook(context, { reservations })`, see "Design Analyses"),
+in the same way.
 
 **Global hooks (manifest opt-in).** Hooks that fire outside an activity and
 need no teacher choice are dispatched with
@@ -852,6 +862,80 @@ teachers `404 CASE_NOT_FOUND`. Services not chosen for the case answer
 `mock-case-analysis` (`adapters/mock-case-analysis.adapter.js`) is the reference
 implementation: it runs in the web process, counts the words of the case, and
 stores an excerpt.
+
+## Design Analyses
+
+Design-scoped services (scope `design`) analyse activity designs (epic #846).
+Their results live in `design_analyses`
+(`database/migrations/V25__design_analyses.sql`): one row per design and
+service, holding the current result, outside the design document, whose schema
+does not change. Deleting a design deletes its analyses (`ON DELETE CASCADE`).
+Raw callbacks still go to `external_service_results`.
+
+Design analyses follow the case analyses lifecycle: the same statuses, the same
+15-minute stale window, and completion and failure conditional on the job id of
+the current generation (see "Statuses" and "Reserving generations" above). The
+statements both tables share live in `helpers/analyses-store-helper.js`; the
+design ones are wrapped in `helpers/design-analyses-helper.js`. What differs:
+
+- **No choice in advance.** Rows are not created when the design is created.
+  The first reservation of a service for a design creates its row
+  (`reserveDesignAnalysisGeneration()`, one `INSERT ... ON CONFLICT DO UPDATE`
+  that refuses a generation in flight), and later reservations replace the
+  previous document when their result arrives. Until then the previous
+  document stays readable, with status `requested` or `processing`.
+- **Input hash.** Each reservation records `input_hash`, the hash of the input
+  of that generation as the adapter computes it, so a save with an unchanged
+  input can skip the generation (#848). An explicit generation records `NULL`
+  until #848 adds the adapters' input export.
+- **Request.** `requested_at` and `requested_by` describe the latest request,
+  not the first one.
+- **Locked designs.** A design used by a launched activity (`designs.locked`)
+  keeps its analyses as they are: generating or editing answers
+  `409 DESIGN_LOCKED`.
+
+### Dispatch
+
+Generations are dispatched with the `design-saved` hook
+(`helpers/design-analyses-lifecycle-helper.js`), one of `NON_SESSION_HOOKS`, so
+it follows the current policy version. `dispatchDesignSavedHook(context, {
+reservations })` sends it to each reserved service under the job id of its
+reservation and releases a reservation its adapter did not start, as
+`case-created` does. Today only `POST /designs/:id/analyses/:serviceId/generate`
+dispatches it; #848 dispatches it when a design is saved and copies analyses
+with duplicated designs.
+
+### Recording results from an adapter
+
+`register()` receives `designAnalyses`, bound to the adapter's own service, with
+the same contract as `caseAnalyses`:
+
+- `markProcessing({ designId, jobId })` starts the generation reserved under
+  the `jobId` of the hook context. Await it before the `design-saved` handler
+  settles. It returns `null` when the generation is no longer the reserved one
+  or the context has no `jobId`; the adapter must then skip the work.
+- `complete({ jobId, documentSchema, document })` stores the document, which
+  replaces the previous one.
+- `fail({ jobId, errorCode, errorMessage })` records a failed generation and
+  keeps an existing document.
+
+An adapter may export
+`validateDesignAnalysisDocument(document, { designId, caseId, languageCode, design })`,
+which returns `{ document, documentSchema }` or `{ errors }`, to accept teacher
+edits. No adapter exports it for now: analyses of designs are read-only in epic
+#846.
+
+### API
+
+Only the design creator can use these endpoints: students get `403` and other
+teachers `404 DESIGN_NOT_FOUND`, also for public designs.
+
+| Endpoint | Description |
+| --- | --- |
+| `GET /designs/:id/analyses` | The design's analyses with status and timestamps, without documents. |
+| `GET /designs/:id/analyses/:serviceId` | One analysis with its document. `404 DESIGN_ANALYSIS_NOT_FOUND` when the design has none from that service. |
+| `PUT /designs/:id/analyses/:serviceId` | Body `{ document }`, validated by the adapter. Answers `405 DESIGN_ANALYSIS_NOT_EDITABLE` without a validator (every service today), `409 DESIGN_LOCKED` on a locked design, `400 DESIGN_ANALYSIS_DOCUMENT_INVALID` with `details`, and `409 DESIGN_ANALYSIS_PROCESSING` while a generation is in flight. |
+| `POST /designs/:id/analyses/:serviceId/generate` | Reserves a new generation, sends `design-saved` to that service only, and answers `202` with the reserved analysis. Answers `404 DESIGN_ANALYSIS_SERVICE_NOT_FOUND` when the service is not registered with the `design` scope, `409 DESIGN_LOCKED` on a locked design, `503 DESIGN_ANALYSIS_SERVICE_DISABLED` when the service is not usable, and `409 DESIGN_ANALYSIS_PROCESSING` while a generation is in flight. It also recovers stale generations. |
 
 ## AI Additions Authentication
 

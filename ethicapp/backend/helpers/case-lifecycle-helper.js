@@ -1,4 +1,5 @@
 import externalServicesRegistry from "../services/external-services.service.js";
+import { dispatchReservedGenerations } from "./analysis-dispatch-helper.js";
 import { releaseUnstartedCaseAnalysis } from "./case-analyses-helper.js";
 
 export const CASE_CREATED_HOOK = "case-created";
@@ -120,33 +121,10 @@ export async function dispatchCaseCreatedHook(
         releaseReservation = releaseUnstartedCaseAnalysis,
     } = {}
 ) {
-    // One dispatch per reservation, so each is released as soon as its own
-    // handler settles rather than after the slowest one.
-    const outcomes = await Promise.all(reservations.map(reservation =>
-        dispatchReservation(context, reservation, { registry, releaseReservation })
-    ));
-
-    return outcomes.flat();
-}
-
-async function dispatchReservation(context, reservation, { registry, releaseReservation }) {
-    const { case_id: caseId, service_id: serviceId, job_id: jobId } = reservation;
-    let outcomes = [];
-
-    try {
-        outcomes = await registry.dispatchHook(CASE_CREATED_HOOK, context, {
-            enabledServiceIds: [serviceId],
-            jobIds:            { [serviceId]: jobId },
-        });
-    } catch (error) {
-        console.error("[external-services] Error dispatching case-created hook.", error);
-    }
-
-    try {
-        await releaseReservation({ caseId, serviceId, jobId });
-    } catch (error) {
-        console.error(`[external-services] Could not release the ${serviceId} reservation.`, error);
-    }
-
-    return outcomes;
+    return dispatchReservedGenerations(CASE_CREATED_HOOK, context, {
+        reservations,
+        registry,
+        release: ({ case_id: caseId, service_id: serviceId, job_id: jobId }) =>
+            releaseReservation({ caseId, serviceId, jobId }),
+    });
 }
