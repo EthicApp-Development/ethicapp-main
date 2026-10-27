@@ -9,6 +9,7 @@ import {
     adaptersByRequiredService,
     classifyAiAdditionsError,
     createAiServicesCatalogService,
+    describeAdapter,
     normalizeCatalogLocale,
     parseCatalogResponse,
 } from "../ai-services-catalog.service.js";
@@ -163,5 +164,49 @@ test("the default adapter catalog is the shipped manifest", async () => {
     const result = await service.readCatalog({ locale: "en_US" });
 
     assert.equal(result.ok, true);
-    assert.deepEqual(result.services[0].adapters.map(adapter => adapter.id), ["polyadic-devils-advocate"]);
+    assert.deepEqual(result.services[0].adapters, [{
+        id:          "polyadic-devils-advocate",
+        scopes:      ["chat"],
+        // The default texts come from the adapter, through the registry.
+        label:       "Discussion agents",
+        description: result.services[0].adapters[0].description,
+    }]);
+    assert.equal(typeof result.services[0].adapters[0].description, "string");
+});
+
+test("adapters carry their scopes, and the label and description of the locale", () => {
+    const adapter = {
+        id:          "case-analyst-claim-typology",
+        description: "Catalog text",
+        scopes:      ["design"],
+    };
+    const translations = {
+        es_CL: { label: "Tipología de respuestas", description: "Tipos de respuesta" },
+        en_US: { label: "Claim typology", description: "Answer types" },
+    };
+
+    assert.deepEqual(describeAdapter(adapter, translations, "es_CL"), {
+        id:          "case-analyst-claim-typology",
+        scopes:      ["design"],
+        label:       "Tipología de respuestas",
+        description: "Tipos de respuesta",
+    });
+    assert.deepEqual(describeAdapter(adapter, null, "en_US"), {
+        id:          "case-analyst-claim-typology",
+        scopes:      ["design"],
+        label:       null,
+        description: "Catalog text",
+    });
+});
+
+test("Case Analyst enables case analyses and a design analysis", () => {
+    const caseAnalyst = adaptersByRequiredService(manifest).get("case-analyst") ?? [];
+    const scopes = Object.fromEntries(caseAnalyst.map(adapter => [adapter.id, adapter.scopes]));
+
+    assert.deepEqual(scopes, {
+        "case-analyst-evaluation":         ["case"],
+        "case-analyst-evidence-inventory": ["case"],
+        "case-analyst-claim-typology":     ["design"],
+        "case-analyst-topic-listing":      ["case"],
+    });
 });

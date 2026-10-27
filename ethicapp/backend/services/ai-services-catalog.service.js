@@ -195,9 +195,10 @@ export function parseCatalogResponse(body) {
 
 /**
  * The EthicApp adapters each AI Additions service enables: the non-development
- * catalog entries whose `requires` include it.
+ * catalog entries whose `requires` include it, with the scopes they work on
+ * (`case`, `design`, `response`, `chat`), so the console can group them.
  * @param {{ services: object[] }} adapterCatalog  The parsed `manifest.json`.
- * @returns {Map<string, { id: string, description: string|null }[]>}
+ * @returns {Map<string, { id: string, description: string|null, scopes: string[] }[]>}
  */
 export function adaptersByRequiredService(adapterCatalog) {
     const adapters = new Map();
@@ -211,12 +212,33 @@ export function adaptersByRequiredService(adapterCatalog) {
             list.push({
                 id:          entry.id,
                 description: typeof entry.description === "string" ? entry.description : null,
+                scopes:      Array.isArray(entry.scopes)
+                    ? entry.scopes.filter(scope => typeof scope === "string")
+                    : [],
             });
             adapters.set(serviceId, list);
         }
     }
 
     return adapters;
+}
+
+/**
+ * An adapter as the catalog read returns it: its id, scopes, and the label and
+ * description its `getUiTranslations()` gives for `locale`. Without them the
+ * label is null and the description is the catalog's own (in English).
+ * @param {{ id: string, description: string|null, scopes: string[] }} adapter
+ * @param {object|null} translations  `{ es_CL: { label, description }, en_US: ... }`
+ * @param {"es_CL"|"en_US"} locale
+ */
+export function describeAdapter(adapter, translations, locale) {
+    const texts = translations?.[locale] ?? null;
+    return {
+        id:          adapter.id,
+        scopes:      [...adapter.scopes],
+        label:       isNonEmptyString(texts?.label) ? texts.label : null,
+        description: isNonEmptyString(texts?.description) ? texts.description : adapter.description,
+    };
 }
 
 function isNetworkError(error) {
@@ -282,6 +304,15 @@ function describeFailure(error, code) {
     return parts.join(" ");
 }
 
+// The adapter's UI texts through the external services registry, which
+// validates and caches them. Imported lazily: only the catalog read needs the
+// registry, and only once the console asks for it.
+async function loadAdapterTranslationsFromRegistry(adapterId) {
+    const { default: registry } = await import("./external-services.service.js");
+    await registry.initialize();
+    return registry.getServiceUiTranslations(adapterId);
+}
+
 async function loadManifestFromDisk(manifestUrl = DEFAULT_MANIFEST_URL) {
     const manifest = JSON.parse(await fs.readFile(manifestUrl, "utf8"));
     assertValidCatalog(validateCatalog(manifest), "manifest.json");
@@ -296,12 +327,15 @@ async function loadManifestFromDisk(manifestUrl = DEFAULT_MANIFEST_URL) {
  * @param {() => Promise<object|null>} [options.getConnection]  Reads the stored
  *   connection, uncached; defaults to the database.
  * @param {() => Promise<{ services: object[] }>} [options.loadAdapterCatalog]
+ * @param {(adapterId: string) => Promise<object|null>} [options.loadAdapterTranslations]
+ *   An adapter's `getUiTranslations()` texts, or null; defaults to the registry.
  * @param {{ warn: Function }} [options.logger]
  */
 export function createAiServicesCatalogService({
     client = aiAdditionsClient,
     getConnection = getStoredConnection,
     loadAdapterCatalog = loadManifestFromDisk,
+    loadAdapterTranslations = loadAdapterTranslationsFromRegistry,
     logger = console,
     catalogDeadlineMs = DEFAULT_CATALOG_DEADLINE_MS,
     tokenStepDeadlineMs = DEFAULT_TOKEN_STEP_DEADLINE_MS,
@@ -323,6 +357,22 @@ export function createAiServicesCatalogService({
                 });
         }
         return adapterCatalogRequest;
+    }
+
+    // The texts of every adapter in `adapters`, by id. A failure only costs
+    // the labels: the console then shows the adapter ids.
+    async function adapterTranslations(adapters) {
+        const ids = [...new Set([...adapters.values()].flat().map(adapter => adapter.id))];
+        const entries = await Promise.all(ids.map(async (id) => {
+            try {
+                return [id, await loadAdapterTranslations(id)];
+            } catch (error) {
+                logger.warn(`[ai-services] UI texts of ${id} are unavailable: `
+                    + `cause=${error?.name ?? "Error"}`);
+                return [id, null];
+            }
+        }));
+        return new Map(entries);
     }
 
     function withDeadline(promise, deadlineMs) {
@@ -368,7 +418,8 @@ export function createAiServicesCatalogService({
      * Reads the catalog through the stored connection.
      * @param {{ locale?: string }} [options]
      * @returns {Promise<object>} `{ ok: true, contractVersion, locale, services }`
-     *   or `{ ok: false, error }`.
+     *   or `{ ok: false, error }`. Each service lists the EthicApp `adapters` it
+     *   enables as `{ id, scopes, label, description }` (see describeAdapter).
      * @throws when the connection cannot be read (a database failure) or the
      *   adapter catalog is broken: those are EthicApp's own errors.
      */
@@ -408,6 +459,7 @@ export function createAiServicesCatalogService({
             return { ok: false, error: failure("catalog read", error) };
         }
 
+        const translations = await adapterTranslations(adapters);
         return {
             ok:              true,
             contractVersion: catalog.contractVersion,
@@ -415,7 +467,11 @@ export function createAiServicesCatalogService({
             services:        catalog.services.map(service => ({
                 ...service,
                 available: service.status === "available",
-                adapters:  (adapters.get(service.id) ?? []).map(adapter => ({ ...adapter })),
+                adapters:  (adapters.get(service.id) ?? []).map(adapter => describeAdapter(
+                    adapter,
+                    translations.get(adapter.id),
+                    normalizedLocale
+                )),
             })),
         };
     }

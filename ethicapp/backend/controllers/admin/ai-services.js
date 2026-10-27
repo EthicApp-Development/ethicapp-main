@@ -13,7 +13,9 @@ import aiServicesCatalogService from "../../services/ai-services-catalog.service
  * must have role `S`.
  *
  * - `GET /api/admin/ai-services/catalog?locale=` reads the AI Additions
- *   catalog through the stored connection.
+ *   catalog through the stored connection. Each service carries the EthicApp
+ *   adapters it enables, with their scopes and their label and description in
+ *   the locale, so the console can switch them off by scope (#864).
  * - `POST /api/admin/ai-services/connection-test` obtains a token and reads
  *   the catalog against `{ baseUrl, keycloakPublicUrl? }` without saving them.
  *
