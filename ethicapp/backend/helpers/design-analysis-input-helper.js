@@ -8,10 +8,11 @@ import { getUploadSha256 } from "./pdf-render-jobs-helper.js";
  *     designAnalysisInput({ design, designCase }) => { input, hash } | null
  *
  * which says whether it applies to a design and, when it does, what its
- * generation works on (`input`, handed to its `design-saved` handler as
- * `context.analysisInput`) and the hash of everything that determines its
- * result (`hash`, stored as `design_analyses.input_hash`). EthicApp compares
- * that hash with the stored one to skip saves that do not change the result.
+ * generation works on (`input`, handed to its `design-created` and
+ * `design-updated` handlers as `context.analysisInput`) and the hash of
+ * everything that determines its result (`hash`, stored as
+ * `design_analyses.input_hash`). EthicApp compares that hash with the stored
+ * one to skip saves that do not change the result.
  * Adapters compute it with hashAnalysisInput() (helpers/analysis-input-hash.js)
  * and leave out what differs between a design and its copies, such as the
  * design and case ids, so copies keep their analyses.

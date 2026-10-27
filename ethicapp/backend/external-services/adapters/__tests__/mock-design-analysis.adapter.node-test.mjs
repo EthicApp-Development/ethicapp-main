@@ -104,7 +104,7 @@ test("getUiTranslations: Spanish and English texts", async () => {
     }
 });
 
-// ─── design-saved ────────────────────────────────────────────────────────────
+// ─── design-created and design-updated ───────────────────────────────────────
 
 function makeDesignAnalyses({ processing = { status: "processing", jobId: JOB_ID }, complete } = {}) {
     const calls = [];
@@ -126,58 +126,77 @@ function makeDesignAnalyses({ processing = { status: "processing", jobId: JOB_ID
     return { designAnalyses, calls };
 }
 
-async function runDesignSaved(designAnalyses, context) {
+async function runDesignHook(designAnalyses, context, hookName = "design-updated") {
     const subscribers = new Map();
     await register({ subscribe: (hookName, handler) => subscribers.set(hookName, handler), designAnalyses });
 
     const results = [];
-    await subscribers.get("design-saved")(
+    await subscribers.get(hookName)(
         { designId: 5, jobId: JOB_ID, ...context },
         { callback: async result => { results.push(result); } }
     );
     return results;
 }
 
-test("design-saved: stores the analysis of the input it was dispatched with", async () => {
-    const { designAnalyses, calls } = makeDesignAnalyses();
-    const { input } = designAnalysisInput({ design: DESIGN, designCase: DESIGN_CASE });
+test("design hooks: subscribes to design-created and design-updated", async () => {
+    const subscribed = [];
+    await register({
+        subscribe:      hookName => subscribed.push(hookName),
+        designAnalyses: makeDesignAnalyses().designAnalyses,
+    });
 
-    const results = await runDesignSaved(designAnalyses, { analysisInput: input });
-
-    assert.deepEqual(calls, [
-        { name: "markProcessing", args: { designId: 5, jobId: JOB_ID } },
-        {
-            name: "complete",
-            args: {
-                jobId:          JOB_ID,
-                documentSchema: MOCK_DESIGN_ANALYSIS_SCHEMA,
-                document:       buildMockDesignAnalysis(input),
-            },
-        },
-    ]);
-    assert.deepEqual(results, [{ hook: "design-saved", status: "completed", designId: 5 }]);
+    assert.deepEqual(subscribed, ["design-created", "design-updated"]);
 });
 
-test("design-saved: skips a generation that is no longer reserved", async () => {
+test("design hooks: stores the analysis of the input it was dispatched with", async () => {
+    const { input } = designAnalysisInput({ design: DESIGN, designCase: DESIGN_CASE });
+    const dispatches = [
+        ["design-created", "created"],
+        ["design-updated", "updated"],
+        ["design-updated", "generate"],
+    ];
+
+    for (const [hookName, trigger] of dispatches) {
+        const { designAnalyses, calls } = makeDesignAnalyses();
+
+        const context = { trigger, analysisInput: input };
+        const results = await runDesignHook(designAnalyses, context, hookName);
+
+        assert.deepEqual(calls, [
+            { name: "markProcessing", args: { designId: 5, jobId: JOB_ID } },
+            {
+                name: "complete",
+                args: {
+                    jobId:          JOB_ID,
+                    documentSchema: MOCK_DESIGN_ANALYSIS_SCHEMA,
+                    document:       buildMockDesignAnalysis(input),
+                },
+            },
+        ], trigger);
+        assert.deepEqual(results, [{ hook: hookName, status: "completed", designId: 5 }], trigger);
+    }
+});
+
+test("design hooks: skips a generation that is no longer reserved", async () => {
     const { designAnalyses, calls } = makeDesignAnalyses({ processing: null });
 
-    const results = await runDesignSaved(designAnalyses, { analysisInput: { questions: [] } });
+    const results = await runDesignHook(designAnalyses, { analysisInput: { questions: [] } });
 
     assert.deepEqual(calls.map(call => call.name), ["markProcessing"]);
     assert.equal(results[0].status, "skipped");
 });
 
-test("design-saved: a superseded job's result is not stored", async () => {
+test("design hooks: a superseded job's result is not stored", async () => {
     const { designAnalyses } = makeDesignAnalyses({ complete: async () => null });
 
-    const results = await runDesignSaved(designAnalyses, { analysisInput: { questions: [] } });
+    const results = await runDesignHook(designAnalyses, { analysisInput: { questions: [] } });
 
     assert.equal(results[0].status, "skipped");
 });
 
-test("design-saved: fails a generation without input, and one whose storage fails", async () => {
+test("design hooks: fails a generation without input, and one whose storage fails", async () => {
     const missing = makeDesignAnalyses();
-    const missingResults = await runDesignSaved(missing.designAnalyses, {});
+    const missingResults = await runDesignHook(missing.designAnalyses, {});
     assert.deepEqual(missing.calls[1], {
         name: "fail",
         args: {
@@ -189,8 +208,8 @@ test("design-saved: fails a generation without input, and one whose storage fail
     assert.equal(missingResults[0].status, "failed");
 
     const broken = makeDesignAnalyses({ complete: async () => { throw new Error("db down"); } });
-    const brokenResults = await runDesignSaved(broken.designAnalyses, { analysisInput: { questions: [] } });
+    const brokenResults = await runDesignHook(broken.designAnalyses, { analysisInput: { questions: [] } });
     assert.equal(broken.calls[1].name, "fail");
     assert.equal(broken.calls[1].args.errorCode, "adapter-error");
-    assert.deepEqual(brokenResults, [{ hook: "design-saved", status: "failed", error: "db down" }]);
+    assert.deepEqual(brokenResults, [{ hook: "design-updated", status: "failed", error: "db down" }]);
 });

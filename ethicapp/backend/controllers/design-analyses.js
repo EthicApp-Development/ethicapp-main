@@ -10,11 +10,12 @@ import {
     saveReviewedDesignAnalysis,
 } from "../helpers/design-analyses-helper.js";
 import {
-    buildDesignSavedContext,
+    buildDesignHookContext,
     designSnapshotOf,
-    dispatchDesignSavedHook,
+    dispatchDesignHook,
     resolveDesignAnalysisInput,
 } from "../helpers/design-analyses-lifecycle-helper.js";
+import { DESIGN_HOOK_TRIGGERS } from "../helpers/design-analysis-hooks.js";
 import { designLockedRefusal } from "../helpers/design-update.js";
 import externalServicesRegistry from "../services/external-services.service.js";
 
@@ -70,11 +71,15 @@ async function isServiceUsable(serviceId) {
     return externalServicesRegistry.isServiceUsable(serviceId);
 }
 
-// A new generation sends design-saved to the reserved service only, with the
-// input its adapter computed.
+// A new generation sends design-updated (trigger `generate`) to the reserved
+// service only, with the current design and the input its adapter computed.
 function dispatchGeneration(designRow, reservation, { userId, analysis }) {
-    return dispatchDesignSavedHook(
-        buildDesignSavedContext(designRow, { userId, analysis }),
+    return dispatchDesignHook(
+        buildDesignHookContext(designRow, {
+            trigger: DESIGN_HOOK_TRIGGERS.GENERATE,
+            userId,
+            analysis,
+        }),
         { reservations: [reservation] }
     );
 }

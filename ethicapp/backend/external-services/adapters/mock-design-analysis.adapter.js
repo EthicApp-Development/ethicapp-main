@@ -1,4 +1,5 @@
 import { hashAnalysisInput } from "../../helpers/analysis-input-hash.js";
+import { DESIGN_ANALYSIS_HOOKS } from "../../helpers/design-analysis-hooks.js";
 import { selectTutorQuestions } from "../../helpers/design-tutor-questions.js";
 
 // Development adapter for design-scoped analyses (#848). It runs in the web
@@ -7,12 +8,10 @@ import { selectTutorQuestions } from "../../helpers/design-tutor-questions.js";
 // that enable argumentation-tutor-system, the selection the claim typology
 // uses), and stores how many tutor phases and questions there are, with each
 // question's word count. It exercises the whole design analysis contract:
-// analyses on save, the input hash that skips unchanged saves, copies, and
-// explicit regeneration.
+// analyses on creation (design-created) and on save (design-updated), the
+// input hash that skips unchanged saves, copies, and explicit regeneration.
 
 export const MOCK_DESIGN_ANALYSIS_SCHEMA = "mock-design-analysis/v1";
-
-const DESIGN_SAVED_HOOK = "design-saved";
 
 const UI_TRANSLATIONS = {
     es_CL: {
@@ -98,7 +97,7 @@ export function buildMockDesignAnalysis(input) {
     };
 }
 
-async function processDesignSaved({ context, callback, designAnalyses }) {
+async function processDesignGeneration({ hookName, context, callback, designAnalyses }) {
     const analysis = await designAnalyses.markProcessing({
         designId: context.designId,
         jobId:    context.jobId,
@@ -106,7 +105,7 @@ async function processDesignSaved({ context, callback, designAnalyses }) {
 
     if (!analysis) {
         await callback({
-            hook:   DESIGN_SAVED_HOOK,
+            hook:   hookName,
             status: "skipped",
             reason: "The generation is no longer the one reserved for the design.",
         });
@@ -117,7 +116,7 @@ async function processDesignSaved({ context, callback, designAnalyses }) {
         if (!context.analysisInput) {
             await designAnalyses.fail({ jobId: analysis.jobId, ...MISSING_INPUT });
             await callback({
-                hook:   DESIGN_SAVED_HOOK,
+                hook:   hookName,
                 status: "failed",
                 error:  MISSING_INPUT.errorMessage,
             });
@@ -130,7 +129,7 @@ async function processDesignSaved({ context, callback, designAnalyses }) {
             document:       buildMockDesignAnalysis(context.analysisInput),
         });
         await callback({
-            hook:     DESIGN_SAVED_HOOK,
+            hook:     hookName,
             status:   stored ? "completed" : "skipped",
             designId: context.designId,
         });
@@ -146,16 +145,20 @@ async function processDesignSaved({ context, callback, designAnalyses }) {
     }
 }
 
+// design-created and design-updated run the reserved generation in the same
+// way; the context's `trigger` says what caused it.
 export async function register({ subscribe, designAnalyses }) {
-    subscribe(DESIGN_SAVED_HOOK, async (context, { callback }) => {
-        try {
-            await processDesignSaved({ context, callback, designAnalyses });
-        } catch (error) {
-            await callback({
-                hook:   DESIGN_SAVED_HOOK,
-                status: "failed",
-                error:  error?.message || "Unexpected mock design analysis error.",
-            });
-        }
-    });
+    for (const hookName of DESIGN_ANALYSIS_HOOKS) {
+        subscribe(hookName, async (context, { callback }) => {
+            try {
+                await processDesignGeneration({ hookName, context, callback, designAnalyses });
+            } catch (error) {
+                await callback({
+                    hook:   hookName,
+                    status: "failed",
+                    error:  error?.message || "Unexpected mock design analysis error.",
+                });
+            }
+        });
+    }
 }

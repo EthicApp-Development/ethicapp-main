@@ -59,9 +59,14 @@ const UI_TRANSLATIONS_RETRY_MS   = 60 * 1000;
 
 // Hooks that fire outside any session. They follow the current AI service
 // policy version; every other hook belongs to a session (`context.sessionId`)
-// and follows the version that session is pinned to (#815). `design-saved`
-// carries design analyses (epic #846; helpers/design-analyses-lifecycle-helper.js).
-export const NON_SESSION_HOOKS = Object.freeze(["case-created", "design-saved"]);
+// and follows the version that session is pinned to (#815). `design-created`
+// and `design-updated` carry design analyses (epic #846, #862;
+// helpers/design-analysis-hooks.js).
+export const NON_SESSION_HOOKS = Object.freeze([
+    "case-created",
+    "design-created",
+    "design-updated",
+]);
 
 const DEFAULT_AI_SERVICE_POLICY = Object.freeze({
     getCurrentPolicyVersion,
@@ -873,9 +878,10 @@ export class ExternalServicesRegistry {
     }
 
     // Which policy version a hook follows: the current one for
-    // NON_SESSION_HOOKS (case-created, design-saved), the session's pinned
-    // version for every other hook. A session hook without `context.sessionId`
-    // follows no version, so only development adapters receive it.
+    // NON_SESSION_HOOKS (case-created, design-created, design-updated), the
+    // session's pinned version for every other hook. A session hook without
+    // `context.sessionId` follows no version, so only development adapters
+    // receive it.
     async resolveHookPolicyVersion(hookName, context = {}) {
         if (NON_SESSION_HOOKS.includes(hookName)) {
             return this.getCurrentPolicyVersion();

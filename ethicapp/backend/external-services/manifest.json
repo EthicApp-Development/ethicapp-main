@@ -129,7 +129,8 @@
       "development": true,
       "requires": [],
       "hooks": [
-        "design-saved"
+        "design-created",
+        "design-updated"
       ],
       "scopes": ["design"],
       "callbackAuth": {
@@ -143,7 +144,8 @@
       "adapter": "./adapters/case-analyst-claim-typology.adapter.js",
       "requires": ["case-analyst"],
       "hooks": [
-        "design-saved",
+        "design-created",
+        "design-updated",
         "callback-received"
       ],
       "scopes": ["design"],

@@ -48,9 +48,10 @@ async function registerDesignTool(store) {
 
 // ─── scope and hook vocabulary ───────────────────────────────────────────────
 
-test("the design scope is part of the vocabulary and design-saved is a non-session hook", async () => {
+test("the design scope is in the vocabulary and the design hooks are non-session", async () => {
     assert.ok(SERVICE_SCOPES.includes("design"));
-    assert.ok(NON_SESSION_HOOKS.includes("design-saved"));
+    assert.ok(NON_SESSION_HOOKS.includes("design-created"));
+    assert.ok(NON_SESSION_HOOKS.includes("design-updated"));
 
     const { registry, warnings } = await registerDesignTool(makeStore().store);
     assert.deepEqual(registry.getServiceById("svc-design").scopes, ["design"]);
@@ -58,7 +59,7 @@ test("the design scope is part of the vocabulary and design-saved is a non-sessi
     assert.ok(!warnings.some(warning => warning.includes("unknown scope")));
 });
 
-test("design-saved follows the current policy version, without a session", async () => {
+test("the design hooks follow the current policy version, without a session", async () => {
     const version = Object.freeze({ id: 4, allowedServiceIds: Object.freeze(["case-analyst"]) });
     const registry = new ExternalServicesRegistry({
         jobsService:     {},
@@ -68,7 +69,13 @@ test("design-saved follows the current policy version, without a session", async
         },
     });
 
-    assert.equal(await registry.resolveHookPolicyVersion("design-saved", { designId: 5 }), version);
+    for (const hookName of ["design-created", "design-updated"]) {
+        assert.equal(
+            await registry.resolveHookPolicyVersion(hookName, { designId: 5 }),
+            version,
+            hookName
+        );
+    }
 });
 
 // ─── designAnalyses passed to register() ─────────────────────────────────────

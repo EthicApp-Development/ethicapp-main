@@ -28,7 +28,7 @@ import {
 import {
     designSnapshotOf,
     readDesignForAnalyses,
-    requestDesignAnalysesOnSave,
+    requestDesignAnalyses,
 } from "../design-analyses-lifecycle-helper.js";
 import {
     designAnalysisInput as mockDesignAnalysisInput,
@@ -490,7 +490,8 @@ async function saveDesign(designId, questionText) {
  */
 function runSaveRequest(ids, { designRead, caseLoaded, generationStarted, storeResult } = {}) {
     const completions = [];
-    const result = requestDesignAnalysesOnSave(ids.designId, {
+    const result = requestDesignAnalyses(ids.designId, {
+        trigger:      "updated",
         dependencies: {
             getDesignRow: async designId => {
                 const row = await readDesignForAnalyses(designId, query);

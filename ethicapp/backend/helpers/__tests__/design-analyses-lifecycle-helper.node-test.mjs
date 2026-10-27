@@ -3,13 +3,19 @@ import test from "node:test";
 
 import { NON_SESSION_HOOKS } from "../../services/external-services.service.js";
 import {
-    DESIGN_SAVED_HOOK,
-    buildDesignSavedContext,
-    dispatchDesignSavedHook,
-    requestDesignAnalysesOnSave,
+    buildDesignHookContext,
+    dispatchDesignHook,
+    requestDesignAnalyses,
     resolveDesignAnalysisInput,
-    scheduleDesignAnalysesOnSave,
+    scheduleDesignAnalyses,
 } from "../design-analyses-lifecycle-helper.js";
+import {
+    DESIGN_ANALYSIS_HOOKS,
+    DESIGN_CREATED_HOOK,
+    DESIGN_HOOK_TRIGGERS,
+    DESIGN_UPDATED_HOOK,
+    designHookForTrigger,
+} from "../design-analysis-hooks.js";
 
 const JOB_ID = "f1a2b3c4-0000-4000-8000-000000000071";
 
@@ -22,13 +28,30 @@ const DESIGN_ROW = {
     design:             { phases: [{ type: "semantic_differential" }] },
 };
 
-test("design-saved fires outside sessions, under the current policy version", () => {
-    assert.equal(DESIGN_SAVED_HOOK, "design-saved");
-    assert.ok(NON_SESSION_HOOKS.includes(DESIGN_SAVED_HOOK));
+test("the design hooks fire outside sessions, under the current policy version", () => {
+    assert.equal(DESIGN_CREATED_HOOK, "design-created");
+    assert.equal(DESIGN_UPDATED_HOOK, "design-updated");
+    assert.deepEqual(DESIGN_ANALYSIS_HOOKS, ["design-created", "design-updated"]);
+    assert.deepEqual(NON_SESSION_HOOKS, ["case-created", "design-created", "design-updated"]);
 });
 
-test("buildDesignSavedContext: maps the design row into the hook context", () => {
-    assert.deepEqual(buildDesignSavedContext(DESIGN_ROW, { userId: "7" }), {
+test("designHookForTrigger: created sends design-created, the others design-updated", () => {
+    assert.deepEqual(DESIGN_HOOK_TRIGGERS, {
+        CREATED:  "created",
+        UPDATED:  "updated",
+        GENERATE: "generate",
+    });
+    assert.equal(designHookForTrigger("created"), "design-created");
+    assert.equal(designHookForTrigger("updated"), "design-updated");
+    assert.equal(designHookForTrigger("generate"), "design-updated");
+    for (const trigger of [undefined, null, "saved", "toString"]) {
+        assert.throws(() => designHookForTrigger(trigger), TypeError, String(trigger));
+    }
+});
+
+test("buildDesignHookContext: maps the design row into the hook context", () => {
+    assert.deepEqual(buildDesignHookContext(DESIGN_ROW, { trigger: "updated", userId: "7" }), {
+        trigger:       "updated",
         designId:      5,
         userId:        7,
         caseId:        42,
@@ -37,20 +60,27 @@ test("buildDesignSavedContext: maps the design row into the hook context", () =>
         analysisInput: null,
         inputHash:     null,
     });
-    assert.equal(buildDesignSavedContext(DESIGN_ROW).userId, 3, "the creator by default");
+    assert.equal(
+        buildDesignHookContext(DESIGN_ROW, { trigger: "created" }).userId,
+        3,
+        "the creator by default"
+    );
 });
 
-test("buildDesignSavedContext: carries the adapter's input and its hash", () => {
-    const context = buildDesignSavedContext(DESIGN_ROW, {
+test("buildDesignHookContext: carries the adapter's input and its hash", () => {
+    const context = buildDesignHookContext(DESIGN_ROW, {
+        trigger:  "generate",
         analysis: { input: { questions: [] }, hash: "sha256:abc" },
     });
 
+    assert.equal(context.trigger, "generate");
     assert.deepEqual(context.analysisInput, { questions: [] });
     assert.equal(context.inputHash, "sha256:abc");
 });
 
-test("buildDesignSavedContext: nulls a missing case and invalid ids", () => {
-    assert.deepEqual(buildDesignSavedContext({ id: "x" }), {
+test("buildDesignHookContext: nulls a missing case and invalid ids", () => {
+    assert.deepEqual(buildDesignHookContext({ id: "x" }, { trigger: "created" }), {
+        trigger:       "created",
         designId:      null,
         userId:        null,
         caseId:        null,
@@ -61,39 +91,69 @@ test("buildDesignSavedContext: nulls a missing case and invalid ids", () => {
     });
 });
 
-test("dispatchDesignSavedHook: dispatches each reservation under its job, then releases it", async () => {
-    const calls = [];
-    const released = [];
-    const registry = {
+test("buildDesignHookContext: refuses an unknown trigger", () => {
+    assert.throws(() => buildDesignHookContext(DESIGN_ROW), TypeError);
+    assert.throws(() => buildDesignHookContext(DESIGN_ROW, { trigger: "saved" }), TypeError);
+});
+
+function recordingRegistry(calls) {
+    return {
         dispatchHook: async (hookName, context, options) => {
             calls.push({ hookName, context, options });
             return [{ status: "fulfilled", value: undefined }];
         },
     };
+}
 
-    const outcomes = await dispatchDesignSavedHook({ designId: 5 }, {
+test("dispatchDesignHook: dispatches each reservation under its job, then releases it", async () => {
+    const calls = [];
+    const released = [];
+
+    const outcomes = await dispatchDesignHook({ trigger: "updated", designId: 5 }, {
         reservations:       [{ design_id: 5, service_id: "svc-design", job_id: JOB_ID }],
-        registry,
+        registry:           recordingRegistry(calls),
         releaseReservation: async args => { released.push(args); },
     });
 
     assert.deepEqual(calls, [{
-        hookName: "design-saved",
-        context:  { designId: 5 },
+        hookName: "design-updated",
+        context:  { trigger: "updated", designId: 5 },
         options:  { enabledServiceIds: ["svc-design"], jobIds: { "svc-design": JOB_ID } },
     }]);
     assert.deepEqual(released, [{ designId: 5, serviceId: "svc-design", jobId: JOB_ID }]);
     assert.equal(outcomes.length, 1);
 });
 
-test("dispatchDesignSavedHook: a failed dispatch is logged and the reservation released", async () => {
+test("dispatchDesignHook: the trigger selects the hook", async () => {
+    const calls = [];
+    const options = {
+        reservations:       [{ design_id: 5, service_id: "svc-design", job_id: JOB_ID }],
+        registry:           recordingRegistry(calls),
+        releaseReservation: async () => {},
+    };
+
+    for (const trigger of ["created", "updated", "generate"]) {
+        await dispatchDesignHook({ trigger, designId: 5 }, options);
+    }
+
+    assert.deepEqual(
+        calls.map(({ hookName, context }) => [context.trigger, hookName]),
+        [
+            ["created", "design-created"],
+            ["updated", "design-updated"],
+            ["generate", "design-updated"],
+        ]
+    );
+});
+
+test("dispatchDesignHook: a failed dispatch is logged and the reservation released", async () => {
     const released = [];
     const logged = [];
     const originalError = console.error;
     console.error = (...args) => { logged.push(args); };
 
     try {
-        const outcomes = await dispatchDesignSavedHook({ designId: 5 }, {
+        const outcomes = await dispatchDesignHook({ trigger: "created", designId: 5 }, {
             reservations:       [{ design_id: 5, service_id: "svc-design", job_id: JOB_ID }],
             registry:           { dispatchHook: async () => { throw new Error("boom"); } },
             releaseReservation: async args => { released.push(args); },
@@ -104,13 +164,14 @@ test("dispatchDesignSavedHook: a failed dispatch is logged and the reservation r
     }
 
     assert.equal(released.length, 1);
-    assert.match(logged[0][0], /Error dispatching design-saved hook/);
+    assert.match(logged[0][0], /Error dispatching design-created hook/);
 });
 
-test("dispatchDesignSavedHook: nothing is dispatched without reservations", async () => {
+test("dispatchDesignHook: nothing is dispatched without reservations", async () => {
     const registry = { dispatchHook: async () => assert.fail("no dispatch expected") };
 
-    assert.deepEqual(await dispatchDesignSavedHook({ designId: 5 }, { registry }), []);
+    const context = { trigger: "updated", designId: 5 };
+    assert.deepEqual(await dispatchDesignHook(context, { registry }), []);
 });
 
 // ─── analyses on save (#848) ─────────────────────────────────────────────────
@@ -212,7 +273,7 @@ function makeSaveDependencies({
     };
 }
 
-test("requestDesignAnalysesOnSave: a valid design with a case requests each applicable service", async () => {
+test("requestDesignAnalyses: a valid design with a case requests each applicable service", async () => {
     const received = [];
     const { dependencies, dispatched, store } = makeSaveDependencies({
         inputs: {
@@ -224,7 +285,7 @@ test("requestDesignAnalysesOnSave: a valid design with a case requests each appl
         },
     });
 
-    const result = await requestDesignAnalysesOnSave(5, { userId: 7, dependencies });
+    const result = await requestDesignAnalyses(5, { trigger: "updated", userId: 7, dependencies });
 
     assert.equal(result.skipped, null);
     assert.deepEqual(result.services.map(({ serviceId, outcome }) => [serviceId, outcome]), [
@@ -238,25 +299,50 @@ test("requestDesignAnalysesOnSave: a valid design with a case requests each appl
     ]);
     assert.deepEqual(dispatched.map(({ context, reservations }) => [
         reservations.map(reservation => reservation.service_id),
+        context.trigger,
         context.designId,
         context.userId,
         context.analysisInput,
         context.inputHash,
     ]), [
-        [["svc-a"], 5, 7, { questions: ["a"] }, "sha256:a"],
-        [["svc-b"], 5, 7, { questions: ["b"] }, "sha256:b"],
+        [["svc-a"], "updated", 5, 7, { questions: ["a"] }, "sha256:a"],
+        [["svc-b"], "updated", 5, 7, { questions: ["b"] }, "sha256:b"],
     ]);
 });
 
-test("requestDesignAnalysesOnSave: the requester is the creator by default", async () => {
+test("requestDesignAnalyses: a created design dispatches with the created trigger", async () => {
+    const { dependencies, dispatched } = makeSaveDependencies();
+
+    const result = await requestDesignAnalyses(5, { trigger: "created", dependencies });
+
+    assert.equal(result.services[0].outcome, "requested");
+    assert.deepEqual(dispatched.map(({ context }) => context.trigger), ["created"]);
+});
+
+test("requestDesignAnalyses: refuses a trigger other than created or updated", async () => {
+    for (const trigger of [undefined, "generate", "saved"]) {
+        const { dependencies, store } = makeSaveDependencies();
+        let read = false;
+        dependencies.getDesignRow = async () => {
+            read = true;
+            return SAVED_ROW;
+        };
+
+        await assert.rejects(requestDesignAnalyses(5, { trigger, dependencies }), TypeError);
+        assert.equal(read, false, String(trigger));
+        assert.deepEqual(store.reserved, [], String(trigger));
+    }
+});
+
+test("requestDesignAnalyses: the requester is the creator by default", async () => {
     const { dependencies, store } = makeSaveDependencies();
 
-    await requestDesignAnalysesOnSave(5, { dependencies });
+    await requestDesignAnalyses(5, { trigger: "updated", dependencies });
 
     assert.equal(store.reserved[0].userId, 3);
 });
 
-test("requestDesignAnalysesOnSave: an unchanged input runs nothing, a changed one runs again", async () => {
+test("requestDesignAnalyses: an unchanged input runs nothing, a changed one runs again", async () => {
     let hash = "sha256:first";
     const store = makeStore();
     const { dependencies, dispatched } = makeSaveDependencies({
@@ -264,21 +350,21 @@ test("requestDesignAnalysesOnSave: an unchanged input runs nothing, a changed on
         inputs: { "svc-design": () => ({ input: {}, hash }) },
     });
 
-    await requestDesignAnalysesOnSave(5, { dependencies });
+    await requestDesignAnalyses(5, { trigger: "updated", dependencies });
     store.rows["svc-design"].status = "ready";
 
-    const unchanged = await requestDesignAnalysesOnSave(5, { dependencies });
+    const unchanged = await requestDesignAnalyses(5, { trigger: "updated", dependencies });
     assert.deepEqual(unchanged.services, [{ serviceId: "svc-design", outcome: "unchanged" }]);
     assert.equal(dispatched.length, 1);
 
     hash = "sha256:second";
-    const changed = await requestDesignAnalysesOnSave(5, { dependencies });
+    const changed = await requestDesignAnalyses(5, { trigger: "updated", dependencies });
     assert.equal(changed.services[0].outcome, "requested");
     assert.equal(dispatched.length, 2);
     assert.equal(dispatched[1].context.inputHash, "sha256:second");
 });
 
-test("requestDesignAnalysesOnSave: the same input in flight is not duplicated; a changed one supersedes it", async () => {
+test("requestDesignAnalyses: the same input in flight is not duplicated; a changed one supersedes it", async () => {
     let hash = "sha256:first";
     const store = makeStore();
     const { dependencies, dispatched } = makeSaveDependencies({
@@ -286,40 +372,40 @@ test("requestDesignAnalysesOnSave: the same input in flight is not duplicated; a
         inputs: { "svc-design": () => ({ input: {}, hash }) },
     });
 
-    const first = await requestDesignAnalysesOnSave(5, { dependencies });
+    const first = await requestDesignAnalyses(5, { trigger: "updated", dependencies });
     store.rows["svc-design"].status = "processing";
 
-    const same = await requestDesignAnalysesOnSave(5, { dependencies });
+    const same = await requestDesignAnalyses(5, { trigger: "updated", dependencies });
     assert.equal(same.services[0].outcome, "unchanged");
 
     hash = "sha256:second";
-    const superseding = await requestDesignAnalysesOnSave(5, { dependencies });
+    const superseding = await requestDesignAnalyses(5, { trigger: "updated", dependencies });
     assert.equal(superseding.services[0].outcome, "requested");
     assert.notEqual(superseding.services[0].jobId, first.services[0].jobId);
     assert.equal(store.rows["svc-design"].job_id, superseding.services[0].jobId);
     assert.equal(dispatched.length, 2);
 });
 
-test("requestDesignAnalysesOnSave: a failed generation of the same input runs again", async () => {
+test("requestDesignAnalyses: a failed generation of the same input runs again", async () => {
     const store = makeStore({
         "svc-design": { input_hash: "sha256:one", status: "ready", error_code: "timeout" },
     });
     const { dependencies } = makeSaveDependencies({ store });
 
-    const result = await requestDesignAnalysesOnSave(5, { dependencies });
+    const result = await requestDesignAnalyses(5, { trigger: "updated", dependencies });
 
     assert.equal(result.services[0].outcome, "requested");
 });
 
-test("requestDesignAnalysesOnSave: reservations are bound to the design row that was read", async () => {
+test("requestDesignAnalyses: reservations are bound to the design row that was read", async () => {
     const { dependencies, store } = makeSaveDependencies();
 
-    await requestDesignAnalysesOnSave(5, { dependencies });
+    await requestDesignAnalyses(5, { trigger: "updated", dependencies });
 
     assert.deepEqual(store.snapshots, [{ fingerprint: "fingerprint-1", caseId: 42 }]);
 });
 
-test("requestDesignAnalysesOnSave: a save overtaken by a newer save reserves and dispatches nothing", async () => {
+test("requestDesignAnalyses: a save overtaken by a newer save reserves and dispatches nothing", async () => {
     const store = makeStore();
     let releaseCase;
     const caseGate = new Promise(resolve => { releaseCase = resolve; });
@@ -329,7 +415,7 @@ test("requestDesignAnalysesOnSave: a save overtaken by a newer save reserves and
         return DESIGN_CASE;
     };
 
-    const olderSave = requestDesignAnalysesOnSave(5, { dependencies });
+    const olderSave = requestDesignAnalyses(5, { trigger: "updated", dependencies });
     // A newer save stores another design while the older one loads its case.
     store.currentDesign.fingerprint = "fingerprint-2";
     releaseCase();
@@ -340,7 +426,7 @@ test("requestDesignAnalysesOnSave: a save overtaken by a newer save reserves and
     assert.deepEqual(dispatched, []);
 });
 
-test("requestDesignAnalysesOnSave: invalid, locked, case-less and missing designs request nothing", async () => {
+test("requestDesignAnalyses: invalid, locked, case-less and missing designs request nothing", async () => {
     const cases = [
         ["invalid", { ...SAVED_ROW, design: { ...SAVED_ROW.design, valid: false } }],
         ["invalid", { ...SAVED_ROW, design: { phases: [] } }],
@@ -352,7 +438,7 @@ test("requestDesignAnalysesOnSave: invalid, locked, case-less and missing design
     for (const [reason, designRow] of cases) {
         const { dependencies, dispatched, store, caseLoads } = makeSaveDependencies({ designRow });
 
-        const result = await requestDesignAnalysesOnSave(5, { dependencies });
+        const result = await requestDesignAnalyses(5, { trigger: "updated", dependencies });
 
         assert.deepEqual(result, { skipped: reason, services: [] }, reason);
         assert.equal(dependencies.registry.initialized, false, reason);
@@ -362,22 +448,22 @@ test("requestDesignAnalysesOnSave: invalid, locked, case-less and missing design
     }
 });
 
-test("requestDesignAnalysesOnSave: a JSON string design document is parsed", async () => {
+test("requestDesignAnalyses: a JSON string design document is parsed", async () => {
     const { dependencies } = makeSaveDependencies({
         designRow: { ...SAVED_ROW, design: JSON.stringify(SAVED_ROW.design) },
     });
 
-    const result = await requestDesignAnalysesOnSave(5, { dependencies });
+    const result = await requestDesignAnalyses(5, { trigger: "updated", dependencies });
 
     assert.equal(result.services[0].outcome, "requested");
 });
 
-test("requestDesignAnalysesOnSave: no usable service with an input export requests nothing", async () => {
+test("requestDesignAnalyses: no usable service with an input export requests nothing", async () => {
     const noneUsable = makeSaveDependencies({ usable: [] });
     const noExport = makeSaveDependencies({ inputs: { "svc-no-export": null } });
 
     for (const { dependencies, store, caseLoads } of [noneUsable, noExport]) {
-        const result = await requestDesignAnalysesOnSave(5, { dependencies });
+        const result = await requestDesignAnalyses(5, { trigger: "updated", dependencies });
 
         assert.deepEqual(result, { skipped: "no-services", services: [] });
         assert.deepEqual(caseLoads, [], "the case is not read");
@@ -385,7 +471,7 @@ test("requestDesignAnalysesOnSave: no usable service with an input export reques
     }
 });
 
-test("requestDesignAnalysesOnSave: an adapter that declines or fails reserves nothing", async () => {
+test("requestDesignAnalyses: an adapter that declines or fails reserves nothing", async () => {
     const logged = [];
     const originalError = console.error;
     console.error = (...args) => { logged.push(args); };
@@ -402,7 +488,10 @@ test("requestDesignAnalysesOnSave: an adapter that declines or fails reserves no
             },
         });
         store = setup.store;
-        result = await requestDesignAnalysesOnSave(5, { dependencies: setup.dependencies });
+        result = await requestDesignAnalyses(5, {
+            trigger:      "updated",
+            dependencies: setup.dependencies,
+        });
     } finally {
         console.error = originalError;
     }
@@ -417,12 +506,13 @@ test("requestDesignAnalysesOnSave: an adapter that declines or fails reserves no
     assert.equal(logged.length, 2);
 });
 
-test("scheduleDesignAnalysesOnSave: returns before the analyses are requested", async () => {
+test("scheduleDesignAnalyses: returns before the analyses are requested", async () => {
     const calls = [];
     let release;
     const settled = new Promise(resolve => { release = resolve; });
 
-    const returned = scheduleDesignAnalysesOnSave(5, {
+    const returned = scheduleDesignAnalyses(5, {
+        trigger: "created",
         userId:  7,
         request: async (designId, options) => {
             calls.push({ designId, options });
@@ -434,17 +524,20 @@ test("scheduleDesignAnalysesOnSave: returns before the analyses are requested", 
     assert.deepEqual(calls, [], "nothing runs before the current request answers");
 
     await new Promise(resolve => setImmediate(resolve));
-    assert.deepEqual(calls, [{ designId: 5, options: { userId: 7 } }]);
+    assert.deepEqual(calls, [{ designId: 5, options: { trigger: "created", userId: 7 } }]);
     release();
 });
 
-test("scheduleDesignAnalysesOnSave: errors are logged, never thrown", async () => {
+test("scheduleDesignAnalyses: errors are logged, never thrown", async () => {
     const logged = [];
     const originalError = console.error;
     console.error = (...args) => { logged.push(args); };
 
     try {
-        scheduleDesignAnalysesOnSave(5, { request: async () => { throw new Error("boom"); } });
+        scheduleDesignAnalyses(5, {
+            trigger: "updated",
+            request: async () => { throw new Error("boom"); },
+        });
         await new Promise(resolve => setImmediate(resolve));
         await new Promise(resolve => setImmediate(resolve));
     } finally {

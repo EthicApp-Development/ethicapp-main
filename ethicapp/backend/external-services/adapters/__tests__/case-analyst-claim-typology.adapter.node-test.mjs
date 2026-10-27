@@ -225,7 +225,7 @@ test("buildClaimTypologyRequest: no inventory key without one, and a title fallb
     assert.equal(request.case.title, "Case 57");
 });
 
-// ─── design-saved ────────────────────────────────────────────────────────────
+// ─── design-created and design-updated ───────────────────────────────────────
 
 function makeDesignAnalyses({ processing = { status: "processing", jobId: JOB_ID }, complete, fail } = {}) {
     const calls = [];
@@ -275,24 +275,26 @@ async function registerAdapter({
     return subscribers;
 }
 
-async function runDesignSaved({ designAnalyses, client, waitForCaseText, context }) {
+async function runDesignHook({
+    designAnalyses, client, waitForCaseText, context, hookName = "design-updated",
+}) {
     const subscribers = await registerAdapter({ designAnalyses, client, waitForCaseText });
     const { input } = await inputOf();
 
     const results = [];
-    await quietly(() => subscribers.get("design-saved")(
+    await quietly(() => subscribers.get(hookName)(
         { designId: 128, caseId: 57, jobId: JOB_ID, analysisInput: input, ...context },
         { callback: async result => { results.push(result); } }
     ));
     return results;
 }
 
-test("design-saved: waits for the case text and sends one request, keeping the job dispatched", async () => {
+test("design hooks: waits for the case text and sends one request, keeping the job dispatched", async () => {
     const { designAnalyses, calls } = makeDesignAnalyses();
     const { client, requests } = makeClient();
     const caseIds = [];
 
-    const results = await runDesignSaved({
+    const results = await runDesignHook({
         designAnalyses,
         client,
         waitForCaseText: async caseId => { caseIds.push(caseId); return { status: "ready", text: " Text. " }; },
@@ -310,26 +312,56 @@ test("design-saved: waits for the case text and sends one request, keeping the j
     assert.deepEqual(results, [], "the callback-received handler settles the job");
 });
 
-test("design-saved: skips a generation that is no longer reserved", async () => {
+test("design hooks: a created design is requested alike, and failures name its hook", async () => {
+    const { designAnalyses } = makeDesignAnalyses();
+    const subscribers = await registerAdapter({ designAnalyses });
+    assert.deepEqual(
+        [...subscribers.keys()],
+        ["design-created", "design-updated", "callback-received"]
+    );
+
+    const { client, requests } = makeClient();
+    const created = await runDesignHook({
+        designAnalyses: makeDesignAnalyses().designAnalyses,
+        client,
+        hookName:       "design-created",
+        context:        { trigger: "created" },
+    });
+    assert.equal(requests.length, 1);
+    assert.equal(requests[0].pathname, "/claim-typologies");
+    assert.deepEqual(created, []);
+
+    const failed = await runDesignHook({
+        designAnalyses:  makeDesignAnalyses().designAnalyses,
+        hookName:        "design-created",
+        context:         { trigger: "created" },
+        waitForCaseText: async () => ({ status: "no-document" }),
+    });
+    assert.deepEqual(failed.map(({ hook, status, errorCode }) => [hook, status, errorCode]), [
+        ["design-created", "failed", "no-document"],
+    ]);
+});
+
+test("design hooks: skips a generation that is no longer reserved", async () => {
     const { designAnalyses, calls } = makeDesignAnalyses({ processing: null });
     const { client, requests } = makeClient();
 
-    const results = await runDesignSaved({ designAnalyses, client });
+    const results = await runDesignHook({ designAnalyses, client });
 
     assert.deepEqual(calls.map(call => call.name), ["markProcessing"]);
     assert.equal(requests.length, 0);
     assert.equal(results[0].status, "skipped");
 });
 
-test("design-saved: fails without input or without the case text", async () => {
+test("design hooks: fails without input or without the case text", async () => {
     const missing = makeDesignAnalyses();
-    await runDesignSaved({ designAnalyses: missing.designAnalyses, context: { analysisInput: null } });
+    await runDesignHook({ designAnalyses: missing.designAnalyses, context: { analysisInput: null } });
     assert.equal(missing.calls[1].args.errorCode, "adapter-error");
 
     for (const status of ["no-document", "render-failed", "superseded", "timeout"]) {
         const { designAnalyses, calls } = makeDesignAnalyses();
         const { client, requests } = makeClient();
-        const results = await runDesignSaved({
+        const results = await runDesignHook({
             designAnalyses, client, waitForCaseText: async () => ({ status }),
         });
         assert.equal(requests.length, 0);
@@ -339,20 +371,20 @@ test("design-saved: fails without input or without the case text", async () => {
     }
 
     const empty = makeDesignAnalyses();
-    await runDesignSaved({
+    await runDesignHook({
         designAnalyses: empty.designAnalyses, waitForCaseText: async () => ({ status: "ready", text: "  " }),
     });
     assert.equal(empty.calls[1].args.errorCode, "empty-case-text");
 
     const long = makeDesignAnalyses();
-    await runDesignSaved({
+    await runDesignHook({
         designAnalyses:  long.designAnalyses,
         waitForCaseText: async () => ({ status: "ready", text: "x".repeat(200001) }),
     });
     assert.equal(long.calls[1].args.errorCode, "case-text-too-long");
 });
 
-test("design-saved: records why the request could not be sent", async () => {
+test("design hooks: records why the request could not be sent", async () => {
     const cases = [
         [new AiAdditionsNotConfiguredError(), "request-failed"],
         [Object.assign(new Error("HTTP 422"), { statusCode: 422 }), "request-rejected"],
@@ -364,7 +396,7 @@ test("design-saved: records why the request could not be sent", async () => {
     for (const [error, errorCode] of cases) {
         const { designAnalyses, calls } = makeDesignAnalyses();
         const { client } = makeClient(async () => { throw error; });
-        const results = await runDesignSaved({ designAnalyses, client });
+        const results = await runDesignHook({ designAnalyses, client });
 
         assert.equal(calls[1].name, "fail");
         assert.equal(calls[1].args.errorCode, errorCode);
@@ -372,16 +404,16 @@ test("design-saved: records why the request could not be sent", async () => {
     }
 });
 
-test("design-saved: an unexpected error fails the started generation", async () => {
+test("design hooks: an unexpected error fails the started generation", async () => {
     const { designAnalyses, calls } = makeDesignAnalyses();
 
-    const results = await runDesignSaved({
+    const results = await runDesignHook({
         designAnalyses, waitForCaseText: async () => { throw new Error("db down"); },
     });
 
     assert.equal(calls[1].name, "fail");
     assert.equal(calls[1].args.errorCode, "adapter-error");
-    assert.deepEqual(results, [{ hook: "design-saved", status: "failed", error: "db down" }]);
+    assert.deepEqual(results, [{ hook: "design-updated", status: "failed", error: "db down" }]);
 });
 
 // ─── callback-received ───────────────────────────────────────────────────────

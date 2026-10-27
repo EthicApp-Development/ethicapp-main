@@ -1,6 +1,7 @@
 import { hashAnalysisInput } from "../../helpers/analysis-input-hash.js";
 import { getCaseAnalysis } from "../../helpers/case-analyses-helper.js";
 import { waitForCaseDocumentText } from "../../helpers/case-document-render-helper.js";
+import { DESIGN_ANALYSIS_HOOKS } from "../../helpers/design-analysis-hooks.js";
 import {
     ARGUMENTATION_TUTOR_SERVICE_ID,
     selectTutorQuestions,
@@ -21,9 +22,9 @@ import defaultAiAdditionsClient from "../../services/ai-additions-client.service
 // Analyst contract is ethicapp-ai-additions#192
 // (case-analyst/app/modules/claim_typology/).
 //
-// - design-saved: starts the reserved generation, waits for the case text and
-//   sends one POST /claim-typologies. The job stays dispatched until Case
-//   Analyst posts its result.
+// - design-created and design-updated: start the reserved generation, wait
+//   for the case text and send one POST /claim-typologies. The job stays
+//   dispatched until Case Analyst posts its result.
 // - callback-received: stores the completed document, or records the failure.
 
 // The service id and the stored schemas are shared with the Argumentation
@@ -53,7 +54,6 @@ const MAX_CASE_TITLE_LENGTH    = 500;
 const MAX_CASE_TEXT_LENGTH     = 200000;
 const MAX_QUESTION_TEXT_LENGTH = 5000;
 
-const DESIGN_SAVED_HOOK      = "design-saved";
 const CALLBACK_RECEIVED_HOOK = "callback-received";
 
 // Case Analyst does not publish translated texts yet, so this adapter
@@ -326,17 +326,17 @@ async function readCaseText(caseId) {
     return { text };
 }
 
-async function failGeneration({ designAnalyses, callback, jobId, error }) {
+async function failGeneration({ hookName, designAnalyses, callback, jobId, error }) {
     await designAnalyses.fail({ jobId, ...error });
     await callback({
-        hook:      DESIGN_SAVED_HOOK,
+        hook:      hookName,
         status:    "failed",
         errorCode: error.errorCode,
         error:     error.errorMessage,
     });
 }
 
-async function processDesignSaved({ context, callback, designAnalyses }) {
+async function processDesignGeneration({ hookName, context, callback, designAnalyses }) {
     const analysis = await designAnalyses.markProcessing({
         designId: context.designId,
         jobId:    context.jobId,
@@ -344,7 +344,7 @@ async function processDesignSaved({ context, callback, designAnalyses }) {
 
     if (!analysis) {
         await callback({
-            hook:   DESIGN_SAVED_HOOK,
+            hook:   hookName,
             status: "skipped",
             reason: "The generation is no longer the one reserved for the design.",
         });
@@ -352,23 +352,21 @@ async function processDesignSaved({ context, callback, designAnalyses }) {
     }
 
     const jobId = analysis.jobId;
+    const failWith = error => failGeneration({ hookName, designAnalyses, callback, jobId, error });
     try {
         const input = context.analysisInput;
         const caseId = toPositiveInteger(context.caseId);
         if (!caseId || !Array.isArray(input?.questions) || input.questions.length === 0) {
-            await failGeneration({
-                designAnalyses, callback, jobId,
-                error: failure(
-                    CLAIM_TYPOLOGY_ERRORS.ADAPTER_ERROR,
-                    "The generation carries no analysis input."
-                ),
-            });
+            await failWith(failure(
+                CLAIM_TYPOLOGY_ERRORS.ADAPTER_ERROR,
+                "The generation carries no analysis input."
+            ));
             return;
         }
 
         const caseText = await readCaseText(caseId);
         if (caseText.error) {
-            await failGeneration({ designAnalyses, callback, jobId, error: caseText.error });
+            await failWith(caseText.error);
             return;
         }
 
@@ -393,7 +391,7 @@ async function processDesignSaved({ context, callback, designAnalyses }) {
                 + `${context.designId}.`,
                 { statusCode: error?.statusCode ?? null, responseBody: error?.responseBody ?? null }
             );
-            await failGeneration({ designAnalyses, callback, jobId, error: requestFailure(error) });
+            await failWith(requestFailure(error));
             return;
         }
 
@@ -534,17 +532,21 @@ export async function register({
     aiAdditionsClient = providedAiAdditionsClient || defaultAiAdditionsClient;
     waitForCaseText = claimTypologyDependencies.waitForCaseText || waitForCaseDocumentText;
 
-    subscribe(DESIGN_SAVED_HOOK, async (context, { callback }) => {
-        try {
-            await processDesignSaved({ context, callback, designAnalyses });
-        } catch (error) {
-            await callback({
-                hook:   DESIGN_SAVED_HOOK,
-                status: "failed",
-                error:  error?.message || "Unexpected claim typology error.",
-            });
-        }
-    });
+    // A new design and a saved one are requested in the same way; the
+    // context's `trigger` says what caused the generation.
+    for (const hookName of DESIGN_ANALYSIS_HOOKS) {
+        subscribe(hookName, async (context, { callback }) => {
+            try {
+                await processDesignGeneration({ hookName, context, callback, designAnalyses });
+            } catch (error) {
+                await callback({
+                    hook:   hookName,
+                    status: "failed",
+                    error:  error?.message || "Unexpected claim typology error.",
+                });
+            }
+        });
+    }
 
     subscribe(CALLBACK_RECEIVED_HOOK, async (context, { callback }) => {
         try {
