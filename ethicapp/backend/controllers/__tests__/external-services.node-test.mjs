@@ -360,6 +360,22 @@ test("listExternalServices: a scope lists only the usable services that declare 
     assert.deepEqual(listedIds(body), ["case-tool"]);
 });
 
+test("listExternalServices: scope=design lists the usable design-scoped services", async () => {
+    const registry = {
+        ...makeListingRegistry(),
+        listServices: () => [
+            { id: "case-tool",       usable: true,  scopes: ["case"] },
+            { id: "design-tool",     usable: true,  scopes: ["design"] },
+            { id: "unusable-design", usable: false, scopes: ["design"] },
+        ],
+    };
+
+    const { status, body } = await listExternalServices({ scope: "design", registry });
+
+    assert.equal(status, 200);
+    assert.deepEqual(listedIds(body), ["design-tool"]);
+});
+
 test("listExternalServices: several scopes list each matching service once", async () => {
     const { status, body } = await listExternalServices({
         scope:    ["response", "chat"],

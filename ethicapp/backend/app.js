@@ -22,6 +22,7 @@ import activitiesStudent from "./controllers/activities/activities-student.js";
 import activityReports from "./controllers/activities/reports.js";
 import phases from "./controllers/phases.js";
 import designs from "./controllers/designs.js";
+import designAnalyses from "./controllers/design-analyses.js";
 import externalServices from "./controllers/external-services.js";
 import groups from "./controllers/groups.js";
 import group_messages from "./controllers/group-messages.js";
@@ -139,6 +140,7 @@ app.use("/", requireLegacyAuth, activityReports);
 app.use("/", requireLegacyAuth, phases);
 app.use("/", requireLegacyAuth, groups);
 app.use("/", requireLegacyAuth, designs);
+app.use("/", requireLegacyAuth, designAnalyses);
 app.use("/", requireLegacyAuth, group_messages);
 // Before cases, whose /cases/:id would otherwise take /cases/videos/... and
 // /cases/documents/...

@@ -8,6 +8,11 @@ import {
     failCaseAnalysis,
     markCaseAnalysisProcessing,
 } from "../helpers/case-analyses-helper.js";
+import {
+    completeDesignAnalysis,
+    failDesignAnalysis,
+    markDesignAnalysisProcessing,
+} from "../helpers/design-analyses-helper.js";
 import { saveChatMessage } from "../helpers/chat-helper.js";
 import { studentNotifications, teacherNotifications } from "../config/socket.config.js";
 import aiAdditionsClient from "./ai-additions-client.service.js";
@@ -45,7 +50,7 @@ const __dirname = path.dirname(__filename);
 const DEFAULT_MANIFEST_PATH = path.join(__dirname, "../external-services/manifest.json");
 const HOOK_NAME_PATTERN = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/u;
 
-export const SERVICE_SCOPES = Object.freeze(["case", "response", "chat"]);
+export const SERVICE_SCOPES = Object.freeze(["case", "design", "response", "chat"]);
 const UI_LOCALES = Object.freeze(["es_CL", "en_US"]);
 
 const UI_TRANSLATIONS_TIMEOUT_MS = 3000;
@@ -54,8 +59,9 @@ const UI_TRANSLATIONS_RETRY_MS   = 60 * 1000;
 
 // Hooks that fire outside any session. They follow the current AI service
 // policy version; every other hook belongs to a session (`context.sessionId`)
-// and follows the version that session is pinned to (#815).
-export const NON_SESSION_HOOKS = Object.freeze(["case-created"]);
+// and follows the version that session is pinned to (#815). `design-saved`
+// carries design analyses (epic #846; helpers/design-analyses-lifecycle-helper.js).
+export const NON_SESSION_HOOKS = Object.freeze(["case-created", "design-saved"]);
 
 const DEFAULT_AI_SERVICE_POLICY = Object.freeze({
     getCurrentPolicyVersion,
@@ -67,6 +73,12 @@ const DEFAULT_CASE_ANALYSES_STORE = Object.freeze({
     markCaseAnalysisProcessing,
     completeCaseAnalysis,
     failCaseAnalysis,
+});
+
+const DEFAULT_DESIGN_ANALYSES_STORE = Object.freeze({
+    markDesignAnalysisProcessing,
+    completeDesignAnalysis,
+    failDesignAnalysis,
 });
 
 function isValidHookName(hookName) {
@@ -122,9 +134,9 @@ function normalizeGlobalHooks(globalHooks, hooks, serviceId) {
     return normalized;
 }
 
-// Scopes declare where a service operates: `case` (case documents), `response`
-// (student responses) and `chat` (group chat). Screens that list services filter
-// by scope instead of guessing from hooks.
+// Scopes declare where a service operates: `case` (case documents), `design`
+// (activity designs), `response` (student responses) and `chat` (group chat).
+// Screens that list services filter by scope instead of guessing from hooks.
 function normalizeScopes(scopes, serviceId) {
     if (!Array.isArray(scopes)) {
         return [];
@@ -256,6 +268,32 @@ function createCaseAnalysesAccess(store, serviceId) {
             store.completeCaseAnalysis({ serviceId, jobId, documentSchema, document }),
         fail: ({ jobId, errorCode, errorMessage }) =>
             store.failCaseAnalysis({ serviceId, jobId, errorCode, errorMessage }),
+    };
+}
+
+// Design-scoped adapters record the progress of their analyses through these
+// functions, bound to their own service id, as case-scoped ones do.
+function createDesignAnalysesAccess(store, serviceId) {
+    return {
+        // Starts the generation reserved under the job id of the dispatch.
+        // Returns null when it is no longer current, and the adapter skips the
+        // work. Adapters use the returned jobId for complete() and fail().
+        async markProcessing({ designId, jobId }) {
+            if (!jobId) {
+                return null;
+            }
+
+            const analysis = await store.markDesignAnalysisProcessing({
+                designId,
+                serviceId,
+                jobId,
+            });
+            return analysis ? { ...analysis, jobId } : null;
+        },
+        complete: ({ jobId, documentSchema, document }) =>
+            store.completeDesignAnalysis({ serviceId, jobId, documentSchema, document }),
+        fail: ({ jobId, errorCode, errorMessage }) =>
+            store.failDesignAnalysis({ serviceId, jobId, errorCode, errorMessage }),
     };
 }
 
@@ -402,6 +440,7 @@ export class ExternalServicesRegistry {
         jobsService,
         roomJobsService,
         caseAnalysesStore = DEFAULT_CASE_ANALYSES_STORE,
+        designAnalysesStore = DEFAULT_DESIGN_ANALYSES_STORE,
         now = () => Date.now(),
         uiTranslationsTimeoutMs = UI_TRANSLATIONS_TIMEOUT_MS,
         capabilityDescriptors,
@@ -441,11 +480,13 @@ export class ExternalServicesRegistry {
         this._now                     = now;
         this._uiTranslationsTimeoutMs = uiTranslationsTimeoutMs;
 
-        this.caseAnalysisValidators = new Map();
+        this.caseAnalysisValidators   = new Map();
+        this.designAnalysisValidators = new Map();
         // serviceId -> getCallbackTarget(requestPayload): the destination a
         // callback payload names, checked against its job (#815).
         this.callbackTargetResolvers = new Map();
         this._caseAnalysesStore     = caseAnalysesStore;
+        this._designAnalysesStore   = designAnalysesStore;
 
         this._capabilityDescriptors = capabilityDescriptors ?? new CapabilityDescriptorsClient({
             getDescriptorLink: serviceId => this.getServiceDescriptor(serviceId),
@@ -546,6 +587,8 @@ export class ExternalServicesRegistry {
             || adapterModule.default?.getUiTranslations;
         const validateCaseAnalysisDocument = adapterModule.validateCaseAnalysisDocument
             || adapterModule.default?.validateCaseAnalysisDocument;
+        const validateDesignAnalysisDocument = adapterModule.validateDesignAnalysisDocument
+            || adapterModule.default?.validateDesignAnalysisDocument;
         const getCallbackTarget = adapterModule.getCallbackTarget
             || adapterModule.default?.getCallbackTarget;
 
@@ -556,10 +599,19 @@ export class ExternalServicesRegistry {
                 `[external-services] Adapter ${service.adapter} exports no getUiTranslations(), `
                 + `so case screens will show the id of ${normalizedService.id}.`
             );
+        } else if (normalizedService.scopes.includes("design")) {
+            console.warn(
+                `[external-services] Adapter ${service.adapter} exports no getUiTranslations(), `
+                + `so design screens will show the id of ${normalizedService.id}.`
+            );
         }
 
         if (typeof validateCaseAnalysisDocument === "function") {
             this.caseAnalysisValidators.set(normalizedService.id, validateCaseAnalysisDocument);
+        }
+
+        if (typeof validateDesignAnalysisDocument === "function") {
+            this.designAnalysisValidators.set(normalizedService.id, validateDesignAnalysisDocument);
         }
 
         if (typeof getCallbackTarget === "function") {
@@ -575,6 +627,10 @@ export class ExternalServicesRegistry {
             this._caseAnalysesStore,
             normalizedService.id
         );
+        const designAnalyses = createDesignAnalysesAccess(
+            this._designAnalysesStore,
+            normalizedService.id
+        );
 
         await register({
             service:   normalizedService,
@@ -585,6 +641,7 @@ export class ExternalServicesRegistry {
             publishGroupChatMessage: payload => this.publishGroupChatMessage(normalizedService.id, payload),
             aiAdditionsClient,
             caseAnalyses,
+            designAnalyses,
             roomJobs:                createRoomJobsAccess(this._roomJobsService, normalizedService.id),
         });
     }
@@ -802,9 +859,9 @@ export class ExternalServicesRegistry {
     }
 
     // Which policy version a hook follows: the current one for
-    // NON_SESSION_HOOKS (case-created), the session's pinned version for every
-    // other hook. A session hook without `context.sessionId` follows no
-    // version, so only development adapters receive it.
+    // NON_SESSION_HOOKS (case-created, design-saved), the session's pinned
+    // version for every other hook. A session hook without `context.sessionId`
+    // follows no version, so only development adapters receive it.
     async resolveHookPolicyVersion(hookName, context = {}) {
         if (NON_SESSION_HOOKS.includes(hookName)) {
             return this.getCurrentPolicyVersion();
@@ -868,6 +925,12 @@ export class ExternalServicesRegistry {
     // teacher edits of its analyses, or null when it accepts none.
     getCaseAnalysisValidator(serviceId) {
         return this.caseAnalysisValidators.get(serviceId) || null;
+    }
+
+    // The adapter's optional validateDesignAnalysisDocument(), which checks
+    // teacher edits of its design analyses, or null when it accepts none.
+    getDesignAnalysisValidator(serviceId) {
+        return this.designAnalysisValidators.get(serviceId) || null;
     }
 
     getServiceById(serviceId) {
@@ -974,7 +1037,7 @@ export class ExternalServicesRegistry {
     // `options.enabledServiceIds` for `hookName`: the policy gate
     // (effectiveServiceIds) drops the others, under the version
     // resolveHookPolicyVersion() picks for the hook (the session's pinned
-    // version, or the current one for case-created). Each handler's context
+    // version, or the current one for NON_SESSION_HOOKS). Each handler's context
     // carries `serviceConfiguration`, its entry in
     // `options.serviceConfigurations` (the phase's settings, #734) or {}.
     // `options.jobIds` maps service ids to job ids chosen by the caller, for
