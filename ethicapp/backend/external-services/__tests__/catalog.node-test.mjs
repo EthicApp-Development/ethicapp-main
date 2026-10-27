@@ -5,11 +5,14 @@ import path from "node:path";
 import test from "node:test";
 import {
     AI_ADDITIONS_SERVICE_IDS,
+    catalogWarnings,
+    DESIGN_ANALYSIS_UNITS,
     developmentAdaptersEnabled,
     validateCatalog,
     validateCatalogEntry,
 } from "../catalog.js";
 import { ExternalServicesRegistry } from "../../services/external-services.service.js";
+import { captureWarnings } from "../../services/__tests__/capture-warnings.mjs";
 
 function productionEntry(overrides = {}) {
     return {
@@ -101,6 +104,130 @@ test("validateCatalogEntry: requires an id and an adapter", () => {
     assertProblem(productionEntry({ id: "" }), "`id`");
     assertProblem(productionEntry({ adapter: undefined }), "`adapter`");
     assert.deepEqual(validateCatalogEntry(null), ["must be an object"]);
+});
+
+// ─── produces and consumes (#863) ────────────────────────────────────────────
+
+const TYPOLOGY_PER_QUESTION = Object.freeze({ documentSchema: "claim-typology/v1", unit: "question" });
+
+test("DESIGN_ANALYSIS_UNITS: questions are the one unit so far", () => {
+    assert.deepEqual(DESIGN_ANALYSIS_UNITS, ["question"]);
+});
+
+test("validateCatalogEntry: accepts design analysis producers and consumers", () => {
+    assert.deepEqual(validateCatalogEntry(productionEntry({
+        requires: ["case-analyst"],
+        scopes:   ["design"],
+        produces: [TYPOLOGY_PER_QUESTION],
+    })), []);
+    assert.deepEqual(validateCatalogEntry(productionEntry({
+        scopes:   ["response"],
+        consumes: [TYPOLOGY_PER_QUESTION, { documentSchema: "argument-map/v12", unit: "question" }],
+    })), []);
+    assert.deepEqual(validateCatalogEntry(developmentEntry({ produces: [], consumes: [] })), []);
+});
+
+test("validateCatalogEntry: rejects malformed produces and consumes", () => {
+    for (const key of ["produces", "consumes"]) {
+        const entry = items => productionEntry({ scopes: ["design"], [key]: items });
+
+        for (const declaration of [null, "claim-typology/v1", TYPOLOGY_PER_QUESTION]) {
+            assertProblem(entry(declaration), `\`${key}\` must be a list`);
+        }
+        assertProblem(entry(["claim-typology/v1"]), `\`${key}[0]\` must be an object`);
+        assertProblem(entry([null]), `\`${key}[0]\` must be an object`);
+        assertProblem(entry([TYPOLOGY_PER_QUESTION, { unit: "question" }]), `\`${key}[1]\`.documentSchema`);
+        for (const documentSchema of ["", "claim-typology", "Claim-Typology/v1", "claim-typology/v0", 7]) {
+            assertProblem(entry([{ documentSchema, unit: "question" }]), `\`${key}[0]\`.documentSchema`);
+        }
+        for (const unit of [undefined, "", "phase", "QUESTION"]) {
+            assertProblem(entry([{ documentSchema: "claim-typology/v1", unit }]), `\`${key}[0]\`.unit must be one of question`);
+        }
+        assertProblem(entry([{ ...TYPOLOGY_PER_QUESTION, serviceId: "x" }]), `\`${key}[0]\` has unknown keys (serviceId)`);
+        assertProblem(entry([TYPOLOGY_PER_QUESTION, { ...TYPOLOGY_PER_QUESTION }]), "claim-typology/v1 per question more than once");
+    }
+});
+
+test("validateCatalogEntry: a producer needs the design scope", () => {
+    for (const scopes of [undefined, [], ["case"], "design"]) {
+        assertProblem(
+            productionEntry({ scopes, produces: [TYPOLOGY_PER_QUESTION] }),
+            "`produces` design analyses needs the `design` scope"
+        );
+    }
+    assert.deepEqual(validateCatalogEntry(productionEntry({ produces: [] })), []);
+});
+
+test("catalogWarnings: a consumption without a producer of the same unit", () => {
+    const producer = productionEntry({ id: "producer", scopes: ["design"], produces: [TYPOLOGY_PER_QUESTION] });
+    const consumer = productionEntry({ id: "consumer", consumes: [TYPOLOGY_PER_QUESTION] });
+    const orphan = productionEntry({
+        id:       "orphan",
+        consumes: [TYPOLOGY_PER_QUESTION, { documentSchema: "argument-map/v1", unit: "question" }],
+    });
+
+    assert.deepEqual(catalogWarnings({ services: [producer, consumer] }), []);
+    assert.deepEqual(catalogWarnings({ services: [consumer] }), [
+        "consumer: consumes claim-typology/v1 per question, which no adapter in the catalog produces",
+    ]);
+    assert.deepEqual(catalogWarnings({ services: [producer, orphan] }), [
+        "orphan: consumes argument-map/v1 per question, which no adapter in the catalog produces",
+    ]);
+    assert.deepEqual(catalogWarnings({ services: [producer] }), [], "a producer without consumers is fine");
+    assert.deepEqual(catalogWarnings({}), []);
+});
+
+test("initialize: a consumption without a producer is a warning, not an error", async () => {
+    const directory = await fs.mkdtemp(path.join(os.tmpdir(), "ethicapp-catalog-"));
+    const manifestPath = path.join(directory, "manifest.json");
+
+    try {
+        await fs.writeFile(manifestPath, JSON.stringify({
+            services: [productionEntry({ scopes: ["response"], consumes: [TYPOLOGY_PER_QUESTION] })],
+        }));
+        const registry = new ExternalServicesRegistry({
+            jobsService:   {},
+            importAdapter: async () => ({ register: async () => {} }),
+        });
+
+        const { warnings } = await captureWarnings(async () => {
+            const originalInfo = console.info;
+            console.info = () => {};
+            try {
+                await registry.initialize(manifestPath);
+            } finally {
+                console.info = originalInfo;
+            }
+        });
+
+        assert.equal(registry.initialized, true);
+        assert.ok(
+            warnings.some(warning => warning.includes("svc-production: consumes claim-typology/v1 per question")),
+            JSON.stringify(warnings)
+        );
+    } finally {
+        await fs.rm(directory, { recursive: true, force: true });
+    }
+});
+
+test("initialize: a malformed produces rejects the catalog", async () => {
+    const directory = await fs.mkdtemp(path.join(os.tmpdir(), "ethicapp-catalog-"));
+    const manifestPath = path.join(directory, "manifest.json");
+
+    try {
+        await fs.writeFile(manifestPath, JSON.stringify({
+            services: [productionEntry({ scopes: ["design"], produces: [{ documentSchema: "claim-typology" }] })],
+        }));
+        const registry = new ExternalServicesRegistry({
+            jobsService:   {},
+            importAdapter: async () => assert.fail("nothing is imported from an invalid catalog"),
+        });
+
+        await assert.rejects(() => registry.initialize(manifestPath), /svc-production: `produces\[0\]`\.documentSchema/);
+        assert.equal(registry.initialized, false);
+    } finally {
+        await fs.rm(directory, { recursive: true, force: true });
+    }
 });
 
 // ─── validateCatalog ─────────────────────────────────────────────────────────

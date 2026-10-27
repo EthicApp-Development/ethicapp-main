@@ -2,10 +2,7 @@ import { hashAnalysisInput } from "../../helpers/analysis-input-hash.js";
 import { getCaseAnalysis } from "../../helpers/case-analyses-helper.js";
 import { waitForCaseDocumentText } from "../../helpers/case-document-render-helper.js";
 import { DESIGN_ANALYSIS_HOOKS } from "../../helpers/design-analysis-hooks.js";
-import {
-    ARGUMENTATION_TUTOR_SERVICE_ID,
-    selectTutorQuestions,
-} from "../../helpers/design-tutor-questions.js";
+import { selectDesignAnalysisUnits } from "../../helpers/design-analysis-units.js";
 import {
     CLAIM_TYPOLOGY_SCHEMA,
     CLAIM_TYPOLOGY_SERVICE_ID,
@@ -16,8 +13,9 @@ import {
 import defaultAiAdditionsClient from "../../services/ai-additions-client.service.js";
 
 // Claim typology from Case Analyst (#849, epic #846): the plausible types of
-// answer to each question of the phases that use the Argumentation Tutor. One
-// job covers every selected question of a design, and its claim-typology/v1
+// answer to each question of the phases that use an adapter which consumes
+// claim typologies (the Argumentation Tutor, by its `consumes` in the catalog,
+// #863). One job covers every selected question of a design, and its claim-typology/v1
 // document is stored as the design's analysis by this service. The Case
 // Analyst contract is ethicapp-ai-additions#192
 // (case-analyst/app/modules/claim_typology/).
@@ -42,7 +40,7 @@ export const CLAIM_TYPOLOGY_REQUEST_SCHEMA = "claim-typology-request/v1";
 export const CLAIM_TYPOLOGY_RESULT_SCHEMA = "claim-typology-result/v1";
 
 // claim-typology-request/v1 accepts 1 to 30 questions. A design with more
-// tutor questions gets a typology for its first 30, in design order.
+// selected questions gets a typology for its first 30, in design order.
 export const MAX_CLAIM_TYPOLOGY_QUESTIONS = 30;
 
 export const CASE_ANALYST_API_BASE_PATH = "/case-analyst/api/v1";
@@ -152,50 +150,44 @@ export function caseAnalystLanguage(languageCode) {
     return /^es(?:[_-]|$)/iu.test(String(languageCode ?? "").trim()) ? "es_CL" : "en_US";
 }
 
-// Whether the current AI service policy allows the Argumentation Tutor (epic
-// #846: the typology runs only where the tutor may run). The registry is
-// imported here because it imports this adapter.
-async function isTutorUsable() {
-    const { default: registry } = await import("../../services/external-services.service.js");
-    return registry.isServiceUsable(ARGUMENTATION_TUTOR_SERVICE_ID);
-}
-
 /**
- * Applies to designs with a case and at least one tutor question (the
- * semantic differential questions of the phases that enable
- * argumentation-tutor-system), while the current policy allows the tutor.
+ * Applies to designs with a case and at least one selected question: the
+ * semantic differential questions of the phases that enable an adapter which
+ * consumes claim-typology/v1 per question (the catalog's `consumes`, #863)
+ * and which the current AI service policy allows, including its per-adapter
+ * switch (selectDesignAnalysisUnits()).
  *
  * Questions keep their positional ids (`p<phase>-q<question>`); a design with
- * more than MAX_CLAIM_TYPOLOGY_QUESTIONS tutor questions sends the first ones
- * and logs a warning. The hash covers the case language, the case PDF hash,
- * each question's id and text hash, and the evidence inventory's content
- * hash. Design and case ids and the case title are left out, so a copy of the
- * design keeps the same hash.
+ * more than MAX_CLAIM_TYPOLOGY_QUESTIONS selected questions sends the first
+ * ones and logs a warning. The hash covers the case language, the case PDF
+ * hash, each question's id and text hash, and the evidence inventory's
+ * content hash. Design and case ids and the case title are left out, so a
+ * copy of the design keeps the same hash.
  *
  * @param {{design: Object, designCase: Object|null}} args
- * @param {Object} [dependencies] - Overrides for tests.
+ * @param {Object} [dependencies] - Overrides for tests: `registry` (see
+ *     selectDesignAnalysisUnits()) and `getAnalysis`.
  * @returns {Promise<{input: Object, hash: string}|null>}
  */
 export async function designAnalysisInput(
     { design, designCase },
-    { isTutorAllowed = isTutorUsable, getAnalysis = getCaseAnalysis } = {}
+    { registry, getAnalysis = getCaseAnalysis } = {}
 ) {
     if (!designCase) {
         return null;
     }
 
-    const selected = selectTutorQuestions(design);
+    const selected = await selectDesignAnalysisUnits(
+        { producerId: CLAIM_TYPOLOGY_SERVICE_ID, design },
+        { registry }
+    );
     if (selected.length === 0) {
-        return null;
-    }
-
-    if (!await isTutorAllowed()) {
         return null;
     }
 
     if (selected.length > MAX_CLAIM_TYPOLOGY_QUESTIONS) {
         console.warn(
-            `[${CLAIM_TYPOLOGY_SERVICE_ID}] The design has ${selected.length} tutor questions; `
+            `[${CLAIM_TYPOLOGY_SERVICE_ID}] The design has ${selected.length} selected questions; `
             + `the claim typology covers the first ${MAX_CLAIM_TYPOLOGY_QUESTIONS}.`
         );
     }

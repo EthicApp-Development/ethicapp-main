@@ -44,13 +44,23 @@ const INVENTORY = {
     ],
 };
 
-const allowTutor = async () => true;
+// The registry, as selectDesignAnalysisUnits() reads it (#863): the tutor
+// consumes claim typologies, and the policy allows `usable` consumers.
+function registryWith({ usable = ["argumentation-tutor-system"] } = {}) {
+    return {
+        getDesignAnalysisConsumerIds: producerId => (
+            producerId === "case-analyst-claim-typology" ? ["argumentation-tutor-system"] : []
+        ),
+        usableServiceIds: async serviceIds => serviceIds.filter(id => usable.includes(id)),
+    };
+}
+
 const noInventory = async () => null;
 
 function inputOf(design = DESIGN, designCase = DESIGN_CASE, overrides = {}) {
     return designAnalysisInput(
         { design, designCase },
-        { isTutorAllowed: allowTutor, getAnalysis: noInventory, ...overrides }
+        { registry: registryWith(), getAnalysis: noInventory, ...overrides }
     );
 }
 
@@ -88,6 +98,14 @@ test("designAnalysisInput: selects the tutor questions with positional ids", asy
     }));
 });
 
+// The input hash decides whether a save runs the typology again, so the
+// selection by consumers (#863) must keep it for unchanged inputs.
+test("designAnalysisInput: the hash of a fixed input is pinned", async () => {
+    const { hash } = await inputOf();
+
+    assert.equal(hash, "sha256:ca11c9ef0d5ec6dfb02c4e984585c93fa22d3d7a50db27c4f1d87fdb235f3894");
+});
+
 test("designAnalysisInput: declines without a case, without tutor questions, or without the tutor", async () => {
     assert.equal(await inputOf(DESIGN, null), null);
     assert.equal(await inputOf(designWith([{ questions: [{ q_text: "No tutor here." }] }])), null);
@@ -96,8 +114,8 @@ test("designAnalysisInput: declines without a case, without tutor questions, or 
 
     let inventoryRead = false;
     assert.equal(await inputOf(DESIGN, DESIGN_CASE, {
-        isTutorAllowed: async () => false,
-        getAnalysis:    async () => { inventoryRead = true; return null; },
+        registry:    registryWith({ usable: [] }),
+        getAnalysis: async () => { inventoryRead = true; return null; },
     }), null);
     assert.equal(inventoryRead, false, "nothing is read when the policy does not allow the tutor");
 });

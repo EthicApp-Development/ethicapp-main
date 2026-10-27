@@ -66,6 +66,9 @@
         "callback-received"
       ],
       "scopes": ["response"],
+      "consumes": [
+        { "documentSchema": "claim-typology/v1", "unit": "question" }
+      ],
       "descriptor": {
         "path": "/argumentation-tutor/api/capabilities"
       },
@@ -149,6 +152,9 @@
         "callback-received"
       ],
       "scopes": ["design"],
+      "produces": [
+        { "documentSchema": "claim-typology/v1", "unit": "question" }
+      ],
       "ui": { "component": "claim-typology" },
       "callbackAuth": {
         "allowedClientIds": ["case-analyst-api"],

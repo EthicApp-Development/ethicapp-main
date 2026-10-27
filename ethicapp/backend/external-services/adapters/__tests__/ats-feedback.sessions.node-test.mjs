@@ -342,6 +342,19 @@ test("phase-ended deletes the tutor session of every question of the phase", asy
     assert.equal(sessionCreations(tutor.requests).length, 3, "a new session after the phase ended");
 });
 
+test("findTutorQuestion: the question unit at a position of a tutor phase (#863)", () => {
+    assert.deepEqual(atsFeedback.findTutorQuestion(DESIGN, POSITIONS[102]), {
+        id:             "p2-q2",
+        phaseNumber:    2,
+        questionNumber: 2,
+        text:           Q2,
+        textHash:       sha256Text(Q2),
+    });
+    assert.equal(atsFeedback.findTutorQuestion(DESIGN, { phaseNumber: 1, questionNumber: 1 }), null,
+        "a phase without the tutor has no tutor question");
+    assert.equal(atsFeedback.findTutorQuestion(null, POSITIONS[101]), null);
+});
+
 test("the tutor's matched claim type is recorded with the result, not sent to the student", async () => {
     const tutor = fakeTutor();
     const { dispatch, published } = await registerAdapter({ tutor });

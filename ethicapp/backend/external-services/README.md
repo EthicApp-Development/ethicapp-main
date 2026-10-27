@@ -282,6 +282,8 @@ Each manifest entry describes one service:
 | `globalHooks` | no | Hooks the service opts into at manifest level, without an activity-design opt-in. Defaults to `[]`. Each name must be kebab-case and must also appear in `hooks`; other entries are dropped with a warning and duplicates are removed. Only consulted by `dispatchGlobalHook()` (see "Hook enablement"). Exposed through `GET /external-services`. |
 | `scopes` | no | Where the service operates: `case` (case documents), `design` (activity designs, see "Design Analyses"), `response` (student responses) or `chat` (group chat). Defaults to `[]`. Unknown values are dropped with a warning and duplicates are removed. Screens list services by scope (see "Listing services"), so an entry without scopes appears in none of them; `__tests__/manifest.node-test.mjs` requires at least one. |
 | `ui` | no | `{ component }`: the kebab-case name of the EthicApp frontend component that shows the service's analysis in its case view tab (see "Case view tabs"). Defaults to `{ component: null }`; other names are dropped with a warning. The texts come from the adapter, not from the manifest (see "UI translations"). |
+| `produces` | no | The design analyses the adapter produces, as `[{ documentSchema, unit }]`, for example `[{ "documentSchema": "claim-typology/v1", "unit": "question" }]`. `documentSchema` is a kebab-case name with its major version (`<name>/v<major>`); `unit` is one of `DESIGN_ANALYSIS_UNITS` in `catalog.js` (only `question` so far). A producer needs the `design` scope. A malformed list, an unknown key or unit, or a repeated pair rejects the catalog. See "Producers, consumers and units". |
+| `consumes` | no | The design analyses the adapter needs, in the same form as `produces`. Its phases decide which units the producer analyses. A consumption that no catalog entry produces for the same unit logs a warning at startup (`catalogWarnings()`), so a consumer can ship before its producer. |
 | `descriptor` | no | `{ path }`: the capability descriptor the service's AI backend publishes (#687). Its id (`service.id` in the descriptor) is the one AI Additions service in `requires`, so an adapter with a descriptor requires exactly one service; `descriptor.serviceId` is no longer accepted (#812). That id may differ from `id`: ids are mapped, not renamed, so stored designs, chat agents and jobs keep the manifest id. `path` is the descriptor route relative to the AI Additions connection's `base_url`, for example `/polyadic-agent/api/capabilities`; it must be an absolute path without host, query or `..` segments. An invalid path is dropped with a warning. `GET /external-services` exposes `descriptor.serviceId` and a summary (see "Listing services"); the route stays internal (`getServiceDescriptor()`). |
 | `capabilities` | — | Removed (#726). Entries that still declare it log a deprecation warning and the key is ignored. A service that processes student responses declares the `response` scope instead; the student app shows the processing state for those services. |
 | `enabled` | — | Removed (#812). An entry that declares it rejects the catalog; usability is decided at dispatch (see "Usability"). |
@@ -1189,14 +1191,55 @@ An adapter with the `design` scope and no export logs a warning: saving a
 design never runs it, and an explicit generation runs it with `input_hash`
 `NULL`.
 
-`helpers/design-tutor-questions.js` selects the questions the Argumentation
-Tutor discusses (`selectTutorQuestions(design)`): the non-empty semantic
-differential questions of the phases that enable `argumentation-tutor-system`,
-as plain text. Questions have no stable ids, so they are identified by
-position, 1-based as at runtime: `phaseNumber` is `stages.number`,
-`questionNumber` is `differential.orden`, and the id is
-`p<phaseNumber>-q<questionNumber>`. Each question carries `textHash`, the
-SHA-256 of its text, so a result can tell which questions changed.
+### Producers, consumers and units
+
+Design analyses are declared in the catalog (#863). A producer lists what it
+stores under `produces`, and every adapter that needs that analysis lists the
+same `{ documentSchema, unit }` under `consumes`:
+
+| Adapter | Declaration |
+| --- | --- |
+| `case-analyst-claim-typology` | `produces: [{ documentSchema: "claim-typology/v1", unit: "question" }]` |
+| `argumentation-tutor-system` | `consumes: [{ documentSchema: "claim-typology/v1", unit: "question" }]` |
+
+A unit is the design element an analysis is about. The one unit so far is
+`question`: a non-empty semantic differential question, as plain text.
+Questions have no stable ids, so they are identified by position, 1-based as
+at runtime: `phaseNumber` is `stages.number`, `questionNumber` is
+`differential.orden`, and the id is `p<phaseNumber>-q<questionNumber>`. Each
+question carries `textHash`, the SHA-256 of its text, so a result can tell
+which questions changed.
+
+A producer analyses only the units its consumers need.
+`selectDesignAnalysisUnits({ producerId, design })`
+(`helpers/design-analysis-units.js`) returns the questions of the phases that
+enable at least one usable consumer of a schema the producer produces for the
+unit:
+
+1. `registry.getDesignAnalysisConsumerIds(producerId, { unit })` lists the
+   registered adapters whose `consumes` matches one of the producer's
+   `produces`. A development consumer counts only when development adapters
+   are registered.
+2. Consumers that no phase of the design enables are dropped; when none is
+   left, the policy is not read.
+3. `registry.usableServiceIds()` keeps the consumers the policy gate allows
+   under the current version: their AI Additions services are allowed, the
+   version does not switch them off (`disabledAdapterIds`, #864), and an AI
+   Additions connection is stored (see "Usability").
+4. The questions of the phases that enable a remaining consumer are returned,
+   in design order. A phase that enables a switched-off consumer and a usable
+   one is selected.
+
+Adding a consumer of an existing analysis is therefore a catalog change: its
+phases join the producer's selection, and the producer's input hash changes
+for designs that use it, so their next save runs the analysis again.
+Switching a consumer off removes its phases the same way.
+
+`selectQuestionUnits(design, { serviceIds })` and `findQuestionUnit(design,
+position, { serviceIds })` select by enabled service ids without the policy.
+The tutor finds its own question with them (`findTutorQuestion()` in
+`adapters/ats-feedback.adapter.js`), and `mock-design-analysis` selects the
+tutor's questions with them.
 
 ### Analyses on creation and save
 
@@ -1283,7 +1326,8 @@ design row behave the same for both.
 ### Development adapter
 
 `mock-design-analysis` (development only) applies to designs with a case and
-at least one tutor question. Its input is the case's language and
+at least one tutor question (`selectQuestionUnits()` with
+`argumentation-tutor-system`, whatever the policy). Its input is the case's language and
 `contentHash` and the selected tutor questions, and its `mock-design-analysis/v1`
 document holds `phaseCount` (tutor phases with questions), `questionCount` and
 `questions` (`id`, `phaseNumber`, `questionNumber`, `text`, `textHash`,
@@ -1294,15 +1338,17 @@ unchanged saves, copies and regeneration locally.
 
 `case-analyst-claim-typology` (`adapters/case-analyst-claim-typology.adapter.js`,
 #849) stores Case Analyst's claim typology (ethicapp-ai-additions#192) as a
-design analysis: the plausible types of answer to each tutor question, which
-the Argumentation Tutor uses when it gives feedback. It requires
-`case-analyst` and has the `design` scope; its callbacks come from the
-`case-analyst-api` Keycloak client.
+design analysis: the plausible types of answer to each selected question,
+which the Argumentation Tutor uses when it gives feedback. It requires
+`case-analyst`, has the `design` scope and produces `claim-typology/v1` per
+question; its callbacks come from the `case-analyst-api` Keycloak client.
 
 - **Input.** `designAnalysisInput()` applies to designs with a case and at
-  least one tutor question (`selectTutorQuestions()`), and only while the
-  current policy also allows `argumentation-tutor-system` and does not switch
-  it off (`registry.isServiceUsable()`). Case Analyst accepts 1 to 30 questions, so
+  least one selected question: a question of a phase that enables a usable
+  consumer of claim typologies (`selectDesignAnalysisUnits()`, see
+  "Producers, consumers and units"). With the shipped catalog these are the
+  questions of the tutor's phases, while the current policy allows
+  `argumentation-tutor-system` and does not switch it off. Case Analyst accepts 1 to 30 questions, so
   a design with more sends its first 30, in design order, and logs a warning.
   When the case has an evidence inventory (its `case-analyst-evidence-inventory`
   analysis holds an `evidence-inventory/v1` document, whatever the status of a
@@ -1363,8 +1409,8 @@ answer is evaluated against its own question.
   compared with their first answer to the same question. `phase-ended`
   deletes the sessions of every question of the phase.
 - **Question text.** The session's `question` is the design's question at that
-  position as plain text (`findTutorQuestion()` in
-  `helpers/design-tutor-questions.js`), the same text the typology answers.
+  position as plain text (`findTutorQuestion()`, a question unit of
+  `helpers/design-analysis-units.js`), the same text the typology answers.
   Without one it is the runtime question's text, then the phase's first
   question, then its instructions, as before #850.
 - **Typology.** When the design's `case-analyst-claim-typology` analysis holds

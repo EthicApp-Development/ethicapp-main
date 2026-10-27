@@ -1,13 +1,14 @@
 import { hashAnalysisInput } from "../../helpers/analysis-input-hash.js";
 import { DESIGN_ANALYSIS_HOOKS } from "../../helpers/design-analysis-hooks.js";
-import { selectTutorQuestions } from "../../helpers/design-tutor-questions.js";
+import { selectQuestionUnits } from "../../helpers/design-analysis-units.js";
+import { ARGUMENTATION_TUTOR_SERVICE_ID } from "./ats-feedback.utils.js";
 
 // Development adapter for design-scoped analyses (#848). It runs in the web
 // process and calls no external service. It applies to designs with a case
-// and with tutor questions (the semantic differential questions of the phases
-// that enable argumentation-tutor-system, the selection the claim typology
-// uses), and stores how many tutor phases and questions there are, with each
-// question's word count. It exercises the whole design analysis contract:
+// and with tutor questions (the question units of the phases that enable
+// argumentation-tutor-system, whatever the policy), and stores how many tutor
+// phases and questions there are, with each question's word count. It
+// exercises the whole design analysis contract:
 // analyses on creation (design-created) and on save (design-updated), the
 // input hash that skips unchanged saves, copies, and explicit regeneration.
 
@@ -56,7 +57,7 @@ export function designAnalysisInput({ design, designCase }) {
         return null;
     }
 
-    const questions = selectTutorQuestions(design);
+    const questions = selectQuestionUnits(design, { serviceIds: [ARGUMENTATION_TUTOR_SERVICE_ID] });
     if (questions.length === 0) {
         return null;
     }
