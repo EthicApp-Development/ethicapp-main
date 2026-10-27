@@ -30,8 +30,9 @@ All `VITE_*` variables are public frontend variables. They must never contain se
 
 ## AI Services
 
-Whether an installation uses AI, where AI Additions is, and which AI services
-are allowed are data that operators edit in the management console
+Whether an installation uses AI, where AI Additions is, which AI services are
+allowed and which of their adapters are switched off are data that operators
+edit in the management console
 (`/mng/ai-services`, epic #810). Deployments provide only the AI Additions
 client credentials. The full operator guide, with the console steps and the
 pinning rules, is

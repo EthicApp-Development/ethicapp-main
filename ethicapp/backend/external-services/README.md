@@ -40,8 +40,9 @@ receives events is decided at dispatch, by the registry's policy gate (see
 that decides whether an adapter may receive events (#815, epic #810):
 
 - **Production adapters** pass when every AI Additions service in their
-  `requires` is in `policyVersion.allowedServiceIds` and a usable AI Additions
-  connection is stored. "Usable" means a row exists and its URLs are valid
+  `requires` is in `policyVersion.allowedServiceIds`, their own id is not in
+  `policyVersion.disabledAdapterIds`, and a usable AI Additions connection is
+  stored. "Usable" means a row exists and its URLs are valid
   (`isValidAiAdditionsUrl` in `helpers/ai-additions-connection.js`; see
   "Stored connection URLs" below). The connection is read through the AI
   Additions client (`isConfigured()`, 5 s cache), and a failed read counts as
@@ -50,6 +51,22 @@ that decides whether an adapter may receive events (#815, epic #810):
   service, so they pass whenever they are registered, which only happens with
   `EXTERNAL_SERVICES_DEVELOPMENT_ADAPTERS=true`, whatever the policy or the
   connection. Production installations never register them.
+
+**Switching adapters off (#864, epic #861).** Allowing an AI Additions service
+enables every adapter that requires it: allowing `case-analyst` enables three
+case analyses (`case-analyst-evaluation`, `case-analyst-evidence-inventory`,
+`case-analyst-topic-listing`) and one design analysis
+(`case-analyst-claim-typology`). A policy version can switch individual
+adapters of its allowed services off, in `disabled_adapter_ids` (V26; the
+store maps it to `disabledAdapterIds`). Switching the claim typology off stops
+design analyses while the case analyses keep running, and the other way round.
+Every listing and dispatch goes through `isAllowedByPolicy()`, so the case
+form, the design editor, design-analysis dispatch, descriptor lookups,
+callbacks without a job and the claim typology's own tutor check all see the
+switch. Versions saved before V26 switch nothing off. The management console
+lists each service's adapters grouped by scope, with a switch for each
+(`GET /api/admin/ai-services/catalog` returns their scopes and localized
+labels).
 
 Which version applies:
 
@@ -1269,8 +1286,8 @@ the Argumentation Tutor uses when it gives feedback. It requires
 
 - **Input.** `designAnalysisInput()` applies to designs with a case and at
   least one tutor question (`selectTutorQuestions()`), and only while the
-  current policy also allows `argumentation-tutor-system`
-  (`registry.isServiceUsable()`). Case Analyst accepts 1 to 30 questions, so
+  current policy also allows `argumentation-tutor-system` and does not switch
+  it off (`registry.isServiceUsable()`). Case Analyst accepts 1 to 30 questions, so
   a design with more sends its first 30, in design order, and logs a warning.
   When the case has an evidence inventory (its `case-analyst-evidence-inventory`
   analysis holds an `evidence-inventory/v1` document, whatever the status of a
