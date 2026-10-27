@@ -1,0 +1,255 @@
+{
+  "schemaVersion": "evidence-inventory-result/v1",
+  "taskId": "3f1c2a9e-5b7d-4c8e-9a10-2b4d6f8e0a12",
+  "status": "completed",
+  "caseId": "example-sebastian",
+  "inventory": {
+    "schemaVersion": "evidence-inventory/v1",
+    "kind": "case_evidence_inventory",
+    "language": "es_CL",
+    "facts": [
+      {
+        "id": "EV1",
+        "group": "Situación académica",
+        "label": "amistad",
+        "statement": "Sebastián es el mejor amigo de quien narra",
+        "sourceQuote": "me llamó Sebastián, mi mejor amigo",
+        "sourceQuoteFound": true,
+        "countingNote": null
+      },
+      {
+        "id": "EV2",
+        "group": "Situación académica",
+        "label": "estudio sin resultado",
+        "statement": "Sebastián estudió harto y aun así cree que no alcanzará la nota para aprobar",
+        "sourceQuote": "había estudiado harto pero que creía que no iba a lograr la nota para aprobar el curso",
+        "sourceQuoteFound": true,
+        "countingNote": null
+      },
+      {
+        "id": "EV3",
+        "group": "Situación académica",
+        "label": "dificultad del curso",
+        "statement": "El curso de contabilidad es difícil; quien narra se eximió y aun así lo pasó mal durante el semestre",
+        "sourceQuote": "el curso es bastante difícil. Es cierto que yo me eximí, pero de que lo pasé mal durante el semestre con los ejercicios y las solemnes, lo pasé mal",
+        "sourceQuoteFound": true,
+        "countingNote": null
+      },
+      {
+        "id": "EV4",
+        "group": "Situación académica",
+        "label": "angustia de Sebastián",
+        "statement": "Sebastián se mostró nervioso y angustiado durante la llamada",
+        "sourceQuote": "Sebastián se notaba muy nervioso y angustiado",
+        "sourceQuoteFound": true,
+        "countingNote": null
+      },
+      {
+        "id": "EV5",
+        "group": "Situación académica",
+        "label": "consecuencias de reprobar",
+        "statement": "Reprobar desencadena un atraso de un año, la pérdida de la gratuidad y la imposibilidad de pagar el arancel",
+        "sourceQuote": "si reprueba el curso se atrasa un año y no tendrá plata para pagar el arancel de la carrera (Sebastián estudia con gratuidad completa)",
+        "sourceQuoteFound": true,
+        "countingNote": "Reúne tres consecuencias que el caso enuncia como cadena causal en una sola oración. Mencionar el atraso, la gratuidad y el arancel invoca un solo ítem."
+      },
+      {
+        "id": "EV6",
+        "group": "Situación académica",
+        "label": "batalla con contabilidad",
+        "statement": "Sebastián batallaba incesantemente con contabilidad",
+        "sourceQuote": "había un ramo con el cual Sebastián batallaba incesantemente: contabilidad",
+        "sourceQuoteFound": true,
+        "countingNote": null
+      },
+      {
+        "id": "EV7",
+        "group": "Situación académica",
+        "label": "clases online",
+        "statement": "Los ramos se siguen dictando online pese a que la pandemia mengua",
+        "sourceQuote": "la pandemia comenzó a menguar: había menos restricciones para moverse y era más fácil salir de la casa, pero, por seguridad, los ramos los seguíamos teniendo online",
+        "sourceQuoteFound": true,
+        "countingNote": null
+      },
+      {
+        "id": "EV8",
+        "group": "Familia",
+        "label": "familia esforzada",
+        "statement": "La familia es esforzada: ambos padres trabajan para sacar adelante a Francisca y a Sebastián",
+        "sourceQuote": "Ellos son una familia esforzada: ambos papás trabajan para poder sacar adelante a la Francisca y a Sebastián",
+        "sourceQuoteFound": true,
+        "countingNote": null
+      },
+      {
+        "id": "EV9",
+        "group": "Familia",
+        "label": "regla de los cinco años",
+        "statement": "La gratuidad financia solo los cinco años del plan de estudios, y la mayoría de los estudiantes no termina en ese plazo",
+        "sourceQuote": "esta regla de financiar sólo los 5 años que dura la carrera (de acuerdo al plan de estudios), cuando todos sabemos que la mayoría de los estudiantes no logra terminarla en ese tiempo",
+        "sourceQuoteFound": true,
+        "countingNote": null
+      },
+      {
+        "id": "EV10",
+        "group": "Familia",
+        "label": "acogida de los padres",
+        "statement": "Alberto y Alejandra acogieron a quien narra durante un par de meses en pandemia, cuando tenía problemas con su propia familia",
+        "sourceQuote": "Me recibieron durante un par de meses en plena pandemia, cuando tenía problemas con mi propia familia",
+        "sourceQuoteFound": true,
+        "countingNote": "Hecho distinto de la ayuda que prestó Sebastián, que es EV15."
+      },
+      {
+        "id": "EV11",
+        "group": "Familia",
+        "label": "familia honrada",
+        "statement": "La familia es trabajadora y honrada, y no quiere nada regalado",
+        "sourceQuote": "son una familia trabajadora y honrada, que no quiere nada regalado",
+        "sourceQuoteFound": true,
+        "countingNote": null
+      },
+      {
+        "id": "EV12",
+        "group": "Familia",
+        "label": "presión del padre",
+        "statement": "El padre le dijo a Sebastián que no podía darse el lujo de reprobar, o la familia tendría serios problemas financieros",
+        "sourceQuote": "no podía darse el lujo de reprobar un ramo, que tenía que pasarlo sí o sí, estudiando día y noche, o de otro modo la familia se vería en serios problemas financieros",
+        "sourceQuoteFound": true,
+        "countingNote": "Se cuenta por separado de EV13: una respuesta puede apelar a la presión sin apelar a la ética del esfuerzo."
+      },
+      {
+        "id": "EV13",
+        "group": "Familia",
+        "label": "ética del esfuerzo familiar",
+        "statement": "El padre le dijo que en esa familia se ganan las cosas, nadie les regaló nada y no se hacen las cosas a medias ni tomando atajos",
+        "sourceQuote": "en esta familia nos ganamos las cosas, nadie nos regaló nada y no hacemos las cosas a medias o tomando atajos",
+        "sourceQuoteFound": true,
+        "countingNote": "Se cuenta por separado de EV12."
+      },
+      {
+        "id": "EV14",
+        "group": "Familia",
+        "label": "sugerencia de la madre",
+        "statement": "Alejandra le sugirió a Sebastián que hablara con quien narra para pedirle ayuda",
+        "sourceQuote": "Alejandra, su mamá, le sugirió que hablara conmigo, para que lo ayudara",
+        "sourceQuoteFound": true,
+        "countingNote": null
+      },
+      {
+        "id": "EV15",
+        "group": "Relación entre Sebastián y quien narra",
+        "label": "ayuda pasada de Sebastián",
+        "statement": "Sebastián y quien narra estudiaron juntos en múltiples ocasiones, y Sebastián lo ayudó en los ramos que más le costaban, \"en las malas\"",
+        "sourceQuote": "estudiamos juntos en múltiples ocasiones. Con el tiempo, él me ayudó en los ramos que más me costaban",
+        "sourceQuoteFound": true,
+        "countingNote": "Cubre toda la ayuda pasada, académica y genérica, como un solo ítem. La acogida de los padres es EV10."
+      },
+      {
+        "id": "EV16",
+        "group": "Relación entre Sebastián y quien narra",
+        "label": "incomodidad al pedir",
+        "statement": "Sebastián pidió la ayuda visiblemente incómodo, con angustia y vergüenza, y por teléfono para no dar la cara",
+        "sourceQuote": "visiblemente incómodo, Sebastián me pidiera que lo ayudara a contestar el examen de contabilidad",
+        "sourceQuoteFound": true,
+        "countingNote": null
+      },
+      {
+        "id": "EV17",
+        "group": "Relación entre Sebastián y quien narra",
+        "label": "confusión de Sebastián",
+        "statement": "Sebastián está muy confundido, sabe que lo que pide compromete a su amigo y no ve salida al problema",
+        "sourceQuote": "estaba muy confundido, sabe que lo que pide me compromete, pero no ve mucha salida al problema",
+        "sourceQuoteFound": true,
+        "countingNote": null
+      },
+      {
+        "id": "EV18",
+        "group": "Postura sobre la copia",
+        "label": "rechazo compartido a la copia",
+        "statement": "A Sebastián y a quien narra les disgusta la copia, y han peleado con compañeros por sentirse perjudicados por su conducta",
+        "sourceQuote": "Ni a Sebastián ni a mí nos gusta esto de la copia",
+        "sourceQuoteFound": true,
+        "countingNote": "Sujeto a la prueba del enunciado general: cuenta cuando la respuesta lo predica de Sebastián o de ambos, y no cuando el participante enuncia solo su propia postura."
+      },
+      {
+        "id": "EV19",
+        "group": "Postura sobre la copia",
+        "label": "reclamo a los profesores",
+        "statement": "Lo han hablado con varios profesores, porque les molesta que las conductas deshonestas terminen premiadas",
+        "sourceQuote": "lo hemos hablado con varios profesores, porque nos molesta mucho que las conductas deshonestas finalmente sean premiadas",
+        "sourceQuoteFound": true,
+        "countingNote": null
+      },
+      {
+        "id": "EV20",
+        "group": "Postura sobre la copia",
+        "label": "lo que dicen los docentes",
+        "statement": "Los docentes sostienen que quienes copian serán peores profesionales, porque saldrán sabiendo menos, y que la honestidad y el trabajo esforzado son virtudes deseables en el ámbito laboral",
+        "sourceQuote": "serán siempre peores profesionales que nosotros",
+        "sourceQuoteFound": true,
+        "countingNote": "Sujeto a la prueba del enunciado general: cuenta cuando se atribuye a los docentes del caso, y no como proposición moral propia."
+      },
+      {
+        "id": "EV21",
+        "group": "Postura sobre la copia",
+        "label": "sensación de ser pasados a llevar",
+        "statement": "Pese a todo, les queda la sensación de que quienes hacen trampa los pasan a llevar",
+        "sourceQuote": "siempre quedamos con la sensación desagradable de que los compañeros que hacen trampa nos pasan a llevar",
+        "sourceQuoteFound": true,
+        "countingNote": null
+      },
+      {
+        "id": "EV22",
+        "group": "Quien narra",
+        "label": "angustia de quien narra",
+        "statement": "Quien narra queda complicado, confundido y angustiado por la situación",
+        "sourceQuote": "me complica mucho la situación de Sebastián y francamente estoy confundido",
+        "sourceQuoteFound": true,
+        "countingNote": null
+      }
+    ],
+    "exclusions": [
+      {
+        "id": "EX1",
+        "label": "cursos posteriores",
+        "statement": "Que reprobar contabilidad perjudicará a Sebastián en cursos posteriores de la misma materia o en su desempeño profesional futuro",
+        "reason": "El caso no lo dice."
+      },
+      {
+        "id": "EX2",
+        "label": "financiamiento alternativo",
+        "statement": "Que existen becas, rebajas de arancel, créditos u otras vías de financiamiento tras perder la gratuidad",
+        "reason": "El caso no lo dice."
+      },
+      {
+        "id": "EX3",
+        "label": "sanción a quien ayuda",
+        "statement": "Que a quien ayuda podrían sancionarlo, sumariarlo o eliminarlo de la carrera",
+        "reason": "El caso no lo dice."
+      },
+      {
+        "id": "EX4",
+        "label": "buen rendimiento de Sebastián",
+        "statement": "Que Sebastián es un buen estudiante o que le va bien en los demás ramos",
+        "reason": "El caso dice que estudió harto para este examen y que batallaba con contabilidad."
+      },
+      {
+        "id": "EX5",
+        "label": "moral general del participante",
+        "statement": "Las valoraciones morales generales sobre la honestidad, la amistad o la lealtad que el participante enuncia por su cuenta",
+        "reason": "Es el otro lado de la prueba del enunciado general que rige EV18 a EV21."
+      },
+      {
+        "id": "EX6",
+        "label": "contexto país",
+        "statement": "La situación del país, la economía o el sistema de educación superior más allá de la regla de los cinco años",
+        "reason": "La regla de los cinco años sí está en el caso y es EV9."
+      }
+    ]
+  },
+  "error": null,
+  "clientContext": {
+    "service": "case-analyst-evidence-inventory",
+    "correlationId": "example-correlation-id",
+    "caseId": "example-sebastian"
+  }
+}

@@ -91,6 +91,22 @@
       }
     },
     {
+      "id": "case-analyst-evidence-inventory",
+      "description": "Evidence inventory of a case from Case Analyst: the facts students may invoke as evidence, with literal quotes, for the teacher to review.",
+      "adapter": "./adapters/case-analyst-evidence-inventory.adapter.js",
+      "requires": ["case-analyst"],
+      "hooks": [
+        "case-created",
+        "callback-received"
+      ],
+      "scopes": ["case"],
+      "ui": { "component": "case-evidence-inventory" },
+      "callbackAuth": {
+        "allowedClientIds": ["case-analyst-api"],
+        "requiredRoles": []
+      }
+    },
+    {
       "id": "mock-case-analysis",
       "description": "Development adapter that analyses case documents in process: word count and an excerpt.",
       "adapter": "./adapters/mock-case-analysis.adapter.js",

@@ -12,6 +12,7 @@ const PRODUCTION_IDS  = [
     "polyadic-devils-advocate",
     "argumentation-tutor-system",
     "case-analyst-evaluation",
+    "case-analyst-evidence-inventory",
 ];
 const DEVELOPMENT_IDS = [
     "mock-ai-response-review",
@@ -132,7 +133,7 @@ test("registration: the policy gate decides which shipped adapters are usable", 
     assert.deepEqual(await usableIds(everything.registry), [...PRODUCTION_IDS, ...DEVELOPMENT_IDS].sort());
     assert.deepEqual(
         await everything.registry.getUsableServiceIdsForScope("case"),
-        ["case-analyst-evaluation", "mock-case-analysis"]
+        ["case-analyst-evaluation", "case-analyst-evidence-inventory", "mock-case-analysis"]
     );
     assert.deepEqual(
         await everything.registry.getUsableServiceIdsForScope("design"),
@@ -148,7 +149,10 @@ test("registration: the policy gate decides which shipped adapters are usable", 
         aiServicePolicy:         policyAllowing(["case-analyst"]),
         isAiAdditionsConfigured: async () => true,
     });
-    assert.deepEqual(await usableIds(caseAnalystOnly.registry), ["case-analyst-evaluation"]);
+    assert.deepEqual(
+        await usableIds(caseAnalystOnly.registry),
+        ["case-analyst-evaluation", "case-analyst-evidence-inventory"]
+    );
 
     const noConnection = await registerWithoutNetwork({
         developmentAdapters:     true,
