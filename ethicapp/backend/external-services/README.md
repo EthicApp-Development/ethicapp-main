@@ -145,8 +145,9 @@ Targets per adapter:
 - Polyadic: the room `ethicapp-s<session>-p<phase>-g<group>`.
 - Argumentation Tutor and the mock response review: the `sessionId`,
   `phaseId`, `questionId` and `userId` their feedback is published to.
-- Case Analyst: none. Its handler only records the result, so it only accepts
-  callbacks for its jobs.
+- Case Analyst (case evaluation and evidence inventory): none. Their handlers
+  only record the result in the job's case analysis, so they only accept
+  callbacks for their jobs.
 
 ### Room jobs
 
@@ -866,6 +867,19 @@ The `service-` prefix keeps the AI service's codes apart from EthicApp's own,
 for example its `timeout` from the render `timeout`. A new code needs an
 `ERROR_KEYS` entry and keys in `es_CL` and `en_US`.
 
+Case Analyst modules do not all publish the same codes. The evidence inventory
+adapter maps its module's codes (`SERVICE_ERROR_CODES` in
+`adapters/case-analyst-evidence-inventory.adapter.js`):
+
+| Case Analyst `error.code` | `error_code` |
+| --- | --- |
+| `llm_error`, `llm_request_failed`, `llm_not_configured`, `llm_tier_unsupported` | `service-llm-error` |
+| `llm_refused` | `service-llm-refusal` |
+| `llm_output_invalid`, `llm_output_truncated`, `inventory_invalid`, `inventory_too_large` | `service-invalid-output` |
+| `timeout` | `service-timeout` |
+| `worker_lost` | `service-worker-lost` |
+| `internal_error` and any other code | `service-internal-error` |
+
 ### Teacher edits
 
 An adapter may export
@@ -968,6 +982,67 @@ feedback and the issues worth revising first, then the feedback of each
 evaluator by criterion. Criterion and evaluator names are translated with
 `case_evaluation_criterion_*` and `case_evaluation_evaluator_*`; a criterion
 added by a new prompt version is shown by its name.
+
+### Evidence inventory (Case Analyst)
+
+`case-analyst-evidence-inventory`
+(`adapters/case-analyst-evidence-inventory.adapter.js`, #652, a rework of
+Daniel Ávila's PR #643) stores Case Analyst's evidence inventory of a case: the
+facts a student may invoke as evidence (`EV#`, each with a literal
+`sourceQuote` and a `sourceQuoteFound` flag) and the plausible statements the
+case does not make (`EX#`). The teacher reviews and edits it. It requires the
+AI Additions service `case-analyst` and its callbacks come from the Keycloak
+client `case-analyst-api`. The contract is defined in ethicapp-ai-additions,
+`case-analyst/app/modules/evidence_inventory/` and `case-analyst/README.md`
+("Evidence inventory").
+
+On `case-created` the adapter:
+
+1. starts the reserved generation (`markProcessing`) and waits for the case
+   text (`waitForCaseDocumentText`);
+2. posts an `evidence-inventory-request/v1` to
+   `/case-analyst/api/v1/evidence-inventories`:
+   `case: { id, title, text, language }` and
+   `clientContext: { service: "case-analyst-evidence-inventory", correlationId: <jobId>, caseId }`.
+   Ids are strings, the title is cut to 500 characters, and `language` follows
+   the same rule as the case evaluation;
+3. leaves the job `dispatched`. Case Analyst answers `202 { taskId }` and
+   takes about one minute.
+
+Failures before the result arrives use the codes of "Error codes": the render
+outcomes, `empty-case-text`, `case-text-too-long`, `request-rejected` and
+`request-failed`.
+
+The result is a `callback-received` with serviceId
+`case-analyst-evidence-inventory`, `correlationId` = the job id, and an
+`evidence-inventory-result/v1` payload:
+
+- `completed`: the inventory is checked with `normalizeEvidenceInventory()`
+  (`helpers/evidence-inventory-document.js`) and stored as an
+  `evidence-inventory/v1` document, keeping the service's quote flags. A
+  payload or inventory that fails the check fails the generation with
+  `invalid-result`.
+- `failed`: the generation fails with the service's message and its code
+  mapped as in "Error codes".
+- A result whose `clientContext.correlationId` differs from its job is refused
+  and leaves the analysis as it is. A result of a superseded generation is
+  only kept in `external_service_results` (the callback reports `skipped`).
+
+Teachers edit the inventory. `validateCaseAnalysisDocument()` normalizes the
+edit, keeps the existing ids, numbers new items after the highest one and
+checks every quote again against the case text; when the text cannot be read,
+no quote counts as found. The quote normalization mirrors
+`case-analyst/app/modules/evidence_inventory/postprocess.py`, and both share
+the same test cases, so keep them in sync. Case Analyst's Sebastián example
+(request text and completed result) is kept in
+`helpers/__tests__/fixtures/evidence-inventory/` for the tests.
+
+The tab component `case-evidence-inventory` (`case-evidence-inventory-view`,
+helpers in `ethicapp/frontend/assets/js/helpers/evidence-inventory.js`) shows
+the facts by theme with their quotes, marks the quotes the server did not
+find, and lets the teacher edit, add and remove facts and exclusions and save
+them as reviewed (`reviewedAt`). Edits are offered only while no fresh
+generation is in flight; "Generate again" comes from the surrounding panel.
 
 ## Design Analyses
 
