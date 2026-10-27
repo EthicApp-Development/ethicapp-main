@@ -210,12 +210,11 @@ test("buildEvidenceInventoryRequest: follows the Case Analyst request envelope",
         serviceId:     SERVICE_ID,
         caseId:        7,
         caseTitle:     "",
-        caseText:      "x".repeat(200010),
+        caseText:      "x",
         languageCode:  null,
         correlationId: JOB_ID,
     });
     assert.equal(untitled.case.title, "Case 7");
-    assert.equal(untitled.case.text.length, 200000);
     assert.equal(untitled.case.language, "en_US");
 });
 
@@ -307,8 +306,21 @@ test("case-created: fails the analysis when the case document has no text", asyn
     assert.equal(row.error_code, "empty-case-text");
 });
 
+test("case-created: fails the analysis when the case text is longer than the service accepts", async () => {
+    const { row, caseAnalyses } = createCaseAnalysisRow();
+    const { dispatch, client } = await registerAdapter({
+        caseAnalyses,
+        renderOutcome: { status: "ready", text: "x".repeat(200001) },
+    });
+
+    await dispatch("case-created", caseCreatedContext());
+
+    assert.equal(client.requests.length, 0);
+    assert.equal(row.error_code, "case-text-too-long");
+});
+
 test("case-created: tells a refused request from an unreachable service", async () => {
-    for (const [statusCode, errorCode] of [[422, "request-rejected"], [503, "service-unreachable"]]) {
+    for (const [statusCode, errorCode] of [[422, "request-rejected"], [503, "request-failed"]]) {
         const { row, caseAnalyses } = createCaseAnalysisRow();
         const client = fakeClient({
             respond: () => {
@@ -345,7 +357,7 @@ test("case-created: without an AI Additions connection, fails without any reques
     await quietly(() => dispatch("case-created", caseCreatedContext()));
 
     assert.deepEqual(urls, []);
-    assert.equal(row.error_code, "service-unreachable");
+    assert.equal(row.error_code, "request-failed");
 });
 
 test("case-created: fails the started generation on an unexpected error", async () => {
@@ -434,9 +446,33 @@ test("callback-received: records a failed generation with the service's code and
     // A failed generation keeps the previous document.
     assert.equal(row.status, "ready");
     assert.equal(row.document, previous);
-    assert.equal(row.error_code, "service:llm_refused");
+    assert.equal(row.error_code, "service-llm-refusal");
     assert.equal(row.error_message, "The model refused the request.");
     assert.equal(callbacks[0].status, "failed");
+});
+
+test("callback-received: maps the service's codes to the shared case analysis codes", async () => {
+    const expected = [
+        ["timeout", "service-timeout"],
+        ["llm_request_failed", "service-llm-error"],
+        ["inventory_too_large", "service-invalid-output"],
+        ["worker_lost", "service-worker-lost"],
+        ["something_new", "service-internal-error"],
+        [undefined, "service-internal-error"],
+    ];
+
+    for (const [code, errorCode] of expected) {
+        const { row, caseAnalyses } = createCaseAnalysisRow({ status: "processing" });
+        const { dispatch } = await registerAdapter({ caseAnalyses });
+
+        await dispatch("callback-received", resultContext({
+            status:    "failed",
+            inventory: null,
+            error:     { code, message: "Detail." },
+        }));
+
+        assert.equal(row.error_code, errorCode, String(code));
+    }
 });
 
 test("callback-received: refuses inventories that break the contract", async () => {
@@ -453,7 +489,7 @@ test("callback-received: refuses inventories that break the contract", async () 
         const callbacks = await quietly(() => dispatch("callback-received", resultContext({ inventory })));
 
         assert.equal(row.status, "failed");
-        assert.equal(row.error_code, "inventory-invalid");
+        assert.equal(row.error_code, "invalid-result");
         assert.equal(callbacks[0].status, "failed");
     }
 });
@@ -465,7 +501,7 @@ test("callback-received: refuses payloads that are not evidence inventory result
 
         await dispatch("callback-received", resultContext(payload));
 
-        assert.equal(row.error_code, "result-invalid");
+        assert.equal(row.error_code, "invalid-result");
     }
 });
 

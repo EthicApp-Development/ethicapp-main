@@ -76,13 +76,38 @@ const RENDER_FAILURES = {
     "timeout":       "The case document was not rendered in time.",
 };
 
+// Case Analyst's public failure codes (evidence-inventory-result/v1) mapped to
+// the shared case analysis codes, which the case view explains in the
+// teacher's language (README, "Error codes"). Unknown codes count as an
+// internal error; error_message keeps the service's sanitized message.
+export const SERVICE_ERROR_CODES = Object.freeze({
+    llm_error:            "service-llm-error",
+    llm_request_failed:   "service-llm-error",
+    llm_not_configured:   "service-llm-error",
+    llm_tier_unsupported: "service-llm-error",
+    llm_refused:          "service-llm-refusal",
+    llm_output_invalid:   "service-invalid-output",
+    llm_output_truncated: "service-invalid-output",
+    inventory_invalid:    "service-invalid-output",
+    inventory_too_large:  "service-invalid-output",
+    timeout:              "service-timeout",
+    worker_lost:          "service-worker-lost",
+    internal_error:       "service-internal-error",
+});
+const UNKNOWN_SERVICE_ERROR = "service-internal-error";
+
 const FAILURES = {
     emptyText: {
         errorCode:    "empty-case-text",
         errorMessage: "The case document has no extractable text.",
     },
-    unreachable: {
-        errorCode:    "service-unreachable",
+    textTooLong: {
+        errorCode:    "case-text-too-long",
+        errorMessage: `The case text is longer than the ${MAX_CASE_TEXT_LENGTH} characters `
+            + "Case Analyst accepts.",
+    },
+    requestFailed: {
+        errorCode:    "request-failed",
         errorMessage: "The evidence inventory service could not be reached.",
     },
     rejected: {
@@ -90,11 +115,11 @@ const FAILURES = {
         errorMessage: "The evidence inventory service rejected the request.",
     },
     invalidResult: {
-        errorCode:    "result-invalid",
+        errorCode:    "invalid-result",
         errorMessage: "The evidence inventory service sent a result EthicApp does not understand.",
     },
     invalidInventory: {
-        errorCode:    "inventory-invalid",
+        errorCode:    "invalid-result",
         errorMessage: "The generated inventory breaks the evidence inventory contract.",
     },
     unexpected: {
@@ -150,7 +175,7 @@ export function buildEvidenceInventoryRequest({
         case:          {
             id,
             title:    (normalizeText(caseTitle) || `Case ${id}`).slice(0, MAX_CASE_TITLE_LENGTH),
-            text:     normalizeText(caseText).slice(0, MAX_CASE_TEXT_LENGTH),
+            text:     normalizeText(caseText),
             language: normalizeCaseLanguage(languageCode),
         },
         clientContext: {
@@ -208,7 +233,7 @@ async function requestEvidenceInventory(body) {
 // connection, network errors, 5xx) means it could not be reached.
 function requestFailure(error) {
     const statusCode = Number(error?.statusCode);
-    return statusCode >= 400 && statusCode < 500 ? FAILURES.rejected : FAILURES.unreachable;
+    return statusCode >= 400 && statusCode < 500 ? FAILURES.rejected : FAILURES.requestFailed;
 }
 
 // Fails a started generation without masking the error that caused it.
@@ -265,6 +290,10 @@ async function processCaseCreated({ context, callback }, adapter) {
             await fail(FAILURES.emptyText);
             return;
         }
+        if (caseText.length > MAX_CASE_TEXT_LENGTH) {
+            await fail(FAILURES.textTooLong);
+            return;
+        }
 
         const body = buildEvidenceInventoryRequest({
             serviceId:     service.id,
@@ -295,9 +324,12 @@ async function processCaseCreated({ context, callback }, adapter) {
 }
 
 function describeServiceFailure(error) {
-    const code = normalizeText(error?.code) || "unknown";
+    const code = normalizeText(error?.code);
+    const errorCode = Object.hasOwn(SERVICE_ERROR_CODES, code)
+        ? SERVICE_ERROR_CODES[code]
+        : UNKNOWN_SERVICE_ERROR;
     return {
-        errorCode:    `service:${code}`,
+        errorCode,
         errorMessage: normalizeText(error?.message) || "The evidence inventory generation failed.",
     };
 }
