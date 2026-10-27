@@ -135,6 +135,16 @@ export default {
         available: 'Available',
         unavailable: 'Unavailable',
         noAdapters: 'None',
+        adaptersHelp: 'Switch an adapter off to stop that analysis or feature while the rest of the service keeps working.',
+        adapterNeedsService: 'Allow the service to switch its adapters on or off.',
+        enableAdapter: 'Enable {{name}}',
+        scopes: {
+          case: 'Case analyses',
+          design: 'Design analyses',
+          response: 'Responses',
+          chat: 'Chat',
+          other: 'Other'
+        },
         note: 'Note (optional)',
         notePlaceholder: 'Why this change? For example, the course or study it is for.',
         save: 'Save as a new version',
@@ -155,11 +165,13 @@ export default {
           title: 'Save a new policy version?',
           allowed: 'The new version allows these services: {{services}}.',
           none: 'The new version allows no services.',
+          disabledAdapters: 'These adapters are switched off: {{adapters}}.',
           confirm: 'Save version'
         },
         errors: {
           unknownIds: 'AI Additions does not offer these services: {{ids}}.',
-          catalogUnavailable: 'The catalog could not be read to check the selected services.'
+          catalogUnavailable: 'The catalog could not be read to check the selected services.',
+          unknownAdapterIds: 'These adapters do not belong to the allowed services, so they cannot be switched off: {{ids}}.'
         }
       },
       history: {
@@ -169,11 +181,13 @@ export default {
         current: 'Current',
         systemAuthor: 'System',
         noServices: 'No services',
+        noDisabledAdapters: 'None',
         columns: {
           version: 'Version',
           date: 'Date',
           author: 'Author',
           allowed: 'Allowed services',
+          disabledAdapters: 'Switched-off adapters',
           note: 'Note',
           sessions: 'Launched sessions'
         }

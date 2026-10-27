@@ -19,13 +19,14 @@ import {
 } from '../components/ai-services/aiServicesConfirmations.js';
 import HistorySection from '../components/ai-services/HistorySection.jsx';
 import ServicesSection from '../components/ai-services/ServicesSection.jsx';
-import { serviceNamesById } from '../components/ai-services/aiServicesFormat.js';
+import { adapterNamesById, serviceNamesById } from '../components/ai-services/aiServicesFormat.js';
 import { IDLE_CATALOG, connectionKeyOf, createCatalogLoader } from '../components/ai-services/catalogLoader.js';
 import SensitiveActionConfirmModal from '../components/common/SensitiveActionConfirmModal.jsx';
 import { useSensitiveActionConfirmation } from '../components/common/useSensitiveActionConfirmation.js';
 
 // AI services page (epic #810): the AI Additions connection, the allowed
-// services saved as append-only policy versions, and their history. This
+// services and the adapters switched off among them (#864), saved as
+// append-only policy versions, and their history. This
 // component only loads data and wires handlers; each section renders itself.
 // Every write first asks for the administrator's step-up confirmation (#841);
 // the write handlers resolve to a falsy value when it is cancelled.
@@ -79,10 +80,9 @@ function AiServicesPage() {
     ? catalogState
     : IDLE_CATALOG;
 
-  const namesById = useMemo(
-    () => serviceNamesById(currentCatalog.result?.ok ? currentCatalog.result.services : []),
-    [currentCatalog.result]
-  );
+  const catalogServices = currentCatalog.result?.ok ? currentCatalog.result.services : null;
+  const namesById = useMemo(() => serviceNamesById(catalogServices || []), [catalogServices]);
+  const adapterNames = useMemo(() => adapterNamesById(catalogServices || []), [catalogServices]);
 
   const handleSaveConnection = useCallback(async (values) => {
     const outcome = await requestConfirmation(saveConnectionConfirmation({ t, values, saveConnection }));
@@ -108,7 +108,9 @@ function AiServicesPage() {
   }, [catalogLoader, requestConfirmation, t]);
 
   const handleSavePolicy = useCallback(async (input) => {
-    const outcome = await requestConfirmation(savePolicyConfirmation({ t, input, namesById, createPolicyVersion }));
+    const outcome = await requestConfirmation(savePolicyConfirmation({
+      t, input, namesById, adapterNamesById: adapterNames, createPolicyVersion
+    }));
     if (!outcome.confirmed) {
       return false;
     }
@@ -116,7 +118,7 @@ function AiServicesPage() {
     setPolicy(await fetchPolicy());
     setPolicySaved(true);
     return true;
-  }, [namesById, requestConfirmation, t]);
+  }, [adapterNames, namesById, requestConfirmation, t]);
 
   return (
     <>
@@ -160,7 +162,7 @@ function AiServicesPage() {
             onSave={handleSavePolicy}
             onRetryCatalog={() => loadCatalogFor(connection)}
           />
-          <HistorySection versions={policy.versions} namesById={namesById} />
+          <HistorySection versions={policy.versions} namesById={namesById} adapterNamesById={adapterNames} />
         </>
       ) : null}
 

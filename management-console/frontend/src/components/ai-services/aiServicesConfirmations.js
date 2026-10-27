@@ -25,12 +25,20 @@ export function removeConnectionConfirmation({ t, removeConnection }) {
   };
 }
 
-export function savePolicyConfirmation({ t, input, namesById, createPolicyVersion }) {
-  const description = input.allowedServiceIds.length > 0
+export function savePolicyConfirmation({
+  t, input, namesById, adapterNamesById = new Map(), createPolicyVersion
+}) {
+  const allowed = input.allowedServiceIds.length > 0
     ? t('pages.aiServices.services.confirmSave.allowed', {
       services: formatServiceList(input.allowedServiceIds, namesById)
     })
     : t('pages.aiServices.services.confirmSave.none');
+  const disabledAdapterIds = input.disabledAdapterIds || [];
+  const description = disabledAdapterIds.length > 0
+    ? `${allowed} ${t('pages.aiServices.services.confirmSave.disabledAdapters', {
+      adapters: formatServiceList(disabledAdapterIds, adapterNamesById)
+    })}`
+    : allowed;
 
   return {
     title: t('pages.aiServices.services.confirmSave.title'),

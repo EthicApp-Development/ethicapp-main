@@ -2,32 +2,11 @@ import PropTypes from 'prop-types';
 import { Badge, Form, Table } from 'react-bootstrap';
 
 import { useI18n } from '../../app/providers.jsx';
+import AdapterSwitches from './AdapterSwitches.jsx';
 
-function AdapterList({ adapters }) {
-  const { t } = useI18n();
-
-  if (adapters.length === 0) {
-    return <span className="text-body-secondary">{t('pages.aiServices.services.noAdapters')}</span>;
-  }
-
-  return (
-    <ul className="list-unstyled mb-0 small">
-      {adapters.map((adapter) => (
-        <li key={adapter.id}>
-          <code>{adapter.id}</code>
-          {adapter.description ? <span className="text-body-secondary">: {adapter.description}</span> : null}
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-AdapterList.propTypes = {
-  adapters: PropTypes.arrayOf(PropTypes.shape({ id: PropTypes.string.isRequired, description: PropTypes.string })).isRequired
-};
-
-// The live AI Additions catalog with an "allowed" checkbox per service.
-function ServiceCatalogTable({ services, selectedIds, disabled, onToggle }) {
+// The live AI Additions catalog with an "allowed" checkbox per service, and
+// a switch per EthicApp adapter of each service, grouped by scope (#864).
+function ServiceCatalogTable({ services, selectedIds, disabledAdapterIds, disabled, onToggle, onToggleAdapter }) {
   const { t } = useI18n();
 
   return (
@@ -65,7 +44,15 @@ function ServiceCatalogTable({ services, selectedIds, disabled, onToggle }) {
                 {t(service.available ? 'pages.aiServices.services.available' : 'pages.aiServices.services.unavailable')}
               </Badge>
             </td>
-            <td><AdapterList adapters={service.adapters || []} /></td>
+            <td>
+              <AdapterSwitches
+                service={service}
+                serviceAllowed={selectedIds.has(service.id)}
+                disabledAdapterIds={disabledAdapterIds}
+                disabled={disabled}
+                onToggle={onToggleAdapter}
+              />
+            </td>
           </tr>
         ))}
       </tbody>
@@ -83,8 +70,10 @@ ServiceCatalogTable.propTypes = {
     adapters: PropTypes.array
   })).isRequired,
   selectedIds: PropTypes.instanceOf(Set).isRequired,
+  disabledAdapterIds: PropTypes.instanceOf(Set).isRequired,
   disabled: PropTypes.bool.isRequired,
-  onToggle: PropTypes.func.isRequired
+  onToggle: PropTypes.func.isRequired,
+  onToggleAdapter: PropTypes.func.isRequired
 };
 
 export default ServiceCatalogTable;

@@ -5,8 +5,10 @@ import { useI18n } from '../../app/providers.jsx';
 import { formatDateTime } from '../diagnostics/formatters.js';
 import { formatServiceList } from './aiServicesFormat.js';
 
-// Policy versions, newest first. Versions are immutable, so this is read-only.
-function HistorySection({ versions, namesById }) {
+// Policy versions, newest first, with the services each allows and the
+// adapters it switches off (#864). Versions are immutable, so this is
+// read-only.
+function HistorySection({ versions, namesById, adapterNamesById = new Map() }) {
   const { t, locale } = useI18n();
 
   return (
@@ -28,6 +30,7 @@ function HistorySection({ versions, namesById }) {
                 <th scope="col">{t('pages.aiServices.history.columns.date')}</th>
                 <th scope="col">{t('pages.aiServices.history.columns.author')}</th>
                 <th scope="col">{t('pages.aiServices.history.columns.allowed')}</th>
+                <th scope="col">{t('pages.aiServices.history.columns.disabledAdapters')}</th>
                 <th scope="col">{t('pages.aiServices.history.columns.note')}</th>
                 <th scope="col" className="text-end">{t('pages.aiServices.history.columns.sessions')}</th>
               </tr>
@@ -46,6 +49,11 @@ function HistorySection({ versions, namesById }) {
                       ? formatServiceList(version.allowedServiceIds, namesById)
                       : <span className="text-body-secondary">{t('pages.aiServices.history.noServices')}</span>}
                   </td>
+                  <td>
+                    {version.disabledAdapterIds?.length > 0
+                      ? formatServiceList(version.disabledAdapterIds, adapterNamesById)
+                      : <span className="text-body-secondary">{t('pages.aiServices.history.noDisabledAdapters')}</span>}
+                  </td>
                   <td>{version.note || '—'}</td>
                   <td className="text-end">{version.launchedSessionCount}</td>
                 </tr>
@@ -62,12 +70,14 @@ HistorySection.propTypes = {
   versions: PropTypes.arrayOf(PropTypes.shape({
     id: PropTypes.number.isRequired,
     allowedServiceIds: PropTypes.arrayOf(PropTypes.string).isRequired,
+    disabledAdapterIds: PropTypes.arrayOf(PropTypes.string),
     note: PropTypes.string,
     createdAt: PropTypes.string,
     createdBy: PropTypes.shape({ name: PropTypes.string }),
     launchedSessionCount: PropTypes.number.isRequired
   })).isRequired,
-  namesById: PropTypes.instanceOf(Map).isRequired
+  namesById: PropTypes.instanceOf(Map).isRequired,
+  adapterNamesById: PropTypes.instanceOf(Map)
 };
 
 export default HistorySection;

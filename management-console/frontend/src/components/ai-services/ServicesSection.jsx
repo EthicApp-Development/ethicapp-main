@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Alert, Button, Card, Form, Spinner } from 'react-bootstrap';
 
 import { useI18n } from '../../app/providers.jsx';
-import { aiErrorKey } from './aiServicesFormat.js';
+import { aiErrorKey, switchableAdapterIds } from './aiServicesFormat.js';
 import ServiceCatalogTable from './ServiceCatalogTable.jsx';
 
 const MAX_NOTE_LENGTH = 1000;
@@ -12,20 +12,28 @@ function saveErrorText(error, t) {
   if (error.code === 'UNKNOWN_SERVICE_IDS') {
     return t('pages.aiServices.services.errors.unknownIds', { ids: (error.body?.unknownServiceIds || []).join(', ') });
   }
+  if (error.code === 'UNKNOWN_ADAPTER_IDS') {
+    return t('pages.aiServices.services.errors.unknownAdapterIds', { ids: (error.body?.unknownAdapterIds || []).join(', ') });
+  }
   if (error.code === 'CATALOG_UNAVAILABLE') {
     return `${t('pages.aiServices.services.errors.catalogUnavailable')} ${t(aiErrorKey(error.body?.catalogError))}`;
   }
   return t('pages.aiServices.services.saveError');
 }
 
-// Allowed-services editor. Saving appends a new policy version; the page
-// remounts this section (keyed by the current version id) after each save.
+// Allowed-services editor: the services a version allows and, within them,
+// the EthicApp adapters it switches off (#864). Saving appends a new policy
+// version; the page remounts this section (keyed by the current version id)
+// after each save.
 // onSave asks for the administrator's confirmation first and resolves to a
 // falsy value when it is cancelled.
 function ServicesSection({ hasConnection, catalogState, currentVersion, onSave, onRetryCatalog }) {
   const { t } = useI18n();
   const currentIds = currentVersion?.allowedServiceIds || [];
   const [selectedIds, setSelectedIds] = useState(() => new Set(currentIds));
+  const [disabledAdapterIds, setDisabledAdapterIds] = useState(
+    () => new Set(currentVersion?.disabledAdapterIds || [])
+  );
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState(null);
@@ -41,8 +49,8 @@ function ServicesSection({ hasConnection, catalogState, currentVersion, onSave, 
   const catalogIds = new Set(catalogOk ? catalog.services.map((service) => service.id) : []);
   const staleIds = catalogOk ? currentIds.filter((id) => !catalogIds.has(id)) : [];
 
-  function toggle(id) {
-    setSelectedIds((current) => {
+  function toggleIn(setIds) {
+    return (id) => setIds((current) => {
       const next = new Set(current);
       if (next.has(id)) {
         next.delete(id);
@@ -53,13 +61,13 @@ function ServicesSection({ hasConnection, catalogState, currentVersion, onSave, 
     });
   }
 
-  async function save(allowedServiceIds) {
+  async function save(allowedServiceIds, switchedOffIds = []) {
     setSaving(true);
     setFeedback(null);
     try {
       // The section remounts after a save; a cancelled confirmation leaves
       // the selection as it was.
-      if (!(await onSave({ allowedServiceIds, note }))) {
+      if (!(await onSave({ allowedServiceIds, disabledAdapterIds: switchedOffIds, note }))) {
         setSaving(false);
       }
     } catch (error) {
@@ -68,9 +76,13 @@ function ServicesSection({ hasConnection, catalogState, currentVersion, onSave, 
     }
   }
 
+  // Only adapters of the services the new version allows can be switched
+  // off; the switches of the other services are kept for this form only.
   const saveSelection = (event) => {
     event.preventDefault();
-    return save([...selectedIds].filter((id) => catalogIds.has(id)));
+    const allowedServiceIds = [...selectedIds].filter((id) => catalogIds.has(id));
+    const switchable = switchableAdapterIds(catalog.services, new Set(allowedServiceIds));
+    return save(allowedServiceIds, [...disabledAdapterIds].filter((id) => switchable.has(id)));
   };
 
   const noteField = (
@@ -141,7 +153,19 @@ function ServicesSection({ hasConnection, catalogState, currentVersion, onSave, 
           <Form onSubmit={saveSelection}>
             {catalog.services.length === 0
               ? <p className="text-body-secondary">{t('pages.aiServices.services.empty')}</p>
-              : <ServiceCatalogTable services={catalog.services} selectedIds={selectedIds} disabled={saving} onToggle={toggle} />}
+              : (
+                <>
+                  <p className="small text-body-secondary">{t('pages.aiServices.services.adaptersHelp')}</p>
+                  <ServiceCatalogTable
+                    services={catalog.services}
+                    selectedIds={selectedIds}
+                    disabledAdapterIds={disabledAdapterIds}
+                    disabled={saving}
+                    onToggle={toggleIn(setSelectedIds)}
+                    onToggleAdapter={toggleIn(setDisabledAdapterIds)}
+                  />
+                </>
+              )}
             {staleIds.length > 0 ? (
               <Alert variant="warning" className="small">
                 {t('pages.aiServices.services.staleIds', { ids: staleIds.join(', ') })}
@@ -171,7 +195,8 @@ ServicesSection.propTypes = {
   }).isRequired,
   currentVersion: PropTypes.shape({
     id: PropTypes.number.isRequired,
-    allowedServiceIds: PropTypes.arrayOf(PropTypes.string).isRequired
+    allowedServiceIds: PropTypes.arrayOf(PropTypes.string).isRequired,
+    disabledAdapterIds: PropTypes.arrayOf(PropTypes.string)
   }),
   onSave: PropTypes.func.isRequired,
   onRetryCatalog: PropTypes.func.isRequired
