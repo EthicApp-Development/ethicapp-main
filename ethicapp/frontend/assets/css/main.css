@@ -3618,6 +3618,80 @@ tr.group-summary {
     padding-left: 20px;
 }
 
+/* Topic listing tab (#845): the numbered topics and the edit form, whose
+   header and actions wrap on phones. */
+.case-topic-listing {
+    overflow-wrap: anywhere;
+}
+
+.case-topic-listing-header,
+.case-topic-listing-edit-header,
+.case-topic-listing-add,
+.case-topic-listing-form-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.case-topic-listing-header {
+    margin-bottom: 8px;
+}
+
+.case-topic-listing-edit-button,
+.case-topic-listing-edit-actions {
+    margin-left: auto;
+}
+
+.case-topic-listing-edit-actions {
+    display: flex;
+    gap: 4px;
+}
+
+.case-topic-listing-list,
+.case-topic-listing-edit-list {
+    padding-left: 0;
+    list-style: none;
+}
+
+.case-topic-listing-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.case-topic-listing-id {
+    flex: 0 0 auto;
+    margin-top: 2px;
+}
+
+.case-topic-listing-body {
+    min-width: 0;
+}
+
+.case-topic-listing-name {
+    margin-bottom: 2px;
+}
+
+.case-topic-listing-description {
+    margin-bottom: 0;
+    white-space: pre-line;
+}
+
+.case-topic-listing-edit-header {
+    margin-bottom: 8px;
+}
+
+.case-topic-listing-edit-position {
+    font-weight: bold;
+}
+
+.case-topic-listing-limits {
+    margin: 0;
+}
+
 .case-material-document-link {
     display: flex;
     align-items: center;

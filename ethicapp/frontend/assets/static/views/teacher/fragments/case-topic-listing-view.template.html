@@ -1,0 +1,162 @@
+<div class="case-topic-listing">
+    <div class="case-topic-listing-header">
+        <span class="label label-success" ng-if="$ctrl.isReviewed()">
+            {{ 'case_topic_listing_state_reviewed' | translate }}
+        </span>
+        <span class="label label-warning" ng-if="!$ctrl.isReviewed()">
+            {{ 'case_topic_listing_state_draft' | translate }}
+        </span>
+        <span class="text-muted small">
+            {{ $ctrl.countKey() | translate:{ count: $ctrl.topics.length } }}
+        </span>
+        <button
+            type="button"
+            class="btn btn-default btn-sm case-topic-listing-edit-button"
+            id="{{ $ctrl.elementId('edit') }}"
+            ng-if="$ctrl.canEdit()"
+            ng-click="$ctrl.startEditing()">
+            <i class="fa-solid fa-pen" aria-hidden="true"></i>
+            {{ 'edit' | translate }}
+        </button>
+    </div>
+
+    <p class="help-block">{{ 'case_topic_listing_description' | translate }}</p>
+
+    <div class="alert alert-{{ $ctrl.alert.type }}" ng-if="$ctrl.alert" role="alert">
+        {{ $ctrl.alert.messageKey | translate }}
+        <ul ng-if="$ctrl.alert.details.length > 0">
+            <li ng-repeat="detail in $ctrl.alert.details track by $index">{{ detail }}</li>
+        </ul>
+    </div>
+
+    <div ng-if="!$ctrl.editing">
+        <div class="alert alert-warning" ng-if="!$ctrl.isReviewed()">
+            <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+            {{ 'case_topic_listing_draft_message' | translate }}
+        </div>
+
+        <p class="text-muted" ng-if="$ctrl.topics.length === 0">
+            {{ 'case_topic_listing_no_topics' | translate }}
+        </p>
+        <ol class="case-topic-listing-list" ng-if="$ctrl.topics.length > 0">
+            <li class="case-topic-listing-item" ng-repeat="topic in $ctrl.topics track by $index">
+                <span class="label label-primary case-topic-listing-id">{{ topic.id }}</span>
+                <div class="case-topic-listing-body">
+                    <p class="case-topic-listing-name"><strong>{{ topic.topic }}</strong></p>
+                    <p class="case-topic-listing-description">{{ topic.description }}</p>
+                </div>
+            </li>
+        </ol>
+    </div>
+
+    <form name="topicListingForm" novalidate ng-if="$ctrl.editing" ng-submit="$ctrl.save(topicListingForm)">
+        <div class="alert alert-info" ng-if="$ctrl.generationRunning()" role="status">
+            <i class="fa-solid fa-circle-notch fa-spin" aria-hidden="true"></i>
+            {{ 'case_topic_listing_generation_running' | translate }}
+        </div>
+
+        <p class="help-block">{{ 'case_topic_listing_edit_help' | translate }}</p>
+
+        <ol class="case-topic-listing-edit-list">
+            <li class="panel panel-default case-topic-listing-edit-item"
+                ng-repeat="topic in $ctrl.draft.topics track by topic.key">
+                <div class="panel-body">
+                    <div class="case-topic-listing-edit-header">
+                        <span class="case-topic-listing-edit-position">{{ $index + 1 }}.</span>
+                        <span class="label label-primary" ng-if="topic.id">{{ topic.id }}</span>
+                        <span class="label label-info" ng-if="!topic.id">{{ 'case_topic_listing_new_topic' | translate }}</span>
+                        <div class="case-topic-listing-edit-actions">
+                            <button
+                                type="button"
+                                class="btn btn-default btn-sm"
+                                id="{{ $ctrl.controlId(topic, 'up') }}"
+                                ng-click="$ctrl.moveTopic($index, -1)"
+                                ng-disabled="$first"
+                                title="{{ 'case_topic_listing_move_up' | translate }}"
+                                aria-label="{{ ('case_topic_listing_move_up' | translate) + ': ' + $ctrl.topicName(topic, $index) }}">
+                                <i class="fa-solid fa-arrow-up" aria-hidden="true"></i>
+                            </button>
+                            <button
+                                type="button"
+                                class="btn btn-default btn-sm"
+                                id="{{ $ctrl.controlId(topic, 'down') }}"
+                                ng-click="$ctrl.moveTopic($index, 1)"
+                                ng-disabled="$last"
+                                title="{{ 'case_topic_listing_move_down' | translate }}"
+                                aria-label="{{ ('case_topic_listing_move_down' | translate) + ': ' + $ctrl.topicName(topic, $index) }}">
+                                <i class="fa-solid fa-arrow-down" aria-hidden="true"></i>
+                            </button>
+                            <button
+                                type="button"
+                                class="btn btn-default btn-sm"
+                                id="{{ $ctrl.controlId(topic, 'remove') }}"
+                                ng-click="$ctrl.removeTopic($index)"
+                                ng-disabled="!$ctrl.canRemoveTopic()"
+                                title="{{ 'case_topic_listing_remove' | translate }}"
+                                aria-label="{{ ('case_topic_listing_remove' | translate) + ': ' + $ctrl.topicName(topic, $index) }}">
+                                <i class="fa-solid fa-trash text-danger" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="{{ $ctrl.controlId(topic, 'topic') }}">{{ 'case_topic_listing_field_topic' | translate }}</label>
+                        <input
+                            id="{{ $ctrl.controlId(topic, 'topic') }}"
+                            name="topic{{ $index }}"
+                            type="text"
+                            class="form-control"
+                            ng-model="topic.topic"
+                            ng-trim="true"
+                            maxlength="{{ $ctrl.limits.maxTopicLength }}"
+                            required
+                            ng-class="{ 'input-warning': topicListingForm['topic' + $index].$invalid && topicListingForm.$submitted }">
+                    </div>
+                    <div class="form-group">
+                        <label for="{{ $ctrl.controlId(topic, 'description') }}">{{ 'case_topic_listing_field_description' | translate }}</label>
+                        <textarea
+                            id="{{ $ctrl.controlId(topic, 'description') }}"
+                            name="description{{ $index }}"
+                            class="form-control"
+                            rows="2"
+                            ng-model="topic.description"
+                            ng-trim="true"
+                            maxlength="{{ $ctrl.limits.maxDescriptionLength }}"
+                            required
+                            ng-class="{ 'input-warning': topicListingForm['description' + $index].$invalid && topicListingForm.$submitted }"></textarea>
+                    </div>
+                </div>
+            </li>
+        </ol>
+
+        <div class="case-topic-listing-add">
+            <button type="button" class="btn btn-default btn-sm" ng-click="$ctrl.addTopic()"
+                ng-disabled="!$ctrl.canAddTopic()" aria-describedby="{{ $ctrl.elementId('limits') }}">
+                <i class="fa-solid fa-plus" aria-hidden="true"></i>
+                {{ 'case_topic_listing_add_topic' | translate }}
+            </button>
+            <span class="help-block case-topic-listing-limits" id="{{ $ctrl.elementId('limits') }}">
+                {{ 'case_topic_listing_limits' | translate:{ max: $ctrl.limits.maxTopics } }}
+            </span>
+        </div>
+
+        <p class="text-danger" role="alert"
+            ng-if="topicListingForm.$submitted && topicListingForm.$invalid">
+            {{ 'case_topic_listing_required' | translate }}
+        </p>
+        <div class="case-topic-listing-form-actions">
+            <button type="submit" class="btn btn-primary btn-sm" ng-disabled="!$ctrl.canSave()">
+                <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+                {{ 'case_topic_listing_save_reviewed' | translate }}
+            </button>
+            <button type="button" class="btn btn-default btn-sm" ng-click="$ctrl.cancelEditing()" ng-disabled="$ctrl.saving">
+                {{ 'cancel' | translate }}
+            </button>
+            <span class="text-muted" ng-if="$ctrl.saving">
+                <i class="fa-solid fa-circle-notch fa-spin" aria-hidden="true"></i>
+                {{ 'case_topic_listing_saving' | translate }}
+            </span>
+        </div>
+    </form>
+
+    <p class="sr-only" aria-live="polite">{{ $ctrl.announcement }}</p>
+</div>
