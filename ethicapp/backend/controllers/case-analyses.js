@@ -212,9 +212,10 @@ export async function getCaseAnalysisForOwner({
 
 /**
  * Stores a document edited by the teacher. The adapter's
- * validateCaseAnalysisDocument(document, { caseId, languageCode, getCaseText })
- * returns { document, documentSchema } with the document to store, or { errors }.
- * Services without a validator accept no edits.
+ * validateCaseAnalysisDocument(document, { caseId, languageCode, getCaseText,
+ * currentDocument }) returns { document, documentSchema } with the document to
+ * store, or { errors }. `currentDocument` is the stored document the edit
+ * replaces, or null. Services without a validator accept no edits.
  */
 export async function saveCaseAnalysisForOwner({
     caseId,
@@ -240,8 +241,9 @@ export async function saveCaseAnalysisForOwner({
 
     const validation = await validate(document, {
         caseId,
-        languageCode: caseRow.language_code ?? null,
-        getCaseText:  () => dependencies.getCaseText(caseId),
+        languageCode:    caseRow.language_code ?? null,
+        getCaseText:     () => dependencies.getCaseText(caseId),
+        currentDocument: row.document ?? null,
     });
     if (!validation || validation.errors) {
         return errorResponse(

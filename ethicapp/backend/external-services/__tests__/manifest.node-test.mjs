@@ -51,6 +51,7 @@ test("catalog: each adapter requires its AI Additions service; mocks are develop
         "mock-case-analysis":              { development: true, requires: [] },
         "mock-design-analysis":            { development: true, requires: [] },
         "case-analyst-claim-typology":     { development: false, requires: ["case-analyst"] },
+        "case-analyst-topic-listing":      { development: false, requires: ["case-analyst"] },
     });
 });
 
@@ -182,4 +183,21 @@ test("catalog: the case evaluation is a read-only case analysis called back by C
     // Without a validator, teacher edits answer 405.
     const registry = await registerCatalog();
     assert.equal(registry.getCaseAnalysisValidator("case-analyst-evaluation"), null);
+});
+
+// ─── Case Analyst: topic listing (#845) ──────────────────────────────────────
+
+test("catalog: the topic listing is an editable case analysis called back by Case Analyst", async () => {
+    const entry = manifest.services.find(service => service.id === "case-analyst-topic-listing");
+
+    assert.ok(entry, "case-analyst-topic-listing is in the catalog");
+    assert.deepEqual(entry.requires, ["case-analyst"]);
+    assert.deepEqual(entry.scopes, ["case"]);
+    assert.deepEqual(entry.hooks, ["case-created", "callback-received"]);
+    assert.deepEqual(entry.ui, { component: "case-topic-listing" });
+    assert.deepEqual(entry.callbackAuth.allowedClientIds, ["case-analyst-api"]);
+
+    // Teacher edits are validated by the adapter.
+    const registry = await registerCatalog();
+    assert.equal(typeof registry.getCaseAnalysisValidator("case-analyst-topic-listing"), "function");
 });

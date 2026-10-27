@@ -1,0 +1,41 @@
+{
+  "schemaVersion": "topic-listing-result/v1",
+  "status": "completed",
+  "clientContext": {
+    "service": "case-analyst-topic-listing",
+    "correlationId": "7f0c2a52-5d0e-4c1b-9a36-2f1d8f6b9e01",
+    "caseId": "128"
+  },
+  "topicListing": {
+    "schemaVersion": "topic-listing/v1",
+    "language": "es_CL",
+    "topics": [
+      {
+        "id": "T1",
+        "topic": "Veracidad del registro clínico",
+        "description": "Si Camila puede registrar una administración que no presenció y qué valor tiene la ficha clínica para la seguridad del paciente."
+      },
+      {
+        "id": "T2",
+        "topic": "Presión jerárquica y evaluación",
+        "description": "Cómo influye que la supervisora decida la evaluación final de Camila en la libertad con que ella puede negarse."
+      },
+      {
+        "id": "T3",
+        "topic": "Costos personales de denunciar",
+        "description": "Qué arriesga Camila si informa lo ocurrido y si ese riesgo justifica callar."
+      },
+      {
+        "id": "T4",
+        "topic": "Normalización de la práctica",
+        "description": "Si el hecho de que otras estudiantes firmen registros así cambia la responsabilidad de Camila."
+      }
+    ],
+    "generation": {
+      "llmTier": "basic",
+      "prompt": "topicListing/v1",
+      "promptDigest": "0123456789ab",
+      "generatedAt": "2026-10-27T15:04:05Z"
+    }
+  }
+}

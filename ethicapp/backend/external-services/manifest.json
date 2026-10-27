@@ -152,6 +152,22 @@
         "allowedClientIds": ["case-analyst-api"],
         "requiredRoles": []
       }
+    },
+    {
+      "id": "case-analyst-topic-listing",
+      "description": "Case Analyst topic listing: the topics participants must address when they discuss the case, for the teacher to review and edit.",
+      "adapter": "./adapters/case-analyst-topic-listing.adapter.js",
+      "requires": ["case-analyst"],
+      "hooks": [
+        "case-created",
+        "callback-received"
+      ],
+      "scopes": ["case"],
+      "ui": { "component": "case-topic-listing" },
+      "callbackAuth": {
+        "allowedClientIds": ["case-analyst-api"],
+        "requiredRoles": []
+      }
     }
   ]
 }

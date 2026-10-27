@@ -1,0 +1,13 @@
+{
+  "schemaVersion": "topic-listing-result/v1",
+  "status": "failed",
+  "clientContext": {
+    "service": "case-analyst-topic-listing",
+    "correlationId": "7f0c2a52-5d0e-4c1b-9a36-2f1d8f6b9e01",
+    "caseId": "128"
+  },
+  "error": {
+    "code": "timeout",
+    "message": "The analysis exceeded its time limit of 300 seconds."
+  }
+}
