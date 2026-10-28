@@ -612,6 +612,7 @@
 	"claim_typology_units_no_consumer": "No phase of this design uses a service that needs the claim typology, so it covers no question.",
 	"claim_typology_units_consumers_unusable": "The services that use the claim typology, such as the Argumentation Tutor, are switched off, so no typology will be generated for the questions of this design.",
 	"claim_typology_units_no_questions": "The phases that use the claim typology have no questions with text.",
+	"claim_typology_units_not_needed": "No phase of this design needs the claim typology with its current settings, for example because the Argumentation Tutor is set to the basic mode.",
 	"claim_typology_producer_unavailable": "The claim typology service is switched off, so the typology cannot be generated now.",
 	"tutor_mode_enhanced_available": "Advanced evaluation available.",
 	"tutor_mode_basic_expected": "The tutor will evaluate without the advanced capabilities:",
@@ -631,6 +632,9 @@
 	"tutor_mode_activity_warning_title": "Advanced evaluation not available",
 	"tutor_mode_activity_question_basic": "Question {{number}}: the tutor evaluates without the advanced capabilities:",
 	"tutor_mode_activity_phase_basic": "The tutor evaluates without the advanced capabilities:",
+	"tutor_mode_basic_selected_note": "The tutor will evaluate in the basic mode, as the phase's settings choose.",
+	"tutor_mode_reason_basic_selected": "the phase's settings choose the basic mode.",
+	"tutor_mode_activity_basic_selected": "The tutor evaluates this phase in the basic mode, as the phase's settings choose.",
 
 	"ethical_cases_validation_required": "This field is required.",
 	"ethical_cases_validation_email": "Please enter a valid email address.",

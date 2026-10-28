@@ -367,21 +367,86 @@ test("createAtsSession gives up once nothing optional is left to drop", async ()
 });
 
 test("sessionTutorMode: the decision, corrected by the tutor's answer", () => {
-    const enhanced = { mode: "enhanced", reason: null, caseContext: CASE_CONTEXT };
-    const basic = { mode: "basic", reason: "no-inventory", caseContext: null };
+    const enhanced = { mode: "enhanced", reason: null, caseContext: CASE_CONTEXT, requestedMode: "enhanced" };
+    const basic = { mode: "basic", reason: "no-inventory", caseContext: null, requestedMode: "enhanced" };
+    const requested = { requestedMode: "enhanced" };
 
     assert.deepEqual(sessionTutorMode(basic, false, {}),
-        { tutorMode: "basic", tutorModeReason: "no-inventory" });
+        { tutorMode: "basic", tutorModeReason: "no-inventory", ...requested });
     assert.deepEqual(sessionTutorMode(enhanced, true, { caseContext: "used" }),
-        { tutorMode: "enhanced", tutorModeReason: null });
+        { tutorMode: "enhanced", tutorModeReason: null, ...requested });
     assert.deepEqual(sessionTutorMode(enhanced, false, {}),
-        { tutorMode: "basic", tutorModeReason: "tutor-unsupported" }, "withheld");
+        { tutorMode: "basic", tutorModeReason: "tutor-unsupported", ...requested }, "withheld");
     assert.deepEqual(sessionTutorMode(enhanced, true, { caseContext: "unsupported" }),
-        { tutorMode: "basic", tutorModeReason: "tutor-unsupported" });
+        { tutorMode: "basic", tutorModeReason: "tutor-unsupported", ...requested });
     assert.deepEqual(sessionTutorMode(enhanced, true, { caseContext: "rejected" }),
-        { tutorMode: "basic", tutorModeReason: "context-rejected" });
+        { tutorMode: "basic", tutorModeReason: "context-rejected", ...requested });
     assert.deepEqual(sessionTutorMode(enhanced, true, { caseContext: "downgraded" }),
-        { tutorMode: "basic", tutorModeReason: "context-rejected" });
+        { tutorMode: "basic", tutorModeReason: "context-rejected", ...requested });
+});
+
+test("sessionTutorMode: a basic phase is basic-selected; a decision without a requested mode is enhanced", () => {
+    const selected = {
+        mode: "basic", reason: "basic-selected", caseContext: null, requestedMode: "basic",
+    };
+
+    assert.deepEqual(sessionTutorMode(selected, false, { tutorMode: "basic" }),
+        { tutorMode: "basic", tutorModeReason: "basic-selected", requestedMode: "basic" });
+    assert.equal(sessionTutorMode({ mode: "basic", reason: "no-inventory", caseContext: null }, false, {})
+        .requestedMode, "enhanced", "the default requested mode");
+});
+
+// ─── The requested evaluation mode (#870) ────────────────────────────────────
+
+test("buildAtsSessionPayload sends the decided evaluation_mode, never the stored one as is", () => {
+    const stored = { llm_tier: "basic", evaluation_mode: "BASIC" };
+
+    assert.equal(buildAtsSessionPayload(METADATA, stored, null, "basic").evaluation_mode, "basic");
+    assert.equal(Object.hasOwn(buildAtsSessionPayload(METADATA, stored, null, null), "evaluation_mode"),
+        false, "without a decided mode the field is left out");
+    const enhanced = buildAtsSessionPayload(METADATA, {}, CASE_CONTEXT, "enhanced");
+    assert.equal(enhanced.evaluation_mode, "enhanced");
+    assert.deepEqual(enhanced.case_context, CASE_CONTEXT);
+    assert.equal(Object.hasOwn(enhanced, "claim_typology"), false);
+});
+
+test("createAtsSession records the tutor's requested mode and keeps evaluation_mode when the tier is rejected", async () => {
+    const bodies = [];
+    const created = await withoutWarnings(() => createAtsSession({
+        metadata:             METADATA,
+        serviceConfiguration: { llm_tier: "legacy" },
+        evaluationMode:       "basic",
+        request:              async (body) => {
+            bodies.push(body);
+            if (bodies.length === 1) {
+                throw badRequest({ error: "Invalid instance configuration", errors: { llm_tier: "x" } });
+            }
+            return {
+                session_id: "ats-4", warnings: [], requestedMode: "basic", mode: "basic", missing: [],
+            };
+        },
+    }));
+
+    assert.equal(bodies.length, 2);
+    assert.equal(Object.hasOwn(bodies[1], "llm_tier"), false);
+    assert.equal(bodies[1].evaluation_mode, "basic", "the teacher's choice is not a tutor default");
+    assert.equal(created.creation.configurationRejected, true);
+    assert.equal(created.creation.tutorMode, "basic");
+    assert.equal(created.creation.tutorRequestedMode, "basic");
+    assert.equal(Object.hasOwn(created.creation, "tutorModeMissing"), false);
+    assert.equal(Object.hasOwn(created.creation, "caseContext"), false, "no context was offered");
+});
+
+test("tutorEvaluationFromExternalResult records the requested mode the tutor reports", () => {
+    assert.deepEqual(tutorEvaluationFromExternalResult({ tutorMode: "basic", requestedMode: "basic" }),
+        { tutorMode: "basic", requestedMode: "basic" });
+    assert.deepEqual(tutorEvaluationFromExternalResult({
+        tutorMode: "enhanced", requestedMode: "enhanced", evidenceFactIds: ["EV1"],
+    }), { tutorMode: "enhanced", requestedMode: "enhanced", evidenceFactIds: ["EV1"] });
+    assert.deepEqual(tutorEvaluationFromExternalResult({ tutorMode: "basic", requestedMode: "other" }),
+        { tutorMode: "basic" }, "an unknown requested mode is left out");
+    assert.equal(tutorEvaluationFromExternalResult({ requestedMode: "basic" }), null,
+        "no mode, nothing recorded");
 });
 
 test("tutorEvaluationFromExternalResult reads the evaluation's mode and evidence", () => {

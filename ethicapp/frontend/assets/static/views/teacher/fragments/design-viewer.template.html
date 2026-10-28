@@ -9,6 +9,14 @@
             </div>
             <phase-description phase-number="$index + 1" design-object="ctrl.design"
                 case-videos="ctrl.caseVideos"></phase-description>
+            <p class="small text-muted claim-typology-tutor-mode"
+                ng-if="ctrl.claimTypology.phaseNotes[$index + 1]"
+                data-testid="tutor-mode-phase-note"
+                data-phase-number="{{ $index + 1 }}"
+                data-tutor-mode-reason="{{ ctrl.claimTypology.phaseNotes[$index + 1].reason }}">
+                <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+                {{ ctrl.claimTypology.phaseNotes[$index + 1].reasonKey | translate }}
+            </p>
             <claim-typology-questions
                 ng-if="ctrl.claimTypology.byPhase[$index + 1]"
                 questions="ctrl.claimTypology.byPhase[$index + 1]"

@@ -18,6 +18,7 @@ const RECORD = Object.freeze({
     questionId:      101,
     questionKey:     "p2-q1",
     questionNumber:  1,
+    requestedMode:   "enhanced",
     tutorMode:       "basic",
     tutorModeReason: "no-inventory",
     createdAt:       "2026-10-27T10:00:00.000Z",
@@ -72,11 +73,12 @@ test("toTutorModeRecords: one record per tutor session, with its evaluations by 
         questionId:      101,
         questionKey:     "p2-q1",
         questionNumber:  1,
+        requestedMode:   null,
         tutorMode:       "basic",
         tutorModeReason: "typology-pending",
         createdAt:       "t1",
         evaluations:     { enhanced: 0, basic: 0, unreported: 2 },
-    });
+    }, "a session reported before #870 has no requested mode");
     assert.equal(records[2].tutorModeReason, null, "an enhanced session has no reason");
     assert.deepEqual(records[2].evaluations, { enhanced: 3, basic: 0, unreported: 1 });
     assert.equal(records[0].questionNumber, null);
@@ -103,6 +105,48 @@ test("listSessionTutorModes: reads the latest report per phase and question, and
     assert.match(queries[0].sql, /DISTINCT ON \(j\.phase_id, j\.instantiation_report->>'questionKey'\)/u);
     assert.match(queries[0].sql, /ORDER BY j\.phase_id, j\.instantiation_report->>'questionKey', j\.created_at DESC/u);
     assert.match(queries[1].sql, /adapter_result->'payload'->>'tutorMode'/u);
+    assert.match(queries[0].sql, /instantiation_report->>'requestedMode' AS requested_mode/u);
+});
+
+// A study comparing modes (#870): two phases, one chosen basic and one that
+// fell back to basic, tell their sessions apart by requestedMode and reason,
+// and the tutor's reported modes count the evaluations of both.
+test("toTutorModeRecords: the requested and effective mode per question, chosen or fallen back", () => {
+    const records = toTutorModeRecords([
+        {
+            phase_id:          10, phase_number:      1, question_id:       101, question_key:      "p1-q1",
+            tutor_mode:        "basic", tutor_mode_reason: "basic-selected", requested_mode:    "basic",
+        },
+        {
+            phase_id:          20, phase_number:      2, question_id:       201, question_key:      "p2-q1",
+            tutor_mode:        "basic", tutor_mode_reason: "no-inventory", requested_mode:    "enhanced",
+        },
+        {
+            phase_id:          20, phase_number:      2, question_id:       202, question_key:      "p2-q2",
+            tutor_mode:        "enhanced", tutor_mode_reason: null, requested_mode:    "enhanced",
+        },
+        {
+            phase_id:       20, phase_number:   2, question_id:    203, question_key:   "p2-q3",
+            tutor_mode:     "enhanced", requested_mode: "other",
+        },
+    ], [
+        { phase_id: 10, question_id: 101, tutor_mode: "basic", evaluations: 4 },
+        { phase_id: 20, question_id: 201, tutor_mode: "basic", evaluations: 2 },
+        { phase_id: 20, question_id: 202, tutor_mode: "enhanced", evaluations: 3 },
+    ]);
+
+    assert.deepEqual(records.map(({ questionKey, requestedMode, tutorMode, tutorModeReason }) => [
+        questionKey, requestedMode, tutorMode, tutorModeReason,
+    ]), [
+        ["p1-q1", "basic", "basic", "basic-selected"],
+        ["p2-q1", "enhanced", "basic", "no-inventory"],
+        ["p2-q2", "enhanced", "enhanced", null],
+        ["p2-q3", null, "enhanced", null],
+    ]);
+    assert.deepEqual(records[0].evaluations, { enhanced: 0, basic: 4, unreported: 0 },
+        "evaluations of a basic session count by the mode the tutor reports");
+    assert.deepEqual(records[1].evaluations, { enhanced: 0, basic: 2, unreported: 0 });
+    assert.deepEqual(records[2].evaluations, { enhanced: 3, basic: 0, unreported: 0 });
 });
 
 // ─── listActivityTutorModesForOwner ──────────────────────────────────────────

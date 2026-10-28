@@ -500,6 +500,10 @@ export class ExternalServicesRegistry {
         // serviceId -> designAnalysisInput({ design, designCase }): whether a
         // design-scoped adapter applies to a design, and its input (#848).
         this.designAnalysisInputBuilders = new Map();
+        // serviceId -> needsDesignAnalysis({ documentSchema, unit,
+        // configuration }): whether a consumer needs a design analysis in a
+        // phase with that configuration of it (#870).
+        this.designAnalysisNeedPredicates = new Map();
         // serviceId -> getCallbackTarget(requestPayload): the destination a
         // callback payload names, checked against its job (#815).
         this.callbackTargetResolvers = new Map();
@@ -619,6 +623,8 @@ export class ExternalServicesRegistry {
             || adapterModule.default?.validateDesignAnalysisDocument;
         const designAnalysisInput = adapterModule.designAnalysisInput
             || adapterModule.default?.designAnalysisInput;
+        const needsDesignAnalysis = adapterModule.needsDesignAnalysis
+            || adapterModule.default?.needsDesignAnalysis;
         const getCallbackTarget = adapterModule.getCallbackTarget
             || adapterModule.default?.getCallbackTarget;
 
@@ -651,6 +657,10 @@ export class ExternalServicesRegistry {
                 `[external-services] Adapter ${service.adapter} exports no designAnalysisInput(), `
                 + `so saving a design never runs ${normalizedService.id}.`
             );
+        }
+
+        if (typeof needsDesignAnalysis === "function") {
+            this.designAnalysisNeedPredicates.set(normalizedService.id, needsDesignAnalysis);
         }
 
         if (typeof getCallbackTarget === "function") {
@@ -1014,6 +1024,52 @@ export class ExternalServicesRegistry {
             .filter(service => (service.consumes ?? [])
                 .some(item => item.unit === unit && schemas.has(item.documentSchema)))
             .map(service => service.id);
+    }
+
+    /**
+     * Whether a consumer needs a design analysis `producerId` produces, in a
+     * phase whose stored configuration of the consumer is `configuration`
+     * (#870). The consumer's adapter may export
+     * `needsDesignAnalysis({ documentSchema, unit, configuration })`; without
+     * it, or when it throws, the consumer needs the analysis in every phase
+     * that enables it. The catalog's `consumes` still says what it may need.
+     *
+     * @param {string} consumerId
+     * @param {Object} options
+     * @param {string} options.producerId
+     * @param {string} [options.unit="question"]
+     * @param {Object} [options.configuration] - The phase's stored
+     *     configuration of the consumer, `{}` when it has none.
+     * @returns {boolean} false only when the adapter says so for every schema
+     *     the producer produces for `unit` that the consumer consumes.
+     */
+    consumerNeedsDesignAnalysis(
+        consumerId,
+        { producerId, unit = "question", configuration = {} } = {}
+    ) {
+        const needs = this.designAnalysisNeedPredicates.get(consumerId);
+        if (!needs) {
+            return true;
+        }
+
+        const produced = new Set((this.services.get(producerId)?.produces ?? [])
+            .filter(item => item.unit === unit)
+            .map(item => item.documentSchema));
+        const schemas = (this.services.get(consumerId)?.consumes ?? [])
+            .filter(item => item.unit === unit && produced.has(item.documentSchema))
+            .map(item => item.documentSchema);
+
+        try {
+            return schemas.length === 0 || schemas.some(documentSchema => needs({
+                documentSchema,
+                unit,
+                configuration: { ...configuration },
+            }) !== false);
+        } catch (error) {
+            console.warn(`[external-services] needsDesignAnalysis() of ${consumerId} failed; `
+                + "the phase is selected.", error?.message || error);
+            return true;
+        }
     }
 
     getServiceById(serviceId) {

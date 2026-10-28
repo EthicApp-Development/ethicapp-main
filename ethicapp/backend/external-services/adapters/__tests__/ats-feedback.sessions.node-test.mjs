@@ -86,9 +86,28 @@ function fakeTutor({ rejectContext = false, ignoreContext = false } = {}) {
                         errors: [{ path: "/evidenceInventory/facts/0/id", message: "bad" }],
                     });
                 }
+                if (body.evaluation_mode === "basic" && body.case_context) {
+                    throw badRequest({
+                        error:  "Conflicting evaluation mode",
+                        errors: { evaluation_mode: "basic never uses a case context" },
+                    });
+                }
                 sessions += 1;
                 const session = { session_id: `ats-${sessions}`, warnings: [], degraded: false };
-                if (body.case_context && ignoreContext) {
+                if (body.evaluation_mode) {
+                    // ethicapp-ai-additions#211: the requested mode narrows the
+                    // mode the context selects.
+                    const enhanced = body.evaluation_mode === "enhanced" && Boolean(body.case_context);
+                    Object.assign(session, {
+                        requestedMode: body.evaluation_mode,
+                        mode:          enhanced ? "enhanced" : "basic",
+                        ...(enhanced ? {} : {
+                            missing: body.evaluation_mode === "basic"
+                                ? []
+                                : ["evidenceInventory", "claimTypology"],
+                        }),
+                    });
+                } else if (body.case_context && ignoreContext) {
                     // A tutor that predates ethicapp-ai-additions#209.
                     session.warnings.push({
                         field: "case_context", verdict: "unsupported", message: "unknown",
@@ -119,9 +138,11 @@ function badRequest(responseBody) {
 }
 
 // The registry the tutor mode reads: which of the two analysis adapters the
-// session's pinned policy version allows.
-function fakeRegistry(usable = [INVENTORY_ID, TYPOLOGY_ID]) {
+// session's pinned policy version allows, and the tutor's descriptor fields
+// (`evaluation_mode` only with `declaresEvaluationMode`, #870).
+function fakeRegistry(usable = [INVENTORY_ID, TYPOLOGY_ID], { declaresEvaluationMode = false } = {}) {
     const calls = [];
+    const fields = [{ key: "llm_tier" }, ...(declaresEvaluationMode ? [{ key: "evaluation_mode" }] : [])];
     return {
         calls,
         async getSessionPolicyVersion(sessionId) {
@@ -132,7 +153,16 @@ function fakeRegistry(usable = [INVENTORY_ID, TYPOLOGY_ID]) {
             calls.push({ serviceIds, options });
             return serviceIds.filter(id => usable.includes(id));
         },
+        async getServiceInstanceConfiguration(serviceId, locale, options) {
+            calls.push({ descriptor: serviceId, options });
+            return { available: true, stale: false, fields };
+        },
     };
+}
+
+// A tutor with ethicapp-ai-additions#211, which declares evaluation_mode.
+function modeAwareRegistry(usable = [INVENTORY_ID, TYPOLOGY_ID]) {
+    return fakeRegistry(usable, { declaresEvaluationMode: true });
 }
 
 async function registerAdapter({
@@ -187,7 +217,9 @@ async function registerAdapter({
     return { dispatch, published };
 }
 
-function response(questionId, userId, comment) {
+// `serviceConfiguration` is the phase's configuration of the tutor, as the
+// registry passes it to the handler (#734).
+function response(questionId, userId, comment, serviceConfiguration = {}) {
     return {
         sessionId:       5,
         phaseId:         20,
@@ -196,6 +228,7 @@ function response(questionId, userId, comment) {
         designType:      "semantic_differential",
         correlationId:   `job-${questionId}-${userId}`,
         responsePayload: { comment },
+        serviceConfiguration,
     };
 }
 
@@ -303,6 +336,7 @@ test("the session follows the policy version it is pinned to", async () => {
     assert.deepEqual(registry.calls, [
         { sessionId: 5 },
         { serviceIds: [INVENTORY_ID, TYPOLOGY_ID], options: { policyVersion: { id: 3 } } },
+        { descriptor: "argumentation-tutor-system", options: { policyVersion: { id: 3 } } },
     ]);
 });
 
@@ -538,4 +572,157 @@ test("the evaluation's claim type, mode and evidence are recorded with the resul
     });
     assert.equal(Object.hasOwn(withoutType.callbacks[0].payload, "claimTypeId"), false);
     assert.equal(Object.hasOwn(withoutType.callbacks[0].payload, "tutorMode"), false);
+});
+
+// ─── The phase's requested mode (#870) ───────────────────────────────────────
+
+const BASIC_PHASE = Object.freeze({ evaluation_mode: "basic" });
+const ENHANCED_PHASE = Object.freeze({ evaluation_mode: "enhanced" });
+
+test("a phase set to basic opens basic sessions with basic-selected, no context and evaluation_mode", async () => {
+    const tutor = fakeTutor();
+    const { dispatch } = await registerAdapter({ tutor, registry: modeAwareRegistry() });
+
+    const first = await dispatch("student-response-submitted", response(101, 1, "Q1.", BASIC_PHASE));
+    const second = await dispatch("student-response-submitted", response(102, 1, "Q2.", BASIC_PHASE));
+
+    for (const creation of sessionCreations(tutor.requests)) {
+        assert.equal(creation.body.evaluation_mode, "basic");
+        assert.equal(Object.hasOwn(creation.body, "case_context"), false,
+            "a basic phase sends no context, though Q1 has a usable typology");
+        assert.equal(Object.hasOwn(creation.body, "claim_typology"), false);
+    }
+    for (const { reports } of [first, second]) {
+        assert.equal(reports[0].tutorMode, "basic");
+        assert.equal(reports[0].tutorModeReason, "basic-selected");
+        assert.equal(reports[0].requestedMode, "basic");
+        assert.equal(reports[0].tutorRequestedMode, "basic", "the tutor reports the requested mode");
+        assert.equal(Object.hasOwn(reports[0], "caseContext"), false);
+        assert.equal(Object.hasOwn(reports[0], "tutorModeMissing"), false);
+    }
+});
+
+test("a phase set to enhanced, or without a value, behaves as in #869 and sends evaluation_mode", async () => {
+    for (const configuration of [ENHANCED_PHASE, {}, { evaluation_mode: " Enhanced " }]) {
+        const tutor = fakeTutor();
+        const { dispatch } = await registerAdapter({ tutor, registry: modeAwareRegistry() });
+
+        const first = await dispatch("student-response-submitted", response(101, 1, "Q1.", configuration));
+        const second = await dispatch("student-response-submitted", response(102, 1, "Q2.", configuration));
+
+        const [enhanced, basic] = sessionCreations(tutor.requests);
+        const name = JSON.stringify(configuration);
+        assert.equal(enhanced.body.evaluation_mode, "enhanced", name);
+        assert.equal(enhanced.body.case_context.schemaVersion, "tutor-case-context/v1", name);
+        assert.equal(basic.body.evaluation_mode, "enhanced", name);
+        assert.equal(Object.hasOwn(basic.body, "case_context"), false, name);
+
+        assert.equal(first.reports[0].tutorMode, "enhanced", name);
+        assert.equal(first.reports[0].tutorModeReason, null, name);
+        assert.equal(first.reports[0].requestedMode, "enhanced", name);
+        assert.equal(first.reports[0].caseContext, "used", name);
+        assert.equal(second.reports[0].tutorMode, "basic", name);
+        assert.equal(second.reports[0].tutorModeReason, "typology-out-of-date", name);
+        assert.equal(second.reports[0].requestedMode, "enhanced", name);
+        assert.deepEqual(second.reports[0].tutorModeMissing, ["evidenceInventory", "claimTypology"], name);
+    }
+});
+
+test("a phase set to enhanced keeps every fallback reason of #869", async () => {
+    const cases = [
+        { options: { inventoryRow: null }, reason: "no-inventory" },
+        { options: { inventoryRow: { status: "failed", document: null } }, reason: "inventory-failed" },
+        { options: { registry: modeAwareRegistry([TYPOLOGY_ID]) }, reason: "inventory-disabled" },
+        { options: { typologyDocument: null }, reason: "no-typology" },
+        {
+            options: { typologyDocument: { ...TYPOLOGY_DOCUMENT, typologies: [] }, typologyStatus: "processing" },
+            reason:  "typology-pending",
+        },
+        {
+            options: { typologyDocument: { ...TYPOLOGY_DOCUMENT, typologies: [] }, typologyStatus: "failed" },
+            reason:  "typology-failed",
+        },
+        { options: { registry: modeAwareRegistry([INVENTORY_ID]) }, reason: "typology-disabled" },
+    ];
+
+    for (const { options, reason } of cases) {
+        const tutor = fakeTutor();
+        const { dispatch } = await registerAdapter({ tutor, registry: modeAwareRegistry(), ...options });
+
+        const { reports } = await dispatch("student-response-submitted", response(101, 1, "Q1.", ENHANCED_PHASE));
+
+        const [creation] = sessionCreations(tutor.requests);
+        assert.deepEqual(Object.keys(creation.body).sort(),
+            ["case_id", "case_text", "case_title", "evaluation_mode", "question"], reason);
+        assert.equal(creation.body.evaluation_mode, "enhanced", reason);
+        assert.equal(reports[0].tutorMode, "basic", reason);
+        assert.equal(reports[0].tutorModeReason, reason, reason);
+        assert.equal(reports[0].requestedMode, "enhanced", reason);
+    }
+});
+
+test("a tutor whose descriptor does not declare evaluation_mode is not sent it", async () => {
+    const tutor = fakeTutor();
+    const { dispatch } = await registerAdapter({ tutor, registry: fakeRegistry() });
+
+    const basic = await dispatch("student-response-submitted", response(101, 1, "Q1.", BASIC_PHASE));
+    const enhanced = await dispatch("student-response-submitted", response(102, 1, "Q2.", ENHANCED_PHASE));
+
+    const creations = sessionCreations(tutor.requests);
+    assert.ok(creations.every(creation => !Object.hasOwn(creation.body, "evaluation_mode")));
+    assert.equal(Object.hasOwn(creations[0].body, "case_context"), false, "basic still sends no context");
+    assert.equal(basic.reports[0].tutorModeReason, "basic-selected");
+    assert.equal(basic.reports[0].requestedMode, "basic");
+    assert.equal(Object.hasOwn(basic.reports[0], "tutorRequestedMode"), false);
+    assert.equal(enhanced.reports[0].tutorModeReason, "typology-out-of-date");
+    assert.equal(enhanced.reports[0].requestedMode, "enhanced");
+});
+
+test("a failure to read the inputs keeps the phase's requested mode", async () => {
+    const tutor = fakeTutor();
+    const subscribers = new Map();
+    await atsFeedback.register({
+        subscribe:               (hookName, handler) => subscribers.set(hookName, handler),
+        publishStudentResult:    async () => true,
+        aiAdditionsClient:       tutor.client,
+        atsFeedbackDependencies: {
+            resolveGroupId:          async () => 7,
+            resolveQuestionPosition: async () => POSITIONS[101],
+            loadSessionContext:      async () => ({ designId: 12, design: DESIGN, caseId: 34 }),
+            resolveQuestionText:     async () => "",
+            loadTutorModeInputs:     async () => { throw new Error("policy unavailable"); },
+        },
+    });
+
+    const reports = [];
+    await quietly(() => subscribers.get("student-response-submitted")(
+        response(101, 1, "Q1.", BASIC_PHASE),
+        { callback: async () => {}, reportInstantiation: async report => { reports.push(report); } }
+    ));
+
+    assert.equal(reports[0].tutorModeReason, "basic-selected");
+    assert.equal(reports[0].requestedMode, "basic");
+    assert.equal(Object.hasOwn(sessionCreations(tutor.requests)[0].body, "evaluation_mode"), false,
+        "the descriptor was not read, so the field is not sent");
+});
+
+test("the evaluation's requested mode is recorded with the result", async () => {
+    const tutor = fakeTutor();
+    const { dispatch } = await registerAdapter({ tutor });
+
+    const { callbacks } = await dispatch("callback-received", {
+        requestPayload: {
+            sessionId:     5,
+            phaseId:       20,
+            questionId:    101,
+            groupId:       7,
+            userId:        1,
+            summary:       "Fine.",
+            tutorMode:     "basic",
+            requestedMode: "basic",
+        },
+    });
+
+    assert.equal(callbacks[0].payload.tutorMode, "basic");
+    assert.equal(callbacks[0].payload.requestedMode, "basic");
 });

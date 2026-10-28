@@ -31,6 +31,7 @@ const EMPTY_SELECTION = Object.freeze({
     unitsReason:    null,
     producerUsable: false,
     tutorModes:     {},
+    tutorPhases:    [],
 });
 
 function ClaimTypologyPanelController(
@@ -116,6 +117,7 @@ function ClaimTypologyPanelController(
                 analysis:    vm.analysis,
                 questions,
                 unitsReason: selection.unitsReason,
+                tutorPhases: selection.tutorPhases,
             }),
             caseId:          vm.design?.caseId ?? null,
             canGenerate:     vm.canGenerate(),

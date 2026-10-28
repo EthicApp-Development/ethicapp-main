@@ -67,3 +67,23 @@ test("buildDesignCopyDocument tolerates designs without metainfo", () => {
 
     assert.deepEqual(copy.metainfo, { title: "Copy" });
 });
+
+// Comparing modes in a study (#870): the copy keeps the phase's tutor mode,
+// and changing it in the copy leaves the source as it was.
+test("buildDesignCopyDocument keeps the tutor's evaluation mode, independently of the source", () => {
+    const source = sourceDesign();
+    source.phases[0].externalServices.enabledServiceIds.push("argumentation-tutor-system");
+    source.phases[0].externalServices.configurations["argumentation-tutor-system"] = {
+        llm_tier:        "advanced",
+        evaluation_mode: "basic",
+    };
+
+    const copy = buildDesignCopyDocument(source, { title: "Copy", visibility: "private" });
+    const tutorConfiguration = () => copy.phases[0].externalServices
+        .configurations["argumentation-tutor-system"];
+
+    assert.equal(tutorConfiguration().evaluation_mode, "basic");
+    tutorConfiguration().evaluation_mode = "enhanced";
+    assert.equal(source.phases[0].externalServices
+        .configurations["argumentation-tutor-system"].evaluation_mode, "basic");
+});

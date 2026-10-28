@@ -8,8 +8,9 @@ import { plainTextOf } from "./rich-text-helper.js";
  * A design analysis is declared in the adapter catalog (#863): its producer
  * lists `produces: [{ documentSchema, unit }]` and the adapters that need it
  * list the same pair under `consumes`. A producer analyses only the units of
- * the phases that enable a consumer the AI service policy allows
- * (selectDesignAnalysisUnits()), so a phase without such a consumer costs
+ * the phases that enable a consumer the AI service policy allows and that
+ * needs them with the phase's configuration of it (#870,
+ * selectDesignAnalysisUnits()), so a phase without such a consumer costs
  * nothing.
  *
  * The one unit so far is `question`: a non-empty semantic differential
@@ -38,16 +39,21 @@ function isSemanticDifferential(design) {
 }
 
 /**
- * The questions of the phases that enable at least one of `serviceIds`.
+ * The questions of the phases that enable at least one of `serviceIds`, and,
+ * with `needs`, for which that service needs them.
  *
  * @param {Object} design - A design document (`designs.design`).
  * @param {Object} options
  * @param {Iterable<string>} options.serviceIds - The services a phase may enable.
+ * @param {(args: {serviceId: string, configuration: Object}) => boolean} [options.needs]
+ *     Whether an enabled service needs the phase's units, given the phase's
+ *     stored configuration of that service (`{}` when it has none, #870).
+ *     Without it every enabled service needs them.
  * @returns {Array<{id: string, phaseNumber: number, questionNumber: number,
  *     text: string, textHash: string}>} In design order. Empty for ranking
  *     designs, malformed designs and designs without such phases.
  */
-export function selectQuestionUnits(design, { serviceIds } = {}) {
+export function selectQuestionUnits(design, { serviceIds, needs = null } = {}) {
     const wanted = new Set(serviceIds ?? []);
     if (wanted.size === 0 || !isSemanticDifferential(design)) {
         return [];
@@ -55,8 +61,10 @@ export function selectQuestionUnits(design, { serviceIds } = {}) {
 
     const selected = [];
     design.phases.forEach((phase, phaseIndex) => {
-        const enabled = phaseExternalServices(phase).enabledServiceIds;
-        if (!enabled.some(serviceId => wanted.has(serviceId))) {
+        const { enabledServiceIds, configurations } = phaseExternalServices(phase);
+        const selecting = enabledServiceIds.some(serviceId => wanted.has(serviceId)
+            && (!needs || needs({ serviceId, configuration: configurations[serviceId] ?? {} })));
+        if (!selecting) {
             return;
         }
 
@@ -123,17 +131,37 @@ export const NO_UNITS_REASONS = Object.freeze({
     CONSUMERS_UNUSABLE: "consumers-unusable",
     // The phases of the usable consumers have no non-empty question.
     NO_QUESTIONS:       "no-questions",
+    // The phases of the usable consumers have questions, but no consumer
+    // needs them with the phase's configuration (#870), for example a tutor
+    // set to the basic mode.
+    NOT_NEEDED:         "not-needed",
 });
+
+// Whether a consumer needs the producer's analysis in a phase, given the
+// phase's configuration of that consumer (#870): the registry asks the
+// adapter (consumerNeedsDesignAnalysis()). A registry without the method
+// needs every phase, as before #870.
+function consumerNeeds(services, { producerId, unit }) {
+    if (typeof services.consumerNeedsDesignAnalysis !== "function") {
+        return null;
+    }
+    return ({ serviceId, configuration }) => services.consumerNeedsDesignAnalysis(
+        serviceId, { producerId, unit, configuration }
+    );
+}
 
 /**
  * The units a design analysis producer works on, for one design (#863), and
  * why there are none (#865): the units of the phases that enable at least one
- * usable consumer of a schema the producer produces for that unit. A consumer
- * is usable when the AI service policy gate allows it under the current
- * policy version, including its per-adapter switch (#864), and a usable AI
- * Additions connection exists for production adapters
+ * usable consumer of a schema the producer produces for that unit, and that
+ * needs it there. A consumer is usable when the AI service policy gate allows
+ * it under the current policy version, including its per-adapter switch
+ * (#864), and a usable AI Additions connection exists for production adapters
  * (`registry.usableServiceIds()`). A phase that enables an unusable consumer
- * and a usable one is selected.
+ * and a usable one is selected. A consumer needs a phase's units unless its
+ * adapter says otherwise for the phase's configuration of it
+ * (`registry.consumerNeedsDesignAnalysis()`, #870): the tutor needs the claim
+ * typology only in phases that request its enhanced mode.
  *
  * The policy is read only when a phase enables a consumer.
  *
@@ -143,12 +171,13 @@ export const NO_UNITS_REASONS = Object.freeze({
  * @param {string} [args.unit="question"] - Only `question` exists so far.
  * @param {Object} [dependencies]
  * @param {Object} [dependencies.registry] - The registry; the application's
- *     by default. It provides getDesignAnalysisConsumerIds() and
- *     usableServiceIds().
+ *     by default. It provides getDesignAnalysisConsumerIds(),
+ *     usableServiceIds() and, optionally, consumerNeedsDesignAnalysis().
  * @returns {Promise<{units: Array, reason: string|null, consumerIds: string[]}>}
  *     `units` as selectQuestionUnits() returns them; `reason` is one of
  *     NO_UNITS_REASONS when `units` is empty, else null; `consumerIds` are
- *     the usable consumers the design's phases enable.
+ *     the usable consumers the design's phases enable, whether or not they
+ *     need any unit.
  */
 export async function explainDesignAnalysisUnits(
     { producerId, design, unit = QUESTION_UNIT },
@@ -171,12 +200,21 @@ export async function explainDesignAnalysisUnits(
         return { units: [], reason: NO_UNITS_REASONS.CONSUMERS_UNUSABLE, consumerIds: [] };
     }
 
-    const units = selectQuestionUnits(design, { serviceIds: usable });
+    const units = selectQuestionUnits(design, {
+        serviceIds: usable,
+        needs:      consumerNeeds(services, { producerId, unit }),
+    });
     return {
         units,
-        reason:      units.length === 0 ? NO_UNITS_REASONS.NO_QUESTIONS : null,
+        reason:      units.length > 0 ? null : noQuestionsReason(design, usable),
         consumerIds: usable,
     };
+}
+
+function noQuestionsReason(design, usableConsumerIds) {
+    return selectQuestionUnits(design, { serviceIds: usableConsumerIds }).length > 0
+        ? NO_UNITS_REASONS.NOT_NEEDED
+        : NO_UNITS_REASONS.NO_QUESTIONS;
 }
 
 /**

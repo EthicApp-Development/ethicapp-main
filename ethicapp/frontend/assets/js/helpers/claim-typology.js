@@ -15,7 +15,7 @@ import {
     caseAnalysisState,
     isCaseAnalysisInFlight,
 } from "./case-analyses.js";
-import { claimTypologyUnitsReasonKey, tutorModeNote } from "./tutor-modes.js";
+import { claimTypologyUnitsReasonKey, tutorModeNote, tutorPhaseNotes } from "./tutor-modes.js";
 
 export const CLAIM_TYPOLOGY_SERVICE_ID = "case-analyst-claim-typology";
 export const CLAIM_TYPOLOGY_SCHEMA = "claim-typology/v1";
@@ -128,10 +128,13 @@ export function claimTypologyQuestions({ units, document = null, facts = {}, tut
 /**
  * The view the design viewer receives: the questions grouped by phase number,
  * the analysis state ("none" when there is no analysis yet), counts for the
- * summary, and why no question is covered (`unitsReasonKey`, a translation
- * key, or null).
+ * summary, why no question is covered (`unitsReasonKey`, a translation key,
+ * or null), and the note of each tutor phase whose configuration chose the
+ * basic mode (`phaseNotes`, by phase number, from the backend's
+ * `tutorPhases`, #870). The questions of such a phase are not units, so they
+ * are not listed as awaiting a typology.
  */
-export function claimTypologyView({ analysis, questions, unitsReason = null }) {
+export function claimTypologyView({ analysis, questions, unitsReason = null, tutorPhases = [] }) {
     const missing = questions.filter(question => !question.typology);
     const byPhase = {};
     for (const question of questions) {
@@ -145,6 +148,7 @@ export function claimTypologyView({ analysis, questions, unitsReason = null }) {
         outOfDateCount: questions.filter(question => question.outOfDate).length,
         missingCount:   analysis?.document ? missing.length : 0,
         unitsReasonKey: questions.length === 0 ? claimTypologyUnitsReasonKey(unitsReason) : null,
+        phaseNotes:     tutorPhaseNotes(tutorPhases),
     };
 }
 

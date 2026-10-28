@@ -3,9 +3,12 @@ import * as rpg2 from "../../db/rest-pg-2.js";
 import { findQuestionUnit, questionUnitId } from "../../helpers/design-analysis-units.js";
 import {
     decideTutorMode,
+    DEFAULT_REQUESTED_TUTOR_MODE,
     loadTutorModeInputs,
+    requestedTutorMode,
     TUTOR_MODE_REASONS,
     TUTOR_MODES,
+    tutorNeedsDesignAnalysis,
 } from "../../helpers/tutor-mode.js";
 import defaultAiAdditionsClient from "../../services/ai-additions-client.service.js";
 import {
@@ -28,6 +31,13 @@ export {
     getUiTranslations,
 };
 
+// Whether the tutor needs a design analysis it consumes (the claim typology)
+// in a phase with this configuration (#870): only phases that request the
+// enhanced mode do. The registry consults it when a producer selects units.
+export function needsDesignAnalysis({ configuration } = {}) {
+    return tutorNeedsDesignAnalysis({ configuration });
+}
+
 // The Argumentation Tutor API under the AI Additions connection's base URL (#814).
 export const ATS_API_BASE_PATH = "/argumentation-tutor/api/v2";
 
@@ -48,29 +58,39 @@ const BASIC_MODE_REASON_BY_OUTCOME = Object.freeze({
  * decision taken before creating it (helpers/tutor-mode.js), corrected by the
  * tutor's answer when a case context was offered. A context withheld because
  * the tutor recently ignored one counts as `tutor-unsupported`.
+ * `requestedMode` is the mode the phase requests (#870), whatever the
+ * outcome.
  *
- * @param {{mode: string, reason: string|null, caseContext: Object|null}} decision
+ * @param {{mode: string, reason: string|null, caseContext: Object|null,
+ *     requestedMode?: string}} decision
  * @param {boolean} offered - Whether the case context was sent.
  * @param {Object} creation - From createAtsSession().
- * @returns {{tutorMode: string, tutorModeReason: string|null}}
+ * @returns {{tutorMode: string, tutorModeReason: string|null, requestedMode: string}}
  */
 export function sessionTutorMode(decision, offered, creation) {
+    const requestedMode = decision?.requestedMode ?? DEFAULT_REQUESTED_TUTOR_MODE;
     if (!decision?.caseContext) {
-        return { tutorMode: TUTOR_MODES.BASIC, tutorModeReason: decision?.reason ?? null };
+        return {
+            tutorMode:       TUTOR_MODES.BASIC,
+            tutorModeReason: decision?.reason ?? null,
+            requestedMode,
+        };
     }
     if (!offered) {
         return {
             tutorMode:       TUTOR_MODES.BASIC,
             tutorModeReason: TUTOR_MODE_REASONS.TUTOR_UNSUPPORTED,
+            requestedMode,
         };
     }
     if (creation?.caseContext === CASE_CONTEXT_OUTCOMES.USED) {
-        return { tutorMode: TUTOR_MODES.ENHANCED, tutorModeReason: null };
+        return { tutorMode: TUTOR_MODES.ENHANCED, tutorModeReason: null, requestedMode };
     }
     return {
         tutorMode:       TUTOR_MODES.BASIC,
         tutorModeReason: BASIC_MODE_REASON_BY_OUTCOME[creation?.caseContext]
             ?? TUTOR_MODE_REASONS.CONTEXT_REJECTED,
+        requestedMode,
     };
 }
 
@@ -442,16 +462,18 @@ function createAtsFeedbackHandlers({ dependencies, publishStudentResult }) {
     }
 
     // The mode the question's session would get (helpers/tutor-mode.js), with
-    // its case context in the enhanced mode. Reading the inputs never fails
+    // its case context in the enhanced mode. The phase requests a mode with
+    // its configuration of the tutor (#870). Reading the inputs never fails
     // the response: a failed read is a basic-mode reason.
     async function questionTutorMode({ context, sessionContext, tutorQuestion }) {
+        const options = { requestedMode: requestedTutorMode(context.serviceConfiguration) };
         try {
             const inputs = await dependencies.loadTutorModeInputs({
                 caseId:    sessionContext?.caseId ?? null,
                 designId:  sessionContext?.designId ?? null,
                 sessionId: context.sessionId,
             });
-            return decideTutorMode(inputs, tutorQuestion);
+            return decideTutorMode(inputs, tutorQuestion, options);
         } catch (error) {
             console.warn("[external-services][ats] Unable to read the inputs of the enhanced mode; "
                 + "the tutor session runs in the basic mode.", {
@@ -460,7 +482,7 @@ function createAtsFeedbackHandlers({ dependencies, publishStudentResult }) {
                 error:      normalizeText(error?.message) || "Unknown error",
             });
             const unreadable = { inventory: { enabled: true, loadFailed: true } };
-            return decideTutorMode(unreadable, tutorQuestion);
+            return decideTutorMode(unreadable, tutorQuestion, options);
         }
     }
 
@@ -506,6 +528,7 @@ function createAtsFeedbackHandlers({ dependencies, publishStudentResult }) {
             metadata,
             serviceConfiguration: context.serviceConfiguration,
             caseContext:          offered ? decision.caseContext : null,
+            evaluationMode:       decision.evaluationMode,
             request:              body => requestAtsJson("/sessions", { method: "POST", body }),
         });
         noteContextOutcome(created.creation, questionKey);
