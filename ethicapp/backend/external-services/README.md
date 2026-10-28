@@ -1231,26 +1231,45 @@ unit:
    under the current version: their AI Additions services are allowed, the
    version does not switch them off (`disabledAdapterIds`, #864), and an AI
    Additions connection is stored (see "Usability").
-4. The questions of the phases that enable a remaining consumer are returned,
-   in design order. A phase that enables a switched-off consumer and a usable
-   one is selected.
+4. A remaining consumer may need the analysis only in some phases, depending
+   on the phase's configuration of it (#870). Its adapter says so by
+   exporting `needsDesignAnalysis({ documentSchema, unit, configuration })`,
+   where `configuration` is the phase's stored
+   `externalServices.configurations[consumerId]` (`{}` when it has none);
+   `registry.consumerNeedsDesignAnalysis(consumerId, { producerId, unit,
+   configuration })` calls it for each schema the producer produces and the
+   consumer consumes. An adapter without it, or one that throws, needs every
+   phase that enables it. The catalog's `consumes` still declares what the
+   consumer may need; the predicate only narrows it per phase. The tutor
+   needs the claim typology only in phases whose requested mode is
+   `enhanced` (see "The tutor's modes").
+5. The questions of the phases that enable a remaining consumer that needs
+   them are returned, in design order. A phase that enables a switched-off
+   consumer and a usable one is selected, and so is a phase where one
+   consumer does not need the analysis and another does.
 
 Adding a consumer of an existing analysis is therefore a catalog change: its
 phases join the producer's selection, and the producer's input hash changes
 for designs that use it, so their next save runs the analysis again.
-Switching a consumer off removes its phases the same way.
+Switching a consumer off removes its phases the same way, and so does a
+phase configuration that makes a consumer stop needing it: switching a tutor
+phase to `basic` drops its questions from the claim typology, and switching
+it back requests them again.
 
 `explainDesignAnalysisUnits()` returns the same selection as `{ units,
 reason, consumerIds }` (#865): `reason` says why nothing is selected
 (`not-applicable` for a ranking design or an unknown unit, `no-consumer`,
 `consumers-unusable` when the policy, a per-adapter switch or a missing
-connection leaves no consumer usable, `no-questions`), and `consumerIds` are
-the usable consumers the design enables. The design view reads both through
-the analysis endpoint (see "API"), so the backend is the one source of the
-selection.
+connection leaves no consumer usable, `no-questions`, and `not-needed` when
+the consumers' phases have questions but no consumer needs them with the
+phase's configuration, #870), and `consumerIds` are the usable consumers the
+design enables, whether or not they need any unit. The design view reads both
+through the analysis endpoint (see "API"), so the backend is the one source of
+the selection.
 
-`selectQuestionUnits(design, { serviceIds })` and `findQuestionUnit(design,
-position, { serviceIds })` select by enabled service ids without the policy.
+`selectQuestionUnits(design, { serviceIds, needs })` and
+`findQuestionUnit(design, position, { serviceIds })` select by enabled service
+ids without the policy (`needs` is the optional per-phase predicate above).
 The tutor finds its own question with them (`findTutorQuestion()` in
 `adapters/ats-feedback.adapter.js`), and `mock-design-analysis` selects the
 tutor's questions with them.
@@ -1426,9 +1445,29 @@ modes (#865, epic #861; ethicapp-ai-additions#209):
 - **Basic:** the session receives no context, and the tutor evaluates as it
   did before #647.
 
-The mode is chosen automatically, fixed when the session is created and kept
-until the phase ends; an input that arrives later does not upgrade a running
-session. Teachers choose nothing.
+The teacher chooses the requested mode per phase (#870), and EthicApp
+decides the effective mode from it. The effective mode is fixed when the
+session is created and kept until the phase ends; an input that arrives later
+does not upgrade a running session.
+
+- **The setting.** It is the tutor's own instance configuration field
+  `evaluation_mode` (`enhanced` | `basic`, default `enhanced`,
+  ethicapp-ai-additions#211), stored like any other phase setting in
+  `phase.externalServices.configurations["argumentation-tutor-system"]`. The
+  design editor shows it with the descriptor-driven form ("Modo de
+  evaluación": "Mejorado" / "Básico", or "Evaluation Mode": "Enhanced" /
+  "Basic", from the descriptor's own translations), with no bespoke UI.
+  Saving validates it against the descriptor ("Configuration validation"),
+  and copies keep it ("Copies"). A phase without a stored value requests
+  `enhanced`, the descriptor's default (`requestedTutorMode()` and
+  `DEFAULT_REQUESTED_TUTOR_MODE` in `helpers/tutor-mode.js`).
+- **`enhanced`**, or no value, selects the mode automatically by the rule
+  below, with its fallback to basic.
+- **`basic`** runs basic on purpose: the reason is `basic-selected`, before
+  any other; the session receives no `case_context`; and the phase's
+  questions need no claim typology, so the typology is not generated for
+  them (the tutor adapter's `needsDesignAnalysis()`, see "Producers,
+  consumers and units").
 
 - **Session key.** The first response to a question creates its session. The
   key is `<sessionId>:<phaseId>:<question key>`, where the question key is the
@@ -1444,9 +1483,10 @@ session. Teachers choose nothing.
   `helpers/design-analysis-units.js`), the same text the typology answers.
   Without one it is the runtime question's text, then the phase's first
   question, then its instructions, as before #850.
-- **The rule.** `decideTutorMode()` in `helpers/tutor-mode.js` is the one
-  place that decides the mode, for session creation and for the design view
-  alike. A question runs enhanced when the case's
+- **The rule.** `decideTutorMode(inputs, question, { requestedMode })` in
+  `helpers/tutor-mode.js` is the one place that decides the mode, for session
+  creation and for the design view alike. A phase that requests `basic` is
+  `basic-selected`. Otherwise a question runs enhanced when the case's
   `case-analyst-evidence-inventory` analysis has a document, the design's
   `case-analyst-claim-typology` analysis has a typology for the question
   whose `questionTextHash` matches the question text, and both adapters are
@@ -1461,6 +1501,7 @@ session. Teachers choose nothing.
 
   | Reason | When |
   | --- | --- |
+  | `basic-selected` | The phase requests the basic mode (`evaluation_mode: basic`, #870). A choice, not a fallback. |
   | `inventory-disabled` | The evidence inventory adapter is switched off, or its service is not allowed. |
   | `inventory-failed` | The case has no inventory because its generation failed or never answered, or it could not be read. |
   | `no-inventory` | The case has no inventory (case analyses are chosen when the case is created). |
@@ -1485,7 +1526,7 @@ session. Teachers choose nothing.
   inventory does not have are left out; `relatedFacts`, `questionId`,
   `phaseId` and `questionTextHash` are not sent. In the basic mode the body
   has no context. The deprecated top-level `claim_typology` is never sent: the
-  tutor answers 400 when it comes with `case_context`.
+  tutor answers 400 when it comes with `case_context` or `evaluation_mode`.
 
   ```json
   {
@@ -1507,6 +1548,25 @@ session. Teachers choose nothing.
     }
   }
   ```
+- **Requested mode.** The body also carries `evaluation_mode`, the phase's
+  requested mode (`enhanced` for a phase without a stored value), when the
+  tutor's capability descriptor declares the field (#870). The descriptor is
+  read through the registry's cached `getServiceInstanceConfiguration()`
+  under the session's pinned policy version. A tutor that predates
+  ethicapp-ai-additions#211 would report the field as `unsupported` with
+  `degraded: true`, so it is not sent the field at all; a `basic` phase still
+  sends it no context. The stored value itself is never copied into the
+  body: the decision sends `basic` or `enhanced`, and keeps it when a
+  rejected `llm_tier` makes the session be created again with the tutor's
+  defaults. The tutor answers:
+
+  | Sent | Tutor's answer |
+  | --- | --- |
+  | `evaluation_mode: basic`, no context | `requestedMode: "basic"`, `mode: "basic"`, `missing: []` |
+  | `evaluation_mode: enhanced` with a complete context | `requestedMode` and `mode` both `enhanced` |
+  | `evaluation_mode: enhanced`, parts missing or no context | `mode: "basic"` and `missing` |
+  | `evaluation_mode: basic` with a context (never sent) | `400 {"error": "Conflicting evaluation mode"}` |
+  | neither the field nor a context | as before ethicapp-ai-additions#211, with no mode keys |
 - **Fallbacks.** When the tutor answers `400` naming the case context, the
   session is created again without it (`context-rejected`). A tutor that
   answers without `mode` ignored the context (`tutor-unsupported`); the next
@@ -1515,27 +1575,38 @@ session. Teachers choose nothing.
   Each of these two outcomes is logged once per process. A failure to read
   the inputs never fails the response: the session runs basic.
 - **Report.** The instantiation report of the response that created the
-  session carries `questionKey`, `tutorMode` (`enhanced` or `basic`) and
+  session carries `questionKey`, `requestedMode` (the phase's requested mode,
+  #870), `tutorMode` (the effective mode, `enhanced` or `basic`) and
   `tutorModeReason` (null in the enhanced mode). When a context was offered,
   `caseContext` says what became of it (`used`, `rejected` with
-  `caseContextRejection`, `downgraded` or `unsupported`), and
-  `tutorModeMissing` lists the parts the tutor reported missing.
+  `caseContextRejection`, `downgraded` or `unsupported`). `tutorModeMissing`
+  lists the parts the tutor reported missing, and `tutorRequestedMode` is the
+  `requestedMode` the tutor echoed, when it reports them.
 - **Evaluations.** The tutor's result callback carries, at the top level of
   its payload, `claimTypeId` (`AF#` or null) and `claimTypeRationale` (up to
   600 characters) when the session has a typology, and `tutorMode` in every
-  analysis of a session opened with `case_context`, with `evidenceFactIds`
-  (`EV#`) and `unsupportedClaims` (`{ statement, exclusionId }`, at most 10)
-  in the enhanced mode. The `callback-received` handler records them in the
-  result's `adapter_result` (`external_service_results`, next to the raw
-  payload). The feedback published to the student keeps its shape and never
-  includes them.
+  analysis of a session opened with `case_context` or `evaluation_mode`, with
+  `requestedMode` (the session's `evaluation_mode`, #870) and, in the
+  enhanced mode, `evidenceFactIds` (`EV#`) and `unsupportedClaims`
+  (`{ statement, exclusionId }`, at most 10). The `callback-received` handler
+  records them in the result's `adapter_result` (`external_service_results`,
+  next to the raw payload). The feedback published to the student keeps its
+  shape and never includes them.
 - **Teachers.** The design view shows, per tutor question, the mode it can
   expect as of now: "Advanced evaluation available", or "The tutor will
   evaluate without the advanced capabilities" with the reason, and a link to
-  the case or to generate the typology again when that helps. The activity
-  view warns, per tutor question with a session in the basic mode, with the
-  reason; it reads `GET /activities/:session_id/tutor-modes` again whenever
-  the registry announces a new tutor session (`onExternalServiceInstantiated`).
+  the case or to generate the typology again when that helps. A phase set to
+  basic shows instead a neutral note, "El tutor evaluará en modo básico,
+  según la configuración de la fase" ("The tutor will evaluate in the basic
+  mode, as the phase's settings choose";
+  `[data-testid="tutor-mode-phase-note"][data-tutor-mode-reason="basic-selected"]`),
+  and its questions are not listed as awaiting a typology. The activity view
+  warns, per tutor question with a session that fell back to the basic mode,
+  with the reason (`[data-testid="tutor-mode-warning"]`); sessions whose
+  phase chose it get one neutral note per phase instead
+  (`[data-testid="tutor-mode-basic-selected"]`). It reads
+  `GET /activities/:session_id/tutor-modes` again whenever the registry
+  announces a new tutor session (`onExternalServiceInstantiated`).
 
 `GET /activities/:session_id/tutor-modes` (`controllers/activity-tutor-modes.js`,
 `helpers/tutor-mode-records.js`) is for the activity's creator only: students
@@ -1552,17 +1623,50 @@ question by the mode the tutor reported:
       {
         "phaseId": 31, "phaseNumber": 1, "questionId": 88,
         "questionKey": "p1-q2", "questionNumber": 2,
+        "requestedMode": "enhanced",
         "tutorMode": "basic", "tutorModeReason": "no-inventory",
         "createdAt": "2026-10-27T14:00:00.000Z",
-        "evaluations": { "enhanced": 0, "basic": 0, "unreported": 3 }
+        "evaluations": { "enhanced": 0, "basic": 3, "unreported": 0 }
+      },
+      {
+        "phaseId": 32, "phaseNumber": 2, "questionId": 91,
+        "questionKey": "p2-q1", "questionNumber": 1,
+        "requestedMode": "basic",
+        "tutorMode": "basic", "tutorModeReason": "basic-selected",
+        "createdAt": "2026-10-27T14:05:00.000Z",
+        "evaluations": { "enhanced": 0, "basic": 2, "unreported": 0 }
       }
     ]
   }
 }
 ```
 
-Evaluations of sessions opened without a context report no mode and count as
-`unreported`.
+`requestedMode` is null for sessions created before #870. The tutor reports a
+mode in every evaluation of a session opened with `case_context` or
+`evaluation_mode`, so with a tutor that declares `evaluation_mode` the
+evaluations of basic sessions count by mode. Only evaluations of sessions
+opened with neither (an older tutor, or sessions from before #870) report no
+mode and count as `unreported`.
+
+#### Comparing modes in a study
+
+The mode is a per-phase design setting, so a study compares groups by
+activity, not inside one activity:
+
+1. Duplicate the design (`POST /designs/:id/duplicate`); the copy keeps every
+   phase's settings, including `evaluation_mode`.
+2. In the copy, change the tutor's evaluation mode of the phases under study,
+   and save. Switching a phase to `basic` drops its questions from the claim
+   typology; switching it to `enhanced` requests them.
+3. Launch one activity per group, each from its design.
+4. Read `GET /activities/:id/tutor-modes` for each activity: `requestedMode`
+   and `tutorMode` per question tell "chose basic" (`basic-selected`) from
+   "fell back to basic" (any other reason), and `evaluations` counts the
+   evaluations by the mode the tutor reported. The evaluations themselves,
+   with `tutorMode` and `requestedMode`, are in
+   `external_service_results.adapter_result`.
+
+Assigning modes to groups of students inside one activity is out of scope.
 
 ### Recording results from an adapter
 
@@ -1592,7 +1696,7 @@ teachers `404 DESIGN_NOT_FOUND`, also for public designs.
 | Endpoint | Description |
 | --- | --- |
 | `GET /designs/:id/analyses` | The design's analyses with status and timestamps, without documents. |
-| `GET /designs/:id/analyses/:serviceId` | One analysis with what the design view renders next to it (#865): `{ analysis, units, unitsReason, producerUsable, tutorModes }`. `analysis` is the analysis with its document, or `null` while a design service has produced nothing for the design. `units` are the units the service currently selects (`{ id, phaseNumber, questionNumber, text, textHash }`, see "Producers, consumers and units"), `unitsReason` why there are none (else `null`), `producerUsable` whether the service could generate now, and `tutorModes` the expected tutor mode of each tutor question when the tutor is a usable consumer (`{ "p1-q1": { "mode": "basic", "reason": "typology-out-of-date" } }`, see "The tutor's modes"). `404 DESIGN_ANALYSIS_NOT_FOUND` when the service does not analyse designs and the design has no analysis from it. |
+| `GET /designs/:id/analyses/:serviceId` | One analysis with what the design view renders next to it (#865): `{ analysis, units, unitsReason, producerUsable, tutorModes, tutorPhases }`. `analysis` is the analysis with its document, or `null` while a design service has produced nothing for the design. `units` are the units the service currently selects (`{ id, phaseNumber, questionNumber, text, textHash }`, see "Producers, consumers and units"), `unitsReason` why there are none (else `null`), `producerUsable` whether the service could generate now, `tutorModes` the expected tutor mode of each tutor question when the tutor is a usable consumer, including the questions of phases set to basic, which are not units (`{ "p1-q1": { "mode": "basic", "reason": "typology-out-of-date", "requestedMode": "enhanced" } }`, see "The tutor's modes"), and `tutorPhases`, under the same condition, the mode each tutor phase requests (`[{ "phaseNumber": 2, "requestedMode": "basic", "reason": "basic-selected" }]`, `reason` null for `enhanced`; else `[]`, #870). `404 DESIGN_ANALYSIS_NOT_FOUND` when the service does not analyse designs and the design has no analysis from it. |
 | `PUT /designs/:id/analyses/:serviceId` | Body `{ document }`, validated by the adapter. Answers `405 DESIGN_ANALYSIS_NOT_EDITABLE` without a validator (every service today), `409 DESIGN_LOCKED` on a locked design, `400 DESIGN_ANALYSIS_DOCUMENT_INVALID` with `details`, and `409 DESIGN_ANALYSIS_PROCESSING` while a generation is in flight. |
 | `POST /designs/:id/analyses/:serviceId/generate` | Reserves a new generation with the input hash of the service's `designAnalysisInput()`, sends `design-updated` (`trigger: "generate"`, with the current design) to that service only, and answers `202` with the reserved analysis. It runs whatever the stored input hash. Answers `404 DESIGN_ANALYSIS_SERVICE_NOT_FOUND` when the service is not registered with the `design` scope, `409 DESIGN_LOCKED` on a locked design, `503 DESIGN_ANALYSIS_SERVICE_DISABLED` when the service is not usable, `409 DESIGN_ANALYSIS_NOT_APPLICABLE` when its input export answers `null` for the design, `409 DESIGN_CHANGED` when a save changed (or a launch locked) the design while the input was prepared (try again), and `409 DESIGN_ANALYSIS_PROCESSING` while a generation is in flight. It also recovers stale generations. |
 

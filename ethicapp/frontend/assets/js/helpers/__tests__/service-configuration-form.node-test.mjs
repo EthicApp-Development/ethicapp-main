@@ -223,3 +223,46 @@ describe("lifecycle notices (#733)", () => {
     });
 });
 
+// The tutor's evaluation mode (#870, ethicapp-ai-additions#211) needs no
+// bespoke UI: the descriptor's enum field, translated by the descriptor's
+// locale, renders as a select whose "default" option names "Enhanced".
+describe("the tutor's evaluation_mode field (#870)", () => {
+    const entry = (value, label) => ({ value, label, status: "active", supersededBy: null });
+    const MODE_FIELDS = {
+        es_CL: field("evaluation_mode", "enum",
+            { entries: [entry("enhanced", "Mejorado"), entry("basic", "Básico")] },
+            { default: "enhanced", label: "Modo de evaluación", group: "General", order: 7 }),
+        en_US: field("evaluation_mode", "enum",
+            { entries: [entry("enhanced", "Enhanced"), entry("basic", "Basic")] },
+            { default: "enhanced", label: "Evaluation Mode", group: "General", order: 7 }),
+    };
+
+    it("renders as a select after the tier, defaulting to enhanced, in both locales", () => {
+        for (const [locale, expectedDefault] of [["es_CL", "Mejorado"], ["en_US", "Enhanced"]]) {
+            const modeField = MODE_FIELDS[locale];
+            const sections = buildFieldSections([TIER, modeField]);
+
+            assert.deepEqual(sections.map(section => section.fields.map(f => f.key)),
+                [["llm_tier", "evaluation_mode"]], locale);
+            assert.equal(controlKind(modeField), "select");
+            assert.equal(defaultText(modeField), expectedDefault, locale);
+            assert.deepEqual(enumOptions(modeField, undefined).map(option => option.value),
+                ["enhanced", "basic"], locale);
+        }
+    });
+
+    it("stores basic, and removes the value to go back to the default", () => {
+        const modeField = MODE_FIELDS.en_US;
+        const configurations = {};
+
+        setConfigurationValue(configurations, "argumentation-tutor-system", "evaluation_mode",
+            readControlValue(modeField, "basic"));
+        assert.deepEqual(configurations, { "argumentation-tutor-system": { evaluation_mode: "basic" } });
+        assert.deepEqual(configurationErrors([modeField], configurations["argumentation-tutor-system"]), {});
+
+        setConfigurationValue(configurations, "argumentation-tutor-system", "evaluation_mode",
+            readControlValue(modeField, ""));
+        assert.deepEqual(configurations, {}, "an unset mode is the descriptor default");
+    });
+});
+

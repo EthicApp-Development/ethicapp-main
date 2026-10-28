@@ -225,3 +225,89 @@ test("explainDesignAnalysisUnits: why nothing is selected", async () => {
         consumerIds: ["consumer-a"],
     });
 });
+
+// ─── Consumers that depend on the phase's configuration (#870) ───────────────
+
+// A registry whose consumers need the analysis unless the phase's
+// configuration of them says `{ needs: false }`.
+function configurableRegistry(options) {
+    const registry = fakeRegistry(options);
+    registry.calls.needs = [];
+    registry.consumerNeedsDesignAnalysis = (serviceId, args) => {
+        registry.calls.needs.push({ serviceId, ...args });
+        return args.configuration.needs !== false;
+    };
+    return registry;
+}
+
+function phaseOf(enabledServiceIds, configurations, text) {
+    return { externalServices: { enabledServiceIds, configurations }, questions: [{ q_text: text }] };
+}
+
+test("selectQuestionUnits: `needs` drops the phases where no enabled service needs the units", () => {
+    const design = {
+        type:   "semantic_differential",
+        phases: [
+            phaseOf(["consumer-a"], { "consumer-a": { needs: false } }, "Not needed?"),
+            phaseOf(["consumer-a"], {}, "Needed?"),
+            phaseOf(["consumer-a", "consumer-b"], { "consumer-a": { needs: false } }, "B needs it?"),
+        ],
+    };
+    const calls = [];
+    const needs = ({ serviceId, configuration }) => {
+        calls.push({ serviceId, configuration });
+        return configuration.needs !== false;
+    };
+
+    assert.deepEqual(selectQuestionUnits(design, { serviceIds: ["consumer-a", "consumer-b"], needs })
+        .map(unit => unit.id), ["p2-q1", "p3-q1"]);
+    assert.deepEqual(calls[1], { serviceId: "consumer-a", configuration: {} },
+        "a phase without a stored configuration passes {}");
+    assert.deepEqual(selectQuestionUnits(design, { serviceIds: ["consumer-a"] }).map(unit => unit.id),
+        ["p1-q1", "p2-q1", "p3-q1"], "without `needs` every enabling phase is selected");
+});
+
+test("explainDesignAnalysisUnits: the registry says per phase whether a consumer needs the analysis", async () => {
+    const design = {
+        type:   "semantic_differential",
+        phases: [
+            phaseOf(["consumer-a"], { "consumer-a": { needs: false, other: 1 } }, "Not needed?"),
+            phaseOf(["consumer-a"], { "consumer-a": { needs: true } }, "Needed?"),
+        ],
+    };
+    const registry = configurableRegistry({ consumers: { producer: ["consumer-a"] } });
+
+    const explained = await explainDesignAnalysisUnits({ producerId: "producer", design }, { registry });
+
+    assert.deepEqual(explained.units.map(unit => unit.id), ["p2-q1"]);
+    assert.equal(explained.reason, null);
+    assert.deepEqual(explained.consumerIds, ["consumer-a"]);
+    assert.deepEqual(registry.calls.needs[0], {
+        serviceId:     "consumer-a",
+        producerId:    "producer",
+        unit:          "question",
+        configuration: { needs: false, other: 1 },
+    });
+});
+
+test("explainDesignAnalysisUnits: not-needed when the consumers' phases have questions nobody needs", async () => {
+    const design = {
+        type:   "semantic_differential",
+        phases: [phaseOf(["consumer-a"], { "consumer-a": { needs: false } }, "Not needed?")],
+    };
+    const registry = configurableRegistry({ consumers: { producer: ["consumer-a"] } });
+
+    assert.deepEqual(await explainDesignAnalysisUnits({ producerId: "producer", design }, { registry }), {
+        units:       [],
+        reason:      NO_UNITS_REASONS.NOT_NEEDED,
+        consumerIds: ["consumer-a"],
+    });
+
+    const emptyAndNotNeeded = {
+        type:   "semantic_differential",
+        phases: [phaseOf(["consumer-a"], { "consumer-a": { needs: false } }, " ")],
+    };
+    assert.equal((await explainDesignAnalysisUnits(
+        { producerId: "producer", design: emptyAndNotNeeded }, { registry }
+    )).reason, NO_UNITS_REASONS.NO_QUESTIONS, "no question at all is still no-questions");
+});

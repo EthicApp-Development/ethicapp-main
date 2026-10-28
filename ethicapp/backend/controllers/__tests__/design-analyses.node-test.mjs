@@ -55,7 +55,11 @@ const UNIT = Object.freeze({
 const SELECTION = Object.freeze({
     units:       [UNIT],
     unitsReason: null,
-    tutorModes:  { "p1-q1": { mode: "basic", reason: "no-inventory" } },
+    tutorModes:  { "p1-q1": { mode: "basic", reason: "no-inventory", requestedMode: "enhanced" } },
+    tutorPhases: [
+        { phaseNumber: 1, requestedMode: "enhanced", reason: null },
+        { phaseNumber: 2, requestedMode: "basic", reason: "basic-selected" },
+    ],
 });
 
 // What the adapter's designAnalysisInput() returns for DESIGN_ROW.
@@ -177,7 +181,9 @@ test("getDesignAnalysisForOwner: one analysis with its document, its units and t
     assert.deepEqual(body.result.units, [UNIT]);
     assert.equal(body.result.unitsReason, null);
     assert.equal(body.result.producerUsable, true);
-    assert.deepEqual(body.result.tutorModes, { "p1-q1": { mode: "basic", reason: "no-inventory" } });
+    assert.deepEqual(body.result.tutorModes, SELECTION.tutorModes);
+    assert.deepEqual(body.result.tutorPhases, SELECTION.tutorPhases,
+        "the tutor's phases and the mode each requests (#870)");
     assert.deepEqual(calls.describeUnits, [{ serviceId: "svc-ready", designRow: DESIGN_ROW }]);
 });
 
@@ -201,6 +207,7 @@ test("getDesignAnalysisForOwner: a design service without an analysis yet still 
         unitsReason:    "consumers-unusable",
         producerUsable: false,
         tutorModes:     {},
+        tutorPhases:    [],
     });
 });
 

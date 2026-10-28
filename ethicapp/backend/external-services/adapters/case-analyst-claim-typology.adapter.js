@@ -155,7 +155,8 @@ export function caseAnalystLanguage(languageCode) {
  * semantic differential questions of the phases that enable an adapter which
  * consumes claim-typology/v1 per question (the catalog's `consumes`, #863)
  * and which the current AI service policy allows, including its per-adapter
- * switch (selectDesignAnalysisUnits()).
+ * switch, and that needs it with the phase's configuration, so a tutor phase
+ * set to the basic mode is left out (selectDesignAnalysisUnits(), #870).
  *
  * Questions keep their positional ids (`p<phase>-q<question>`); a design with
  * more than MAX_CLAIM_TYPOLOGY_QUESTIONS selected questions sends the first

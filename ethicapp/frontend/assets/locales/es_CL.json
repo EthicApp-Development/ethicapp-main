@@ -612,6 +612,7 @@
 	"claim_typology_units_no_consumer": "Ninguna fase de este diseño usa un servicio que necesite la tipología de respuestas, por lo que no cubre ninguna pregunta.",
 	"claim_typology_units_consumers_unusable": "Los servicios que usan la tipología de respuestas, como el tutor de argumentación, están desactivados, por lo que no se generará una tipología para las preguntas de este diseño.",
 	"claim_typology_units_no_questions": "Las fases que usan la tipología de respuestas no tienen preguntas con texto.",
+	"claim_typology_units_not_needed": "Ninguna fase de este diseño necesita la tipología de respuestas con su configuración actual, por ejemplo porque el tutor de argumentación está configurado en modo básico.",
 	"claim_typology_producer_unavailable": "El servicio de tipología de respuestas está desactivado, por lo que la tipología no se puede generar ahora.",
 	"tutor_mode_enhanced_available": "Evaluación avanzada disponible.",
 	"tutor_mode_basic_expected": "El tutor evaluará sin las capacidades avanzadas:",
@@ -631,6 +632,9 @@
 	"tutor_mode_activity_warning_title": "Evaluación avanzada no disponible",
 	"tutor_mode_activity_question_basic": "Pregunta {{number}}: el tutor evalúa sin las capacidades avanzadas:",
 	"tutor_mode_activity_phase_basic": "El tutor evalúa sin las capacidades avanzadas:",
+	"tutor_mode_basic_selected_note": "El tutor evaluará en modo básico, según la configuración de la fase.",
+	"tutor_mode_reason_basic_selected": "la configuración de la fase elige el modo básico.",
+	"tutor_mode_activity_basic_selected": "El tutor evalúa esta fase en modo básico, según la configuración de la fase.",
 
 	"ethical_cases_validation_required": "Este campo es obligatorio.",
 	"ethical_cases_validation_email": "Ingresa un correo electrónico válido.",

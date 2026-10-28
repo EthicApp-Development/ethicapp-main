@@ -160,7 +160,8 @@ export async function listDesignAnalysesForOwner({
 
 /**
  * One analysis with its document, and what the design view renders next to it
- * (#865): `{ analysis, units, unitsReason, producerUsable, tutorModes }`.
+ * (#865): `{ analysis, units, unitsReason, producerUsable, tutorModes,
+ * tutorPhases }` (`tutorPhases` since #870).
  * `analysis` is null while a design service has produced nothing for the
  * design yet; the units it selects are listed anyway, so the view can offer
  * the first generation. `producerUsable` says whether the service could be
@@ -196,6 +197,7 @@ export async function getDesignAnalysisForOwner({
         unitsReason: selection.unitsReason,
         producerUsable,
         tutorModes:  selection.tutorModes,
+        tutorPhases: selection.tutorPhases ?? [],
     });
 }
 

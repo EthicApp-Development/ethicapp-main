@@ -66,9 +66,34 @@ describe("tutorModeWarnings", () => {
         await vm.$onInit();
 
         assert.deepEqual(calls, [7]);
-        assert.deepEqual(vm.warnings, [
-            { questionKey: "p2-q1", questionNumber: 1, reasonKey: "tutor_mode_reason_no_inventory" },
-        ]);
+        assert.deepEqual(vm.warnings, [{
+            questionKey:    "p2-q1",
+            questionNumber: 1,
+            reason:         "no-inventory",
+            reasonKey:      "tutor_mode_reason_no_inventory",
+            selected:       false,
+        }]);
+        assert.deepEqual(vm.basicSelected, []);
+    });
+
+    it("notes, without warning, the sessions whose phase chose the basic mode (#870)", async () => {
+        const selected = (questionKey, questionNumber) => ({
+            phaseId:         20,
+            questionKey,
+            questionNumber,
+            tutorMode:       "basic",
+            tutorModeReason: "basic-selected",
+            requestedMode:   "basic",
+        });
+        const { vm } = createWarnings([[selected("p2-q2", 2), selected("p2-q1", 1), BASIC]]);
+
+        await vm.$onInit();
+
+        assert.deepEqual(vm.basicSelected.map(session => session.questionKey), ["p2-q1", "p2-q2"]);
+        assert.equal(vm.basicSelectedKeys(), "p2-q1 p2-q2");
+        assert.deepEqual(vm.warnings.map(warning => warning.questionKey), ["p2-q1"],
+            "a fallback in the same phase still warns");
+        assert.equal(vm.warnings[0].reason, "no-inventory");
     });
 
     it("reads again when the tutor announces a new session in the phase, live", async () => {

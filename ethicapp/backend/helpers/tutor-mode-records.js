@@ -8,10 +8,16 @@ import { ARGUMENTATION_TUTOR_SERVICE_ID, TUTOR_MODES } from "./tutor-mode.js";
  * The Argumentation Tutor adapter records the mode of each tutor session it
  * creates, one per EthicApp session, phase and question, in the instantiation
  * report of the job whose response created it (`tutorMode`,
- * `tutorModeReason`, `questionKey`; see adapters/ats-feedback.adapter.js).
+ * `tutorModeReason`, `requestedMode`, `questionKey`; see
+ * adapters/ats-feedback.adapter.js). `requestedMode` is the mode the phase
+ * requested (#870); sessions created before #870 did not record it.
  * The `callback-received` handler records the mode the tutor reports for each
- * evaluation (`tutorMode` in `external_service_results.adapter_result`).
- * Tutor sessions are recreated after a restart or a new phase run, so the
+ * evaluation (`tutorMode`, and `requestedMode` since
+ * ethicapp-ai-additions#211, in `external_service_results.adapter_result`).
+ * The tutor reports a mode in every evaluation of a session opened with
+ * `case_context` or `evaluation_mode`, so with a tutor that declares
+ * `evaluation_mode` the evaluations of basic sessions count as `basic`, not
+ * `unreported`. Tutor sessions are recreated after a restart or a new phase run, so the
  * latest report of each phase and question wins.
  */
 
@@ -38,13 +44,15 @@ const noEvaluations = () => ({ enhanced: 0, basic: 0, unreported: 0 });
  * evaluation counts.
  *
  * @param {Array} sessionRows - `{ phase_id, phase_number, question_id,
- *     question_key, tutor_mode, tutor_mode_reason, created_at }`.
+ *     question_key, tutor_mode, tutor_mode_reason, requested_mode,
+ *     created_at }`.
  * @param {Array} evaluationRows - `{ phase_id, question_id, tutor_mode,
  *     evaluations }`.
  * @returns {Array<{phaseId, phaseNumber, questionId, questionKey,
- *     questionNumber, tutorMode, tutorModeReason, createdAt, evaluations:
- *     {enhanced: number, basic: number, unreported: number}}>} By phase and
- *     question number.
+ *     questionNumber, requestedMode, tutorMode, tutorModeReason, createdAt,
+ *     evaluations: {enhanced: number, basic: number, unreported: number}}>}
+ *     By phase and question number. `requestedMode` is null for sessions
+ *     created before #870.
  */
 export function toTutorModeRecords(sessionRows = [], evaluationRows = []) {
     const evaluations = new Map();
@@ -71,6 +79,7 @@ export function toTutorModeRecords(sessionRows = [], evaluationRows = []) {
                 questionId,
                 questionKey:     row.question_key ?? null,
                 questionNumber:  questionNumberOf(row.question_key),
+                requestedMode:   isTutorMode(row.requested_mode) ? row.requested_mode : null,
                 tutorMode:       row.tutor_mode,
                 tutorModeReason: basic ? (row.tutor_mode_reason ?? null) : null,
                 createdAt:       row.created_at ?? null,
@@ -104,6 +113,7 @@ export async function listSessionTutorModes(sessionId, query = rpg2.execSQL) {
                    j.instantiation_report->>'questionKey' AS question_key,
                    j.instantiation_report->>'tutorMode' AS tutor_mode,
                    j.instantiation_report->>'tutorModeReason' AS tutor_mode_reason,
+                   j.instantiation_report->>'requestedMode' AS requested_mode,
                    j.created_at
             FROM external_service_jobs AS j
             LEFT JOIN stages AS st

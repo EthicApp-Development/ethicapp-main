@@ -13,12 +13,17 @@
         <p class="small claim-typology-tutor-mode" ng-if="question.tutorMode"
             data-testid="tutor-mode-note"
             data-question-id="{{ question.id }}"
-            data-tutor-mode="{{ question.tutorMode.enhanced ? 'enhanced' : 'basic' }}">
+            data-tutor-mode="{{ question.tutorMode.enhanced ? 'enhanced' : 'basic' }}"
+            data-tutor-mode-selected="{{ question.tutorMode.selected ? 'true' : 'false' }}">
             <span class="text-success" ng-if="question.tutorMode.enhanced">
                 <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
                 {{ 'tutor_mode_enhanced_available' | translate }}
             </span>
-            <span class="text-warning" ng-if="!question.tutorMode.enhanced">
+            <span class="text-muted" ng-if="question.tutorMode.selected">
+                <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+                {{ 'tutor_mode_basic_selected_note' | translate }}
+            </span>
+            <span class="text-warning" ng-if="!question.tutorMode.enhanced && !question.tutorMode.selected">
                 <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
                 {{ 'tutor_mode_basic_expected' | translate }}
                 {{ question.tutorMode.reasonKey | translate }}

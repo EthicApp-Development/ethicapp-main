@@ -1,3 +1,11 @@
+<p class="alert alert-info tutor-mode-basic-selected" role="status"
+    ng-if="$ctrl.basicSelected.length > 0"
+    data-testid="tutor-mode-basic-selected"
+    data-tutor-mode-reason="basic-selected"
+    data-question-keys="{{ $ctrl.basicSelectedKeys() }}">
+    <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+    {{ 'tutor_mode_activity_basic_selected' | translate }}
+</p>
 <div class="alert alert-warning tutor-mode-warnings" role="status"
     ng-if="$ctrl.warnings.length > 0"
     data-testid="tutor-mode-warnings">
@@ -8,7 +16,8 @@
     <ul class="list-unstyled">
         <li ng-repeat="warning in $ctrl.warnings track by warning.questionKey"
             data-testid="tutor-mode-warning"
-            data-question-key="{{ warning.questionKey }}">
+            data-question-key="{{ warning.questionKey }}"
+            data-tutor-mode-reason="{{ warning.reason }}">
             <span ng-if="warning.questionNumber">
                 {{ 'tutor_mode_activity_question_basic' | translate:{ number: warning.questionNumber } }}
             </span>

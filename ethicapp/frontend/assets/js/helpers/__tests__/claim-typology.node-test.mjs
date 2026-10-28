@@ -95,8 +95,10 @@ describe("claimTypologyQuestions", () => {
         });
 
         assert.deepEqual(views.map(view => view.tutorMode), [
-            { enhanced: true, reasonKey: null, action: null },
-            { enhanced: false, reasonKey: "tutor_mode_reason_no_inventory", action: "open-case" },
+            { enhanced: true, selected: false, reasonKey: null, action: null },
+            {
+                enhanced: false, selected: false, reasonKey: "tutor_mode_reason_no_inventory", action: "open-case",
+            },
             null,
         ]);
     });
@@ -148,6 +150,31 @@ describe("claimTypologyView", () => {
             "claim_typology_units_consumers_unusable"
         );
         assert.equal(claimTypologyView({ analysis: null, questions: [], unitsReason: "other" }).unitsReasonKey, null);
+        assert.equal(
+            claimTypologyView({ analysis: null, questions: [], unitsReason: "not-needed" }).unitsReasonKey,
+            "claim_typology_units_not_needed"
+        );
+    });
+
+    // A basic phase and an enhanced one (#870): the backend lists only the
+    // enhanced phase's questions as units, and says the basic phase chose it.
+    it("notes the phases that chose the basic mode, without listing their questions", () => {
+        const enhancedOnly = claimTypologyQuestions({ units: UNITS.filter(unit => unit.phaseNumber === 3) });
+        const view = claimTypologyView({
+            analysis:    { status: "ready", stale: false, document: { typologies: [] } },
+            questions:   enhancedOnly,
+            tutorPhases: [
+                { phaseNumber: 1, requestedMode: "basic", reason: "basic-selected" },
+                { phaseNumber: 3, requestedMode: "enhanced", reason: null },
+            ],
+        });
+
+        assert.deepEqual(view.phaseNotes, {
+            1: { reason: "basic-selected", reasonKey: "tutor_mode_basic_selected_note" },
+        });
+        assert.deepEqual(Object.keys(view.byPhase), ["3"], "phase 1 is not awaiting a typology");
+        assert.equal(view.missingCount, 1, "only the enhanced phase's question is missing");
+        assert.deepEqual(claimTypologyView({ analysis: null, questions: [] }).phaseNotes, {});
     });
 });
 

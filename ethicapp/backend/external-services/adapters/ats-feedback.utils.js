@@ -273,9 +273,19 @@ export function differentialQuestionText(row) {
  * (tutor-case-context/v1, ethicapp-ai-additions#209) carries the case's
  * evidence inventory and the question's claim typology. The deprecated
  * top-level `claim_typology` is never sent: the tutor refuses it together
- * with `case_context`.
+ * with `case_context`, and together with `evaluation_mode`.
+ *
+ * `evaluationMode` (#870, ethicapp-ai-additions#211) is the mode the phase
+ * requests, decided by helpers/tutor-mode.js and given only when the tutor's
+ * descriptor declares the field; null leaves `evaluation_mode` out. The
+ * stored configuration's own `evaluation_mode` is never copied as is.
  */
-export function buildAtsSessionPayload(metadata, serviceConfiguration = {}, caseContext = null) {
+export function buildAtsSessionPayload(
+    metadata,
+    serviceConfiguration = {},
+    caseContext = null,
+    evaluationMode = null
+) {
     const body = {
         case_id:    metadata.caseId,
         case_title: metadata.caseTitle,
@@ -286,6 +296,9 @@ export function buildAtsSessionPayload(metadata, serviceConfiguration = {}, case
     const llmTier = normalizeText(serviceConfiguration?.llm_tier);
     if (llmTier) {
         body.llm_tier = llmTier;
+    }
+    if (evaluationMode) {
+        body.evaluation_mode = evaluationMode;
     }
     if (caseContext) {
         body.case_context = caseContext;
@@ -351,12 +364,18 @@ function caseContextOutcome(response, rejection) {
  * (`enhanced` or `basic`), and `tutorModeMissing` the parts it says are
  * missing, when it reports them.
  *
+ * `evaluationMode` is sent as `evaluation_mode` (#870) and kept when the
+ * configured settings are rejected: it is the study condition the teacher
+ * chose, not a tutor default. `creation.tutorRequestedMode` is the
+ * `requestedMode` the tutor reports back, when it reports one.
+ *
  * @param {(body: object) => Promise<object>} request POST /sessions
  */
 export async function createAtsSession({
     metadata,
     serviceConfiguration = {},
     caseContext = null,
+    evaluationMode = null,
     request,
 }) {
     let configuration = serviceConfiguration;
@@ -367,7 +386,7 @@ export async function createAtsSession({
     let response;
 
     for (;;) {
-        const body = buildAtsSessionPayload(metadata, configuration, context);
+        const body = buildAtsSessionPayload(metadata, configuration, context, evaluationMode);
         try {
             response = await request(body);
             break;
@@ -411,6 +430,9 @@ export async function createAtsSession({
         creation.tutorMode = response.mode;
         if (Array.isArray(response.missing) && response.missing.length > 0) {
             creation.tutorModeMissing = response.missing.filter(part => typeof part === "string");
+        }
+        if (TUTOR_SESSION_MODES.has(response.requestedMode)) {
+            creation.tutorRequestedMode = response.requestedMode;
         }
     }
 
@@ -485,11 +507,12 @@ function unsupportedClaim(item) {
 /**
  * The mode of an evaluation and its teacher-facing evidence (#865,
  * ethicapp-ai-additions#209): `tutorMode` (`enhanced` or `basic`), which the
- * tutor reports in every analysis of a session opened with `case_context`,
- * and, in the enhanced mode, `evidenceFactIds` (the inventory facts the
- * argument states) and `unsupportedClaims` (`{ statement, exclusionId }`).
- * null when the evaluation reports no mode, as those of sessions opened
- * without a context do.
+ * tutor reports in every analysis of a session opened with `case_context` or
+ * `evaluation_mode`, `requestedMode`, the `evaluation_mode` the session was
+ * opened with (#870, ethicapp-ai-additions#211), and, in the enhanced mode,
+ * `evidenceFactIds` (the inventory facts the argument states) and
+ * `unsupportedClaims` (`{ statement, exclusionId }`). null when the
+ * evaluation reports no mode, as those of sessions opened with neither do.
  */
 export function tutorEvaluationFromExternalResult(requestPayload) {
     const source = evaluationSource(requestPayload, ["tutorMode"]);
@@ -499,6 +522,10 @@ export function tutorEvaluationFromExternalResult(requestPayload) {
     }
 
     const evaluation = { tutorMode };
+    const requestedMode = normalizeText(source.requestedMode);
+    if (TUTOR_SESSION_MODES.has(requestedMode)) {
+        evaluation.requestedMode = requestedMode;
+    }
     if (Array.isArray(source.evidenceFactIds)) {
         evaluation.evidenceFactIds = [...new Set(source.evidenceFactIds
             .map(normalizeText)

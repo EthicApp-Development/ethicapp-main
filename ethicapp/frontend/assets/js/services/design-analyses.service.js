@@ -25,8 +25,9 @@ export function DesignAnalysesService($http) {
     return {
         /**
          * One analysis with what the design view renders next to it (#865):
-         * `{ analysis, units, unitsReason, producerUsable, tutorModes }`,
-         * where `analysis` (with its document) is null while the service has
+         * `{ analysis, units, unitsReason, producerUsable, tutorModes,
+         * tutorPhases }` (`tutorPhases`, the mode each tutor phase requests,
+         * since #870), where `analysis` (with its document) is null while the service has
          * produced nothing for the design. null when the service does not
          * analyse designs or the teacher cannot read the design's analyses.
          */

@@ -29,7 +29,8 @@ export function TutorModesService($http) {
     return {
         /**
          * The activity's tutor sessions, one per phase and question, with
-         * `tutorMode`, `tutorModeReason`, `questionNumber` and `evaluations`
+         * `requestedMode` (#870), `tutorMode`, `tutorModeReason`,
+         * `questionNumber` and `evaluations`
          * (see helpers/tutor-mode-records.js in the backend). [] when the
          * teacher cannot read the activity.
          */

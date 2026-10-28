@@ -5,8 +5,10 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
+import { needsDesignAnalysis as tutorNeedsDesignAnalysis } from "../../external-services/adapters/ats-feedback.adapter.js";
 import { designAnalysisInput } from "../../external-services/adapters/case-analyst-claim-typology.adapter.js";
 import {
+    explainDesignAnalysisUnits,
     selectDesignAnalysisUnits,
     selectQuestionUnits,
 } from "../../helpers/design-analysis-units.js";
@@ -121,10 +123,15 @@ async function makeRegistry({
         developmentAdapters,
         aiServicePolicy:         policy,
         isAiAdditionsConfigured: async () => connected,
-        importAdapter:           async () => ({
+        // Stub modules, except that the tutor's carries its real
+        // needsDesignAnalysis() (#870).
+        importAdapter:           async href => ({
             register:            async () => {},
             getUiTranslations:   async () => null,
             designAnalysisInput: async () => null,
+            ...(href.endsWith("/ats-feedback.adapter.js")
+                ? { needsDesignAnalysis: tutorNeedsDesignAnalysis }
+                : {}),
         }),
         jobsService: {},
     });
@@ -276,6 +283,120 @@ test("test consumer: a phase stays selected while one of its consumers is usable
 
     // Phase 3 enables the switched-off tutor and the usable test consumer.
     assert.deepEqual(selectedIds(await selectFor(registry)), ["p2-q1", "p3-q1"]);
+});
+
+// ─── The tutor's requested mode (#870) ───────────────────────────────────────
+
+function tutorPhase(evaluationMode, texts, enabledServiceIds = [TUTOR]) {
+    return {
+        externalServices: {
+            enabledServiceIds,
+            ...(evaluationMode
+                ? { configurations: { [TUTOR]: { evaluation_mode: evaluationMode } } }
+                : {}),
+        },
+        questions: texts.map(q_text => ({ q_text })),
+    };
+}
+
+// The fixture of the pinned hash, with the tutor's phases configured.
+function pinnedDesign(evaluationMode) {
+    return {
+        type:   "semantic_differential",
+        valid:  true,
+        phases: [
+            {
+                ...tutorPhase(evaluationMode, []),
+                questions: [{ q_text: "Should Camila omit the data?" }, { q_text: " " }, { q_text: "Why?" }],
+            },
+            { questions: [{ q_text: "Not discussed with the tutor." }] },
+            {
+                ...tutorPhase(evaluationMode, []),
+                questions: [{ q_text: "**Is** the request acceptable?", q_text_content_type: "text/markdown" }],
+            },
+        ],
+    };
+}
+
+const PINNED_HASH = "sha256:ca11c9ef0d5ec6dfb02c4e984585c93fa22d3d7a50db27c4f1d87fdb235f3894";
+
+async function typologyInput(registry, design) {
+    return designAnalysisInput({ design, designCase: DESIGN_CASE }, { registry, getAnalysis: async () => null });
+}
+
+test("tutor mode: the registry asks the tutor's adapter whether a phase needs the typology", async () => {
+    const { registry } = await makeRegistry();
+    const needs = configuration => registry.consumerNeedsDesignAnalysis(TUTOR, {
+        producerId: CLAIM_TYPOLOGY, configuration,
+    });
+
+    assert.equal(needs({ evaluation_mode: "basic" }), false);
+    assert.equal(needs({ evaluation_mode: "enhanced" }), true);
+    assert.equal(needs({}), true, "no stored value is the enhanced default");
+    assert.equal(registry.consumerNeedsDesignAnalysis(TUTOR, { producerId: CLAIM_TYPOLOGY }), true);
+    assert.equal(registry.consumerNeedsDesignAnalysis("polyadic-devils-advocate", {
+        producerId: CLAIM_TYPOLOGY, configuration: { evaluation_mode: "basic" },
+    }), true, "an adapter without needsDesignAnalysis() needs every phase");
+});
+
+test("tutor mode: the pinned hash holds with no stored mode and with an explicit enhanced", async () => {
+    const { registry } = await makeRegistry();
+
+    assert.equal((await typologyInput(registry, pinnedDesign(null))).hash, PINNED_HASH);
+    assert.equal((await typologyInput(registry, pinnedDesign("enhanced"))).hash, PINNED_HASH,
+        "an explicit enhanced selects the same questions");
+});
+
+test("tutor mode: a basic and an enhanced phase get a typology for the enhanced one only", async () => {
+    const { registry } = await makeRegistry();
+    const mixed = {
+        type:   "semantic_differential",
+        valid:  true,
+        phases: [
+            tutorPhase("basic", ["Should Camila omit the data?"]),
+            tutorPhase("enhanced", ["Is the request acceptable?"]),
+        ],
+    };
+
+    const { input, hash } = await typologyInput(registry, mixed);
+    assert.deepEqual(selectedIds(input.questions), ["p2-q1"]);
+
+    // Switching the basic phase to enhanced requests its questions, and the
+    // input hash follows; switching back restores it.
+    const switched = structuredClone(mixed);
+    switched.phases[0].externalServices.configurations[TUTOR].evaluation_mode = "enhanced";
+    const after = await typologyInput(registry, switched);
+    assert.deepEqual(selectedIds(after.input.questions), ["p1-q1", "p2-q1"]);
+    assert.notEqual(after.hash, hash);
+    assert.equal((await typologyInput(registry, structuredClone(mixed))).hash, hash);
+});
+
+test("tutor mode: a design whose tutor phases are all basic gets no typology, and says why", async () => {
+    const { registry } = await makeRegistry();
+    const allBasic = {
+        type:   "semantic_differential",
+        valid:  true,
+        phases: [tutorPhase("basic", ["Should Camila omit the data?"])],
+    };
+
+    assert.equal(await typologyInput(registry, allBasic), null);
+    const explained = await explainDesignAnalysisUnits({ producerId: CLAIM_TYPOLOGY, design: allBasic }, { registry });
+    assert.equal(explained.reason, "not-needed");
+    assert.deepEqual(explained.consumerIds, [TUTOR], "the tutor is still a usable consumer");
+});
+
+test("tutor mode: a basic tutor phase stays selected for another consumer that needs it", async () => {
+    const { registry } = await makeRegistry({ manifestServices: withTestConsumers() });
+    const design = {
+        type:   "semantic_differential",
+        valid:  true,
+        phases: [
+            tutorPhase("basic", ["Tutor only?"]),
+            tutorPhase("basic", ["Both?"], [TUTOR, TEST_CONSUMER]),
+        ],
+    };
+
+    assert.deepEqual(selectedIds(await selectFor(registry, design)), ["p2-q1"]);
 });
 
 // ─── Catalog warnings ────────────────────────────────────────────────────────

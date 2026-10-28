@@ -425,3 +425,40 @@ test("validateDesignServiceConfigurations: an allowed service is still validated
     assert.ok(result.errors.every(error => error.serviceId === SERVICE));
     assert.deepEqual(result.warnings, []);
 });
+
+// ─── The tutor's evaluation_mode (#870) ──────────────────────────────────────
+
+// The tutor's descriptor fields as ethicapp-ai-additions#212 publishes them.
+const TUTOR = "argumentation-tutor-system";
+const { descriptor: tutorDescriptor } = normalizeDescriptor({
+    contract_version:       "1",
+    service:                { id: "argumentation-tutor", name: "Argumentation Tutor", uses_llm: true },
+    instance_configuration: {
+        fields: [
+            field("llm_tier", "enum", {
+                enum: [{ value: "basic", label: "Basic" }, { value: "advanced", label: "Advanced" }],
+            }, { default: "basic" }),
+            field("evaluation_mode", "enum", {
+                enum: [{ value: "enhanced", label: "Enhanced" }, { value: "basic", label: "Basic" }],
+            }, { default: "enhanced" }),
+        ],
+    },
+    runtime_configuration: { fields: [] },
+}, "argumentation-tutor");
+
+test("validateDesignServiceConfigurations: the tutor's evaluation_mode is validated by its descriptor", async () => {
+    const validate = configuration => validateDesignServiceConfigurations({
+        design:                   designWith(configuration, { enabled: [TUTOR], serviceId: TUTOR }),
+        getInstanceConfiguration: async () => ({ available: true, fields: tutorDescriptor.fields }),
+    });
+
+    for (const evaluationMode of ["enhanced", "basic"]) {
+        assert.deepEqual(await validate({ evaluation_mode: evaluationMode, llm_tier: "advanced" }),
+            { errors: [], warnings: [] }, evaluationMode);
+    }
+    assert.deepEqual(await validate({ llm_tier: "basic" }), { errors: [], warnings: [] },
+        "an unset mode takes the descriptor default");
+    assert.deepEqual((await validate({ evaluation_mode: "turbo" })).errors, [{
+        phaseIndex: 0, serviceId: TUTOR, field: "evaluation_mode", code: "not_in_enum", value: "turbo",
+    }]);
+});

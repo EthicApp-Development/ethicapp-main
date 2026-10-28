@@ -124,6 +124,7 @@ describe("claimTypologyPanel", () => {
         assert.deepEqual(question.typology.types[0].evidence, [{ id: "EV1", statement: "Participation fell." }]);
         assert.deepEqual(question.tutorMode, {
             enhanced:  false,
+            selected:  false,
             reasonKey: "tutor_mode_reason_typology_out_of_date",
             action:    "generate-typology",
         });
@@ -214,6 +215,42 @@ describe("claimTypologyPanel", () => {
         });
         await withoutAnalysis.vm.$onInit();
         assert.equal(withoutAnalysis.vm.isVisible(), true, "the panel explains it even before a generation");
+    });
+
+    it("with every tutor phase set to basic, notes each phase and says why no typology is needed (#870)", async () => {
+        const { vm, views } = createPanel({
+            analyses: [read(
+                { status: "ready", stale: false, document: DOCUMENT },
+                {
+                    units:       [],
+                    unitsReason: "not-needed",
+                    tutorModes:  { "p1-q1": { mode: "basic", reason: "basic-selected", requestedMode: "basic" } },
+                    tutorPhases: [{ phaseNumber: 1, requestedMode: "basic", reason: "basic-selected" }],
+                }
+            )],
+        });
+
+        await vm.$onInit();
+
+        assert.deepEqual(views[0].byPhase, {}, "no question is listed as awaiting a typology");
+        assert.equal(views[0].missingCount, 0);
+        assert.deepEqual(views[0].phaseNotes, {
+            1: { reason: "basic-selected", reasonKey: "tutor_mode_basic_selected_note" },
+        });
+        assert.equal(vm.unitsReasonKey(), "claim_typology_units_not_needed");
+        assert.equal(vm.canGenerate(), false);
+
+        const withoutAnalysis = createPanel({
+            analyses: [read(null, {
+                units:       [],
+                unitsReason: "not-needed",
+                tutorPhases: [{ phaseNumber: 1, requestedMode: "basic", reason: "basic-selected" }],
+            })],
+        });
+        await withoutAnalysis.vm.$onInit();
+        assert.equal(withoutAnalysis.vm.isVisible(), false, "nothing to generate, so no panel");
+        assert.equal(withoutAnalysis.views[0].phaseNotes[1].reason, "basic-selected",
+            "the phase note is published all the same");
     });
 
     it("does not offer a generation while the typology service is switched off", async () => {
