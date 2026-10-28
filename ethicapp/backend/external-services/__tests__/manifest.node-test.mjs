@@ -6,7 +6,7 @@ import {
     ExternalServicesRegistry,
     SERVICE_SCOPES,
 } from "../../services/external-services.service.js";
-import { validateCatalog } from "../catalog.js";
+import { catalogWarnings, validateCatalog } from "../catalog.js";
 
 const manifestUrl  = new URL("../manifest.json", import.meta.url);
 const manifestPath = fileURLToPath(manifestUrl);
@@ -53,6 +53,21 @@ test("catalog: each adapter requires its AI Additions service; mocks are develop
         "case-analyst-claim-typology":     { development: false, requires: ["case-analyst"] },
         "case-analyst-topic-listing":      { development: false, requires: ["case-analyst"] },
     });
+});
+
+// Design analyses are declared (#863): the claim typology is produced per
+// question for the tutor, and every consumption has a producer.
+test("catalog: the claim typology is produced per question and the tutor consumes it", () => {
+    const declared = Object.fromEntries(manifest.services
+        .filter(service => service.produces || service.consumes)
+        .map(service => [service.id, { produces: service.produces, consumes: service.consumes }]));
+    const typologyPerQuestion = [{ documentSchema: "claim-typology/v1", unit: "question" }];
+
+    assert.deepEqual(declared, {
+        "argumentation-tutor-system":  { produces: undefined, consumes: typologyPerQuestion },
+        "case-analyst-claim-typology": { produces: typologyPerQuestion, consumes: undefined },
+    });
+    assert.deepEqual(catalogWarnings(manifest), []);
 });
 
 test("catalog: no service declares the removed enabled or capabilities keys", () => {

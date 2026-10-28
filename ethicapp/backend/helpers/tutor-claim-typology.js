@@ -7,9 +7,9 @@ import { getDesignAnalysis } from "./design-analyses-helper.js";
  * receives it (#850, epic #846).
  *
  * A design's claim typology is its `case-analyst-claim-typology` analysis
- * (#849): a claim-typology/v1 document with one typology per tutor question,
- * keyed by positional id (`p<phase>-q<question>`, see
- * design-tutor-questions.js) and annotated with `questionTextHash`, the hash
+ * (#849): a claim-typology/v1 document with one typology per selected
+ * question, keyed by positional id (`p<phase>-q<question>`, see
+ * design-analysis-units.js) and annotated with `questionTextHash`, the hash
  * of the question text it answers. When the tutor opens a session for a
  * question, the question's typology is passed as `claim_typology`
  * (tutor-claim-typology/v1, ethicapp-ai-additions#204) only when it answers
@@ -89,7 +89,8 @@ export async function loadEvidenceInventory(caseId, { getAnalysis = getCaseAnaly
  * answers the given question text.
  *
  * @param {Object|null} document - The stored claim-typology/v1 document.
- * @param {{id: string, textHash: string}} question - From findTutorQuestion().
+ * @param {{id: string, textHash: string}} question - From findTutorQuestion()
+ *     (ats-feedback.adapter.js).
  * @returns {{typology: Object|null, reason: string|null}}
  */
 export function findQuestionTypology(document, question) {
@@ -219,7 +220,8 @@ export function toTutorClaimTypology(typology, inventoryDocument = null) {
  * @param {Object} args
  * @param {number|null} args.designId
  * @param {number|null} args.caseId - The design's case, for the inventory.
- * @param {Object|null} args.question - From findTutorQuestion().
+ * @param {Object|null} args.question - From findTutorQuestion()
+ *     (ats-feedback.adapter.js).
  * @param {Object} [dependencies] - Overrides for tests.
  * @returns {Promise<{claimTypology: Object|null, reason: string|null}>}
  */

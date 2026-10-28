@@ -23,6 +23,7 @@ import {
 } from "../helpers/ai-service-policy.js";
 import {
     assertValidCatalog,
+    catalogWarnings,
     developmentAdaptersEnabled,
     validateCatalog,
     validateCatalogEntry,
@@ -182,6 +183,13 @@ function normalizeUi(ui, serviceId) {
     }
 
     return { component };
+}
+
+// A validated `produces` or `consumes` declaration (catalog.js), copied.
+function designAnalysisDeclaration(declaration) {
+    return Array.isArray(declaration)
+        ? declaration.map(({ documentSchema, unit }) => ({ documentSchema, unit }))
+        : [];
 }
 
 function normalizeText(value) {
@@ -522,6 +530,9 @@ export class ExternalServicesRegistry {
         this.manifestPath = manifestPath;
         const manifest = await this.readManifest(manifestPath);
         assertValidCatalog(validateCatalog(manifest), manifestPath);
+        for (const warning of catalogWarnings(manifest)) {
+            console.warn(`[external-services] ${warning}.`);
+        }
 
         for (const service of manifest.services) {
             await this.registerService(service, manifestPath);
@@ -572,6 +583,10 @@ export class ExternalServicesRegistry {
             // The AI Additions services the adapter talks to (#812). The
             // service policy (#815) allows an adapter only when it allows all.
             requires:     [...service.requires],
+            // The design analyses the adapter produces and needs (#863), as
+            // `{ documentSchema, unit }`. See getDesignAnalysisConsumerIds().
+            produces:     designAnalysisDeclaration(service.produces),
+            consumes:     designAnalysisDeclaration(service.consumes),
             development,
             adapter:      service.adapter,
             callbackAuth: service.callbackAuth && typeof service.callbackAuth === "object"
@@ -967,6 +982,33 @@ export class ExternalServicesRegistry {
     // null when it exports none.
     getDesignAnalysisInputBuilder(serviceId) {
         return this.designAnalysisInputBuilders.get(serviceId) || null;
+    }
+
+    /**
+     * The registered adapters that consume a design analysis `producerId`
+     * produces (#863): those whose `consumes` names one of the producer's
+     * `produces` schemas for `unit`. Only registered adapters count, so a
+     * development consumer counts only with development adapters on. Whether
+     * they are usable is the policy gate's business (usableServiceIds()).
+     *
+     * @param {string} producerId
+     * @param {Object} [options]
+     * @param {string} [options.unit="question"] - One of DESIGN_ANALYSIS_UNITS.
+     * @returns {string[]} Consumer ids in catalog order; [] for an unknown
+     *     producer or one that produces nothing for `unit`.
+     */
+    getDesignAnalysisConsumerIds(producerId, { unit = "question" } = {}) {
+        const schemas = new Set((this.services.get(producerId)?.produces ?? [])
+            .filter(item => item.unit === unit)
+            .map(item => item.documentSchema));
+        if (schemas.size === 0) {
+            return [];
+        }
+
+        return Array.from(this.services.values())
+            .filter(service => (service.consumes ?? [])
+                .some(item => item.unit === unit && schemas.has(item.documentSchema)))
+            .map(service => service.id);
     }
 
     getServiceById(serviceId) {

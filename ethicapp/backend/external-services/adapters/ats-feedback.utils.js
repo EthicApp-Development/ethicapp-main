@@ -1,5 +1,8 @@
 import { plainTextOf } from "../../helpers/rich-text-helper.js";
 
+// The tutor's catalog id, which design phases enable.
+export const ARGUMENTATION_TUTOR_SERVICE_ID = "argumentation-tutor-system";
+
 // The texts teachers read about this service (#723), available even when the
 // tutor does not respond (#757).
 const UI_TRANSLATIONS = {
@@ -179,7 +182,7 @@ export function buildFeedbackPayloadFromAtsStatus(statusResponse, context, submi
 
     return {
         version: "1",
-        source:  "argumentation-tutor-system",
+        source:  ARGUMENTATION_TUTOR_SERVICE_ID,
         title:   "Argument Tutor Feedback",
         summary,
         mode,
@@ -208,7 +211,7 @@ export function buildFeedbackPayloadFromExternalResult(requestPayload, fallbackC
 
     return {
         version:  "1",
-        source:   "argumentation-tutor-system",
+        source:   ARGUMENTATION_TUTOR_SERVICE_ID,
         title:    normalizeText(input.title) || "Argument Tutor Feedback",
         summary:  normalizeText(input.summary) || normalizeText(payloadRoot.message) || "Argument feedback is now available.",
         mode,

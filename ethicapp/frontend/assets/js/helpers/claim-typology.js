@@ -47,7 +47,7 @@ function isPlainObject(value) {
 }
 
 // The question as the tutor receives it, as the backend computes it
-// (design-tutor-questions.js): text/markdown becomes plain text, then trimmed.
+// (design-analysis-units.js): text/markdown becomes plain text, then trimmed.
 function questionText(question) {
     const value = question?.q_text;
     const text = question?.q_text_content_type === TEXT_MARKDOWN && typeof value === "string"
@@ -62,10 +62,12 @@ function enablesService(phase, serviceId) {
 }
 
 /**
- * The questions the typology covers, selected as the backend does
- * (ethicapp/backend/helpers/design-tutor-questions.js): the non-empty
+ * The tutor questions the typology covers, selected as the backend selects
+ * the question units of the tutor's phases
+ * (ethicapp/backend/helpers/design-analysis-units.js): the non-empty
  * semantic differential questions of the phases that enable the tutor, with
- * positional 1-based ids `p<phase>-q<question>`.
+ * positional 1-based ids `p<phase>-q<question>`. The tutor is the one
+ * consumer of claim typologies in the shipped catalog (#863).
  *
  * @returns {Array<{id: string, phaseNumber: number, questionNumber: number, text: string}>}
  */

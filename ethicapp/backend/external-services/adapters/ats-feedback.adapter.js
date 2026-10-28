@@ -1,12 +1,13 @@
 import * as config from "../../config/database.config.js";
 import * as rpg2 from "../../db/rest-pg-2.js";
-import { findTutorQuestion, tutorQuestionId } from "../../helpers/design-tutor-questions.js";
+import { findQuestionUnit, questionUnitId } from "../../helpers/design-analysis-units.js";
 import {
     loadTutorClaimTypology,
     TYPOLOGY_ABSENT_REASONS,
 } from "../../helpers/tutor-claim-typology.js";
 import defaultAiAdditionsClient from "../../services/ai-additions-client.service.js";
 import {
+    ARGUMENTATION_TUTOR_SERVICE_ID,
     buildArgumentClientContext,
     buildFeedbackPayloadFromExternalResult,
     claimTypeFromExternalResult,
@@ -103,11 +104,24 @@ export function tutorQuestionKey(context, position = {}) {
     const phaseNumber = positiveIdOrNull(position?.phaseNumber);
     const questionNumber = positiveIdOrNull(position?.questionNumber);
     if (phaseNumber && questionNumber) {
-        return tutorQuestionId(phaseNumber, questionNumber);
+        return questionUnitId(phaseNumber, questionNumber);
     }
 
     const questionId = positiveIdOrNull(context?.questionId);
     return questionId ? `question-${questionId}` : "phase";
+}
+
+/**
+ * The design's question at a runtime position (#850), when its phase enables
+ * the tutor: a question unit (helpers/design-analysis-units.js), whose text is
+ * the one the question's claim typology answers.
+ *
+ * @param {Object|null} design - The session's design document.
+ * @param {{phaseNumber: number, questionNumber: number}} position
+ * @returns {Object|null} As findQuestionUnit() returns it.
+ */
+export function findTutorQuestion(design, position) {
+    return findQuestionUnit(design, position, { serviceIds: [ARGUMENTATION_TUTOR_SERVICE_ID] });
 }
 
 /**
