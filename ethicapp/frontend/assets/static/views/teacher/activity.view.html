@@ -94,6 +94,8 @@
                                      ng-repeat="phase in dc.dashboardPhaseData track by $index">
                                     <phase-description phase-number="phase.descriptor.number" design-object="dc.designObj"
                                         case-videos="dc.associatedCase.videos"></phase-description>
+                                    <tutor-mode-warnings session-id="dc.sessionId" phase-id="phase.descriptor.id"
+                                        data-phase-number="{{ phase.descriptor.number }}"></tutor-mode-warnings>
                                     <phase-state
                                         phase-data="phase"
                                         design-type="dc.designObj.type"

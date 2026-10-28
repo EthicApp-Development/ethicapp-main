@@ -23,8 +23,13 @@ const GENERATE_CONFLICTS = Object.freeze({
 
 export function DesignAnalysesService($http) {
     return {
-        // One analysis with its document, or null when the design has none
-        // from the service (or the teacher cannot read the design's analyses).
+        /**
+         * One analysis with what the design view renders next to it (#865):
+         * `{ analysis, units, unitsReason, producerUsable, tutorModes }`,
+         * where `analysis` (with its document) is null while the service has
+         * produced nothing for the design. null when the service does not
+         * analyse designs or the teacher cannot read the design's analyses.
+         */
         async getAnalysis(designId, serviceId) {
             try {
                 const response = await $http.get(analysisUrl(designId, serviceId));

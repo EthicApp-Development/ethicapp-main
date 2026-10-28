@@ -2,21 +2,24 @@ import * as config from "../../config/database.config.js";
 import * as rpg2 from "../../db/rest-pg-2.js";
 import { findQuestionUnit, questionUnitId } from "../../helpers/design-analysis-units.js";
 import {
-    loadTutorClaimTypology,
-    TYPOLOGY_ABSENT_REASONS,
-} from "../../helpers/tutor-claim-typology.js";
+    decideTutorMode,
+    loadTutorModeInputs,
+    TUTOR_MODE_REASONS,
+    TUTOR_MODES,
+} from "../../helpers/tutor-mode.js";
 import defaultAiAdditionsClient from "../../services/ai-additions-client.service.js";
 import {
     ARGUMENTATION_TUTOR_SERVICE_ID,
     buildArgumentClientContext,
     buildFeedbackPayloadFromExternalResult,
+    CASE_CONTEXT_OUTCOMES,
     claimTypeFromExternalResult,
-    CLAIM_TYPOLOGY_OUTCOMES,
     createAtsSession,
     differentialQuestionText,
     getUiTranslations,
     phaseInstructionsText,
     questionTextFromPhaseDesign,
+    tutorEvaluationFromExternalResult,
 } from "./ats-feedback.utils.js";
 
 export {
@@ -28,17 +31,48 @@ export {
 // The Argumentation Tutor API under the AI Additions connection's base URL (#814).
 export const ATS_API_BASE_PATH = "/argumentation-tutor/api/v2";
 
-// A tutor that ignored a claim typology as an unsupported setting is not sent
+// A tutor that ignored a case context as an unsupported setting is not sent
 // one again for this long; the first session after it offers one again, in
 // case the tutor was upgraded.
-export const CLAIM_TYPOLOGY_UNSUPPORTED_RETRY_MS = 10 * 60 * 1000;
+export const CASE_CONTEXT_UNSUPPORTED_RETRY_MS = 10 * 60 * 1000;
 
-// What the instantiation report says about the claim typology of a session,
-// besides the outcomes of an offered one (CLAIM_TYPOLOGY_OUTCOMES).
-const CLAIM_TYPOLOGY_NOT_OFFERED = Object.freeze({
-    ABSENT:   "absent",
-    WITHHELD: "withheld",
+// The reason a session offered a case context still runs in the basic mode.
+const BASIC_MODE_REASON_BY_OUTCOME = Object.freeze({
+    [CASE_CONTEXT_OUTCOMES.REJECTED]:    TUTOR_MODE_REASONS.CONTEXT_REJECTED,
+    [CASE_CONTEXT_OUTCOMES.DOWNGRADED]:  TUTOR_MODE_REASONS.CONTEXT_REJECTED,
+    [CASE_CONTEXT_OUTCOMES.UNSUPPORTED]: TUTOR_MODE_REASONS.TUTOR_UNSUPPORTED,
 });
+
+/**
+ * The mode a created session runs in, and why it is basic (#865): the
+ * decision taken before creating it (helpers/tutor-mode.js), corrected by the
+ * tutor's answer when a case context was offered. A context withheld because
+ * the tutor recently ignored one counts as `tutor-unsupported`.
+ *
+ * @param {{mode: string, reason: string|null, caseContext: Object|null}} decision
+ * @param {boolean} offered - Whether the case context was sent.
+ * @param {Object} creation - From createAtsSession().
+ * @returns {{tutorMode: string, tutorModeReason: string|null}}
+ */
+export function sessionTutorMode(decision, offered, creation) {
+    if (!decision?.caseContext) {
+        return { tutorMode: TUTOR_MODES.BASIC, tutorModeReason: decision?.reason ?? null };
+    }
+    if (!offered) {
+        return {
+            tutorMode:       TUTOR_MODES.BASIC,
+            tutorModeReason: TUTOR_MODE_REASONS.TUTOR_UNSUPPORTED,
+        };
+    }
+    if (creation?.caseContext === CASE_CONTEXT_OUTCOMES.USED) {
+        return { tutorMode: TUTOR_MODES.ENHANCED, tutorModeReason: null };
+    }
+    return {
+        tutorMode:       TUTOR_MODES.BASIC,
+        tutorModeReason: BASIC_MODE_REASON_BY_OUTCOME[creation?.caseContext]
+            ?? TUTOR_MODE_REASONS.CONTEXT_REJECTED,
+    };
+}
 
 function positiveIdOrNull(value) {
     const id = Number(value);
@@ -344,8 +378,8 @@ function createDependencies(overrides = {}) {
         resolveQuestionPosition,
         loadSessionContext,
         resolveQuestionText,
-        loadClaimTypology: loadTutorClaimTypology,
-        now:               () => Date.now(),
+        loadTutorModeInputs,
+        now: () => Date.now(),
         ...overrides,
     };
 }
@@ -387,7 +421,7 @@ async function publishFeedbackToStudent({ context, feedbackPayload, status, publ
  *
  * Each EthicApp session, phase and question has its own tutor session (#850),
  * created lazily by the first response to the question, with that question's
- * text and, when the design has an up-to-date one, its claim typology. Keys are
+ * text and, in the enhanced mode (#865), the case context. Keys are
  * `<sessionId>:<phaseId>:<question key>` (tutorQuestionKey()), and the
  * submission counters that choose between a first analysis and a comparison
  * add `:<userId>`. `phase-ended` deletes the phase's tutor sessions.
@@ -396,70 +430,58 @@ function createAtsFeedbackHandlers({ dependencies, publishStudentResult }) {
     const atsSessionByQuestion = new Map();
     const atsSessionCreationByQuestion = new Map();
     const atsSubmissionCountByQuestionUser = new Map();
-    const loggedTypologyOutcomes = new Set();
-    let claimTypologyWithheldUntil = 0;
+    const loggedContextOutcomes = new Set();
+    let caseContextWithheldUntil = 0;
 
-    function logTypologyOutcomeOnce(outcome, message, details) {
-        if (loggedTypologyOutcomes.has(outcome)) {
+    function logContextOutcomeOnce(outcome, message, details) {
+        if (loggedContextOutcomes.has(outcome)) {
             return;
         }
-        loggedTypologyOutcomes.add(outcome);
+        loggedContextOutcomes.add(outcome);
         console.warn(`[external-services][ats] ${message}`, details);
     }
 
-    // The claim typology offered to the session of a question, and why there
-    // is none otherwise. Loading it never fails the response.
-    async function questionClaimTypology({ sessionContext, tutorQuestion }) {
-        if (!tutorQuestion) {
-            return { claimTypology: null, reason: TYPOLOGY_ABSENT_REASONS.NO_QUESTION };
-        }
-
+    // The mode the question's session would get (helpers/tutor-mode.js), with
+    // its case context in the enhanced mode. Reading the inputs never fails
+    // the response: a failed read is a basic-mode reason.
+    async function questionTutorMode({ context, sessionContext, tutorQuestion }) {
         try {
-            return await dependencies.loadClaimTypology({
-                designId: sessionContext?.designId ?? null,
-                caseId:   sessionContext?.caseId ?? null,
-                question: tutorQuestion,
+            const inputs = await dependencies.loadTutorModeInputs({
+                caseId:    sessionContext?.caseId ?? null,
+                designId:  sessionContext?.designId ?? null,
+                sessionId: context.sessionId,
             });
+            return decideTutorMode(inputs, tutorQuestion);
         } catch (error) {
-            console.warn("[external-services][ats] Unable to load the claim typology; "
-                + "the tutor session is created without it.", {
+            console.warn("[external-services][ats] Unable to read the inputs of the enhanced mode; "
+                + "the tutor session runs in the basic mode.", {
                 designId:   sessionContext?.designId ?? null,
-                questionId: tutorQuestion.id,
+                questionId: tutorQuestion?.id ?? null,
                 error:      normalizeText(error?.message) || "Unknown error",
             });
-            return { claimTypology: null, reason: TYPOLOGY_ABSENT_REASONS.LOAD_FAILED };
+            const unreadable = { inventory: { enabled: true, loadFailed: true } };
+            return decideTutorMode(unreadable, tutorQuestion);
         }
     }
 
-    // What the instantiation report says about the typology, and what this
-    // creation teaches about the tutor's support for it.
-    function claimTypologyReport({ typology, offered, creation, questionKey }) {
-        if (!typology.claimTypology) {
-            return {
-                claimTypology:       CLAIM_TYPOLOGY_NOT_OFFERED.ABSENT,
-                claimTypologyReason: typology.reason,
-            };
-        }
-        if (!offered) {
-            return { claimTypology: CLAIM_TYPOLOGY_NOT_OFFERED.WITHHELD };
-        }
-
-        if (creation.claimTypology === CLAIM_TYPOLOGY_OUTCOMES.UNSUPPORTED) {
-            claimTypologyWithheldUntil = dependencies.now() + CLAIM_TYPOLOGY_UNSUPPORTED_RETRY_MS;
-            logTypologyOutcomeOnce(
-                CLAIM_TYPOLOGY_OUTCOMES.UNSUPPORTED,
-                "The tutor does not support claim typologies; "
-                    + "its sessions are created without them.",
+    // Learns from the tutor's answer to an offered context: a tutor that
+    // ignores it is not offered one again for a while. Both outcomes are
+    // logged once per process.
+    function noteContextOutcome(creation, questionKey) {
+        if (creation.caseContext === CASE_CONTEXT_OUTCOMES.UNSUPPORTED) {
+            caseContextWithheldUntil = dependencies.now() + CASE_CONTEXT_UNSUPPORTED_RETRY_MS;
+            logContextOutcomeOnce(
+                CASE_CONTEXT_OUTCOMES.UNSUPPORTED,
+                "The tutor does not support case contexts; its sessions run in the basic mode.",
                 { questionKey }
             );
-        } else if (creation.claimTypology === CLAIM_TYPOLOGY_OUTCOMES.REJECTED) {
-            logTypologyOutcomeOnce(
-                CLAIM_TYPOLOGY_OUTCOMES.REJECTED,
-                "The tutor rejected a claim typology; the session was created without it.",
-                { questionKey, rejection: creation.claimTypologyRejection ?? null }
+        } else if (creation.caseContext === CASE_CONTEXT_OUTCOMES.REJECTED) {
+            logContextOutcomeOnce(
+                CASE_CONTEXT_OUTCOMES.REJECTED,
+                "The tutor rejected a case context; the session runs in the basic mode.",
+                { questionKey, rejection: creation.caseContextRejection ?? null }
             );
         }
-        return {};
     }
 
     async function createQuestionSession(context, position, questionKey) {
@@ -476,26 +498,27 @@ function createAtsFeedbackHandlers({ dependencies, publishStudentResult }) {
             runtimeQuestionText,
         });
 
-        const typology = await questionClaimTypology({ sessionContext, tutorQuestion });
-        const offered = typology.claimTypology !== null
-            && dependencies.now() >= claimTypologyWithheldUntil;
+        const decision = await questionTutorMode({ context, sessionContext, tutorQuestion });
+        const offered = decision.caseContext !== null
+            && dependencies.now() >= caseContextWithheldUntil;
 
         const created = await createAtsSession({
             metadata,
             serviceConfiguration: context.serviceConfiguration,
-            claimTypology:        offered ? typology.claimTypology : null,
+            caseContext:          offered ? decision.caseContext : null,
             request:              body => requestAtsJson("/sessions", { method: "POST", body }),
         });
+        noteContextOutcome(created.creation, questionKey);
 
-        const report = claimTypologyReport({
-            typology,
-            offered,
-            creation: created.creation,
-            questionKey,
-        });
+        // The session keeps this mode until the phase ends (#865). The
+        // instantiation report records it for teachers.
         return {
             sessionId: created.sessionId,
-            creation:  { ...created.creation, questionKey, ...report },
+            creation:  {
+                ...created.creation,
+                questionKey,
+                ...sessionTutorMode(decision, offered, created.creation),
+            },
         };
     }
 
@@ -737,8 +760,9 @@ function createAtsFeedbackHandlers({ dependencies, publishStudentResult }) {
             userId:     Number(requestPayload?.userId) || context.userId,
         };
 
-        // The student's feedback is unchanged: the matched claim type is for
-        // teachers, and is only recorded with the result (#850).
+        // The student's feedback is unchanged: the matched claim type (#850),
+        // the evaluation's mode and its evidence (#865) are for teachers, and
+        // are only recorded with the result.
         const feedbackPayload = buildFeedbackPayloadFromExternalResult(
             requestPayload, fallbackContext
         );
@@ -757,6 +781,7 @@ function createAtsFeedbackHandlers({ dependencies, publishStudentResult }) {
                 publishedToUserId: Number(fallbackContext.userId) || null,
                 feedbackTitle:     feedbackPayload.title,
                 ...claimTypeFromExternalResult(requestPayload),
+                ...tutorEvaluationFromExternalResult(requestPayload),
             },
         });
     }

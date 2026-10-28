@@ -48,6 +48,16 @@ const STALE_ROW = { ...BUSY_ROW, service_id: "svc-stale", is_stale: true };
 // Services registered with the `design` scope; "svc-new" has no row yet.
 const DESIGN_SERVICES = ["svc-ready", "svc-busy", "svc-stale", "svc-new"];
 
+// What describeDesignAnalysisUnits() returns for DESIGN_ROW (#865).
+const UNIT = Object.freeze({
+    id: "p1-q1", phaseNumber: 1, questionNumber: 1, text: "Why?", textHash: "sha256:why",
+});
+const SELECTION = Object.freeze({
+    units:       [UNIT],
+    unitsReason: null,
+    tutorModes:  { "p1-q1": { mode: "basic", reason: "no-inventory" } },
+});
+
 // What the adapter's designAnalysisInput() returns for DESIGN_ROW.
 const ANALYSIS_INPUT = { input: { questions: ["p1-q1"] }, hash: "sha256:input" };
 
@@ -55,7 +65,9 @@ const ANALYSIS_INPUT = { input: { questions: ["p1-q1"] }, hash: "sha256:input" }
 const isInFlight = row => ["requested", "processing"].includes(row.status) && !row.is_stale;
 
 function makeDependencies(overrides = {}) {
-    const calls = { saveReviewed: [], reserveGeneration: [], dispatchGeneration: [] };
+    const calls = {
+        saveReviewed: [], reserveGeneration: [], dispatchGeneration: [], describeUnits: [],
+    };
     const rows = [READY_ROW, BUSY_ROW, STALE_ROW];
     const findRow = serviceId => rows.find(row => row.service_id === serviceId) ?? null;
 
@@ -93,6 +105,10 @@ function makeDependencies(overrides = {}) {
         getValidator:    async () => null,
         isServiceUsable: async () => true,
         resolveInput:    async () => ANALYSIS_INPUT,
+        describeUnits:   async (args) => {
+            calls.describeUnits.push(args);
+            return SELECTION;
+        },
         saveReviewed,
         reserveGeneration,
         dispatchGeneration,
@@ -145,8 +161,8 @@ test("listDesignAnalysesForOwner: 404 for a design of another teacher", async ()
     assert.equal(body.code, "DESIGN_NOT_FOUND");
 });
 
-test("getDesignAnalysisForOwner: returns one analysis with its document", async () => {
-    const { dependencies } = makeDependencies();
+test("getDesignAnalysisForOwner: one analysis with its document, its units and the tutor modes", async () => {
+    const { dependencies, calls } = makeDependencies();
 
     const { status, body } = await getDesignAnalysisForOwner({
         designId:  5,
@@ -156,15 +172,44 @@ test("getDesignAnalysisForOwner: returns one analysis with its document", async 
     });
 
     assert.equal(status, 200);
-    assert.deepEqual(body.result.document, { typologies: [] });
+    assert.deepEqual(body.result.analysis.document, { typologies: [] });
+    assert.equal(body.result.analysis.serviceId, "svc-ready");
+    assert.deepEqual(body.result.units, [UNIT]);
+    assert.equal(body.result.unitsReason, null);
+    assert.equal(body.result.producerUsable, true);
+    assert.deepEqual(body.result.tutorModes, { "p1-q1": { mode: "basic", reason: "no-inventory" } });
+    assert.deepEqual(calls.describeUnits, [{ serviceId: "svc-ready", designRow: DESIGN_ROW }]);
 });
 
-test("getDesignAnalysisForOwner: 404 without an analysis or for another teacher", async () => {
+test("getDesignAnalysisForOwner: a design service without an analysis yet still lists its units", async () => {
+    const { dependencies } = makeDependencies({
+        isServiceUsable: async () => false,
+        describeUnits:   async () => ({ units: [], unitsReason: "consumers-unusable", tutorModes: {} }),
+    });
+
+    const { status, body } = await getDesignAnalysisForOwner({
+        designId:  5,
+        serviceId: "svc-new",
+        userId:    OWNER_ID,
+        dependencies,
+    });
+
+    assert.equal(status, 200);
+    assert.deepEqual(body.result, {
+        analysis:       null,
+        units:          [],
+        unitsReason:    "consumers-unusable",
+        producerUsable: false,
+        tutorModes:     {},
+    });
+});
+
+test("getDesignAnalysisForOwner: 404 for an unknown service without an analysis or for another teacher", async () => {
     const { dependencies } = makeDependencies();
 
     const missing = await getDesignAnalysisForOwner({
         designId:  5,
-        serviceId: "svc-new",
+        serviceId: "svc-unknown",
         userId:    OWNER_ID,
         dependencies,
     });
@@ -537,7 +582,8 @@ test("routes: the owner reads, cannot edit (405) and regenerates (202)", async (
     try {
         assert.equal((await owner.request("GET", "/designs/5/analyses")).status, 200);
         assert.equal((await owner.request("GET", "/designs/5/analyses/svc-ready")).status, 200);
-        assert.equal((await owner.request("GET", "/designs/5/analyses/svc-new")).status, 404);
+        assert.equal((await owner.request("GET", "/designs/5/analyses/svc-new")).status, 200);
+        assert.equal((await owner.request("GET", "/designs/5/analyses/svc-unknown")).status, 404);
 
         const edit = await owner.request("PUT", "/designs/5/analyses/svc-ready", { document: {} });
         assert.equal(edit.status, 405);

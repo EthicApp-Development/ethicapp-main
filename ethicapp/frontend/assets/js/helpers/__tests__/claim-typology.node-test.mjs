@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import crypto from "node:crypto";
 import { describe, it } from "node:test";
 
 import {
@@ -11,27 +10,14 @@ import {
     claimTypologyStance,
     claimTypologyView,
     evidenceFactsById,
-    questionTextHashes,
-    selectTutorQuestions,
-    sha256Text,
 } from "../claim-typology.js";
 
-const TUTOR = { externalServices: { enabledServiceIds: [" argumentation-tutor-system "] } };
-
-const DESIGN = {
-    type:   "semantic_differential",
-    phases: [
-        { ...TUTOR, questions: [{ q_text: "Should Camila omit the data?" }, { q_text: " " }, { q_text: "Why?" }] },
-        { questions: [{ q_text: "Not discussed with the tutor." }] },
-        {
-            ...TUTOR,
-            questions: [{ q_text: "**Is** the request acceptable?", q_text_content_type: "text/markdown" }],
-        },
-    ],
-};
-
-// The backend's sha256Text() (helpers/analysis-input-hash.js).
-const nodeHash = text => `sha256:${crypto.createHash("sha256").update(text, "utf8").digest("hex")}`;
+// The units the backend selects for the typology (#865), with their hashes.
+const UNITS = Object.freeze([
+    { id: "p1-q1", phaseNumber: 1, questionNumber: 1, text: "Should Camila omit the data?", textHash: "sha256:one" },
+    { id: "p1-q3", phaseNumber: 1, questionNumber: 3, text: "Why?", textHash: "sha256:three" },
+    { id: "p3-q1", phaseNumber: 3, questionNumber: 1, text: "Is the request acceptable?", textHash: "sha256:five" },
+]);
 
 function typology(questionId, overrides = {}) {
     return {
@@ -54,56 +40,17 @@ function typology(questionId, overrides = {}) {
     };
 }
 
-describe("selectTutorQuestions", () => {
-    it("selects the non-empty questions of tutor phases with positional ids, as plain text", () => {
-        assert.deepEqual(selectTutorQuestions(DESIGN), [
-            { id: "p1-q1", phaseNumber: 1, questionNumber: 1, text: "Should Camila omit the data?" },
-            { id: "p1-q3", phaseNumber: 1, questionNumber: 3, text: "Why?" },
-            { id: "p3-q1", phaseNumber: 3, questionNumber: 1, text: "Is the request acceptable?" },
-        ]);
-    });
-
-    it("selects nothing for ranking designs and designs without tutor phases", () => {
-        assert.deepEqual(selectTutorQuestions({ ...DESIGN, type: "ranking" }), []);
-        assert.deepEqual(selectTutorQuestions({ type: "semantic_differential", phases: [{ questions: [] }] }), []);
-        assert.deepEqual(selectTutorQuestions(null), []);
-    });
-});
-
-describe("sha256Text", () => {
-    it("hashes as the backend does", async () => {
-        for (const text of ["Why?", "¿Debería Camila omitir los datos?", ""]) {
-            assert.equal(await sha256Text(text), nodeHash(text));
-        }
-    });
-
-    it("is null without Web Crypto", async () => {
-        assert.equal(await sha256Text("Why?", null), null);
-    });
-
-    it("hashes every question by id", async () => {
-        const questions = selectTutorQuestions(DESIGN);
-        assert.deepEqual(await questionTextHashes(questions), {
-            "p1-q1": nodeHash("Should Camila omit the data?"),
-            "p1-q3": nodeHash("Why?"),
-            "p3-q1": nodeHash("Is the request acceptable?"),
-        });
-    });
-});
-
 describe("claimTypologyQuestions", () => {
-    const questions = selectTutorQuestions(DESIGN);
-    const hashes = {
-        "p1-q1": "sha256:one",
-        "p1-q3": "sha256:three",
-        "p3-q1": "sha256:five",
-    };
-
-    it("pairs each question with its typology and cited evidence", () => {
+    it("pairs each unit with its typology and cited evidence", () => {
         const document = { typologies: [typology("p1-q1", { questionTextHash: "sha256:one" })] };
         const facts = evidenceFactsById({ facts: [{ id: "EV2", label: "request", statement: "Andrea asks." }] });
 
-        const [first, second] = claimTypologyQuestions({ questions, hashes, document, facts });
+        const [first, second] = claimTypologyQuestions({ units: UNITS, document, facts });
+
+        assert.deepEqual(
+            [first.id, first.phaseNumber, first.questionNumber, first.text],
+            ["p1-q1", 1, 1, "Should Camila omit the data?"]
+        );
 
         assert.equal(first.outOfDate, false);
         assert.equal(first.typology.focalAction, "Focal action of p1-q1");
@@ -121,7 +68,7 @@ describe("claimTypologyQuestions", () => {
         assert.equal(second.outOfDate, false);
     });
 
-    it("reports a typology out of date when its question text changed", () => {
+    it("reports a typology out of date when it answers another text, or records none", () => {
         const document = {
             typologies: [
                 typology("p1-q1", { questionTextHash: "sha256:old" }),
@@ -130,24 +77,39 @@ describe("claimTypologyQuestions", () => {
             ],
         };
 
-        const views = claimTypologyQuestions({ questions, hashes, document });
+        const views = claimTypologyQuestions({ units: UNITS, document });
         assert.deepEqual(views.map(view => [view.id, view.outOfDate]), [
             ["p1-q1", true],
-            ["p1-q3", false],
+            ["p1-q3", true],
             ["p3-q1", false],
         ]);
+    });
 
-        const withoutHashes = claimTypologyQuestions({ questions, hashes: {}, document });
-        assert.equal(withoutHashes.some(view => view.outOfDate), false,
-            "without Web Crypto nothing is reported out of date");
+    it("adds the note on each question's expected tutor mode", () => {
+        const views = claimTypologyQuestions({
+            units:      UNITS,
+            tutorModes: {
+                "p1-q1": { mode: "enhanced", reason: null },
+                "p1-q3": { mode: "basic", reason: "no-inventory" },
+            },
+        });
+
+        assert.deepEqual(views.map(view => view.tutorMode), [
+            { enhanced: true, reasonKey: null, action: null },
+            { enhanced: false, reasonKey: "tutor_mode_reason_no_inventory", action: "open-case" },
+            null,
+        ]);
+    });
+
+    it("lists nothing without units", () => {
+        assert.deepEqual(claimTypologyQuestions({ units: null, document: { typologies: [typology("p1-q1")] } }), []);
     });
 });
 
 describe("claimTypologyView", () => {
     const questions = claimTypologyQuestions({
-        questions: selectTutorQuestions(DESIGN),
-        hashes:    { "p1-q1": "sha256:new" },
-        document:  { typologies: [typology("p1-q1", { questionTextHash: "sha256:old" })] },
+        units:    UNITS,
+        document: { typologies: [typology("p1-q1", { questionTextHash: "sha256:old" })] },
     });
 
     it("groups the questions by phase and counts what needs attention", () => {
@@ -177,6 +139,15 @@ describe("claimTypologyView", () => {
         assert.equal(stuck.inFlight, false);
 
         assert.equal(claimTypologyView({ analysis: { status: "failed" }, questions }).state, "failed");
+    });
+
+    it("explains why no question is covered", () => {
+        assert.equal(claimTypologyView({ analysis: null, questions, unitsReason: null }).unitsReasonKey, null);
+        assert.equal(
+            claimTypologyView({ analysis: null, questions: [], unitsReason: "consumers-unusable" }).unitsReasonKey,
+            "claim_typology_units_consumers_unusable"
+        );
+        assert.equal(claimTypologyView({ analysis: null, questions: [], unitsReason: "other" }).unitsReasonKey, null);
     });
 });
 
@@ -221,23 +192,25 @@ describe("citesEvidence and evidenceFactsById", () => {
 });
 
 describe("canGenerateClaimTypology", () => {
-    const questions = selectTutorQuestions(DESIGN);
     const design = { userOwned: true, locked: false, caseId: 57 };
+    const allowed = { design, analysis: null, units: UNITS, producerUsable: true };
 
-    it("allows the owner of an unlocked design with a case and tutor questions", () => {
-        assert.equal(canGenerateClaimTypology({ design, analysis: null, questions }), true);
+    it("allows the owner of an unlocked design with a case, covered questions and a usable service", () => {
+        assert.equal(canGenerateClaimTypology(allowed), true);
         assert.equal(canGenerateClaimTypology({
-            design, analysis: { status: "requested", stale: true }, questions,
+            ...allowed, analysis: { status: "requested", stale: true },
         }), true, "a stale generation can be replaced");
     });
 
     it("refuses otherwise", () => {
-        assert.equal(canGenerateClaimTypology({ design: { ...design, locked: true }, analysis: null, questions }), false);
-        assert.equal(canGenerateClaimTypology({ design: { ...design, userOwned: false }, analysis: null, questions }), false);
-        assert.equal(canGenerateClaimTypology({ design: { ...design, caseId: null }, analysis: null, questions }), false);
-        assert.equal(canGenerateClaimTypology({ design, analysis: null, questions: [] }), false);
+        assert.equal(canGenerateClaimTypology({ ...allowed, design: { ...design, locked: true } }), false);
+        assert.equal(canGenerateClaimTypology({ ...allowed, design: { ...design, userOwned: false } }), false);
+        assert.equal(canGenerateClaimTypology({ ...allowed, design: { ...design, caseId: null } }), false);
+        assert.equal(canGenerateClaimTypology({ ...allowed, units: [] }), false);
+        assert.equal(canGenerateClaimTypology({ ...allowed, producerUsable: false }), false,
+            "a switched-off typology service is not offered");
         assert.equal(canGenerateClaimTypology({
-            design, analysis: { status: "processing", stale: false }, questions,
+            ...allowed, analysis: { status: "processing", stale: false },
         }), false);
     });
 });

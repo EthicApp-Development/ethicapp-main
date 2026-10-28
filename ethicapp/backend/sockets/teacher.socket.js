@@ -58,7 +58,15 @@ const toTeacherNotifications = (socketNamespace) => {
         groupChatMessage: (groupId, message) => {
             socketNamespace.to(`teacher-group-${groupId}`).
                 emit("onGroupChatMessage", message);
-        }
+        },
+
+        // An AI service reported an instantiation for the session (#865),
+        // for example the mode of a new tutor session: `{ serviceId,
+        // sessionId, phaseId, questionId }`.
+        serviceInstantiated: (sessionId, payload) => {
+            socketNamespace.to(`session-${sessionId}`).
+                emit("onExternalServiceInstantiated", payload);
+        },
     };
 };
 

@@ -212,6 +212,17 @@ let ActivityStateService = function($http, TeacherSocketService) {
                 })                
             );
         
+            // Subscribe to `onExternalServiceInstantiated` (#865): an AI service
+            // reported an instantiation, such as the mode of a new tutor
+            // session. Listeners read what they need again.
+            subscriptions.push(
+                TeacherSocketService.fromEvent("onExternalServiceInstantiated").subscribe({
+                    next:  data => service.notifyListeners("onExternalServiceInstantiated", data),
+                    error: err => console.error(
+                        `Websocket error for onExternalServiceInstantiated in session ${sessionId}:`, err),
+                })
+            );
+
             service.startChatRefreshWatchdog(sessionId);
 
             // Subscribe to `onChatMessage`

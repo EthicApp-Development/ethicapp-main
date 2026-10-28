@@ -3,18 +3,22 @@
 // a claim-typology/v1 document with one typology per tutor question, stored by
 // the backend adapter with each question's text hash (`questionTextHash`).
 // The view shows it read-only, question by question, inside each phase.
+//
+// The backend is the single source of truth for the questions (#865): the
+// analysis read (`GET /designs/:id/analyses/:serviceId`) returns the units
+// the typology currently covers, with their text hashes, why there are none,
+// and each tutor question's expected mode. These helpers only cross-reference
+// them with the stored document.
 
-import { TEXT_MARKDOWN } from "../../../../common/modules/text-content-types.js";
-import { toPlainText } from "./rich-text.js";
 import {
     caseAnalysisErrorKey,
     caseAnalysisState,
     isCaseAnalysisInFlight,
 } from "./case-analyses.js";
+import { claimTypologyUnitsReasonKey, tutorModeNote } from "./tutor-modes.js";
 
 export const CLAIM_TYPOLOGY_SERVICE_ID = "case-analyst-claim-typology";
 export const CLAIM_TYPOLOGY_SCHEMA = "claim-typology/v1";
-export const ARGUMENTATION_TUTOR_SERVICE_ID = "argumentation-tutor-system";
 export const EVIDENCE_INVENTORY_SERVICE_ID = "case-analyst-evidence-inventory";
 
 // How often the design view reads the analysis while a generation is in flight.
@@ -44,80 +48,6 @@ const GENERATE_NOTICES = Object.freeze({
 
 function isPlainObject(value) {
     return value !== null && typeof value === "object" && !Array.isArray(value);
-}
-
-// The question as the tutor receives it, as the backend computes it
-// (design-analysis-units.js): text/markdown becomes plain text, then trimmed.
-function questionText(question) {
-    const value = question?.q_text;
-    const text = question?.q_text_content_type === TEXT_MARKDOWN && typeof value === "string"
-        ? toPlainText(value, TEXT_MARKDOWN)
-        : value;
-    return typeof text === "string" ? text.trim() : "";
-}
-
-function enablesService(phase, serviceId) {
-    const enabled = phase?.externalServices?.enabledServiceIds;
-    return Array.isArray(enabled) && enabled.some(id => String(id).trim() === serviceId);
-}
-
-/**
- * The tutor questions the typology covers, selected as the backend selects
- * the question units of the tutor's phases
- * (ethicapp/backend/helpers/design-analysis-units.js): the non-empty
- * semantic differential questions of the phases that enable the tutor, with
- * positional 1-based ids `p<phase>-q<question>`. The tutor is the one
- * consumer of claim typologies in the shipped catalog (#863).
- *
- * @returns {Array<{id: string, phaseNumber: number, questionNumber: number, text: string}>}
- */
-export function selectTutorQuestions(design) {
-    if (design?.type !== "semantic_differential" || !Array.isArray(design.phases)) {
-        return [];
-    }
-
-    const selected = [];
-    design.phases.forEach((phase, phaseIndex) => {
-        if (!enablesService(phase, ARGUMENTATION_TUTOR_SERVICE_ID)) {
-            return;
-        }
-
-        const questions = Array.isArray(phase?.questions) ? phase.questions : [];
-        questions.forEach((question, questionIndex) => {
-            const text = questionText(question);
-            if (text) {
-                const phaseNumber = phaseIndex + 1;
-                const questionNumber = questionIndex + 1;
-                const id = `p${phaseNumber}-q${questionNumber}`;
-                selected.push({ id, phaseNumber, questionNumber, text });
-            }
-        });
-    });
-
-    return selected;
-}
-
-/**
- * The SHA-256 of a text, as `sha256:<hex>` (the backend's sha256Text()), or
- * null when Web Crypto is not available (an insecure context).
- */
-export async function sha256Text(text, subtle = globalThis.crypto?.subtle) {
-    if (!subtle) {
-        return null;
-    }
-
-    const digest = await subtle.digest("SHA-256", new TextEncoder().encode(String(text)));
-    const hex = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, "0"))
-        .join("");
-    return `sha256:${hex}`;
-}
-
-/** The text hash of each question, by id. */
-export async function questionTextHashes(questions, hash = sha256Text) {
-    const entries = await Promise.all(
-        questions.map(async question => [question.id, await hash(question.text)])
-    );
-    return Object.fromEntries(entries);
 }
 
 export function claimTypologyStance(stance) {
@@ -162,44 +92,46 @@ function typologyView(typology, facts) {
 }
 
 /**
- * What the design view shows for each tutor question: its typology, if the
- * stored document has one, and whether it is out of date (the typology
- * recorded the hash of another question text). A typology without a recorded
- * hash, or a question whose hash cannot be computed, is never reported out of
- * date.
+ * What the design view shows for each question the typology covers: its
+ * typology, if the stored document has one, whether it is out of date (it
+ * recorded the hash of another question text, or none), and the note on the
+ * tutor's expected mode.
  *
  * @param {Object} args
- * @param {Array} args.questions - From selectTutorQuestions().
- * @param {Object} [args.hashes] - From questionTextHashes().
+ * @param {Array} args.units - The backend's units: `{ id, phaseNumber,
+ *     questionNumber, text, textHash }`.
  * @param {Object|null} [args.document] - The stored claim-typology/v1 document.
  * @param {Object} [args.facts] - From evidenceFactsById().
+ * @param {Object} [args.tutorModes] - The backend's `{ [unit id]: { mode, reason } }`.
  */
-export function claimTypologyQuestions({ questions, hashes = {}, document = null, facts = {} }) {
+export function claimTypologyQuestions({ units, document = null, facts = {}, tutorModes = {} }) {
     const typologies = Array.isArray(document?.typologies) ? document.typologies : [];
     const byId = new Map(typologies
         .filter(typology => isPlainObject(typology) && typeof typology.questionId === "string")
         .map(typology => [typology.questionId, typology]));
 
-    return questions.map((question) => {
-        const typology = byId.get(question.id) ?? null;
-        const recordedHash = typology?.questionTextHash ?? null;
-        const currentHash = hashes[question.id] ?? null;
-        const changed = Boolean(recordedHash && currentHash && recordedHash !== currentHash);
+    return (Array.isArray(units) ? units : []).map((unit) => {
+        const typology = byId.get(unit.id) ?? null;
 
         return {
-            ...question,
-            typology:  typology ? typologyView(typology, facts) : null,
-            outOfDate: Boolean(typology) && changed,
+            id:             unit.id,
+            phaseNumber:    unit.phaseNumber,
+            questionNumber: unit.questionNumber,
+            text:           unit.text,
+            typology:       typology ? typologyView(typology, facts) : null,
+            outOfDate:      Boolean(typology) && typology.questionTextHash !== unit.textHash,
+            tutorMode:      tutorModeNote(tutorModes?.[unit.id]),
         };
     });
 }
 
 /**
  * The view the design viewer receives: the questions grouped by phase number,
- * the analysis state ("none" when there is no analysis yet) and counts for
- * the summary.
+ * the analysis state ("none" when there is no analysis yet), counts for the
+ * summary, and why no question is covered (`unitsReasonKey`, a translation
+ * key, or null).
  */
-export function claimTypologyView({ analysis, questions }) {
+export function claimTypologyView({ analysis, questions, unitsReason = null }) {
     const missing = questions.filter(question => !question.typology);
     const byPhase = {};
     for (const question of questions) {
@@ -212,6 +144,7 @@ export function claimTypologyView({ analysis, questions }) {
         byPhase,
         outOfDateCount: questions.filter(question => question.outOfDate).length,
         missingCount:   analysis?.document ? missing.length : 0,
+        unitsReasonKey: questions.length === 0 ? claimTypologyUnitsReasonKey(unitsReason) : null,
     };
 }
 
@@ -229,12 +162,14 @@ export function claimTypologyGenerateNotice(outcome) {
 
 /**
  * Whether the teacher can ask for a new generation: the design is theirs and
- * not locked, it has tutor questions, and no fresh generation is in flight.
+ * not locked, the typology covers questions, its service is usable, and no
+ * fresh generation is in flight.
  */
-export function canGenerateClaimTypology({ design, analysis, questions }) {
+export function canGenerateClaimTypology({ design, analysis, units, producerUsable }) {
     return design?.userOwned === true
         && design.locked !== true
         && Boolean(design.caseId)
-        && questions.length > 0
+        && Array.isArray(units) && units.length > 0
+        && producerUsable === true
         && !isCaseAnalysisInFlight(analysis);
 }

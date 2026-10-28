@@ -1,4 +1,4 @@
-<div class="panel panel-default claim-typology-panel" ng-if="$ctrl.isVisible()">
+<div class="panel panel-default claim-typology-panel" ng-if="$ctrl.isVisible()" data-testid="claim-typology-panel">
     <div class="panel-body">
         <div class="claim-typology-panel-header">
             <h4 class="claim-typology-panel-title">{{ 'claim_typology_title' | translate }}</h4>
@@ -51,7 +51,7 @@
         </div>
 
         <div role="status">
-            <p class="text-muted" ng-if="$ctrl.state() === 'none' && !$ctrl.loadFailed">
+            <p class="text-muted" ng-if="$ctrl.state() === 'none' && !$ctrl.loadFailed && !$ctrl.unitsReasonKey()">
                 <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
                 {{ 'claim_typology_not_generated' | translate }}
             </p>
@@ -100,12 +100,22 @@
             {{ 'claim_typology_missing_summary' | translate:{ count: $ctrl.view.missingCount } }}
         </p>
 
+        <p class="text-muted" ng-if="$ctrl.unitsReasonKey()" data-testid="claim-typology-units-reason">
+            <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+            {{ $ctrl.unitsReasonKey() | translate }}
+        </p>
+
+        <p class="text-muted small" ng-if="$ctrl.isProducerUnavailable()" data-testid="claim-typology-producer-unavailable">
+            <i class="fa-solid fa-power-off" aria-hidden="true"></i>
+            {{ 'claim_typology_producer_unavailable' | translate }}
+        </p>
+
         <p class="text-muted small" ng-if="$ctrl.isLocked()">
             <i class="fa-solid fa-lock" aria-hidden="true"></i>
             {{ 'claim_typology_locked_note' | translate }}
         </p>
 
-        <p class="small" ng-if="$ctrl.hasDocument()">
+        <p class="small" ng-if="$ctrl.hasDocument() && !$ctrl.unitsReasonKey()">
             {{ 'claim_typology_where_note' | translate }}
         </p>
     </div>

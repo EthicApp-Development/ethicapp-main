@@ -10,6 +10,30 @@
             <span class="claim-typology-question-text">{{ question.text }}</span>
         </p>
 
+        <p class="small claim-typology-tutor-mode" ng-if="question.tutorMode"
+            data-testid="tutor-mode-note"
+            data-question-id="{{ question.id }}"
+            data-tutor-mode="{{ question.tutorMode.enhanced ? 'enhanced' : 'basic' }}">
+            <span class="text-success" ng-if="question.tutorMode.enhanced">
+                <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+                {{ 'tutor_mode_enhanced_available' | translate }}
+            </span>
+            <span class="text-warning" ng-if="!question.tutorMode.enhanced">
+                <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+                {{ 'tutor_mode_basic_expected' | translate }}
+                {{ question.tutorMode.reasonKey | translate }}
+            </span>
+            <a ng-if="$ctrl.offersCaseLink(question)" ng-href="#!/cases/{{ $ctrl.caseId }}"
+                data-testid="tutor-mode-open-case">
+                {{ 'tutor_mode_open_case' | translate }}
+            </a>
+            <button type="button" class="btn btn-link btn-xs" ng-if="$ctrl.offersGenerate(question)"
+                data-testid="tutor-mode-generate"
+                ng-click="$ctrl.onGenerate()">
+                {{ 'tutor_mode_generate_typology' | translate }}
+            </button>
+        </p>
+
         <p class="text-warning small" ng-if="question.outOfDate">
             <i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i>
             {{ 'claim_typology_question_out_of_date' | translate }}

@@ -16,6 +16,7 @@ import {
     resolveDesignAnalysisInput,
 } from "../helpers/design-analyses-lifecycle-helper.js";
 import { DESIGN_HOOK_TRIGGERS } from "../helpers/design-analysis-hooks.js";
+import { describeDesignAnalysisUnits } from "../helpers/design-analysis-view.js";
 import { designLockedRefusal } from "../helpers/design-update.js";
 import externalServicesRegistry from "../services/external-services.service.js";
 
@@ -94,6 +95,7 @@ const defaultDependencies = {
     getValidator,
     isServiceUsable,
     resolveInput:      resolveDesignAnalysisInput,
+    describeUnits:     describeDesignAnalysisUnits,
     dispatchGeneration,
 };
 
@@ -156,22 +158,45 @@ export async function listDesignAnalysesForOwner({
     return okResponse(rows.map(row => serializeDesignAnalysis(row)));
 }
 
+/**
+ * One analysis with its document, and what the design view renders next to it
+ * (#865): `{ analysis, units, unitsReason, producerUsable, tutorModes }`.
+ * `analysis` is null while a design service has produced nothing for the
+ * design yet; the units it selects are listed anyway, so the view can offer
+ * the first generation. `producerUsable` says whether the service could be
+ * asked for a generation now. See describeDesignAnalysisUnits().
+ */
 export async function getDesignAnalysisForOwner({
     designId,
     serviceId,
     userId,
     dependencies = defaultDependencies,
 }) {
-    if (!await dependencies.getOwnedDesign(designId, userId)) {
+    const designRow = await dependencies.getOwnedDesign(designId, userId);
+    if (!designRow) {
         return designNotFound();
     }
 
-    const row = await dependencies.getAnalysis({ designId, serviceId });
-    if (!row) {
+    const [row, designService] = await Promise.all([
+        dependencies.getAnalysis({ designId, serviceId }),
+        dependencies.isDesignService(serviceId),
+    ]);
+    if (!row && !designService) {
         return analysisNotFound();
     }
 
-    return okResponse(serializeDesignAnalysis(row, { withDocument: true }));
+    const [selection, producerUsable] = await Promise.all([
+        dependencies.describeUnits({ serviceId, designRow }),
+        designService ? dependencies.isServiceUsable(serviceId) : false,
+    ]);
+
+    return okResponse({
+        analysis:    row ? serializeDesignAnalysis(row, { withDocument: true }) : null,
+        units:       selection.units,
+        unitsReason: selection.unitsReason,
+        producerUsable,
+        tutorModes:  selection.tutorModes,
+    });
 }
 
 /**
