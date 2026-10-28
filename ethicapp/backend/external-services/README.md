@@ -713,12 +713,17 @@ change the job status, so asynchronous jobs can report before they complete.
   present. Other keys are adapter-specific: Polyadic adds `rooms` (one entry per
   room; `rejection` holds the service's error when settings were refused) and
   tags each warning with its `room`. The Argumentation Tutor adds `llmTier`,
-  the resolved `model`, the `questionKey` of the session and what became of
-  the question's claim typology (see "The tutor and the claim typology").
+  the resolved `model`, the `questionKey` of the session and its mode (see
+  "The tutor's modes").
 - A report with warnings, degraded mode or rejected settings is also logged as
   one `[external-services] Instantiation report.` line with its job id.
-- `NULL` means the job instantiated nothing. Teachers do not see these reports
-  yet.
+- Once a report is stored, the registry emits `onExternalServiceInstantiated`
+  (`{ serviceId, sessionId, phaseId, questionId }`, the ids only) to the
+  session's room on the `/teacher` socket namespace (#865), so a teacher view
+  can read what it needs again.
+- `NULL` means the job instantiated nothing. Teachers see the tutor's modes
+  (`GET /activities/:session_id/tutor-modes`); the other reports have no
+  screen yet.
 
 ## Inbound Callbacks
 
@@ -1235,6 +1240,15 @@ phases join the producer's selection, and the producer's input hash changes
 for designs that use it, so their next save runs the analysis again.
 Switching a consumer off removes its phases the same way.
 
+`explainDesignAnalysisUnits()` returns the same selection as `{ units,
+reason, consumerIds }` (#865): `reason` says why nothing is selected
+(`not-applicable` for a ranking design or an unknown unit, `no-consumer`,
+`consumers-unusable` when the policy, a per-adapter switch or a missing
+connection leaves no consumer usable, `no-questions`), and `consumerIds` are
+the usable consumers the design enables. The design view reads both through
+the analysis endpoint (see "API"), so the backend is the one source of the
+selection.
+
 `selectQuestionUnits(design, { serviceIds })` and `findQuestionUnit(design,
 position, { serviceIds })` select by enabled service ids without the policy.
 The tutor finds its own question with them (`findTutorQuestion()` in
@@ -1387,17 +1401,34 @@ question; its callbacks come from the `case-analyst-api` Keycloak client.
 The teacher's design view shows the typology read-only
 (`components/claim-typology-panel.component.js` and
 `claim-typology-questions.component.js` in the frontend). The panel shows the
-generation state and "Generate again"; each tutor question shows its focal
-action and claim types (stance, description, example statement and cited
-evidence, with the statements of the case's current evidence inventory)
-inside its phase. A typology whose `questionTextHash` differs from the hash of
-the current question text is marked out of date.
+generation state and "Generate again"; each question the typology covers
+shows its focal action and claim types (stance, description, example
+statement and cited evidence, with the statements of the case's current
+evidence inventory) inside its phase, and the tutor's expected mode (see
+"The tutor's modes"). The questions, their text hashes and the expected modes
+come from `GET /designs/:id/analyses/:serviceId` (#865); the frontend selects
+and hashes nothing. A typology whose `questionTextHash` differs from the
+unit's `textHash`, or that records none, is marked out of date. When nothing
+is selected the panel says why: with the tutor switched off, for example, it
+lists no question as awaiting a typology. "Generate" is offered only while
+units are selected and the typology service itself is usable.
 
-### The tutor and the claim typology
+### The tutor's modes
 
 The Argumentation Tutor adapter (`adapters/ats-feedback.adapter.js`, #850)
 opens one tutor session per EthicApp session, phase and question, so each
-answer is evaluated against its own question.
+answer is evaluated against its own question. Each session runs in one of two
+modes (#865, epic #861; ethicapp-ai-additions#209):
+
+- **Enhanced:** the session receives the case's evidence inventory and the
+  question's claim typology as `case_context`. The tutor checks the
+  argument's evidence against the case's facts and classifies its claim.
+- **Basic:** the session receives no context, and the tutor evaluates as it
+  did before #647.
+
+The mode is chosen automatically, fixed when the session is created and kept
+until the phase ends; an input that arrives later does not upgrade a running
+session. Teachers choose nothing.
 
 - **Session key.** The first response to a question creates its session. The
   key is `<sessionId>:<phaseId>:<question key>`, where the question key is the
@@ -1413,53 +1444,125 @@ answer is evaluated against its own question.
   `helpers/design-analysis-units.js`), the same text the typology answers.
   Without one it is the runtime question's text, then the phase's first
   question, then its instructions, as before #850.
-- **Typology.** When the design's `case-analyst-claim-typology` analysis holds
-  a typology for that question whose `questionTextHash` matches the hash of
-  the question text, the session receives it as `claim_typology`
-  (`helpers/tutor-claim-typology.js`). A document kept while a new generation
-  is in flight is used under the same condition. The tutor's
-  `tutor-claim-typology/v1` (ethicapp-ai-additions#204) accepts no other key,
-  so the adapter sends `schemaVersion`, `focalAction`, at most eight
-  `types[{id, label, description, stance, exampleStatement?,
-  relatedEvidenceIds?}]` with unique ids and a known stance, and
-  `relatedFacts[{id, statement}]` with the facts of the case's evidence
-  inventory that those types cite. Cited facts the current inventory no longer
-  has are left out. `questionId`, `phaseId` and `questionTextHash` are not
-  sent.
+- **The rule.** `decideTutorMode()` in `helpers/tutor-mode.js` is the one
+  place that decides the mode, for session creation and for the design view
+  alike. A question runs enhanced when the case's
+  `case-analyst-evidence-inventory` analysis has a document, the design's
+  `case-analyst-claim-typology` analysis has a typology for the question
+  whose `questionTextHash` matches the question text, and both adapters are
+  usable under the AI service policy, including their per-adapter switches
+  (#864). A document kept while a new generation is in flight, or after a
+  failed one, is used under the same conditions. A session follows the policy
+  version it is pinned to, as its hooks do; the design view follows the
+  current one.
+- **Reasons.** Otherwise the session runs basic, and the reason is the first
+  that applies, in this order. The inventory comes first: a case without one
+  cannot run enhanced whatever its typologies.
+
+  | Reason | When |
+  | --- | --- |
+  | `inventory-disabled` | The evidence inventory adapter is switched off, or its service is not allowed. |
+  | `inventory-failed` | The case has no inventory because its generation failed or never answered, or it could not be read. |
+  | `no-inventory` | The case has no inventory (case analyses are chosen when the case is created). |
+  | `typology-disabled` | The claim typology adapter is switched off, or its service is not allowed. |
+  | `typology-pending` | The question has no usable typology and a generation is in flight. |
+  | `typology-failed` | The question has no usable typology and the latest generation failed or never answered, or the typology could not be read or used. |
+  | `typology-out-of-date` | The question's typology answers another text of the question, or records none. |
+  | `no-typology` | The question has no typology (including a response that maps to no tutor question). |
+  | `tutor-unsupported` | The tutor answered without a `mode`: it predates ethicapp-ai-additions#209 and ignored the context. |
+  | `context-rejected` | The tutor answered `400 {"error": "Invalid case context"}`, or created the session in the basic mode anyway. |
+
+  The last two are known only from the tutor's answer to session creation;
+  `inventory-disabled` and `typology-disabled` were added to the reasons of
+  #865 for the per-adapter switches of #864.
+- **Request.** In the enhanced mode the session body carries `case_context`
+  (`tutor-case-context/v1`): `evidenceInventory` is the stored
+  `evidence-inventory/v1` document as is, and `claimTypology` the question's
+  typology as `tutor-claim-typology/v1` (`toTutorClaimTypology()` in
+  `helpers/tutor-claim-typology.js`): `schemaVersion`, `focalAction` and at
+  most eight `types[{id, label, description, stance, exampleStatement?,
+  relatedEvidenceIds?}]` with unique ids and a known stance. Cited facts the
+  inventory does not have are left out; `relatedFacts`, `questionId`,
+  `phaseId` and `questionTextHash` are not sent. In the basic mode the body
+  has no context. The deprecated top-level `claim_typology` is never sent: the
+  tutor answers 400 when it comes with `case_context`.
 
   ```json
   {
-    "schemaVersion": "tutor-claim-typology/v1",
-    "focalAction": "tell his mother about the accident",
-    "types": [
-      { "id": "AF1", "label": "Tell her now", "description": "...",
-        "stance": "in_favor", "relatedEvidenceIds": ["EV3"] }
-    ],
-    "relatedFacts": [{ "id": "EV3", "statement": "..." }]
+    "case_id": "ethicapp-case-57",
+    "case_title": "...",
+    "case_text": "...",
+    "question": "...",
+    "case_context": {
+      "schemaVersion": "tutor-case-context/v1",
+      "evidenceInventory": { "schemaVersion": "evidence-inventory/v1", "facts": ["..."], "exclusions": ["..."] },
+      "claimTypology": {
+        "schemaVersion": "tutor-claim-typology/v1",
+        "focalAction": "tell his mother about the accident",
+        "types": [
+          { "id": "AF1", "label": "Tell her now", "description": "...",
+            "stance": "in_favor", "relatedEvidenceIds": ["EV3"] }
+        ]
+      }
+    }
   }
   ```
-- **Fallbacks.** A design without the analysis, a question without a
-  typology, an out-of-date typology or a failure to read it creates the
-  session as before, without the field. When the tutor answers
-  `400 {"error": "Invalid claim typology"}`, the session is created again
-  without it. A tutor that predates #204 reports `claim_typology` as an
-  unsupported setting and ignores it; a session whose answer lacks
-  `claim_typology_used: true` counts as such, and the next sessions are
-  created without a typology for ten minutes
-  (`CLAIM_TYPOLOGY_UNSUPPORTED_RETRY_MS`). Each of these two outcomes is
-  logged once per process.
+- **Fallbacks.** When the tutor answers `400` naming the case context, the
+  session is created again without it (`context-rejected`). A tutor that
+  answers without `mode` ignored the context (`tutor-unsupported`); the next
+  sessions are created without one for ten minutes
+  (`CASE_CONTEXT_UNSUPPORTED_RETRY_MS`), and also report `tutor-unsupported`.
+  Each of these two outcomes is logged once per process. A failure to read
+  the inputs never fails the response: the session runs basic.
 - **Report.** The instantiation report of the response that created the
-  session carries `questionKey` and `claimTypology`: `used`, `rejected` (with
-  `claimTypologyRejection`), `unsupported`, `withheld` (not offered during
-  the ten minutes) or `absent`, with `claimTypologyReason` (`no-question`,
-  `no-analysis`, `no-typology`, `out-of-date`, `invalid` or `load-failed`).
-- **Evaluations.** With a typology, the tutor's result callback carries
-  `claimTypeId` (`AF#` or null) and `claimTypeRationale` (up to 600
-  characters) at the top level of its payload. The `callback-received`
-  handler records both in the result's `adapter_result`
-  (`external_service_results`, next to the raw payload). The feedback
-  published to the student keeps its shape and never includes them. No
-  teacher screen shows them yet.
+  session carries `questionKey`, `tutorMode` (`enhanced` or `basic`) and
+  `tutorModeReason` (null in the enhanced mode). When a context was offered,
+  `caseContext` says what became of it (`used`, `rejected` with
+  `caseContextRejection`, `downgraded` or `unsupported`), and
+  `tutorModeMissing` lists the parts the tutor reported missing.
+- **Evaluations.** The tutor's result callback carries, at the top level of
+  its payload, `claimTypeId` (`AF#` or null) and `claimTypeRationale` (up to
+  600 characters) when the session has a typology, and `tutorMode` in every
+  analysis of a session opened with `case_context`, with `evidenceFactIds`
+  (`EV#`) and `unsupportedClaims` (`{ statement, exclusionId }`, at most 10)
+  in the enhanced mode. The `callback-received` handler records them in the
+  result's `adapter_result` (`external_service_results`, next to the raw
+  payload). The feedback published to the student keeps its shape and never
+  includes them.
+- **Teachers.** The design view shows, per tutor question, the mode it can
+  expect as of now: "Advanced evaluation available", or "The tutor will
+  evaluate without the advanced capabilities" with the reason, and a link to
+  the case or to generate the typology again when that helps. The activity
+  view warns, per tutor question with a session in the basic mode, with the
+  reason; it reads `GET /activities/:session_id/tutor-modes` again whenever
+  the registry announces a new tutor session (`onExternalServiceInstantiated`).
+
+`GET /activities/:session_id/tutor-modes` (`controllers/activity-tutor-modes.js`,
+`helpers/tutor-mode-records.js`) is for the activity's creator only: students
+get `403` and other teachers `404 SESSION_NOT_FOUND`. It returns the latest
+report of each phase and question, with the evaluations recorded for that
+question by the mode the tutor reported:
+
+```json
+{
+  "status": "ok",
+  "result": {
+    "sessionId": 7,
+    "questions": [
+      {
+        "phaseId": 31, "phaseNumber": 1, "questionId": 88,
+        "questionKey": "p1-q2", "questionNumber": 2,
+        "tutorMode": "basic", "tutorModeReason": "no-inventory",
+        "createdAt": "2026-10-27T14:00:00.000Z",
+        "evaluations": { "enhanced": 0, "basic": 0, "unreported": 3 }
+      }
+    ]
+  }
+}
+```
+
+Evaluations of sessions opened without a context report no mode and count as
+`unreported`.
 
 ### Recording results from an adapter
 
@@ -1489,7 +1592,7 @@ teachers `404 DESIGN_NOT_FOUND`, also for public designs.
 | Endpoint | Description |
 | --- | --- |
 | `GET /designs/:id/analyses` | The design's analyses with status and timestamps, without documents. |
-| `GET /designs/:id/analyses/:serviceId` | One analysis with its document. `404 DESIGN_ANALYSIS_NOT_FOUND` when the design has none from that service. |
+| `GET /designs/:id/analyses/:serviceId` | One analysis with what the design view renders next to it (#865): `{ analysis, units, unitsReason, producerUsable, tutorModes }`. `analysis` is the analysis with its document, or `null` while a design service has produced nothing for the design. `units` are the units the service currently selects (`{ id, phaseNumber, questionNumber, text, textHash }`, see "Producers, consumers and units"), `unitsReason` why there are none (else `null`), `producerUsable` whether the service could generate now, and `tutorModes` the expected tutor mode of each tutor question when the tutor is a usable consumer (`{ "p1-q1": { "mode": "basic", "reason": "typology-out-of-date" } }`, see "The tutor's modes"). `404 DESIGN_ANALYSIS_NOT_FOUND` when the service does not analyse designs and the design has no analysis from it. |
 | `PUT /designs/:id/analyses/:serviceId` | Body `{ document }`, validated by the adapter. Answers `405 DESIGN_ANALYSIS_NOT_EDITABLE` without a validator (every service today), `409 DESIGN_LOCKED` on a locked design, `400 DESIGN_ANALYSIS_DOCUMENT_INVALID` with `details`, and `409 DESIGN_ANALYSIS_PROCESSING` while a generation is in flight. |
 | `POST /designs/:id/analyses/:serviceId/generate` | Reserves a new generation with the input hash of the service's `designAnalysisInput()`, sends `design-updated` (`trigger: "generate"`, with the current design) to that service only, and answers `202` with the reserved analysis. It runs whatever the stored input hash. Answers `404 DESIGN_ANALYSIS_SERVICE_NOT_FOUND` when the service is not registered with the `design` scope, `409 DESIGN_LOCKED` on a locked design, `503 DESIGN_ANALYSIS_SERVICE_DISABLED` when the service is not usable, `409 DESIGN_ANALYSIS_NOT_APPLICABLE` when its input export answers `null` for the design, `409 DESIGN_CHANGED` when a save changed (or a launch locked) the design while the input was prepared (try again), and `409 DESIGN_ANALYSIS_PROCESSING` while a generation is in flight. It also recovers stale generations. |
 

@@ -1,11 +1,13 @@
-// One tutor session per question, with that question's claim typology (#850).
-// The adapter runs with a fake AI Additions client and fake database reads:
-// differential 101 and 102 are the first and second questions of phase 2.
+// One tutor session per question (#850), in the enhanced mode when the case
+// has an evidence inventory and the question an up-to-date claim typology,
+// otherwise in the basic mode (#865). The adapter runs with a fake AI
+// Additions client, a fake registry and fake database reads: differential 101
+// and 102 are the first and second questions of phase 2.
 import assert from "node:assert/strict";
 import test from "node:test";
 
 import { sha256Text } from "../../../helpers/analysis-input-hash.js";
-import { loadTutorClaimTypology } from "../../../helpers/tutor-claim-typology.js";
+import { loadTutorModeInputs } from "../../../helpers/tutor-mode.js";
 import * as atsFeedback from "../ats-feedback.adapter.js";
 
 const Q1 = "Should Sebastián tell his mother?";
@@ -55,10 +57,16 @@ const TYPOLOGY_DOCUMENT = Object.freeze({
 
 const INVENTORY = Object.freeze({
     schemaVersion: "evidence-inventory/v1",
+    kind:          "case_evidence_inventory",
+    language:      "en_US",
     facts:         [{ id: "EV1", statement: "His mother is ill." }],
+    exclusions:    [],
 });
 
-function fakeTutor({ rejectTypology = false, ignoreTypology = false } = {}) {
+const INVENTORY_ID = "case-analyst-evidence-inventory";
+const TYPOLOGY_ID = "case-analyst-claim-typology";
+
+function fakeTutor({ rejectContext = false, ignoreContext = false } = {}) {
     const requests = [];
     let sessions = 0;
     let tasks = 0;
@@ -69,22 +77,25 @@ function fakeTutor({ rejectTypology = false, ignoreTypology = false } = {}) {
             requests.push({ pathname, method, body, basePath });
 
             if (pathname === "/sessions" && method === "POST") {
-                if (rejectTypology && body.claim_typology) {
-                    const error = new Error("HTTP 400");
-                    error.statusCode = 400;
-                    error.responseBody = { error: "Invalid claim typology", errors: ["types"] };
-                    throw error;
+                if (body.case_context && body.claim_typology) {
+                    throw badRequest({ error: "Invalid case context", errors: [{ path: "/" }] });
+                }
+                if (rejectContext && body.case_context) {
+                    throw badRequest({
+                        error:  "Invalid case context",
+                        errors: [{ path: "/evidenceInventory/facts/0/id", message: "bad" }],
+                    });
                 }
                 sessions += 1;
                 const session = { session_id: `ats-${sessions}`, warnings: [], degraded: false };
-                if (body.claim_typology && ignoreTypology) {
-                    // A tutor that predates ethicapp-ai-additions#204.
+                if (body.case_context && ignoreContext) {
+                    // A tutor that predates ethicapp-ai-additions#209.
                     session.warnings.push({
-                        field: "claim_typology", verdict: "unsupported", message: "unknown",
+                        field: "case_context", verdict: "unsupported", message: "unknown",
                     });
                     session.degraded = true;
-                } else if (body.claim_typology) {
-                    session.claim_typology_used = true;
+                } else if (body.case_context) {
+                    session.mode = "enhanced";
                 }
                 return session;
             }
@@ -100,7 +111,38 @@ function fakeTutor({ rejectTypology = false, ignoreTypology = false } = {}) {
     return { client, requests };
 }
 
-async function registerAdapter({ tutor, typologyDocument = TYPOLOGY_DOCUMENT, now = () => 0 }) {
+function badRequest(responseBody) {
+    const error = new Error("HTTP 400");
+    error.statusCode = 400;
+    error.responseBody = responseBody;
+    return error;
+}
+
+// The registry the tutor mode reads: which of the two analysis adapters the
+// session's pinned policy version allows.
+function fakeRegistry(usable = [INVENTORY_ID, TYPOLOGY_ID]) {
+    const calls = [];
+    return {
+        calls,
+        async getSessionPolicyVersion(sessionId) {
+            calls.push({ sessionId });
+            return { id: 3 };
+        },
+        async usableServiceIds(serviceIds, options) {
+            calls.push({ serviceIds, options });
+            return serviceIds.filter(id => usable.includes(id));
+        },
+    };
+}
+
+async function registerAdapter({
+    tutor,
+    typologyDocument = TYPOLOGY_DOCUMENT,
+    typologyStatus = "ready",
+    inventoryRow = { status: "ready", document: INVENTORY },
+    registry = fakeRegistry(),
+    now = () => 0,
+}) {
     const subscribers = new Map();
     const published = [];
 
@@ -121,11 +163,12 @@ async function registerAdapter({ tutor, typologyDocument = TYPOLOGY_DOCUMENT, no
                 caseText:           "Case text.",
             }),
             resolveQuestionText: async context => `Runtime question ${context.questionId}`,
-            loadClaimTypology:   args => loadTutorClaimTypology(args, {
-                getAnalysis: async () => (typologyDocument
-                    ? { status: "ready", document: typologyDocument }
+            loadTutorModeInputs: args => loadTutorModeInputs(args, {
+                registry,
+                getDesignAnalysisRow: async () => (typologyDocument
+                    ? { status: typologyStatus, is_stale: false, document: typologyDocument }
                     : null),
-                getCaseAnalysisRow: async () => ({ document: INVENTORY }),
+                getCaseAnalysisRow: async () => inventoryRow,
             }),
             now,
         },
@@ -210,45 +253,102 @@ test("a later answer to the same question is compared in that question's session
     ]);
 });
 
-test("a question with an up-to-date typology gets it; an out-of-date one does not", async () => {
+test("an up-to-date typology and an inventory open an enhanced session with case_context", async () => {
     const tutor = fakeTutor();
     const { dispatch } = await registerAdapter({ tutor });
 
     const first = await dispatch("student-response-submitted", response(101, 1, "Q1."));
     const second = await dispatch("student-response-submitted", response(102, 1, "Q2."));
 
-    const [withTypology, withoutTypology] = sessionCreations(tutor.requests);
-    assert.deepEqual(withTypology.body.claim_typology, {
-        schemaVersion: "tutor-claim-typology/v1",
-        focalAction:   "tell his mother",
-        types:         [{
-            id:                 "AF1",
-            label:              "Tell her",
-            description:        "Argues for telling.",
-            stance:             "in_favor",
-            relatedEvidenceIds: ["EV1"],
-        }],
-        relatedFacts: [{ id: "EV1", statement: "His mother is ill." }],
+    const [enhanced, basic] = sessionCreations(tutor.requests);
+    assert.deepEqual(enhanced.body.case_context, {
+        schemaVersion:     "tutor-case-context/v1",
+        evidenceInventory: INVENTORY,
+        claimTypology:     {
+            schemaVersion: "tutor-claim-typology/v1",
+            focalAction:   "tell his mother",
+            types:         [{
+                id:                 "AF1",
+                label:              "Tell her",
+                description:        "Argues for telling.",
+                stance:             "in_favor",
+                relatedEvidenceIds: ["EV1"],
+            }],
+        },
     });
-    assert.equal(Object.hasOwn(withoutTypology.body, "claim_typology"), false);
+    assert.equal(Object.hasOwn(enhanced.body, "claim_typology"), false,
+        "the deprecated claim_typology is never sent");
+    assert.equal(Object.hasOwn(basic.body, "case_context"), false,
+        "a basic session receives no context");
+    assert.equal(Object.hasOwn(basic.body, "claim_typology"), false);
 
     assert.equal(first.reports[0].questionKey, "p2-q1");
-    assert.equal(first.reports[0].claimTypology, "used");
-    assert.equal(second.reports[0].claimTypology, "absent");
-    assert.equal(second.reports[0].claimTypologyReason, "out-of-date");
+    assert.equal(first.reports[0].tutorMode, "enhanced");
+    assert.equal(first.reports[0].tutorModeReason, null);
+    assert.equal(first.reports[0].caseContext, "used");
+    assert.equal(second.reports[0].questionKey, "p2-q2");
+    assert.equal(second.reports[0].tutorMode, "basic",
+        "questions of one phase can differ");
+    assert.equal(second.reports[0].tutorModeReason, "typology-out-of-date");
+    assert.equal(Object.hasOwn(second.reports[0], "caseContext"), false);
 });
 
-test("without a typology analysis the session is created as before", async () => {
+test("the session follows the policy version it is pinned to", async () => {
     const tutor = fakeTutor();
-    const { dispatch } = await registerAdapter({ tutor, typologyDocument: null });
+    const registry = fakeRegistry();
+    const { dispatch } = await registerAdapter({ tutor, registry });
 
-    const { reports } = await dispatch("student-response-submitted", response(101, 1, "Q1."));
+    await dispatch("student-response-submitted", response(101, 1, "Q1."));
 
-    const [creation] = sessionCreations(tutor.requests);
-    assert.deepEqual(Object.keys(creation.body).sort(),
-        ["case_id", "case_text", "case_title", "question"]);
-    assert.equal(reports[0].claimTypology, "absent");
-    assert.equal(reports[0].claimTypologyReason, "no-analysis");
+    assert.deepEqual(registry.calls, [
+        { sessionId: 5 },
+        { serviceIds: [INVENTORY_ID, TYPOLOGY_ID], options: { policyVersion: { id: 3 } } },
+    ]);
+});
+
+test("each missing or failed input opens a basic session with its reason", async () => {
+    const cases = [
+        { name: "no inventory", options: { inventoryRow: null }, reason: "no-inventory" },
+        {
+            name:    "failed inventory",
+            options: { inventoryRow: { status: "failed", document: null } },
+            reason:  "inventory-failed",
+        },
+        {
+            name:    "inventory switched off",
+            options: { registry: fakeRegistry([TYPOLOGY_ID]) },
+            reason:  "inventory-disabled",
+        },
+        { name: "no typology analysis", options: { typologyDocument: null }, reason: "no-typology" },
+        {
+            name:    "pending typology",
+            options: { typologyDocument: { ...TYPOLOGY_DOCUMENT, typologies: [] }, typologyStatus: "processing" },
+            reason:  "typology-pending",
+        },
+        {
+            name:    "failed typology",
+            options: { typologyDocument: { ...TYPOLOGY_DOCUMENT, typologies: [] }, typologyStatus: "failed" },
+            reason:  "typology-failed",
+        },
+        {
+            name:    "typology switched off",
+            options: { registry: fakeRegistry([INVENTORY_ID]) },
+            reason:  "typology-disabled",
+        },
+    ];
+
+    for (const { name, options, reason } of cases) {
+        const tutor = fakeTutor();
+        const { dispatch } = await registerAdapter({ tutor, ...options });
+
+        const { reports } = await dispatch("student-response-submitted", response(101, 1, "Q1."));
+
+        const [creation] = sessionCreations(tutor.requests);
+        assert.deepEqual(Object.keys(creation.body).sort(),
+            ["case_id", "case_text", "case_title", "question"], name);
+        assert.equal(reports[0].tutorMode, "basic", name);
+        assert.equal(reports[0].tutorModeReason, reason, name);
+    }
 });
 
 test("a question outside the design's tutor questions uses its runtime text", async () => {
@@ -259,13 +359,42 @@ test("a question outside the design's tutor questions uses its runtime text", as
 
     const [creation] = sessionCreations(tutor.requests);
     assert.equal(creation.body.question, "Runtime question 999");
-    assert.equal(Object.hasOwn(creation.body, "claim_typology"), false);
+    assert.equal(Object.hasOwn(creation.body, "case_context"), false);
     assert.equal(reports[0].questionKey, "question-999");
-    assert.equal(reports[0].claimTypologyReason, "no-question");
+    assert.equal(reports[0].tutorMode, "basic");
+    assert.equal(reports[0].tutorModeReason, "no-typology");
 });
 
-test("a tutor that rejects the typology gets the session without it, logged once", async () => {
-    const tutor = fakeTutor({ rejectTypology: true });
+test("a failure to read the inputs opens a basic session", async () => {
+    const tutor = fakeTutor();
+    const subscribers = new Map();
+    await atsFeedback.register({
+        subscribe:               (hookName, handler) => subscribers.set(hookName, handler),
+        publishStudentResult:    async () => true,
+        aiAdditionsClient:       tutor.client,
+        atsFeedbackDependencies: {
+            resolveGroupId:          async () => 7,
+            resolveQuestionPosition: async () => POSITIONS[101],
+            loadSessionContext:      async () => ({ designId: 12, design: DESIGN, caseId: 34 }),
+            resolveQuestionText:     async () => "",
+            loadTutorModeInputs:     async () => { throw new Error("policy unavailable"); },
+        },
+    });
+
+    const reports = [];
+    const { warnings } = await quietly(() => subscribers.get("student-response-submitted")(
+        response(101, 1, "Q1."),
+        { callback: async () => {}, reportInstantiation: async report => { reports.push(report); } }
+    ));
+
+    assert.equal(sessionCreations(tutor.requests).length, 1);
+    assert.equal(reports[0].tutorMode, "basic");
+    assert.equal(reports[0].tutorModeReason, "inventory-failed");
+    assert.equal(warnings.length, 1);
+});
+
+test("a tutor that rejects the context gets the session without it, logged once", async () => {
+    const tutor = fakeTutor({ rejectContext: true });
     const { dispatch } = await registerAdapter({
         tutor,
         typologyDocument: {
@@ -283,17 +412,20 @@ test("a tutor that rejects the typology gets the session without it, logged once
     ]);
 
     const creations = sessionCreations(tutor.requests);
-    assert.equal(creations.length, 4, "each question tries with the typology, then without it");
-    assert.equal(Object.hasOwn(creations[1].body, "claim_typology"), false);
-    assert.deepEqual(result.map(({ reports }) => reports[0].claimTypology), ["rejected", "rejected"]);
+    assert.equal(creations.length, 4, "each question tries with the context, then without it");
+    assert.equal(Object.hasOwn(creations[1].body, "case_context"), false);
+    assert.deepEqual(result.map(({ reports }) => reports[0].tutorModeReason),
+        ["context-rejected", "context-rejected"]);
+    assert.deepEqual(result.map(({ reports }) => reports[0].caseContext), ["rejected", "rejected"]);
+    assert.equal(result[0].reports[0].caseContextRejection.error, "Invalid case context");
     assert.deepEqual(result.map(({ callbacks }) => callbacks.length), [0, 0],
         "the jobs stay dispatched until the tutor's callbacks");
     assert.equal(warnings.length, 1);
 });
 
-test("a tutor without typology support is not offered one again for a while", async () => {
+test("a tutor without context support is not offered one again for a while", async () => {
     let clock = 0;
-    const tutor = fakeTutor({ ignoreTypology: true });
+    const tutor = fakeTutor({ ignoreContext: true });
     const { dispatch } = await registerAdapter({
         tutor,
         now:              () => clock,
@@ -311,16 +443,30 @@ test("a tutor without typology support is not offered one again for a while", as
         await dispatch("student-response-submitted", response(102, 1, "Q2.")),
     ]);
 
-    assert.equal(first.reports[0].claimTypology, "unsupported");
-    assert.equal(second.reports[0].claimTypology, "withheld");
-    assert.equal(Object.hasOwn(sessionCreations(tutor.requests)[1].body, "claim_typology"), false);
+    assert.equal(first.reports[0].caseContext, "unsupported");
+    assert.equal(first.reports[0].tutorModeReason, "tutor-unsupported");
+    assert.equal(Object.hasOwn(second.reports[0], "caseContext"), false, "withheld, not offered");
+    assert.equal(second.reports[0].tutorModeReason, "tutor-unsupported");
+    assert.equal(Object.hasOwn(sessionCreations(tutor.requests)[1].body, "case_context"), false);
     assert.equal(warnings.length, 1);
 
-    clock = atsFeedback.CLAIM_TYPOLOGY_UNSUPPORTED_RETRY_MS;
+    clock = atsFeedback.CASE_CONTEXT_UNSUPPORTED_RETRY_MS;
     await quietly(() => dispatch("phase-ended", { sessionId: 5, phaseId: 20 }));
     await quietly(() => dispatch("student-response-submitted", response(101, 1, "Q1 again.")));
-    assert.ok(sessionCreations(tutor.requests)[2].body.claim_typology,
-        "the typology is offered again once the window has passed");
+    assert.ok(sessionCreations(tutor.requests)[2].body.case_context,
+        "the context is offered again once the window has passed");
+});
+
+test("a running session keeps its mode", async () => {
+    const tutor = fakeTutor();
+    const { dispatch } = await registerAdapter({ tutor, inventoryRow: null });
+
+    const first = await dispatch("student-response-submitted", response(101, 1, "Q1."));
+    const later = await dispatch("student-response-submitted", response(101, 2, "Another student."));
+
+    assert.equal(first.reports[0].tutorModeReason, "no-inventory");
+    assert.equal(later.reports.length, 0, "no new session, no new report");
+    assert.equal(sessionCreations(tutor.requests).length, 1);
 });
 
 test("phase-ended deletes the tutor session of every question of the phase", async () => {
@@ -355,7 +501,7 @@ test("findTutorQuestion: the question unit at a position of a tutor phase (#863)
     assert.equal(atsFeedback.findTutorQuestion(null, POSITIONS[101]), null);
 });
 
-test("the tutor's matched claim type is recorded with the result, not sent to the student", async () => {
+test("the evaluation's claim type, mode and evidence are recorded with the result, not sent to the student", async () => {
     const tutor = fakeTutor();
     const { dispatch, published } = await registerAdapter({ tutor });
 
@@ -369,16 +515,27 @@ test("the tutor's matched claim type is recorded with the result, not sent to th
             summary:            "Good argument.",
             claimTypeId:        "AF1",
             claimTypeRationale: "Argues for telling his mother.",
+            tutorMode:          "enhanced",
+            evidenceFactIds:    ["EV1"],
+            unsupportedClaims:  [{ statement: "She will be fired.", exclusionId: "EX1" }],
         },
     });
 
     assert.equal(callbacks[0].status, "completed");
     assert.equal(callbacks[0].payload.claimTypeId, "AF1");
     assert.equal(callbacks[0].payload.claimTypeRationale, "Argues for telling his mother.");
-    assert.equal(JSON.stringify(published).includes("claimType"), false);
+    assert.equal(callbacks[0].payload.tutorMode, "enhanced");
+    assert.deepEqual(callbacks[0].payload.evidenceFactIds, ["EV1"]);
+    assert.deepEqual(callbacks[0].payload.unsupportedClaims,
+        [{ statement: "She will be fired.", exclusionId: "EX1" }]);
+    const studentPayload = JSON.stringify(published);
+    for (const key of ["claimType", "tutorMode", "evidenceFactIds", "unsupportedClaims"]) {
+        assert.equal(studentPayload.includes(key), false, key);
+    }
 
     const withoutType = await dispatch("callback-received", {
         requestPayload: { sessionId: 5, phaseId: 20, questionId: 101, groupId: 7, userId: 1 },
     });
     assert.equal(Object.hasOwn(withoutType.callbacks[0].payload, "claimTypeId"), false);
+    assert.equal(Object.hasOwn(withoutType.callbacks[0].payload, "tutorMode"), false);
 });

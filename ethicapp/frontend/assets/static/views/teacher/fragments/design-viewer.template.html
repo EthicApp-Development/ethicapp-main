@@ -12,7 +12,10 @@
             <claim-typology-questions
                 ng-if="ctrl.claimTypology.byPhase[$index + 1]"
                 questions="ctrl.claimTypology.byPhase[$index + 1]"
-                state="ctrl.claimTypology.state">
+                state="ctrl.claimTypology.state"
+                case-id="ctrl.claimTypology.caseId"
+                can-generate="ctrl.claimTypology.canGenerate"
+                on-generate="ctrl.claimTypology.requestGenerate()">
             </claim-typology-questions>
         </div>
     </div>      

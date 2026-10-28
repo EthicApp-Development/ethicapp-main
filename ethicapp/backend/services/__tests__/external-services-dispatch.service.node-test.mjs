@@ -1044,6 +1044,50 @@ test("dispatchHook: handlers can store an instantiation report on their job", as
     assert.match(warnings[0], /"serviceId":"svc-a"/u);
 });
 
+test("dispatchHook: a stored instantiation report is announced to the session's teachers (#865)", async () => {
+    const { registry } = registryWithReports();
+    const announced = [];
+    registry._notifyServiceInstantiated = (sessionId, payload) => announced.push({ sessionId, payload });
+    registry.hookSubscribers.set("student-response-submitted", [{
+        serviceId: "svc-a",
+        handler:   async (ctx, { reportInstantiation }) => {
+            await reportInstantiation({ tutorMode: "basic", tutorModeReason: "no-inventory" });
+        },
+    }]);
+
+    await registry.dispatchHook("student-response-submitted", { sessionId: 1, phaseId: 2, questionId: 3 }, {
+        enabledServiceIds: ["svc-a"],
+    });
+
+    assert.deepEqual(announced, [{
+        sessionId: 1,
+        payload:   { serviceId: "svc-a", sessionId: 1, phaseId: 2, questionId: 3 },
+    }]);
+});
+
+test("recordInstantiationReport: a report that could not be stored is not announced", async () => {
+    const { registry } = makeRegistry({
+        recordInstantiationReport: async () => { throw new Error("db down"); },
+    });
+    const announced = [];
+    registry._notifyServiceInstantiated = (sessionId, payload) => announced.push({ sessionId, payload });
+    const originalError = console.error;
+    console.error = () => {};
+    try {
+        await registry.recordInstantiationReport({
+            hookName:  "student-response-submitted",
+            serviceId: "svc-a",
+            jobId:     JOB_UUID,
+            report:    { tutorMode: "basic" },
+            context:   { sessionId: 1, phaseId: 2 },
+        });
+    } finally {
+        console.error = originalError;
+    }
+
+    assert.deepEqual(announced, []);
+});
+
 test("recordInstantiationReport: clean reports are stored without a log line", async () => {
     const { registry, stored } = registryWithReports();
 

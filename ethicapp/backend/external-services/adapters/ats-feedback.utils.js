@@ -1,7 +1,8 @@
 import { plainTextOf } from "../../helpers/rich-text-helper.js";
+import { ARGUMENTATION_TUTOR_SERVICE_ID } from "../../helpers/tutor-mode.js";
 
 // The tutor's catalog id, which design phases enable.
-export const ARGUMENTATION_TUTOR_SERVICE_ID = "argumentation-tutor-system";
+export { ARGUMENTATION_TUTOR_SERVICE_ID };
 
 // The texts teachers read about this service (#723), available even when the
 // tutor does not respond (#757).
@@ -267,11 +268,14 @@ export function differentialQuestionText(row) {
 /**
  * The body of POST /sessions (#736). The only setting sent is the configured
  * `llm_tier` (#734); the deprecated `model` is not sent, and new designs are
- * not offered it (#733). An unset tier takes the tutor's default. The
- * question's claim typology (#850), when it has one, goes as the session
- * input `claim_typology` (tutor-claim-typology/v1).
+ * not offered it (#733). An unset tier takes the tutor's default. In the
+ * enhanced mode (#865) the session input `case_context`
+ * (tutor-case-context/v1, ethicapp-ai-additions#209) carries the case's
+ * evidence inventory and the question's claim typology. The deprecated
+ * top-level `claim_typology` is never sent: the tutor refuses it together
+ * with `case_context`.
  */
-export function buildAtsSessionPayload(metadata, serviceConfiguration = {}, claimTypology = null) {
+export function buildAtsSessionPayload(metadata, serviceConfiguration = {}, caseContext = null) {
     const body = {
         case_id:    metadata.caseId,
         case_title: metadata.caseTitle,
@@ -283,35 +287,54 @@ export function buildAtsSessionPayload(metadata, serviceConfiguration = {}, clai
     if (llmTier) {
         body.llm_tier = llmTier;
     }
-    if (claimTypology) {
-        body.claim_typology = claimTypology;
+    if (caseContext) {
+        body.case_context = caseContext;
     }
     return body;
 }
 
-// The outcomes of a claim typology offered to the tutor (#850).
-export const CLAIM_TYPOLOGY_OUTCOMES = Object.freeze({
+// The outcomes of a case context offered to the tutor (#865).
+export const CASE_CONTEXT_OUTCOMES = Object.freeze({
+    // The tutor created the session in the enhanced mode.
     USED:        "used",
+    // The tutor answered 400 about it; the session was created without it.
     REJECTED:    "rejected",
+    // The tutor accepted it but created the session in the basic mode.
+    DOWNGRADED:  "downgraded",
+    // The answer has no `mode`: a tutor that predates #209 ignored it.
     UNSUPPORTED: "unsupported",
 });
 
-// How the tutor names the typology when it refuses one: `400 {"error":
-// "Invalid claim typology", "errors": [...]}` (ethicapp-ai-additions#204).
-const CLAIM_TYPOLOGY_NAME = /claim[ _]typology/iu;
+const TUTOR_SESSION_MODES = new Set(["enhanced", "basic"]);
+
+// How the tutor names the context when it refuses one: `400 {"error":
+// "Invalid case context", "errors": [...]}` (ethicapp-ai-additions#209).
+const CASE_CONTEXT_NAME = /case[ _]context/iu;
 
 /**
  * Which optional part of a session body the tutor refused with a 400, so it
- * can be left out: `claim_typology` when the error names it, or when it is
- * the only optional part sent, otherwise `llm_tier`. null when the body has
- * no optional part left.
+ * can be left out: `case_context` when the error names it, or when it is the
+ * only optional part sent, otherwise `llm_tier`. null when the body has no
+ * optional part left.
  */
 function rejectedOptionalField(error, body) {
-    const named = CLAIM_TYPOLOGY_NAME.test(JSON.stringify(error?.responseBody ?? null));
-    if (body.claim_typology && (named || !body.llm_tier)) {
-        return "claim_typology";
+    const named = CASE_CONTEXT_NAME.test(JSON.stringify(error?.responseBody ?? null));
+    if (body.case_context && (named || !body.llm_tier)) {
+        return "case_context";
     }
     return body.llm_tier ? "llm_tier" : null;
+}
+
+function caseContextOutcome(response, rejection) {
+    if (rejection !== undefined) {
+        return CASE_CONTEXT_OUTCOMES.REJECTED;
+    }
+    if (!TUTOR_SESSION_MODES.has(response?.mode)) {
+        return CASE_CONTEXT_OUTCOMES.UNSUPPORTED;
+    }
+    return response.mode === "enhanced"
+        ? CASE_CONTEXT_OUTCOMES.USED
+        : CASE_CONTEXT_OUTCOMES.DOWNGRADED;
 }
 
 /**
@@ -321,31 +344,30 @@ function rejectedOptionalField(error, body) {
  * configured value fails its format rules; the session is then created once
  * more with the tutor's defaults and `configurationRejected` says so.
  *
- * When a claim typology is offered (#850), `creation.claimTypology` says what
- * became of it: `used` (the tutor stored it and answered
- * `claim_typology_used: true`), `rejected` (the tutor answered 400 about it,
- * and the session was created without it; `claimTypologyRejection` holds the
- * answer) or `unsupported` (the session was created without using it: a tutor
- * that predates ethicapp-ai-additions#204 reports the unknown key as an
- * unsupported setting, creates the session in degraded mode and ignores it).
+ * When a case context is offered (#865), `creation.caseContext` says what
+ * became of it (CASE_CONTEXT_OUTCOMES). A rejected context is dropped and the
+ * session created again without it; `caseContextRejection` holds the
+ * tutor's answer. `creation.tutorMode` is the mode the tutor reports
+ * (`enhanced` or `basic`), and `tutorModeMissing` the parts it says are
+ * missing, when it reports them.
  *
  * @param {(body: object) => Promise<object>} request POST /sessions
  */
 export async function createAtsSession({
     metadata,
     serviceConfiguration = {},
-    claimTypology = null,
+    caseContext = null,
     request,
 }) {
     let configuration = serviceConfiguration;
-    let typology = claimTypology;
+    let context = caseContext;
     let configurationRejected = false;
     let rejection = null;
-    let claimTypologyRejection;
+    let caseContextRejection;
     let response;
 
     for (;;) {
-        const body = buildAtsSessionPayload(metadata, configuration, typology);
+        const body = buildAtsSessionPayload(metadata, configuration, context);
         try {
             response = await request(body);
             break;
@@ -357,9 +379,9 @@ export async function createAtsSession({
                 throw error;
             }
 
-            if (field === "claim_typology") {
-                typology = null;
-                claimTypologyRejection = error.responseBody ?? null;
+            if (field === "case_context") {
+                context = null;
+                caseContextRejection = error.responseBody ?? null;
                 continue;
             }
 
@@ -385,14 +407,17 @@ export async function createAtsSession({
         ...(configurationRejected ? { rejection } : {}),
     };
 
-    if (claimTypology) {
-        if (claimTypologyRejection !== undefined) {
-            creation.claimTypology = CLAIM_TYPOLOGY_OUTCOMES.REJECTED;
-            creation.claimTypologyRejection = claimTypologyRejection;
-        } else {
-            creation.claimTypology = response?.claim_typology_used === true
-                ? CLAIM_TYPOLOGY_OUTCOMES.USED
-                : CLAIM_TYPOLOGY_OUTCOMES.UNSUPPORTED;
+    if (TUTOR_SESSION_MODES.has(response?.mode)) {
+        creation.tutorMode = response.mode;
+        if (Array.isArray(response.missing) && response.missing.length > 0) {
+            creation.tutorModeMissing = response.missing.filter(part => typeof part === "string");
+        }
+    }
+
+    if (caseContext) {
+        creation.caseContext = caseContextOutcome(response, caseContextRejection);
+        if (caseContextRejection !== undefined) {
+            creation.caseContextRejection = caseContextRejection;
         }
     }
 
@@ -402,6 +427,15 @@ export async function createAtsSession({
 const CLAIM_TYPE_ID_PATTERN = /^AF[1-9][0-9]*$/u;
 // The tutor writes at most 600 characters (ethicapp-ai-additions#204).
 const MAX_CLAIM_TYPE_RATIONALE_LENGTH = 600;
+
+// The object of a callback payload that carries one of `keys`: its top
+// level, as the tutor sends analyses, or a nested feedback object.
+function evaluationSource(requestPayload, keys) {
+    const root = requestPayload && typeof requestPayload === "object" ? requestPayload : {};
+    const reports = candidate => candidate && typeof candidate === "object"
+        && keys.some(key => Object.hasOwn(candidate, key));
+    return [root, root.payload?.feedback, root.payload].find(reports) ?? null;
+}
 
 /**
  * The claim type the tutor matched in an evaluation (#850,
@@ -414,11 +448,7 @@ const MAX_CLAIM_TYPE_RATIONALE_LENGTH = 600;
  * @returns {{claimTypeId: string|null, claimTypeRationale: string|null}|null}
  */
 export function claimTypeFromExternalResult(requestPayload) {
-    const root = requestPayload && typeof requestPayload === "object" ? requestPayload : {};
-    const reportsClaimType = candidate => candidate && typeof candidate === "object"
-        && (Object.hasOwn(candidate, "claimTypeId")
-            || Object.hasOwn(candidate, "claimTypeRationale"));
-    const source = [root, root.payload?.feedback, root.payload].find(reportsClaimType);
+    const source = evaluationSource(requestPayload, ["claimTypeId", "claimTypeRationale"]);
     if (!source) {
         return null;
     }
@@ -429,4 +459,57 @@ export function claimTypeFromExternalResult(requestPayload) {
         claimTypeId:        CLAIM_TYPE_ID_PATTERN.test(id) ? id : null,
         claimTypeRationale: rationale ? rationale.slice(0, MAX_CLAIM_TYPE_RATIONALE_LENGTH) : null,
     };
+}
+
+const FACT_ID_PATTERN = /^EV[1-9][0-9]*$/u;
+const EXCLUSION_ID_PATTERN = /^EX[1-9][0-9]*$/u;
+// The tutor's own limits (ethicapp-ai-additions#209): at most 60 facts in an
+// inventory, 10 unsupported claims of at most 400 characters each.
+const MAX_EVIDENCE_FACT_IDS = 60;
+const MAX_UNSUPPORTED_CLAIMS = 10;
+const MAX_UNSUPPORTED_CLAIM_LENGTH = 400;
+
+function unsupportedClaim(item) {
+    const statement = normalizeText(item?.statement);
+    if (!statement) {
+        return null;
+    }
+
+    const exclusionId = normalizeText(item?.exclusionId);
+    return {
+        statement:   statement.slice(0, MAX_UNSUPPORTED_CLAIM_LENGTH),
+        exclusionId: EXCLUSION_ID_PATTERN.test(exclusionId) ? exclusionId : null,
+    };
+}
+
+/**
+ * The mode of an evaluation and its teacher-facing evidence (#865,
+ * ethicapp-ai-additions#209): `tutorMode` (`enhanced` or `basic`), which the
+ * tutor reports in every analysis of a session opened with `case_context`,
+ * and, in the enhanced mode, `evidenceFactIds` (the inventory facts the
+ * argument states) and `unsupportedClaims` (`{ statement, exclusionId }`).
+ * null when the evaluation reports no mode, as those of sessions opened
+ * without a context do.
+ */
+export function tutorEvaluationFromExternalResult(requestPayload) {
+    const source = evaluationSource(requestPayload, ["tutorMode"]);
+    const tutorMode = normalizeText(source?.tutorMode);
+    if (!TUTOR_SESSION_MODES.has(tutorMode)) {
+        return null;
+    }
+
+    const evaluation = { tutorMode };
+    if (Array.isArray(source.evidenceFactIds)) {
+        evaluation.evidenceFactIds = [...new Set(source.evidenceFactIds
+            .map(normalizeText)
+            .filter(id => FACT_ID_PATTERN.test(id)))]
+            .slice(0, MAX_EVIDENCE_FACT_IDS);
+    }
+    if (Array.isArray(source.unsupportedClaims)) {
+        evaluation.unsupportedClaims = source.unsupportedClaims
+            .map(unsupportedClaim)
+            .filter(Boolean)
+            .slice(0, MAX_UNSUPPORTED_CLAIMS);
+    }
+    return evaluation;
 }

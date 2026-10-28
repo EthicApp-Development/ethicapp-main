@@ -1,0 +1,21 @@
+<div class="alert alert-warning tutor-mode-warnings" role="status"
+    ng-if="$ctrl.warnings.length > 0"
+    data-testid="tutor-mode-warnings">
+    <p>
+        <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+        <strong>{{ 'tutor_mode_activity_warning_title' | translate }}</strong>
+    </p>
+    <ul class="list-unstyled">
+        <li ng-repeat="warning in $ctrl.warnings track by warning.questionKey"
+            data-testid="tutor-mode-warning"
+            data-question-key="{{ warning.questionKey }}">
+            <span ng-if="warning.questionNumber">
+                {{ 'tutor_mode_activity_question_basic' | translate:{ number: warning.questionNumber } }}
+            </span>
+            <span ng-if="!warning.questionNumber">
+                {{ 'tutor_mode_activity_phase_basic' | translate }}
+            </span>
+            {{ warning.reasonKey | translate }}
+        </li>
+    </ul>
+</div>

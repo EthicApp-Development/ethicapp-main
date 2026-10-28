@@ -25,8 +25,14 @@ function createService(handlers = {}) {
 const ok = result => ({ data: { status: "ok", result } });
 
 describe("DesignAnalysesService.getAnalysis", () => {
-    it("reads one analysis with encoded ids", async () => {
-        const detail = { serviceId: "case-analyst-claim-typology", status: "ready", document: {} };
+    it("reads one analysis and its units with encoded ids", async () => {
+        const detail = {
+            analysis:       { serviceId: "case-analyst-claim-typology", status: "ready", document: {} },
+            units:          [],
+            unitsReason:    "no-consumer",
+            producerUsable: true,
+            tutorModes:     {},
+        };
         const { service, requests } = createService({ get: async () => ok(detail) });
 
         assert.deepEqual(await service.getAnalysis(12, "case-analyst-claim-typology"), detail);

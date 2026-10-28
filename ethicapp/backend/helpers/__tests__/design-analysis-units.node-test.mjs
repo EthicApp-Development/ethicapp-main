@@ -3,7 +3,9 @@ import test from "node:test";
 
 import { sha256Text } from "../analysis-input-hash.js";
 import {
+    explainDesignAnalysisUnits,
     findQuestionUnit,
+    NO_UNITS_REASONS,
     QUESTION_UNIT,
     questionUnitId,
     selectDesignAnalysisUnits,
@@ -174,4 +176,52 @@ test("selectDesignAnalysisUnits: no consumer, no usable consumer or no question 
     assert.deepEqual(await select(ranking, null), []);
     assert.deepEqual(await select(ranking, DESIGN, "phase"), [], "only question units exist");
     assert.deepEqual(ranking.calls.consumers, []);
+});
+
+// ─── explainDesignAnalysisUnits (#865) ───────────────────────────────────────
+
+test("explainDesignAnalysisUnits: the units, the usable consumers and no reason", async () => {
+    const registry = fakeRegistry({
+        consumers: { producer: ["consumer-a", "consumer-b"] },
+        usable:    ["consumer-b"],
+    });
+
+    const explained = await explainDesignAnalysisUnits(
+        { producerId: "producer", design: DESIGN },
+        { registry }
+    );
+
+    assert.deepEqual(explained.units.map(unit => unit.id), ["p2-q1", "p3-q1"]);
+    assert.equal(explained.reason, null);
+    assert.deepEqual(explained.consumerIds, ["consumer-b"]);
+});
+
+test("explainDesignAnalysisUnits: why nothing is selected", async () => {
+    const explain = (registry, design = DESIGN, unit) => explainDesignAnalysisUnits(
+        { producerId: "producer", design, unit },
+        { registry }
+    );
+    const reasonOf = async (...args) => (await explain(...args)).reason;
+
+    assert.equal(await reasonOf(fakeRegistry(), { ...DESIGN, type: "ranking" }),
+        NO_UNITS_REASONS.NOT_APPLICABLE);
+    assert.equal(await reasonOf(fakeRegistry(), DESIGN, "phase"), NO_UNITS_REASONS.NOT_APPLICABLE);
+    assert.equal(await reasonOf(fakeRegistry({ consumers: { producer: ["consumer-z"] } })),
+        NO_UNITS_REASONS.NO_CONSUMER);
+    assert.equal(
+        await reasonOf(fakeRegistry({ consumers: { producer: ["consumer-a"] }, usable: [] })),
+        NO_UNITS_REASONS.CONSUMERS_UNUSABLE,
+        "a switched-off consumer selects nothing, and says so"
+    );
+
+    const emptyQuestions = {
+        type:   "semantic_differential",
+        phases: [{ externalServices: { enabledServiceIds: ["consumer-a"] }, questions: [{ q_text: " " }] }],
+    };
+    const empty = await explain(fakeRegistry({ consumers: { producer: ["consumer-a"] } }), emptyQuestions);
+    assert.deepEqual(empty, {
+        units:       [],
+        reason:      NO_UNITS_REASONS.NO_QUESTIONS,
+        consumerIds: ["consumer-a"],
+    });
 });

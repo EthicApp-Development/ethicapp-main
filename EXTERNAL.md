@@ -144,9 +144,14 @@ Current Argumentation Tutor adapter:
 ethicapp/backend/external-services/adapters/ats-feedback.adapter.js
 ```
 
-It creates one tutor session per EthicApp session and phase, on the first
-student response. When the phase configures `llm_tier`
-(`context.serviceConfiguration`, #734), the creation request sends it (#736);
+It creates one tutor session per EthicApp session, phase and question, on the
+first student response to the question (#850). A session runs in the enhanced
+mode, with the case's evidence inventory and the question's claim typology as
+`case_context`, when both are available, and otherwise in the basic mode; the
+mode and its reason are recorded and shown to teachers (#865, see "The tutor's
+modes" in `ethicapp/backend/external-services/README.md`). When the phase
+configures `llm_tier` (`context.serviceConfiguration`, #734), the creation
+request sends it (#736);
 otherwise the tutor uses its default tier. The deprecated `model` is not sent.
 The tutor's `llm_tier`, resolved `model`, `warnings` and `degraded` come back
 in the `student-response-submitted` handler's result as `sessionCreation`. If

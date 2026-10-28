@@ -10,7 +10,9 @@ import {
     differentialQuestionText,
     phaseInstructionsText,
     questionTextFromPhaseDesign,
+    tutorEvaluationFromExternalResult,
 } from "../ats-feedback.utils.js";
+import { sessionTutorMode } from "../ats-feedback.adapter.js";
 
 // ─── buildArgumentClientContext ───────────────────────────────────────────────
 
@@ -218,12 +220,16 @@ test("createAtsSession does not retry other failures", async () => {
     }), /did not return a session_id/u);
 });
 
-// ─── Claim typology in the session (#850) ───────────────────────────────────
+// ─── Case context in the session (#865) ─────────────────────────────────────
 
-const CLAIM_TYPOLOGY = Object.freeze({
-    schemaVersion: "tutor-claim-typology/v1",
-    focalAction:   "report the error",
-    types:         [{ id: "AF1", label: "Report", description: "d", stance: "in_favor" }],
+const CASE_CONTEXT = Object.freeze({
+    schemaVersion:     "tutor-case-context/v1",
+    evidenceInventory: { schemaVersion: "evidence-inventory/v1", facts: [], exclusions: [] },
+    claimTypology:     {
+        schemaVersion: "tutor-claim-typology/v1",
+        focalAction:   "report the error",
+        types:         [{ id: "AF1", label: "Report", description: "d", stance: "in_favor" }],
+    },
 });
 
 function badRequest(responseBody) {
@@ -243,62 +249,69 @@ async function withoutWarnings(run) {
     }
 }
 
-test("buildAtsSessionPayload sends the claim typology as claim_typology", () => {
-    const body = buildAtsSessionPayload(METADATA, {}, CLAIM_TYPOLOGY);
+test("buildAtsSessionPayload sends the case context as case_context, never claim_typology", () => {
+    const body = buildAtsSessionPayload(METADATA, {}, CASE_CONTEXT);
 
-    assert.deepEqual(body.claim_typology, CLAIM_TYPOLOGY);
-    assert.equal(Object.hasOwn(buildAtsSessionPayload(METADATA, {}, null), "claim_typology"), false);
+    assert.deepEqual(body.case_context, CASE_CONTEXT);
+    assert.equal(Object.hasOwn(body, "claim_typology"), false);
+    const basic = buildAtsSessionPayload(METADATA, {}, null);
+    assert.equal(Object.hasOwn(basic, "case_context"), false);
+    assert.equal(Object.hasOwn(basic, "claim_typology"), false);
 });
 
-test("createAtsSession reports a claim typology the tutor took", async () => {
+test("createAtsSession reports a context the tutor used for an enhanced session", async () => {
     const bodies = [];
     const created = await createAtsSession({
-        metadata:      METADATA,
-        claimTypology: CLAIM_TYPOLOGY,
-        request:       async (body) => {
+        metadata:    METADATA,
+        caseContext: CASE_CONTEXT,
+        request:     async (body) => {
             bodies.push(body);
-            return {
-                session_id: "ats-1", warnings: [], degraded: false, claim_typology_used: true,
-            };
+            return { session_id: "ats-1", warnings: [], degraded: false, mode: "enhanced" };
         },
     });
 
     assert.equal(bodies.length, 1);
-    assert.deepEqual(bodies[0].claim_typology, CLAIM_TYPOLOGY);
-    assert.equal(created.creation.claimTypology, "used");
+    assert.deepEqual(bodies[0].case_context, CASE_CONTEXT);
+    assert.equal(created.creation.caseContext, "used");
+    assert.equal(created.creation.tutorMode, "enhanced");
 });
 
-test("createAtsSession reports a typology the tutor did not confirm as unsupported", async () => {
+test("createAtsSession reports a tutor that answers without a mode as unsupported", async () => {
+    const warning = { field: "case_context", verdict: "unsupported", message: "unknown field" };
     const created = await createAtsSession({
-        metadata:      METADATA,
-        claimTypology: CLAIM_TYPOLOGY,
-        request:       async () => ({ session_id: "ats-1", warnings: [], degraded: false }),
-    });
-
-    assert.equal(created.creation.claimTypology, "unsupported");
-});
-
-test("createAtsSession reports a tutor that ignores the typology as unsupported", async () => {
-    const warning = { field: "claim_typology", verdict: "unsupported", message: "unknown field" };
-    const created = await createAtsSession({
-        metadata:      METADATA,
-        claimTypology: CLAIM_TYPOLOGY,
-        request:       async () => ({ session_id: "ats-1", warnings: [warning], degraded: true }),
+        metadata:    METADATA,
+        caseContext: CASE_CONTEXT,
+        request:     async () => ({ session_id: "ats-1", warnings: [warning], degraded: true }),
     });
 
     assert.equal(created.sessionId, "ats-1");
-    assert.equal(created.creation.claimTypology, "unsupported");
+    assert.equal(created.creation.caseContext, "unsupported");
+    assert.equal(Object.hasOwn(created.creation, "tutorMode"), false);
     assert.equal(created.creation.configurationRejected, false);
 });
 
-test("createAtsSession retries without a rejected typology and keeps the tier", async () => {
+test("createAtsSession reports a session the tutor opened in the basic mode anyway", async () => {
+    const created = await createAtsSession({
+        metadata:    METADATA,
+        caseContext: CASE_CONTEXT,
+        request:     async () => ({
+            session_id: "ats-1", warnings: [], mode: "basic", missing: ["claimTypology"],
+        }),
+    });
+
+    assert.equal(created.creation.caseContext, "downgraded");
+    assert.equal(created.creation.tutorMode, "basic");
+    assert.deepEqual(created.creation.tutorModeMissing, ["claimTypology"]);
+});
+
+test("createAtsSession retries without a rejected context and keeps the tier", async () => {
     const bodies = [];
-    const rejection = { error: "Invalid claim typology", errors: ["types: too many"] };
+    const rejection = { error: "Invalid case context", errors: [{ path: "/", message: "x" }] };
 
     const created = await createAtsSession({
         metadata:             METADATA,
         serviceConfiguration: { llm_tier: "advanced" },
-        claimTypology:        CLAIM_TYPOLOGY,
+        caseContext:          CASE_CONTEXT,
         request:              async (body) => {
             bodies.push(body);
             if (bodies.length === 1) {
@@ -309,48 +322,92 @@ test("createAtsSession retries without a rejected typology and keeps the tier", 
     });
 
     assert.equal(bodies.length, 2);
-    assert.equal(Object.hasOwn(bodies[1], "claim_typology"), false);
+    assert.equal(Object.hasOwn(bodies[1], "case_context"), false);
     assert.equal(bodies[1].llm_tier, "advanced");
-    assert.equal(created.creation.claimTypology, "rejected");
-    assert.deepEqual(created.creation.claimTypologyRejection, rejection);
+    assert.equal(created.creation.caseContext, "rejected");
+    assert.deepEqual(created.creation.caseContextRejection, rejection);
     assert.equal(created.creation.configurationRejected, false);
 });
 
-test("createAtsSession drops the tier first when the 400 does not name the typology", async () => {
+test("createAtsSession drops the tier first when the 400 does not name the context", async () => {
     const bodies = [];
 
     const created = await withoutWarnings(() => createAtsSession({
         metadata:             METADATA,
         serviceConfiguration: { llm_tier: "legacy" },
-        claimTypology:        CLAIM_TYPOLOGY,
+        caseContext:          CASE_CONTEXT,
         request:              async (body) => {
             bodies.push(body);
             if (bodies.length === 1) {
                 throw badRequest({ error: "Invalid instance configuration", errors: { llm_tier: "x" } });
             }
-            return { session_id: "ats-3", warnings: [], claim_typology_used: true };
+            return { session_id: "ats-3", warnings: [], mode: "enhanced" };
         },
     }));
 
     assert.equal(bodies.length, 2);
     assert.equal(Object.hasOwn(bodies[1], "llm_tier"), false);
-    assert.deepEqual(bodies[1].claim_typology, CLAIM_TYPOLOGY);
+    assert.deepEqual(bodies[1].case_context, CASE_CONTEXT);
     assert.equal(created.creation.configurationRejected, true);
-    assert.equal(created.creation.claimTypology, "used");
+    assert.equal(created.creation.caseContext, "used");
 });
 
 test("createAtsSession gives up once nothing optional is left to drop", async () => {
     let calls = 0;
     await assert.rejects(createAtsSession({
-        metadata:      METADATA,
-        claimTypology: CLAIM_TYPOLOGY,
-        request:       async () => {
+        metadata:    METADATA,
+        caseContext: CASE_CONTEXT,
+        request:     async () => {
             calls += 1;
             throw badRequest({ error: "Missing required fields: question" });
         },
     }), /HTTP 400/u);
 
-    assert.equal(calls, 2, "the typology is dropped once, then the error is final");
+    assert.equal(calls, 2, "the context is dropped once, then the error is final");
+});
+
+test("sessionTutorMode: the decision, corrected by the tutor's answer", () => {
+    const enhanced = { mode: "enhanced", reason: null, caseContext: CASE_CONTEXT };
+    const basic = { mode: "basic", reason: "no-inventory", caseContext: null };
+
+    assert.deepEqual(sessionTutorMode(basic, false, {}),
+        { tutorMode: "basic", tutorModeReason: "no-inventory" });
+    assert.deepEqual(sessionTutorMode(enhanced, true, { caseContext: "used" }),
+        { tutorMode: "enhanced", tutorModeReason: null });
+    assert.deepEqual(sessionTutorMode(enhanced, false, {}),
+        { tutorMode: "basic", tutorModeReason: "tutor-unsupported" }, "withheld");
+    assert.deepEqual(sessionTutorMode(enhanced, true, { caseContext: "unsupported" }),
+        { tutorMode: "basic", tutorModeReason: "tutor-unsupported" });
+    assert.deepEqual(sessionTutorMode(enhanced, true, { caseContext: "rejected" }),
+        { tutorMode: "basic", tutorModeReason: "context-rejected" });
+    assert.deepEqual(sessionTutorMode(enhanced, true, { caseContext: "downgraded" }),
+        { tutorMode: "basic", tutorModeReason: "context-rejected" });
+});
+
+test("tutorEvaluationFromExternalResult reads the evaluation's mode and evidence", () => {
+    assert.deepEqual(tutorEvaluationFromExternalResult({
+        tutorMode:         "enhanced",
+        evidenceFactIds:   ["EV1", "EV1", "AF2", " EV3 "],
+        unsupportedClaims: [
+            { statement: " She will be fired. ", exclusionId: "EX1" },
+            { statement: "Not in the case.", exclusionId: null },
+            { statement: "Wrong id.", exclusionId: "EV1" },
+            { statement: "" },
+        ],
+    }), {
+        tutorMode:         "enhanced",
+        evidenceFactIds:   ["EV1", "EV3"],
+        unsupportedClaims: [
+            { statement: "She will be fired.", exclusionId: "EX1" },
+            { statement: "Not in the case.", exclusionId: null },
+            { statement: "Wrong id.", exclusionId: null },
+        ],
+    });
+    assert.deepEqual(tutorEvaluationFromExternalResult({ payload: { feedback: { tutorMode: "basic" } } }),
+        { tutorMode: "basic" });
+    assert.equal(tutorEvaluationFromExternalResult({ tutorMode: "turbo" }), null);
+    assert.equal(tutorEvaluationFromExternalResult({ summary: "No mode." }), null);
+    assert.equal(tutorEvaluationFromExternalResult(null), null);
 });
 
 test("claimTypeFromExternalResult reads the matched claim type for teachers", () => {

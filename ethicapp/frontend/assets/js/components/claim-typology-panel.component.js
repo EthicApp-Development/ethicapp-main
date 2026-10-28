@@ -5,6 +5,10 @@
 // question inside each phase (claim-typology-questions): this panel hands the
 // view to the design view through `onViewChanged`. It is read-only. Only the
 // design owner can read the analysis, so the panel shows nothing to others.
+//
+// The questions, their text hashes and each tutor question's expected mode
+// come from the backend with the analysis (#865); the panel keeps no copy of
+// the selection or mode rules.
 
 import {
     canGenerateClaimTypology,
@@ -17,20 +21,26 @@ import {
     claimTypologyView,
     EVIDENCE_INVENTORY_SERVICE_ID,
     evidenceFactsById,
-    questionTextHashes,
-    selectTutorQuestions,
 } from "../helpers/claim-typology.js";
 import { caseAnalysisIndicator, hasLatestGenerationFailed } from "../helpers/case-analyses.js";
 
+// What the panel shows before the first read, or when the read fails.
+const EMPTY_SELECTION = Object.freeze({
+    analysis:       null,
+    units:          [],
+    unitsReason:    null,
+    producerUsable: false,
+    tutorModes:     {},
+});
+
 function ClaimTypologyPanelController(
-    $scope, $timeout, DesignAnalysesService, CaseAnalysesService
+    $scope, $timeout, $element, DesignAnalysesService, CaseAnalysesService
 ) {
     const vm = this;
     let destroyed = false;
     let pollTimer = null;
     let loadSequence = 0;
-    let questions = [];
-    let hashes = {};
+    let selection = EMPTY_SELECTION;
     let facts = {};
     let factsDocument = null;
 
@@ -45,14 +55,6 @@ function ClaimTypologyPanelController(
     vm.$onInit = async function() {
         if (vm.design?.userOwned !== true) {
             return;
-        }
-
-        questions = selectTutorQuestions(vm.design);
-        try {
-            hashes = await questionTextHashes(questions);
-        } catch (error) {
-            console.warn("[claimTypologyPanel] Could not hash the questions.", error);
-            hashes = {};
         }
         await vm.load();
     };
@@ -103,11 +105,22 @@ function ClaimTypologyPanelController(
     }
 
     function publishView() {
-        const document = vm.analysis?.document ?? null;
-        vm.view = claimTypologyView({
-            analysis:  vm.analysis,
-            questions: claimTypologyQuestions({ questions, hashes, document, facts }),
+        const questions = claimTypologyQuestions({
+            units:      selection.units,
+            document:   vm.analysis?.document ?? null,
+            facts,
+            tutorModes: selection.tutorModes,
         });
+        vm.view = {
+            ...claimTypologyView({
+                analysis:    vm.analysis,
+                questions,
+                unitsReason: selection.unitsReason,
+            }),
+            caseId:          vm.design?.caseId ?? null,
+            canGenerate:     vm.canGenerate(),
+            requestGenerate: vm.requestGenerateFromQuestion,
+        };
         vm.onViewChanged({ view: vm.view });
     }
 
@@ -119,18 +132,20 @@ function ClaimTypologyPanelController(
 
         const sequence = ++loadSequence;
         try {
-            const analysis = await DesignAnalysesService.getAnalysis(
+            const result = await DesignAnalysesService.getAnalysis(
                 designId,
                 CLAIM_TYPOLOGY_SERVICE_ID
             );
             if (destroyed || sequence !== loadSequence) {
                 return;
             }
-            await loadFacts(analysis?.document ?? null);
+            const loaded = result ?? EMPTY_SELECTION;
+            await loadFacts(loaded.analysis?.document ?? null);
             if (destroyed || sequence !== loadSequence) {
                 return;
             }
-            vm.analysis = analysis;
+            selection = loaded;
+            vm.analysis = loaded.analysis;
             vm.loadFailed = false;
             publishView();
         } catch (error) {
@@ -148,13 +163,18 @@ function ClaimTypologyPanelController(
         }
     };
 
-    // The panel is shown to the owner of a design with a case and tutor
-    // questions, or with a stored analysis.
+    // The panel is shown to the owner of a design with a case and questions
+    // the typology covers, with a stored analysis, or when the services that
+    // use the typology are switched off (to say so).
     vm.isVisible = function() {
         if (!vm.loaded || vm.design?.userOwned !== true) {
             return false;
         }
-        return Boolean(vm.analysis) || (Boolean(vm.design.caseId) && questions.length > 0);
+        if (vm.analysis || vm.loadFailed) {
+            return true;
+        }
+        return Boolean(vm.design.caseId)
+            && (selection.units.length > 0 || selection.unitsReason === "consumers-unusable");
     };
 
     vm.state = function() {
@@ -185,14 +205,37 @@ function ClaimTypologyPanelController(
         return vm.design?.locked === true;
     };
 
+    vm.unitsReasonKey = function() {
+        return vm.view?.unitsReasonKey ?? null;
+    };
+
+    // The typology covers questions but its own service is switched off.
+    vm.isProducerUnavailable = function() {
+        return selection.units.length > 0 && selection.producerUsable !== true;
+    };
+
     vm.canGenerate = function() {
-        return !vm.generating
-            && canGenerateClaimTypology({ design: vm.design, analysis: vm.analysis, questions });
+        return !vm.generating && canGenerateClaimTypology({
+            design:         vm.design,
+            analysis:       vm.analysis,
+            units:          selection.units,
+            producerUsable: selection.producerUsable,
+        });
     };
 
     vm.askToGenerate = function() {
         vm.notice = null;
         vm.confirmingGenerate = true;
+    };
+
+    // "Generate again" from a question's note, further down the page: the
+    // confirmation is the panel's, so the panel is brought into view.
+    vm.requestGenerateFromQuestion = function() {
+        if (!vm.canGenerate()) {
+            return;
+        }
+        vm.askToGenerate();
+        $element[0]?.scrollIntoView?.({ behavior: "smooth", block: "start" });
     };
 
     vm.cancelGenerate = function() {
@@ -236,7 +279,7 @@ export default {
         onViewChanged: "&",
     },
     controller: [
-        "$scope", "$timeout", "DesignAnalysesService", "CaseAnalysesService",
+        "$scope", "$timeout", "$element", "DesignAnalysesService", "CaseAnalysesService",
         ClaimTypologyPanelController,
     ],
     templateUrl: "/assets/static/views/teacher/fragments/claim-typology-panel.template.html",

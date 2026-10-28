@@ -14,6 +14,7 @@ import { LanguageCatalogService } from "../../services/language-catalog.service.
 import { TagCatalogService } from "../../services/tag-catalog.service.js";
 import { TeacherGroupChatService } from "../../services/teacher-group-chat.service.js";
 import { TeacherToastService } from "../../services/teacher-toast.service.js";
+import { TutorModesService } from "../../services/tutor-modes.service.js";
 import UserProfileService from "../../services/user-profile.service.js";
 import SocketService from '../../services/socket.service.js';
 import {
@@ -47,6 +48,7 @@ app.factory("ActivityStateService", ["$http", "TeacherSocketService", ActivitySt
     .factory("CasesCatalogService", ["$rootScope", "$http", CasesCatalogService])
     .factory("CaseAnalysesService", ["$http", CaseAnalysesService])
     .factory("DesignAnalysesService", ["$http", DesignAnalysesService])
+    .factory("TutorModesService", ["$http", TutorModesService])
     .factory("LanguageCatalogService", ["$http", "$translate", LanguageCatalogService])
     .factory("TagCatalogService", ["$http", "$translate", TagCatalogService]);
 app.service("toast", ["$rootScope", "$timeout", TeacherToastService]);
@@ -244,6 +246,8 @@ import caseEvidenceInventoryViewComponent
 // The claim typology of a design, in the design view (#849).
 import claimTypologyPanelComponent from "../../components/claim-typology-panel.component.js";
 import claimTypologyQuestionsComponent from "../../components/claim-typology-questions.component.js";
+// The tutor questions running in the basic mode, in the activity view (#865).
+import tutorModeWarningsComponent from "../../components/tutor-mode-warnings.component.js";
 // Case Analyst: topic listing (#845).
 import caseTopicListingViewComponent from "../../components/case-topic-listing-view.component.js";
 import videoFacadeComponent from "../../components/video-facade.component.js";
@@ -288,6 +292,8 @@ app.component("caseEvidenceInventoryView", caseEvidenceInventoryViewComponent);
 // The claim typology of a design, in the design view (#849).
 app.component("claimTypologyPanel", claimTypologyPanelComponent);
 app.component("claimTypologyQuestions", claimTypologyQuestionsComponent);
+// The tutor questions running in the basic mode, in the activity view (#865).
+app.component("tutorModeWarnings", tutorModeWarningsComponent);
 // Case Analyst: topic listing (#845).
 app.component("caseTopicListingView", caseTopicListingViewComponent);
 app.component("videoFacade", videoFacadeComponent);

@@ -463,6 +463,8 @@ export class ExternalServicesRegistry {
         isAiAdditionsConfigured = () => aiAdditionsClient.isConfigured(),
         resolveCallbackDestination: resolveDestination = resolveCallbackDestination,
         callbackDestinationLookups = {},
+        notifyServiceInstantiated = (sessionId, payload) =>
+            teacherNotifications?.serviceInstantiated?.(sessionId, payload),
     } = {}) {
         this.initialized      = false;
         this.services         = new Map();
@@ -503,6 +505,9 @@ export class ExternalServicesRegistry {
         this.callbackTargetResolvers = new Map();
         this._caseAnalysesStore     = caseAnalysesStore;
         this._designAnalysesStore   = designAnalysesStore;
+        // Tells the session's teachers that a service reported an
+        // instantiation (#865), so their activity view can read it again.
+        this._notifyServiceInstantiated = notifyServiceInstantiated;
 
         this._capabilityDescriptors = capabilityDescriptors ?? new CapabilityDescriptorsClient({
             getDescriptorLink: serviceId => this.getServiceDescriptor(serviceId),
@@ -1099,6 +1104,7 @@ export class ExternalServicesRegistry {
                     serviceId,
                     jobId,
                     report,
+                    context: serviceContext,
                 }),
             });
         } catch (err) {
@@ -1402,17 +1408,23 @@ export class ExternalServicesRegistry {
     // room or session for it (#737): `{ warnings, degraded,
     // configurationRejected, ...details }`. It does not change the job status.
     // Warnings, degraded mode and rejected settings are also logged.
-    async recordInstantiationReport({ hookName, serviceId, jobId, report }) {
+    async recordInstantiationReport({ hookName, serviceId, jobId, report, context = {} }) {
         const normalized = normalizeInstantiationReport(report);
         if (!normalized) {
             return null;
         }
 
         if (jobId) {
-            await this._jobsService
+            const stored = await this._jobsService
                 .recordInstantiationReport(jobId, normalized)
-                .catch(err => console.error(
-                    "[external-services] Failed to store an instantiation report.", err));
+                .then(() => true)
+                .catch((err) => {
+                    console.error("[external-services] Failed to store an instantiation report.", err);
+                    return false;
+                });
+            if (stored) {
+                this._announceInstantiation(serviceId, context);
+            }
         }
 
         const worthLogging = normalized.warnings.length > 0 || normalized.degraded
@@ -1428,6 +1440,26 @@ export class ExternalServicesRegistry {
             }));
         }
         return normalized;
+    }
+
+    // Emits `onExternalServiceInstantiated` to the session's teachers (#865):
+    // the ids only, so the view reads the stored report through its endpoint.
+    _announceInstantiation(serviceId, context) {
+        const sessionId = positiveId(context?.sessionId);
+        if (sessionId === null) {
+            return;
+        }
+
+        try {
+            this._notifyServiceInstantiated(sessionId, {
+                serviceId,
+                sessionId,
+                phaseId:    positiveId(context.phaseId),
+                questionId: positiveId(context.questionId),
+            });
+        } catch (error) {
+            console.error("[external-services] Could not notify teachers of an instantiation.", error);
+        }
     }
 
     async recordCallbackResult({ hookName, serviceId, result, context }) {

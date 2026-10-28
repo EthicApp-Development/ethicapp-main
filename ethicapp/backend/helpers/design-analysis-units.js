@@ -112,14 +112,28 @@ async function defaultRegistry() {
     return registry;
 }
 
+// Why a producer selects no unit of a design (explainDesignAnalysisUnits()).
+export const NO_UNITS_REASONS = Object.freeze({
+    // The design is not a semantic differential, or the unit is unknown.
+    NOT_APPLICABLE:     "not-applicable",
+    // No phase enables a consumer of the producer's documents.
+    NO_CONSUMER:        "no-consumer",
+    // Phases enable consumers, but the policy, its per-adapter switches or a
+    // missing AI Additions connection make none of them usable.
+    CONSUMERS_UNUSABLE: "consumers-unusable",
+    // The phases of the usable consumers have no non-empty question.
+    NO_QUESTIONS:       "no-questions",
+});
+
 /**
- * The units a design analysis producer works on, for one design (#863): the
- * units of the phases that enable at least one usable consumer of a schema
- * the producer produces for that unit. A consumer is usable when the AI
- * service policy gate allows it under the current policy version, including
- * its per-adapter switch (#864), and a usable AI Additions connection exists
- * for production adapters (`registry.usableServiceIds()`). A phase that
- * enables an unusable consumer and a usable one is selected.
+ * The units a design analysis producer works on, for one design (#863), and
+ * why there are none (#865): the units of the phases that enable at least one
+ * usable consumer of a schema the producer produces for that unit. A consumer
+ * is usable when the AI service policy gate allows it under the current
+ * policy version, including its per-adapter switch (#864), and a usable AI
+ * Additions connection exists for production adapters
+ * (`registry.usableServiceIds()`). A phase that enables an unusable consumer
+ * and a usable one is selected.
  *
  * The policy is read only when a phase enables a consumer.
  *
@@ -131,14 +145,17 @@ async function defaultRegistry() {
  * @param {Object} [dependencies.registry] - The registry; the application's
  *     by default. It provides getDesignAnalysisConsumerIds() and
  *     usableServiceIds().
- * @returns {Promise<Array>} As selectQuestionUnits() returns them.
+ * @returns {Promise<{units: Array, reason: string|null, consumerIds: string[]}>}
+ *     `units` as selectQuestionUnits() returns them; `reason` is one of
+ *     NO_UNITS_REASONS when `units` is empty, else null; `consumerIds` are
+ *     the usable consumers the design's phases enable.
  */
-export async function selectDesignAnalysisUnits(
+export async function explainDesignAnalysisUnits(
     { producerId, design, unit = QUESTION_UNIT },
     { registry } = {}
 ) {
     if (unit !== QUESTION_UNIT || !isSemanticDifferential(design)) {
-        return [];
+        return { units: [], reason: NO_UNITS_REASONS.NOT_APPLICABLE, consumerIds: [] };
     }
 
     const services = registry ?? await defaultRegistry();
@@ -146,9 +163,28 @@ export async function selectDesignAnalysisUnits(
     const consumers = services.getDesignAnalysisConsumerIds(producerId, { unit })
         .filter(serviceId => enabled.has(serviceId));
     if (consumers.length === 0) {
-        return [];
+        return { units: [], reason: NO_UNITS_REASONS.NO_CONSUMER, consumerIds: [] };
     }
 
     const usable = await services.usableServiceIds(consumers);
-    return selectQuestionUnits(design, { serviceIds: usable });
+    if (usable.length === 0) {
+        return { units: [], reason: NO_UNITS_REASONS.CONSUMERS_UNUSABLE, consumerIds: [] };
+    }
+
+    const units = selectQuestionUnits(design, { serviceIds: usable });
+    return {
+        units,
+        reason:      units.length === 0 ? NO_UNITS_REASONS.NO_QUESTIONS : null,
+        consumerIds: usable,
+    };
+}
+
+/**
+ * The units a design analysis producer works on, for one design (#863). See
+ * explainDesignAnalysisUnits(), which also says why there are none.
+ *
+ * @returns {Promise<Array>} As selectQuestionUnits() returns them.
+ */
+export async function selectDesignAnalysisUnits(args, dependencies = {}) {
+    return (await explainDesignAnalysisUnits(args, dependencies)).units;
 }
