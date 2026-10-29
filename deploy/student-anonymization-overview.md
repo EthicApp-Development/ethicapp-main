@@ -62,7 +62,8 @@ The current job anonymizes or clears:
 
 The current job intentionally retains relationship rows such as `teamusers` and
 `jigsaw_users` because they contain no free-text data and point to the
-anonymized inactive user. See `deploy/student-anonymization-data-map.md` for
+anonymized inactive user. It also keeps `users.created_at`, which does not
+identify anyone and keeps the account's age for audits. See `deploy/student-anonymization-data-map.md` for
 the field-by-field rationale and the manual inventory query.
 
 ## Audit Model
