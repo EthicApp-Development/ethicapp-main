@@ -374,8 +374,60 @@ describe('management-console user routes', () => {
     });
 
     assert.deepEqual(listCalls, [
-      { keywords: '', role: 'A', status: 'pending', page: 2, pageSize: 10 }
+      { keywords: '', role: 'A', status: 'pending', sort: '', page: 2, pageSize: 10 }
     ]);
+  });
+
+  it('passes the status filter and the sort order together to the list service', async () => {
+    const calls = [];
+    const router = createUsersRouter({
+      listUsersService: async (options) => {
+        calls.push(options);
+        return { items: [], total: 0, sort: 'created_at_asc' };
+      }
+    });
+    const app = createTestApp(router);
+
+    await withServer(app, async (baseUrl) => {
+      const response = await fetch(
+        `${baseUrl}/mng/api/users?q=ana&role=A&status=pending&sort=created_at_asc&page=2`
+      );
+
+      assert.equal(response.status, 200);
+      assert.deepEqual(await response.json(), { items: [], total: 0, sort: 'created_at_asc' });
+    });
+
+    assert.deepEqual(calls, [
+      {
+        keywords: 'ana',
+        role: 'A',
+        status: 'pending',
+        sort: 'created_at_asc',
+        page: 2,
+        pageSize: 10
+      }
+    ]);
+  });
+
+  it('returns the creation date of an account, or null when it is unknown', async () => {
+    const users = {
+      21: { id: 21, email: 'old@test', createdAt: null },
+      22: { id: 22, email: 'new@test', createdAt: '2026-10-29T12:00:00.000Z' }
+    };
+    const router = createUsersRouter({
+      getUserByIdService: async (id) => users[id] || null
+    });
+    const app = createTestApp(router);
+
+    await withServer(app, async (baseUrl) => {
+      const unknown = await fetch(`${baseUrl}/mng/api/users/21`);
+      assert.equal(unknown.status, 200);
+      assert.equal((await unknown.json()).createdAt, null);
+
+      const known = await fetch(`${baseUrl}/mng/api/users/22`);
+      assert.equal(known.status, 200);
+      assert.equal((await known.json()).createdAt, '2026-10-29T12:00:00.000Z');
+    });
   });
 
   it('updates account active state after admin confirmation', async () => {

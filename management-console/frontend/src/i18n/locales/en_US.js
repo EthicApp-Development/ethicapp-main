@@ -214,6 +214,7 @@ export default {
         email: 'Email',
         role: 'Role',
         status: 'Status',
+        createdAt: 'Created',
         actions: 'Actions'
       },
       status: {
@@ -223,6 +224,11 @@ export default {
       },
       actions: {
         view: 'View details'
+      },
+      createdAtUnknown: 'Unknown',
+      sort: {
+        newestFirst: 'Sort newest first',
+        oldestFirst: 'Sort oldest first'
       },
       empty: 'No users found for the selected filters.',
       pagination: 'Page {{page}} of {{totalPages}} ({{total}} users)'
@@ -269,6 +275,7 @@ export default {
         gender: 'Gender',
         role: 'Role',
         status: 'Account status',
+        createdAt: 'Created',
         lastLogin: 'Last login',
         email: 'Email',
         emailConfirmation: 'Confirm email'
@@ -299,6 +306,7 @@ export default {
         active: 'Active account',
         inactive: 'Inactive account',
         pendingActivationHelp: 'To activate a pending account, use “Confirm account”.',
+        createdAtUnknown: 'Unknown (not recorded)',
         neverLoggedIn: 'Never'
       },
       actions: {

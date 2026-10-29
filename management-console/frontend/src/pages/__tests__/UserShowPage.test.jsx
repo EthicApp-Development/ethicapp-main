@@ -35,7 +35,8 @@ const pendingUser = Object.freeze({
   active: false,
   emailConfirmed: false,
   status: 'pending',
-  lastLoginAt: null
+  lastLoginAt: null,
+  createdAt: '2026-10-29T15:30:00.000Z'
 });
 
 let container;
@@ -193,5 +194,26 @@ describe('UserShowPage: confirming a pending account', () => {
       'The email of this account changed since the page was loaded'
     );
     expect(emailInput().value).toBe('changed@example.test');
+  });
+});
+
+describe('UserShowPage: account creation date', () => {
+  it('shows the stored creation date, which is not an unsaved edit', async () => {
+    await renderPage();
+
+    expect(byTestId('user-created-at').value).toBe(
+      new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' })
+        .format(new Date(pendingUser.createdAt))
+    );
+    expect(byTestId('confirm-account-button').disabled).toBe(false);
+    expect(byTestId('confirm-account-unsaved-hint')).toBeNull();
+  });
+
+  it('shows an unknown creation date for an account created before it was recorded', async () => {
+    vi.mocked(fetchUserById).mockResolvedValue({ ...pendingUser, createdAt: null });
+    await renderPage();
+
+    expect(byTestId('user-created-at').value).toBe('Unknown (not recorded)');
+    expect(byTestId('confirm-account-button').disabled).toBe(false);
   });
 });
