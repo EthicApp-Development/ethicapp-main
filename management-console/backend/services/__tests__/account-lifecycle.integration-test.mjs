@@ -88,7 +88,12 @@ test('V27: a pending account is confirmed, loses its confirmation tokens and the
   await insertToken(user.mail, 'account_confirmation');
   await insertToken(user.mail, 'password_reset');
 
-  const result = await service().confirmPendingAccount({ adminUserId: ADMIN_USER_ID, userId: user.id });
+  // The approved email matches ignoring case and surrounding spaces.
+  const result = await service().confirmPendingAccount({
+    adminUserId: ADMIN_USER_ID,
+    userId: user.id,
+    expectedEmail: ` ${user.mail.toUpperCase()} `
+  });
 
   assert.deepEqual(result, { id: user.id, status: 'active' });
   const [row] = await query('SELECT active, email_confirmed FROM users WHERE id = $1', [user.id]);
@@ -121,7 +126,7 @@ test('V27: active, deactivated and anonymized accounts are refused, unchanged, a
     await insertToken(user.mail, 'account_confirmation');
 
     await assert.rejects(
-      service().confirmPendingAccount({ adminUserId: ADMIN_USER_ID, userId: user.id }),
+      service().confirmPendingAccount({ adminUserId: ADMIN_USER_ID, userId: user.id, expectedEmail: user.mail }),
       { code: 'ACCOUNT_NOT_PENDING', accountStatus: expectedStatus }
     );
 
@@ -139,14 +144,38 @@ test('V27: active, deactivated and anonymized accounts are refused, unchanged, a
   }
 });
 
+test('V27: a pending account is not confirmed for another email than its own, and the refusal is recorded', {
+  skip: SKIP_REASON
+}, async () => {
+  const user = await insertUser({ active: false, emailConfirmed: false });
+  await insertToken(user.mail, 'account_confirmation');
+
+  for (const expectedEmail of ['edited-but-unsaved@example.test', null]) {
+    await assert.rejects(
+      service().confirmPendingAccount({ adminUserId: ADMIN_USER_ID, userId: user.id, expectedEmail }),
+      { code: 'ACCOUNT_CHANGED' }
+    );
+  }
+
+  const [row] = await query('SELECT active, email_confirmed FROM users WHERE id = $1', [user.id]);
+  assert.deepEqual(row, { active: false, email_confirmed: false });
+  const tokens = await query('SELECT id FROM pass_reset WHERE mail = $1', [user.mail]);
+  assert.equal(tokens.length, 1);
+  const events = await auditEventsFor(user.id);
+  assert.deepEqual(
+    events.map((event) => [event.outcome, event.reason_code]),
+    [['refused', 'ACCOUNT_CHANGED'], ['refused', 'ACCOUNT_CHANGED']]
+  );
+});
+
 test('V27: of two concurrent confirmations, one succeeds and the other is refused', {
   skip: SKIP_REASON
 }, async () => {
   const user = await insertUser({ active: false, emailConfirmed: false });
 
   const outcomes = await Promise.allSettled([
-    service().confirmPendingAccount({ adminUserId: ADMIN_USER_ID, userId: user.id }),
-    service().confirmPendingAccount({ adminUserId: ADMIN_USER_ID, userId: user.id })
+    service().confirmPendingAccount({ adminUserId: ADMIN_USER_ID, userId: user.id, expectedEmail: user.mail }),
+    service().confirmPendingAccount({ adminUserId: ADMIN_USER_ID, userId: user.id, expectedEmail: user.mail })
   ]);
 
   assert.equal(outcomes.filter((outcome) => outcome.status === 'fulfilled').length, 1);

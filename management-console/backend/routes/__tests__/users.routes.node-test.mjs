@@ -143,6 +143,7 @@ describe('management-console confirm-account route', () => {
 
     await withServer(createTestApp(router), async (baseUrl) => {
       const response = await postConfirmAccount(baseUrl, 22, {
+        expected_email: 'stored@example.test',
         admin_password: 'admin-secret',
         recaptcha_token: 'test-recaptcha-token'
       });
@@ -153,7 +154,61 @@ describe('management-console confirm-account route', () => {
 
     assert.equal(calls.recaptcha.length, 1);
     assert.equal(calls.password.length, 1);
-    assert.deepEqual(calls.confirm, [{ adminUserId: 7, userId: 22 }]);
+    assert.deepEqual(calls.confirm, [
+      { adminUserId: 7, userId: 22, expectedEmail: 'stored@example.test' }
+    ]);
+  });
+
+  it('passes a missing expected email on as null, for the service to refuse', async () => {
+    const { calls, router } = createConfirmAccountRouter();
+
+    await withServer(createTestApp(router), async (baseUrl) => {
+      const response = await postConfirmAccount(baseUrl, 22, {
+        admin_password: 'admin-secret',
+        recaptcha_token: 'test-recaptcha-token'
+      });
+
+      assert.equal(response.status, 200);
+    });
+
+    assert.deepEqual(calls.confirm, [{ adminUserId: 7, userId: 22, expectedEmail: null }]);
+  });
+
+  it('rejects an expected email that is not a string before the step-up confirmation', async () => {
+    const { calls, router } = createConfirmAccountRouter();
+
+    await withServer(createTestApp(router), async (baseUrl) => {
+      const response = await postConfirmAccount(baseUrl, 22, {
+        expected_email: ['stored@example.test'],
+        admin_password: 'admin-secret',
+        recaptcha_token: 'test-recaptcha-token'
+      });
+
+      assert.equal(response.status, 400);
+      assert.deepEqual(await response.json(), { error: 'INVALID_EXPECTED_EMAIL' });
+    });
+
+    assert.equal(calls.password.length, 0);
+    assert.equal(calls.confirm.length, 0);
+  });
+
+  it('answers 409 ACCOUNT_CHANGED when the account no longer has the approved email', async () => {
+    const { router } = createConfirmAccountRouter({
+      confirmPendingAccountService: async () => {
+        throw lifecycleError('ACCOUNT_CHANGED');
+      }
+    });
+
+    await withServer(createTestApp(router), async (baseUrl) => {
+      const response = await postConfirmAccount(baseUrl, 22, {
+        expected_email: 'edited-but-unsaved@example.test',
+        admin_password: 'admin-secret',
+        recaptcha_token: 'test-recaptcha-token'
+      });
+
+      assert.equal(response.status, 409);
+      assert.deepEqual(await response.json(), { error: 'ACCOUNT_CHANGED' });
+    });
   });
 
   it('accepts a passkey confirmation', async () => {

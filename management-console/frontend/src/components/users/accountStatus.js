@@ -42,6 +42,7 @@ export function accountStatusBadgeVariant(status) {
 // Backend error codes of the account actions, mapped to translations.
 const ACCOUNT_ACTION_ERROR_KEYS = Object.freeze({
   ACCOUNT_NOT_PENDING: 'pages.userShow.errors.accountNotPending',
+  ACCOUNT_CHANGED: 'pages.userShow.errors.accountChanged',
   USER_NOT_FOUND: 'pages.userShow.errors.userNotFound',
   INVALID_USER_ID: 'pages.userShow.errors.invalidUserId'
 });

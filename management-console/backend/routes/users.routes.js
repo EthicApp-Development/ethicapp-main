@@ -20,8 +20,12 @@ import {
 const ACCOUNT_LIFECYCLE_STATUS_BY_CODE = Object.freeze({
   [ACCOUNT_LIFECYCLE_ERRORS.invalidUserId]: 400,
   [ACCOUNT_LIFECYCLE_ERRORS.userNotFound]: 404,
-  [ACCOUNT_LIFECYCLE_ERRORS.accountNotPending]: 409
+  [ACCOUNT_LIFECYCLE_ERRORS.accountNotPending]: 409,
+  [ACCOUNT_LIFECYCLE_ERRORS.accountChanged]: 409
 });
+
+// Code of a confirm-account request whose expected_email is not a string.
+const INVALID_EXPECTED_EMAIL = 'INVALID_EXPECTED_EMAIL';
 
 function isValidUserIdParam(value) {
   const userId = Number(value);
@@ -165,12 +169,20 @@ export function createUsersRouter({
   });
 
   // Confirms an account whose owner never confirmed the email, after the
-  // step-up confirmation. Answers 409 ACCOUNT_NOT_PENDING, with the
-  // account's current `status`, for any account that is not pending.
+  // step-up confirmation. The body carries `expected_email`, the email the
+  // administrator approved. Answers 409 ACCOUNT_NOT_PENDING, with the
+  // account's current `status`, for any account that is not pending, and
+  // 409 ACCOUNT_CHANGED when expected_email is missing or is not the
+  // account's email.
   router.post('/mng/api/users/:id/confirm-account', requireManagementRoleMiddleware, async (req, res, next) => {
     try {
       if (!isValidUserIdParam(req.params.id)) {
         return res.status(400).json({ error: ACCOUNT_LIFECYCLE_ERRORS.invalidUserId });
+      }
+
+      const expectedEmail = req.body?.expected_email ?? null;
+      if (expectedEmail !== null && typeof expectedEmail !== 'string') {
+        return res.status(400).json({ error: INVALID_EXPECTED_EMAIL });
       }
 
       const sensitiveActionVerified = await verifySensitiveAction(req, res);
@@ -180,7 +192,8 @@ export function createUsersRouter({
 
       const result = await confirmPendingAccountService({
         adminUserId: req.session.uid,
-        userId: Number(req.params.id)
+        userId: Number(req.params.id),
+        expectedEmail
       });
 
       return res.status(200).json(result);

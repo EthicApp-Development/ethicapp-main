@@ -238,8 +238,10 @@ export default {
       impersonationError: 'No fue posible iniciar impersonación del profesor.',
       confirmAccountSuccess: 'Cuenta confirmada. {{name}} ya puede ingresar con la contraseña que eligió al registrarse.',
       confirmAccountError: 'No fue posible confirmar la cuenta.',
+      confirmAccountUnsavedHint: 'Guarda o descarta tus cambios antes de confirmar la cuenta.',
       errors: {
         accountNotPending: 'Esta cuenta ya no está pendiente de confirmación, así que no se modificó. Abajo se muestra su estado actual.',
+        accountChanged: 'El correo de esta cuenta cambió desde que se cargó la página, así que no se confirmó. Revisa el correo que se muestra abajo e inténtalo de nuevo.',
         userNotFound: 'Esta cuenta ya no existe.',
         invalidUserId: 'El identificador de la cuenta no es válido.'
       },
@@ -304,6 +306,7 @@ export default {
         cancel: 'Cancelar',
         triggerPasswordReset: 'Gatillar recuperación de contraseña',
         confirmAccount: 'Confirmar cuenta',
+        discardChanges: 'Descartar cambios',
         impersonateProfessor: 'Ingresar como profesor'
       }
     },

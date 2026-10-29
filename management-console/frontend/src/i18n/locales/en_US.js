@@ -238,8 +238,10 @@ export default {
       impersonationError: 'Unable to start professor impersonation.',
       confirmAccountSuccess: 'Account confirmed. {{name}} can now sign in with the password they chose when signing up.',
       confirmAccountError: 'Unable to confirm the account.',
+      confirmAccountUnsavedHint: 'Save or discard your changes before confirming the account.',
       errors: {
         accountNotPending: 'This account is not pending confirmation any more, so it was not changed. Its current status is shown below.',
+        accountChanged: 'The email of this account changed since the page was loaded, so it was not confirmed. Check the email shown below and try again.',
         userNotFound: 'This account no longer exists.',
         invalidUserId: 'The account identifier is not valid.'
       },
@@ -304,6 +306,7 @@ export default {
         cancel: 'Cancel',
         triggerPasswordReset: 'Trigger password recovery',
         confirmAccount: 'Confirm account',
+        discardChanges: 'Discard changes',
         impersonateProfessor: 'Sign in as professor'
       }
     },

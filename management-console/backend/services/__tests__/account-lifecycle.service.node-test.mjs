@@ -6,9 +6,11 @@ import {
   createAccountLifecycleService
 } from '../account-lifecycle.service.js';
 
+const STORED_EMAIL = 'Pat@Example.com';
+
 const PENDING_USER = Object.freeze({
   id: 22,
-  mail: 'Pat@Example.com',
+  mail: STORED_EMAIL,
   active: false,
   email_confirmed: false,
   anonymized_at: null
@@ -87,7 +89,7 @@ describe('account lifecycle service: confirm a pending account', () => {
     const pool = createFakePool();
     const service = createAccountLifecycleService({ pool, logger: silentLogger });
 
-    const result = await service.confirmPendingAccount({ adminUserId: 7, userId: '22' });
+    const result = await service.confirmPendingAccount({ adminUserId: 7, userId: '22', expectedEmail: ' pat@example.COM ' });
 
     assert.deepEqual(result, { id: 22, status: 'active' });
     assert.deepEqual(pool.clientCalls.map((call) => call.step), [
@@ -110,7 +112,7 @@ describe('account lifecycle service: confirm a pending account', () => {
     const pool = createFakePool();
     const service = createAccountLifecycleService({ pool, logger: silentLogger });
 
-    await service.confirmPendingAccount({ adminUserId: 7, userId: 22 });
+    await service.confirmPendingAccount({ adminUserId: 7, userId: 22, expectedEmail: STORED_EMAIL });
 
     const [update, deletion] = [pool.clientCalls[2], pool.clientCalls[3]];
     assert.match(update.sql, /SET active = true, email_confirmed = true WHERE id = \$1$/);
@@ -127,7 +129,7 @@ describe('account lifecycle service: confirm a pending account', () => {
       const service = createAccountLifecycleService({ pool, logger: silentLogger });
 
       await assert.rejects(
-        service.confirmPendingAccount({ adminUserId: 7, userId: 22 }),
+        service.confirmPendingAccount({ adminUserId: 7, userId: 22, expectedEmail: STORED_EMAIL }),
         (error) => {
           assert.equal(error.code, ACCOUNT_LIFECYCLE_ERRORS.accountNotPending);
           assert.equal(error.accountStatus, status);
@@ -143,6 +145,35 @@ describe('account lifecycle service: confirm a pending account', () => {
       ]);
       assert.deepEqual(pool.clientCalls[2].params, [7, 'account.confirm', 22, 'refused', 'ACCOUNT_NOT_PENDING']);
       assert.equal(pool.released, 1);
+    });
+  }
+
+  for (const [label, expectedEmail] of [
+    ['another email than the stored one', 'edited-but-unsaved@example.test'],
+    ['no expected email', undefined],
+    ['a blank expected email', '   ']
+  ]) {
+    it(`refuses ACCOUNT_CHANGED for ${label}, records the refusal and changes nothing`, async () => {
+      const pool = createFakePool();
+      const service = createAccountLifecycleService({ pool, logger: silentLogger });
+
+      await assert.rejects(
+        service.confirmPendingAccount({ adminUserId: 7, userId: 22, expectedEmail }),
+        (error) => {
+          assert.equal(error.code, ACCOUNT_LIFECYCLE_ERRORS.accountChanged);
+          assert.equal(error.accountStatus, undefined);
+          return true;
+        }
+      );
+
+      assert.deepEqual(pool.clientCalls.map((call) => call.step), [
+        'BEGIN',
+        'SELECT user FOR UPDATE',
+        'INSERT audit',
+        'COMMIT'
+      ]);
+      assert.deepEqual(pool.clientCalls[2].params, [7, 'account.confirm', 22, 'refused', 'ACCOUNT_CHANGED']);
+      assert.equal(pool.poolCalls.length, 0);
     });
   }
 
@@ -184,7 +215,7 @@ describe('account lifecycle service: confirm a pending account', () => {
     const service = createAccountLifecycleService({ pool, logger: silentLogger });
 
     await assert.rejects(
-      service.confirmPendingAccount({ adminUserId: 7, userId: 22 }),
+      service.confirmPendingAccount({ adminUserId: 7, userId: 22, expectedEmail: STORED_EMAIL }),
       { message: 'deadlock detected' }
     );
 
@@ -210,7 +241,7 @@ describe('account lifecycle service: confirm a pending account', () => {
     });
 
     await assert.rejects(
-      service.confirmPendingAccount({ adminUserId: 7, userId: 22 }),
+      service.confirmPendingAccount({ adminUserId: 7, userId: 22, expectedEmail: STORED_EMAIL }),
       { message: 'deadlock detected' }
     );
 

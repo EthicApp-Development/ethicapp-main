@@ -37,6 +37,7 @@ describe('account status', () => {
 
   it('translates the error codes of the confirm action and leaves others to the caller', () => {
     expect(accountActionErrorKey({ code: 'ACCOUNT_NOT_PENDING' })).toBe('pages.userShow.errors.accountNotPending');
+    expect(accountActionErrorKey({ code: 'ACCOUNT_CHANGED' })).toBe('pages.userShow.errors.accountChanged');
     expect(accountActionErrorKey({ code: 'USER_NOT_FOUND' })).toBe('pages.userShow.errors.userNotFound');
     expect(accountActionErrorKey(new Error('INVALID_USER_ID'))).toBe('pages.userShow.errors.invalidUserId');
     expect(accountActionErrorKey({ code: 'Request failed' })).toBeNull();
@@ -60,6 +61,8 @@ describe('account status', () => {
       'pages.userShow.actions.confirmAccount',
       'pages.userShow.confirmAccountSuccess',
       'pages.userShow.confirmAccountError',
+      'pages.userShow.confirmAccountUnsavedHint',
+      'pages.userShow.actions.discardChanges',
       'pages.userShow.status.pendingActivationHelp',
       'pages.userShow.confirm.confirmAccount.title',
       'pages.userShow.confirm.confirmAccount.body',
@@ -69,7 +72,8 @@ describe('account status', () => {
         `pages.userShow.accountStatus.${status}.label`,
         `pages.userShow.accountStatus.${status}.description`
       ]),
-      ...['ACCOUNT_NOT_PENDING', 'USER_NOT_FOUND', 'INVALID_USER_ID'].map((code) => accountActionErrorKey({ code }))
+      ...['ACCOUNT_NOT_PENDING', 'ACCOUNT_CHANGED', 'USER_NOT_FOUND', 'INVALID_USER_ID']
+        .map((code) => accountActionErrorKey({ code }))
     ];
 
     for (const locale of [enUS, esCL]) {

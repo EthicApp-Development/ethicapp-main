@@ -33,6 +33,11 @@ function formFromUser(user) {
   };
 }
 
+// Form fields an administrator can edit; any difference from the loaded
+// account is an unsaved change.
+const EDITABLE_FIELDS = Object.freeze(['firstname', 'lastname', 'sex', 'email', 'email_confirmation', 'role', 'active']);
+const CONFIRM_ACCOUNT_HINT_ID = 'confirm-account-unsaved-hint';
+
 function UserShowPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -45,6 +50,9 @@ function UserShowPage() {
   const [lastLoginAt, setLastLoginAt] = useState(null);
   const [currentProfile, setCurrentProfile] = useState(null);
   const [accountStatus, setAccountStatus] = useState(ACCOUNT_STATUSES.active);
+  // The account as last loaded from the server. Dialogs name the account
+  // from it, never from the form, which may hold unsaved edits.
+  const [savedForm, setSavedForm] = useState(null);
   // Saving, confirming the account, password recovery and impersonation ask
   // for the administrator's passkey, or password and reCAPTCHA, in a dialog.
   const { requestConfirmation, modalProps } = useSensitiveActionConfirmation();
@@ -64,9 +72,13 @@ function UserShowPage() {
     form.role === 'S' &&
     Number(currentProfile.id) === Number(id);
   const isPendingAccount = accountStatus === ACCOUNT_STATUSES.pending;
+  const hasUnsavedChanges = savedForm !== null &&
+    EDITABLE_FIELDS.some((fieldName) => form[fieldName] !== savedForm[fieldName]);
 
   const applyUser = useCallback((user) => {
-    setForm(formFromUser(user));
+    const persistedForm = formFromUser(user);
+    setForm(persistedForm);
+    setSavedForm(persistedForm);
     setLastLoginAt(user.lastLoginAt || null);
     setAccountStatus(accountStatusOf(user));
   }, []);
@@ -125,12 +137,19 @@ function UserShowPage() {
     }));
   }
 
-  const accountName = `${form.firstname} ${form.lastname}`.trim() || form.email;
+  function onDiscardChanges() {
+    if (savedForm) {
+      setForm(savedForm);
+    }
+  }
+
+  const savedEmail = savedForm?.email || '';
+  const accountName = `${savedForm?.firstname || ''} ${savedForm?.lastname || ''}`.trim() || savedEmail;
 
   function confirmAction(action, request) {
     return requestConfirmation({
       title: t(`pages.userShow.confirm.${action}.title`),
-      description: t(`pages.userShow.confirm.${action}.body`, { name: accountName, email: form.email }),
+      description: t(`pages.userShow.confirm.${action}.body`, { name: accountName, email: savedEmail }),
       confirmLabel: t(`pages.userShow.confirm.${action}.confirm`),
       action: request
     });
@@ -164,15 +183,22 @@ function UserShowPage() {
   }
 
   async function onConfirmAccount() {
-    if (!isPendingAccount) {
+    if (!isPendingAccount || hasUnsavedChanges) {
       return;
     }
 
     setError('');
     setSuccess('');
 
+    // The backend confirms the account only while it still has the email
+    // the administrator approved in the dialog.
+    const expectedEmail = savedEmail;
+
     try {
-      const outcome = await confirmAction('confirmAccount', (stepUp) => confirmAccount(id, stepUp));
+      const outcome = await confirmAction(
+        'confirmAccount',
+        (stepUp) => confirmAccount(id, { ...stepUp, expected_email: expectedEmail })
+      );
       if (outcome.confirmed) {
         setSuccess(t('pages.userShow.confirmAccountSuccess', { name: accountName }));
         await reloadUser();
@@ -337,6 +363,8 @@ function UserShowPage() {
                 type="button"
                 variant="success"
                 data-testid="confirm-account-button"
+                disabled={hasUnsavedChanges}
+                aria-describedby={hasUnsavedChanges ? CONFIRM_ACCOUNT_HINT_ID : undefined}
                 onClick={onConfirmAccount}
               >
                 <i className="fa-solid fa-user-check me-2" aria-hidden="true" />
@@ -364,6 +392,22 @@ function UserShowPage() {
               </Button>
             ) : null}
           </div>
+          {isPendingAccount && hasUnsavedChanges ? (
+            <div className="d-flex flex-wrap align-items-center gap-2 mt-2">
+              <Form.Text id={CONFIRM_ACCOUNT_HINT_ID} className="mt-0" data-testid="confirm-account-unsaved-hint">
+                {t('pages.userShow.confirmAccountUnsavedHint')}
+              </Form.Text>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline-secondary"
+                data-testid="discard-changes-button"
+                onClick={onDiscardChanges}
+              >
+                {t('pages.userShow.actions.discardChanges')}
+              </Button>
+            </div>
+          ) : null}
         </Form>
       </Card.Body>
 
