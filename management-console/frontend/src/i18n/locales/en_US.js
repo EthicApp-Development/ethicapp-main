@@ -17,6 +17,8 @@ export default {
     keywords: 'Search by first name, last name, email, or identifier',
     role: 'Filter by role',
     allRoles: 'All roles',
+    status: 'Filter by status',
+    allStatuses: 'All statuses',
     search: 'Search'
   },
   roles: {
@@ -216,7 +218,7 @@ export default {
       },
       status: {
         active: 'Active',
-        inactive: 'Inactive',
+        inactive: 'Deactivated',
         pending: 'Pending confirmation'
       },
       actions: {
@@ -234,6 +236,31 @@ export default {
       passwordResetSuccess: 'Password recovery email was sent.',
       passwordResetError: 'Unable to trigger password recovery flow.',
       impersonationError: 'Unable to start professor impersonation.',
+      confirmAccountSuccess: 'Account confirmed. {{name}} can now sign in with the password they chose when signing up.',
+      confirmAccountError: 'Unable to confirm the account.',
+      errors: {
+        accountNotPending: 'This account is not pending confirmation any more, so it was not changed. Its current status is shown below.',
+        userNotFound: 'This account no longer exists.',
+        invalidUserId: 'The account identifier is not valid.'
+      },
+      accountStatus: {
+        active: {
+          label: 'Active',
+          description: 'The email is confirmed and the owner can sign in.'
+        },
+        pending: {
+          label: 'Pending confirmation',
+          description: 'The owner signed up but never confirmed their email, so they cannot sign in yet.'
+        },
+        inactive: {
+          label: 'Deactivated by an administrator',
+          description: 'The email was confirmed, but an administrator deactivated the account, so the owner cannot sign in.'
+        },
+        anonymized: {
+          label: 'Anonymized',
+          description: 'This account was anonymized and no longer identifies anyone.'
+        }
+      },
       fields: {
         firstname: 'First name',
         lastname: 'Last name',
@@ -255,6 +282,11 @@ export default {
           body: 'A password recovery email will be sent to {{email}}.',
           confirm: 'Send email'
         },
+        confirmAccount: {
+          title: 'Confirm this account?',
+          body: 'The email {{email}} will be marked as confirmed and the account activated. {{name}} will be able to sign in with the password they chose when signing up. No email is sent.',
+          confirm: 'Confirm account'
+        },
         impersonation: {
           title: 'Sign in as this professor?',
           body: 'You will use EthicApp as {{name}} until you go back to the management console.',
@@ -264,14 +296,14 @@ export default {
       status: {
         active: 'Active account',
         inactive: 'Inactive account',
-        emailConfirmed: 'Email confirmed',
-        emailPending: 'Email confirmation pending',
+        pendingActivationHelp: 'To activate a pending account, use “Confirm account”.',
         neverLoggedIn: 'Never'
       },
       actions: {
         save: 'Save changes',
         cancel: 'Cancel',
         triggerPasswordReset: 'Trigger password recovery',
+        confirmAccount: 'Confirm account',
         impersonateProfessor: 'Sign in as professor'
       }
     },

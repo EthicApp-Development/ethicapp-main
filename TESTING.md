@@ -76,6 +76,8 @@ Current integration suites:
 
   The first suite covers the activity launch transaction and the AI service policy pin, including two concurrent launches of the same session. Others cover pending callback results and their concurrent claim (V23), and room-scoped jobs (V24): opening, supersession, closing, and the refusal of a callback to a closed room job; and design analyses (V25): reservation, in-flight and stale generations, conditional completion and failure, replacement of the previous document, deletion with the design, reservation on save (unchanged input hash, supersession of a generation in flight), and the copy of ready analyses to a duplicated design; and the adapters a policy version switches off (V26): the empty default for existing and new versions, the stored list as the policy store reads it, the rejection of NULL ids, and the append-only rule; and the student activity descriptor of an activity in progress and of a finished one, which has no current phase.
 
+- `management-console/backend`: `npm run test:integration` runs `**/*.integration-test.mjs` against the same kind of database, with migrations V1 to V27 or later applied, and reads the same `ETHICAPP_INTEGRATION_DATABASE_URL`, so one disposable database serves both suites. Run it from `management-console/backend` in place of `ethicapp/backend` in the example above. It covers the confirmation of a pending account and the administrator audit log (V27): the account activated and its confirmation tokens deleted, the refusal of active, deactivated and anonymized accounts, two concurrent confirmations of the same account, the append-only rule of `admin_audit_events`, and the checks that keep free text out of it. The accounts and audit events it inserts are not removed.
+
 ### 1.3. End-to-End and Smoke Tests
 
 End-to-end and smoke tests are appropriate for validating the full Compose stack or release candidates.
@@ -139,7 +141,7 @@ Current guardrail coverage includes:
 
 - `ethicapp/backend`: upload middleware behavior, protected upload authorization, rendered case-document access contracts, PDF render job status helpers, and selected session middleware behavior.
 - `auth-backend`: CSRF protection plus authentication route behavior for login, registration validation, duplicate account handling, locale normalization, forgot-password token creation, and password reset.
-- `management-console/backend`: CSRF protection and professor impersonation route behavior, including reCAPTCHA rejection, role rejection, and EthicApp session cookie forwarding.
+- `management-console/backend`: CSRF protection and professor impersonation route behavior, including reCAPTCHA rejection, role rejection, and EthicApp session cookie forwarding; the confirmation of a pending account (route, step-up, transaction order, refusals) and the administrator audit helper.
 
 The broader integration regression layer is not yet consistently implemented; `ethicapp/backend` has a first suite (section 1.2). Until it exists for a touched area, changes that rely on real database behavior should be manually verified against the local Docker Compose stack and should document that limitation in PR verification notes.
 

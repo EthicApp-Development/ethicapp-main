@@ -12,6 +12,21 @@ import {
 } from '../services/authBackend.service.js';
 import { impersonateProfessorInEthicapp } from '../services/ethicapp.service.js';
 import { createSensitiveActionVerifier } from '../services/sensitive-action.service.js';
+import {
+  ACCOUNT_LIFECYCLE_ERRORS,
+  confirmPendingAccount
+} from '../services/account-lifecycle.service.js';
+
+const ACCOUNT_LIFECYCLE_STATUS_BY_CODE = Object.freeze({
+  [ACCOUNT_LIFECYCLE_ERRORS.invalidUserId]: 400,
+  [ACCOUNT_LIFECYCLE_ERRORS.userNotFound]: 404,
+  [ACCOUNT_LIFECYCLE_ERRORS.accountNotPending]: 409
+});
+
+function isValidUserIdParam(value) {
+  const userId = Number(value);
+  return Number.isInteger(userId) && userId > 0;
+}
 
 export function createUsersRouter({
   requireManagementRoleMiddleware = requireManagementRole,
@@ -24,7 +39,8 @@ export function createUsersRouter({
   triggerForgotPasswordWithAuthBackendService = triggerForgotPasswordWithAuthBackend,
   verifyAdminPasswordWithAuthBackendService = verifyAdminPasswordWithAuthBackend,
   verifyAdminPasskeyWithAuthBackendService = verifyAdminPasskeyWithAuthBackend,
-  impersonateProfessorInEthicappService = impersonateProfessorInEthicapp
+  impersonateProfessorInEthicappService = impersonateProfessorInEthicapp,
+  confirmPendingAccountService = confirmPendingAccount
 } = {}) {
   const router = express.Router();
 
@@ -37,11 +53,12 @@ export function createUsersRouter({
 
   router.get('/mng/api/users', requireManagementRoleMiddleware, async (req, res, next) => {
   try {
-    const { q = '', role = '', page = '1' } = req.query;
+    const { q = '', role = '', status = '', page = '1' } = req.query;
 
     const result = await listUsersService({
       keywords: q,
       role,
+      status,
       page: Number(page),
       pageSize: 10
     });
@@ -145,6 +162,40 @@ export function createUsersRouter({
 
     return next(error);
   }
+  });
+
+  // Confirms an account whose owner never confirmed the email, after the
+  // step-up confirmation. Answers 409 ACCOUNT_NOT_PENDING, with the
+  // account's current `status`, for any account that is not pending.
+  router.post('/mng/api/users/:id/confirm-account', requireManagementRoleMiddleware, async (req, res, next) => {
+    try {
+      if (!isValidUserIdParam(req.params.id)) {
+        return res.status(400).json({ error: ACCOUNT_LIFECYCLE_ERRORS.invalidUserId });
+      }
+
+      const sensitiveActionVerified = await verifySensitiveAction(req, res);
+      if (!sensitiveActionVerified) {
+        return undefined;
+      }
+
+      const result = await confirmPendingAccountService({
+        adminUserId: req.session.uid,
+        userId: Number(req.params.id)
+      });
+
+      return res.status(200).json(result);
+    } catch (error) {
+      const status = ACCOUNT_LIFECYCLE_STATUS_BY_CODE[error.code];
+
+      if (status) {
+        return res.status(status).json({
+          error: error.code,
+          ...(error.accountStatus ? { status: error.accountStatus } : {})
+        });
+      }
+
+      return next(error);
+    }
   });
 
   router.post('/mng/api/users/:id/impersonate-professor', requireManagementRoleMiddleware, async (req, res, next) => {
