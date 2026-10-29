@@ -9,7 +9,9 @@ import { listServicesNotRunning } from "../../helpers/ai-service-launch-notice.j
 import * as StatusCodes from "../../../common/modules/session-status.js";
 import { requireRole } from "../../helpers/auth-helper.js";
 import { studentNotifications } from "../../config/socket.config.js";
-import redisClient from "../../db/redis.js";
+import {
+    invalidateCachedStudentActivityDescriptor,
+} from "../../helpers/student-activity-state-helper.js";
 import { getDesignTypeBySessionId } from "./activities-common.js";
 import { getEnabledExternalServiceIdsBySessionId } from "../../helpers/designs-helper.js";
 import { dispatchPhaseHook } from "../../helpers/external-service-dispatch.js";
@@ -384,7 +386,7 @@ router.post("/activities/:session_id/phase_transition", async (req, res) => {
             return res.status(404).json({ error: "Session not found or no update performed." });
         }
 
-        await redisClient.del(`descriptor:${sessionId}`);
+        await invalidateCachedStudentActivityDescriptor(sessionId);
         studentNotifications.phaseTransition(sessionId);
         dispatchPhaseTransitionHooks({
             sessionId,
@@ -509,6 +511,8 @@ router.post("/activities/:session_id/finish", async (req, res) => {
         if (result.rowCount === 0) {
             return res.status(404).json({ error: "Session not found or no update performed." });
         }
+
+        await invalidateCachedStudentActivityDescriptor(sessionId);
 
         if (previousPhaseId) {
             await dispatchPhaseHook("phase-ended", {
