@@ -9,6 +9,11 @@ import {
 import * as DesignsHelper from "../helpers/designs-helper.js"
 import * as ActivitiesHelper from "../helpers/activities-helper.js"
 import externalServicesRegistry from "../services/external-services.service.js";
+import {
+    STUDENT_ACTIVITY_DESCRIPTOR_SQL,
+    getCachedStudentActivityDescriptorWith,
+    invalidateStudentActivityDescriptorWith,
+} from "./student-activity-descriptor.js";
 
 export const buildInitialPhaseState = async function (phaseId) {
     try {
@@ -56,28 +61,15 @@ export async function getCachedStudentActivityDescriptor(sessionId, invalidate =
         throw new Error("Invalid sessionId");
     }
 
-    const cacheKey = `descriptor:${sessionId}:v2`;
+    return getCachedStudentActivityDescriptorWith(
+        { redis: redisClient, load: getStudentActivityDescriptor },
+        sessionId,
+        invalidate
+    );
+}
 
-    // Check if cache invalidation is requested
-    if (invalidate) {
-        await redisClient.del(cacheKey);
-    } else {
-        // Try to retrieve the descriptor from the cache
-        const cachedDescriptor = await redisClient.get(cacheKey);
-        if (cachedDescriptor) {
-            return JSON.parse(cachedDescriptor);
-        }
-    }
-
-    // Fetch the descriptor from the database
-    const descriptor = await getStudentActivityDescriptor(sessionId);
-
-    // Cache the descriptor with a TTL of one hour
-    if (descriptor) {
-        await redisClient.set(cacheKey, JSON.stringify(descriptor), 'EX', 3600); // TTL: 3600 seconds
-    }
-
-    return descriptor;
+export async function invalidateCachedStudentActivityDescriptor(sessionId) {
+    await invalidateStudentActivityDescriptorWith(redisClient, sessionId);
 }
 
 export async function getStudentActivityDescriptor(sessionId) {
@@ -87,27 +79,9 @@ export async function getStudentActivityDescriptor(sessionId) {
     }
 
     try {
-        const descriptorQuery = `
-            SELECT 
-                s.descr AS description,
-                d.design AS design,
-                st.number AS currentphasenumber,
-                st.id AS currentphaseid
-            FROM 
-                sessions s
-            JOIN 
-                activity a ON s.id = a.session
-            JOIN
-                designs d ON d.id = a.design
-            JOIN 
-                stages st ON st.id = s.current_stage
-            WHERE 
-                s.id = $1;
-        `;
-
         const descriptorResult = await rpg2.execSQL({
             dbcon: config.dbconnString,
-            sql: descriptorQuery,
+            sql: STUDENT_ACTIVITY_DESCRIPTOR_SQL,
             sqlParams: [rpg2.param('plain', Number(sessionId))], // Correct usage of rpg2.param
         });
 
