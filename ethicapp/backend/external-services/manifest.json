@@ -44,8 +44,10 @@
         "phase-started",
         "phase-ended",
         "callback-received",
-        "activity-finished"
+        "activity-finished",
+        "user-forgotten"
       ],
+      "globalHooks": ["user-forgotten"],
       "scopes": ["chat"],
       "descriptor": {
         "path": "/polyadic-agent/api/capabilities"
@@ -63,8 +65,10 @@
       "hooks": [
         "student-response-submitted",
         "phase-ended",
-        "callback-received"
+        "callback-received",
+        "user-forgotten"
       ],
+      "globalHooks": ["user-forgotten"],
       "scopes": ["response"],
       "consumes": [
         { "documentSchema": "claim-typology/v1", "unit": "question" }

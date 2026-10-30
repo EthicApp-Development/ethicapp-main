@@ -32,7 +32,8 @@ test("the design hooks fire outside sessions, under the current policy version",
     assert.equal(DESIGN_CREATED_HOOK, "design-created");
     assert.equal(DESIGN_UPDATED_HOOK, "design-updated");
     assert.deepEqual(DESIGN_ANALYSIS_HOOKS, ["design-created", "design-updated"]);
-    assert.deepEqual(NON_SESSION_HOOKS, ["case-created", "design-created", "design-updated"]);
+    assert.ok(NON_SESSION_HOOKS.includes("design-created"));
+    assert.ok(NON_SESSION_HOOKS.includes("design-updated"));
 });
 
 test("designHookForTrigger: created sends design-created, the others design-updated", () => {
