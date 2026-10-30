@@ -15,6 +15,7 @@ import UserShowPage from '../UserShowPage.jsx';
 
 vi.mock('../../api/usersApi.js', () => ({
   confirmAccount: vi.fn(),
+  deleteAccount: vi.fn(),
   fetchUserById: vi.fn(),
   impersonateProfessor: vi.fn(),
   triggerPasswordReset: vi.fn(),
@@ -168,19 +169,43 @@ describe('UserShowPage: forgetting a student', () => {
     expect(byTestId('erasure-status-line').textContent).toBe('EthicApp ✓ · Tutor ✓ · Polyadic: retrying');
   });
 
-  it('cannot forget while the account has unsaved edits, and names the stored account', async () => {
+  it('cannot forget an active student while the form has unsaved edits, until they are discarded', async () => {
     await renderPage();
     const button = byTestId('forget-student-button');
+    expect(byTestId('discard-changes-button')).toBeNull();
 
     await typeInto(container.querySelector('input[type="email"]'), 'edited@example.test');
 
     expect(button.disabled).toBe(true);
-    const hint = byTestId('forget-student-unsaved-hint');
-    expect(hint.textContent).toBe('Save or discard your changes before forgetting the student.');
+    const hint = byTestId('unsaved-changes-hint');
+    expect(hint.textContent).toBe('Save or discard your changes before forgetting this account.');
     expect(button.getAttribute('aria-describedby')).toBe(hint.id);
     await click(button);
     expect(dialog()).toBeNull();
     expect(forgetStudent).not.toHaveBeenCalled();
+
+    // An active account has no confirm or delete action, but its edits can
+    // still be discarded, so the hint is actionable.
+    await click(byTestId('discard-changes-button'));
+
+    expect(container.querySelector('input[type="email"]').value).toBe(STORED_EMAIL);
+    expect(button.disabled).toBe(false);
+    expect(byTestId('unsaved-changes-hint')).toBeNull();
+    expect(byTestId('discard-changes-button')).toBeNull();
+
+    await click(button);
+    expect(dialog().textContent).toContain(STORED_EMAIL);
+  });
+
+  it('offers to discard the edits of an account with no action that needs it, without a hint', async () => {
+    vi.mocked(fetchUserById).mockResolvedValue({ ...activeStudent, role: 'P' });
+    await renderPage();
+
+    await typeInto(container.querySelector('input[type="email"]'), 'edited@example.test');
+
+    expect(byTestId('unsaved-changes-hint')).toBeNull();
+    await click(byTestId('discard-changes-button'));
+    expect(container.querySelector('input[type="email"]').value).toBe(STORED_EMAIL);
   });
 
   it('reports a refusal and reloads the account', async () => {

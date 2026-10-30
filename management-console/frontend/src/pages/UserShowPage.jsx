@@ -17,6 +17,7 @@ import { useSensitiveActionConfirmation } from '../components/common/useSensitiv
 import AccountStatusSummary from '../components/users/AccountStatusSummary.jsx';
 import ErasureStatusPanel from '../components/users/ErasureStatusPanel.jsx';
 import ForgetStudentButton from '../components/users/ForgetStudentButton.jsx';
+import { unsavedChangesHint } from '../components/users/unsavedChangesHint.js';
 import {
   ACCOUNT_STATUSES,
   accountActionErrorKey,
@@ -45,8 +46,8 @@ function formFromUser(user) {
 // Form fields an administrator can edit; any difference from the loaded
 // account is an unsaved change.
 const EDITABLE_FIELDS = Object.freeze(['firstname', 'lastname', 'sex', 'email', 'email_confirmation', 'role', 'active']);
-const CONFIRM_ACCOUNT_HINT_ID = 'confirm-account-unsaved-hint';
-const FORGET_STUDENT_HINT_ID = 'forget-student-unsaved-hint';
+// The hint for every account action that unsaved edits disable.
+const UNSAVED_CHANGES_HINT_ID = 'unsaved-changes-hint';
 
 function UserShowPage() {
   const { id } = useParams();
@@ -90,6 +91,14 @@ function UserShowPage() {
   const canForgetStudent = savedForm?.role === 'A' && !isAnonymizedAccount;
   const hasUnsavedChanges = savedForm !== null &&
     EDITABLE_FIELDS.some((fieldName) => form[fieldName] !== savedForm[fieldName]);
+  const unsavedHint = hasUnsavedChanges
+    ? unsavedChangesHint([
+      ...(isPendingAccount ? ['confirm'] : []),
+      ...(canDeleteAccount ? ['delete'] : []),
+      ...(canForgetStudent ? ['forget'] : [])
+    ], t)
+    : null;
+  const unsavedHintId = unsavedHint ? UNSAVED_CHANGES_HINT_ID : undefined;
 
   const applyUser = useCallback((user) => {
     const persistedForm = formFromUser(user);
@@ -446,7 +455,7 @@ function UserShowPage() {
                 variant="success"
                 data-testid="confirm-account-button"
                 disabled={hasUnsavedChanges}
-                aria-describedby={hasUnsavedChanges ? CONFIRM_ACCOUNT_HINT_ID : undefined}
+                aria-describedby={unsavedHintId}
                 onClick={onConfirmAccount}
               >
                 <i className="fa-solid fa-user-check me-2" aria-hidden="true" />
@@ -479,7 +488,7 @@ function UserShowPage() {
                 variant="outline-danger"
                 data-testid="delete-account-button"
                 disabled={hasUnsavedChanges}
-                aria-describedby={hasUnsavedChanges ? CONFIRM_ACCOUNT_HINT_ID : undefined}
+                aria-describedby={unsavedHintId}
                 onClick={onDeleteAccount}
               >
                 <i className="fa-solid fa-trash me-2" aria-hidden="true" />
@@ -492,23 +501,20 @@ function UserShowPage() {
                 accountName={accountName}
                 email={savedEmail}
                 disabled={hasUnsavedChanges}
-                describedBy={hasUnsavedChanges ? FORGET_STUDENT_HINT_ID : undefined}
+                describedBy={unsavedHintId}
                 requestConfirmation={requestConfirmation}
                 onForgotten={onStudentForgotten}
                 onError={onForgetStudentError}
               />
             ) : null}
           </div>
-          {canForgetStudent && hasUnsavedChanges ? (
-            <Form.Text id={FORGET_STUDENT_HINT_ID} className="d-block mt-2" data-testid="forget-student-unsaved-hint">
-              {t('pages.userForget.unsavedHint')}
-            </Form.Text>
-          ) : null}
-          {isPendingAccount && hasUnsavedChanges ? (
+          {hasUnsavedChanges ? (
             <div className="d-flex flex-wrap align-items-center gap-2 mt-2">
-              <Form.Text id={CONFIRM_ACCOUNT_HINT_ID} className="mt-0" data-testid="confirm-account-unsaved-hint">
-                {t('pages.userShow.confirmAccountUnsavedHint')}
-              </Form.Text>
+              {unsavedHint ? (
+                <Form.Text id={UNSAVED_CHANGES_HINT_ID} className="mt-0" data-testid="unsaved-changes-hint">
+                  {unsavedHint}
+                </Form.Text>
+              ) : null}
               <Button
                 type="button"
                 size="sm"

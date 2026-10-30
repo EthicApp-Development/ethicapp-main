@@ -245,7 +245,14 @@ export default {
       impersonationError: 'No fue posible iniciar impersonación del profesor.',
       confirmAccountSuccess: 'Cuenta confirmada. {{name}} ya puede ingresar con la contraseña que eligió al registrarse.',
       confirmAccountError: 'No fue posible confirmar la cuenta.',
-      confirmAccountUnsavedHint: 'Guarda o descarta tus cambios antes de confirmar o eliminar la cuenta.',
+      unsavedChangesHint: {
+        template: 'Guarda o descarta tus cambios antes de {{actions}} esta cuenta.',
+        confirm: 'confirmar',
+        delete: 'eliminar',
+        forget: 'olvidar',
+        or: 'o',
+        orBeforeO: 'u'
+      },
       errors: {
         accountNotPending: 'Esta cuenta ya no está pendiente de confirmación, así que no se modificó. Abajo se muestra su estado actual.',
         accountChanged: 'El correo de esta cuenta cambió desde que se cargó la página, así que no se confirmó. Revisa el correo que se muestra abajo e inténtalo de nuevo.',
@@ -344,7 +351,6 @@ export default {
     },
     userForget: {
       action: 'Olvidar a este estudiante',
-      unsavedHint: 'Guarda o descarta tus cambios antes de olvidar al estudiante.',
       success: 'EthicApp olvidó a {{name}}. La cuenta quedó desactivada y anonimizada. Se pidió a los servicios de IA que borren sus datos en segundo plano.',
       error: 'No fue posible olvidar al estudiante.',
       confirm: {

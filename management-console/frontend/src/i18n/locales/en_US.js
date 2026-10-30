@@ -245,7 +245,14 @@ export default {
       impersonationError: 'Unable to start professor impersonation.',
       confirmAccountSuccess: 'Account confirmed. {{name}} can now sign in with the password they chose when signing up.',
       confirmAccountError: 'Unable to confirm the account.',
-      confirmAccountUnsavedHint: 'Save or discard your changes before confirming or deleting the account.',
+      unsavedChangesHint: {
+        template: 'Save or discard your changes before {{actions}} this account.',
+        confirm: 'confirming',
+        delete: 'deleting',
+        forget: 'forgetting',
+        or: 'or',
+        orBeforeO: 'or'
+      },
       errors: {
         accountNotPending: 'This account is not pending confirmation any more, so it was not changed. Its current status is shown below.',
         accountChanged: 'The email of this account changed since the page was loaded, so it was not confirmed. Check the email shown below and try again.',
@@ -344,7 +351,6 @@ export default {
     },
     userForget: {
       action: 'Forget this student',
-      unsavedHint: 'Save or discard your changes before forgetting the student.',
       success: 'EthicApp forgot {{name}}. The account is disabled and anonymized. The AI services are asked to erase their data in the background.',
       error: 'Unable to forget the student.',
       confirm: {
