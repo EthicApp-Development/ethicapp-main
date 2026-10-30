@@ -374,3 +374,184 @@ export async function testAiAdditionsConnectionInEthicapp({
 
   return failedConnectionTest(exchange.ok ? 'invalid_response' : 'ethicapp_error');
 }
+
+// --- Teacher activities (epic #879): internal-only ethicapp endpoints (#881) -
+//
+// Before a teacher is forgotten (#877), the console asks ethicapp how many of
+// the teacher's activities are still open, then has ethicapp finish them, with
+// the same hooks and student notifications as the teacher's own "finish". The
+// console authenticates as it does for the AI services endpoints.
+//
+// Results are returned as values, never thrown: { ok: false, error } with one
+// of TEACHER_ACTIVITIES_ERROR_CODES.
+
+export const TEACHER_ACTIVITIES_ERROR_CODES = Object.freeze([
+  // ethicapp's own refusals of the target user.
+  'invalid_user',
+  'user_not_found',
+  'not_a_teacher',
+  // ethicapp answered, but some activities could not be finished; the result
+  // still lists what was finished and what failed. Calling again retries the
+  // failed ones.
+  'finish_incomplete',
+  'unreachable',
+  'invalid_response',
+  'ethicapp_error'
+]);
+
+const TEACHER_REFUSAL_CODES = new Set(['invalid_user', 'user_not_found', 'not_a_teacher']);
+const OPEN_TEACHER_ACTIVITIES_TIMEOUT_MS = 15000;
+// Activities are finished one at a time, each dispatching its hooks to the AI
+// services, so a teacher with many open activities takes a while.
+const FINISH_TEACHER_ACTIVITIES_TIMEOUT_MS = 120000;
+const MAX_FAILURE_CODE_LENGTH = 64;
+
+function isPositiveId(value) {
+  return Number.isSafeInteger(value) && value > 0;
+}
+
+function sessionIdList(value) {
+  return Array.isArray(value) && value.every(isPositiveId) ? [...value] : null;
+}
+
+function sanitizeFailures(value) {
+  if (!Array.isArray(value)) {
+    return null;
+  }
+
+  const failures = value.map((failure) => (
+    failure && isPositiveId(failure.sessionId)
+      ? {
+          sessionId: failure.sessionId,
+          error: typeof failure.error === 'string' && /^[a-z_]+$/.test(failure.error)
+            && failure.error.length <= MAX_FAILURE_CODE_LENGTH
+            ? failure.error
+            : 'finish_failed'
+        }
+      : null
+  ));
+
+  return failures.every(Boolean) ? failures : null;
+}
+
+// Maps an exchange with no usable body to an error code: ethicapp's refusal
+// of the target user passes through, anything else is ethicapp's failure.
+function teacherActivitiesError(exchange) {
+  if (exchange.transportError) {
+    return 'unreachable';
+  }
+
+  if (!exchange.ok && TEACHER_REFUSAL_CODES.has(exchange.body?.error)) {
+    return exchange.body.error;
+  }
+
+  return exchange.ok ? 'invalid_response' : 'ethicapp_error';
+}
+
+function teacherActivitiesUrl(teacherId, action) {
+  return buildUrl(`/api/admin/users/${encodeURIComponent(String(teacherId))}/${action}`);
+}
+
+export function sanitizeOpenTeacherActivitiesBody(body) {
+  const sessionIds = sessionIdList(body?.sessionIds);
+
+  if (!body || body.ok !== true || !sessionIds || body.count !== sessionIds.length) {
+    return null;
+  }
+
+  return { ok: true, count: sessionIds.length, sessionIds };
+}
+
+export function sanitizeFinishTeacherActivitiesBody(body) {
+  if (!body || typeof body.ok !== 'boolean') {
+    return null;
+  }
+
+  const finished = sessionIdList(body.finished);
+  const skipped = sessionIdList(body.skipped);
+  const failed = sanitizeFailures(body.failed);
+
+  if (!finished || !skipped || !failed || body.ok !== (failed.length === 0)) {
+    return null;
+  }
+
+  return {
+    ok: body.ok,
+    error: body.ok ? null : 'finish_incomplete',
+    finished,
+    skipped,
+    failed
+  };
+}
+
+// How many of the teacher's activities are not finished, initiated ones
+// included, and which: { ok: true, count, sessionIds }.
+export async function fetchOpenTeacherActivitiesFromEthicapp({
+  teacherId,
+  cookie,
+  userId,
+  userRole,
+  language,
+  fetchImpl = fetch,
+  timeoutMs = OPEN_TEACHER_ACTIVITIES_TIMEOUT_MS
+}) {
+  if (!isPositiveId(teacherId)) {
+    return { ok: false, error: 'invalid_user' };
+  }
+
+  const exchange = await fetchInternalJson(
+    teacherActivitiesUrl(teacherId, 'open-activities'),
+    {
+      method: 'GET',
+      headers: internalIdentityHeaders({ cookie, userId, userRole, language })
+    },
+    { fetchImpl, timeoutMs }
+  );
+
+  if (exchange.ok) {
+    const result = sanitizeOpenTeacherActivitiesBody(exchange.body);
+
+    if (result) {
+      return result;
+    }
+  }
+
+  return { ok: false, error: teacherActivitiesError(exchange) };
+}
+
+// Finishes every open activity of the teacher:
+// { ok, error, finished, skipped, failed }, where `error` is
+// `finish_incomplete` when `failed` is not empty. Idempotent: a second call
+// finds nothing left to finish.
+export async function finishTeacherActivitiesInEthicapp({
+  teacherId,
+  cookie,
+  userId,
+  userRole,
+  language,
+  fetchImpl = fetch,
+  timeoutMs = FINISH_TEACHER_ACTIVITIES_TIMEOUT_MS
+}) {
+  if (!isPositiveId(teacherId)) {
+    return { ok: false, error: 'invalid_user' };
+  }
+
+  const exchange = await fetchInternalJson(
+    teacherActivitiesUrl(teacherId, 'finish-activities'),
+    {
+      method: 'POST',
+      headers: internalIdentityHeaders({ cookie, userId, userRole, language })
+    },
+    { fetchImpl, timeoutMs }
+  );
+
+  if (exchange.ok) {
+    const result = sanitizeFinishTeacherActivitiesBody(exchange.body);
+
+    if (result) {
+      return result;
+    }
+  }
+
+  return { ok: false, error: teacherActivitiesError(exchange) };
+}
