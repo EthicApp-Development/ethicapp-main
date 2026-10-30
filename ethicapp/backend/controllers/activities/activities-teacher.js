@@ -13,10 +13,9 @@ import {
     invalidateCachedStudentActivityDescriptor,
 } from "../../helpers/student-activity-state-helper.js";
 import { getDesignTypeBySessionId } from "./activities-common.js";
-import { getEnabledExternalServiceIdsBySessionId } from "../../helpers/designs-helper.js";
 import { dispatchPhaseHook } from "../../helpers/external-service-dispatch.js";
 import { shouldDispatchActivityStarted } from "../../helpers/activity-lifecycle-helper.js";
-import externalServicesRegistry from "../../services/external-services.service.js";
+import activityFinisher from "../../helpers/activity-finish-helper.js";
 
 const router = express.Router();
 
@@ -445,29 +444,6 @@ async function dispatchActivityStartedHook(context) {
     }
 }
 
-// Broadcasts activity-finished to the union of services enabled across ALL phases
-// of the activity design, so any service that could have opened provider-side
-// state (e.g. chat rooms) is notified to clean up — regardless of which phase the
-// activity finished on. This is the safety net guaranteeing nothing leaks past
-// the end of the activity. Adapter failures are isolated from the teacher request.
-// The registry receives it even when no service is enabled or the design cannot
-// be read, since it also closes the session's room jobs (#833).
-async function dispatchActivityFinishedHook(sessionId, context) {
-    try {
-        let enabledServiceIds = [];
-        try {
-            enabledServiceIds = await getEnabledExternalServiceIdsBySessionId(sessionId);
-        } catch (error) {
-            console.error("[external-services] Could not read the services of the finished activity; "
-                + "activity-finished only closes its room jobs.", error);
-        }
-        await externalServicesRegistry.dispatchHook("activity-finished", context, { enabledServiceIds });
-    } catch (error) {
-        console.error("[external-services] Error dispatching activity-finished hook.", error);
-    }
-}
-
-
 router.post("/activities/:session_id/finish", async (req, res) => {
     if (!requireRole(req, res, "P")) {
         return;
@@ -478,63 +454,19 @@ router.post("/activities/:session_id/finish", async (req, res) => {
         return res.status(400).json({ error: "Missing required parameter: session_id" });
     }
 
-    const status = StatusCodes.getStatusCode("finished");
-
     try {
-        const sessionState = await rpg2.singleSQL({
-            sql: `
-                SELECT current_stage
-                FROM sessions
-                WHERE id = $1
-            `,
-            dbcon: config.dbconnString,
-            sqlParams: [rpg2.param('plain', sessionId)],
-        });
+        // Shared with the internal endpoint that finishes every open activity
+        // of a teacher (#881): status, phase-ended, student notification and
+        // activity-finished to every service enabled in the design.
+        const result = await activityFinisher.finishActivity(sessionId);
 
-        if (!sessionState) {
+        if (result.status === "not_found") {
             return res.status(404).json({ error: "Session not found." });
         }
 
-        const previousPhaseId = Number(sessionState.current_stage) || null;
-
-        const result = await rpg2.execSQL({
-            sql: `
-                UPDATE sessions
-                SET status = $1,
-                    current_stage = NULL
-                WHERE id = $2
-            `,
-            dbcon: config.dbconnString,
-            sqlParams: [rpg2.param('plain', status), rpg2.param('plain', sessionId)],
-        });
-
-        if (result.rowCount === 0) {
+        if (result.status === "not_updated") {
             return res.status(404).json({ error: "Session not found or no update performed." });
         }
-
-        await invalidateCachedStudentActivityDescriptor(sessionId);
-
-        if (previousPhaseId) {
-            await dispatchPhaseHook("phase-ended", {
-                sessionId: Number(sessionId),
-                phaseId: previousPhaseId,
-                startedPhaseId: null,
-                endedPhaseId: previousPhaseId,
-            });
-        }
-
-        studentNotifications.endSession(sessionId);
-
-        // Broadcast activity-finished to every service enabled anywhere in the
-        // activity design (union across phases) so adapters can run required
-        // cleanup regardless of which phase the activity finished on. Fired even
-        // when there is no current phase, so nothing leaks past the activity end.
-        await dispatchActivityFinishedHook(Number(sessionId), {
-            sessionId:      Number(sessionId),
-            phaseId:        previousPhaseId,
-            startedPhaseId: null,
-            endedPhaseId:   previousPhaseId,
-        });
 
         res.status(200).json({ status: "ok", message: "Activity session finished successfully." });
     } catch (err) {

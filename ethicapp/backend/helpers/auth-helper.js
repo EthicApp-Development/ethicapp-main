@@ -65,3 +65,22 @@ export function isSuperAdminSession(req) {
     const canonicalRole = req.session?.authRole || req.session?.role;
     return canonicalRole === "S";
 }
+
+/**
+ * Express middleware for the internal `/api/admin/` JSON endpoints that the
+ * management console calls: 401 without a session user, 403 unless the
+ * session belongs to a super-admin.
+ *
+ * @param {Object} req - Express request.
+ * @param {Object} res - Express response.
+ * @param {Function} next
+ */
+export function requireSuperAdminJson(req, res, next) {
+    if (!req.session?.uid) {
+        return res.status(401).json({ ok: false, error: "unauthenticated" });
+    }
+    if (!isSuperAdminSession(req)) {
+        return res.status(403).json({ ok: false, error: "forbidden" });
+    }
+    return next();
+}
