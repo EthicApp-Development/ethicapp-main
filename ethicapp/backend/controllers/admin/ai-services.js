@@ -1,7 +1,7 @@
 import express from "express";
 
 import { isValidAiAdditionsUrl } from "../../helpers/ai-additions-connection.js";
-import { isSuperAdminSession } from "../../helpers/auth-helper.js";
+import { requireSuperAdminJson as requireSuperAdmin } from "../../helpers/auth-helper.js";
 import aiServicesCatalogService from "../../services/ai-services-catalog.service.js";
 
 /**
@@ -23,16 +23,6 @@ import aiServicesCatalogService from "../../services/ai-services-catalog.service
  * with status 200; status codes other than 200 mean the request itself was
  * rejected or EthicApp failed.
  */
-
-function requireSuperAdmin(req, res, next) {
-    if (!req.session?.uid) {
-        return res.status(401).json({ ok: false, error: "unauthenticated" });
-    }
-    if (!isSuperAdminSession(req)) {
-        return res.status(403).json({ ok: false, error: "forbidden" });
-    }
-    return next();
-}
 
 function isAbsent(value) {
     return value === undefined || value === null || value === "";
