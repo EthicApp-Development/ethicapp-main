@@ -178,6 +178,53 @@ A `failed` request was refused in a way a retry cannot fix (its
 page in the management console. The application does not wait for these
 requests, and they do not block the restore.
 
+Students with a profile image also leave file deletions
+(`upload_deletion_requests`, V32), which ethicapp processes the same way:
+
+```sql
+SELECT status, count(*), max(attempts), max(last_error)
+FROM upload_deletion_requests
+WHERE anonymization_run_id = <run id>
+GROUP BY status;
+```
+
+`done` and `skipped` are final; `skipped` with `STILL_REFERENCED` means
+another row still uses the file, so it was kept.
+
+## Forgetting a Teacher
+
+Teachers are never anonymized by this job. An administrator forgets a teacher
+from the teacher's page in the management console (#877), with ethicapp
+running, because ethicapp first finishes the teacher's open activities. No
+maintenance window is needed. When the console reports a refusal:
+
+- `ACTIVITIES_NOT_FINISHED`: ethicapp could not finish an activity, or could
+  not be reached. Nothing was anonymized. Check the ethicapp logs
+  (`[admin-teacher-activities]`) and `activity_finalizations`, then try again.
+- `OPEN_ACTIVITIES`: the teacher opened an activity while being forgotten.
+  Nothing was anonymized; trying again finishes it first.
+- `RECIPIENT_UNAVAILABLE` or `RECIPIENT_CHANGED`: choose the recipient again,
+  or none.
+
+Afterwards, follow the account's background work:
+
+```sql
+SELECT service_id, status, attempts, last_error
+FROM user_erasure_requests
+WHERE user_id = <teacher id>;
+
+SELECT path, status, attempts, last_error
+FROM upload_deletion_requests
+WHERE user_id = <teacher id>
+ORDER BY path;
+```
+
+A deleted case's directory (`cases/<id>`) whose render was pending or in
+progress waits ten minutes before its first attempt. A request `failed` with
+`INVALID_PATH` names a path ethicapp refuses to delete; check it by hand. The
+retry on the teacher's page resets the requests and file deletions that are
+not complete.
+
 ## Failure Handling
 
 If dry-run fails:

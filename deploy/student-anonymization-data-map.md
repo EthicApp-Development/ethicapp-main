@@ -4,7 +4,8 @@ This document records the student-linked personal data fields reviewed for the
 scheduled anonymization process and for forgetting a student on demand from
 the management console (#876), which run the same per-account step. It is
 intended to support privacy reviews and to keep the operational job aligned
-with the schema.
+with the schema. "Forgetting a Teacher" covers what the console does, on top
+of that step, when it forgets a teacher (#877).
 
 The anonymization job is owned by `management-console` because it is a platform
 administration task. Legacy EthicApp remains the passive owner of several
@@ -76,7 +77,7 @@ to `users` that the list does not name.
 | `users.name`, `users.firstname`, `users.lastname`, `users.mail`, `users.rut` | Core account profile for student login and activity membership. | In scope. Replace with deterministic anonymous values. | Covered by the job. |
 | `users.pass`, `users.password_bcrypt`, `users.active`, `users.email_confirmed`, `users.session_version`, `users.anonymized_at`, `users.anonymization_run_id` | Core account and session state. | In scope. Disable account, clear credentials, invalidate sessions, and mark run metadata. | Covered by the job. |
 | `users.sex`, `users.last_login_at` | Demographic and activity metadata. | In scope. Clear during anonymization. | Covered by the job. |
-| `users.profile_image_path`, `users.profile_image_topbar_path` | Teacher/student profile image references served through protected uploads. | In scope for database references. Null stored paths. | Covered by the job. File deletion is tracked separately. |
+| `users.profile_image_path`, `users.profile_image_topbar_path` | Teacher/student profile image references served through protected uploads. | In scope. Null stored paths and delete the files. | Covered by the job. Since #877 the step records the files in `upload_deletion_requests` and ethicapp deletes them in the background; images orphaned before #877 are tracked in #552. |
 | `users.created_at` | Account creation time (V28); NULL for accounts created before it was recorded. | Retain. It does not identify anyone and keeps the account's age for audits. | No action needed. |
 | `differential_selection.comment` | Active semantic-differential student justification text. | In scope. Replace free text with the placeholder. | Covered by the job. |
 | `differential_chat.content` | Active semantic-differential group chat text. | In scope. Replace free text with the placeholder. | Covered by the job. |
@@ -95,7 +96,48 @@ to `users` that the list does not name.
 | `teamusers.uid`, `teamusers.anon_mask` | Pedagogical membership and anonymous display mask. | Retain. No free-text data; the FK points to an anonymized inactive user. | No action needed. |
 | `jigsaw_users.userid` | Pedagogical role assignment. | Retain. No free-text data; the FK points to an anonymized inactive user. | No action needed. |
 | `activity_report_exports.actor_user_id`, `activity_report_exports.effective_user_id`, `activity_report_exports.ip_address`, `activity_report_exports.user_agent`, `activity_report_exports.content_sha256`, `activity_report_exports.metadata` | Audit trail for report export actions. Current production flows are teacher/admin export operations, not student-generated answers. | Out of first student anonymization job. Requires a separate audit-retention policy if operator metadata minimization is desired. | Not covered by the job. |
-| `user_passkeys.*` | WebAuthn credentials for management-console administrator users. | Out of scope. The table is not used for students. | Not covered by the job. Revisit if student passkeys are introduced. |
+| `user_passkeys.*` | WebAuthn credentials for management-console administrator users. | In scope as credentials of the account, should any exist. | Deleted by the step since #877; students and teachers have none today. |
+| `upload_deletion_requests` | One row per file a forgotten account freed (V32): ids, a path relative to the uploads root (`cases/<id>`, `user-profiles/<id>/...`), status, attempts, an upper-case error code. | Retain. No personal data; it records what ethicapp deleted or kept. | No action needed. |
+
+## Forgetting a Teacher
+
+What forgetting a teacher (#877) does with every column that holds a user id,
+in the order of `management-console/backend/services/user-references.js`,
+whose `onForget` field records the same decision. The per-account step is the
+student's (see the table above); the rows below add what is specific to a
+teacher. "Kept" means the row stays as it is and its id now names the
+anonymized account.
+
+| Table and column | What it holds for a teacher | Decision |
+| --- | --- | --- |
+| `sessions.creator` | The activities the teacher ran, with the students' work. | Always kept. Open ones are finished first (#881). Transferred to the recipient, or kept under the anonymized account. |
+| `sesusers.uid` | Participation in an activity; teachers normally have none. | Kept; `device` cleared by the step. |
+| `teams.leader`, `teamusers.uid`, `jigsaw_users.userid` | Student groups; teachers are not members. | Kept. |
+| `actor_selection.uid`, `chat.uid`, `differential_selection.uid`, `differential_chat.uid` | Text the account wrote; for a teacher, chat messages posted in group chats (students see them as "Teacher"). | Text replaced with the placeholder by the step; rows kept. |
+| `differential.creator` | The semantic differential items of the teacher's activities. | Transferred with the activities, or kept. |
+| `designs.creator` | The teacher's designs. | Deleted when private (`visibility` and the legacy `public` flag), used by no activity and never copied or imported; otherwise transferred or kept. `metainfo.email` matching the teacher's email is removed in every design, other teachers' copies included; `metainfo.author` stays. |
+| `ethical_cases.creator` | The teacher's cases. | Deleted when private, never copied or imported, and used by no design that stays; otherwise transferred or kept. Their files go through `upload_deletion_requests`. |
+| `student_anonymization_events.user_id` | The audit of the run that forgot the teacher. | Recorded (run of role `P`). |
+| `ai_service_policy_versions.created_by` | Administrators only. | Kept (append-only). |
+| `external_service_jobs.user_id`, `external_service_results.user_id` | AI service work the teacher triggered or wrote, such as chat messages forwarded to Polyadic. | Strings of the payloads replaced by the step. |
+| `user_erasure_requests.user_id` | AI Additions erasure. | Recorded: one `user-forgotten` request per service, since the teacher's chat messages may have reached Polyadic. |
+| `upload_deletion_requests.user_id` | Files freed by the forgetting. | Recorded: the deleted cases' directories and the profile images. |
+| `user_passkeys.user_id` | Credentials. | Deleted by the step. |
+| `activity_report_exports.actor_user_id`, `effective_user_id` | Audit of report exports the teacher made. | Kept, ids only (#553 tracks their retention). `design_id` becomes NULL if a deleted design had exports, which cannot happen since exports need an activity. |
+| `ethical_cases_authors.user_id` | Links an author entry to the account. | Kept; the entry's email is erased (below) and its name stays. |
+| `ethical_cases_tags.assigned_by`, `designs_tags.assigned_by` | Who tagged a case or design. | Kept, ids only; deleted with a deleted case or design. |
+| `case_analyses.requested_by`, `reviewed_by`, `design_analyses.requested_by`, `reviewed_by` | Who requested or reviewed an AI analysis. | Kept, ids only; deleted with a deleted case or design. |
+| `ai_additions_connection.updated_by` | Administrators only. | Kept. |
+| `admin_audit_events.admin_user_id`, `target_user_id` | The administrator's actions. | Recorded: `account.forget` with `target_role = 'P'`. |
+
+Author data outside the user id columns:
+
+| Table and fields | Decision |
+| --- | --- |
+| `ethical_cases.author_firstname`, `author_lastname`, `source_case_author`, `attribution_text`, `designs.source_design_author`, `attribution_text`, `design.metainfo.author` | Kept, in the teacher's materials and in other teachers' copies. The license requires attribution. |
+| `ethical_cases.author_email` equal to the teacher's email (or to an author entry linked to the account) | Replaced with the account's anonymous address, in every case. The render jobs of those cases are queued again, so their manifests lose the email too. |
+| `ethical_case_author.author_email` equal to those emails | Replaced with `anon-author-<id>@anonymous.invalid` (the column is unique and required). Entries left without a case by the deletions are deleted. |
+| Case texts and PDFs | Not changed; the terms of service say so (#880). |
 
 ## AI Service Payload Inventory
 

@@ -260,14 +260,18 @@ headers); other roles get `403`.
   most 2048 characters; anything else gets `400`. The same rule decides
   whether a stored connection is usable.
 - `GET /api/admin/user-erasure/users/:id` lists the AI Additions erasure
-  requests of an account (`user_erasure_requests`, V31), one per service:
-  `{ ok: true, userId, requests: [{ serviceId, status, attempts, nextAttemptAt, lastAttemptAt, lastError, requestedAt, completedAt }] }`.
+  requests of an account (`user_erasure_requests`, V31), one per service, and
+  summarizes the deletion of the upload files it freed
+  (`upload_deletion_requests`, V32, #877):
+  `{ ok: true, userId, requests: [{ serviceId, status, attempts, nextAttemptAt, lastAttemptAt, lastError, requestedAt, completedAt }], uploadDeletions: { total, pending, retrying, done, skipped, failed, lastError } }`.
   `status` is `pending`, `done` or `failed`; `lastError` is an upper-case
-  code. An account that was never forgotten has `requests: []`.
-- `POST /api/admin/user-erasure/users/:id/retry` sets every request of the
-  account that is not done back to `pending`, due now and with a fresh
-  backoff, sends them at once, and answers like the status endpoint plus
-  `retried`, how many requests it reset. An invalid id gets `400`.
+  code. An account that was never forgotten has `requests: []` and a zero
+  `uploadDeletions.total`. Students and teachers (#877) get the same
+  requests: a forgotten teacher's chat messages may have reached Polyadic.
+- `POST /api/admin/user-erasure/users/:id/retry` sets every request and file
+  deletion of the account that is not complete back to `pending`, due now and
+  with a fresh backoff, attempts them at once, and answers like the status
+  endpoint plus `retried`, how many it reset. An invalid id gets `400`.
 
 The issuer step (#834) catches a wrong Keycloak public URL before it is saved.
 Tokens are always requested through `base_url`, so the token step succeeds
