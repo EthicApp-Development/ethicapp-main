@@ -2,7 +2,22 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { deriveAccountStatus } from '../account-status.js';
-import { buildListUsersFilter } from '../user.service.js';
+import {
+  buildListUsersFilter,
+  buildListUsersOrder,
+  getUserById,
+  listUsers
+} from '../user.service.js';
+
+function createFakeQuery(handler) {
+  const calls = [];
+  const queryFn = async (sql, params) => {
+    calls.push({ sql: String(sql).replace(/\s+/g, ' ').trim(), params: [...params] });
+    return handler(calls[calls.length - 1]);
+  };
+
+  return { calls, queryFn };
+}
 
 test('buildListUsersFilter excludes anonymized users by default', () => {
   const filter = buildListUsersFilter();
@@ -74,4 +89,132 @@ test('deriveAccountStatus distinguishes pending, deactivated, active and anonymi
     deriveAccountStatus({ active: false, emailConfirmed: false, anonymizedAt: '2026-07-01T03:00:00Z' }),
     'anonymized'
   );
+});
+
+test('buildListUsersOrder sorts newest accounts first by default', () => {
+  for (const sort of [undefined, null, '', 'unknown']) {
+    assert.deepEqual(buildListUsersOrder(sort), {
+      sort: 'created_at_desc',
+      orderSql: 'ORDER BY created_at DESC NULLS LAST, id DESC'
+    });
+  }
+});
+
+test('buildListUsersOrder sorts oldest accounts first, undated ones before dated ones', () => {
+  assert.deepEqual(buildListUsersOrder(' CREATED_AT_ASC '), {
+    sort: 'created_at_asc',
+    orderSql: 'ORDER BY created_at ASC NULLS FIRST, id ASC'
+  });
+});
+
+test('buildListUsersOrder only accepts whitelisted sort orders', () => {
+  for (const sort of [
+    'created_at; DROP TABLE users',
+    'id DESC',
+    'toString',
+    '__proto__',
+    ['created_at_asc', 'created_at_desc']
+  ]) {
+    assert.equal(buildListUsersOrder(sort).sort, 'created_at_desc');
+  }
+});
+
+test('listUsers selects the creation date and orders the page by the requested sort', async () => {
+  const { calls, queryFn } = createFakeQuery(({ sql }) => {
+    if (sql.startsWith('SELECT count(*)')) {
+      return { rows: [{ total: 2 }] };
+    }
+
+    return {
+      rows: [
+        {
+          id: 3,
+          firstname: 'Old',
+          lastname: 'Account',
+          mail: 'old@test',
+          role: 'A',
+          active: true,
+          email_confirmed: true,
+          created_at: null
+        },
+        {
+          id: 9,
+          firstname: 'New',
+          lastname: 'Account',
+          mail: 'new@test',
+          role: 'P',
+          active: false,
+          email_confirmed: false,
+          created_at: new Date('2026-10-29T12:00:00.000Z')
+        }
+      ]
+    };
+  });
+
+  const result = await listUsers(
+    { keywords: 'account', role: 'P', sort: 'created_at_asc', page: 2, pageSize: 5 },
+    { queryFn }
+  );
+
+  assert.equal(calls.length, 2);
+  assert.deepEqual(calls[0].params, ['%account%', 'P']);
+  assert.match(calls[1].sql, /email_confirmed, created_at FROM users WHERE/);
+  assert.match(calls[1].sql, /ORDER BY created_at ASC NULLS FIRST, id ASC LIMIT \$3 OFFSET \$4$/);
+  assert.deepEqual(calls[1].params, ['%account%', 'P', 5, 5]);
+
+  assert.equal(result.sort, 'created_at_asc');
+  assert.equal(result.total, 2);
+  assert.equal(result.totalPages, 1);
+  assert.equal(result.items[0].createdAt, null);
+  assert.deepEqual(result.items[1].createdAt, new Date('2026-10-29T12:00:00.000Z'));
+});
+
+test('listUsers combines the status filter and the sort: pending, oldest first', async () => {
+  const { calls, queryFn } = createFakeQuery(({ sql }) => (
+    sql.startsWith('SELECT count(*)') ? { rows: [{ total: 0 }] } : { rows: [] }
+  ));
+
+  const result = await listUsers({ status: 'pending', sort: 'created_at_asc' }, { queryFn });
+
+  assert.equal(result.sort, 'created_at_asc');
+  assert.ok(calls[1].sql.includes(
+    'WHERE anonymized_at IS NULL AND (active = false AND email_confirmed = false) '
+    + 'ORDER BY created_at ASC NULLS FIRST, id ASC LIMIT $1 OFFSET $2'
+  ));
+  assert.deepEqual(calls[1].params, [10, 0]);
+});
+
+test('listUsers falls back to the default sort for an unknown value', async () => {
+  const { calls, queryFn } = createFakeQuery(({ sql }) => (
+    sql.startsWith('SELECT count(*)') ? { rows: [{ total: 0 }] } : { rows: [] }
+  ));
+
+  const result = await listUsers({ sort: 'mail ASC' }, { queryFn });
+
+  assert.equal(result.sort, 'created_at_desc');
+  assert.match(calls[1].sql, /ORDER BY created_at DESC NULLS LAST, id DESC LIMIT \$1 OFFSET \$2$/);
+  assert.doesNotMatch(calls[1].sql, /mail ASC/);
+});
+
+test('getUserById returns the creation date, or null when it is unknown', async () => {
+  const createdAt = new Date('2026-10-29T12:00:00.000Z');
+  const { calls, queryFn } = createFakeQuery(({ params }) => ({
+    rowCount: 1,
+    rows: [{
+      id: params[0],
+      firstname: 'Pat',
+      lastname: 'Teacher',
+      sex: 'O',
+      mail: 'pat@test',
+      role: 'P',
+      active: true,
+      email_confirmed: true,
+      last_login_at: null,
+      created_at: params[0] === 22 ? createdAt : null
+    }]
+  }));
+
+  assert.deepEqual((await getUserById('22', { queryFn })).createdAt, createdAt);
+  assert.equal((await getUserById('21', { queryFn })).createdAt, null);
+  assert.match(calls[0].sql, /last_login_at, anonymized_at, created_at FROM users WHERE id = \$1/);
 });

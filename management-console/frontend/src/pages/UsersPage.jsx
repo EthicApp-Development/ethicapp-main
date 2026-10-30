@@ -14,6 +14,8 @@ import { Link } from 'react-router-dom';
 
 import { useI18n } from '../app/providers.jsx';
 import { fetchUsers } from '../api/usersApi.js';
+import CreatedAtSortHeader from '../components/users/CreatedAtSortHeader.jsx';
+import { CREATED_AT_SORTS, formatAccountDate } from '../components/users/accountDates.js';
 import {
   ACCOUNT_STATUS_FILTERS,
   accountStatusBadgeVariant,
@@ -23,7 +25,7 @@ import {
 const roleOptions = ['', 'P', 'A', 'S'];
 
 function UsersPage() {
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
   const roleLabel = (roleCode) => {
     const translationKey = `roles.${roleCode}`;
     const translation = t(translationKey);
@@ -38,6 +40,7 @@ function UsersPage() {
   const [roleFilter, setRoleFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [page, setPage] = useState(1);
+  const [sort, setSort] = useState(CREATED_AT_SORTS.newestFirst);
 
   const [usersResponse, setUsersResponse] = useState({
     items: [],
@@ -60,6 +63,7 @@ function UsersPage() {
           keywords: keywordsFilter,
           role: roleFilter,
           status: statusFilter,
+          sort,
           page
         });
 
@@ -82,7 +86,7 @@ function UsersPage() {
     return () => {
       isMounted = false;
     };
-  }, [keywordsFilter, roleFilter, statusFilter, page]);
+  }, [keywordsFilter, roleFilter, statusFilter, sort, page]);
 
   const paginationItems = useMemo(() => {
     const items = [];
@@ -107,6 +111,11 @@ function UsersPage() {
     setKeywordsFilter(keywordsInput.trim());
     setRoleFilter(roleInput);
     setStatusFilter(statusInput);
+    setPage(1);
+  };
+
+  const handleSortChange = (nextSort) => {
+    setSort(nextSort);
     setPage(1);
   };
 
@@ -192,13 +201,14 @@ function UsersPage() {
                   <th>{t('pages.users.columns.email')}</th>
                   <th>{t('pages.users.columns.role')}</th>
                   <th>{t('pages.users.columns.status')}</th>
+                  <CreatedAtSortHeader sort={sort} onSortChange={handleSortChange} />
                   <th>{t('pages.users.columns.actions')}</th>
                 </tr>
               </thead>
               <tbody>
                 {usersResponse.items.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="text-center text-secondary">
+                    <td colSpan={7} className="text-center text-secondary">
                       {t('pages.users.empty')}
                     </td>
                   </tr>
@@ -213,6 +223,11 @@ function UsersPage() {
                         <span className={`badge text-bg-${accountStatusBadgeVariant(accountStatusOf(user))}`}>
                           {t(`pages.users.status.${accountStatusOf(user)}`)}
                         </span>
+                      </td>
+                      <td data-testid="user-row-created-at">
+                        {formatAccountDate(user.createdAt, locale) || (
+                          <span className="text-secondary">{t('pages.users.createdAtUnknown')}</span>
+                        )}
                       </td>
                       <td>
                         <Button as={Link} to={`/users/${user.id}`} size="sm" variant="outline-secondary">

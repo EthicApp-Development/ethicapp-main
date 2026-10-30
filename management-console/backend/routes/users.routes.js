@@ -57,12 +57,13 @@ export function createUsersRouter({
 
   router.get('/mng/api/users', requireManagementRoleMiddleware, async (req, res, next) => {
   try {
-    const { q = '', role = '', status = '', page = '1' } = req.query;
+    const { q = '', role = '', status = '', sort = '', page = '1' } = req.query;
 
     const result = await listUsersService({
       keywords: q,
       role,
       status,
+      sort,
       page: Number(page),
       pageSize: 10
     });

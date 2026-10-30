@@ -177,6 +177,29 @@ test("runStudentAnonymization anonymizes account, free-text data, session device
     assert.ok(pool.client.calls.some(call => call.sql === "COMMIT"));
 });
 
+test("runStudentAnonymization keeps the account creation date", async () => {
+    const pool = new FakePool(createQueryHandler({
+        candidates: [{ id: 6, mail: "student6@example.test" }],
+    }));
+
+    const result = await runStudentAnonymization({
+        pool,
+        options: {
+            dryRun: false,
+        },
+        logger: createSilentLogger(),
+    });
+
+    assert.equal(result.succeeded, 1);
+    const userUpdate = pool.client.calls.find(call => call.sql.includes("UPDATE users SET"));
+    assert.ok(userUpdate);
+    // users.created_at (V28) does not identify anyone and keeps the
+    // account's age for audits, so no statement on users touches it.
+    const userStatements = pool.client.calls.filter(call => /\busers\b/.test(call.sql));
+    assert.ok(userStatements.length > 0);
+    assert.equal(userStatements.some(call => call.sql.includes("created_at")), false);
+});
+
 test("runStudentAnonymization skips a candidate that was already anonymized before lock", async () => {
     const pool = new FakePool(createQueryHandler({
         candidates:   [{ id: 9, mail: "student9@example.test" }],

@@ -63,8 +63,8 @@ export async function mutatingJsonHeaders() {
   };
 }
 
-export async function fetchUsers({ keywords = '', role = '', status = '', page = 1 }) {
-  const query = toQueryString({ q: keywords, role, status, page });
+export async function fetchUsers({ keywords = '', role = '', status = '', sort = '', page = 1 }) {
+  const query = toQueryString({ q: keywords, role, status, sort, page });
   const response = await fetch(`/mng/api/users?${query}`, {
     method: 'GET',
     credentials: 'include',

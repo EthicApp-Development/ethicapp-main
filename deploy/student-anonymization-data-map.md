@@ -68,6 +68,7 @@ ORDER BY ur.table_name;
 | `users.pass`, `users.password_bcrypt`, `users.active`, `users.email_confirmed`, `users.session_version`, `users.anonymized_at`, `users.anonymization_run_id` | Core account and session state. | In scope. Disable account, clear credentials, invalidate sessions, and mark run metadata. | Covered by the job. |
 | `users.sex`, `users.last_login_at` | Demographic and activity metadata. | In scope. Clear during anonymization. | Covered by the job. |
 | `users.profile_image_path`, `users.profile_image_topbar_path` | Teacher/student profile image references served through protected uploads. | In scope for database references. Null stored paths. | Covered by the job. File deletion is tracked separately. |
+| `users.created_at` | Account creation time (V28); NULL for accounts created before it was recorded. | Retain. It does not identify anyone and keeps the account's age for audits. | No action needed. |
 | `differential_selection.comment` | Active semantic-differential student justification text. | In scope. Replace free text with the placeholder. | Covered by the job. |
 | `differential_chat.content` | Active semantic-differential group chat text. | In scope. Replace free text with the placeholder. | Covered by the job. |
 | `chat.content` | Active ranking and group chat text through `group-messages` and student session views. | In scope. Replace free text with the placeholder. | Covered by the job. |

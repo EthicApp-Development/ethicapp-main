@@ -214,6 +214,7 @@ export default {
         email: 'Email',
         role: 'Rol',
         status: 'Estado',
+        createdAt: 'Creación',
         actions: 'Acciones'
       },
       status: {
@@ -223,6 +224,11 @@ export default {
       },
       actions: {
         view: 'Ver detalle'
+      },
+      createdAtUnknown: 'Desconocida',
+      sort: {
+        newestFirst: 'Ordenar de la más reciente a la más antigua',
+        oldestFirst: 'Ordenar de la más antigua a la más reciente'
       },
       empty: 'No se encontraron usuarios para los filtros aplicados.',
       pagination: 'Página {{page}} de {{totalPages}} ({{total}} usuarios)'
@@ -269,6 +275,7 @@ export default {
         gender: 'Género',
         role: 'Rol',
         status: 'Estado de cuenta',
+        createdAt: 'Fecha de creación',
         lastLogin: 'Último login',
         email: 'Email',
         emailConfirmation: 'Confirmar email'
@@ -299,6 +306,7 @@ export default {
         active: 'Cuenta activa',
         inactive: 'Cuenta inactiva',
         pendingActivationHelp: 'Para activar una cuenta pendiente, usa “Confirmar cuenta”.',
+        createdAtUnknown: 'Desconocida (no registrada)',
         neverLoggedIn: 'Nunca'
       },
       actions: {

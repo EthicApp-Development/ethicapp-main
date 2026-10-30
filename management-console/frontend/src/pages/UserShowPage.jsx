@@ -19,6 +19,7 @@ import {
   accountActionErrorKey,
   accountStatusOf
 } from '../components/users/accountStatus.js';
+import { formatAccountDate } from '../components/users/accountDates.js';
 
 function formFromUser(user) {
   return {
@@ -48,6 +49,7 @@ function UserShowPage() {
   const [success, setSuccess] = useState('');
   const [resetMessage, setResetMessage] = useState('');
   const [lastLoginAt, setLastLoginAt] = useState(null);
+  const [createdAt, setCreatedAt] = useState(null);
   const [currentProfile, setCurrentProfile] = useState(null);
   const [accountStatus, setAccountStatus] = useState(ACCOUNT_STATUSES.active);
   // The account as last loaded from the server. Dialogs name the account
@@ -80,6 +82,7 @@ function UserShowPage() {
     setForm(persistedForm);
     setSavedForm(persistedForm);
     setLastLoginAt(user.lastLoginAt || null);
+    setCreatedAt(user.createdAt || null);
     setAccountStatus(accountStatusOf(user));
   }, []);
 
@@ -322,7 +325,20 @@ function UserShowPage() {
               ) : null}
             </Col>
 
-            <Col md={6}>
+            <Col md={3}>
+              <Form.Label>{t('pages.userShow.fields.createdAt')}</Form.Label>
+              <Form.Control
+                plaintext
+                readOnly
+                value={
+                  formatAccountDate(createdAt, locale, { withTime: true }) ||
+                  t('pages.userShow.status.createdAtUnknown')
+                }
+                data-testid="user-created-at"
+              />
+            </Col>
+
+            <Col md={3}>
               <Form.Label>{t('pages.userShow.fields.lastLogin')}</Form.Label>
               <Form.Control plaintext readOnly value={formatLastLogin(lastLoginAt)} />
             </Col>

@@ -3,6 +3,18 @@ import { ACCOUNT_STATUS_FILTER_SQL, deriveAccountStatus } from './account-status
 
 const ALLOWED_ROLE_FILTERS = new Set(['A', 'P', 'S']);
 
+// Sort orders the user list accepts, by the value of its `sort` parameter.
+// Only these fixed clauses reach the SQL. Accounts created before V28 have no
+// created_at (NULL, "unknown"); they predate every dated account, so they
+// come last when the newest are first and first when the oldest are first.
+// The id breaks ties and orders the undated accounts among themselves.
+export const LIST_USERS_SORT_ORDERS = Object.freeze({
+  created_at_desc: 'created_at DESC NULLS LAST, id DESC',
+  created_at_asc: 'created_at ASC NULLS FIRST, id ASC'
+});
+
+export const DEFAULT_LIST_USERS_SORT = 'created_at_desc';
+
 function normalizeRoleFilter(role) {
   const normalized = String(role || '').trim().toUpperCase();
   return ALLOWED_ROLE_FILTERS.has(normalized) ? normalized : null;
@@ -48,13 +60,29 @@ export function buildListUsersFilter({ keywords = '', role = null, status = null
   };
 }
 
-export async function listUsers({ keywords = '', role = null, status = null, page = 1, pageSize = 10 }) {
+export function buildListUsersOrder(sort) {
+  const normalized = String(sort || '').trim().toLowerCase();
+  const safeSort = Object.hasOwn(LIST_USERS_SORT_ORDERS, normalized)
+    ? normalized
+    : DEFAULT_LIST_USERS_SORT;
+
+  return {
+    sort: safeSort,
+    orderSql: `ORDER BY ${LIST_USERS_SORT_ORDERS[safeSort]}`
+  };
+}
+
+export async function listUsers(
+  { keywords = '', role = null, status = null, sort = DEFAULT_LIST_USERS_SORT, page = 1, pageSize = 10 },
+  { queryFn = query } = {}
+) {
   const safePageSize = Math.min(Math.max(Number(pageSize) || 10, 1), 50);
   const safePage = Math.max(Number(page) || 1, 1);
   const offset = (safePage - 1) * safePageSize;
   const { whereSql, params } = buildListUsersFilter({ keywords, role, status });
+  const { sort: safeSort, orderSql } = buildListUsersOrder(sort);
 
-  const countResult = await query(
+  const countResult = await queryFn(
     `
       SELECT count(*)::int AS total
       FROM users
@@ -70,7 +98,7 @@ export async function listUsers({ keywords = '', role = null, status = null, pag
   params.push(offset);
   const offsetIndex = params.length;
 
-  const rowsResult = await query(
+  const rowsResult = await queryFn(
     `
       SELECT
         id,
@@ -79,10 +107,11 @@ export async function listUsers({ keywords = '', role = null, status = null, pag
         mail,
         role,
         active,
-        email_confirmed
+        email_confirmed,
+        created_at
       FROM users
       ${whereSql}
-      ORDER BY id DESC
+      ${orderSql}
       LIMIT $${limitIndex}
       OFFSET $${offsetIndex}
     `,
@@ -100,26 +129,28 @@ export async function listUsers({ keywords = '', role = null, status = null, pag
     status: deriveAccountStatus({
       active: row.active,
       emailConfirmed: row.email_confirmed
-    })
+    }),
+    createdAt: row.created_at || null
   }));
 
   return {
     items,
     total,
+    sort: safeSort,
     page: safePage,
     pageSize: safePageSize,
     totalPages: Math.max(Math.ceil(total / safePageSize), 1)
   };
 }
 
-export async function getUserById(userId) {
+export async function getUserById(userId, { queryFn = query } = {}) {
   const normalizedId = Number(userId);
 
   if (!Number.isInteger(normalizedId) || normalizedId <= 0) {
     return null;
   }
 
-  const result = await query(
+  const result = await queryFn(
     `
       SELECT
         id,
@@ -131,7 +162,8 @@ export async function getUserById(userId) {
         active,
         email_confirmed,
         last_login_at,
-        anonymized_at
+        anonymized_at,
+        created_at
       FROM users
       WHERE id = $1
       LIMIT 1
@@ -159,7 +191,8 @@ export async function getUserById(userId) {
       emailConfirmed: row.email_confirmed,
       anonymizedAt: row.anonymized_at
     }),
-    lastLoginAt: row.last_login_at || null
+    lastLoginAt: row.last_login_at || null,
+    createdAt: row.created_at || null
   };
 }
 
