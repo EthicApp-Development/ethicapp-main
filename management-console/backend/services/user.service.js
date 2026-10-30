@@ -243,7 +243,8 @@ export async function updateUserById(userId, payload, { queryFn = query } = {}) 
   const currentUser = currentResult.rows[0];
 
   // An anonymized account names no one and must stay disabled: editing it
-  // could give it a real email or reactivate it.
+  // could give it a real email or reactivate it. The UPDATE below repeats the
+  // condition, for an account forgotten after this read.
   if (currentUser.anonymized_at) {
     throw new Error('ACCOUNT_ANONYMIZED');
   }
@@ -294,6 +295,7 @@ export async function updateUserById(userId, payload, { queryFn = query } = {}) 
             ELSE session_version
           END
       WHERE id = $8
+        AND anonymized_at IS NULL
       RETURNING id, firstname, lastname, sex, mail, role, active, email_confirmed
     `,
     [
@@ -308,6 +310,14 @@ export async function updateUserById(userId, payload, { queryFn = query } = {}) 
       isRoleChanged || isActiveChanged
     ]
   );
+
+  // No row: the account was forgotten, or deleted, after the read above.
+  // PostgreSQL re-checks the condition on the latest version of a row that a
+  // concurrent transaction changed, so the forgetting always wins.
+  if (updateResult.rowCount === 0) {
+    const stillThere = await queryFn('SELECT 1 FROM users WHERE id = $1', [normalizedId]);
+    throw new Error(stillThere.rowCount > 0 ? 'ACCOUNT_ANONYMIZED' : 'USER_NOT_FOUND');
+  }
 
   const row = updateResult.rows[0];
 

@@ -377,3 +377,202 @@ test('V29: editing an anonymized account is refused', { skip: SKIP_REASON }, asy
   const [user] = await query('SELECT firstname, active FROM users WHERE id = $1', [account.id]);
   assert.deepEqual(user, { firstname: 'Ana', active: true });
 });
+
+// A tutor callback for `userId`, as ethicapp stores it, through `run`.
+const LATE_PAYLOAD = { payload: { argumentPreview: 'Late argument', scores: { claim: 1 }, empty: '' } };
+
+function insertCallbackResult(run, userId) {
+  return run(
+    `
+      INSERT INTO external_service_results (service_id, status, user_id, raw_payload)
+      VALUES ('argumentation-tutor-system', 'pending', $1, $2::jsonb)
+      RETURNING id
+    `,
+    [userId, JSON.stringify(LATE_PAYLOAD)]
+  );
+}
+
+function forget(student) {
+  return service().forgetStudent({ adminUserId: ADMIN_USER_ID, userId: student.id, expectedEmail: student.mail });
+}
+
+const REDACTED_LATE_PAYLOAD = { payload: { argumentPreview: PLACEHOLDER, scores: { claim: 1 }, empty: '' } };
+
+// Waits until `pid` is blocked on a lock, so the test knows the statement it
+// sent is waiting for the other transaction.
+async function waitUntilBlocked(pid) {
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    const [row] = await query('SELECT wait_event_type FROM pg_stat_activity WHERE pid = $1', [pid]);
+    if (row?.wait_event_type === 'Lock') {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+  throw new Error(`backend ${pid} never waited for a lock`);
+}
+
+test('V29: a callback stored after the student was forgotten keeps no text', {
+  skip: SKIP_REASON
+}, async () => {
+  const student = await insertUser();
+  await forget(student);
+
+  const [inserted] = await insertCallbackResult(query, student.id);
+  const [afterInsert] = await query('SELECT raw_payload FROM external_service_results WHERE id = $1', [inserted.id]);
+  assert.deepEqual(afterInsert.raw_payload, REDACTED_LATE_PAYLOAD);
+
+  // The handler's later update of the same result.
+  await query(
+    `
+      UPDATE external_service_results
+      SET status = 'completed', adapter_result = $2::jsonb, raw_payload = $3::jsonb
+      WHERE id = $1
+    `,
+    [inserted.id, JSON.stringify({ payload: { claimTypeRationale: 'Quotes the student', claimTypeId: 2 } }),
+      JSON.stringify(LATE_PAYLOAD)]
+  );
+  const [afterUpdate] = await query(
+    'SELECT raw_payload, adapter_result FROM external_service_results WHERE id = $1',
+    [inserted.id]
+  );
+  assert.deepEqual(afterUpdate, {
+    raw_payload: REDACTED_LATE_PAYLOAD,
+    adapter_result: { payload: { claimTypeRationale: PLACEHOLDER, claimTypeId: 2 } }
+  });
+
+  // Another student's callbacks are stored as sent.
+  const other = await insertUser();
+  const [kept] = await insertCallbackResult(query, other.id);
+  const [keptRow] = await query('SELECT raw_payload FROM external_service_results WHERE id = $1', [kept.id]);
+  assert.deepEqual(keptRow.raw_payload, LATE_PAYLOAD);
+});
+
+test('V29: a callback inserted while the student is being forgotten waits and keeps no text', {
+  skip: SKIP_REASON
+}, async () => {
+  const student = await insertUser();
+  const forgetting = await getPool().connect();
+  const callback = await getPool().connect();
+  try {
+    // The per-account step's protocol: lock the account, then set
+    // anonymized_at, in one transaction.
+    await forgetting.query('BEGIN');
+    await forgetting.query('SELECT id FROM users WHERE id = $1 FOR UPDATE', [student.id]);
+    const { rows: [{ pid }] } = await callback.query('SELECT pg_backend_pid() AS pid');
+    const inserting = insertCallbackResult((sql, params) => callback.query(sql, params).then((r) => r.rows), student.id);
+    await waitUntilBlocked(pid);
+    await forgetting.query('UPDATE users SET anonymized_at = NOW() WHERE id = $1', [student.id]);
+    await forgetting.query('COMMIT');
+
+    const [inserted] = await inserting;
+    const [row] = await query('SELECT raw_payload FROM external_service_results WHERE id = $1', [inserted.id]);
+    assert.deepEqual(row.raw_payload, REDACTED_LATE_PAYLOAD);
+  } finally {
+    forgetting.release();
+    callback.release();
+  }
+});
+
+test('V29: forgetting waits for callbacks in progress and erases what they wrote', {
+  skip: SKIP_REASON
+}, async () => {
+  const student = await insertUser();
+  const [existing] = await insertCallbackResult(query, student.id);
+  const callback = await getPool().connect();
+  try {
+    // One callback inserts a result and another updates an existing one,
+    // both in a transaction still open when the forgetting starts.
+    await callback.query('BEGIN');
+    const [inserted] = await insertCallbackResult((sql, params) => callback.query(sql, params).then((r) => r.rows), student.id);
+    await callback.query(
+      'UPDATE external_service_results SET adapter_result = $2::jsonb WHERE id = $1',
+      [existing.id, JSON.stringify({ payload: { claimTypeRationale: 'Quotes the student' } })]
+    );
+
+    const forgetting = forget(student);
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    await callback.query('COMMIT');
+    const result = await forgetting;
+    assert.equal(result.status, 'anonymized');
+
+    const stored = async (id) => (await query(
+      'SELECT raw_payload, adapter_result FROM external_service_results WHERE id = $1',
+      [id]
+    ))[0];
+    assert.deepEqual(await stored(existing.id), {
+      raw_payload: REDACTED_LATE_PAYLOAD,
+      adapter_result: { payload: { claimTypeRationale: PLACEHOLDER } }
+    });
+    assert.deepEqual(await stored(inserted.id), { raw_payload: REDACTED_LATE_PAYLOAD, adapter_result: null });
+  } finally {
+    callback.release();
+  }
+});
+
+test('V29: an edit that started before the student was forgotten cannot undo it', {
+  skip: SKIP_REASON
+}, async () => {
+  const student = await insertUser();
+  const email = `it-876-${randomUUID()}@example.com`;
+  // The edit reads the account before the forgetting, and writes after it.
+  const queryFn = async (sql, params) => {
+    if (/^\s*UPDATE users/.test(sql)) {
+      await forget(student);
+    }
+    return getPool().query(sql, params);
+  };
+
+  await assert.rejects(updateUserById(student.id, {
+    firstname: 'Real',
+    lastname: 'Name',
+    sex: 'F',
+    email,
+    email_confirmation: email,
+    role: 'A',
+    active: true
+  }, { queryFn }), { message: 'ACCOUNT_ANONYMIZED' });
+
+  const [user] = await query(
+    'SELECT firstname, mail, sex, active, email_confirmed, anonymized_at FROM users WHERE id = $1',
+    [student.id]
+  );
+  assert.equal(user.firstname, 'Anonymous');
+  assert.equal(user.mail, `anon-student-${student.id}@anonymous.invalid`);
+  assert.equal(user.sex, null);
+  assert.equal(user.active, false);
+  assert.equal(user.email_confirmed, false);
+  assert.ok(user.anonymized_at);
+});
+
+test('V29: an edit blocked by a forgetting in progress is refused once it commits', {
+  skip: SKIP_REASON
+}, async () => {
+  const student = await insertUser();
+  const email = `it-876-${randomUUID()}@example.com`;
+  const forgetting = await getPool().connect();
+  const editor = await getPool().connect();
+  try {
+    const { rows: [{ pid }] } = await editor.query('SELECT pg_backend_pid() AS pid');
+    await forgetting.query('BEGIN');
+    await forgetting.query('SELECT id FROM users WHERE id = $1 FOR UPDATE', [student.id]);
+    const editing = updateUserById(student.id, {
+      firstname: 'Real',
+      lastname: 'Name',
+      sex: 'F',
+      email,
+      email_confirmation: email,
+      role: 'A',
+      active: true
+    }, { queryFn: (sql, params) => editor.query(sql, params) });
+    await waitUntilBlocked(pid);
+    await forgetting.query('UPDATE users SET anonymized_at = NOW(), active = false WHERE id = $1', [student.id]);
+    await forgetting.query('COMMIT');
+
+    await assert.rejects(editing, { message: 'ACCOUNT_ANONYMIZED' });
+    const [user] = await query('SELECT firstname, active FROM users WHERE id = $1', [student.id]);
+    assert.deepEqual(user, { firstname: 'Ana', active: false });
+  } finally {
+    forgetting.release();
+    editor.release();
+  }
+});
