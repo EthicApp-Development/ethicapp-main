@@ -1,3 +1,5 @@
+import { PASSWORD_MIN_LENGTH, PASSWORD_MIN_SYMBOLS } from '../../services/password-policy.js';
+
 const authMessages = {
   en_US: {
     invalidCredentials: 'Invalid credentials',
@@ -7,7 +9,7 @@ const authMessages = {
     requiredFieldsMissing: 'Required fields are missing',
     invalidRecaptcha: 'Invalid reCAPTCHA validation',
     passwordsDoNotMatch: 'Passwords do not match',
-    weakPassword: 'Password must be at least 10 characters long and contain at least 2 symbols',
+    weakPassword: `Password must be at least ${PASSWORD_MIN_LENGTH} characters long and contain at least ${PASSWORD_MIN_SYMBOLS} symbols`,
     invalidGender: 'Invalid gender',
     duplicateUserIdentifier: 'A user with that identifier already exists',
     emailAlreadyRegistered: 'An account with that email already exists',
@@ -30,7 +32,15 @@ const authMessages = {
     passkeyAlreadyRegistered: 'That passkey is already registered',
     passkeyNotConfigured: 'No passkey is configured for this administrator',
     passkeyAuthenticationExpired: 'Passkey confirmation expired. Try again',
-    passkeyAuthenticationFailed: 'Unable to confirm passkey'
+    passkeyAuthenticationFailed: 'Unable to confirm passkey',
+    invalidUserId: 'Invalid user id',
+    userNotFound: 'User not found',
+    passwordSetByAdmin: 'Password set. The user\'s open sessions were closed',
+    passwordSetOwnAccount: 'Change your own password from your profile, which asks for your current password',
+    passwordSetRoleNotAllowed: 'Only student and teacher accounts can have their password set by an administrator',
+    passwordSetAccountAnonymized: 'This account was anonymized and cannot sign in',
+    passwordSetNotLocalAccount: 'This account does not sign in with a password',
+    passwordSetAccountChanged: 'The account changed since it was loaded. Reload it and try again'
   },
   es_CL: {
     invalidCredentials: 'Credenciales inválidas',
@@ -40,7 +50,7 @@ const authMessages = {
     requiredFieldsMissing: 'Faltan campos obligatorios',
     invalidRecaptcha: 'Validación reCAPTCHA inválida',
     passwordsDoNotMatch: 'Las contraseñas no coinciden',
-    weakPassword: 'La contraseña debe tener al menos 10 caracteres y al menos 2 símbolos',
+    weakPassword: `La contraseña debe tener al menos ${PASSWORD_MIN_LENGTH} caracteres y al menos ${PASSWORD_MIN_SYMBOLS} símbolos`,
     invalidGender: 'Género inválido',
     duplicateUserIdentifier: 'Ya existe un usuario con ese identificador',
     emailAlreadyRegistered: 'Ya existe una cuenta con ese correo electrónico',
@@ -63,7 +73,15 @@ const authMessages = {
     passkeyAlreadyRegistered: 'Esa passkey ya está registrada',
     passkeyNotConfigured: 'Este administrador no tiene passkeys configuradas',
     passkeyAuthenticationExpired: 'La confirmación con passkey expiró. Intenta nuevamente',
-    passkeyAuthenticationFailed: 'No fue posible confirmar la passkey'
+    passkeyAuthenticationFailed: 'No fue posible confirmar la passkey',
+    invalidUserId: 'Identificador de usuario inválido',
+    userNotFound: 'Usuario no encontrado',
+    passwordSetByAdmin: 'Contraseña establecida. Se cerraron las sesiones abiertas del usuario',
+    passwordSetOwnAccount: 'Cambia tu propia contraseña desde tu perfil, que pide tu contraseña actual',
+    passwordSetRoleNotAllowed: 'Solo se puede establecer la contraseña de cuentas de estudiantes y profesores',
+    passwordSetAccountAnonymized: 'Esta cuenta fue anonimizada y no puede iniciar sesión',
+    passwordSetNotLocalAccount: 'Esta cuenta no inicia sesión con contraseña',
+    passwordSetAccountChanged: 'La cuenta cambió desde que se cargó. Recárgala e intenta nuevamente'
   }
 };
 

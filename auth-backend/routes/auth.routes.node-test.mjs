@@ -726,3 +726,82 @@ describe('Auth Routes', () => {
     }]);
   });
 });
+
+describe('Password policy (#889)', () => {
+  const WEAK_EN = 'Password must be at least 10 characters long and contain at least 2 symbols';
+  const WEAK_ES = 'La contraseña debe tener al menos 10 caracteres y al menos 2 símbolos';
+
+  beforeEach(() => {
+    dbMock.query.mock.resetCalls();
+    dbMock.query.mock.restore();
+    recaptchaMock.verifyRecaptchaToken.mock.resetCalls();
+    recaptchaMock.verifyRecaptchaToken.mock.mockImplementation(() => Promise.resolve(true));
+  });
+
+  test('GET /password-policy - returns the limits the routes enforce', async () => {
+    const res = await supertest(app).get('/password-policy');
+
+    assert.strictEqual(res.status, 200);
+    assert.deepStrictEqual(res.body, { minLength: 10, minSymbols: 2 });
+    assert.match(res.headers['cache-control'], /public/);
+    assert.strictEqual(dbMock.query.mock.calls.length, 0);
+  });
+
+  // Every route that sets a password refuses one just below either limit,
+  // with the same localized message.
+  const routes = [
+    {
+      name: 'POST /register',
+      path: '/register',
+      payload: (password) => validRegistrationPayload({ password, password_confirmation: password })
+    },
+    {
+      name: 'POST /register-prof',
+      path: '/register-prof',
+      admin: true,
+      payload: (password) => ({
+        firstname: 'Pat',
+        lastname: 'Teacher',
+        dni: '1-9',
+        gender: 'F',
+        email: 'pat@example.com',
+        password,
+        password_confirmation: password
+      })
+    },
+    {
+      name: 'POST /reset-password',
+      path: '/reset-password',
+      payload: (password) => ({ token: 'raw-token', password, password_confirmation: password })
+    },
+    {
+      name: 'POST /admin/change-password',
+      path: '/admin/change-password',
+      admin: true,
+      payload: (password) => ({
+        current_password: 'CurrentPassword123!@',
+        new_password: password,
+        password_confirmation: password
+      })
+    }
+  ];
+
+  for (const route of routes) {
+    for (const [label, password] of [['nine characters', 'abcdefg!!'], ['one symbol', 'abcdefghi!']]) {
+      for (const [language, message] of [['en-US', WEAK_EN], ['es-CL', WEAK_ES]]) {
+        test(`${route.name} - refuses a password with ${label} (${language})`, async () => {
+          let request = supertest(app).post(route.path).set('Accept-Language', language);
+          if (route.admin) {
+            request = request.set('X-Test-User-Id', '7').set('X-Test-User-Role', 'S');
+          }
+
+          const res = await request.send(route.payload(password));
+
+          assert.strictEqual(res.status, 400);
+          assert.strictEqual(res.body.error, message);
+          assert.strictEqual(dbMock.query.mock.calls.length, 0);
+        });
+      }
+    }
+  }
+});

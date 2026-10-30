@@ -15,6 +15,7 @@ import authMessages from '../i18n/messages/auth-messages.js';
 import { inferPreferredLocaleFromRequest, normalizePreferredLocale, translateMessage } from '../i18n/locale.js';
 import { csrfTokenHandler } from '../middleware/csrfProtection.js';
 import { initializeSessionPolicy } from '../middleware/sessionPolicy.js';
+import { getPasswordPolicy, isStrongPassword } from '../services/password-policy.js';
 
 const router = express.Router();
 
@@ -22,15 +23,6 @@ const SALT_ROUNDS = Number(process.env.BCRYPT_SALT_ROUNDS || 10);
 const RESET_TOKEN_TTL_MINUTES = Number(process.env.RESET_TOKEN_TTL_MINUTES || 60);
 const PASSKEY_REGISTRATION_TIMEOUT_MS = Number(process.env.WEBAUTHN_REGISTRATION_TIMEOUT_MS || 60000);
 const PASSKEY_AUTHENTICATION_TIMEOUT_MS = Number(process.env.WEBAUTHN_AUTHENTICATION_TIMEOUT_MS || 60000);
-
-function isStrongPassword(password) {
-  if (!password || password.length < 10) {
-    return false;
-  }
-
-  const symbolCount = (password.match(/[^a-zA-Z0-9]/g) || []).length;
-  return symbolCount >= 2;
-}
 
 function sha256Hex(value) {
   return crypto
@@ -272,6 +264,13 @@ function t(req, key) {
 }
 
 router.get('/csrf-token', csrfTokenHandler);
+
+// The password strength limits, public and read-only: the frontends build
+// their live checklists from them. The routes that set a password decide.
+router.get('/password-policy', (req, res) => {
+  res.set('Cache-Control', 'public, max-age=300');
+  return res.status(200).json(getPasswordPolicy());
+});
 
 router.get('/institution', async (req, res, next) => {
   try {
