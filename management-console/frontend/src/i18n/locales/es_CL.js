@@ -231,7 +231,8 @@ export default {
         oldestFirst: 'Ordenar de la más antigua a la más reciente'
       },
       empty: 'No se encontraron usuarios para los filtros aplicados.',
-      pagination: 'Página {{page}} de {{totalPages}} ({{total}} usuarios)'
+      pagination: 'Página {{page}} de {{totalPages}} ({{total}} usuarios)',
+      accountDeleted: 'Se eliminó la cuenta. Su correo puede usarse para registrarse de nuevo.'
     },
     userShow: {
       heading: 'Detalle de cuenta',
@@ -244,7 +245,7 @@ export default {
       impersonationError: 'No fue posible iniciar impersonación del profesor.',
       confirmAccountSuccess: 'Cuenta confirmada. {{name}} ya puede ingresar con la contraseña que eligió al registrarse.',
       confirmAccountError: 'No fue posible confirmar la cuenta.',
-      confirmAccountUnsavedHint: 'Guarda o descarta tus cambios antes de confirmar la cuenta.',
+      confirmAccountUnsavedHint: 'Guarda o descarta tus cambios antes de confirmar o eliminar la cuenta.',
       errors: {
         accountNotPending: 'Esta cuenta ya no está pendiente de confirmación, así que no se modificó. Abajo se muestra su estado actual.',
         accountChanged: 'El correo de esta cuenta cambió desde que se cargó la página, así que no se confirmó. Revisa el correo que se muestra abajo e inténtalo de nuevo.',
@@ -316,6 +317,29 @@ export default {
         confirmAccount: 'Confirmar cuenta',
         discardChanges: 'Descartar cambios',
         impersonateProfessor: 'Ingresar como profesor'
+      },
+      deleteAccount: {
+        action: 'Eliminar cuenta',
+        title: '¿Eliminar esta cuenta?',
+        body: 'La cuenta de {{name}} ({{email}}) se eliminará de forma permanente. Esta acción no se puede deshacer. Después, el correo podrá usarse para registrarse de nuevo.',
+        createdAgo: 'La cuenta se creó {{age}} ({{date}}) y nunca se activó.',
+        createdUnknown: 'No se sabe cuánto tiempo lleva pendiente la cuenta: se creó antes de que se registraran las fechas de creación.',
+        confirm: 'Eliminar cuenta',
+        error: 'No fue posible eliminar la cuenta.',
+        errors: {
+          accountNotDeletable: 'Solo se pueden eliminar cuentas que nunca se activaron, y esta se activó o se usó. No se eliminó; abajo se muestra su estado actual.',
+          accountChanged: 'El correo de esta cuenta cambió desde que se cargó la página, así que no se eliminó. Revisa el correo que se muestra abajo e inténtalo de nuevo.',
+          accountReferenced: 'Esta cuenta tiene {{data}} (tabla {{table}}), así que no se eliminó.'
+        },
+        referenceCategories: {
+          activities: 'participaciones en actividades',
+          teams: 'membresías en equipos',
+          responses: 'respuestas o mensajes de chat en actividades',
+          authoredContent: 'casos o diseños creados por ella',
+          administration: 'registros administrativos',
+          aiServices: 'trabajos o resultados de servicios de IA',
+          accountData: 'datos de la cuenta'
+        }
       }
     },
     profile: {

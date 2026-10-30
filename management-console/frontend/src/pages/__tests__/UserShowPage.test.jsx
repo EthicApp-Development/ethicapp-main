@@ -10,6 +10,7 @@ import UserShowPage from '../UserShowPage.jsx';
 
 vi.mock('../../api/usersApi.js', () => ({
   confirmAccount: vi.fn(),
+  deleteAccount: vi.fn(),
   fetchUserById: vi.fn(),
   impersonateProfessor: vi.fn(),
   triggerPasswordReset: vi.fn(),
@@ -126,7 +127,7 @@ describe('UserShowPage: confirming a pending account', () => {
 
     expect(button.disabled).toBe(true);
     const hint = byTestId('confirm-account-unsaved-hint');
-    expect(hint.textContent).toBe('Save or discard your changes before confirming the account.');
+    expect(hint.textContent).toBe('Save or discard your changes before confirming or deleting the account.');
     expect(button.getAttribute('aria-describedby')).toBe(hint.id);
 
     await click(button);
