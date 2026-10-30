@@ -83,8 +83,8 @@ to `users` that the list does not name.
 | `chat.content` | Active ranking and group chat text through `group-messages` and student session views. | In scope. Replace free text with the placeholder. | Covered by the job. |
 | `actor_selection.description` | Active role/actor selection justification text through phase and activity routes. | In scope. Replace free text with the placeholder. | Covered by the job. |
 | `sesusers.device` | Session join metadata supplied by student clients. | In scope. Clear because it can identify a device or client context. | Covered by the job. |
-| `external_service_results.raw_payload`, `sanitized_payload`, `adapter_result` (rows with the student's `user_id`) | AI service callbacks correlated to the student's work. See "AI service payload inventory". | In scope. Replace every string with the placeholder; keep the structure, numbers and rows. | Covered by the job (#876). |
-| `external_service_jobs.outbound_payload` (rows with the student's `user_id`) | Never set by the current adapters (always NULL). | In scope should it ever be set. Same replacement. | Covered by the job (#876). |
+| `external_service_results.raw_payload`, `sanitized_payload`, `adapter_result` (rows with the student's `user_id`) | AI service callbacks correlated to the student's work. See "AI service payload inventory". | In scope. Replace every string with the placeholder; keep the structure, numbers and rows. | Covered by the job (#876). Callbacks that arrive later are written with their strings already replaced (V29 triggers). |
+| `external_service_jobs.outbound_payload` (rows with the student's `user_id`) | Never set by the current adapters (always NULL). | In scope should it ever be set. Same replacement. | Covered by the job (#876), and by the V29 triggers for later writes. |
 | `external_service_jobs`, `external_service_results`: `user_id`, `group_id` and the other ids | Destination of AI service work. | Retain. Ids only; the user id points to the anonymized account. | No action needed. |
 | `external_service_jobs.instantiation_report`, `provider_reference` | Session-creation reports of the tutor and Polyadic, and Polyadic room names made of ids. | Retain. They carry case text and settings, no student text. | No action needed. |
 | Argumentation Tutor (AI Additions): sessions, history, task keys and Celery results in Redis | The student's arguments and the tutor's analyses, for 24 hours. | In scope. Erased by `DELETE /argumentation-tutor/api/v2/users/{id}/data`. | Erasure request recorded by the job; sent by ethicapp in the background (#876). |
@@ -124,7 +124,11 @@ Columns:
 
 The per-account step replaces every string in those columns, for the rows with
 the student's `user_id`, so it does not depend on this inventory staying
-complete. The feedback the tutor sends to the student is published over the
+complete. An AI service can still deliver a callback for work it received
+before the student was forgotten. Triggers from V29 replace the strings of any
+payload later written for an anonymized user in the same way, with the
+placeholder of the run that anonymized the account. A write that races with
+the step either waits for it or is rewritten by it, as V29 explains. The feedback the tutor sends to the student is published over the
 socket only, never stored.
 
 ## Container Logs
