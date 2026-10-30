@@ -334,102 +334,100 @@ function UserShowPage() {
         {resetMessage ? <Alert variant="info">{resetMessage}</Alert> : null}
 
         <Form onSubmit={onSubmit}>
-          <fieldset disabled={isAnonymizedAccount}>
-            <Row className="g-3">
-              <Col md={6}>
-                <Form.Label>{t('pages.userShow.fields.firstname')}</Form.Label>
-                <Form.Control
-                  value={form.firstname}
-                  onChange={(event) => onFieldChange('firstname', event.target.value)}
-                  required
-                />
-              </Col>
-              <Col md={6}>
-                <Form.Label>{t('pages.userShow.fields.lastname')}</Form.Label>
-                <Form.Control
-                  value={form.lastname}
-                  onChange={(event) => onFieldChange('lastname', event.target.value)}
-                  required
-                />
-              </Col>
+          <Row as="fieldset" className="g-3" disabled={isAnonymizedAccount}>
+            <Col md={6}>
+              <Form.Label>{t('pages.userShow.fields.firstname')}</Form.Label>
+              <Form.Control
+                value={form.firstname}
+                onChange={(event) => onFieldChange('firstname', event.target.value)}
+                required
+              />
+            </Col>
+            <Col md={6}>
+              <Form.Label>{t('pages.userShow.fields.lastname')}</Form.Label>
+              <Form.Control
+                value={form.lastname}
+                onChange={(event) => onFieldChange('lastname', event.target.value)}
+                required
+              />
+            </Col>
 
-              <Col md={6}>
-                <Form.Label>{t('pages.userShow.fields.gender')}</Form.Label>
-                <Form.Select value={form.sex} onChange={(event) => onFieldChange('sex', event.target.value)}>
-                  <option value="F">{t('genders.F')}</option>
-                  <option value="M">{t('genders.M')}</option>
-                  <option value="O">{t('genders.O')}</option>
-                </Form.Select>
-              </Col>
+            <Col md={6}>
+              <Form.Label>{t('pages.userShow.fields.gender')}</Form.Label>
+              <Form.Select value={form.sex} onChange={(event) => onFieldChange('sex', event.target.value)}>
+                <option value="F">{t('genders.F')}</option>
+                <option value="M">{t('genders.M')}</option>
+                <option value="O">{t('genders.O')}</option>
+              </Form.Select>
+            </Col>
 
-              <Col md={6}>
-                <Form.Label>{t('pages.userShow.fields.role')}</Form.Label>
-                <Form.Select value={form.role} onChange={(event) => onFieldChange('role', event.target.value)}>
-                  <option value="A">{t('roles.A')}</option>
-                  <option value="P">{t('roles.P')}</option>
-                  {form.role === 'S' ? <option value="S">{t('roles.S')}</option> : null}
-                </Form.Select>
-                <Form.Text>{t('pages.userShow.roleHelp')}</Form.Text>
-              </Col>
+            <Col md={6}>
+              <Form.Label>{t('pages.userShow.fields.role')}</Form.Label>
+              <Form.Select value={form.role} onChange={(event) => onFieldChange('role', event.target.value)}>
+                <option value="A">{t('roles.A')}</option>
+                <option value="P">{t('roles.P')}</option>
+                {form.role === 'S' ? <option value="S">{t('roles.S')}</option> : null}
+              </Form.Select>
+              <Form.Text>{t('pages.userShow.roleHelp')}</Form.Text>
+            </Col>
 
-              <Col md={6}>
-                <Form.Label>{t('pages.userShow.fields.status')}</Form.Label>
-                <AccountStatusSummary status={accountStatus} />
-                <Form.Check
-                  type="switch"
-                  id="account-active"
-                  className="mt-2"
-                  label={form.active ? t('pages.userShow.status.active') : t('pages.userShow.status.inactive')}
-                  checked={form.active}
-                  disabled={isPendingAccount}
-                  aria-describedby={isPendingAccount ? 'account-active-help' : undefined}
-                  onChange={(event) => onFieldChange('active', event.target.checked)}
-                />
-                {isPendingAccount ? (
-                  <Form.Text id="account-active-help">{t('pages.userShow.status.pendingActivationHelp')}</Form.Text>
-                ) : null}
-              </Col>
+            <Col md={6}>
+              <Form.Label>{t('pages.userShow.fields.status')}</Form.Label>
+              <AccountStatusSummary status={accountStatus} />
+              <Form.Check
+                type="switch"
+                id="account-active"
+                className="mt-2"
+                label={form.active ? t('pages.userShow.status.active') : t('pages.userShow.status.inactive')}
+                checked={form.active}
+                disabled={isPendingAccount}
+                aria-describedby={isPendingAccount ? 'account-active-help' : undefined}
+                onChange={(event) => onFieldChange('active', event.target.checked)}
+              />
+              {isPendingAccount ? (
+                <Form.Text id="account-active-help">{t('pages.userShow.status.pendingActivationHelp')}</Form.Text>
+              ) : null}
+            </Col>
 
-              <Col md={3}>
-                <Form.Label>{t('pages.userShow.fields.createdAt')}</Form.Label>
-                <Form.Control
-                  plaintext
-                  readOnly
-                  value={
-                    formatAccountDate(createdAt, locale, { withTime: true }) ||
-                    t('pages.userShow.status.createdAtUnknown')
-                  }
-                  data-testid="user-created-at"
-                />
-              </Col>
+            <Col md={3}>
+              <Form.Label>{t('pages.userShow.fields.createdAt')}</Form.Label>
+              <Form.Control
+                plaintext
+                readOnly
+                value={
+                  formatAccountDate(createdAt, locale, { withTime: true }) ||
+                  t('pages.userShow.status.createdAtUnknown')
+                }
+                data-testid="user-created-at"
+              />
+            </Col>
 
-              <Col md={3}>
-                <Form.Label>{t('pages.userShow.fields.lastLogin')}</Form.Label>
-                <Form.Control plaintext readOnly value={formatLastLogin(lastLoginAt)} />
-              </Col>
+            <Col md={3}>
+              <Form.Label>{t('pages.userShow.fields.lastLogin')}</Form.Label>
+              <Form.Control plaintext readOnly value={formatLastLogin(lastLoginAt)} />
+            </Col>
 
-              <Col md={6}>
-                <Form.Label>{t('pages.userShow.fields.email')}</Form.Label>
-                <Form.Control
-                  type="email"
-                  value={form.email}
-                  onChange={(event) => onFieldChange('email', event.target.value)}
-                  required
-                />
-              </Col>
+            <Col md={6}>
+              <Form.Label>{t('pages.userShow.fields.email')}</Form.Label>
+              <Form.Control
+                type="email"
+                value={form.email}
+                onChange={(event) => onFieldChange('email', event.target.value)}
+                required
+              />
+            </Col>
 
-              <Col md={6}>
-                <Form.Label>{t('pages.userShow.fields.emailConfirmation')}</Form.Label>
-                <Form.Control
-                  type="email"
-                  value={form.email_confirmation}
-                  onChange={(event) => onFieldChange('email_confirmation', event.target.value)}
-                  required
-                />
-              </Col>
+            <Col md={6}>
+              <Form.Label>{t('pages.userShow.fields.emailConfirmation')}</Form.Label>
+              <Form.Control
+                type="email"
+                value={form.email_confirmation}
+                onChange={(event) => onFieldChange('email_confirmation', event.target.value)}
+                required
+              />
+            </Col>
 
-            </Row>
-          </fieldset>
+          </Row>
 
           <div className="d-flex flex-wrap gap-2 mt-4">
             {!isAnonymizedAccount ? (
