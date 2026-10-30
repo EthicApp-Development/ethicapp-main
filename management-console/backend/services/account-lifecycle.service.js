@@ -20,11 +20,11 @@ export const ACCOUNT_LIFECYCLE_ERRORS = Object.freeze({
 // Reason code of an action that failed unexpectedly and was rolled back.
 const UNEXPECTED_ERROR_REASON = 'UNEXPECTED_ERROR';
 
-function lifecycleError(code, extra = {}) {
+export function lifecycleError(code, extra = {}) {
   return Object.assign(new Error(code), { code, ...extra });
 }
 
-function normalizeUserId(userId) {
+export function normalizeUserId(userId) {
   const normalizedId = Number(userId);
   return Number.isInteger(normalizedId) && normalizedId > 0 ? normalizedId : null;
 }
@@ -35,7 +35,7 @@ function normalizeEmail(email) {
 
 // Whether the email the administrator approved is the account's stored
 // email, ignoring case and surrounding spaces. A missing email never matches.
-function isExpectedEmail(expectedEmail, storedEmail) {
+export function isExpectedEmail(expectedEmail, storedEmail) {
   const expected = normalizeEmail(expectedEmail);
   return expected !== '' && expected === normalizeEmail(storedEmail);
 }

@@ -6,6 +6,7 @@ import { useI18n } from '../app/providers.jsx';
 import { fetchProfile } from '../api/profileApi.js';
 import {
   confirmAccount,
+  deleteAccount,
   fetchUserById,
   impersonateProfessor,
   triggerPasswordReset,
@@ -20,6 +21,11 @@ import {
   accountStatusOf
 } from '../components/users/accountStatus.js';
 import { formatAccountDate } from '../components/users/accountDates.js';
+import {
+  accountAgeDetails,
+  accountDeletionErrorMessage,
+  isDeletableAccount
+} from '../components/users/accountDeletion.js';
 
 function formFromUser(user) {
   return {
@@ -74,6 +80,7 @@ function UserShowPage() {
     form.role === 'S' &&
     Number(currentProfile.id) === Number(id);
   const isPendingAccount = accountStatus === ACCOUNT_STATUSES.pending;
+  const canDeleteAccount = isDeletableAccount({ status: accountStatus, lastLoginAt });
   const hasUnsavedChanges = savedForm !== null &&
     EDITABLE_FIELDS.some((fieldName) => form[fieldName] !== savedForm[fieldName]);
 
@@ -211,6 +218,40 @@ function UserShowPage() {
       setError(t(errorKey || 'pages.userShow.confirmAccountError'));
       if (errorKey) {
         // The account changed meanwhile: show its current status.
+        await reloadUser();
+      }
+    }
+  }
+
+  async function onDeleteAccount() {
+    if (!canDeleteAccount || hasUnsavedChanges) {
+      return;
+    }
+
+    setError('');
+    setSuccess('');
+
+    // The backend deletes the account only while it still has the email the
+    // administrator approved in the dialog.
+    const expectedEmail = savedEmail;
+
+    try {
+      const outcome = await requestConfirmation({
+        title: t('pages.userShow.deleteAccount.title'),
+        description: t('pages.userShow.deleteAccount.body', { name: accountName, email: savedEmail }),
+        details: accountAgeDetails(createdAt, locale, t),
+        confirmLabel: t('pages.userShow.deleteAccount.confirm'),
+        confirmVariant: 'danger',
+        action: (stepUp) => deleteAccount(id, { ...stepUp, expected_email: expectedEmail })
+      });
+      if (outcome.confirmed) {
+        navigate('/users', { state: { accountDeleted: true } });
+      }
+    } catch (requestError) {
+      const message = accountDeletionErrorMessage(requestError, t);
+      setError(message || t('pages.userShow.deleteAccount.error'));
+      if (message) {
+        // The account changed or is in use: show it as it is now.
         await reloadUser();
       }
     }
@@ -405,6 +446,19 @@ function UserShowPage() {
               >
                 <i className="fa-solid fa-user-secret me-2" aria-hidden="true" />
                 {t('pages.userShow.actions.impersonateProfessor')}
+              </Button>
+            ) : null}
+            {canDeleteAccount ? (
+              <Button
+                type="button"
+                variant="outline-danger"
+                data-testid="delete-account-button"
+                disabled={hasUnsavedChanges}
+                aria-describedby={hasUnsavedChanges ? CONFIRM_ACCOUNT_HINT_ID : undefined}
+                onClick={onDeleteAccount}
+              >
+                <i className="fa-solid fa-trash me-2" aria-hidden="true" />
+                {t('pages.userShow.deleteAccount.action')}
               </Button>
             ) : null}
           </div>

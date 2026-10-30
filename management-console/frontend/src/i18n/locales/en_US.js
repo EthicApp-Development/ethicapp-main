@@ -231,7 +231,8 @@ export default {
         oldestFirst: 'Sort oldest first'
       },
       empty: 'No users found for the selected filters.',
-      pagination: 'Page {{page}} of {{totalPages}} ({{total}} users)'
+      pagination: 'Page {{page}} of {{totalPages}} ({{total}} users)',
+      accountDeleted: 'The account was deleted. Its email can be used to sign up again.'
     },
     userShow: {
       heading: 'Account details',
@@ -244,7 +245,7 @@ export default {
       impersonationError: 'Unable to start professor impersonation.',
       confirmAccountSuccess: 'Account confirmed. {{name}} can now sign in with the password they chose when signing up.',
       confirmAccountError: 'Unable to confirm the account.',
-      confirmAccountUnsavedHint: 'Save or discard your changes before confirming the account.',
+      confirmAccountUnsavedHint: 'Save or discard your changes before confirming or deleting the account.',
       errors: {
         accountNotPending: 'This account is not pending confirmation any more, so it was not changed. Its current status is shown below.',
         accountChanged: 'The email of this account changed since the page was loaded, so it was not confirmed. Check the email shown below and try again.',
@@ -316,6 +317,29 @@ export default {
         confirmAccount: 'Confirm account',
         discardChanges: 'Discard changes',
         impersonateProfessor: 'Sign in as professor'
+      },
+      deleteAccount: {
+        action: 'Delete account',
+        title: 'Delete this account?',
+        body: 'The account of {{name}} ({{email}}) will be deleted permanently. This cannot be undone. The email can then be used to sign up again.',
+        createdAgo: 'The account was created {{age}} ({{date}}) and was never activated.',
+        createdUnknown: 'How long the account has been pending is unknown: it was created before creation dates were recorded.',
+        confirm: 'Delete account',
+        error: 'Unable to delete the account.',
+        errors: {
+          accountNotDeletable: 'Only accounts that were never activated can be deleted, and this one was activated or used. It was not deleted; its current status is shown below.',
+          accountChanged: 'The email of this account changed since the page was loaded, so it was not deleted. Check the email shown below and try again.',
+          accountReferenced: 'This account has {{data}} (table {{table}}), so it was not deleted.'
+        },
+        referenceCategories: {
+          activities: 'activity participations',
+          teams: 'team memberships',
+          responses: 'activity responses or chat messages',
+          authoredContent: 'cases or designs it created',
+          administration: 'administrative records',
+          aiServices: 'AI service jobs or results',
+          accountData: 'account data'
+        }
       }
     },
     profile: {

@@ -16,6 +16,10 @@ import {
   ACCOUNT_LIFECYCLE_ERRORS,
   confirmPendingAccount
 } from '../services/account-lifecycle.service.js';
+import {
+  ACCOUNT_DELETION_ERRORS,
+  deleteNeverActivatedAccount
+} from '../services/account-deletion.service.js';
 
 const ACCOUNT_LIFECYCLE_STATUS_BY_CODE = Object.freeze({
   [ACCOUNT_LIFECYCLE_ERRORS.invalidUserId]: 400,
@@ -24,7 +28,15 @@ const ACCOUNT_LIFECYCLE_STATUS_BY_CODE = Object.freeze({
   [ACCOUNT_LIFECYCLE_ERRORS.accountChanged]: 409
 });
 
-// Code of a confirm-account request whose expected_email is not a string.
+const ACCOUNT_DELETION_STATUS_BY_CODE = Object.freeze({
+  [ACCOUNT_DELETION_ERRORS.invalidUserId]: 400,
+  [ACCOUNT_DELETION_ERRORS.userNotFound]: 404,
+  [ACCOUNT_DELETION_ERRORS.accountNotDeletable]: 409,
+  [ACCOUNT_DELETION_ERRORS.accountChanged]: 409,
+  [ACCOUNT_DELETION_ERRORS.accountReferenced]: 409
+});
+
+// Code of an account action whose expected_email is not a string.
 const INVALID_EXPECTED_EMAIL = 'INVALID_EXPECTED_EMAIL';
 
 function isValidUserIdParam(value) {
@@ -44,7 +56,8 @@ export function createUsersRouter({
   verifyAdminPasswordWithAuthBackendService = verifyAdminPasswordWithAuthBackend,
   verifyAdminPasskeyWithAuthBackendService = verifyAdminPasskeyWithAuthBackend,
   impersonateProfessorInEthicappService = impersonateProfessorInEthicapp,
-  confirmPendingAccountService = confirmPendingAccount
+  confirmPendingAccountService = confirmPendingAccount,
+  deleteNeverActivatedAccountService = deleteNeverActivatedAccount
 } = {}) {
   const router = express.Router();
 
@@ -205,6 +218,55 @@ export function createUsersRouter({
         return res.status(status).json({
           error: error.code,
           ...(error.accountStatus ? { status: error.accountStatus } : {})
+        });
+      }
+
+      return next(error);
+    }
+  });
+
+  // Deletes an account that was never activated, after the step-up
+  // confirmation. The body carries `expected_email`, the email the
+  // administrator approved. Answers 200 { id, deleted: true }, or 409 with:
+  // - ACCOUNT_NOT_DELETABLE and the account's `status`, for an account that
+  //   was ever active, signed in or was anonymized;
+  // - ACCOUNT_CHANGED, when expected_email is missing or is not the
+  //   account's email;
+  // - ACCOUNT_REFERENCED, with `referenced_by` (the first table that holds
+  //   a row of the account) and `reference_category`.
+  router.delete('/mng/api/users/:id', requireManagementRoleMiddleware, async (req, res, next) => {
+    try {
+      if (!isValidUserIdParam(req.params.id)) {
+        return res.status(400).json({ error: ACCOUNT_DELETION_ERRORS.invalidUserId });
+      }
+
+      const expectedEmail = req.body?.expected_email ?? null;
+      if (expectedEmail !== null && typeof expectedEmail !== 'string') {
+        return res.status(400).json({ error: INVALID_EXPECTED_EMAIL });
+      }
+
+      const sensitiveActionVerified = await verifySensitiveAction(req, res);
+      if (!sensitiveActionVerified) {
+        return undefined;
+      }
+
+      const result = await deleteNeverActivatedAccountService({
+        adminUserId: req.session.uid,
+        userId: Number(req.params.id),
+        expectedEmail
+      });
+
+      return res.status(200).json(result);
+    } catch (error) {
+      const status = ACCOUNT_DELETION_STATUS_BY_CODE[error.code];
+
+      if (status) {
+        return res.status(status).json({
+          error: error.code,
+          ...(error.accountStatus ? { status: error.accountStatus } : {}),
+          ...(error.referencedBy
+            ? { referenced_by: error.referencedBy, reference_category: error.referenceCategory }
+            : {})
         });
       }
 

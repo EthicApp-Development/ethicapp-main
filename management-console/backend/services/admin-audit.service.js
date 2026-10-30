@@ -12,7 +12,8 @@
 // Audited actions. The database checks only the format
 // (`<area>.<verb>`), so a new action needs no migration: add it here.
 export const ADMIN_AUDIT_ACTIONS = Object.freeze({
-  accountConfirm: 'account.confirm'
+  accountConfirm: 'account.confirm',
+  accountDelete: 'account.delete'
 });
 
 export const ADMIN_AUDIT_OUTCOMES = Object.freeze({

@@ -10,7 +10,7 @@ import {
   Spinner,
   Table
 } from 'react-bootstrap';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 import { useI18n } from '../app/providers.jsx';
 import { fetchUsers } from '../api/usersApi.js';
@@ -26,6 +26,10 @@ const roleOptions = ['', 'P', 'A', 'S'];
 
 function UsersPage() {
   const { locale, t } = useI18n();
+  const location = useLocation();
+  const navigate = useNavigate();
+  // Set by the account page after it deleted an account.
+  const [accountDeleted, setAccountDeleted] = useState(Boolean(location.state?.accountDeleted));
   const roleLabel = (roleCode) => {
     const translationKey = `roles.${roleCode}`;
     const translation = t(translationKey);
@@ -87,6 +91,14 @@ function UsersPage() {
       isMounted = false;
     };
   }, [keywordsFilter, roleFilter, statusFilter, sort, page]);
+
+  // The notice is shown once: going back to this entry or reloading the page
+  // does not show it again.
+  useEffect(() => {
+    if (location.state?.accountDeleted) {
+      navigate(`${location.pathname}${location.search}`, { replace: true, state: null });
+    }
+  }, [location.pathname, location.search, location.state, navigate]);
 
   const paginationItems = useMemo(() => {
     const items = [];
@@ -184,6 +196,16 @@ function UsersPage() {
           </Row>
         </Form>
 
+        {accountDeleted ? (
+          <Alert
+            variant="success"
+            dismissible
+            onClose={() => setAccountDeleted(false)}
+            data-testid="account-deleted-notice"
+          >
+            {t('pages.users.accountDeleted')}
+          </Alert>
+        ) : null}
         {error && <Alert variant="danger">{error}</Alert>}
 
         {loading ? (

@@ -13,7 +13,8 @@ function toQueryString(params) {
 }
 
 // Errors thrown for a failed response carry `code`: the backend `error`
-// value (for example PASSKEY_REQUIRED) or SESSION_EXPIRED.
+// value (for example PASSKEY_REQUIRED) or SESSION_EXPIRED, and `body`, the
+// parsed response, for the details some refusals add.
 export async function parseJson(response) {
   const contentType = response.headers.get('content-type') || '';
   const json = contentType.includes('application/json')
@@ -27,7 +28,7 @@ export async function parseJson(response) {
 
   if (!response.ok) {
     const message = json.error || 'Request failed';
-    throw Object.assign(new Error(message), { code: message });
+    throw Object.assign(new Error(message), { code: message, body: json });
   }
 
   return json;
@@ -115,6 +116,21 @@ export async function triggerPasswordReset(userId, payload) {
 export async function confirmAccount(userId, payload) {
   const response = await fetch(`/mng/api/users/${userId}/confirm-account`, {
     method: 'POST',
+    credentials: 'include',
+    headers: await mutatingJsonHeaders(),
+    body: JSON.stringify(payload)
+  });
+
+  return parseJson(response);
+}
+
+// Deletes an account that was never activated. A refusal rejects with code
+// ACCOUNT_NOT_DELETABLE, ACCOUNT_CHANGED or ACCOUNT_REFERENCED; for the last
+// one, `body.referenced_by` names the table and `body.reference_category`
+// the kind of data.
+export async function deleteAccount(userId, payload) {
+  const response = await fetch(`/mng/api/users/${userId}`, {
+    method: 'DELETE',
     credentials: 'include',
     headers: await mutatingJsonHeaders(),
     body: JSON.stringify(payload)
