@@ -146,7 +146,9 @@ test("V29: a failing service is retried with a growing backoff until it confirms
         [polyadic.status, polyadic.attempts, polyadic.last_error, polyadic.completed],
         ["done", 3, null, true]
     );
-    assert.deepEqual(registry.dispatched.map(entry => entry[1]), [
+    // UPDATE ... RETURNING does not keep the claim's order, so the first
+    // attempt may send either service first.
+    assert.deepEqual(registry.dispatched.map(entry => entry[1]).sort(), [
         "argumentation-tutor-system",
         "polyadic-devils-advocate",
         "polyadic-devils-advocate",
