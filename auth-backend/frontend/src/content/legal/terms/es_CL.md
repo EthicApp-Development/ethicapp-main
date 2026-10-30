@@ -26,6 +26,20 @@ El usuario es responsable de:
 
 En caso de uso indebido o sospecha de acceso no autorizado, el usuario deberá notificarlo a los responsables de la plataforma.
 
+### Cierre de la cuenta
+
+El usuario puede solicitar el cierre de su cuenta por los medios indicados en la [Política de Privacidad](/privacy). Al cerrarse la cuenta, esta se desactiva y EthicApp anonimiza los datos personales del usuario. Las actividades en que el usuario participó se conservan, asociadas a la cuenta anonimizada.
+
+Cuando la cuenta pertenece a un docente:
+
+- Las actividades que el docente mantenga abiertas se finalizan antes del cierre
+- Los casos y diseños privados que no se hayan usado en ninguna actividad ni hayan sido copiados se eliminan
+- Los demás casos y diseños, y las actividades, se transfieren a otro docente que designen los responsables de la plataforma o permanecen asociados a la cuenta anonimizada
+- Se conserva la atribución de autoría de sus casos y diseños, incluida la de las copias realizadas por otros docentes, conforme lo exigen las licencias de ese contenido
+- Los textos y documentos PDF de los casos que mencionan al docente se conservan sin cambios, porque EthicApp no puede transformar ese contenido
+
+El docente acepta que, después del cierre de su cuenta, su nombre permanezca en la atribución de autoría de sus casos y diseños y en el contenido de los casos que lo mencionan.
+
 ## 4. Uso adecuado y contenido generado
 
 El usuario se compromete a que cualquier contenido generado en la plataforma:

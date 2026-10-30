@@ -42,12 +42,47 @@ Siempre que sea posible, los datos utilizados en investigación serán tratados 
 
 ## 5. Conservación de los datos
 
-Las cuentas de usuario y todos los datos asociados serán eliminados periódicamente en las siguientes fechas:
+### Anonimización periódica de cuentas de estudiantes
+
+Las cuentas de estudiantes se anonimizan periódicamente en las siguientes fechas:
 
 - 1 de enero
 - 1 de julio
 
-Sin perjuicio de ello, el sistema mantiene copias de seguridad diarias de los datos, con un período máximo de conservación de una semana.
+Al anonimizarse la cuenta de un estudiante:
+
+- La cuenta se desactiva y sus sesiones abiertas dejan de ser válidas
+- Se anonimizan sus datos personales, como el nombre, los apellidos, el correo electrónico, el identificador personal y el género
+- Sus respuestas escritas se sustituyen por un texto de reemplazo
+- Se solicita a los servicios de inteligencia artificial de la plataforma la supresión de los textos del estudiante que conservan
+- Las actividades y los registros pedagógicos se conservan, asociados a la cuenta anonimizada
+
+Para volver a usar la plataforma, el estudiante debe crear una cuenta nueva.
+
+Las cuentas de docentes se conservan hasta que se solicita su cierre.
+
+### Cierre de la cuenta a solicitud
+
+Estudiantes y docentes pueden solicitar en cualquier momento el cierre de su cuenta al contacto de privacidad indicado en la sección 1.
+
+El cierre de la cuenta de un estudiante tiene los mismos efectos que la anonimización periódica.
+
+El cierre de la cuenta de un docente tiene los siguientes efectos:
+
+- Las actividades que el docente mantenga abiertas se finalizan antes del cierre
+- La cuenta se desactiva y se anonimizan sus datos personales, incluidos los correos electrónicos de autor registrados en sus casos y diseños
+- Los mensajes que haya escrito en los chats de las actividades se sustituyen por un texto de reemplazo
+- Los casos y diseños privados que no se hayan usado en ninguna actividad ni hayan sido copiados se eliminan
+- Los demás casos y diseños, y las actividades con las respuestas de sus estudiantes, se transfieren a otro docente que designen los responsables de la plataforma o permanecen asociados a la cuenta anonimizada
+- El nombre del docente se conserva en la atribución de autoría de sus casos y diseños, incluida la de las copias realizadas por otros docentes, porque las licencias de ese contenido la exigen
+- Los textos y documentos PDF de los casos que mencionan al docente se conservan sin cambios, porque EthicApp no puede transformar ese contenido, según establecen los [Términos de Uso](/terms)
+- Se solicita a los servicios de inteligencia artificial de la plataforma la supresión de los textos del docente que conservan
+
+La supresión en los servicios de inteligencia artificial y la eliminación de los archivos de los materiales eliminados se completan en segundo plano, después del cierre de la cuenta.
+
+### Copias de seguridad
+
+Sin perjuicio de lo anterior, el sistema mantiene copias de seguridad diarias de los datos, con un período máximo de conservación de una semana.
 
 ## 6. Ubicación y almacenamiento de los datos
 

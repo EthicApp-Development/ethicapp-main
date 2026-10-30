@@ -144,6 +144,12 @@ run_cases() {
     "${api[@]}" "${valid[@]}" --request POST "$base/api/admin/user-erasure/users/12/retry"
   check "internal user erasure retry, other letter case" 404 text/html 'X-Request-Id:' \
     "${api[@]}" "${valid[@]}" --request POST "$base/api/Admin/User-Erasure/users/12/retry"
+  check "teacher open activities count is not served" 404 text/html 'X-Request-Id:' \
+    "${api[@]}" "${valid[@]}" "$base/api/admin/users/12/open-activities"
+  check "finishing a teacher's activities is not served" 404 text/html 'X-Request-Id:' \
+    "${api[@]}" "${valid[@]}" --request POST "$base/api/admin/users/12/finish-activities"
+  check "finishing a teacher's activities, other letter case" 404 text/html 'X-Request-Id:' \
+    "${api[@]}" "${valid[@]}" --request POST "$base/API/Admin/Users/12/finish-activities"
   # Impersonation stop stays proxied: ethicapp is down here, hence 502.
   check "impersonation stop is still proxied" 502 application/json '{"status":"unavailable"}' \
     "${api[@]}" "${valid[@]}" --request POST "$base/api/admin/impersonation/stop"
