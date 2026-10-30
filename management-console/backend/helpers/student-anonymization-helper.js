@@ -2,9 +2,32 @@ import {
     eraseExternalServicePayloads,
     recordUserErasureRequests,
 } from "./student-ai-service-data-helper.js";
+import {
+    profileImageDeletionEntries,
+    recordUploadDeletionRequests,
+} from "./upload-deletion-helper.js";
+
+// The per-account anonymization step and the runs that record it. The
+// scheduled job anonymizes students with it; the management console uses
+// the same step when an administrator forgets a student (#876) or a teacher
+// (#877). The file keeps its historical name, which the job and the runbook
+// use.
 
 const DEFAULT_PLACEHOLDER_TEXT = "******";
 const STUDENT_ROLE = "A";
+const TEACHER_ROLE = "P";
+
+// The anonymous identity of each role the step accepts.
+const ANONYMOUS_IDENTITY_LABELS = Object.freeze({
+    [STUDENT_ROLE]: { firstname: "Anonymous", lastname: "Student", emailPrefix: "anon-student" },
+    [TEACHER_ROLE]: { firstname: "Former", lastname: "Teacher", emailPrefix: "anon-teacher" },
+});
+
+// The event message of an account the step skips, by role.
+const SKIPPED_MESSAGES = Object.freeze({
+    [STUDENT_ROLE]: "Account was already anonymized or is no longer a student.",
+    [TEACHER_ROLE]: "Account was already anonymized or is no longer a teacher.",
+});
 
 function parseBoolean(value) {
     return String(value || "").trim().toLowerCase() === "true";
@@ -37,20 +60,43 @@ function parseStudentAnonymizationOptions(argv = [], env = process.env) {
     };
 }
 
-function buildAnonymousStudentIdentity(userId) {
+function anonymousIdentityLabels(role) {
+    const labels = ANONYMOUS_IDENTITY_LABELS[role];
+
+    if (!labels) {
+        throw new Error(`Accounts with role ${role} cannot be anonymized.`);
+    }
+
+    return labels;
+}
+
+// The values that replace an account's identity: "Anonymous Student 42" for
+// a student, "Former Teacher 42" for a teacher. The email is in the reserved
+// .invalid domain, so it reaches no one and never collides with a real
+// account.
+function buildAnonymousIdentity(role, userId) {
     const normalizedUserId = Number(userId);
+    const labels = anonymousIdentityLabels(role);
 
     if (!Number.isInteger(normalizedUserId) || normalizedUserId <= 0) {
         throw new Error("A positive integer user id is required to build an anonymous identity.");
     }
 
     return {
-        name: `Anonymous Student ${normalizedUserId}`,
-        firstname: "Anonymous",
-        lastname: `Student ${normalizedUserId}`,
-        email: `anon-student-${normalizedUserId}@anonymous.invalid`,
+        name: `${labels.firstname} ${labels.lastname} ${normalizedUserId}`,
+        firstname: labels.firstname,
+        lastname: `${labels.lastname} ${normalizedUserId}`,
+        email: `${labels.emailPrefix}-${normalizedUserId}@anonymous.invalid`,
         rut: `ANON-${normalizedUserId}`,
     };
+}
+
+function buildAnonymousStudentIdentity(userId) {
+    return buildAnonymousIdentity(STUDENT_ROLE, userId);
+}
+
+function buildAnonymousTeacherIdentity(userId) {
+    return buildAnonymousIdentity(TEACHER_ROLE, userId);
 }
 
 function createDefaultLogger(logger = console) {
@@ -85,7 +131,12 @@ async function selectCandidateStudents(client) {
     return result.rows;
 }
 
+// `options.targetRole` is the role of the accounts the run anonymizes: `A`,
+// the default and always for the scheduled job, or `P` (V32).
 async function createAnonymizationRun(client, options, totalAccounts) {
+    const targetRole = options.targetRole || STUDENT_ROLE;
+    anonymousIdentityLabels(targetRole);
+
     const result = await client.query(
         `
             INSERT INTO student_anonymization_runs
@@ -97,7 +148,7 @@ async function createAnonymizationRun(client, options, totalAccounts) {
         [
             options.dryRun,
             options.placeholderText,
-            STUDENT_ROLE,
+            targetRole,
             totalAccounts,
             options.triggeredBy,
             options.processName,
@@ -177,9 +228,23 @@ async function recordFailedEvent(pool, runId, userId, error) {
 // the management console runs it in the transaction that also writes the
 // run and the administrator's audit row (account-forgetting.service.js).
 //
-// Resolves to { status: 'skipped' } when the account is no longer an
-// unanonymized student, or { status: 'succeeded', counts }.
-async function anonymizeStudentAccountInTransaction(client, runId, user, options) {
+// `options.targetRole` is the role the account must still have: `A` (the
+// default) or `P`. The step is the same for both roles. It replaces the
+// account's identity with buildAnonymousIdentity(role), disables it, ends
+// its sessions (session_version), deletes its credentials (password, reset
+// tokens, passkeys), replaces the text it wrote with the placeholder, erases
+// the strings of its AI service payloads, and records the AI Additions
+// erasure requests and the deletion of its profile images, which ethicapp
+// processes in the background. A teacher's materials are handled by the
+// caller, before the step (teacher-materials-helper.js).
+//
+// Resolves to { status: 'skipped' } when the account no longer has the role
+// or is already anonymized, or { status: 'succeeded', counts,
+// erasureServiceIds }.
+async function anonymizeAccountInTransaction(client, runId, user, options) {
+    const targetRole = options.targetRole || STUDENT_ROLE;
+    const identity = buildAnonymousIdentity(targetRole, user.id);
+
     await client.query(
         `
             INSERT INTO student_anonymization_events
@@ -192,14 +257,14 @@ async function anonymizeStudentAccountInTransaction(client, runId, user, options
 
     const currentUserResult = await client.query(
         `
-            SELECT id, mail
+            SELECT id, mail, profile_image_path, profile_image_topbar_path
             FROM users
             WHERE id = $1
               AND role = $2
               AND anonymized_at IS NULL
             FOR UPDATE
         `,
-        [user.id, STUDENT_ROLE]
+        [user.id, targetRole]
     );
 
     if (currentUserResult.rowCount === 0) {
@@ -207,18 +272,17 @@ async function anonymizeStudentAccountInTransaction(client, runId, user, options
             `
                 UPDATE student_anonymization_events
                 SET status = 'skipped',
-                    message = 'Account was already anonymized or is no longer a student.',
+                    message = $3,
                     finished_at = NOW()
                 WHERE run_id = $1
                   AND user_id = $2
             `,
-            [runId, user.id]
+            [runId, user.id, SKIPPED_MESSAGES[targetRole]]
         );
         return { status: "skipped" };
     }
 
     const currentUser = currentUserResult.rows[0];
-    const identity = buildAnonymousStudentIdentity(user.id);
 
     const differentialSelectionResult = await client.query(
         `
@@ -280,6 +344,14 @@ async function anonymizeStudentAccountInTransaction(client, runId, user, options
         [currentUser.mail]
     );
 
+    const passkeyResult = await client.query(
+        `
+            DELETE FROM user_passkeys
+            WHERE user_id = $1
+        `,
+        [user.id]
+    );
+
     await client.query(
         `
             UPDATE users
@@ -312,7 +384,16 @@ async function anonymizeStudentAccountInTransaction(client, runId, user, options
         ]
     );
 
-    // AI Additions is asked to forget the student after the commit, by
+    // The files of the profile images whose paths were just cleared. ethicapp
+    // deletes them in the background (V32).
+    const profileImageFiles = await recordUploadDeletionRequests(
+        client,
+        user.id,
+        runId,
+        profileImageDeletionEntries(currentUser.profile_image_path, currentUser.profile_image_topbar_path)
+    );
+
+    // AI Additions is asked to forget the account after the commit, by
     // ethicapp, in the background.
     const erasureServiceIds = await recordUserErasureRequests(client, user.id, runId);
 
@@ -325,6 +406,8 @@ async function anonymizeStudentAccountInTransaction(client, runId, user, options
         externalServiceJobs: externalPayloads.jobs,
         sessionDevices: sessionDeviceResult.rowCount || 0,
         passwordResetTokens: passwordResetResult.rowCount || 0,
+        passkeys: passkeyResult.rowCount || 0,
+        profileImageFiles,
     };
 
     const message = [
@@ -337,6 +420,8 @@ async function anonymizeStudentAccountInTransaction(client, runId, user, options
         `external_service_jobs payloads erased: ${counts.externalServiceJobs}.`,
         `session device values cleared: ${counts.sessionDevices}.`,
         `password reset tokens deleted: ${counts.passwordResetTokens}.`,
+        `passkeys deleted: ${counts.passkeys}.`,
+        `profile image deletions recorded: ${counts.profileImageFiles}.`,
         `AI service erasure requests recorded: ${erasureServiceIds.join(", ")}.`,
     ].join(" ");
 
@@ -353,6 +438,11 @@ async function anonymizeStudentAccountInTransaction(client, runId, user, options
     );
 
     return { status: "succeeded", counts, erasureServiceIds };
+}
+
+// The step for a student, as the scheduled job and #876 call it.
+async function anonymizeStudentAccountInTransaction(client, runId, user, options) {
+    return anonymizeAccountInTransaction(client, runId, user, { ...options, targetRole: STUDENT_ROLE });
 }
 
 async function anonymizeStudentAccount(pool, runId, user, options) {
@@ -435,9 +525,13 @@ async function runStudentAnonymization({ pool, options, logger = console }) {
 export {
     DEFAULT_PLACEHOLDER_TEXT,
     STUDENT_ROLE,
+    TEACHER_ROLE,
+    anonymizeAccountInTransaction,
     anonymizeStudentAccount,
     anonymizeStudentAccountInTransaction,
+    buildAnonymousIdentity,
     buildAnonymousStudentIdentity,
+    buildAnonymousTeacherIdentity,
     createAnonymizationRun,
     finalizeAnonymizationRun,
     parseStudentAnonymizationOptions,

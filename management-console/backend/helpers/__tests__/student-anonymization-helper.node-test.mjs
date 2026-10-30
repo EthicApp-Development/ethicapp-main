@@ -2,7 +2,11 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+    anonymizeAccountInTransaction,
+    buildAnonymousIdentity,
     buildAnonymousStudentIdentity,
+    buildAnonymousTeacherIdentity,
+    createAnonymizationRun,
     parseStudentAnonymizationOptions,
     resolveRunStatus,
     runStudentAnonymization,
@@ -56,7 +60,7 @@ function createQueryHandler({ candidates = [], lockedUsers = candidates } = {}) 
             return { rows: [{ id: 77 }], rowCount: 1 };
         }
 
-        if (sql.includes("SELECT id, mail FROM users WHERE id = $1")) {
+        if (sql.includes("FROM users WHERE id = $1 AND role = $2")) {
             const user = lockedUsers.find(candidate => candidate.id === params[0]);
             return {
                 rows: user ? [user] : [],
@@ -264,4 +268,96 @@ test("runStudentAnonymization dry run records no erasure request", async () => {
 
     assert.equal(pool.client.calls.some(call => call.sql.includes("user_erasure_requests")), false);
     assert.equal(pool.client.calls.some(call => call.sql.includes("external_service_results")), false);
+});
+
+test("buildAnonymousTeacherIdentity names a former teacher (#877)", () => {
+    assert.deepEqual(buildAnonymousTeacherIdentity(42), {
+        name:      "Former Teacher 42",
+        firstname: "Former",
+        lastname:  "Teacher 42",
+        email:     "anon-teacher-42@anonymous.invalid",
+        rut:       "ANON-42",
+    });
+    assert.deepEqual(buildAnonymousIdentity("A", 42), buildAnonymousStudentIdentity(42));
+    assert.throws(() => buildAnonymousIdentity("S", 42), /cannot be anonymized/);
+});
+
+test("the step deletes the account's passkeys and records the deletion of its profile images", async () => {
+    const pool = new FakePool(createQueryHandler({
+        candidates:  [{ id: 5, mail: "student5@example.test" }],
+        lockedUsers: [{
+            id:                        5,
+            mail:                      "student5@example.test",
+            profile_image_path:        "/uploads/user-profiles/5/user-5-original.jpg",
+            profile_image_topbar_path: "/uploads/user-profiles/5/user-5-topbar-64.jpg",
+        }],
+    }));
+
+    await runStudentAnonymization({ pool, options: { dryRun: false }, logger: createSilentLogger() });
+
+    const statements = pool.client.calls.map(call => call.sql);
+    const passkeys = pool.client.calls.find(call => call.sql.startsWith("DELETE FROM user_passkeys"));
+    assert.deepEqual(passkeys.params, [5]);
+    const uploads = pool.client.calls.find(call => call.sql.startsWith("INSERT INTO upload_deletion_requests"));
+    assert.deepEqual(uploads.params, [
+        5,
+        ["user-profiles/5/user-5-original.jpg", "user-profiles/5/user-5-topbar-64.jpg"],
+        [false, false],
+        [0, 0],
+        77,
+    ]);
+    // Both inside the account's transaction.
+    for (const sql of [passkeys.sql, uploads.sql]) {
+        const index = statements.indexOf(sql);
+        assert.ok(index > statements.indexOf("BEGIN") && index < statements.indexOf("COMMIT"));
+    }
+});
+
+test("an account without profile images records no file deletion", async () => {
+    const pool = new FakePool(createQueryHandler({ candidates: [{ id: 5, mail: "student5@example.test" }] }));
+
+    await runStudentAnonymization({ pool, options: { dryRun: false }, logger: createSilentLogger() });
+
+    assert.equal(pool.client.calls.some(call => call.sql.includes("upload_deletion_requests")), false);
+});
+
+test("anonymizeAccountInTransaction anonymizes a teacher as a teacher, in a run of role P", async () => {
+    const client = new FakeClient(createQueryHandler({ lockedUsers: [{ id: 8, mail: "teacher8@example.test" }] }));
+
+    const runId = await createAnonymizationRun(client, {
+        dryRun:          false,
+        placeholderText: "******",
+        triggeredBy:     "admin-user:1",
+        processName:     "mng-console",
+        targetRole:      "P",
+    }, 1);
+    const result = await anonymizeAccountInTransaction(client, runId, { id: 8 }, {
+        placeholderText: "******",
+        targetRole:      "P",
+    });
+
+    assert.equal(result.status, "succeeded");
+    const run = client.calls.find(call => call.sql.startsWith("INSERT INTO student_anonymization_runs"));
+    assert.equal(run.params[2], "P");
+    const lock = client.calls.find(call => call.sql.includes("FROM users WHERE id = $1 AND role = $2"));
+    assert.deepEqual(lock.params, [8, "P"]);
+    const userUpdate = client.calls.find(call => call.sql.includes("UPDATE users SET"));
+    assert.deepEqual(userUpdate.params.slice(0, 5), [
+        "Former Teacher 8", "Former", "Teacher 8", "anon-teacher-8@anonymous.invalid", "ANON-8",
+    ]);
+    assert.ok(client.calls.some(call => call.sql.includes("UPDATE chat SET content = $1")));
+});
+
+test("anonymizeAccountInTransaction skips an account that is no longer a teacher", async () => {
+    const client = new FakeClient(createQueryHandler({ lockedUsers: [] }));
+
+    const result = await anonymizeAccountInTransaction(client, 3, { id: 8 }, {
+        placeholderText: "******",
+        targetRole:      "P",
+    });
+
+    assert.equal(result.status, "skipped");
+    const skipped = client.calls.find(call => call.sql.includes("SET status = 'skipped'"));
+    assert.equal(skipped.params[2], "Account was already anonymized or is no longer a teacher.");
+    assert.equal(client.calls.some(call => call.sql.includes("UPDATE users SET")), false);
 });

@@ -33,7 +33,7 @@ const validEvent = Object.freeze({
 
 describe('admin audit events', () => {
   it('builds the INSERT parameters of a valid event', () => {
-    assert.deepEqual(buildAdminAuditEventParams(validEvent), [7, 'account.confirm', 22, 'succeeded', null]);
+    assert.deepEqual(buildAdminAuditEventParams(validEvent), [7, 'account.confirm', 22, 'succeeded', null, null]);
     assert.deepEqual(
       buildAdminAuditEventParams({
         ...validEvent,
@@ -42,14 +42,24 @@ describe('admin audit events', () => {
         outcome: ADMIN_AUDIT_OUTCOMES.refused,
         reasonCode: 'ACCOUNT_NOT_PENDING'
       }),
-      [7, 'account.confirm', 22, 'refused', 'ACCOUNT_NOT_PENDING']
+      [7, 'account.confirm', 22, 'refused', 'ACCOUNT_NOT_PENDING', null]
     );
+  });
+
+  it('records the role of the target account when given (V32)', () => {
+    assert.deepEqual(
+      buildAdminAuditEventParams({ ...validEvent, action: ADMIN_AUDIT_ACTIONS.accountForget, targetRole: 'P' }),
+      [7, 'account.forget', 22, 'succeeded', null, 'P']
+    );
+    for (const targetRole of ['A', 'S']) {
+      assert.equal(buildAdminAuditEventParams({ ...validEvent, targetRole })[5], targetRole);
+    }
   });
 
   it('accepts an event without a target account', () => {
     assert.deepEqual(
       buildAdminAuditEventParams({ ...validEvent, targetUserId: undefined }),
-      [7, 'account.confirm', null, 'succeeded', null]
+      [7, 'account.confirm', null, 'succeeded', null, null]
     );
   });
 
@@ -63,7 +73,9 @@ describe('admin audit events', () => {
       { ...validEvent, outcome: 'done' },
       { ...validEvent, reasonCode: 'pat@example.com' },
       { ...validEvent, reasonCode: 'Account not pending' },
-      { ...validEvent, reasonCode: 'A'.repeat(65) }
+      { ...validEvent, reasonCode: 'A'.repeat(65) },
+      { ...validEvent, targetRole: 'teacher' },
+      { ...validEvent, targetRole: 'X' }
     ];
 
     for (const event of invalidEvents) {
@@ -83,8 +95,8 @@ describe('admin audit events', () => {
     assert.deepEqual(recorded, { id: 41, occurredAt: '2026-10-29T12:00:00.000Z' });
     assert.equal(executor.calls.length, 1);
     assert.match(executor.calls[0].text, /INSERT INTO admin_audit_events/);
-    assert.match(executor.calls[0].text, /\(admin_user_id, action, target_user_id, outcome, reason_code\)/);
-    assert.deepEqual(executor.calls[0].params, [7, 'account.confirm', 22, 'refused', 'ACCOUNT_NOT_PENDING']);
+    assert.match(executor.calls[0].text, /\(admin_user_id, action, target_user_id, outcome, reason_code, target_role\)/);
+    assert.deepEqual(executor.calls[0].params, [7, 'account.confirm', 22, 'refused', 'ACCOUNT_NOT_PENDING', null]);
   });
 
   it('does not query for an invalid event', async () => {

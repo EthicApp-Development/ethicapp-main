@@ -22,10 +22,10 @@ function summarize(text) {
   const sql = text.replace(/\s+/g, ' ').trim();
   const steps = [
     [/^(BEGIN|COMMIT|ROLLBACK)$/, sql],
-    [/^SELECT id, mail, role, anonymized_at FROM users/, 'SELECT target FOR UPDATE'],
+    [/^SELECT id, mail, role, active, anonymized_at FROM users .* FOR UPDATE$/, 'SELECT target FOR UPDATE'],
     [/^INSERT INTO student_anonymization_runs/, 'INSERT run'],
     [/^INSERT INTO student_anonymization_events/, 'INSERT event'],
-    [/^SELECT id, mail FROM users WHERE id = \$1 AND role = \$2/, 'SELECT student FOR UPDATE'],
+    [/^SELECT id, mail, profile_image_path, profile_image_topbar_path FROM users WHERE id = \$1 AND role = \$2/, 'SELECT student FOR UPDATE'],
     [/^UPDATE differential_selection/, 'UPDATE differential_selection'],
     [/^UPDATE differential_chat/, 'UPDATE differential_chat'],
     [/^UPDATE chat/, 'UPDATE chat'],
@@ -34,6 +34,7 @@ function summarize(text) {
     [/^SELECT id, outbound_payload/, 'SELECT external jobs'],
     [/^UPDATE sesusers/, 'UPDATE sesusers'],
     [/^DELETE FROM pass_reset/, 'DELETE pass_reset'],
+    [/^DELETE FROM user_passkeys/, 'DELETE passkeys'],
     [/^UPDATE users SET name/, 'UPDATE users'],
     [/^INSERT INTO user_erasure_requests/, 'INSERT erasure requests'],
     [/^UPDATE student_anonymization_events SET status = 'succeeded'/, 'UPDATE event succeeded'],
@@ -132,6 +133,7 @@ describe('forgetStudent', () => {
       'SELECT external jobs',
       'UPDATE sesusers',
       'DELETE pass_reset',
+      'DELETE passkeys',
       'UPDATE users',
       'INSERT erasure requests',
       'UPDATE event succeeded',
@@ -144,7 +146,7 @@ describe('forgetStudent', () => {
     assert.deepEqual(run.params, [false, '******', 'A', 1, 'admin-user:7', FORGETTING_PROCESS_NAME]);
     const finalized = pool.clientCalls.find((call) => call.step === 'UPDATE run');
     assert.deepEqual(finalized.params, ['completed', 1, 0, 91]);
-    assert.deepEqual(auditParams(pool.clientCalls), [[7, 'account.forget', 22, 'succeeded', null]]);
+    assert.deepEqual(auditParams(pool.clientCalls), [[7, 'account.forget', 22, 'succeeded', null, 'A']]);
     assert.equal(pool.released, 1);
     assert.deepEqual(pool.poolCalls, []);
   });
@@ -181,7 +183,7 @@ describe('forgetStudent', () => {
       );
 
       assert.deepEqual(steps(pool.clientCalls), ['BEGIN', 'SELECT target FOR UPDATE', 'INSERT audit', 'COMMIT']);
-      assert.deepEqual(auditParams(pool.clientCalls), [[7, 'account.forget', 22, 'refused', code]]);
+      assert.deepEqual(auditParams(pool.clientCalls), [[7, 'account.forget', 22, 'refused', code, 'A']]);
     });
   }
 
@@ -220,7 +222,7 @@ describe('forgetStudent', () => {
 
     assert.equal(steps(pool.clientCalls).at(-1), 'ROLLBACK');
     assert.equal(steps(pool.clientCalls).includes('COMMIT'), false);
-    assert.deepEqual(auditParams(pool.poolCalls), [[7, 'account.forget', 22, 'failed', 'UNEXPECTED_ERROR']]);
+    assert.deepEqual(auditParams(pool.poolCalls), [[7, 'account.forget', 22, 'failed', 'UNEXPECTED_ERROR', 'A']]);
     assert.equal(pool.released, 1);
   });
 });

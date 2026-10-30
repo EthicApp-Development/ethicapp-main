@@ -143,7 +143,7 @@ describe('account deletion service: delete a never-activated account', () => {
     assert.deepEqual(pool.clientCalls[3].params, [STORED_EMAIL]);
     assert.deepEqual(pool.clientCalls[4].params, [22]);
     // The audit row names the administrator and the former id, nothing else.
-    assert.deepEqual(pool.clientCalls[5].params, [7, 'account.delete', 22, 'succeeded', null]);
+    assert.deepEqual(pool.clientCalls[5].params, [7, 'account.delete', 22, 'succeeded', null, null]);
     assert.equal(pool.poolCalls.length, 0);
     assert.equal(pool.released, 1);
   });
@@ -183,7 +183,7 @@ describe('account deletion service: delete a never-activated account', () => {
       );
 
       assert.deepEqual(steps(pool), ['BEGIN', 'SELECT user FOR UPDATE', 'INSERT audit', 'COMMIT']);
-      assert.deepEqual(pool.clientCalls[2].params, [7, 'account.delete', 22, 'refused', 'ACCOUNT_NOT_DELETABLE']);
+      assert.deepEqual(pool.clientCalls[2].params, [7, 'account.delete', 22, 'refused', 'ACCOUNT_NOT_DELETABLE', null]);
       assert.equal(pool.released, 1);
     });
   }
@@ -207,7 +207,7 @@ describe('account deletion service: delete a never-activated account', () => {
       );
 
       assert.deepEqual(steps(pool), ['BEGIN', 'SELECT user FOR UPDATE', 'INSERT audit', 'COMMIT']);
-      assert.deepEqual(pool.clientCalls[2].params, [7, 'account.delete', 22, 'refused', 'ACCOUNT_CHANGED']);
+      assert.deepEqual(pool.clientCalls[2].params, [7, 'account.delete', 22, 'refused', 'ACCOUNT_CHANGED', null]);
     });
   }
 
@@ -234,7 +234,7 @@ describe('account deletion service: delete a never-activated account', () => {
       'INSERT audit',
       'COMMIT'
     ]);
-    assert.deepEqual(pool.clientCalls[3].params, [7, 'account.delete', 22, 'refused', 'REFERENCED_BY_SESUSERS']);
+    assert.deepEqual(pool.clientCalls[3].params, [7, 'account.delete', 22, 'refused', 'REFERENCED_BY_SESUSERS', null]);
   });
 
   it('answers USER_NOT_FOUND for a missing account without recording it', async () => {
@@ -284,7 +284,7 @@ describe('account deletion service: delete a never-activated account', () => {
       'ROLLBACK'
     ]);
     assert.deepEqual(pool.poolCalls.map((call) => call.step), ['INSERT audit']);
-    assert.deepEqual(pool.poolCalls[0].params, [7, 'account.delete', 22, 'failed', 'UNEXPECTED_ERROR']);
+    assert.deepEqual(pool.poolCalls[0].params, [7, 'account.delete', 22, 'failed', 'UNEXPECTED_ERROR', null]);
     assert.equal(pool.released, 1);
   });
 });
