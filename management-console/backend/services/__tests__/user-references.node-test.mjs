@@ -61,7 +61,8 @@ describe('user references', () => {
         'sesusers.uid',
         'student_anonymization_events.user_id',
         'teams.leader',
-        'teamusers.uid'
+        'teamusers.uid',
+        'user_erasure_requests.user_id'
       ]
     );
   });
