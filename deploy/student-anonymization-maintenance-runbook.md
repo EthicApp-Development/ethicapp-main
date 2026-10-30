@@ -116,7 +116,13 @@ scripts/student-anonymization-maintenance.sh execute
 The confirmation variable is required to avoid accidental destructive
 execution. The real run anonymizes eligible student accounts, deactivates them,
 invalidates sessions through `session_version`, anonymizes current free-text
-student responses and student-provided device metadata, and writes audit rows.
+student responses, the strings in their AI service payloads and
+student-provided device metadata, and writes audit rows.
+
+For each anonymized account it also records one pending erasure request per
+AI Additions service (`user_erasure_requests`, V29). ethicapp is stopped
+during the window, so nothing is sent then: ethicapp sends the requests in the
+background after the restore (see "Restore").
 
 ## Post-Run Checks
 
@@ -153,6 +159,24 @@ Confirm:
 - NGINX validates with `nginx -t`.
 - `NGINX_MAINTENANCE_MODE=false` is used for the restored NGINX process.
 - Users can reach the normal login page.
+
+Once ethicapp is running, it sends the run's erasure requests to the AI
+Additions services within a minute, a few at a time. Follow them with:
+
+```sql
+SELECT service_id, status, count(*), max(attempts), max(last_error)
+FROM user_erasure_requests
+WHERE anonymization_run_id = <run id>
+GROUP BY service_id, status;
+```
+
+All of them should end `done`. A request that stays `pending` with attempts
+is being retried, with a backoff of up to six hours, while its service is
+unavailable or the AI Additions connection is missing; it needs no action.
+A `failed` request was refused in a way a retry cannot fix (its
+`last_error` says why); after fixing the cause, retry it from the student's
+page in the management console. The application does not wait for these
+requests, and they do not block the restore.
 
 ## Failure Handling
 

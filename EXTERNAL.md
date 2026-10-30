@@ -218,7 +218,9 @@ on translating EthicApp hook context into service-specific requests.
 
 The management console holds no AI Additions credentials. Its AI services page
 (#817) reads the AI Additions catalog and tests a connection through two
-ethicapp endpoints (#816, `controllers/admin/ai-services.js`). Like the
+ethicapp endpoints (#816, `controllers/admin/ai-services.js`), and its user
+page reads and retries the AI Additions erasure requests of a forgotten
+account through two more (#876, `controllers/admin/user-erasure.js`). Like the
 impersonation start endpoint, they are reached over the internal network only:
 NGINX answers `404` for `/api/admin/` at the edge in any letter case
 (`location ^~ /api/admin/` plus `location ~* ^/api/admin/`), except the exact
@@ -257,6 +259,15 @@ headers); other roles get `403`.
   backslash, whitespace or `.`/`..` segment, a valid host and port, and at
   most 2048 characters; anything else gets `400`. The same rule decides
   whether a stored connection is usable.
+- `GET /api/admin/user-erasure/users/:id` lists the AI Additions erasure
+  requests of an account (`user_erasure_requests`, V29), one per service:
+  `{ ok: true, userId, requests: [{ serviceId, status, attempts, nextAttemptAt, lastAttemptAt, lastError, requestedAt, completedAt }] }`.
+  `status` is `pending`, `done` or `failed`; `lastError` is an upper-case
+  code. An account that was never forgotten has `requests: []`.
+- `POST /api/admin/user-erasure/users/:id/retry` sets every request of the
+  account that is not done back to `pending`, due now and with a fresh
+  backoff, sends them at once, and answers like the status endpoint plus
+  `retried`, how many requests it reset. An invalid id gets `400`.
 
 The issuer step (#834) catches a wrong Keycloak public URL before it is saved.
 Tokens are always requested through `base_url`, so the token step succeeds

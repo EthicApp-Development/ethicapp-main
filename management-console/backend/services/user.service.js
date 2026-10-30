@@ -196,7 +196,7 @@ export async function getUserById(userId, { queryFn = query } = {}) {
   };
 }
 
-export async function updateUserById(userId, payload) {
+export async function updateUserById(userId, payload, { queryFn = query } = {}) {
   const normalizedId = Number(userId);
 
   if (!Number.isInteger(normalizedId) || normalizedId <= 0) {
@@ -226,7 +226,7 @@ export async function updateUserById(userId, payload) {
     throw new Error('EMAIL_CONFIRMATION_MISMATCH');
   }
 
-  const currentResult = await query(
+  const currentResult = await queryFn(
     `
       SELECT id, role, mail, active, anonymized_at
       FROM users
@@ -261,7 +261,7 @@ export async function updateUserById(userId, payload) {
     throw new Error('INVALID_ROLE_TRANSITION');
   }
 
-  const duplicatedEmailResult = await query(
+  const duplicatedEmailResult = await queryFn(
     `
       SELECT id
       FROM users
@@ -278,7 +278,7 @@ export async function updateUserById(userId, payload) {
 
   const fullName = `${firstname} ${lastname}`.trim();
 
-  const updateResult = await query(
+  const updateResult = await queryFn(
     `
       UPDATE users
       SET firstname = $1,
