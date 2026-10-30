@@ -112,7 +112,7 @@ describe('sensitive action translations', () => {
 
   it('defines the dialog texts of each user action', () => {
     for (const locale of [enUS, esCL]) {
-      for (const action of ['save', 'passwordReset', 'impersonation']) {
+      for (const action of ['save', 'confirmAccount', 'passwordReset', 'impersonation']) {
         expect(Object.keys(locale.pages.userShow.confirm[action]).sort()).toEqual(['body', 'confirm', 'title']);
       }
     }

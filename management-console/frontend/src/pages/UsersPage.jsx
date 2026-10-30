@@ -14,6 +14,11 @@ import { Link } from 'react-router-dom';
 
 import { useI18n } from '../app/providers.jsx';
 import { fetchUsers } from '../api/usersApi.js';
+import {
+  ACCOUNT_STATUS_FILTERS,
+  accountStatusBadgeVariant,
+  accountStatusOf
+} from '../components/users/accountStatus.js';
 
 const roleOptions = ['', 'P', 'A', 'S'];
 
@@ -27,9 +32,11 @@ function UsersPage() {
 
   const [keywordsInput, setKeywordsInput] = useState('');
   const [roleInput, setRoleInput] = useState('');
+  const [statusInput, setStatusInput] = useState('');
 
   const [keywordsFilter, setKeywordsFilter] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const [page, setPage] = useState(1);
 
   const [usersResponse, setUsersResponse] = useState({
@@ -52,6 +59,7 @@ function UsersPage() {
         const result = await fetchUsers({
           keywords: keywordsFilter,
           role: roleFilter,
+          status: statusFilter,
           page
         });
 
@@ -74,7 +82,7 @@ function UsersPage() {
     return () => {
       isMounted = false;
     };
-  }, [keywordsFilter, roleFilter, page]);
+  }, [keywordsFilter, roleFilter, statusFilter, page]);
 
   const paginationItems = useMemo(() => {
     const items = [];
@@ -98,6 +106,7 @@ function UsersPage() {
     event.preventDefault();
     setKeywordsFilter(keywordsInput.trim());
     setRoleFilter(roleInput);
+    setStatusFilter(statusInput);
     setPage(1);
   };
 
@@ -112,7 +121,7 @@ function UsersPage() {
 
         <Form onSubmit={handleSubmit} className="mb-3">
           <Row className="g-2 align-items-end">
-            <Col md={7}>
+            <Col md={4}>
               <Form.Group controlId="users-keywords">
                 <Form.Label>{t('filters.search')}</Form.Label>
                 <Form.Control
@@ -135,6 +144,24 @@ function UsersPage() {
                         {t(`roles.${roleCode}`)}
                       </option>
                     ))}
+                </Form.Select>
+              </Form.Group>
+            </Col>
+
+            <Col md={3}>
+              <Form.Group controlId="users-status">
+                <Form.Label>{t('filters.status')}</Form.Label>
+                <Form.Select
+                  value={statusInput}
+                  data-testid="users-status-filter"
+                  onChange={(event) => setStatusInput(event.target.value)}
+                >
+                  <option value="">{t('filters.allStatuses')}</option>
+                  {ACCOUNT_STATUS_FILTERS.map((status) => (
+                    <option key={status} value={status}>
+                      {t(`pages.users.status.${status}`)}
+                    </option>
+                  ))}
                 </Form.Select>
               </Form.Group>
             </Col>
@@ -183,13 +210,9 @@ function UsersPage() {
                       <td>{user.email}</td>
                       <td>{roleLabel(user.role)}</td>
                       <td>
-                        {!user.emailConfirmed ? (
-                          <span className="badge text-bg-warning">{t('pages.users.status.pending')}</span>
-                        ) : user.active ? (
-                          <span className="badge text-bg-success">{t('pages.users.status.active')}</span>
-                        ) : (
-                          <span className="badge text-bg-secondary">{t('pages.users.status.inactive')}</span>
-                        )}
+                        <span className={`badge text-bg-${accountStatusBadgeVariant(accountStatusOf(user))}`}>
+                          {t(`pages.users.status.${accountStatusOf(user)}`)}
+                        </span>
                       </td>
                       <td>
                         <Button as={Link} to={`/users/${user.id}`} size="sm" variant="outline-secondary">

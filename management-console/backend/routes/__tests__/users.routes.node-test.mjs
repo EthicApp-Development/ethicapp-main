@@ -89,7 +89,295 @@ function createImpersonationRouter(overrides = {}) {
   };
 }
 
+function createConfirmAccountRouter(overrides = {}) {
+  const calls = {
+    recaptcha: [],
+    password: [],
+    passkey: [],
+    confirm: []
+  };
+
+  const router = createUsersRouter({
+    verifyRecaptchaTokenService: async (payload) => {
+      calls.recaptcha.push(payload);
+      return true;
+    },
+    verifyAdminPasswordWithAuthBackendService: async (payload) => {
+      calls.password.push(payload);
+      return true;
+    },
+    verifyAdminPasskeyWithAuthBackendService: async (payload) => {
+      calls.passkey.push(payload);
+      return true;
+    },
+    listAdminPasskeysWithAuthBackendService: async () => ({ passkeys: [] }),
+    confirmPendingAccountService: async (payload) => {
+      calls.confirm.push(payload);
+      return { id: payload.userId, status: 'active' };
+    },
+    ...overrides
+  });
+
+  return { calls, router };
+}
+
+async function postConfirmAccount(baseUrl, userId, body) {
+  return fetch(`${baseUrl}/mng/api/users/${userId}/confirm-account`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Cookie: 'auth.sid=auth-session',
+      'Accept-Language': 'es-CL'
+    },
+    body: JSON.stringify(body)
+  });
+}
+
+function lifecycleError(code, extra = {}) {
+  return Object.assign(new Error(code), { code, ...extra });
+}
+
+describe('management-console confirm-account route', () => {
+  it('confirms a pending account after the step-up confirmation, as the signed-in administrator', async () => {
+    const { calls, router } = createConfirmAccountRouter();
+
+    await withServer(createTestApp(router), async (baseUrl) => {
+      const response = await postConfirmAccount(baseUrl, 22, {
+        expected_email: 'stored@example.test',
+        admin_password: 'admin-secret',
+        recaptcha_token: 'test-recaptcha-token'
+      });
+
+      assert.equal(response.status, 200);
+      assert.deepEqual(await response.json(), { id: 22, status: 'active' });
+    });
+
+    assert.equal(calls.recaptcha.length, 1);
+    assert.equal(calls.password.length, 1);
+    assert.deepEqual(calls.confirm, [
+      { adminUserId: 7, userId: 22, expectedEmail: 'stored@example.test' }
+    ]);
+  });
+
+  it('passes a missing expected email on as null, for the service to refuse', async () => {
+    const { calls, router } = createConfirmAccountRouter();
+
+    await withServer(createTestApp(router), async (baseUrl) => {
+      const response = await postConfirmAccount(baseUrl, 22, {
+        admin_password: 'admin-secret',
+        recaptcha_token: 'test-recaptcha-token'
+      });
+
+      assert.equal(response.status, 200);
+    });
+
+    assert.deepEqual(calls.confirm, [{ adminUserId: 7, userId: 22, expectedEmail: null }]);
+  });
+
+  it('rejects an expected email that is not a string before the step-up confirmation', async () => {
+    const { calls, router } = createConfirmAccountRouter();
+
+    await withServer(createTestApp(router), async (baseUrl) => {
+      const response = await postConfirmAccount(baseUrl, 22, {
+        expected_email: ['stored@example.test'],
+        admin_password: 'admin-secret',
+        recaptcha_token: 'test-recaptcha-token'
+      });
+
+      assert.equal(response.status, 400);
+      assert.deepEqual(await response.json(), { error: 'INVALID_EXPECTED_EMAIL' });
+    });
+
+    assert.equal(calls.password.length, 0);
+    assert.equal(calls.confirm.length, 0);
+  });
+
+  it('answers 409 ACCOUNT_CHANGED when the account no longer has the approved email', async () => {
+    const { router } = createConfirmAccountRouter({
+      confirmPendingAccountService: async () => {
+        throw lifecycleError('ACCOUNT_CHANGED');
+      }
+    });
+
+    await withServer(createTestApp(router), async (baseUrl) => {
+      const response = await postConfirmAccount(baseUrl, 22, {
+        expected_email: 'edited-but-unsaved@example.test',
+        admin_password: 'admin-secret',
+        recaptcha_token: 'test-recaptcha-token'
+      });
+
+      assert.equal(response.status, 409);
+      assert.deepEqual(await response.json(), { error: 'ACCOUNT_CHANGED' });
+    });
+  });
+
+  it('accepts a passkey confirmation', async () => {
+    const { calls, router } = createConfirmAccountRouter({
+      listAdminPasskeysWithAuthBackendService: async () => ({ passkeys: [{ id: 4 }] })
+    });
+
+    await withServer(createTestApp(router), async (baseUrl) => {
+      const response = await postConfirmAccount(baseUrl, 22, {
+        passkey_assertion: { id: 'credential-123' }
+      });
+
+      assert.equal(response.status, 200);
+    });
+
+    assert.equal(calls.passkey.length, 1);
+    assert.equal(calls.password.length, 0);
+    assert.equal(calls.confirm.length, 1);
+  });
+
+  it('does not confirm when the step-up confirmation is refused', async () => {
+    const { calls, router } = createConfirmAccountRouter({
+      verifyAdminPasswordWithAuthBackendService: async () => false
+    });
+
+    await withServer(createTestApp(router), async (baseUrl) => {
+      const response = await postConfirmAccount(baseUrl, 22, {
+        admin_password: 'wrong',
+        recaptcha_token: 'test-recaptcha-token'
+      });
+
+      assert.equal(response.status, 401);
+      assert.deepEqual(await response.json(), { error: 'Invalid administrator password' });
+    });
+
+    assert.equal(calls.confirm.length, 0);
+  });
+
+  it('requires a passkey when the administrator has one', async () => {
+    const { calls, router } = createConfirmAccountRouter({
+      listAdminPasskeysWithAuthBackendService: async () => ({ passkeys: [{ id: 4 }] })
+    });
+
+    await withServer(createTestApp(router), async (baseUrl) => {
+      const response = await postConfirmAccount(baseUrl, 22, {
+        admin_password: 'admin-secret',
+        recaptcha_token: 'test-recaptcha-token'
+      });
+
+      assert.equal(response.status, 401);
+      assert.deepEqual(await response.json(), { error: 'PASSKEY_REQUIRED' });
+    });
+
+    assert.equal(calls.password.length, 0);
+    assert.equal(calls.confirm.length, 0);
+  });
+
+  it('rejects an invalid user id before the step-up confirmation', async () => {
+    const { calls, router } = createConfirmAccountRouter();
+
+    await withServer(createTestApp(router), async (baseUrl) => {
+      const response = await postConfirmAccount(baseUrl, 'abc', {
+        admin_password: 'admin-secret',
+        recaptcha_token: 'test-recaptcha-token'
+      });
+
+      assert.equal(response.status, 400);
+      assert.deepEqual(await response.json(), { error: 'INVALID_USER_ID' });
+    });
+
+    assert.equal(calls.recaptcha.length, 0);
+    assert.equal(calls.password.length, 0);
+    assert.equal(calls.confirm.length, 0);
+  });
+
+  it('answers 409 ACCOUNT_NOT_PENDING with the current status for an account that is not pending', async () => {
+    for (const accountStatus of ['active', 'inactive', 'anonymized']) {
+      const { router } = createConfirmAccountRouter({
+        confirmPendingAccountService: async () => {
+          throw lifecycleError('ACCOUNT_NOT_PENDING', { accountStatus });
+        }
+      });
+
+      await withServer(createTestApp(router), async (baseUrl) => {
+        const response = await postConfirmAccount(baseUrl, 22, {
+          admin_password: 'admin-secret',
+          recaptcha_token: 'test-recaptcha-token'
+        });
+
+        assert.equal(response.status, 409);
+        assert.deepEqual(await response.json(), { error: 'ACCOUNT_NOT_PENDING', status: accountStatus });
+      });
+    }
+  });
+
+  it('answers 404 USER_NOT_FOUND for a missing account', async () => {
+    const { router } = createConfirmAccountRouter({
+      confirmPendingAccountService: async () => {
+        throw lifecycleError('USER_NOT_FOUND');
+      }
+    });
+
+    await withServer(createTestApp(router), async (baseUrl) => {
+      const response = await postConfirmAccount(baseUrl, 404, {
+        admin_password: 'admin-secret',
+        recaptcha_token: 'test-recaptcha-token'
+      });
+
+      assert.equal(response.status, 404);
+      assert.deepEqual(await response.json(), { error: 'USER_NOT_FOUND' });
+    });
+  });
+
+  it('passes unexpected failures to the error handler', async () => {
+    const { router } = createConfirmAccountRouter({
+      confirmPendingAccountService: async () => {
+        throw new Error('deadlock detected');
+      }
+    });
+
+    await withServer(createTestApp(router), async (baseUrl) => {
+      const response = await postConfirmAccount(baseUrl, 22, {
+        admin_password: 'admin-secret',
+        recaptcha_token: 'test-recaptcha-token'
+      });
+
+      assert.equal(response.status, 500);
+    });
+  });
+
+  it('is behind the management role middleware', async () => {
+    const { calls, router } = createConfirmAccountRouter({
+      requireManagementRoleMiddleware: (req, res) => res.status(403).json({ error: 'Forbidden' })
+    });
+
+    await withServer(createTestApp(router), async (baseUrl) => {
+      const response = await postConfirmAccount(baseUrl, 22, {
+        admin_password: 'admin-secret',
+        recaptcha_token: 'test-recaptcha-token'
+      });
+
+      assert.equal(response.status, 403);
+    });
+
+    assert.equal(calls.password.length, 0);
+    assert.equal(calls.confirm.length, 0);
+  });
+});
+
 describe('management-console user routes', () => {
+  it('passes the status filter to the users list', async () => {
+    const listCalls = [];
+    const router = createUsersRouter({
+      listUsersService: async (payload) => {
+        listCalls.push(payload);
+        return { items: [], total: 0 };
+      }
+    });
+
+    await withServer(createTestApp(router), async (baseUrl) => {
+      const response = await fetch(`${baseUrl}/mng/api/users?status=pending&role=A&page=2`);
+      assert.equal(response.status, 200);
+    });
+
+    assert.deepEqual(listCalls, [
+      { keywords: '', role: 'A', status: 'pending', page: 2, pageSize: 10 }
+    ]);
+  });
+
   it('updates account active state after admin confirmation', async () => {
     const calls = {
       password: [],

@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Alert, Button, Card, Col, Form, Row, Spinner } from 'react-bootstrap';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import { useI18n } from '../app/providers.jsx';
 import { fetchProfile } from '../api/profileApi.js';
 import {
+  confirmAccount,
   fetchUserById,
   impersonateProfessor,
   triggerPasswordReset,
@@ -12,6 +13,30 @@ import {
 } from '../api/usersApi.js';
 import SensitiveActionConfirmModal from '../components/common/SensitiveActionConfirmModal.jsx';
 import { useSensitiveActionConfirmation } from '../components/common/useSensitiveActionConfirmation.js';
+import AccountStatusSummary from '../components/users/AccountStatusSummary.jsx';
+import {
+  ACCOUNT_STATUSES,
+  accountActionErrorKey,
+  accountStatusOf
+} from '../components/users/accountStatus.js';
+
+function formFromUser(user) {
+  return {
+    firstname: user.firstname || '',
+    lastname: user.lastname || '',
+    sex: user.sex || 'O',
+    email: user.email || '',
+    email_confirmation: user.email || '',
+    role: user.role || 'A',
+    active: user.active !== false,
+    emailConfirmed: user.emailConfirmed !== false
+  };
+}
+
+// Form fields an administrator can edit; any difference from the loaded
+// account is an unsaved change.
+const EDITABLE_FIELDS = Object.freeze(['firstname', 'lastname', 'sex', 'email', 'email_confirmation', 'role', 'active']);
+const CONFIRM_ACCOUNT_HINT_ID = 'confirm-account-unsaved-hint';
 
 function UserShowPage() {
   const { id } = useParams();
@@ -24,8 +49,12 @@ function UserShowPage() {
   const [resetMessage, setResetMessage] = useState('');
   const [lastLoginAt, setLastLoginAt] = useState(null);
   const [currentProfile, setCurrentProfile] = useState(null);
-  // Saving, password recovery and impersonation ask for the administrator's
-  // passkey, or password and reCAPTCHA, in a dialog.
+  const [accountStatus, setAccountStatus] = useState(ACCOUNT_STATUSES.active);
+  // The account as last loaded from the server. Dialogs name the account
+  // from it, never from the form, which may hold unsaved edits.
+  const [savedForm, setSavedForm] = useState(null);
+  // Saving, confirming the account, password recovery and impersonation ask
+  // for the administrator's passkey, or password and reCAPTCHA, in a dialog.
   const { requestConfirmation, modalProps } = useSensitiveActionConfirmation();
 
   const [form, setForm] = useState({
@@ -42,6 +71,27 @@ function UserShowPage() {
     currentProfile?.role === 'S' &&
     form.role === 'S' &&
     Number(currentProfile.id) === Number(id);
+  const isPendingAccount = accountStatus === ACCOUNT_STATUSES.pending;
+  const hasUnsavedChanges = savedForm !== null &&
+    EDITABLE_FIELDS.some((fieldName) => form[fieldName] !== savedForm[fieldName]);
+
+  const applyUser = useCallback((user) => {
+    const persistedForm = formFromUser(user);
+    setForm(persistedForm);
+    setSavedForm(persistedForm);
+    setLastLoginAt(user.lastLoginAt || null);
+    setAccountStatus(accountStatusOf(user));
+  }, []);
+
+  // Reloads the account after an action, so the page shows what was saved.
+  // A failure keeps the page as it is; the action's own message stands.
+  const reloadUser = useCallback(async () => {
+    try {
+      applyUser(await fetchUserById(id));
+    } catch {
+      // The next visit to the page loads the account again.
+    }
+  }, [applyUser, id]);
 
   useEffect(() => {
     let isMounted = true;
@@ -60,17 +110,7 @@ function UserShowPage() {
           return;
         }
 
-        setForm({
-          firstname: user.firstname || '',
-          lastname: user.lastname || '',
-          sex: user.sex || 'O',
-          email: user.email || '',
-          email_confirmation: user.email || '',
-          role: user.role || 'A',
-          active: user.active !== false,
-          emailConfirmed: user.emailConfirmed !== false
-        });
-        setLastLoginAt(user.lastLoginAt || null);
+        applyUser(user);
         setCurrentProfile(profileResult);
       } catch (requestError) {
         if (isMounted) {
@@ -88,7 +128,7 @@ function UserShowPage() {
     return () => {
       isMounted = false;
     };
-  }, [id]);
+  }, [applyUser, id]);
 
   function onFieldChange(fieldName, value) {
     setForm((currentForm) => ({
@@ -97,12 +137,19 @@ function UserShowPage() {
     }));
   }
 
-  const accountName = `${form.firstname} ${form.lastname}`.trim() || form.email;
+  function onDiscardChanges() {
+    if (savedForm) {
+      setForm(savedForm);
+    }
+  }
+
+  const savedEmail = savedForm?.email || '';
+  const accountName = `${savedForm?.firstname || ''} ${savedForm?.lastname || ''}`.trim() || savedEmail;
 
   function confirmAction(action, request) {
     return requestConfirmation({
       title: t(`pages.userShow.confirm.${action}.title`),
-      description: t(`pages.userShow.confirm.${action}.body`, { name: accountName, email: form.email }),
+      description: t(`pages.userShow.confirm.${action}.body`, { name: accountName, email: savedEmail }),
       confirmLabel: t(`pages.userShow.confirm.${action}.confirm`),
       action: request
     });
@@ -128,9 +175,41 @@ function UserShowPage() {
       const outcome = await confirmAction('save', (stepUp) => updateUser(id, { ...form, ...stepUp }));
       if (outcome.confirmed) {
         setSuccess(t('pages.userShow.saveSuccess'));
+        await reloadUser();
       }
     } catch (requestError) {
       setError(requestError.message || t('pages.userShow.saveError'));
+    }
+  }
+
+  async function onConfirmAccount() {
+    if (!isPendingAccount || hasUnsavedChanges) {
+      return;
+    }
+
+    setError('');
+    setSuccess('');
+
+    // The backend confirms the account only while it still has the email
+    // the administrator approved in the dialog.
+    const expectedEmail = savedEmail;
+
+    try {
+      const outcome = await confirmAction(
+        'confirmAccount',
+        (stepUp) => confirmAccount(id, { ...stepUp, expected_email: expectedEmail })
+      );
+      if (outcome.confirmed) {
+        setSuccess(t('pages.userShow.confirmAccountSuccess', { name: accountName }));
+        await reloadUser();
+      }
+    } catch (requestError) {
+      const errorKey = accountActionErrorKey(requestError);
+      setError(t(errorKey || 'pages.userShow.confirmAccountError'));
+      if (errorKey) {
+        // The account changed meanwhile: show its current status.
+        await reloadUser();
+      }
     }
   }
 
@@ -227,18 +306,20 @@ function UserShowPage() {
 
             <Col md={6}>
               <Form.Label>{t('pages.userShow.fields.status')}</Form.Label>
+              <AccountStatusSummary status={accountStatus} />
               <Form.Check
                 type="switch"
                 id="account-active"
+                className="mt-2"
                 label={form.active ? t('pages.userShow.status.active') : t('pages.userShow.status.inactive')}
                 checked={form.active}
+                disabled={isPendingAccount}
+                aria-describedby={isPendingAccount ? 'account-active-help' : undefined}
                 onChange={(event) => onFieldChange('active', event.target.checked)}
               />
-              <Form.Text>
-                {form.emailConfirmed
-                  ? t('pages.userShow.status.emailConfirmed')
-                  : t('pages.userShow.status.emailPending')}
-              </Form.Text>
+              {isPendingAccount ? (
+                <Form.Text id="account-active-help">{t('pages.userShow.status.pendingActivationHelp')}</Form.Text>
+              ) : null}
             </Col>
 
             <Col md={6}>
@@ -268,7 +349,7 @@ function UserShowPage() {
 
           </Row>
 
-          <div className="d-flex gap-2 mt-4">
+          <div className="d-flex flex-wrap gap-2 mt-4">
             <Button type="submit">
               <i className="fa-solid fa-floppy-disk me-2" aria-hidden="true" />
               {t('pages.userShow.actions.save')}
@@ -277,6 +358,19 @@ function UserShowPage() {
               <i className="fa-solid fa-xmark me-2" aria-hidden="true" />
               {t('pages.userShow.actions.cancel')}
             </Button>
+            {isPendingAccount ? (
+              <Button
+                type="button"
+                variant="success"
+                data-testid="confirm-account-button"
+                disabled={hasUnsavedChanges}
+                aria-describedby={hasUnsavedChanges ? CONFIRM_ACCOUNT_HINT_ID : undefined}
+                onClick={onConfirmAccount}
+              >
+                <i className="fa-solid fa-user-check me-2" aria-hidden="true" />
+                {t('pages.userShow.actions.confirmAccount')}
+              </Button>
+            ) : null}
             {!isOwnSuperAdminAccount ? (
               <Button
                 type="button"
@@ -298,6 +392,22 @@ function UserShowPage() {
               </Button>
             ) : null}
           </div>
+          {isPendingAccount && hasUnsavedChanges ? (
+            <div className="d-flex flex-wrap align-items-center gap-2 mt-2">
+              <Form.Text id={CONFIRM_ACCOUNT_HINT_ID} className="mt-0" data-testid="confirm-account-unsaved-hint">
+                {t('pages.userShow.confirmAccountUnsavedHint')}
+              </Form.Text>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline-secondary"
+                data-testid="discard-changes-button"
+                onClick={onDiscardChanges}
+              >
+                {t('pages.userShow.actions.discardChanges')}
+              </Button>
+            </div>
+          ) : null}
         </Form>
       </Card.Body>
 

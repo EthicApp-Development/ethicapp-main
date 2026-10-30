@@ -63,8 +63,8 @@ export async function mutatingJsonHeaders() {
   };
 }
 
-export async function fetchUsers({ keywords = '', role = '', page = 1 }) {
-  const query = toQueryString({ q: keywords, role, page });
+export async function fetchUsers({ keywords = '', role = '', status = '', page = 1 }) {
+  const query = toQueryString({ q: keywords, role, status, page });
   const response = await fetch(`/mng/api/users?${query}`, {
     method: 'GET',
     credentials: 'include',
@@ -101,6 +101,19 @@ export async function updateUser(userId, payload) {
 
 export async function triggerPasswordReset(userId, payload) {
   const response = await fetch(`/mng/api/users/${userId}/password-reset`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: await mutatingJsonHeaders(),
+    body: JSON.stringify(payload)
+  });
+
+  return parseJson(response);
+}
+
+// Confirms an account whose owner never confirmed the email. A refusal
+// rejects with code ACCOUNT_NOT_PENDING when the account is not pending.
+export async function confirmAccount(userId, payload) {
+  const response = await fetch(`/mng/api/users/${userId}/confirm-account`, {
     method: 'POST',
     credentials: 'include',
     headers: await mutatingJsonHeaders(),

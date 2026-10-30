@@ -17,6 +17,8 @@ export default {
     keywords: 'Buscar por nombre, apellido, email o identificador',
     role: 'Filtrar por rol',
     allRoles: 'Todos los roles',
+    status: 'Filtrar por estado',
+    allStatuses: 'Todos los estados',
     search: 'Buscar'
   },
   roles: {
@@ -216,7 +218,7 @@ export default {
       },
       status: {
         active: 'Activa',
-        inactive: 'Inactiva',
+        inactive: 'Desactivada',
         pending: 'Pendiente de confirmación'
       },
       actions: {
@@ -234,6 +236,33 @@ export default {
       passwordResetSuccess: 'Se envió el correo de recuperación de contraseña.',
       passwordResetError: 'No fue posible gatillar la recuperación de contraseña.',
       impersonationError: 'No fue posible iniciar impersonación del profesor.',
+      confirmAccountSuccess: 'Cuenta confirmada. {{name}} ya puede ingresar con la contraseña que eligió al registrarse.',
+      confirmAccountError: 'No fue posible confirmar la cuenta.',
+      confirmAccountUnsavedHint: 'Guarda o descarta tus cambios antes de confirmar la cuenta.',
+      errors: {
+        accountNotPending: 'Esta cuenta ya no está pendiente de confirmación, así que no se modificó. Abajo se muestra su estado actual.',
+        accountChanged: 'El correo de esta cuenta cambió desde que se cargó la página, así que no se confirmó. Revisa el correo que se muestra abajo e inténtalo de nuevo.',
+        userNotFound: 'Esta cuenta ya no existe.',
+        invalidUserId: 'El identificador de la cuenta no es válido.'
+      },
+      accountStatus: {
+        active: {
+          label: 'Activa',
+          description: 'El correo está confirmado y la persona puede ingresar.'
+        },
+        pending: {
+          label: 'Pendiente de confirmación',
+          description: 'La persona se registró, pero nunca confirmó su correo, así que todavía no puede ingresar.'
+        },
+        inactive: {
+          label: 'Desactivada por un administrador',
+          description: 'El correo fue confirmado, pero un administrador desactivó la cuenta, así que la persona no puede ingresar.'
+        },
+        anonymized: {
+          label: 'Anonimizada',
+          description: 'Esta cuenta fue anonimizada y ya no identifica a nadie.'
+        }
+      },
       fields: {
         firstname: 'Nombre',
         lastname: 'Apellido',
@@ -255,6 +284,11 @@ export default {
           body: 'Se enviará un correo de recuperación de contraseña a {{email}}.',
           confirm: 'Enviar correo'
         },
+        confirmAccount: {
+          title: '¿Confirmar esta cuenta?',
+          body: 'El correo {{email}} quedará confirmado y la cuenta, activada. {{name}} podrá ingresar con la contraseña que eligió al registrarse. No se envía ningún correo.',
+          confirm: 'Confirmar cuenta'
+        },
         impersonation: {
           title: '¿Ingresar como este profesor?',
           body: 'Usarás EthicApp como {{name}} hasta que vuelvas a la consola de gestión.',
@@ -264,14 +298,15 @@ export default {
       status: {
         active: 'Cuenta activa',
         inactive: 'Cuenta inactiva',
-        emailConfirmed: 'Correo confirmado',
-        emailPending: 'Confirmación de correo pendiente',
+        pendingActivationHelp: 'Para activar una cuenta pendiente, usa “Confirmar cuenta”.',
         neverLoggedIn: 'Nunca'
       },
       actions: {
         save: 'Guardar cambios',
         cancel: 'Cancelar',
         triggerPasswordReset: 'Gatillar recuperación de contraseña',
+        confirmAccount: 'Confirmar cuenta',
+        discardChanges: 'Descartar cambios',
         impersonateProfessor: 'Ingresar como profesor'
       }
     },

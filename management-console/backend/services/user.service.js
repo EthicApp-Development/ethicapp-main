@@ -1,4 +1,5 @@
 import { query } from '../config/database.js';
+import { ACCOUNT_STATUS_FILTER_SQL, deriveAccountStatus } from './account-status.js';
 
 const ALLOWED_ROLE_FILTERS = new Set(['A', 'P', 'S']);
 
@@ -7,9 +8,15 @@ function normalizeRoleFilter(role) {
   return ALLOWED_ROLE_FILTERS.has(normalized) ? normalized : null;
 }
 
-export function buildListUsersFilter({ keywords = '', role = null } = {}) {
+function normalizeStatusFilter(status) {
+  const normalized = String(status || '').trim().toLowerCase();
+  return Object.hasOwn(ACCOUNT_STATUS_FILTER_SQL, normalized) ? normalized : null;
+}
+
+export function buildListUsersFilter({ keywords = '', role = null, status = null } = {}) {
   const normalizedKeywords = String(keywords || '').trim().toLowerCase();
   const normalizedRole = normalizeRoleFilter(role);
+  const normalizedStatus = normalizeStatusFilter(status);
   const filterClauses = ['anonymized_at IS NULL'];
   const params = [];
 
@@ -31,17 +38,21 @@ export function buildListUsersFilter({ keywords = '', role = null } = {}) {
     filterClauses.push(`role = $${params.length}`);
   }
 
+  if (normalizedStatus) {
+    filterClauses.push(`(${ACCOUNT_STATUS_FILTER_SQL[normalizedStatus]})`);
+  }
+
   return {
     whereSql: `WHERE ${filterClauses.join(' AND ')}`,
     params
   };
 }
 
-export async function listUsers({ keywords = '', role = null, page = 1, pageSize = 10 }) {
+export async function listUsers({ keywords = '', role = null, status = null, page = 1, pageSize = 10 }) {
   const safePageSize = Math.min(Math.max(Number(pageSize) || 10, 1), 50);
   const safePage = Math.max(Number(page) || 1, 1);
   const offset = (safePage - 1) * safePageSize;
-  const { whereSql, params } = buildListUsersFilter({ keywords, role });
+  const { whereSql, params } = buildListUsersFilter({ keywords, role, status });
 
   const countResult = await query(
     `
@@ -85,7 +96,11 @@ export async function listUsers({ keywords = '', role = null, page = 1, pageSize
     email: row.mail || '',
     role: row.role || '',
     active: row.active !== false,
-    emailConfirmed: row.email_confirmed !== false
+    emailConfirmed: row.email_confirmed !== false,
+    status: deriveAccountStatus({
+      active: row.active,
+      emailConfirmed: row.email_confirmed
+    })
   }));
 
   return {
@@ -115,7 +130,8 @@ export async function getUserById(userId) {
         role,
         active,
         email_confirmed,
-        last_login_at
+        last_login_at,
+        anonymized_at
       FROM users
       WHERE id = $1
       LIMIT 1
@@ -138,6 +154,11 @@ export async function getUserById(userId) {
     role: row.role || '',
     active: row.active !== false,
     emailConfirmed: row.email_confirmed !== false,
+    status: deriveAccountStatus({
+      active: row.active,
+      emailConfirmed: row.email_confirmed,
+      anonymizedAt: row.anonymized_at
+    }),
     lastLoginAt: row.last_login_at || null
   };
 }
