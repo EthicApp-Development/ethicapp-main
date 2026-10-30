@@ -342,6 +342,44 @@ export default {
         }
       }
     },
+    userForget: {
+      action: 'Olvidar a este estudiante',
+      unsavedHint: 'Guarda o descarta tus cambios antes de olvidar al estudiante.',
+      success: 'EthicApp olvidó a {{name}}. La cuenta quedó desactivada y anonimizada. Se pidió a los servicios de IA que borren sus datos en segundo plano.',
+      error: 'No fue posible olvidar al estudiante.',
+      confirm: {
+        title: '¿Olvidar a este estudiante?',
+        body: 'EthicApp olvidará a {{name}} ({{email}}). Esta acción no se puede deshacer.',
+        detailAccount: 'La cuenta se desactiva de inmediato: las sesiones abiertas dejan de funcionar y las credenciales anteriores ya no permiten ingresar.',
+        detailIdentity: 'El nombre, el correo, el RUT y los datos de perfil se reemplazan por valores anónimos.',
+        detailResponses: 'Las respuestas escritas y los mensajes de chat se reemplazan por un texto de relleno. Sus filas se conservan, para que los chats grupales sigan siendo coherentes.',
+        detailAiServices: 'Se borra el texto que EthicApp guarda con el trabajo de los servicios de IA, y se pide al Tutor de Argumentación y a Polyadic Agents que borren lo que guardan del estudiante, en segundo plano.',
+        confirm: 'Olvidar estudiante'
+      },
+      errors: {
+        accountAnonymized: 'Esta cuenta ya estaba anonimizada, así que no se modificó. Abajo se muestra su estado actual.',
+        notAStudent: 'Aquí solo se pueden olvidar cuentas de estudiantes, así que esta cuenta no se modificó.',
+        accountChanged: 'El correo de esta cuenta cambió desde que se cargó la página, así que no se olvidó. Revisa la cuenta que se muestra abajo e inténtalo de nuevo.'
+      },
+      status: {
+        heading: 'Borrado de datos',
+        help: 'Los servicios de IA borran sus datos en segundo plano. Si un servicio no está disponible, se reintenta automáticamente, cada vez con más espera.',
+        ethicapp: 'EthicApp',
+        done: '{{service}} ✓',
+        pending: '{{service}}: pendiente',
+        retrying: '{{service}}: reintentando',
+        failed: '{{service}}: falló',
+        lastError: 'Último error: {{code}}',
+        none: 'No hay borrados en servicios de IA registrados para esta cuenta: se anonimizó antes de que EthicApp pidiera a los servicios de IA olvidar a los estudiantes.',
+        unavailable: 'El estado del borrado en los servicios de IA no está disponible ahora, porque no fue posible comunicarse con EthicApp.',
+        retry: 'Reintentar el borrado',
+        retryError: 'No fue posible reintentar el borrado ahora, porque no fue posible comunicarse con EthicApp.',
+        services: {
+          'argumentation-tutor': 'Tutor',
+          'polyadic-agent': 'Polyadic'
+        }
+      }
+    },
     profile: {
       heading: 'Perfil de administrador',
       loading: 'Cargando perfil...',

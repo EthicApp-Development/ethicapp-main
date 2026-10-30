@@ -15,6 +15,8 @@ import {
 import SensitiveActionConfirmModal from '../components/common/SensitiveActionConfirmModal.jsx';
 import { useSensitiveActionConfirmation } from '../components/common/useSensitiveActionConfirmation.js';
 import AccountStatusSummary from '../components/users/AccountStatusSummary.jsx';
+import ErasureStatusPanel from '../components/users/ErasureStatusPanel.jsx';
+import ForgetStudentButton from '../components/users/ForgetStudentButton.jsx';
 import {
   ACCOUNT_STATUSES,
   accountActionErrorKey,
@@ -44,6 +46,7 @@ function formFromUser(user) {
 // account is an unsaved change.
 const EDITABLE_FIELDS = Object.freeze(['firstname', 'lastname', 'sex', 'email', 'email_confirmation', 'role', 'active']);
 const CONFIRM_ACCOUNT_HINT_ID = 'confirm-account-unsaved-hint';
+const FORGET_STUDENT_HINT_ID = 'forget-student-unsaved-hint';
 
 function UserShowPage() {
   const { id } = useParams();
@@ -81,6 +84,10 @@ function UserShowPage() {
     Number(currentProfile.id) === Number(id);
   const isPendingAccount = accountStatus === ACCOUNT_STATUSES.pending;
   const canDeleteAccount = isDeletableAccount({ status: accountStatus, lastLoginAt });
+  // An anonymized account names no one: it is shown read-only, with where
+  // its data has been erased (#876).
+  const isAnonymizedAccount = accountStatus === ACCOUNT_STATUSES.anonymized;
+  const canForgetStudent = savedForm?.role === 'A' && !isAnonymizedAccount;
   const hasUnsavedChanges = savedForm !== null &&
     EDITABLE_FIELDS.some((fieldName) => form[fieldName] !== savedForm[fieldName]);
 
@@ -257,6 +264,22 @@ function UserShowPage() {
     }
   }
 
+  async function onStudentForgotten() {
+    setError('');
+    setResetMessage('');
+    setSuccess(t('pages.userForget.success', { name: accountName }));
+    await reloadUser();
+  }
+
+  async function onForgetStudentError(message, { changed }) {
+    setSuccess('');
+    setError(message);
+    if (changed) {
+      // The account changed meanwhile: show its current state.
+      await reloadUser();
+    }
+  }
+
   async function onTriggerPasswordReset() {
     if (isOwnSuperAdminAccount) {
       return;
@@ -311,106 +334,110 @@ function UserShowPage() {
         {resetMessage ? <Alert variant="info">{resetMessage}</Alert> : null}
 
         <Form onSubmit={onSubmit}>
-          <Row className="g-3">
-            <Col md={6}>
-              <Form.Label>{t('pages.userShow.fields.firstname')}</Form.Label>
-              <Form.Control
-                value={form.firstname}
-                onChange={(event) => onFieldChange('firstname', event.target.value)}
-                required
-              />
-            </Col>
-            <Col md={6}>
-              <Form.Label>{t('pages.userShow.fields.lastname')}</Form.Label>
-              <Form.Control
-                value={form.lastname}
-                onChange={(event) => onFieldChange('lastname', event.target.value)}
-                required
-              />
-            </Col>
+          <fieldset disabled={isAnonymizedAccount}>
+            <Row className="g-3">
+              <Col md={6}>
+                <Form.Label>{t('pages.userShow.fields.firstname')}</Form.Label>
+                <Form.Control
+                  value={form.firstname}
+                  onChange={(event) => onFieldChange('firstname', event.target.value)}
+                  required
+                />
+              </Col>
+              <Col md={6}>
+                <Form.Label>{t('pages.userShow.fields.lastname')}</Form.Label>
+                <Form.Control
+                  value={form.lastname}
+                  onChange={(event) => onFieldChange('lastname', event.target.value)}
+                  required
+                />
+              </Col>
 
-            <Col md={6}>
-              <Form.Label>{t('pages.userShow.fields.gender')}</Form.Label>
-              <Form.Select value={form.sex} onChange={(event) => onFieldChange('sex', event.target.value)}>
-                <option value="F">{t('genders.F')}</option>
-                <option value="M">{t('genders.M')}</option>
-                <option value="O">{t('genders.O')}</option>
-              </Form.Select>
-            </Col>
+              <Col md={6}>
+                <Form.Label>{t('pages.userShow.fields.gender')}</Form.Label>
+                <Form.Select value={form.sex} onChange={(event) => onFieldChange('sex', event.target.value)}>
+                  <option value="F">{t('genders.F')}</option>
+                  <option value="M">{t('genders.M')}</option>
+                  <option value="O">{t('genders.O')}</option>
+                </Form.Select>
+              </Col>
 
-            <Col md={6}>
-              <Form.Label>{t('pages.userShow.fields.role')}</Form.Label>
-              <Form.Select value={form.role} onChange={(event) => onFieldChange('role', event.target.value)}>
-                <option value="A">{t('roles.A')}</option>
-                <option value="P">{t('roles.P')}</option>
-                {form.role === 'S' ? <option value="S">{t('roles.S')}</option> : null}
-              </Form.Select>
-              <Form.Text>{t('pages.userShow.roleHelp')}</Form.Text>
-            </Col>
+              <Col md={6}>
+                <Form.Label>{t('pages.userShow.fields.role')}</Form.Label>
+                <Form.Select value={form.role} onChange={(event) => onFieldChange('role', event.target.value)}>
+                  <option value="A">{t('roles.A')}</option>
+                  <option value="P">{t('roles.P')}</option>
+                  {form.role === 'S' ? <option value="S">{t('roles.S')}</option> : null}
+                </Form.Select>
+                <Form.Text>{t('pages.userShow.roleHelp')}</Form.Text>
+              </Col>
 
-            <Col md={6}>
-              <Form.Label>{t('pages.userShow.fields.status')}</Form.Label>
-              <AccountStatusSummary status={accountStatus} />
-              <Form.Check
-                type="switch"
-                id="account-active"
-                className="mt-2"
-                label={form.active ? t('pages.userShow.status.active') : t('pages.userShow.status.inactive')}
-                checked={form.active}
-                disabled={isPendingAccount}
-                aria-describedby={isPendingAccount ? 'account-active-help' : undefined}
-                onChange={(event) => onFieldChange('active', event.target.checked)}
-              />
-              {isPendingAccount ? (
-                <Form.Text id="account-active-help">{t('pages.userShow.status.pendingActivationHelp')}</Form.Text>
-              ) : null}
-            </Col>
+              <Col md={6}>
+                <Form.Label>{t('pages.userShow.fields.status')}</Form.Label>
+                <AccountStatusSummary status={accountStatus} />
+                <Form.Check
+                  type="switch"
+                  id="account-active"
+                  className="mt-2"
+                  label={form.active ? t('pages.userShow.status.active') : t('pages.userShow.status.inactive')}
+                  checked={form.active}
+                  disabled={isPendingAccount}
+                  aria-describedby={isPendingAccount ? 'account-active-help' : undefined}
+                  onChange={(event) => onFieldChange('active', event.target.checked)}
+                />
+                {isPendingAccount ? (
+                  <Form.Text id="account-active-help">{t('pages.userShow.status.pendingActivationHelp')}</Form.Text>
+                ) : null}
+              </Col>
 
-            <Col md={3}>
-              <Form.Label>{t('pages.userShow.fields.createdAt')}</Form.Label>
-              <Form.Control
-                plaintext
-                readOnly
-                value={
-                  formatAccountDate(createdAt, locale, { withTime: true }) ||
-                  t('pages.userShow.status.createdAtUnknown')
-                }
-                data-testid="user-created-at"
-              />
-            </Col>
+              <Col md={3}>
+                <Form.Label>{t('pages.userShow.fields.createdAt')}</Form.Label>
+                <Form.Control
+                  plaintext
+                  readOnly
+                  value={
+                    formatAccountDate(createdAt, locale, { withTime: true }) ||
+                    t('pages.userShow.status.createdAtUnknown')
+                  }
+                  data-testid="user-created-at"
+                />
+              </Col>
 
-            <Col md={3}>
-              <Form.Label>{t('pages.userShow.fields.lastLogin')}</Form.Label>
-              <Form.Control plaintext readOnly value={formatLastLogin(lastLoginAt)} />
-            </Col>
+              <Col md={3}>
+                <Form.Label>{t('pages.userShow.fields.lastLogin')}</Form.Label>
+                <Form.Control plaintext readOnly value={formatLastLogin(lastLoginAt)} />
+              </Col>
 
-            <Col md={6}>
-              <Form.Label>{t('pages.userShow.fields.email')}</Form.Label>
-              <Form.Control
-                type="email"
-                value={form.email}
-                onChange={(event) => onFieldChange('email', event.target.value)}
-                required
-              />
-            </Col>
+              <Col md={6}>
+                <Form.Label>{t('pages.userShow.fields.email')}</Form.Label>
+                <Form.Control
+                  type="email"
+                  value={form.email}
+                  onChange={(event) => onFieldChange('email', event.target.value)}
+                  required
+                />
+              </Col>
 
-            <Col md={6}>
-              <Form.Label>{t('pages.userShow.fields.emailConfirmation')}</Form.Label>
-              <Form.Control
-                type="email"
-                value={form.email_confirmation}
-                onChange={(event) => onFieldChange('email_confirmation', event.target.value)}
-                required
-              />
-            </Col>
+              <Col md={6}>
+                <Form.Label>{t('pages.userShow.fields.emailConfirmation')}</Form.Label>
+                <Form.Control
+                  type="email"
+                  value={form.email_confirmation}
+                  onChange={(event) => onFieldChange('email_confirmation', event.target.value)}
+                  required
+                />
+              </Col>
 
-          </Row>
+            </Row>
+          </fieldset>
 
           <div className="d-flex flex-wrap gap-2 mt-4">
-            <Button type="submit">
-              <i className="fa-solid fa-floppy-disk me-2" aria-hidden="true" />
-              {t('pages.userShow.actions.save')}
-            </Button>
+            {!isAnonymizedAccount ? (
+              <Button type="submit">
+                <i className="fa-solid fa-floppy-disk me-2" aria-hidden="true" />
+                {t('pages.userShow.actions.save')}
+              </Button>
+            ) : null}
             <Button type="button" variant="outline-primary" onClick={() => navigate('/users')}>
               <i className="fa-solid fa-xmark me-2" aria-hidden="true" />
               {t('pages.userShow.actions.cancel')}
@@ -428,7 +455,7 @@ function UserShowPage() {
                 {t('pages.userShow.actions.confirmAccount')}
               </Button>
             ) : null}
-            {!isOwnSuperAdminAccount ? (
+            {!isOwnSuperAdminAccount && !isAnonymizedAccount ? (
               <Button
                 type="button"
                 variant="warning"
@@ -461,7 +488,24 @@ function UserShowPage() {
                 {t('pages.userShow.deleteAccount.action')}
               </Button>
             ) : null}
+            {canForgetStudent ? (
+              <ForgetStudentButton
+                userId={id}
+                accountName={accountName}
+                email={savedEmail}
+                disabled={hasUnsavedChanges}
+                describedBy={hasUnsavedChanges ? FORGET_STUDENT_HINT_ID : undefined}
+                requestConfirmation={requestConfirmation}
+                onForgotten={onStudentForgotten}
+                onError={onForgetStudentError}
+              />
+            ) : null}
           </div>
+          {canForgetStudent && hasUnsavedChanges ? (
+            <Form.Text id={FORGET_STUDENT_HINT_ID} className="d-block mt-2" data-testid="forget-student-unsaved-hint">
+              {t('pages.userForget.unsavedHint')}
+            </Form.Text>
+          ) : null}
           {isPendingAccount && hasUnsavedChanges ? (
             <div className="d-flex flex-wrap align-items-center gap-2 mt-2">
               <Form.Text id={CONFIRM_ACCOUNT_HINT_ID} className="mt-0" data-testid="confirm-account-unsaved-hint">
@@ -479,6 +523,8 @@ function UserShowPage() {
             </div>
           ) : null}
         </Form>
+
+        {isAnonymizedAccount ? <ErasureStatusPanel userId={id} /> : null}
       </Card.Body>
 
       <SensitiveActionConfirmModal {...modalProps} />
