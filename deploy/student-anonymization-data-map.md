@@ -60,6 +60,13 @@ GROUP BY ur.table_name, tc.text_columns
 ORDER BY ur.table_name;
 ```
 
+The same inventory, with each foreign key's `ON DELETE` rule and the user id
+columns that have no foreign key, is kept as code in
+`management-console/backend/services/user-references.js`. The deletion of a
+never-activated account uses it to refuse accounts that any table still
+references, and its integration test fails when a migration adds a reference
+to `users` that the list does not name.
+
 ## Coverage Decisions
 
 | Table and fields | Production reachability | Decision | Current coverage |
