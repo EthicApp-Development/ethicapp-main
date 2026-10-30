@@ -8,7 +8,7 @@
     "start": "node server.js",
     "anonymize:students": "node scripts/anonymize-students.js",
     "test": "node --test \"**/*.node-test.mjs\"",
-    "test:integration": "node --test \"**/*.integration-test.mjs\""
+    "test:integration": "node --test --test-concurrency=1 \"**/*.integration-test.mjs\""
   },
   "dependencies": {
     "dotenv": "^17.4.1",

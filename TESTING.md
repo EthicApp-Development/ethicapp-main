@@ -54,6 +54,8 @@ Preferred conventions:
 
 Integration tests should be explicit about their infrastructure requirements and should fail with clear setup errors when the required test database is unavailable.
 
+The `test:integration` scripts run their files one at a time (`--test-concurrency=1`). All files share one database, and some assert on global state, such as the current AI service policy version, which a file running in parallel would change.
+
 Current integration suites:
 
 - `ethicapp/backend`: `npm run test:integration` runs `**/*.integration-test.mjs` against the database in `ETHICAPP_INTEGRATION_DATABASE_URL`, which must have migrations V1 to V28 or later applied. When the variable is unset, the suites are skipped with a message saying so. They insert rows that are not cleaned up (AI service policy versions are append-only), so point them at a disposable database. For example:
