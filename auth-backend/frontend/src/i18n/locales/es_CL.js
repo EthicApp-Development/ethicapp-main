@@ -147,11 +147,11 @@ const esCL = {
     },
     privacy: {
       title: 'Política de Privacidad',
-      updatedAt: 'Última actualización: 15 de abril de 2026'
+      updatedAt: 'Última actualización: 29 de octubre de 2026'
     },
     terms: {
       title: 'Términos de Uso',
-      updatedAt: 'Última actualización: 16 de abril de 2026'
+      updatedAt: 'Última actualización: 29 de octubre de 2026'
     }
   },
   cookieNotice: {

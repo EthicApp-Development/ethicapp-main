@@ -42,10 +42,45 @@ Whenever possible, data used for research will be anonymized or pseudonymized.
 
 ## 5. Data retention
 
-User accounts and all associated data will be deleted periodically on the following dates:
+### Periodic anonymization of student accounts
+
+Student accounts are anonymized periodically on the following dates:
 
 - January 1
 - July 1
+
+When a student account is anonymized:
+
+- The account is disabled and its open sessions stop being valid
+- The student's personal data is anonymized, such as first and last name, email address, personal identifier, and gender
+- The student's written responses are replaced with placeholder text
+- The platform's artificial intelligence services are asked to erase the student's texts they keep
+- Activities and pedagogical records are kept, linked to the anonymized account
+
+To use the platform again, the student must create a new account.
+
+Teacher accounts are kept until their closure is requested.
+
+### Account closure on request
+
+Students and teachers may request the closure of their account at any time from the privacy contact stated in section 1.
+
+Closing a student account has the same effects as the periodic anonymization.
+
+Closing a teacher account has the following effects:
+
+- Activities the teacher still has open are finished before the closure
+- The account is disabled and the teacher's personal data is anonymized, including the author email addresses recorded in their cases and designs
+- Messages the teacher wrote in activity chats are replaced with placeholder text
+- Private cases and designs that were never used in an activity and never copied are deleted
+- The remaining cases and designs, and the activities with their students' responses, are transferred to another teacher designated by platform administrators or remain linked to the anonymized account
+- The teacher's name is kept in the authorship attribution of their cases and designs, including in copies made by other teachers, because the licenses of that content require it
+- Case texts and PDF documents that mention the teacher are kept unchanged, because EthicApp cannot transform that content, as stated in the [Terms of Use](/terms)
+- The platform's artificial intelligence services are asked to erase the teacher's texts they keep
+
+Erasure in the artificial intelligence services and deletion of the files of deleted materials are completed in the background, after the account is closed.
+
+### Backups
 
 In addition, the system keeps daily backups with a maximum retention period of one week.
 

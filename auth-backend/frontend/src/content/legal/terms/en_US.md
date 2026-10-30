@@ -26,6 +26,20 @@ Users are responsible for:
 
 In case of misuse or suspected unauthorized access, users must notify platform administrators.
 
+### Account closure
+
+Users may request the closure of their account through the means stated in the [Privacy Policy](/privacy). When an account is closed, it is disabled and EthicApp anonymizes the user's personal data. The activities in which the user took part are kept, linked to the anonymized account.
+
+When the account belongs to a teacher:
+
+- Activities the teacher still has open are finished before the closure
+- Private cases and designs that were never used in an activity and never copied are deleted
+- The remaining cases and designs, and the activities, are transferred to another teacher designated by platform administrators or remain linked to the anonymized account
+- The authorship attribution of the teacher's cases and designs is kept, including in copies made by other teachers, as the licenses of that content require
+- Case texts and PDF documents that mention the teacher are kept unchanged, because EthicApp cannot transform that content
+
+Teachers accept that, after their account is closed, their name remains in the authorship attribution of their cases and designs and in the content of the cases that mention them.
+
 ## 4. Proper use and user-generated content
 
 Users agree that any content generated on the platform:
