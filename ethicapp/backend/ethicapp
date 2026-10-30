@@ -9,6 +9,7 @@ import debugLib from "debug";
 import { fileURLToPath } from "url";
 import { initializeSockets } from "./config/socket.config.js";
 import { startDomainEventSubscriber } from "./services/domain-events/index.js";
+import { startUserErasureProcessor } from "./services/user-erasure/index.js";
 
 const debug = debugLib("ethicapp:server");
 
@@ -33,6 +34,10 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     startDomainEventSubscriber().catch((error) => {
         console.error("[domain-events] Subscriber could not be started:", error);
     });
+
+    // Send the pending AI Additions erasure requests of forgotten accounts
+    // (#876), including those recorded while ethicapp was stopped.
+    startUserErasureProcessor();
 }
 
 /**

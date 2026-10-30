@@ -19,6 +19,8 @@ const INTERNAL_ROUTES = [
     "/api/admin/ai-services/connection-test",
     "/api/admin/ai-services/",
     "/api/admin/impersonation/professor/12",
+    "/api/admin/user-erasure/users/12",
+    "/api/admin/user-erasure/users/12/retry",
 ];
 
 // Spellings that a case-insensitive router would accept.
@@ -27,7 +29,8 @@ function caseVariants(uri) {
         uri.toUpperCase(),
         uri.replace("/api/", "/API/"),
         uri.replace("/admin/", "/Admin/"),
-        uri.replace("/ai-services/", "/AI-Services/").replace("/impersonation/", "/Impersonation/"),
+        uri.replace("/ai-services/", "/AI-Services/").replace("/impersonation/", "/Impersonation/")
+            .replace("/user-erasure/", "/User-Erasure/"),
     ].filter(variant => variant !== uri);
 }
 

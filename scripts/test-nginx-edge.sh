@@ -138,6 +138,12 @@ run_cases() {
     "${api[@]}" "${valid[@]}" --request POST "$base/api/admin/impersonation/professor/12"
   check "impersonation start, other letter case" 404 text/html 'X-Request-Id:' \
     "${api[@]}" "${valid[@]}" --request POST "$base/Api/Admin/Impersonation/professor/12"
+  check "internal user erasure status is not served" 404 text/html 'X-Request-Id:' \
+    "${api[@]}" "${valid[@]}" "$base/api/admin/user-erasure/users/12"
+  check "internal user erasure retry is not served" 404 text/html 'X-Request-Id:' \
+    "${api[@]}" "${valid[@]}" --request POST "$base/api/admin/user-erasure/users/12/retry"
+  check "internal user erasure retry, other letter case" 404 text/html 'X-Request-Id:' \
+    "${api[@]}" "${valid[@]}" --request POST "$base/api/Admin/User-Erasure/users/12/retry"
   # Impersonation stop stays proxied: ethicapp is down here, hence 502.
   check "impersonation stop is still proxied" 502 application/json '{"status":"unavailable"}' \
     "${api[@]}" "${valid[@]}" --request POST "$base/api/admin/impersonation/stop"
