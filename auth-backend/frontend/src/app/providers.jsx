@@ -18,9 +18,18 @@ export function AppProviders({ children }) {
   const i18nContextValue = useMemo(() => {
     const localeDictionary = translations[locale] || translations[DEFAULT_LOCALE] || {};
 
-    function t(key) {
-      const localizedText = getByPath(localeDictionary, key);
-      return localizedText ?? key;
+    // `{{name}}` placeholders take their value from `params`.
+    function t(key, params = {}) {
+      const localizedText = getByPath(localeDictionary, key) ?? key;
+
+      if (typeof localizedText !== 'string') {
+        return localizedText;
+      }
+
+      return Object.entries(params).reduce(
+        (text, [name, value]) => text.replaceAll(`{{${name}}}`, String(value)),
+        localizedText
+      );
     }
 
     return { locale, t };

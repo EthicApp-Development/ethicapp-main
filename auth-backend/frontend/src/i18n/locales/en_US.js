@@ -55,9 +55,9 @@ const enUS = {
       other: 'Other'
     },
     passwordRules: {
-      helpText: 'Minimum 10 characters and at least 2 symbols.',
-      minLength: 'Minimum 10 characters',
-      twoSymbols: 'At least 2 symbols'
+      helpText: 'Minimum {{minLength}} characters and at least {{minSymbols}} symbols.',
+      minLength: 'Minimum {{minLength}} characters',
+      minSymbols: 'At least {{minSymbols}} symbols'
     },
     submit: 'Create account',
     submitting: 'Creating account...',
@@ -83,7 +83,7 @@ const enUS = {
       emailInvalid: 'Enter a valid email address.',
       genderRequired: 'You must select an option.',
       passwordRequired: 'Password is required.',
-      passwordInvalid: 'Password must be at least 10 characters and include 2 symbols.',
+      passwordInvalid: 'Password must be at least {{minLength}} characters and include {{minSymbols}} symbols.',
       passwordConfirmationRequired: 'You must confirm the password.',
       passwordMismatch: 'Passwords do not match.',
       privacyAcceptanceRequired: 'You must accept the Privacy Policy to create an account.',
@@ -118,14 +118,14 @@ const enUS = {
     backToLogin: 'Back to sign in',
     successMessage: 'Password updated successfully. If your account was pending confirmation, it is now active. You will be redirected to sign in.',
     passwordRules: {
-      helpText: 'Minimum 10 characters and at least 2 symbols.',
-      minLength: 'Minimum 10 characters',
-      twoSymbols: 'At least 2 symbols'
+      helpText: 'Minimum {{minLength}} characters and at least {{minSymbols}} symbols.',
+      minLength: 'Minimum {{minLength}} characters',
+      minSymbols: 'At least {{minSymbols}} symbols'
     },
     errors: {
       invalidToken: 'The recovery link is not valid.',
       passwordRequired: 'New password is required.',
-      passwordInvalid: 'Password must be at least 10 characters and include 2 symbols.',
+      passwordInvalid: 'Password must be at least {{minLength}} characters and include {{minSymbols}} symbols.',
       passwordConfirmationRequired: 'You must confirm the password.',
       passwordMismatch: 'Passwords do not match.',
       genericResetError: 'We could not reset the password. Request a new link.'
