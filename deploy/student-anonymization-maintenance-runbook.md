@@ -120,7 +120,7 @@ student responses, the strings in their AI service payloads and
 student-provided device metadata, and writes audit rows.
 
 For each anonymized account it also records one pending erasure request per
-AI Additions service (`user_erasure_requests`, V29). ethicapp is stopped
+AI Additions service (`user_erasure_requests`, V31). ethicapp is stopped
 during the window, so nothing is sent then: ethicapp sends the requests in the
 background after the restore (see "Restore").
 

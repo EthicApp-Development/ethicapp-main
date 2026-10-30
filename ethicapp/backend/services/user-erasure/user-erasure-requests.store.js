@@ -1,7 +1,7 @@
 import { poolQuery } from "../external-service-jobs.service.js";
 
 /**
- * Access to user_erasure_requests (V29, #876): one row per forgotten account
+ * Access to user_erasure_requests (V31, #876): one row per forgotten account
  * and AI Additions service. The management console records the rows when it
  * anonymizes an account; this store claims the due ones and records each
  * attempt's outcome.

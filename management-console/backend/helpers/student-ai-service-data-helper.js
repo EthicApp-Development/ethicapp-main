@@ -10,7 +10,7 @@
 //   deploy/student-anonymization-data-map.md for the payload inventory.
 // - Outside EthicApp, AI Additions keeps what the student sent to the tutor
 //   and to Polyadic. The step records one erasure request per AI Additions
-//   service in user_erasure_requests (V29). ethicapp, which holds the AI
+//   service in user_erasure_requests (V31). ethicapp, which holds the AI
 //   Additions credentials, processes them in the background through the
 //   `user-forgotten` hook, with retries.
 

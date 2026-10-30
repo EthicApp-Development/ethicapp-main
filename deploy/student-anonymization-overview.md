@@ -41,7 +41,7 @@ After a student account is anonymized:
 | Data map | `deploy/student-anonymization-data-map.md` | Documents reviewed fields, coverage decisions, exclusions, and follow-up items. |
 | On-demand forgetting | `management-console/backend/services/account-forgetting.service.js`, `routes/user-forgetting.routes.js`, and the user page | `POST /mng/api/users/:id/forget` runs the per-account step for one student in one transaction (#876). |
 | AI service data step | `management-console/backend/helpers/student-ai-service-data-helper.js` | Erases the strings in the student's AI service payloads and records the AI Additions erasure requests, inside the per-account step. |
-| Erasure requests | `database/migrations/V29__user_erasure_requests.sql` (`user_erasure_requests`) | One row per anonymized account and AI Additions service, with its status, attempts and last error. |
+| Erasure requests | `database/migrations/V31__user_erasure_requests.sql` (`user_erasure_requests`) | One row per anonymized account and AI Additions service, with its status, attempts and last error. |
 | Erasure processor | `ethicapp/backend/services/user-erasure/` and the `user-forgotten` hook of the tutor and Polyadic adapters | ethicapp sends the requests in the background, with retries, and serves their status and a retry to the console (`/api/admin/user-erasure/`, internal only). |
 
 ## Ownership Model

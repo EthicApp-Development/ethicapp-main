@@ -1,5 +1,5 @@
-// Integration tests for the user erasure requests (V29, #876), against a real
-// PostgreSQL database with migrations V1-V29 applied: the processor's claim,
+// Integration tests for the user erasure requests (V31, #876), against a real
+// PostgreSQL database with migrations V1-V31 applied: the processor's claim,
 // its retries with backoff, the lease that makes it survive a crash or a
 // restart, and an administrator's retry. The AI Additions side is a fake
 // registry; the requests are real rows.
@@ -112,7 +112,7 @@ function assertDueIn(actualMs, expectedMs) {
     assert.ok(Math.abs(Number(actualMs) - expectedMs) < 5000, `due in ${actualMs} ms, expected ${expectedMs}`);
 }
 
-test("V29: a failing service is retried with a growing backoff until it confirms", {
+test("V31: a failing service is retried with a growing backoff until it confirms", {
     skip: SKIP_REASON,
 }, async () => {
     const userId = newUserId();
@@ -156,7 +156,7 @@ test("V29: a failing service is retried with a growing backoff until it confirms
     ]);
 });
 
-test("V29: a request whose attempt was cut short is due again once its lease ends", {
+test("V31: a request whose attempt was cut short is due again once its lease ends", {
     skip: SKIP_REASON,
 }, async () => {
     const userId = newUserId();
@@ -181,7 +181,7 @@ test("V29: a request whose attempt was cut short is due again once its lease end
     assert.equal(request.status, "done");
 });
 
-test("V29: concurrent claims never take the same request", { skip: SKIP_REASON }, async () => {
+test("V31: concurrent claims never take the same request", { skip: SKIP_REASON }, async () => {
     const userId = newUserId();
     const serviceIds = Array.from({ length: 6 }, (_, index) => `svc-claim-${index}`);
     await insertRequests(userId, serviceIds);
@@ -196,7 +196,7 @@ test("V29: concurrent claims never take the same request", { skip: SKIP_REASON }
     assert.equal(claimedIds.length, serviceIds.length);
 });
 
-test("V29: a refusal fails the request until an administrator retries it", {
+test("V31: a refusal fails the request until an administrator retries it", {
     skip: SKIP_REASON,
 }, async () => {
     const userId = newUserId();

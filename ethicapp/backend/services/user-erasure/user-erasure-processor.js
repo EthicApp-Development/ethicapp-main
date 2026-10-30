@@ -5,7 +5,7 @@ import { userErasureRequestsStore } from "./user-erasure-requests.store.js";
  *
  * When the management console forgets a student, it anonymizes the account
  * in EthicApp and records, in the same transaction, one pending request per
- * AI Additions service (user_erasure_requests, V29). The scheduled
+ * AI Additions service (user_erasure_requests, V31). The scheduled
  * anonymization job, which runs while ethicapp is stopped, records them too.
  * This processor, which runs inside the ethicapp web process because it holds
  * the AI Additions credentials and the adapter registry, sends them:

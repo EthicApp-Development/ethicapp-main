@@ -260,7 +260,7 @@ headers); other roles get `403`.
   most 2048 characters; anything else gets `400`. The same rule decides
   whether a stored connection is usable.
 - `GET /api/admin/user-erasure/users/:id` lists the AI Additions erasure
-  requests of an account (`user_erasure_requests`, V29), one per service:
+  requests of an account (`user_erasure_requests`, V31), one per service:
   `{ ok: true, userId, requests: [{ serviceId, status, attempts, nextAttemptAt, lastAttemptAt, lastError, requestedAt, completedAt }] }`.
   `status` is `pending`, `done` or `failed`; `lastError` is an upper-case
   code. An account that was never forgotten has `requests: []`.

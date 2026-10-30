@@ -1,5 +1,5 @@
-// Integration tests for forgetting a student (V29, #876), against a real
-// PostgreSQL database with migrations V1-V29 applied: the on-demand
+// Integration tests for forgetting a student (V31, #876), against a real
+// PostgreSQL database with migrations V1-V31 applied: the on-demand
 // transaction, the per-account step of the scheduled job, the
 // user_erasure_requests table, and the indexes the anonymization uses.
 //
@@ -113,7 +113,7 @@ async function erasureRequestsOf(userId) {
   );
 }
 
-test('V29: forgetting a student anonymizes the account and its text and records the erasure requests', {
+test('V31: forgetting a student anonymizes the account and its text and records the erasure requests', {
   skip: SKIP_REASON
 }, async () => {
   const student = await insertUser();
@@ -209,7 +209,7 @@ test('V29: forgetting a student anonymizes the account and its text and records 
   assert.deepEqual(audit, [{ action: 'account.forget', outcome: 'succeeded', reason_code: null }]);
 });
 
-test('V29: teachers, administrators and anonymized accounts are refused and left unchanged', {
+test('V31: teachers, administrators and anonymized accounts are refused and left unchanged', {
   skip: SKIP_REASON
 }, async () => {
   for (const [options, code] of [
@@ -235,7 +235,7 @@ test('V29: teachers, administrators and anonymized accounts are refused and left
   }
 });
 
-test('V29: the scheduled job\'s per-account step gives the same coverage and leaves the requests pending', {
+test('V31: the scheduled job\'s per-account step gives the same coverage and leaves the requests pending', {
   skip: SKIP_REASON
 }, async () => {
   const student = await insertUser();
@@ -272,7 +272,7 @@ test('V29: the scheduled job\'s per-account step gives the same coverage and lea
   );
 });
 
-test('V29: two concurrent forgettings of the same student anonymize it once', {
+test('V31: two concurrent forgettings of the same student anonymize it once', {
   skip: SKIP_REASON
 }, async () => {
   const student = await insertUser();
@@ -293,7 +293,7 @@ test('V29: two concurrent forgettings of the same student anonymize it once', {
   assert.equal(runs[0].runs, 1);
 });
 
-test('V29: user_erasure_requests keeps codes, statuses and service ids well formed', {
+test('V31: user_erasure_requests keeps codes, statuses and service ids well formed', {
   skip: SKIP_REASON
 }, async () => {
   const userId = (await insertUser()).id;
@@ -322,7 +322,7 @@ test('V29: user_erasure_requests keeps codes, statuses and service ids well form
 // With the planner's sequential scans switched off, each statement the
 // per-account step filters by user must find an index on that user column.
 // Without one, PostgreSQL would still scan the table.
-test('V29: the anonymization statements use the user indexes (EXPLAIN)', {
+test('V31: the anonymization statements use the user indexes (EXPLAIN)', {
   skip: SKIP_REASON
 }, async () => {
   const statements = [
@@ -360,7 +360,7 @@ test('V29: the anonymization statements use the user indexes (EXPLAIN)', {
   }
 });
 
-test('V29: editing an anonymized account is refused', { skip: SKIP_REASON }, async () => {
+test('V31: editing an anonymized account is refused', { skip: SKIP_REASON }, async () => {
   const account = await insertUser({ anonymized: true });
   const email = `it-876-${randomUUID()}@example.com`;
 
@@ -411,7 +411,7 @@ async function waitUntilBlocked(pid) {
   throw new Error(`backend ${pid} never waited for a lock`);
 }
 
-test('V29: a callback stored after the student was forgotten keeps no text', {
+test('V31: a callback stored after the student was forgotten keeps no text', {
   skip: SKIP_REASON
 }, async () => {
   const student = await insertUser();
@@ -447,7 +447,7 @@ test('V29: a callback stored after the student was forgotten keeps no text', {
   assert.deepEqual(keptRow.raw_payload, LATE_PAYLOAD);
 });
 
-test('V29: a callback inserted while the student is being forgotten waits and keeps no text', {
+test('V31: a callback inserted while the student is being forgotten waits and keeps no text', {
   skip: SKIP_REASON
 }, async () => {
   const student = await insertUser();
@@ -473,7 +473,7 @@ test('V29: a callback inserted while the student is being forgotten waits and ke
   }
 });
 
-test('V29: forgetting waits for callbacks in progress and erases what they wrote', {
+test('V31: forgetting waits for callbacks in progress and erases what they wrote', {
   skip: SKIP_REASON
 }, async () => {
   const student = await insertUser();
@@ -509,7 +509,7 @@ test('V29: forgetting waits for callbacks in progress and erases what they wrote
   }
 });
 
-test('V29: an edit that started before the student was forgotten cannot undo it', {
+test('V31: an edit that started before the student was forgotten cannot undo it', {
   skip: SKIP_REASON
 }, async () => {
   const student = await insertUser();
@@ -544,7 +544,7 @@ test('V29: an edit that started before the student was forgotten cannot undo it'
   assert.ok(user.anonymized_at);
 });
 
-test('V29: an edit blocked by a forgetting in progress is refused once it commits', {
+test('V31: an edit blocked by a forgetting in progress is refused once it commits', {
   skip: SKIP_REASON
 }, async () => {
   const student = await insertUser();
