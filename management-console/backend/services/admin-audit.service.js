@@ -13,7 +13,9 @@
 // (`<area>.<verb>`), so a new action needs no migration: add it here.
 export const ADMIN_AUDIT_ACTIONS = Object.freeze({
   accountConfirm: 'account.confirm',
-  accountDelete: 'account.delete'
+  accountDelete: 'account.delete',
+  accountForget: 'account.forget',
+  accountErasureRetry: 'account.erasure_retry'
 });
 
 export const ADMIN_AUDIT_OUTCOMES = Object.freeze({

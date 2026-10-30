@@ -119,7 +119,8 @@ export function createUsersRouter({
       EMAIL_CONFIRMATION_MISMATCH: 400,
       EMAIL_ALREADY_EXISTS: 409,
       USER_NOT_FOUND: 404,
-      INVALID_ROLE_TRANSITION: 400
+      INVALID_ROLE_TRANSITION: 400,
+      ACCOUNT_ANONYMIZED: 409
     };
 
     if (errorsByCode[error.message]) {

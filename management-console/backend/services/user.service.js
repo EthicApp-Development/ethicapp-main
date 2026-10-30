@@ -228,7 +228,7 @@ export async function updateUserById(userId, payload) {
 
   const currentResult = await query(
     `
-      SELECT id, role, mail, active
+      SELECT id, role, mail, active, anonymized_at
       FROM users
       WHERE id = $1
       LIMIT 1
@@ -241,6 +241,12 @@ export async function updateUserById(userId, payload) {
   }
 
   const currentUser = currentResult.rows[0];
+
+  // An anonymized account names no one and must stay disabled: editing it
+  // could give it a real email or reactivate it.
+  if (currentUser.anonymized_at) {
+    throw new Error('ACCOUNT_ANONYMIZED');
+  }
   const active = Object.prototype.hasOwnProperty.call(payload, 'active')
     ? payload.active === true || payload.active === 'true' || payload.active === 'on'
     : currentUser.active !== false;

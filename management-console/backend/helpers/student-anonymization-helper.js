@@ -1,3 +1,8 @@
+import {
+    eraseExternalServicePayloads,
+    recordUserErasureRequests,
+} from "./student-ai-service-data-helper.js";
+
 const DEFAULT_PLACEHOLDER_TEXT = "******";
 const STUDENT_ROLE = "A";
 
@@ -166,167 +171,198 @@ async function recordFailedEvent(pool, runId, userId, error) {
     });
 }
 
+// The per-account step, inside the caller's transaction on `client`: the
+// event row, the lock on the account, and every change. The scheduled job
+// runs it in a transaction of its own per account (anonymizeStudentAccount);
+// the management console runs it in the transaction that also writes the
+// run and the administrator's audit row (account-forgetting.service.js).
+//
+// Resolves to { status: 'skipped' } when the account is no longer an
+// unanonymized student, or { status: 'succeeded', counts }.
+async function anonymizeStudentAccountInTransaction(client, runId, user, options) {
+    await client.query(
+        `
+            INSERT INTO student_anonymization_events
+                (run_id, user_id, status, message)
+            VALUES
+                ($1, $2, 'started', 'Account anonymization started.')
+        `,
+        [runId, user.id]
+    );
+
+    const currentUserResult = await client.query(
+        `
+            SELECT id, mail
+            FROM users
+            WHERE id = $1
+              AND role = $2
+              AND anonymized_at IS NULL
+            FOR UPDATE
+        `,
+        [user.id, STUDENT_ROLE]
+    );
+
+    if (currentUserResult.rowCount === 0) {
+        await client.query(
+            `
+                UPDATE student_anonymization_events
+                SET status = 'skipped',
+                    message = 'Account was already anonymized or is no longer a student.',
+                    finished_at = NOW()
+                WHERE run_id = $1
+                  AND user_id = $2
+            `,
+            [runId, user.id]
+        );
+        return { status: "skipped" };
+    }
+
+    const currentUser = currentUserResult.rows[0];
+    const identity = buildAnonymousStudentIdentity(user.id);
+
+    const differentialSelectionResult = await client.query(
+        `
+            UPDATE differential_selection
+            SET comment = $1
+            WHERE uid = $2
+              AND comment IS NOT NULL
+        `,
+        [options.placeholderText, user.id]
+    );
+
+    const differentialChatResult = await client.query(
+        `
+            UPDATE differential_chat
+            SET content = $1
+            WHERE uid = $2
+              AND content IS NOT NULL
+        `,
+        [options.placeholderText, user.id]
+    );
+
+    const rankingChatResult = await client.query(
+        `
+            UPDATE chat
+            SET content = $1
+            WHERE uid = $2
+              AND content IS NOT NULL
+        `,
+        [options.placeholderText, user.id]
+    );
+
+    const actorSelectionResult = await client.query(
+        `
+            UPDATE actor_selection
+            SET description = $1
+            WHERE uid = $2
+              AND description IS NOT NULL
+        `,
+        [options.placeholderText, user.id]
+    );
+
+    const externalPayloads = await eraseExternalServicePayloads(client, user.id, options.placeholderText);
+
+    const sessionDeviceResult = await client.query(
+        `
+            UPDATE sesusers
+            SET device = NULL
+            WHERE uid = $1
+              AND device IS NOT NULL
+        `,
+        [user.id]
+    );
+
+    const passwordResetResult = await client.query(
+        `
+            DELETE FROM pass_reset
+            WHERE lower(mail) = lower($1)
+        `,
+        [currentUser.mail]
+    );
+
+    await client.query(
+        `
+            UPDATE users
+            SET name = $1,
+                firstname = $2,
+                lastname = $3,
+                mail = $4,
+                rut = $5,
+                sex = NULL,
+                pass = '',
+                password_bcrypt = NULL,
+                last_login_at = NULL,
+                active = false,
+                email_confirmed = false,
+                profile_image_path = NULL,
+                profile_image_topbar_path = NULL,
+                session_version = session_version + 1,
+                anonymized_at = NOW(),
+                anonymization_run_id = $6
+            WHERE id = $7
+        `,
+        [
+            identity.name,
+            identity.firstname,
+            identity.lastname,
+            identity.email,
+            identity.rut,
+            runId,
+            user.id,
+        ]
+    );
+
+    // AI Additions is asked to forget the student after the commit, by
+    // ethicapp, in the background.
+    const erasureServiceIds = await recordUserErasureRequests(client, user.id, runId);
+
+    const counts = {
+        differentialSelectionComments: differentialSelectionResult.rowCount || 0,
+        differentialChatMessages: differentialChatResult.rowCount || 0,
+        chatMessages: rankingChatResult.rowCount || 0,
+        actorSelectionDescriptions: actorSelectionResult.rowCount || 0,
+        externalServiceResults: externalPayloads.results,
+        externalServiceJobs: externalPayloads.jobs,
+        sessionDevices: sessionDeviceResult.rowCount || 0,
+        passwordResetTokens: passwordResetResult.rowCount || 0,
+    };
+
+    const message = [
+        "Account anonymized.",
+        `differential_selection comments updated: ${counts.differentialSelectionComments}.`,
+        `differential_chat messages updated: ${counts.differentialChatMessages}.`,
+        `chat messages updated: ${counts.chatMessages}.`,
+        `actor_selection descriptions updated: ${counts.actorSelectionDescriptions}.`,
+        `external_service_results payloads erased: ${counts.externalServiceResults}.`,
+        `external_service_jobs payloads erased: ${counts.externalServiceJobs}.`,
+        `session device values cleared: ${counts.sessionDevices}.`,
+        `password reset tokens deleted: ${counts.passwordResetTokens}.`,
+        `AI service erasure requests recorded: ${erasureServiceIds.join(", ")}.`,
+    ].join(" ");
+
+    await client.query(
+        `
+            UPDATE student_anonymization_events
+            SET status = 'succeeded',
+                message = $1,
+                finished_at = NOW()
+            WHERE run_id = $2
+              AND user_id = $3
+        `,
+        [message, runId, user.id]
+    );
+
+    return { status: "succeeded", counts, erasureServiceIds };
+}
+
 async function anonymizeStudentAccount(pool, runId, user, options) {
     return withClient(pool, async (client) => {
         await client.query("BEGIN");
 
         try {
-            await client.query(
-                `
-                    INSERT INTO student_anonymization_events
-                        (run_id, user_id, status, message)
-                    VALUES
-                        ($1, $2, 'started', 'Account anonymization started.')
-                `,
-                [runId, user.id]
-            );
-
-            const currentUserResult = await client.query(
-                `
-                    SELECT id, mail
-                    FROM users
-                    WHERE id = $1
-                      AND role = $2
-                      AND anonymized_at IS NULL
-                    FOR UPDATE
-                `,
-                [user.id, STUDENT_ROLE]
-            );
-
-            if (currentUserResult.rowCount === 0) {
-                await client.query(
-                    `
-                        UPDATE student_anonymization_events
-                        SET status = 'skipped',
-                            message = 'Account was already anonymized or is no longer a student.',
-                            finished_at = NOW()
-                        WHERE run_id = $1
-                          AND user_id = $2
-                    `,
-                    [runId, user.id]
-                );
-                await client.query("COMMIT");
-                return { status: "skipped" };
-            }
-
-            const currentUser = currentUserResult.rows[0];
-            const identity = buildAnonymousStudentIdentity(user.id);
-
-            const differentialSelectionResult = await client.query(
-                `
-                    UPDATE differential_selection
-                    SET comment = $1
-                    WHERE uid = $2
-                      AND comment IS NOT NULL
-                `,
-                [options.placeholderText, user.id]
-            );
-
-            const differentialChatResult = await client.query(
-                `
-                    UPDATE differential_chat
-                    SET content = $1
-                    WHERE uid = $2
-                      AND content IS NOT NULL
-                `,
-                [options.placeholderText, user.id]
-            );
-
-            const rankingChatResult = await client.query(
-                `
-                    UPDATE chat
-                    SET content = $1
-                    WHERE uid = $2
-                      AND content IS NOT NULL
-                `,
-                [options.placeholderText, user.id]
-            );
-
-            const actorSelectionResult = await client.query(
-                `
-                    UPDATE actor_selection
-                    SET description = $1
-                    WHERE uid = $2
-                      AND description IS NOT NULL
-                `,
-                [options.placeholderText, user.id]
-            );
-
-            const sessionDeviceResult = await client.query(
-                `
-                    UPDATE sesusers
-                    SET device = NULL
-                    WHERE uid = $1
-                      AND device IS NOT NULL
-                `,
-                [user.id]
-            );
-
-            const passwordResetResult = await client.query(
-                `
-                    DELETE FROM pass_reset
-                    WHERE lower(mail) = lower($1)
-                `,
-                [currentUser.mail]
-            );
-
-            await client.query(
-                `
-                    UPDATE users
-                    SET name = $1,
-                        firstname = $2,
-                        lastname = $3,
-                        mail = $4,
-                        rut = $5,
-                        sex = NULL,
-                        pass = '',
-                        password_bcrypt = NULL,
-                        last_login_at = NULL,
-                        active = false,
-                        email_confirmed = false,
-                        profile_image_path = NULL,
-                        profile_image_topbar_path = NULL,
-                        session_version = session_version + 1,
-                        anonymized_at = NOW(),
-                        anonymization_run_id = $6
-                    WHERE id = $7
-                `,
-                [
-                    identity.name,
-                    identity.firstname,
-                    identity.lastname,
-                    identity.email,
-                    identity.rut,
-                    runId,
-                    user.id,
-                ]
-            );
-
-            const message = [
-                "Account anonymized.",
-                `differential_selection comments updated: ${differentialSelectionResult.rowCount || 0}.`,
-                `differential_chat messages updated: ${differentialChatResult.rowCount || 0}.`,
-                `chat messages updated: ${rankingChatResult.rowCount || 0}.`,
-                `actor_selection descriptions updated: ${actorSelectionResult.rowCount || 0}.`,
-                `session device values cleared: ${sessionDeviceResult.rowCount || 0}.`,
-                `password reset tokens deleted: ${passwordResetResult.rowCount || 0}.`,
-            ].join(" ");
-
-            await client.query(
-                `
-                    UPDATE student_anonymization_events
-                    SET status = 'succeeded',
-                        message = $1,
-                        finished_at = NOW()
-                    WHERE run_id = $2
-                      AND user_id = $3
-                `,
-                [message, runId, user.id]
-            );
-
+            const result = await anonymizeStudentAccountInTransaction(client, runId, user, options);
             await client.query("COMMIT");
-
-            return { status: "succeeded" };
+            return result;
         } catch (error) {
             await client.query("ROLLBACK");
             throw error;
@@ -400,7 +436,10 @@ export {
     DEFAULT_PLACEHOLDER_TEXT,
     STUDENT_ROLE,
     anonymizeStudentAccount,
+    anonymizeStudentAccountInTransaction,
     buildAnonymousStudentIdentity,
+    createAnonymizationRun,
+    finalizeAnonymizationRun,
     parseStudentAnonymizationOptions,
     resolveRunStatus,
     runStudentAnonymization,
