@@ -10,6 +10,7 @@ import { fileURLToPath } from "url";
 import { initializeSockets } from "./config/socket.config.js";
 import { startDomainEventSubscriber } from "./services/domain-events/index.js";
 import { startUserErasureProcessor } from "./services/user-erasure/index.js";
+import { startUploadDeletionProcessor } from "./services/upload-deletion/index.js";
 
 const debug = debugLib("ethicapp:server");
 
@@ -38,6 +39,9 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     // Send the pending AI Additions erasure requests of forgotten accounts
     // (#876), including those recorded while ethicapp was stopped.
     startUserErasureProcessor();
+
+    // Delete the upload files that forgetting an account freed (#877).
+    startUploadDeletionProcessor();
 }
 
 /**

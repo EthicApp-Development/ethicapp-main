@@ -28,6 +28,8 @@ describe("internal user erasure endpoints", () => {
     let session;
     let store;
     let processor;
+    let uploadStore;
+    let uploadProcessor;
 
     before(async () => {
         const app = express();
@@ -38,6 +40,11 @@ describe("internal user erasure endpoints", () => {
         app.use(createUserErasureRouter({
             store:     { listForUser: (...args) => store.listForUser(...args), resetForRetry: (...args) => store.resetForRetry(...args) },
             processor: { processDue: (...args) => processor.processDue(...args) },
+            uploadStore: {
+                summaryForUser: (...args) => uploadStore.summaryForUser(...args),
+                resetForRetry:  (...args) => uploadStore.resetForRetry(...args),
+            },
+            uploadProcessor: { processDue: (...args) => uploadProcessor.processDue(...args) },
         }));
         server = await new Promise(resolve => {
             const listening = app.listen(0, "127.0.0.1", () => resolve(listening));
@@ -73,6 +80,28 @@ describe("internal user erasure endpoints", () => {
                 return { done: 1, retrying: 0, failed: 0 };
             },
         };
+        let uploadSummary = {
+            total: 3, pending: 0, retrying: 1, done: 1, skipped: 1, failed: 0, lastError: "FS_EACCES",
+        };
+        uploadStore = {
+            calls: [],
+            async summaryForUser(userId) {
+                uploadStore.calls.push(["summary", userId]);
+                return uploadSummary;
+            },
+            async resetForRetry(userId) {
+                uploadStore.calls.push(["reset", userId]);
+                return 1;
+            },
+        };
+        uploadProcessor = {
+            calls: [],
+            async processDue(options) {
+                uploadProcessor.calls.push(options);
+                uploadSummary = { ...uploadSummary, retrying: 0, done: 2, lastError: null };
+                return { done: 1, skipped: 0, retrying: 0, failed: 0 };
+            },
+        };
     });
 
     it("lists the requests of an account without internal ids", async () => {
@@ -89,6 +118,10 @@ describe("internal user erasure endpoints", () => {
         assert.equal("id" in body.requests[0], false);
         assert.equal("userId" in body.requests[0], false);
         assert.deepEqual(store.calls, [["list", 42]]);
+        assert.deepEqual(body.uploadDeletions, {
+            total: 3, pending: 0, retrying: 1, done: 1, skipped: 1, failed: 0, lastError: "FS_EACCES",
+        });
+        assert.deepEqual(uploadStore.calls, [["summary", 42]]);
     });
 
     it("retries the requests that are not done and answers with their state afterwards", async () => {
@@ -96,20 +129,26 @@ describe("internal user erasure endpoints", () => {
         const body = await response.json();
 
         assert.equal(response.status, 200);
-        assert.equal(body.retried, 1);
+        assert.equal(body.retried, 2);
         assert.deepEqual(store.calls, [["reset", 42], ["list", 42]]);
         assert.deepEqual(processor.calls, [{ userId: 42 }]);
         assert.deepEqual(body.requests.map(request => request.status), ["done", "done"]);
+        assert.deepEqual(uploadStore.calls, [["reset", 42], ["summary", 42]]);
+        assert.deepEqual(uploadProcessor.calls, [{ userId: 42 }]);
+        assert.equal(body.uploadDeletions.done, 2);
+        assert.equal(body.uploadDeletions.lastError, null);
     });
 
     it("does not process anything when no request was reset", async () => {
         store.resetForRetry = async () => 0;
+        uploadStore.resetForRetry = async () => 0;
 
         const response = await fetch(`${baseUrl}/api/admin/user-erasure/users/42/retry`, { method: "POST" });
 
         assert.equal(response.status, 200);
         assert.equal((await response.json()).retried, 0);
         assert.deepEqual(processor.calls, []);
+        assert.deepEqual(uploadProcessor.calls, []);
     });
 
     it("rejects an invalid user id", async () => {
