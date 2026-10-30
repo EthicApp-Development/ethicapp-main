@@ -380,10 +380,63 @@ export default {
         unavailable: 'El estado del borrado en los servicios de IA no está disponible ahora, porque no fue posible comunicarse con EthicApp.',
         retry: 'Reintentar el borrado',
         retryError: 'No fue posible reintentar el borrado ahora, porque no fue posible comunicarse con EthicApp.',
+        files: 'Archivos',
+        filesSummary: 'EthicApp borra en segundo plano los archivos de los casos eliminados y las imágenes de perfil: {{done}} de {{total}} borrados, {{skipped}} conservados porque otro caso todavía los usa.',
         services: {
           'argumentation-tutor': 'Tutor',
           'polyadic-agent': 'Polyadic'
         }
+      }
+    },
+    userForgetTeacher: {
+      action: 'Olvidar a este docente',
+      success: 'EthicApp olvidó a {{name}}. La cuenta quedó desactivada y anonimizada, y sus materiales se trataron como lo describía el diálogo. Los archivos y los servicios de IA se borran en segundo plano.',
+      error: 'No fue posible olvidar al docente.',
+      plan: {
+        title: '¿Olvidar a este docente?',
+        body: 'EthicApp olvidará a {{name}} ({{email}}). Esta acción no se puede deshacer. Esto es lo que ocurrirá:',
+        loading: 'Contando las actividades y los materiales del docente...',
+        loadError: 'No fue posible contar las actividades y los materiales del docente. Cierra este diálogo e inténtalo de nuevo.',
+        openActivities: 'Primero se finalizan las actividades abiertas, con aviso a sus estudiantes: {{count}}.',
+        openActivitiesUnavailable: 'Actividades abiertas: {{count}}. No fue posible comunicarse con EthicApp para finalizarlas; mientras no se pueda, olvidar al docente se detiene antes de cambiar nada.',
+        casesDeleted: 'Casos que se eliminan con sus archivos, porque son privados, nunca se usaron en una actividad y nunca se copiaron: {{count}}.',
+        designsDeleted: 'Diseños que se eliminan, porque son privados, nunca se usaron en una actividad y nunca se copiaron: {{count}}.',
+        keptWithRecipient: 'Lo que se conserva pasa a {{name}}: casos ({{cases}}), diseños ({{designs}}) y actividades ({{activities}}).',
+        keptWithoutRecipient: 'Lo que se conserva queda en la cuenta anonimizada, donde nadie puede editarlo: casos ({{cases}}), diseños ({{designs}}) y actividades ({{activities}}).',
+        copies: 'Las copias que hicieron otros docentes siguen funcionando: casos ({{cases}}) y diseños ({{designs}}).',
+        attribution: 'El nombre del docente se mantiene como autor de sus casos y diseños, y su correo se borra en todas partes. Los textos y PDF de los casos no se modifican.',
+        account: 'La cuenta se desactiva y pasa a llamarse «Former Teacher {{id}}», sus mensajes de chat se reemplazan por un texto de relleno y se pide a los servicios de IA que borren lo que guardan.',
+        recipientHeading: 'Destinatario (opcional)',
+        recipientHelp: 'Elige un docente activo que reciba los casos, diseños y actividades que se conservan.',
+        recipientSearch: 'Buscar docentes por nombre o correo',
+        recipientSearchButton: 'Buscar',
+        recipientNoResults: 'Ningún otro docente activo coincide.',
+        recipientSearchError: 'No fue posible buscar docentes.',
+        recipientSelected: 'Destinatario: {{name}} ({{email}})',
+        recipientChoose: 'Elegir',
+        recipientRemove: 'Quitar destinatario',
+        recipientWarning: '{{name}} quedará a cargo de las actividades y verá los nombres y las respuestas de sus estudiantes.',
+        cancel: 'Cancelar',
+        continue: 'Continuar'
+      },
+      confirm: {
+        title: '¿Olvidar a este docente?',
+        body: 'EthicApp olvidará a {{name}} ({{email}}). Esta acción no se puede deshacer.',
+        detailActivities: 'Actividades abiertas que se finalizan primero: {{count}}.',
+        detailDeleted: 'Se eliminan: casos ({{cases}}) y diseños ({{designs}}).',
+        detailRecipient: 'Los casos, diseños y actividades que se conservan pasan a {{name}} ({{email}}).',
+        detailNoRecipient: 'Los casos, diseños y actividades que se conservan quedan en la cuenta anonimizada.',
+        detailAccount: 'La cuenta se desactiva y se anonimiza; el nombre del docente se mantiene solo como autor de sus materiales.',
+        confirm: 'Olvidar docente'
+      },
+      errors: {
+        accountAnonymized: 'Esta cuenta ya estaba anonimizada, así que no se modificó. Abajo se muestra su estado actual.',
+        notATeacher: 'Esta cuenta ya no es de un docente, así que no se olvidó. Revisa la cuenta que se muestra abajo.',
+        accountChanged: 'El correo de esta cuenta cambió desde que se cargó la página, así que no se olvidó. Revisa la cuenta que se muestra abajo e inténtalo de nuevo.',
+        recipientUnavailable: 'El destinatario elegido ya no es un docente activo, así que no se cambió nada. Elige otro destinatario o ninguno.',
+        recipientChanged: 'El correo del destinatario elegido cambió, así que no se cambió nada. Vuelve a elegir al destinatario.',
+        openActivities: 'Se abrió una actividad del docente mientras se le olvidaba, así que no se anonimizó nada. Inténtalo de nuevo: primero se finalizará.',
+        activitiesNotFinished: 'EthicApp no pudo finalizar las actividades abiertas del docente, así que no se anonimizó nada. Inténtalo más tarde.'
       }
     },
     profile: {

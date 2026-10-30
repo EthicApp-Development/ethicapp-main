@@ -198,7 +198,8 @@ describe('UserShowPage: forgetting a student', () => {
   });
 
   it('offers to discard the edits of an account with no action that needs it, without a hint', async () => {
-    vi.mocked(fetchUserById).mockResolvedValue({ ...activeStudent, role: 'P' });
+    // An administrator account cannot be confirmed, deleted or forgotten.
+    vi.mocked(fetchUserById).mockResolvedValue({ ...activeStudent, role: 'S' });
     await renderPage();
 
     await typeInto(container.querySelector('input[type="email"]'), 'edited@example.test');

@@ -4,7 +4,7 @@ import { Alert, Button, Spinner } from 'react-bootstrap';
 
 import { useI18n } from '../../app/providers.jsx';
 import { fetchErasureRequests, retryErasureRequests } from '../../api/userForgettingApi.js';
-import { canRetryErasure, erasureDisplayStatus } from './erasureStatus.js';
+import { canRetryErasure, erasureDisplayStatus, uploadDeletionDisplayStatus } from './erasureStatus.js';
 
 const STATUS_CLASSES = Object.freeze({
   done: 'text-success',
@@ -13,16 +13,17 @@ const STATUS_CLASSES = Object.freeze({
   failed: 'text-danger'
 });
 
-// Where a forgotten account's data has been erased (#876): EthicApp, which
-// erased it when the account was forgotten, and each AI Additions service,
-// which erases it in the background. For example
-// "EthicApp ✓ · Tutor ✓ · Polyadic: retrying". Offers a retry while a
-// service has not confirmed its erasure.
+// Where a forgotten account's data has been erased (#876, #877): EthicApp,
+// which erased it when the account was forgotten, each AI Additions service,
+// which erases it in the background, and the files the account freed, which
+// ethicapp deletes in the background. For example
+// "EthicApp ✓ · Tutor ✓ · Polyadic: retrying · Files: pending". Offers a
+// retry while a service has not confirmed its erasure or a file is left.
 function ErasureStatusPanel({ userId }) {
   const { t } = useI18n();
   const [loading, setLoading] = useState(true);
   const [retrying, setRetrying] = useState(false);
-  const [state, setState] = useState({ ok: true, requests: [] });
+  const [state, setState] = useState({ ok: true, requests: [], uploadDeletions: null });
   const [retryError, setRetryError] = useState('');
 
   const serviceLabel = useCallback(
@@ -78,6 +79,9 @@ function ErasureStatusPanel({ userId }) {
   }
 
   const requests = state.ok ? state.requests : [];
+  const uploadDeletions = state.ok ? state.uploadDeletions ?? null : null;
+  const filesStatus = uploadDeletionDisplayStatus(uploadDeletions);
+  const filesLabel = t('pages.userForget.status.files');
 
   return (
     <section className="mt-4" data-testid="erasure-status" aria-labelledby="erasure-status-heading">
@@ -109,6 +113,18 @@ function ErasureStatusPanel({ userId }) {
                 </span>
               );
             })}
+            {filesStatus ? (
+              <span>
+                {' · '}
+                <span
+                  className={STATUS_CLASSES[filesStatus]}
+                  data-testid="erasure-status-files"
+                  data-erasure-status={filesStatus}
+                >
+                  {t(`pages.userForget.status.${filesStatus}`, { service: filesLabel })}
+                </span>
+              </span>
+            ) : null}
           </p>
 
           {!state.ok ? (
@@ -116,23 +132,37 @@ function ErasureStatusPanel({ userId }) {
               {t('pages.userForget.status.unavailable')}
             </Alert>
           ) : null}
-          {state.ok && requests.length === 0 ? (
+          {state.ok && requests.length === 0 && !filesStatus ? (
             <p className="form-text" data-testid="erasure-status-none">{t('pages.userForget.status.none')}</p>
           ) : null}
           {requests.length > 0 ? (
             <p className="form-text">{t('pages.userForget.status.help')}</p>
+          ) : null}
+          {filesStatus ? (
+            <p className="form-text" data-testid="erasure-files-summary">
+              {t('pages.userForget.status.filesSummary', {
+                done: uploadDeletions.done,
+                total: uploadDeletions.total,
+                skipped: uploadDeletions.skipped
+              })}
+            </p>
           ) : null}
           {requests.filter((request) => request.lastError && request.status !== 'done').map((request) => (
             <p key={request.serviceId} className="form-text mb-1" data-testid={`erasure-last-error-${request.serviceId}`}>
               {serviceLabel(request.serviceId)}: {t('pages.userForget.status.lastError', { code: request.lastError })}
             </p>
           ))}
+          {filesStatus && filesStatus !== 'done' && uploadDeletions.lastError ? (
+            <p className="form-text mb-1" data-testid="erasure-last-error-files">
+              {filesLabel}: {t('pages.userForget.status.lastError', { code: uploadDeletions.lastError })}
+            </p>
+          ) : null}
 
           {retryError ? (
             <Alert variant="danger" className="py-2 small" data-testid="erasure-retry-error">{retryError}</Alert>
           ) : null}
 
-          {canRetryErasure(requests) ? (
+          {canRetryErasure(requests, uploadDeletions) ? (
             <Button
               type="button"
               size="sm"

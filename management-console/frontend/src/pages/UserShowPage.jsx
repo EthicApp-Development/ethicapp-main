@@ -17,6 +17,7 @@ import { useSensitiveActionConfirmation } from '../components/common/useSensitiv
 import AccountStatusSummary from '../components/users/AccountStatusSummary.jsx';
 import ErasureStatusPanel from '../components/users/ErasureStatusPanel.jsx';
 import ForgetStudentButton from '../components/users/ForgetStudentButton.jsx';
+import ForgetTeacherButton from '../components/users/ForgetTeacherButton.jsx';
 import { unsavedChangesHint } from '../components/users/unsavedChangesHint.js';
 import {
   ACCOUNT_STATUSES,
@@ -89,13 +90,15 @@ function UserShowPage() {
   // its data has been erased (#876).
   const isAnonymizedAccount = accountStatus === ACCOUNT_STATUSES.anonymized;
   const canForgetStudent = savedForm?.role === 'A' && !isAnonymizedAccount;
+  // A teacher is forgotten with their materials (#877).
+  const canForgetTeacher = savedForm?.role === 'P' && !isAnonymizedAccount;
   const hasUnsavedChanges = savedForm !== null &&
     EDITABLE_FIELDS.some((fieldName) => form[fieldName] !== savedForm[fieldName]);
   const unsavedHint = hasUnsavedChanges
     ? unsavedChangesHint([
       ...(isPendingAccount ? ['confirm'] : []),
       ...(canDeleteAccount ? ['delete'] : []),
-      ...(canForgetStudent ? ['forget'] : [])
+      ...(canForgetStudent || canForgetTeacher ? ['forget'] : [])
     ], t)
     : null;
   const unsavedHintId = unsavedHint ? UNSAVED_CHANGES_HINT_ID : undefined;
@@ -280,7 +283,14 @@ function UserShowPage() {
     await reloadUser();
   }
 
-  async function onForgetStudentError(message, { changed }) {
+  async function onTeacherForgotten() {
+    setError('');
+    setResetMessage('');
+    setSuccess(t('pages.userForgetTeacher.success', { name: accountName }));
+    await reloadUser();
+  }
+
+  async function onForgetError(message, { changed }) {
     setSuccess('');
     setError(message);
     if (changed) {
@@ -472,7 +482,7 @@ function UserShowPage() {
                 {t('pages.userShow.actions.triggerPasswordReset')}
               </Button>
             ) : null}
-            {form.role === 'P' ? (
+            {form.role === 'P' && !isAnonymizedAccount ? (
               <Button
                 type="button"
                 variant="dark"
@@ -504,7 +514,19 @@ function UserShowPage() {
                 describedBy={unsavedHintId}
                 requestConfirmation={requestConfirmation}
                 onForgotten={onStudentForgotten}
-                onError={onForgetStudentError}
+                onError={onForgetError}
+              />
+            ) : null}
+            {canForgetTeacher ? (
+              <ForgetTeacherButton
+                userId={id}
+                accountName={accountName}
+                email={savedEmail}
+                disabled={hasUnsavedChanges}
+                describedBy={unsavedHintId}
+                requestConfirmation={requestConfirmation}
+                onForgotten={onTeacherForgotten}
+                onError={onForgetError}
               />
             ) : null}
           </div>
