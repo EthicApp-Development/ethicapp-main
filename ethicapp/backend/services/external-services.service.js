@@ -14,6 +14,7 @@ import {
     markDesignAnalysisProcessing,
 } from "../helpers/design-analyses-helper.js";
 import { saveChatMessage } from "../helpers/chat-helper.js";
+import { describeError, summarizeCallbackResult } from "../helpers/log-safety.js";
 import { studentNotifications, teacherNotifications } from "../config/socket.config.js";
 import aiAdditionsClient from "./ai-additions-client.service.js";
 import {
@@ -62,11 +63,22 @@ const UI_TRANSLATIONS_RETRY_MS   = 60 * 1000;
 // policy version; every other hook belongs to a session (`context.sessionId`)
 // and follows the version that session is pinned to (#815). `design-created`
 // and `design-updated` carry design analyses (epic #846, #862;
-// helpers/design-analysis-hooks.js).
+// helpers/design-analysis-hooks.js). `user-forgotten` asks a service to
+// erase what it keeps about a user (#876; see ERASURE_HOOKS).
 export const NON_SESSION_HOOKS = Object.freeze([
     "case-created",
     "design-created",
     "design-updated",
+    "user-forgotten",
+]);
+
+// Hooks that ask an AI service to erase what it keeps about someone (#876).
+// They carry an id and no content, and a service the current policy switched
+// off may still hold data from when it was allowed, so they skip the policy:
+// every registered adapter among the requested ones receives them, provided
+// a usable AI Additions connection is stored.
+export const ERASURE_HOOKS = Object.freeze([
+    "user-forgotten",
 ]);
 
 const DEFAULT_AI_SERVICE_POLICY = Object.freeze({
@@ -1173,6 +1185,32 @@ export class ExternalServicesRegistry {
         }
     }
 
+    // The ids among `requestedIds` that pass the policy gate for `hookName`.
+    async policyEnabledServiceIds(hookName, context, requestedIds) {
+        // Only production adapters depend on the policy, so the version is
+        // read only when one of them is requested.
+        const needsPolicy = requestedIds
+            .some(serviceId => !this.services.get(serviceId).development);
+        const policyVersion = needsPolicy
+            ? await this.resolveHookPolicyVersion(hookName, context)
+            : null;
+
+        return this.effectiveServiceIds(requestedIds, policyVersion);
+    }
+
+    // The ids among `requestedIds` that receive an erasure hook
+    // (ERASURE_HOOKS): every registered one, whatever the policy, but
+    // production adapters only with a usable AI Additions connection.
+    async erasureServiceIds(requestedIds = []) {
+        const registered = Array.from(new Set(requestedIds))
+            .filter(serviceId => this.services.has(serviceId));
+        const isDevelopment = serviceId => this.services.get(serviceId).development;
+        if (registered.every(isDevelopment) || await this.hasAiAdditionsConnection()) {
+            return registered;
+        }
+        return registered.filter(isDevelopment);
+    }
+
     // Runs the handlers of the effective services among
     // `options.enabledServiceIds` for `hookName`: the policy gate
     // (effectiveServiceIds) drops the others, under the version
@@ -1198,14 +1236,9 @@ export class ExternalServicesRegistry {
             return [];
         }
 
-        // Only production adapters depend on the policy, so the version is
-        // read only when one of them is requested.
-        const needsPolicy = requestedIds.some(serviceId => !this.services.get(serviceId).development);
-        const policyVersion = needsPolicy
-            ? await this.resolveHookPolicyVersion(hookName, context)
-            : null;
-
-        const enabledServiceIds = new Set(await this.effectiveServiceIds(requestedIds, policyVersion));
+        const enabledServiceIds = new Set(ERASURE_HOOKS.includes(hookName)
+            ? await this.erasureServiceIds(requestedIds)
+            : await this.policyEnabledServiceIds(hookName, context, requestedIds));
         if (enabledServiceIds.size === 0) {
             return [];
         }
@@ -1289,18 +1322,28 @@ export class ExternalServicesRegistry {
     // Dispatches a design-independent hook to the services that opted into it
     // through `globalHooks` in the manifest. Jobs, correlation ids, callback
     // handling, and error isolation are identical to dispatchHook().
-    async dispatchGlobalHook(hookName, context) {
+    // `options.serviceIds` narrows the audience to those services, so a
+    // caller can dispatch to one service at a time and read its outcome
+    // (the user erasure processor, #876).
+    async dispatchGlobalHook(hookName, context, { serviceIds = null } = {}) {
         if (!this.initialized) {
             await this.initialize();
         }
 
         // dispatchHook() applies the policy gate for this hook.
         return this.dispatchHook(hookName, context, {
-            enabledServiceIds: Array.from(this.services.values())
-                .filter(service => Array.isArray(service.globalHooks)
-                    && service.globalHooks.includes(hookName))
-                .map(service => service.id),
+            enabledServiceIds: this.globalHookServiceIds(hookName)
+                .filter(serviceId => serviceIds === null || serviceIds.includes(serviceId)),
         });
+    }
+
+    // The ids of the registered services that list `hookName` in
+    // `globalHooks`, in catalog order, whether or not they are usable.
+    globalHookServiceIds(hookName) {
+        return Array.from(this.services.values())
+            .filter(service => Array.isArray(service.globalHooks)
+                && service.globalHooks.includes(hookName))
+            .map(service => service.id);
     }
 
     // Delivers an inbound callback to its adapter (#815). The destination is
@@ -1404,7 +1447,8 @@ export class ExternalServicesRegistry {
                     .catch(() => null);
                 throw error;
             }
-            console.error(`[external-services] Could not claim a ${serviceId} callback.`, error);
+            console.error(`[external-services] Could not claim a ${serviceId} callback.`,
+                describeError(error));
             throw Object.assign(
                 new Error(`The callback for ${serviceId} could not be recorded; try again later.`),
                 { statusCode: 503 }
@@ -1475,7 +1519,8 @@ export class ExternalServicesRegistry {
                 .recordInstantiationReport(jobId, normalized)
                 .then(() => true)
                 .catch((err) => {
-                    console.error("[external-services] Failed to store an instantiation report.", err);
+                    console.error("[external-services] Failed to store an instantiation report.",
+                        describeError(err));
                     return false;
                 });
             if (stored) {
@@ -1546,7 +1591,8 @@ export class ExternalServicesRegistry {
                     status:        resultStatus,
                     adapterResult: result,
                 })
-                .catch(err => console.error("[external-services] Failed to persist callback result.", err));
+                .catch(err => console.error(
+                    "[external-services] Failed to persist callback result.", describeError(err)));
 
             // A room job stays open for the room's next callbacks (#833).
             if (context.jobId && !isRoomJob(context.job)) {
@@ -1558,7 +1604,9 @@ export class ExternalServicesRegistry {
                 const completedAt = jobStatus === JOB_STATUS.COMPLETED ? new Date().toISOString() : undefined;
                 await this._jobsService
                     .updateJobStatus(context.jobId, jobStatus, { completedAt })
-                    .catch(err => console.error("[external-services] Failed to update job status after callback result.", err));
+                    .catch(err => console.error(
+                        "[external-services] Failed to update job status after callback result.",
+                        describeError(err)));
             }
         } else if (context.jobId) {
             const jobStatus = result?.status === "failed"
@@ -1569,10 +1617,16 @@ export class ExternalServicesRegistry {
             const completedAt = jobStatus === JOB_STATUS.COMPLETED ? new Date().toISOString() : undefined;
             await this._jobsService
                 .updateJobStatus(context.jobId, jobStatus, { completedAt })
-                .catch(err => console.error("[external-services] Failed to update job status.", err));
+                .catch(err => console.error("[external-services] Failed to update job status.",
+                    describeError(err)));
         }
 
-        console.info(`[external-services] Callback received from ${serviceId} for ${hookName}.`, entry);
+        // Ids, status and sizes only: the result can carry a student's text
+        // (#876, helpers/log-safety.js).
+        console.info(
+            `[external-services] Callback received from ${serviceId} for ${hookName}.`,
+            JSON.stringify(summarizeCallbackResult({ serviceId, hookName, result, context }))
+        );
         return entry;
     }
 

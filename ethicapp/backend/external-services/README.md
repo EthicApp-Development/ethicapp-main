@@ -74,6 +74,7 @@ Which version applies:
 | --- | --- |
 | Session hooks (`phase-started`, `phase-ended`, `activity-started`, `activity-finished`, `student-response-submitted`, `chat-message-received`, and any hook other than `case-created`, `design-created` and `design-updated`) | The version the session was pinned to at launch (`sessions.ai_service_policy_version_id`), found from `context.sessionId`. A hook without `sessionId` follows no version. |
 | `case-created` (`NON_SESSION_HOOKS`) | The current version. It only bounds the author's choice (`case_analyses`): the candidates are the services chosen for the case, never every allowed one. |
+| `user-forgotten` (`NON_SESSION_HOOKS`, `ERASURE_HOOKS`) | None: erasure hooks skip the policy and only need the AI Additions connection. |
 | `design-created` and `design-updated` (`NON_SESSION_HOOKS`) | The current version. Only the reserved design analyses receive them (see "Design Analyses"). |
 | `GET /external-services`, `GET /external-services/:id/instance-configuration`, design saving, the case form's choice (`POST /cases`), regenerating a case or design analysis | The current version. |
 | The student activity descriptor | The session's pinned version. |
@@ -588,6 +589,7 @@ failures are isolated from teacher and student requests.
 | `design-created` | After `POST /designs` answers, and after `POST /designs/:id/duplicate` (duplicate or import) commits the copy (`helpers/design-analyses-lifecycle-helper.js`) | Each design-scoped service whose generation was reserved, one dispatch per service (see "Design Analyses") | `trigger` (`"created"`), `designId`, `userId` (requester), `caseId`, `languageCode` (the case's), `design` (the design document), `analysisInput` and `inputHash` (from the service's `designAnalysisInput()`) |
 | `design-updated` | After `PATCH /designs/:id` answers (`trigger: "updated"`), and from `POST /designs/:id/analyses/:serviceId/generate` with the current design (`trigger: "generate"`) (`helpers/design-analyses-lifecycle-helper.js`) | As for `design-created` | As for `design-created`, with `trigger` `"updated"` or `"generate"` |
 | `callback-received` | `POST /external-services/callbacks` | Only the service named in the callback body | `serviceId`, `eventType`, `correlationId`, `eventId`, `requestPayload`, `rawBody`, `auth` |
+| `user-forgotten` | The user erasure processor (`services/user-erasure/`), for each pending request in `user_erasure_requests` (#876) | Global (`globalHooks`), one AI Additions service at a time: the adapters that declare it and require the request's service. An erasure hook: it skips the policy (see "Erasure hooks") | `userId` (the forgotten account), `erasureRequestId` |
 
 ### Hook enablement
 
@@ -624,8 +626,29 @@ by the policy gate like any other dispatch. Opting in is decided in
 the catalog; there is no teacher-facing UI for it. `dispatchGlobalHook` delegates to `dispatchHook`, so jobs,
 `correlationId`, `callback(result)` handling, and error isolation are identical.
 
-No hook uses this path today: `case-created` did until the services became a
-choice of each case (#649).
+`user-forgotten` uses this path (#876). `case-created` did until the services
+became a choice of each case (#649). `dispatchGlobalHook(hookName, context,
+{ serviceIds })` narrows the audience to some of those services, so a caller
+can dispatch to one service at a time and read its outcome from the returned
+`Promise.allSettled` results.
+
+**Erasure hooks.** `ERASURE_HOOKS` (`user-forgotten`) ask a service to erase
+what it keeps about someone. They carry an id and no content, and a service
+the current policy switched off may still hold data from when it was
+allowed, so they skip the policy: every registered adapter among the
+requested ones receives them, provided a usable AI Additions connection is
+stored. Their handlers throw on failure instead of reporting a failed
+`callback(result)`, so the caller records the failure and retries it.
+
+The tutor and Polyadic adapters declare `user-forgotten`. The tutor's handler
+calls `DELETE /argumentation-tutor/api/v2/users/{user_id}/data`, with the
+`user_id` it sends with each argument; Polyadic's calls
+`DELETE /polyadic-agent/api/participants/{participant_id}/data`. Both are
+idempotent, and both answer counts, which the handler reports with
+`callback(result)`. The erasure request processor in
+`services/user-erasure/` dispatches it, records the outcome in
+`user_erasure_requests` and retries failures with a backoff; see
+`deploy/student-anonymization-overview.md`, "Erasure in AI Additions".
 
 `globalHooks` is only consulted by `dispatchGlobalHook`. Listing a phase-scoped
 hook such as `phase-started` there has no effect, because the activity dispatch
@@ -1857,8 +1880,13 @@ evaluation callback to be treated as duplicates under the idempotency logic
 introduced in #584.
 
 ```json
-{ "username": "...", "content": "...", "ethicapp_correlation_id": "<correlationId>" }
+{ "username": "...", "content": "...", "participant_id": "<sender uid>",
+  "ethicapp_correlation_id": "<correlationId>" }
 ```
+
+`participant_id` is the sender's EthicApp user id as a string (#876). Polyadic
+stores it with the message and never shows it to the agents; its
+per-participant erasure finds the messages by it.
 
 The Polyadic AI Additions service should track the most recent
 `ethicapp_correlation_id` received per room and include it in EthicApp

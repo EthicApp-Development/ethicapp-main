@@ -5,6 +5,7 @@ import * as config from "../config/database.config.js";
 import * as rpg2 from "../db/rest-pg-2.js";
 import { getDesignTypeByPhaseId } from "../helpers/designs-helper.js";
 import { dispatchPhaseHook } from "../helpers/external-service-dispatch.js";
+import { describeError } from "../helpers/log-safety.js";
 import { getStatusCode } from "../../common/modules/session-status.js";
 import { messageCountHandlers,
     chatTranscriptHandlers,
@@ -209,7 +210,8 @@ async function dispatchIncomingChatMessageHook(context) {
     try {
         await dispatchPhaseHook("chat-message-received", context);
     } catch (error) {
-        console.error("[external-services] Error dispatching incoming chat message hook.", error);
+        console.error("[external-services] Error dispatching incoming chat message hook.",
+            describeError(error));
     }
 }
 

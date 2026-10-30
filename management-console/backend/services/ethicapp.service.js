@@ -1,6 +1,6 @@
 const ETHICAPP_INTERNAL_BASE_URL = process.env.ETHICAPP_INTERNAL_BASE_URL || 'http://ethicapp:8501';
 
-function buildUrl(pathname) {
+export function buildUrl(pathname) {
   return `${ETHICAPP_INTERNAL_BASE_URL.replace(/\/$/, '')}${pathname}`;
 }
 
@@ -90,7 +90,7 @@ const AI_ADDITIONS_ERROR_CODES = new Set(AI_SERVICES_ERROR_CODES.filter((code) =
 const AI_SERVICES_CATALOG_TIMEOUT_MS = 15000;
 const AI_SERVICES_CONNECTION_TEST_TIMEOUT_MS = 20000;
 
-function internalIdentityHeaders({ cookie, userId, userRole, language }) {
+export function internalIdentityHeaders({ cookie, userId, userRole, language }) {
   return {
     Accept: 'application/json',
     Cookie: cookie || '',
@@ -103,7 +103,7 @@ function internalIdentityHeaders({ cookie, userId, userRole, language }) {
 // Fetches JSON from ethicapp. Transport failures (DNS, refused connection,
 // timeout) become { transportError: true }; a non-JSON body becomes
 // { body: null }.
-async function fetchInternalJson(url, init, { fetchImpl, timeoutMs }) {
+export async function fetchInternalJson(url, init, { fetchImpl, timeoutMs }) {
   let response;
 
   try {

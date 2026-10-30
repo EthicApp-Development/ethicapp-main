@@ -245,7 +245,14 @@ export default {
       impersonationError: 'Unable to start professor impersonation.',
       confirmAccountSuccess: 'Account confirmed. {{name}} can now sign in with the password they chose when signing up.',
       confirmAccountError: 'Unable to confirm the account.',
-      confirmAccountUnsavedHint: 'Save or discard your changes before confirming or deleting the account.',
+      unsavedChangesHint: {
+        template: 'Save or discard your changes before {{actions}} this account.',
+        confirm: 'confirming',
+        delete: 'deleting',
+        forget: 'forgetting',
+        or: 'or',
+        orBeforeO: 'or'
+      },
       errors: {
         accountNotPending: 'This account is not pending confirmation any more, so it was not changed. Its current status is shown below.',
         accountChanged: 'The email of this account changed since the page was loaded, so it was not confirmed. Check the email shown below and try again.',
@@ -339,6 +346,43 @@ export default {
           administration: 'administrative records',
           aiServices: 'AI service jobs or results',
           accountData: 'account data'
+        }
+      }
+    },
+    userForget: {
+      action: 'Forget this student',
+      success: 'EthicApp forgot {{name}}. The account is disabled and anonymized. The AI services are asked to erase their data in the background.',
+      error: 'Unable to forget the student.',
+      confirm: {
+        title: 'Forget this student?',
+        body: 'EthicApp will forget {{name}} ({{email}}). This cannot be undone.',
+        detailAccount: 'The account is disabled at once: open sessions stop working and the old credentials no longer sign in.',
+        detailIdentity: 'The name, email, RUT and profile data are replaced with anonymous values.',
+        detailResponses: 'Written responses and chat messages are replaced with a placeholder. Their rows are kept, so group chats stay consistent.',
+        detailAiServices: 'The text kept with AI service work in EthicApp is erased, and the Argumentation Tutor and Polyadic Agents are asked to erase what they keep about the student, in the background.',
+        confirm: 'Forget student'
+      },
+      errors: {
+        accountAnonymized: 'This account was already anonymized, so it was not changed. Its current status is shown below.',
+        notAStudent: 'Only student accounts can be forgotten here, so this account was not changed.',
+        accountChanged: 'The email of this account changed since the page was loaded, so it was not forgotten. Check the account shown below and try again.'
+      },
+      status: {
+        heading: 'Data erasure',
+        help: 'The AI services erase their data in the background. A service that is unavailable is retried automatically, with growing intervals.',
+        ethicapp: 'EthicApp',
+        done: '{{service}} ✓',
+        pending: '{{service}}: pending',
+        retrying: '{{service}}: retrying',
+        failed: '{{service}}: failed',
+        lastError: 'Last error: {{code}}',
+        none: 'No AI service erasure was recorded for this account: it was anonymized before EthicApp asked the AI services to forget students.',
+        unavailable: 'The erasure status of the AI services is unavailable right now, because EthicApp could not be reached.',
+        retry: 'Retry the erasure',
+        retryError: 'Unable to retry the erasure now, because EthicApp could not be reached.',
+        services: {
+          'argumentation-tutor': 'Tutor',
+          'polyadic-agent': 'Polyadic'
         }
       }
     },

@@ -15,6 +15,9 @@ import {
 import SensitiveActionConfirmModal from '../components/common/SensitiveActionConfirmModal.jsx';
 import { useSensitiveActionConfirmation } from '../components/common/useSensitiveActionConfirmation.js';
 import AccountStatusSummary from '../components/users/AccountStatusSummary.jsx';
+import ErasureStatusPanel from '../components/users/ErasureStatusPanel.jsx';
+import ForgetStudentButton from '../components/users/ForgetStudentButton.jsx';
+import { unsavedChangesHint } from '../components/users/unsavedChangesHint.js';
 import {
   ACCOUNT_STATUSES,
   accountActionErrorKey,
@@ -43,7 +46,8 @@ function formFromUser(user) {
 // Form fields an administrator can edit; any difference from the loaded
 // account is an unsaved change.
 const EDITABLE_FIELDS = Object.freeze(['firstname', 'lastname', 'sex', 'email', 'email_confirmation', 'role', 'active']);
-const CONFIRM_ACCOUNT_HINT_ID = 'confirm-account-unsaved-hint';
+// The hint for every account action that unsaved edits disable.
+const UNSAVED_CHANGES_HINT_ID = 'unsaved-changes-hint';
 
 function UserShowPage() {
   const { id } = useParams();
@@ -81,8 +85,20 @@ function UserShowPage() {
     Number(currentProfile.id) === Number(id);
   const isPendingAccount = accountStatus === ACCOUNT_STATUSES.pending;
   const canDeleteAccount = isDeletableAccount({ status: accountStatus, lastLoginAt });
+  // An anonymized account names no one: it is shown read-only, with where
+  // its data has been erased (#876).
+  const isAnonymizedAccount = accountStatus === ACCOUNT_STATUSES.anonymized;
+  const canForgetStudent = savedForm?.role === 'A' && !isAnonymizedAccount;
   const hasUnsavedChanges = savedForm !== null &&
     EDITABLE_FIELDS.some((fieldName) => form[fieldName] !== savedForm[fieldName]);
+  const unsavedHint = hasUnsavedChanges
+    ? unsavedChangesHint([
+      ...(isPendingAccount ? ['confirm'] : []),
+      ...(canDeleteAccount ? ['delete'] : []),
+      ...(canForgetStudent ? ['forget'] : [])
+    ], t)
+    : null;
+  const unsavedHintId = unsavedHint ? UNSAVED_CHANGES_HINT_ID : undefined;
 
   const applyUser = useCallback((user) => {
     const persistedForm = formFromUser(user);
@@ -257,6 +273,22 @@ function UserShowPage() {
     }
   }
 
+  async function onStudentForgotten() {
+    setError('');
+    setResetMessage('');
+    setSuccess(t('pages.userForget.success', { name: accountName }));
+    await reloadUser();
+  }
+
+  async function onForgetStudentError(message, { changed }) {
+    setSuccess('');
+    setError(message);
+    if (changed) {
+      // The account changed meanwhile: show its current state.
+      await reloadUser();
+    }
+  }
+
   async function onTriggerPasswordReset() {
     if (isOwnSuperAdminAccount) {
       return;
@@ -311,7 +343,7 @@ function UserShowPage() {
         {resetMessage ? <Alert variant="info">{resetMessage}</Alert> : null}
 
         <Form onSubmit={onSubmit}>
-          <Row className="g-3">
+          <Row as="fieldset" className="g-3" disabled={isAnonymizedAccount}>
             <Col md={6}>
               <Form.Label>{t('pages.userShow.fields.firstname')}</Form.Label>
               <Form.Control
@@ -407,10 +439,12 @@ function UserShowPage() {
           </Row>
 
           <div className="d-flex flex-wrap gap-2 mt-4">
-            <Button type="submit">
-              <i className="fa-solid fa-floppy-disk me-2" aria-hidden="true" />
-              {t('pages.userShow.actions.save')}
-            </Button>
+            {!isAnonymizedAccount ? (
+              <Button type="submit">
+                <i className="fa-solid fa-floppy-disk me-2" aria-hidden="true" />
+                {t('pages.userShow.actions.save')}
+              </Button>
+            ) : null}
             <Button type="button" variant="outline-primary" onClick={() => navigate('/users')}>
               <i className="fa-solid fa-xmark me-2" aria-hidden="true" />
               {t('pages.userShow.actions.cancel')}
@@ -421,14 +455,14 @@ function UserShowPage() {
                 variant="success"
                 data-testid="confirm-account-button"
                 disabled={hasUnsavedChanges}
-                aria-describedby={hasUnsavedChanges ? CONFIRM_ACCOUNT_HINT_ID : undefined}
+                aria-describedby={unsavedHintId}
                 onClick={onConfirmAccount}
               >
                 <i className="fa-solid fa-user-check me-2" aria-hidden="true" />
                 {t('pages.userShow.actions.confirmAccount')}
               </Button>
             ) : null}
-            {!isOwnSuperAdminAccount ? (
+            {!isOwnSuperAdminAccount && !isAnonymizedAccount ? (
               <Button
                 type="button"
                 variant="warning"
@@ -454,19 +488,33 @@ function UserShowPage() {
                 variant="outline-danger"
                 data-testid="delete-account-button"
                 disabled={hasUnsavedChanges}
-                aria-describedby={hasUnsavedChanges ? CONFIRM_ACCOUNT_HINT_ID : undefined}
+                aria-describedby={unsavedHintId}
                 onClick={onDeleteAccount}
               >
                 <i className="fa-solid fa-trash me-2" aria-hidden="true" />
                 {t('pages.userShow.deleteAccount.action')}
               </Button>
             ) : null}
+            {canForgetStudent ? (
+              <ForgetStudentButton
+                userId={id}
+                accountName={accountName}
+                email={savedEmail}
+                disabled={hasUnsavedChanges}
+                describedBy={unsavedHintId}
+                requestConfirmation={requestConfirmation}
+                onForgotten={onStudentForgotten}
+                onError={onForgetStudentError}
+              />
+            ) : null}
           </div>
-          {isPendingAccount && hasUnsavedChanges ? (
+          {hasUnsavedChanges ? (
             <div className="d-flex flex-wrap align-items-center gap-2 mt-2">
-              <Form.Text id={CONFIRM_ACCOUNT_HINT_ID} className="mt-0" data-testid="confirm-account-unsaved-hint">
-                {t('pages.userShow.confirmAccountUnsavedHint')}
-              </Form.Text>
+              {unsavedHint ? (
+                <Form.Text id={UNSAVED_CHANGES_HINT_ID} className="mt-0" data-testid="unsaved-changes-hint">
+                  {unsavedHint}
+                </Form.Text>
+              ) : null}
               <Button
                 type="button"
                 size="sm"
@@ -479,6 +527,8 @@ function UserShowPage() {
             </div>
           ) : null}
         </Form>
+
+        {isAnonymizedAccount ? <ErasureStatusPanel userId={id} /> : null}
       </Card.Body>
 
       <SensitiveActionConfirmModal {...modalProps} />

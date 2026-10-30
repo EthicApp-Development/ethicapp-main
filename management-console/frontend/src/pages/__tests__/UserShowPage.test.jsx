@@ -121,13 +121,13 @@ describe('UserShowPage: confirming a pending account', () => {
     await renderPage();
     const button = byTestId('confirm-account-button');
     expect(button.disabled).toBe(false);
-    expect(byTestId('confirm-account-unsaved-hint')).toBeNull();
+    expect(byTestId('unsaved-changes-hint')).toBeNull();
 
     await typeInto(emailInput(), EDITED_EMAIL);
 
     expect(button.disabled).toBe(true);
-    const hint = byTestId('confirm-account-unsaved-hint');
-    expect(hint.textContent).toBe('Save or discard your changes before confirming or deleting the account.');
+    const hint = byTestId('unsaved-changes-hint');
+    expect(hint.textContent).toBe('Save or discard your changes before confirming, deleting or forgetting this account.');
     expect(button.getAttribute('aria-describedby')).toBe(hint.id);
 
     await click(button);
@@ -137,7 +137,7 @@ describe('UserShowPage: confirming a pending account', () => {
 
     expect(emailInput().value).toBe(STORED_EMAIL);
     expect(button.disabled).toBe(false);
-    expect(byTestId('confirm-account-unsaved-hint')).toBeNull();
+    expect(byTestId('unsaved-changes-hint')).toBeNull();
 
     await click(button);
     expect(dialogText()).toContain(STORED_EMAIL);
@@ -171,7 +171,7 @@ describe('UserShowPage: confirming a pending account', () => {
 
     expect(updateUser).toHaveBeenCalledTimes(1);
     expect(byTestId('confirm-account-button').disabled).toBe(false);
-    expect(byTestId('confirm-account-unsaved-hint')).toBeNull();
+    expect(byTestId('unsaved-changes-hint')).toBeNull();
 
     await click(byTestId('confirm-account-button'));
     expect(dialogText()).toContain(savedEmail);
@@ -207,7 +207,7 @@ describe('UserShowPage: account creation date', () => {
         .format(new Date(pendingUser.createdAt))
     );
     expect(byTestId('confirm-account-button').disabled).toBe(false);
-    expect(byTestId('confirm-account-unsaved-hint')).toBeNull();
+    expect(byTestId('unsaved-changes-hint')).toBeNull();
   });
 
   it('shows an unknown creation date for an account created before it was recorded', async () => {

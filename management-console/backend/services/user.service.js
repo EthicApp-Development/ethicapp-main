@@ -196,7 +196,7 @@ export async function getUserById(userId, { queryFn = query } = {}) {
   };
 }
 
-export async function updateUserById(userId, payload) {
+export async function updateUserById(userId, payload, { queryFn = query } = {}) {
   const normalizedId = Number(userId);
 
   if (!Number.isInteger(normalizedId) || normalizedId <= 0) {
@@ -226,9 +226,9 @@ export async function updateUserById(userId, payload) {
     throw new Error('EMAIL_CONFIRMATION_MISMATCH');
   }
 
-  const currentResult = await query(
+  const currentResult = await queryFn(
     `
-      SELECT id, role, mail, active
+      SELECT id, role, mail, active, anonymized_at
       FROM users
       WHERE id = $1
       LIMIT 1
@@ -241,6 +241,13 @@ export async function updateUserById(userId, payload) {
   }
 
   const currentUser = currentResult.rows[0];
+
+  // An anonymized account names no one and must stay disabled: editing it
+  // could give it a real email or reactivate it. The UPDATE below repeats the
+  // condition, for an account forgotten after this read.
+  if (currentUser.anonymized_at) {
+    throw new Error('ACCOUNT_ANONYMIZED');
+  }
   const active = Object.prototype.hasOwnProperty.call(payload, 'active')
     ? payload.active === true || payload.active === 'true' || payload.active === 'on'
     : currentUser.active !== false;
@@ -255,7 +262,7 @@ export async function updateUserById(userId, payload) {
     throw new Error('INVALID_ROLE_TRANSITION');
   }
 
-  const duplicatedEmailResult = await query(
+  const duplicatedEmailResult = await queryFn(
     `
       SELECT id
       FROM users
@@ -272,7 +279,7 @@ export async function updateUserById(userId, payload) {
 
   const fullName = `${firstname} ${lastname}`.trim();
 
-  const updateResult = await query(
+  const updateResult = await queryFn(
     `
       UPDATE users
       SET firstname = $1,
@@ -288,6 +295,7 @@ export async function updateUserById(userId, payload) {
             ELSE session_version
           END
       WHERE id = $8
+        AND anonymized_at IS NULL
       RETURNING id, firstname, lastname, sex, mail, role, active, email_confirmed
     `,
     [
@@ -302,6 +310,14 @@ export async function updateUserById(userId, payload) {
       isRoleChanged || isActiveChanged
     ]
   );
+
+  // No row: the account was forgotten, or deleted, after the read above.
+  // PostgreSQL re-checks the condition on the latest version of a row that a
+  // concurrent transaction changed, so the forgetting always wins.
+  if (updateResult.rowCount === 0) {
+    const stillThere = await queryFn('SELECT 1 FROM users WHERE id = $1', [normalizedId]);
+    throw new Error(stillThere.rowCount > 0 ? 'ACCOUNT_ANONYMIZED' : 'USER_NOT_FOUND');
+  }
 
   const row = updateResult.rows[0];
 

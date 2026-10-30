@@ -74,6 +74,9 @@ export const USER_REFERENCES = Object.freeze([
   // AI service jobs and results keep a user id without a foreign key (V15).
   reference('external_service_jobs', 'user_id', null, true, aiServices),
   reference('external_service_results', 'user_id', null, true, aiServices),
+  // AI Additions erasure requests of a forgotten account (V31, #876), which
+  // must outlive any change to the account row.
+  reference('user_erasure_requests', 'user_id', null, true, aiServices),
   // Rows the deletion removes with the account (V10).
   reference('user_passkeys', 'user_id', cascade, false, accountData),
   // Rows that keep their meaning without the account and lose the id (V4,

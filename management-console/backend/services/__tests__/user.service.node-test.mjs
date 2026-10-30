@@ -6,7 +6,8 @@ import {
   buildListUsersFilter,
   buildListUsersOrder,
   getUserById,
-  listUsers
+  listUsers,
+  updateUserById
 } from '../user.service.js';
 
 function createFakeQuery(handler) {
@@ -217,4 +218,45 @@ test('getUserById returns the creation date, or null when it is unknown', async 
   assert.deepEqual((await getUserById('22', { queryFn })).createdAt, createdAt);
   assert.equal((await getUserById('21', { queryFn })).createdAt, null);
   assert.match(calls[0].sql, /last_login_at, anonymized_at, created_at FROM users WHERE id = \$1/);
+});
+
+const EDIT = Object.freeze({
+  firstname: 'Real',
+  lastname: 'Name',
+  sex: 'F',
+  email: 'real@test',
+  email_confirmation: 'real@test',
+  role: 'A',
+  active: true
+});
+
+// The fake answers the read of the account, the duplicate-email check, an
+// UPDATE that matched no row (the account was forgotten or deleted after the
+// read), and the re-read that tells the two apart.
+function editRacingWith({ stillThere }) {
+  return createFakeQuery(({ sql }) => {
+    if (sql.startsWith('SELECT id, role, mail, active, anonymized_at')) {
+      return { rowCount: 1, rows: [{ id: 7, role: 'A', mail: 'ana@test', active: true, anonymized_at: null }] };
+    }
+    if (sql.startsWith('UPDATE users')) {
+      return { rowCount: 0, rows: [] };
+    }
+    if (sql === 'SELECT 1 FROM users WHERE id = $1') {
+      return { rowCount: stillThere ? 1 : 0, rows: stillThere ? [{}] : [] };
+    }
+    return { rowCount: 0, rows: [] };
+  });
+}
+
+test('updateUserById writes only while the account is not anonymized', async () => {
+  const { calls, queryFn } = editRacingWith({ stillThere: true });
+
+  await assert.rejects(updateUserById(7, EDIT, { queryFn }), { message: 'ACCOUNT_ANONYMIZED' });
+  assert.match(calls.find((call) => call.sql.startsWith('UPDATE users')).sql, /WHERE id = \$8 AND anonymized_at IS NULL/);
+});
+
+test('updateUserById reports an account deleted after its read as not found', async () => {
+  const { queryFn } = editRacingWith({ stillThere: false });
+
+  await assert.rejects(updateUserById(7, EDIT, { queryFn }), { message: 'USER_NOT_FOUND' });
 });

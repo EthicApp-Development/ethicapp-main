@@ -2,6 +2,7 @@ import * as rpg2 from "../../db/rest-pg-2.js";
 import * as config from "../../config/database.config.js";
 import defaultAiAdditionsClient from "../../services/ai-additions-client.service.js";
 import { plainTextOf } from "../../helpers/rich-text-helper.js";
+import { describeError } from "../../helpers/log-safety.js";
 
 // The Polyadic Agents API under the AI Additions connection's base URL (#814).
 export const POLYADIC_API_BASE_PATH = "/polyadic-agent/api";
@@ -368,6 +369,42 @@ function createDependencies(overrides = {}) {
     };
 }
 
+// The EthicApp user id as Polyadic's participant id (a decimal string), or
+// null when it is not a positive integer.
+function participantIdOf(userId) {
+    const id = Number(userId);
+    return Number.isInteger(id) && id > 0 ? String(id) : null;
+}
+
+/**
+ * Asks Polyadic to erase what it keeps about one participant (#876):
+ * `DELETE /participants/{participant_id}/data`. Idempotent; resolves to
+ * Polyadic's counts. Rejects for an invalid user id, and with the client's
+ * error (`statusCode` for an HTTP failure) when Polyadic cannot be reached
+ * or refuses.
+ */
+export async function erasePolyadicParticipant(userId) {
+    const participantId = participantIdOf(userId);
+    if (!participantId) {
+        throw Object.assign(new Error("A positive integer user id is required."), {
+            code: "invalid_user_id",
+        });
+    }
+
+    const response = await requestPolyadicJson(
+        `/participants/${encodeURIComponent(participantId)}/data`,
+        { method: "DELETE" }
+    );
+
+    return {
+        participantId,
+        messagesErased:   Number(response?.messages_erased) || 0,
+        messagesRedacted: Number(response?.messages_redacted) || 0,
+        roomSessions:     Number(response?.room_sessions) || 0,
+        activeRooms:      Number(response?.active_rooms) || 0,
+    };
+}
+
 async function requestPolyadicJson(pathname, { method = "GET", body = null } = {}) {
     return aiAdditionsClient.requestJson(pathname, {
         method,
@@ -440,12 +477,16 @@ async function closePolyadicSession(roomName) {
     return true;
 }
 
-async function forwardChatMessage(roomName, username, content, correlationId) {
+// `participantId` is the sender's EthicApp user id. Polyadic stores it with
+// the message, so it can erase the participant's messages when EthicApp
+// forgets them (#876, ethicapp-ai-additions#214). The agents never see it.
+async function forwardChatMessage(roomName, username, content, correlationId, participantId) {
     await requestPolyadicJson(`/rooms/${encodeURIComponent(roomName)}/messages`, {
         method: "POST",
         body:   {
             username,
             content,
+            participant_id:          participantIdOf(participantId),
             ethicapp_correlation_id: correlationId ?? null,
         },
     });
@@ -566,7 +607,8 @@ export async function register({
             });
         } catch (error) {
             roomContext.delete(roomName);
-            console.warn(`[polyadic-bridge] Failed to create polyadic room ${roomName}.`, error);
+            console.warn(`[polyadic-bridge] Failed to create polyadic room ${roomName}.`,
+                describeError(error));
             await settleRoomJob(roomJobId, roomName, id => roomJobs.fail(id));
             return null;
         }
@@ -728,7 +770,7 @@ export async function register({
         }
 
         try {
-            await forwardChatMessage(roomName, polyadicUsername, content, correlationId);
+            await forwardChatMessage(roomName, polyadicUsername, content, correlationId, userId);
             await callback({
                 serviceId: service.id,
                 hook:      "chat-message-received",
@@ -742,7 +784,8 @@ export async function register({
                 },
             });
         } catch (error) {
-            console.warn(`[polyadic-bridge] Failed to forward message to ${roomName}.`, error);
+            console.warn(`[polyadic-bridge] Failed to forward message to ${roomName}.`,
+                describeError(error));
             await callback({
                 serviceId: service.id,
                 hook:      "chat-message-received",
@@ -840,7 +883,8 @@ export async function register({
                 await closePolyadicSession(roomName);
                 roomsClosed++;
             } catch (error) {
-                console.warn(`[polyadic-bridge] Failed to close room ${roomName}.`, error);
+                console.warn(`[polyadic-bridge] Failed to close room ${roomName}.`,
+                    describeError(error));
             }
             roomContext.delete(roomName);
         }
@@ -853,6 +897,22 @@ export async function register({
             status:    "completed",
             payload:   { sessionId, phaseId, roomsClosed },
         });
+    });
+
+    // An administrator forgot the user (#876). Dispatched by the erasure
+    // request processor (services/user-erasure/), which records the outcome
+    // and retries a failure, so a failure is thrown, never swallowed.
+    subscribe("user-forgotten", async (context, { callback }) => {
+        const erasure = await erasePolyadicParticipant(context.userId);
+        console.info(`[polyadic-bridge] Participant ${erasure.participantId} erased.`);
+        const result = {
+            serviceId: service.id,
+            hook:      "user-forgotten",
+            status:    "completed",
+            payload:   erasure,
+        };
+        await callback(result);
+        return result;
     });
 
     subscribe("activity-finished", async (context, { callback }) => {
@@ -868,7 +928,8 @@ export async function register({
                 await closePolyadicSession(roomName);
                 roomsClosed++;
             } catch (error) {
-                console.warn(`[polyadic-bridge] Failed to close room ${roomName}.`, error);
+                console.warn(`[polyadic-bridge] Failed to close room ${roomName}.`,
+                    describeError(error));
             }
             roomContext.delete(roomName);
         }

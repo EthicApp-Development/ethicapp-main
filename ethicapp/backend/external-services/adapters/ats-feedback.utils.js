@@ -1,4 +1,5 @@
 import { plainTextOf } from "../../helpers/rich-text-helper.js";
+import { describeError } from "../../helpers/log-safety.js";
 import { ARGUMENTATION_TUTOR_SERVICE_ID } from "../../helpers/tutor-mode.js";
 
 // The tutor's catalog id, which design phases enable.
@@ -404,8 +405,9 @@ export async function createAtsSession({
                 continue;
             }
 
+            // The rejection itself is kept in the instantiation report.
             console.warn("[ats-feedback] The tutor rejected the configured settings; "
-                + "creating the session with its defaults.", error.responseBody ?? error);
+                + "creating the session with its defaults.", describeError(error));
             configuration = {};
             configurationRejected = true;
             rejection = error.responseBody ?? null;

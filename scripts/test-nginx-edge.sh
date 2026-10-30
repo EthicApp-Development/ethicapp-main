@@ -138,6 +138,12 @@ run_cases() {
     "${api[@]}" "${valid[@]}" --request POST "$base/api/admin/impersonation/professor/12"
   check "impersonation start, other letter case" 404 text/html 'X-Request-Id:' \
     "${api[@]}" "${valid[@]}" --request POST "$base/Api/Admin/Impersonation/professor/12"
+  check "internal user erasure status is not served" 404 text/html 'X-Request-Id:' \
+    "${api[@]}" "${valid[@]}" "$base/api/admin/user-erasure/users/12"
+  check "internal user erasure retry is not served" 404 text/html 'X-Request-Id:' \
+    "${api[@]}" "${valid[@]}" --request POST "$base/api/admin/user-erasure/users/12/retry"
+  check "internal user erasure retry, other letter case" 404 text/html 'X-Request-Id:' \
+    "${api[@]}" "${valid[@]}" --request POST "$base/api/Admin/User-Erasure/users/12/retry"
   check "teacher open activities count is not served" 404 text/html 'X-Request-Id:' \
     "${api[@]}" "${valid[@]}" "$base/api/admin/users/12/open-activities"
   check "finishing a teacher's activities is not served" 404 text/html 'X-Request-Id:' \

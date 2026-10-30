@@ -19,6 +19,8 @@ const INTERNAL_ROUTES = [
     "/api/admin/ai-services/connection-test",
     "/api/admin/ai-services/",
     "/api/admin/impersonation/professor/12",
+    "/api/admin/user-erasure/users/12",
+    "/api/admin/user-erasure/users/12/retry",
     "/api/admin/users/12/open-activities",
     "/api/admin/users/12/finish-activities",
 ];
@@ -31,6 +33,7 @@ function caseVariants(uri) {
         uri.replace("/admin/", "/Admin/"),
         uri.replace("/ai-services/", "/AI-Services/")
             .replace("/impersonation/", "/Impersonation/")
+            .replace("/user-erasure/", "/User-Erasure/")
             .replace("/users/", "/Users/"),
     ].filter(variant => variant !== uri);
 }

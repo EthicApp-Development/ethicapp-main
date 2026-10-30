@@ -130,7 +130,12 @@ export function SensitiveActionConfirmContent({
       <Modal.Body>
         <div id={DESCRIPTION_ID}>
           {description ? <p>{description}</p> : null}
-          {details ? <p className="text-body-secondary small">{details}</p> : null}
+          {Array.isArray(details) && details.length > 0 ? (
+            <ul className="small" data-testid="sensitive-action-details">
+              {details.map((detail) => <li key={detail}>{detail}</li>)}
+            </ul>
+          ) : null}
+          {typeof details === 'string' && details ? <p className="text-body-secondary small">{details}</p> : null}
           <p className="text-body-secondary small">
             {t(method === CONFIRMATION_METHODS.passkey ? 'sensitiveAction.passkeyIntro' : 'sensitiveAction.passwordIntro')}
           </p>
@@ -160,7 +165,8 @@ export function SensitiveActionConfirmContent({
 SensitiveActionConfirmContent.propTypes = {
   title: PropTypes.string.isRequired,
   description: PropTypes.string,
-  details: PropTypes.string,
+  // A paragraph, or a list of what the action will do.
+  details: PropTypes.oneOfType([PropTypes.string, PropTypes.arrayOf(PropTypes.string)]),
   confirmLabel: PropTypes.string,
   confirmVariant: PropTypes.string,
   method: PropTypes.oneOf(Object.values(CONFIRMATION_METHODS)).isRequired,

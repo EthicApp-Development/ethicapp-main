@@ -155,6 +155,7 @@ test("chat-message-received creates a missing room and forwards the message", as
     assert.deepEqual(harness.requests[1].options.body, {
         username:                "user-9001",
         content:                 "We should discuss the consequences.",
+        participant_id:          "9001",
         ethicapp_correlation_id: "corr-msg-001",
     });
     // Session creation does NOT carry correlationId — only message forwarding does.

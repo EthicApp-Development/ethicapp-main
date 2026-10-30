@@ -8,6 +8,7 @@ import * as rpg2 from "../../db/rest-pg-2.js";
 import { teacherNotifications } from "../../config/socket.config.js";
 import { getDesignTypeBySessionId } from "./activities-common.js";
 import { dispatchPhaseHook } from "../../helpers/external-service-dispatch.js";
+import { describeError } from "../../helpers/log-safety.js";
 
 const router = express.Router();
 
@@ -210,7 +211,8 @@ async function dispatchStudentResponseHook(context) {
     try {
         await dispatchPhaseHook("student-response-submitted", context);
     } catch (error) {
-        console.error("[external-services] Error dispatching student response hook.", error);
+        console.error("[external-services] Error dispatching student response hook.",
+            describeError(error));
     }
 }
 

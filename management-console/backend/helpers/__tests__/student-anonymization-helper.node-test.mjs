@@ -218,5 +218,50 @@ test("runStudentAnonymization skips a candidate that was already anonymized befo
     assert.equal(result.skipped, 1);
     assert.equal(result.failed, 0);
     assert.equal(pool.client.calls.some(call => call.sql.includes("UPDATE users SET")), false);
+    assert.equal(pool.client.calls.some(call => call.sql.includes("user_erasure_requests")), false);
     assert.ok(pool.client.calls.some(call => call.sql === "COMMIT"));
+});
+
+test("runStudentAnonymization erases AI service payloads and records pending erasure requests (#876)", async () => {
+    const pool = new FakePool(createQueryHandler({
+        candidates: [{ id: 5, mail: "student5@example.test" }],
+    }));
+
+    const result = await runStudentAnonymization({
+        pool,
+        options: {
+            dryRun:          false,
+            placeholderText: "******",
+        },
+        logger: createSilentLogger(),
+    });
+
+    assert.equal(result.succeeded, 1);
+    const statements = pool.client.calls.map(call => call.sql);
+    const beginIndex = statements.indexOf("BEGIN");
+    const commitIndex = statements.indexOf("COMMIT");
+    const resultsIndex = statements.findIndex(sql => sql.includes("FROM external_service_results WHERE user_id = $1"));
+    const jobsIndex = statements.findIndex(sql => sql.includes("FROM external_service_jobs WHERE user_id = $1"));
+    const requestsIndex = statements.findIndex(sql => sql.startsWith("INSERT INTO user_erasure_requests"));
+
+    // Inside the account's transaction.
+    for (const index of [resultsIndex, jobsIndex, requestsIndex]) {
+        assert.ok(index > beginIndex && index < commitIndex);
+    }
+    assert.deepEqual(pool.client.calls[requestsIndex].params, [5, ["argumentation-tutor", "polyadic-agent"], 77]);
+
+    const succeeded = pool.client.calls.find(call => call.sql.includes("SET status = 'succeeded'"));
+    assert.match(succeeded.params[0], /external_service_results payloads erased: 0\./);
+    assert.match(succeeded.params[0], /AI service erasure requests recorded: argumentation-tutor, polyadic-agent\./);
+});
+
+test("runStudentAnonymization dry run records no erasure request", async () => {
+    const pool = new FakePool(createQueryHandler({
+        candidates: [{ id: 5, mail: "student5@example.test" }],
+    }));
+
+    await runStudentAnonymization({ pool, options: { dryRun: true }, logger: createSilentLogger() });
+
+    assert.equal(pool.client.calls.some(call => call.sql.includes("user_erasure_requests")), false);
+    assert.equal(pool.client.calls.some(call => call.sql.includes("external_service_results")), false);
 });

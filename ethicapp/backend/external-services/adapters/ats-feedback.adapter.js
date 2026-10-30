@@ -813,6 +813,35 @@ function createAtsFeedbackHandlers({ dependencies, publishStudentResult }) {
 }
 
 /**
+ * Asks the tutor to erase what it keeps about one user (#876):
+ * `DELETE /users/{user_id}/data`, with the `user_id` the adapter sends with
+ * each argument. Idempotent; resolves to the tutor's counts. Rejects for an
+ * invalid user id, and with the client's error (`statusCode` for an HTTP
+ * failure) when the tutor cannot be reached or refuses.
+ */
+export async function eraseTutorUserData(userId) {
+    const id = Number(userId);
+    if (!Number.isInteger(id) || id <= 0) {
+        throw Object.assign(new Error("A positive integer user id is required."), {
+            code: "invalid_user_id",
+        });
+    }
+
+    const response = await requestAtsJson(`/users/${encodeURIComponent(String(id))}/data`, {
+        method: "DELETE",
+    });
+
+    return {
+        userId:         String(id),
+        sessions:       Number(response?.sessions) || 0,
+        historyEntries: Number(response?.history_entries) || 0,
+        tasks:          Number(response?.tasks) || 0,
+        taskKeys:       Number(response?.task_keys) || 0,
+        celeryResults:  Number(response?.celery_results) || 0,
+    };
+}
+
+/**
  * @param {Object} args - See "Adapter registration" in the README.
  * @param {Object} [args.atsFeedbackDependencies] - Test-only overrides of the
  *     database reads and the clock (createDependencies()).
@@ -853,6 +882,20 @@ export async function register({
                 error:  normalizeText(error?.message) || "Unexpected external result adapter error.",
             });
         }
+    });
+
+    // An administrator forgot the user (#876). Dispatched by the erasure
+    // request processor (services/user-erasure/), which records the outcome
+    // and retries a failure, so a failure is thrown, never swallowed.
+    subscribe("user-forgotten", async (context, { callback }) => {
+        const erasure = await eraseTutorUserData(context.userId);
+        const result = {
+            hook:    "user-forgotten",
+            status:  "completed",
+            payload: erasure,
+        };
+        await callback(result);
+        return result;
     });
 
     subscribe("phase-ended", async (context, { callback }) => {
