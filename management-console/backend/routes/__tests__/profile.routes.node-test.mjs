@@ -114,12 +114,13 @@ describe('management-console profile routes', () => {
     ]);
   });
 
-  it('rejects weak new passwords before forwarding to auth-backend', async () => {
+  it('leaves the strength rule to auth-backend and passes its refusal through', async () => {
     const calls = [];
+    const weakMessage = 'La contraseña debe tener al menos 10 caracteres y al menos 2 símbolos';
     const router = createProfileRouter({
       changeAdminPasswordWithAuthBackendService: async (payload) => {
         calls.push(payload);
-        return {};
+        throw Object.assign(new Error(weakMessage), { status: 400 });
       }
     });
     const app = createTestApp(router);
@@ -139,11 +140,11 @@ describe('management-console profile routes', () => {
 
       assert.equal(response.status, 400);
       assert.deepEqual(await response.json(), {
-        error: 'WEAK_PASSWORD'
+        error: weakMessage
       });
     });
 
-    assert.equal(calls.length, 0);
+    assert.equal(calls.length, 1);
   });
 
   it('starts passkey registration through auth-backend', async () => {

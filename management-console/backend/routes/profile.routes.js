@@ -21,15 +21,6 @@ function mapProfileUser(user) {
   };
 }
 
-function isStrongPassword(password) {
-  if (!password || password.length < 10) {
-    return false;
-  }
-
-  const symbolCount = (password.match(/[^a-zA-Z0-9]/g) || []).length;
-  return symbolCount >= 2;
-}
-
 export function createProfileRouter({
   requireManagementRoleMiddleware = requireManagementRole,
   getUserByIdService = getUserById,
@@ -70,10 +61,8 @@ export function createProfileRouter({
         return res.status(400).json({ error: 'PASSWORD_CONFIRMATION_MISMATCH' });
       }
 
-      if (!isStrongPassword(newPassword)) {
-        return res.status(400).json({ error: 'WEAK_PASSWORD' });
-      }
-
+      // auth-backend owns the strength rule (#889): a weak password comes
+      // back as its localized refusal, passed through below.
       const result = await changeAdminPasswordWithAuthBackendService({
         currentPassword,
         newPassword,

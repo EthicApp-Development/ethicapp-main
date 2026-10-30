@@ -35,6 +35,15 @@ describe('unsavedChangesHint', () => {
       .toBe('Guarda o descarta tus cambios antes de olvidar esta cuenta.');
   });
 
+  it('names setting the password after confirming (#889)', () => {
+    expect(unsavedChangesHint(['forget', 'setPassword', 'delete', 'confirm'], translator(enUS)))
+      .toBe('Save or discard your changes before confirming, setting the password of, deleting or forgetting this account.');
+    expect(unsavedChangesHint(['setPassword'], translator(enUS)))
+      .toBe('Save or discard your changes before setting the password of this account.');
+    expect(unsavedChangesHint(['setPassword', 'forget'], translator(esCL)))
+      .toBe('Guarda o descarta tus cambios antes de establecer la contraseña de u olvidar esta cuenta.');
+  });
+
   it('is null when no action needs the saved account', () => {
     expect(unsavedChangesHint([], translator(enUS))).toBeNull();
   });

@@ -15,6 +15,7 @@ import profileRoutes from './routes/profile.routes.js';
 import viewRoutes from './routes/view.routes.js';
 import usersRoutes from './routes/users.routes.js';
 import userForgettingRoutes from './routes/user-forgetting.routes.js';
+import userPasswordRoutes from './routes/user-password.routes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -49,6 +50,7 @@ app.use(institutionRoutes);
 app.use(profileRoutes);
 app.use(usersRoutes);
 app.use(userForgettingRoutes);
+app.use(userPasswordRoutes);
 app.use(aiServicesRoutes);
 app.use(healthRoutes);
 app.use(viewRoutes);
