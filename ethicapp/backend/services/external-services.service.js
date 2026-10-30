@@ -14,6 +14,7 @@ import {
     markDesignAnalysisProcessing,
 } from "../helpers/design-analyses-helper.js";
 import { saveChatMessage } from "../helpers/chat-helper.js";
+import { describeError, summarizeCallbackResult } from "../helpers/log-safety.js";
 import { studentNotifications, teacherNotifications } from "../config/socket.config.js";
 import aiAdditionsClient from "./ai-additions-client.service.js";
 import {
@@ -1446,7 +1447,8 @@ export class ExternalServicesRegistry {
                     .catch(() => null);
                 throw error;
             }
-            console.error(`[external-services] Could not claim a ${serviceId} callback.`, error);
+            console.error(`[external-services] Could not claim a ${serviceId} callback.`,
+                describeError(error));
             throw Object.assign(
                 new Error(`The callback for ${serviceId} could not be recorded; try again later.`),
                 { statusCode: 503 }
@@ -1517,7 +1519,8 @@ export class ExternalServicesRegistry {
                 .recordInstantiationReport(jobId, normalized)
                 .then(() => true)
                 .catch((err) => {
-                    console.error("[external-services] Failed to store an instantiation report.", err);
+                    console.error("[external-services] Failed to store an instantiation report.",
+                        describeError(err));
                     return false;
                 });
             if (stored) {
@@ -1588,7 +1591,8 @@ export class ExternalServicesRegistry {
                     status:        resultStatus,
                     adapterResult: result,
                 })
-                .catch(err => console.error("[external-services] Failed to persist callback result.", err));
+                .catch(err => console.error(
+                    "[external-services] Failed to persist callback result.", describeError(err)));
 
             // A room job stays open for the room's next callbacks (#833).
             if (context.jobId && !isRoomJob(context.job)) {
@@ -1600,7 +1604,9 @@ export class ExternalServicesRegistry {
                 const completedAt = jobStatus === JOB_STATUS.COMPLETED ? new Date().toISOString() : undefined;
                 await this._jobsService
                     .updateJobStatus(context.jobId, jobStatus, { completedAt })
-                    .catch(err => console.error("[external-services] Failed to update job status after callback result.", err));
+                    .catch(err => console.error(
+                        "[external-services] Failed to update job status after callback result.",
+                        describeError(err)));
             }
         } else if (context.jobId) {
             const jobStatus = result?.status === "failed"
@@ -1611,10 +1617,16 @@ export class ExternalServicesRegistry {
             const completedAt = jobStatus === JOB_STATUS.COMPLETED ? new Date().toISOString() : undefined;
             await this._jobsService
                 .updateJobStatus(context.jobId, jobStatus, { completedAt })
-                .catch(err => console.error("[external-services] Failed to update job status.", err));
+                .catch(err => console.error("[external-services] Failed to update job status.",
+                    describeError(err)));
         }
 
-        console.info(`[external-services] Callback received from ${serviceId} for ${hookName}.`, entry);
+        // Ids, status and sizes only: the result can carry a student's text
+        // (#876, helpers/log-safety.js).
+        console.info(
+            `[external-services] Callback received from ${serviceId} for ${hookName}.`,
+            JSON.stringify(summarizeCallbackResult({ serviceId, hookName, result, context }))
+        );
         return entry;
     }
 

@@ -2,6 +2,7 @@ import * as rpg2 from "../../db/rest-pg-2.js";
 import * as config from "../../config/database.config.js";
 import defaultAiAdditionsClient from "../../services/ai-additions-client.service.js";
 import { plainTextOf } from "../../helpers/rich-text-helper.js";
+import { describeError } from "../../helpers/log-safety.js";
 
 // The Polyadic Agents API under the AI Additions connection's base URL (#814).
 export const POLYADIC_API_BASE_PATH = "/polyadic-agent/api";
@@ -606,7 +607,8 @@ export async function register({
             });
         } catch (error) {
             roomContext.delete(roomName);
-            console.warn(`[polyadic-bridge] Failed to create polyadic room ${roomName}.`, error);
+            console.warn(`[polyadic-bridge] Failed to create polyadic room ${roomName}.`,
+                describeError(error));
             await settleRoomJob(roomJobId, roomName, id => roomJobs.fail(id));
             return null;
         }
@@ -782,7 +784,8 @@ export async function register({
                 },
             });
         } catch (error) {
-            console.warn(`[polyadic-bridge] Failed to forward message to ${roomName}.`, error);
+            console.warn(`[polyadic-bridge] Failed to forward message to ${roomName}.`,
+                describeError(error));
             await callback({
                 serviceId: service.id,
                 hook:      "chat-message-received",
@@ -880,7 +883,8 @@ export async function register({
                 await closePolyadicSession(roomName);
                 roomsClosed++;
             } catch (error) {
-                console.warn(`[polyadic-bridge] Failed to close room ${roomName}.`, error);
+                console.warn(`[polyadic-bridge] Failed to close room ${roomName}.`,
+                    describeError(error));
             }
             roomContext.delete(roomName);
         }
@@ -924,7 +928,8 @@ export async function register({
                 await closePolyadicSession(roomName);
                 roomsClosed++;
             } catch (error) {
-                console.warn(`[polyadic-bridge] Failed to close room ${roomName}.`, error);
+                console.warn(`[polyadic-bridge] Failed to close room ${roomName}.`,
+                    describeError(error));
             }
             roomContext.delete(roomName);
         }

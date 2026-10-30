@@ -2,6 +2,7 @@ import express from "express";
 import * as config from "../config/database.config.js";
 import { execSQL, param } from "../db/rest-pg-2.js";
 import { requireRole } from "../helpers/auth-helper.js";
+import { describeError } from "../helpers/log-safety.js";
 import externalServicesRegistry, { SERVICE_SCOPES } from "../services/external-services.service.js";
 import { callbackAuthMiddleware } from "../middleware/external-services-callback-auth.middleware.js";
 
@@ -77,7 +78,8 @@ export async function processCallback({ serviceId, eventType, correlationId, eve
             };
         }
 
-        console.error("[external-services] Error dispatching callback-received hook.", error);
+        console.error("[external-services] Error dispatching callback-received hook.",
+            describeError(error));
         return {
             status: 500,
             body:   { status: "err", error: "Internal server error." },

@@ -127,6 +127,20 @@ the student's `user_id`, so it does not depend on this inventory staying
 complete. The feedback the tutor sends to the student is published over the
 socket only, never stored.
 
+## Container Logs
+
+The external-services path logs only ids, the service, the hook, statuses,
+counts and sizes (#876, `ethicapp/backend/helpers/log-safety.js`): never
+callback payloads, adapter results or AI Additions error bodies.
+
+Before #876, ethicapp logged each callback result whole, and some errors with
+the AI service's response body attached. The ethicapp container logs written
+by earlier releases may therefore hold students' text or the tutor's
+paraphrases of it (`claimTypeRationale`, `unsupportedClaims`), which
+anonymizing or forgetting a student does not reach. Operators rotate and
+expire container logs under their log retention policy; after deploying
+#876, logs from before the deployment should not be kept beyond it.
+
 ## Remaining Follow-Ups
 
 - Issue #552: purge orphaned profile image files after database paths are nulled, if the
