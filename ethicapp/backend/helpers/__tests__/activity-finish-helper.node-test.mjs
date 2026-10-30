@@ -2,42 +2,59 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
-    FINISH_OPEN_SESSION_SQL,
+    COMPLETE_FINALIZATION_SQL,
     FINISH_SESSION_SQL,
     OPEN_SESSIONS_OF_CREATOR_SQL,
-    SESSION_CURRENT_PHASE_SQL,
+    PENDING_FINALIZATION_SQL,
+    SESSION_EXISTS_SQL,
     createActivityFinisher,
 } from "../activity-finish-helper.js";
 
 const FINISHED = 3;
 
-// A fake database holding sessions as { status, current_stage, creator }. It
-// answers the helper's four statements and records every effect, database
-// writes included, in one ordered log.
-function fakeWorld(sessions = {}, { failOn = {} } = {}) {
+// A fake database holding sessions as { status, current_stage, creator } and
+// pending finalizations as { ended_phase_id }. It answers the helper's
+// statements and records every effect, database writes included, in one
+// ordered log.
+function fakeWorld(sessions = {}, { failOn = {}, pending: pendingRows = {} } = {}) {
     const effects = [];
     const rows = new Map(Object.entries(sessions).map(([id, row]) => [Number(id), { ...row }]));
+    const pending = new Map(Object.entries(pendingRows).map(([id, row]) => [Number(id), { ...row }]));
 
     async function query(sql, params) {
-        if (sql === SESSION_CURRENT_PHASE_SQL) {
-            const row = rows.get(Number(params[0]));
-            return { rows: row ? [{ current_stage: row.current_stage }] : [], rowCount: row ? 1 : 0 };
-        }
-        if (sql === FINISH_SESSION_SQL || sql === FINISH_OPEN_SESSION_SQL) {
-            const [status, sessionId] = params;
-            const row = rows.get(Number(sessionId));
-            if (!row || (sql === FINISH_OPEN_SESSION_SQL && row.status === status)) {
+        if (sql === FINISH_SESSION_SQL) {
+            const [status, sessionId, onlyIfOpen] = params;
+            const id = Number(sessionId);
+            const row = rows.get(id);
+            if (!row || (onlyIfOpen && row.status === status)) {
                 return { rows: [], rowCount: 0 };
+            }
+            if (!pending.has(id)) {
+                pending.set(id, { ended_phase_id: row.current_stage });
             }
             row.status = status;
             row.current_stage = null;
-            effects.push(["update", Number(sessionId), sql === FINISH_OPEN_SESSION_SQL ? "only-if-open" : "always"]);
+            effects.push(["update", id, onlyIfOpen ? "only-if-open" : "always"]);
+            return { rows: [], rowCount: 1 };
+        }
+        if (sql === PENDING_FINALIZATION_SQL) {
+            const row = pending.get(Number(params[0]));
+            return { rows: row ? [{ ...row }] : [], rowCount: row ? 1 : 0 };
+        }
+        if (sql === SESSION_EXISTS_SQL) {
+            const found = rows.has(Number(params[0]));
+            return { rows: found ? [{ "?column?": 1 }] : [], rowCount: found ? 1 : 0 };
+        }
+        if (sql === COMPLETE_FINALIZATION_SQL) {
+            const id = Number(params[0]);
+            pending.delete(id);
+            effects.push(["complete", id]);
             return { rows: [], rowCount: 1 };
         }
         if (sql === OPEN_SESSIONS_OF_CREATOR_SQL) {
             const [creator, finished] = params;
             const ids = [...rows.entries()]
-                .filter(([, row]) => row.creator === creator && row.status !== finished)
+                .filter(([id, row]) => row.creator === creator && (row.status !== finished || pending.has(id)))
                 .map(([id]) => ({ id: String(id) }))
                 .sort((left, right) => Number(left.id) - Number(right.id));
             return { rows: ids, rowCount: ids.length };
@@ -76,7 +93,7 @@ function fakeWorld(sessions = {}, { failOn = {} } = {}) {
         logger: { error: (...args) => errors.push(args) },
     };
 
-    return { rows, effects, errors, dependencies };
+    return { rows, pending, effects, errors, dependencies };
 }
 
 describe("finishActivity", () => {
@@ -98,7 +115,9 @@ describe("finishActivity", () => {
             ["registry-hook", "activity-finished", {
                 sessionId: 7, phaseId: 21, startedPhaseId: null, endedPhaseId: 21,
             }, { enabledServiceIds: ["service-of-7", "shared-service"] }],
+            ["complete", 7],
         ]);
+        assert.equal(world.pending.size, 0);
         assert.deepEqual(world.errors, []);
     });
 
@@ -110,9 +129,9 @@ describe("finishActivity", () => {
 
         assert.deepEqual(result, { status: "finished", sessionId: 8, previousPhaseId: null });
         assert.deepEqual(world.effects.map(effect => effect[0]), [
-            "update", "invalidate", "notify", "registry-hook",
+            "update", "invalidate", "notify", "registry-hook", "complete",
         ]);
-        assert.deepEqual(world.effects.at(-1)[2], {
+        assert.deepEqual(world.effects.at(-2)[2], {
             sessionId: 8, phaseId: null, startedPhaseId: null, endedPhaseId: null,
         });
     });
@@ -154,7 +173,7 @@ describe("finishActivity", () => {
         const result = await finisher.finishActivity(7);
 
         assert.equal(result.status, "finished");
-        assert.deepEqual(world.effects.at(-1)[3], { enabledServiceIds: [] });
+        assert.deepEqual(world.effects.at(-2)[3], { enabledServiceIds: [] });
         assert.equal(world.errors.length, 1);
     });
 
@@ -171,7 +190,7 @@ describe("finishActivity", () => {
         assert.match(String(world.errors[0][0]), /activity-finished/);
     });
 
-    it("propagates a phase-ended failure after the session is finished, before notifying", async () => {
+    it("propagates a phase-ended failure after the session is finished, and keeps its finishing pending", async () => {
         const world = fakeWorld({ 7: { status: 2, current_stage: 21, creator: 5 } }, {
             failOn: { phaseHook: [7] },
         });
@@ -179,21 +198,51 @@ describe("finishActivity", () => {
 
         await assert.rejects(finisher.finishActivity(7), /phaseHook failed/);
         assert.deepEqual(world.effects.map(effect => effect[0]), ["update", "invalidate"]);
+        assert.deepEqual(world.pending.get(7), { ended_phase_id: 21 });
+    });
+
+    it("resumes a pending finishing with onlyIfOpen, ending the phase it recorded", async () => {
+        const world = fakeWorld({ 7: { status: FINISHED, current_stage: null, creator: 5 } }, {
+            pending: { 7: { ended_phase_id: 21 } },
+        });
+        const finisher = createActivityFinisher(world.dependencies);
+
+        const result = await finisher.finishActivity(7, { onlyIfOpen: true });
+
+        assert.deepEqual(result, { status: "finished", sessionId: 7, previousPhaseId: 21 });
+        assert.deepEqual(world.effects.map(effect => effect[0]), [
+            "invalidate", "phase-hook", "notify", "registry-hook", "complete",
+        ]);
+        assert.equal(world.effects[1][2].endedPhaseId, 21);
+        assert.equal(world.pending.size, 0);
+    });
+
+    it("keeps the recorded phase when the teacher finishes a pending session again", async () => {
+        const world = fakeWorld({ 7: { status: FINISHED, current_stage: null, creator: 5 } }, {
+            pending: { 7: { ended_phase_id: 21 } },
+        });
+        const finisher = createActivityFinisher(world.dependencies);
+
+        const result = await finisher.finishActivity("7");
+
+        assert.deepEqual(result, { status: "finished", sessionId: 7, previousPhaseId: 21 });
+        assert.equal(world.effects.find(effect => effect[0] === "phase-hook")[2].endedPhaseId, 21);
     });
 });
 
 describe("listOpenActivityIds", () => {
-    it("lists the creator's sessions that are not finished, initiated ones included", async () => {
+    it("lists the creator's sessions that are not finished, initiated ones included, and pending ones", async () => {
         const world = fakeWorld({
             3: { status: 2, current_stage: 1, creator: 5 },
             1: { status: 1, current_stage: null, creator: 5 },
             2: { status: FINISHED, current_stage: null, creator: 5 },
             4: { status: null, current_stage: null, creator: 5 },
+            5: { status: FINISHED, current_stage: null, creator: 5 },
             6: { status: 2, current_stage: 1, creator: 99 },
-        });
+        }, { pending: { 5: { ended_phase_id: null } } });
         const finisher = createActivityFinisher(world.dependencies);
 
-        assert.deepEqual(await finisher.listOpenActivityIds(5), [1, 3, 4]);
+        assert.deepEqual(await finisher.listOpenActivityIds(5), [1, 3, 4, 5]);
     });
 });
 
@@ -212,8 +261,9 @@ describe("finishOpenActivitiesOf", () => {
         assert.deepEqual(result, { finished: [11, 12], skipped: [], failed: [] });
         assert.deepEqual(world.effects.map(effect => [effect[0], effect[1]]), [
             ["update", 11], ["invalidate", 11], ["phase-hook", "phase-ended"], ["notify", 11],
-            ["registry-hook", "activity-finished"],
+            ["registry-hook", "activity-finished"], ["complete", 11],
             ["update", 12], ["invalidate", 12], ["notify", 12], ["registry-hook", "activity-finished"],
+            ["complete", 12],
         ]);
         assert.ok(world.effects
             .filter(effect => effect[0] === "update")
@@ -239,6 +289,34 @@ describe("finishOpenActivitiesOf", () => {
         assert.deepEqual(world.effects.filter(effect => effect[0] === "notify"), [["notify", 11], ["notify", 13]]);
         assert.equal(world.errors.length, 1);
         assert.match(world.errors[0][0], /session 12 of user 5/);
+    });
+
+    it("finishes on a retry a session that failed after its update, with the phase it was on", async () => {
+        const world = fakeWorld({
+            11: { status: 2, current_stage: 31, creator: 5 },
+            12: { status: 2, current_stage: 32, creator: 5 },
+        }, { failOn: { invalidate: [12] } });
+        const finisher = createActivityFinisher(world.dependencies);
+
+        const first = await finisher.finishOpenActivitiesOf(5);
+        assert.deepEqual(first.failed, [{ sessionId: 12, error: "finish_failed" }]);
+        assert.equal(world.rows.get(12).status, FINISHED);
+        assert.deepEqual(await finisher.listOpenActivityIds(5), [12]);
+
+        // The cache is back.
+        world.dependencies.invalidateStudentDescriptor = async (sessionId) => {
+            world.effects.push(["invalidate", sessionId]);
+        };
+        const effectsBeforeRetry = world.effects.length;
+        const retry = await createActivityFinisher(world.dependencies).finishOpenActivitiesOf(5);
+
+        assert.deepEqual(retry, { finished: [12], skipped: [], failed: [] });
+        assert.deepEqual(world.effects.slice(effectsBeforeRetry).map(effect => [effect[0], effect[1]]), [
+            ["invalidate", 12], ["phase-hook", "phase-ended"], ["notify", 12],
+            ["registry-hook", "activity-finished"], ["complete", 12],
+        ]);
+        assert.equal(world.effects.at(-4)[2].endedPhaseId, 32);
+        assert.deepEqual(await finisher.finishOpenActivitiesOf(5), { finished: [], skipped: [], failed: [] });
     });
 
     it("skips a session finished between the listing and its update", async () => {

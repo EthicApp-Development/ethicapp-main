@@ -11,50 +11,84 @@ import externalServicesRegistry from "../services/external-services.service.js";
  * endpoint that finishes every open activity of a teacher before the teacher
  * is forgotten (#877) share these steps, in this order:
  *
- * 1. the session becomes `finished` with no current phase;
+ * 1. the session becomes `finished` with no current phase, and the phase it
+ *    was on is recorded in `activity_finalizations` (V30), in one statement;
  * 2. the cached student activity descriptor is dropped, so students reload a
  *    descriptor without a current phase (#872);
  * 3. `phase-ended` is dispatched for the phase the activity was on, if any;
  * 4. students in the session are told it ended (`onEndSession`);
  * 5. `activity-finished` is dispatched to every service enabled anywhere in the
  *    design, so AI services close their rooms. Its failures are logged, never
- *    thrown.
+ *    thrown;
+ * 6. the `activity_finalizations` row is deleted.
+ *
+ * When step 2, 3 or 4 fails, the row stays. The next finish of that session
+ * resumes steps 2 to 6 for the recorded phase, and the session still counts
+ * as open for the internal endpoint, so its retry finishes it. A step may run
+ * twice, never zero times.
  */
 
 const FINISHED_STATUS = getStatusCode("finished");
 
-export const SESSION_CURRENT_PHASE_SQL = `
-    SELECT current_stage
+// Finishes the session and records its pending finalization with the phase it
+// was on, in one statement. With $3, a session already finished is left
+// alone. A finalization already pending keeps the phase it recorded, since
+// the session has no current phase by then.
+export const FINISH_SESSION_SQL = `
+    WITH previous AS (
+        SELECT id, current_stage
+        FROM sessions
+        WHERE id = $2
+        FOR UPDATE
+    ),
+    finished AS (
+        UPDATE sessions s
+        SET status = $1,
+            current_stage = NULL
+        FROM previous
+        WHERE s.id = previous.id
+          AND (NOT $3::boolean OR s.status IS DISTINCT FROM $1)
+        RETURNING s.id, previous.current_stage
+    )
+    INSERT INTO activity_finalizations (session_id, ended_phase_id)
+    SELECT id, current_stage
+    FROM finished
+    ON CONFLICT (session_id) DO NOTHING
+`;
+
+export const PENDING_FINALIZATION_SQL = `
+    SELECT ended_phase_id
+    FROM activity_finalizations
+    WHERE session_id = $1
+`;
+
+export const SESSION_EXISTS_SQL = `
+    SELECT 1
     FROM sessions
     WHERE id = $1
 `;
 
-export const FINISH_SESSION_SQL = `
-    UPDATE sessions
-    SET status = $1,
-        current_stage = NULL
-    WHERE id = $2
-`;
-
-// The same update, applied only while the session is still open, so a session
-// finished meanwhile (by its teacher, or by a concurrent call) is not finished
-// twice.
-export const FINISH_OPEN_SESSION_SQL = `
-    UPDATE sessions
-    SET status = $1,
-        current_stage = NULL
-    WHERE id = $2
-      AND status IS DISTINCT FROM $1
+export const COMPLETE_FINALIZATION_SQL = `
+    DELETE FROM activity_finalizations
+    WHERE session_id = $1
 `;
 
 // Every session the user created that is not finished, initiated ones
-// included. `status` is nullable, hence IS DISTINCT FROM.
+// included, and every one whose finishing did not complete. `status` is
+// nullable, hence IS DISTINCT FROM.
 export const OPEN_SESSIONS_OF_CREATOR_SQL = `
-    SELECT id
-    FROM sessions
-    WHERE creator = $1
-      AND status IS DISTINCT FROM $2
-    ORDER BY id
+    SELECT s.id
+    FROM sessions s
+    WHERE s.creator = $1
+      AND (
+          s.status IS DISTINCT FROM $2
+          OR EXISTS (
+              SELECT 1
+              FROM activity_finalizations f
+              WHERE f.session_id = s.id
+          )
+      )
+    ORDER BY s.id
 `;
 
 async function defaultQuery(sql, params) {
@@ -122,32 +156,31 @@ export function createActivityFinisher({
     }
 
     /**
-     * Finishes one activity. Errors other than the activity-finished dispatch
-     * propagate; the session may then already be finished.
+     * Finishes one activity, or resumes the finishing of one that did not
+     * complete. Errors other than the activity-finished dispatch propagate;
+     * the session is then finished, and its finishing pending.
      *
      * @param {number|string} sessionId
      * @param {{ onlyIfOpen?: boolean }} [options] With `onlyIfOpen`, a session
-     *        that is already finished is left alone and reported as `not_updated`.
+     *        that is already finished, with nothing pending, is left alone and
+     *        reported as `not_updated`.
      * @returns {Promise<{ status: "finished", sessionId: number, previousPhaseId: number|null }
      *          | { status: "not_found" | "not_updated", sessionId: number }>}
      */
     async function finishActivity(sessionId, { onlyIfOpen = false } = {}) {
         const numericSessionId = Number(sessionId);
-        const current = await query(SESSION_CURRENT_PHASE_SQL, [sessionId]);
+        await query(FINISH_SESSION_SQL, [FINISHED_STATUS, sessionId, onlyIfOpen]);
+        const pending = await query(PENDING_FINALIZATION_SQL, [sessionId]);
 
-        if (!current.rows?.length) {
-            return { status: "not_found", sessionId: numericSessionId };
+        if (!pending.rows?.length) {
+            const session = await query(SESSION_EXISTS_SQL, [sessionId]);
+            return {
+                status:    session.rows?.length ? "not_updated" : "not_found",
+                sessionId: numericSessionId,
+            };
         }
 
-        const previousPhaseId = Number(current.rows[0].current_stage) || null;
-        const update = await query(
-            onlyIfOpen ? FINISH_OPEN_SESSION_SQL : FINISH_SESSION_SQL,
-            [FINISHED_STATUS, sessionId],
-        );
-
-        if (update.rowCount === 0) {
-            return { status: "not_updated", sessionId: numericSessionId };
-        }
+        const previousPhaseId = Number(pending.rows[0].ended_phase_id) || null;
 
         await invalidateStudentDescriptor(sessionId);
 
@@ -169,13 +202,15 @@ export function createActivityFinisher({
             endedPhaseId:   previousPhaseId,
         });
 
+        await query(COMPLETE_FINALIZATION_SQL, [sessionId]);
+
         return { status: "finished", sessionId: numericSessionId, previousPhaseId };
     }
 
     /**
      * @param {number} creatorId
      * @returns {Promise<number[]>} The ids of the creator's unfinished sessions,
-     *          in ascending order.
+     *          and of those whose finishing did not complete, in ascending order.
      */
     async function listOpenActivityIds(creatorId) {
         const result = await query(OPEN_SESSIONS_OF_CREATOR_SQL, [creatorId, FINISHED_STATUS]);
@@ -183,9 +218,10 @@ export function createActivityFinisher({
     }
 
     /**
-     * Finishes every unfinished session the creator has, one at a time. A
-     * failure is recorded and the next session is still finished. A second
-     * call finds nothing left to finish.
+     * Finishes every unfinished session the creator has, one at a time, and
+     * resumes those whose finishing did not complete. A failure is recorded
+     * and the next session is still finished. A second call retries the
+     * failed ones, and finds nothing left once all succeed.
      *
      * @param {number} creatorId
      * @returns {Promise<{ finished: number[], skipped: number[],

@@ -1,8 +1,10 @@
 // Integration test for finishing a teacher's open activities (#881), against a
 // real PostgreSQL database with migrations applied: the selection of the
-// teacher's unfinished sessions (initiated, in progress, and a NULL status)
-// and the guarded update. Hooks, notifications and the descriptor cache are
-// fakes here; they are covered by activity-finish-helper.node-test.mjs.
+// teacher's unfinished sessions (initiated, in progress, and a NULL status),
+// the guarded update, and the pending finalization (V30) that lets a retry
+// finish a session whose steps failed after its update. Hooks, notifications
+// and the descriptor cache are fakes here; they are covered by
+// activity-finish-helper.node-test.mjs.
 //
 // Run with `npm run test:integration`, setting ETHICAPP_INTEGRATION_DATABASE_URL
 // to a disposable database. The test inserts users and sessions, and does not
@@ -68,12 +70,22 @@ async function sessionState(id) {
     return row;
 }
 
-function finisherWithFakes() {
+async function pendingFinalization(id) {
+    const [row] = await query("SELECT ended_phase_id FROM activity_finalizations WHERE session_id = $1;", [id]);
+    return row ?? null;
+}
+
+function finisherWithFakes({ failingInvalidation = [] } = {}) {
     const effects = [];
     const finisher = createActivityFinisher({
         query:                       (sql, params) => getPool().query(sql, params),
-        invalidateStudentDescriptor: async sessionId => effects.push(["invalidate", sessionId]),
-        dispatchPhaseHook:           async (hookName, context) => effects.push([hookName, context.sessionId]),
+        invalidateStudentDescriptor: async (sessionId) => {
+            if (failingInvalidation.includes(Number(sessionId))) {
+                throw new Error("cache down");
+            }
+            effects.push(["invalidate", sessionId]);
+        },
+        dispatchPhaseHook:           async (hookName, context) => effects.push([hookName, context.sessionId, context.endedPhaseId]),
         notifyStudentsEnded:         sessionId => effects.push(["notify", sessionId]),
         readEnabledServiceIds:       async () => [],
         dispatchRegistryHook:        async (hookName, context) => effects.push([hookName, context.sessionId]),
@@ -110,11 +122,15 @@ test("a teacher's open activities are listed, finished once, and nothing is left
 
     for (const session of [inProgress, initiated, withoutStatus, finished]) {
         assert.deepEqual(await sessionState(session.id), { status: 3, current_stage: null });
+        assert.equal(await pendingFinalization(session.id), null);
     }
     assert.deepEqual(await sessionState(othersActivity.id), { status: 2, current_stage: othersActivity.phaseId });
 
     // phase-ended only for the session that was on a phase.
-    assert.deepEqual(effects.filter(effect => effect[0] === "phase-ended"), [["phase-ended", inProgress.id]]);
+    assert.deepEqual(
+        effects.filter(effect => effect[0] === "phase-ended"),
+        [["phase-ended", inProgress.id, inProgress.phaseId]],
+    );
     assert.deepEqual(
         effects.filter(effect => effect[0] === "activity-finished").map(effect => effect[1]),
         [inProgress.id, initiated.id, withoutStatus.id],
@@ -144,4 +160,48 @@ test("the guarded update leaves a finished session alone; the teacher's route fi
         { status: "finished", sessionId: finished.id, previousPhaseId: null },
     );
     assert.deepEqual(await finisher.finishActivity(2147483000), { status: "not_found", sessionId: 2147483000 });
+});
+
+test("a session whose steps failed after its update stays pending, and a retry finishes it", {
+    skip: SKIP_REASON,
+}, async () => {
+    const teacher = await createTeacher();
+    const inProgress = await createSession(teacher, 2, { withPhase: true });
+    const broken = finisherWithFakes({ failingInvalidation: [inProgress.id] });
+
+    const first = await broken.finisher.finishOpenActivitiesOf(teacher);
+    assert.deepEqual(first, { finished: [], skipped: [], failed: [{ sessionId: inProgress.id, error: "finish_failed" }] });
+    assert.deepEqual(await sessionState(inProgress.id), { status: 3, current_stage: null });
+    assert.deepEqual(await pendingFinalization(inProgress.id), { ended_phase_id: inProgress.phaseId });
+    assert.deepEqual(broken.effects, []);
+    assert.deepEqual(await broken.finisher.listOpenActivityIds(teacher), [inProgress.id]);
+
+    const { finisher, effects } = finisherWithFakes();
+    const retry = await finisher.finishOpenActivitiesOf(teacher);
+    assert.deepEqual(retry, { finished: [inProgress.id], skipped: [], failed: [] });
+    assert.deepEqual(effects, [
+        ["invalidate", inProgress.id],
+        ["phase-ended", inProgress.id, inProgress.phaseId],
+        ["notify", inProgress.id],
+        ["activity-finished", inProgress.id],
+    ]);
+    assert.equal(await pendingFinalization(inProgress.id), null);
+    assert.deepEqual(await finisher.finishOpenActivitiesOf(teacher), { finished: [], skipped: [], failed: [] });
+});
+
+test("the teacher's route resumes a pending finalization with the phase it recorded", {
+    skip: SKIP_REASON,
+}, async () => {
+    const teacher = await createTeacher();
+    const inProgress = await createSession(teacher, 2, { withPhase: true });
+    const broken = finisherWithFakes({ failingInvalidation: [inProgress.id] });
+    await assert.rejects(broken.finisher.finishActivity(String(inProgress.id)), /cache down/);
+
+    const { finisher, effects } = finisherWithFakes();
+    assert.deepEqual(
+        await finisher.finishActivity(String(inProgress.id)),
+        { status: "finished", sessionId: inProgress.id, previousPhaseId: inProgress.phaseId },
+    );
+    assert.deepEqual(effects.find(effect => effect[0] === "phase-ended"), ["phase-ended", inProgress.id, inProgress.phaseId]);
+    assert.equal(await pendingFinalization(inProgress.id), null);
 });

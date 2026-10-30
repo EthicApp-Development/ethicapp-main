@@ -3,7 +3,14 @@ import { afterEach, describe, it } from "node:test";
 import express from "express";
 
 import { createTeacherActivitiesAdminRouter } from "../teacher-activities.js";
-import { createActivityFinisher } from "../../../helpers/activity-finish-helper.js";
+import {
+    COMPLETE_FINALIZATION_SQL,
+    FINISH_SESSION_SQL,
+    OPEN_SESSIONS_OF_CREATOR_SQL,
+    PENDING_FINALIZATION_SQL,
+    SESSION_EXISTS_SQL,
+    createActivityFinisher,
+} from "../../../helpers/activity-finish-helper.js";
 
 const SUPER_ADMIN = Object.freeze({ uid: 1, role: "S" });
 const USERS = Object.freeze({
@@ -17,31 +24,46 @@ afterEach(async () => {
     await Promise.all(servers.splice(0).map(server => new Promise(resolve => server.close(resolve))));
 });
 
-// A finisher over an in-memory session table: { id: { creator, status } }.
+// A finisher over an in-memory session table: { id: { creator, status } },
+// with the pending finalizations in a Set. `failing` lists the sessions whose
+// descriptor cache cannot be dropped.
 function inMemoryFinisher(sessions, { failing = [] } = {}) {
     const notified = [];
+    const pending = new Set();
     const finisher = createActivityFinisher({
         query: async (sql, params) => {
-            if (/SELECT id\s+FROM sessions/.test(sql)) {
+            const id = Number(params[0]);
+            switch (sql) {
+            case OPEN_SESSIONS_OF_CREATOR_SQL: {
                 const [creator, finished] = params;
                 const rows = Object.entries(sessions)
-                    .filter(([, row]) => row.creator === creator && row.status !== finished)
-                    .map(([id]) => ({ id: Number(id) }));
+                    .filter(([key, row]) => row.creator === creator
+                        && (row.status !== finished || pending.has(Number(key))))
+                    .map(([key]) => ({ id: Number(key) }));
                 return { rows, rowCount: rows.length };
             }
-            if (/SELECT current_stage/.test(sql)) {
-                const row = sessions[params[0]];
-                return { rows: row ? [{ current_stage: null }] : [], rowCount: row ? 1 : 0 };
-            }
-            const [status, id] = params;
-            if (sessions[id].status === status) {
+            case FINISH_SESSION_SQL: {
+                const [status, sessionId, onlyIfOpen] = params;
+                const row = sessions[sessionId];
+                if (row && !(onlyIfOpen && row.status === status)) {
+                    row.status = status;
+                    pending.add(Number(sessionId));
+                }
                 return { rows: [], rowCount: 0 };
             }
-            sessions[id].status = status;
-            return { rows: [], rowCount: 1 };
+            case PENDING_FINALIZATION_SQL:
+                return pending.has(id) ? { rows: [{ ended_phase_id: null }], rowCount: 1 } : { rows: [], rowCount: 0 };
+            case SESSION_EXISTS_SQL:
+                return sessions[id] ? { rows: [{}], rowCount: 1 } : { rows: [], rowCount: 0 };
+            case COMPLETE_FINALIZATION_SQL:
+                pending.delete(id);
+                return { rows: [], rowCount: 1 };
+            default:
+                throw new Error(`unexpected SQL: ${sql}`);
+            }
         },
         invalidateStudentDescriptor: async (sessionId) => {
-            if (failing.includes(sessionId)) {
+            if (failing.includes(Number(sessionId))) {
                 throw new Error("cache down");
             }
         },
@@ -51,7 +73,7 @@ function inMemoryFinisher(sessions, { failing = [] } = {}) {
         dispatchRegistryHook:  async () => [],
         logger:                { error: () => {} },
     });
-    return { finisher, notified };
+    return { finisher, notified, pending, failing };
 }
 
 function spyFinisher() {
@@ -236,6 +258,31 @@ describe("POST /api/admin/users/:id/finish-activities", () => {
             skipped:  [],
             failed:   [{ sessionId: 11, error: "finish_failed" }],
         });
+    });
+
+    it("finishes on a retry a session that failed after it was marked finished", async () => {
+        const sessions = {
+            10: { creator: 5, status: 2 },
+            11: { creator: 5, status: 2 },
+        };
+        const { finisher, notified, failing } = inMemoryFinisher(sessions, { failing: [11] });
+        const call = path => request({ finisher, method: path.endsWith("finish-activities") ? "POST" : "GET", path });
+
+        const first = await call("/api/admin/users/5/finish-activities");
+        assert.deepEqual(first.body.failed, [{ sessionId: 11, error: "finish_failed" }]);
+        assert.equal(sessions[11].status, 3);
+        assert.deepEqual(notified, [10]);
+
+        const open = await call("/api/admin/users/5/open-activities");
+        assert.deepEqual(open.body, { ok: true, userId: 5, count: 1, sessionIds: [11] });
+
+        failing.length = 0;
+        const retry = await call("/api/admin/users/5/finish-activities");
+        assert.deepEqual(retry.body, { ok: true, userId: 5, finished: [11], skipped: [], failed: [] });
+        assert.deepEqual(notified, [10, 11]);
+
+        const last = await call("/api/admin/users/5/finish-activities");
+        assert.deepEqual(last.body, { ok: true, userId: 5, finished: [], skipped: [], failed: [] });
     });
 
     it("answers 500 when the sessions cannot be listed", async () => {
