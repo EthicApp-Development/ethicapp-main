@@ -40,6 +40,11 @@ server {
         }
         return 401;
     }
+    # Any other auth API call that reaches auth-backend.
+    location /api/auth/ {
+        default_type application/json;
+        return 200 '{"stub":"auth-backend"}';
+    }
 }
 
 server {
@@ -150,6 +155,17 @@ run_cases() {
     "${api[@]}" "${valid[@]}" --request POST "$base/api/admin/users/12/finish-activities"
   check "finishing a teacher's activities, other letter case" 404 text/html 'X-Request-Id:' \
     "${api[@]}" "${valid[@]}" --request POST "$base/API/Admin/Users/12/finish-activities"
+  # auth-backend's internal route to set a user's password (#889): 404 at the
+  # edge in any letter case, while the rest of the auth API reaches the stub.
+  check "setting a user's password is not served" 404 text/html 'X-Request-Id:' \
+    "${api[@]}" "${valid[@]}" --request POST --header 'X-Internal-Service-Token: guess' \
+    "$base/api/auth/admin/users/12/password"
+  check "setting a user's password, other letter case" 404 text/html 'X-Request-Id:' \
+    "${api[@]}" "${valid[@]}" --request POST "$base/api/auth/Admin/Users/12/password"
+  check "setting a user's password, upper case" 404 text/html 'X-Request-Id:' \
+    "${api[@]}" "${valid[@]}" --request POST "$base/API/AUTH/ADMIN/USERS/12/PASSWORD"
+  check "the password policy is still proxied" 200 application/json '"stub":"auth-backend"' \
+    "${api[@]}" "$base/api/auth/password-policy"
   # Impersonation stop stays proxied: ethicapp is down here, hence 502.
   check "impersonation stop is still proxied" 502 application/json '{"status":"unavailable"}' \
     "${api[@]}" "${valid[@]}" --request POST "$base/api/admin/impersonation/stop"
