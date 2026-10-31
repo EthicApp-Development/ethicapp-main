@@ -443,6 +443,10 @@ function scheduleCopyFollowUp(designId, caseId, userId) {
 }
 
 router.get("/designs/:id", async (req, res) => {
+    if (!requireRole(req, res, "P")) {
+        return;
+    }
+
     try {
         // Extract the design ID from request parameters
         const designId = req.params.id;
@@ -483,6 +487,10 @@ router.get("/designs/:id", async (req, res) => {
 });
 
 router.post("/designs", async (req, res) => {
+    if (!requireRole(req, res, "P")) {
+        return;
+    }
+
     try {
         const sessionUid = req.session?.uid;
         const {
@@ -590,6 +598,10 @@ router.post("/designs", async (req, res) => {
 });
 
 router.patch("/designs/:id", async (req, res) => {
+    if (!requireRole(req, res, "P")) {
+        return;
+    }
+
     try {
         const sessionUid = req.session?.uid;
         const designId = parseInt(req.params.id, 10); // Convert designId to an integer
@@ -714,6 +726,10 @@ router.patch("/designs/:id", async (req, res) => {
 });
 
 router.get("/designs", async (req, res) => {
+    if (!requireRole(req, res, "P")) {
+        return;
+    }
+
     try {
         // Validate session
         const sessionUid = req.session?.uid;
@@ -803,6 +819,10 @@ router.get("/designs", async (req, res) => {
 });
 
 router.patch("/designs/:id/toggle_public", async (req, res) => {
+    if (!requireRole(req, res, "P")) {
+        return;
+    }
+
     try {
         const sessionUid = req.session?.uid;
         const designId = parseInt(req.params.id, 10);
@@ -971,6 +991,10 @@ router.patch("/designs/:id/lock", async (req, res) => {
 });
 
 router.patch("/designs/:id/archive", async (req, res) => {
+    if (!requireRole(req, res, "P")) {
+        return;
+    }
+
     try {
         const sessionUid = req.session?.uid;
         const designId = parseInt(req.params.id, 10);
@@ -1030,6 +1054,10 @@ router.patch("/designs/:id/archive", async (req, res) => {
 });
 
 router.post("/designs/:id/duplicate", async (req, res) => {
+    if (!requireRole(req, res, "P")) {
+        return;
+    }
+
     try {
         const sessionUid = req.session?.uid;
         const designId = parseInt(req.params.id, 10); // Convert designId to an integer
@@ -1166,6 +1194,10 @@ router.post("/designs/:id/duplicate", async (req, res) => {
 });
 
 router.delete("/designs/:id", async (req, res) => {
+    if (!requireRole(req, res, "P")) {
+        return;
+    }
+
     try {
         const sessionUid = req.session?.uid;
         const designId = parseInt(req.params.id, 10); // Convert designId to an integer
