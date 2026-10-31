@@ -1,0 +1,23 @@
+<!-- A semantic-differential phase in the activity dashboard's rail (#894):
+     the questions, numbered as the response table's columns. -->
+<div class="phase-context">
+    <div ng-include="'/assets/static/views/teacher/fragments/phase-context-features.template.html'"></div>
+
+    <h4 class="phase-context-label">{{ 'questions_title_text' | translate }}</h4>
+    <ol class="phase-context-questions">
+        <li class="phase-context-question" ng-repeat="question in ctrl.phaseQuestions">
+            <abbr class="phase-context-question-number"
+                title="{{ 'item_label' | translate }} {{ $index + 1 }}">{{ 'dashboard_item_short' | translate:{ number: $index + 1 } }}</abbr>
+            <div class="phase-context-question-body">
+                <rich-text text="question.text" content-type="question.contentType"
+                    videos="ctrl.caseVideos"></rich-text>
+                <p class="phase-context-question-meta">
+                    {{ question.leftPole }} &harr; {{ question.rightPole }}
+                    &middot; 1&ndash;{{ question.range }}<span ng-if="question.justificationRequired"><span class="text-danger" aria-hidden="true">*</span>
+                        &middot; {{ 'dashboard_question_justified' | translate }}<span ng-if="question.minJustificationLength > 0">,
+                        {{ 'dashboard_question_min_words' | translate:{ count: question.minJustificationLength } }}</span></span>
+                </p>
+            </div>
+        </li>
+    </ol>
+</div>

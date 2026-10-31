@@ -1,4 +1,6 @@
-import phaseDescriptionTemplatesRegistry from "./templates/dashboard/phase-description-templates.registry.js";
+import phaseDescriptionTemplatesRegistry, {
+    compactPhaseDescriptionTemplatesRegistry,
+} from "./templates/dashboard/phase-description-templates.registry.js";
 
 let designTransformers = {
     semantic_differential: transformSemanticDifferentialPhase,
@@ -34,6 +36,11 @@ const phaseDescriptionDirective = function() {
             // The case's videos (#785), when the view has the case: durations
             // and availability for the videos in the texts.
             caseVideos:   "<",
+            // The condensed variant for the activity dashboard's rail (#894):
+            // the external services go to their own card, and `expanded`
+            // shows the features and instructions above the questions.
+            compact:      "<?",
+            expanded:     "<?",
         },
         bindToController: true,
         controllerAs: 'ctrl',
@@ -72,7 +79,10 @@ const phaseDescriptionDirective = function() {
                     return '/assets/static/views/teacher/fragments/default-phase-description.html';
                 }
 
-                const templateUrl = phaseDescriptionTemplatesRegistry[ctrl.designObject.type];
+                const registry = ctrl.compact
+                    ? compactPhaseDescriptionTemplatesRegistry
+                    : phaseDescriptionTemplatesRegistry;
+                const templateUrl = registry[ctrl.designObject.type];
                 if (!templateUrl) {
                     console.error(`[phaseDescription] No template found for design type: ${ctrl.designObject.type}`);
                     return '/assets/static/views/teacher/fragments/default-phase-description.html';
@@ -82,9 +92,10 @@ const phaseDescriptionDirective = function() {
         },
         // Every phase description lists the phase's external services and their
         // settings (#757): the design view, and the activity's design and
-        // progress tabs.
+        // progress tabs. The compact variant leaves them to the dashboard's
+        // AI services card.
         template: '<div ng-include="ctrl.getTemplateUrl()"></div>'
-            + '<phase-external-services-summary ng-if="ctrl.phaseDetails"'
+            + '<phase-external-services-summary ng-if="ctrl.phaseDetails && !ctrl.compact"'
             + ' phase="ctrl.phaseDetails"></phase-external-services-summary>'
     };
 };

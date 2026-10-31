@@ -4,6 +4,7 @@
 // they are. Phases without services render nothing.
 
 import {
+    compactSettingsLine,
     phaseEnabledServiceIds,
     phaseServiceConfiguration,
     serviceDisplayName,
@@ -62,6 +63,7 @@ function PhaseExternalServicesSummaryController($scope, $rootScope, ExternalServ
                 status:        "ready",
                 stale:         result.stale === true,
                 rows:          summary.rows,
+                summaryLine:   compactSettingsLine(summary.rows),
                 retiredFields: storedSettingRows(Object.fromEntries(summary.retiredFields
                     .map(({ key, value }) => [key, value]))),
             };
@@ -118,7 +120,10 @@ function PhaseExternalServicesSummaryController($scope, $rootScope, ExternalServ
 
 const phaseExternalServicesSummaryComponent = {
     bindings: {
-        phase: "<",
+        phase:   "<",
+        // One line per service with its details on demand, without the
+        // heading: the activity dashboard's AI services card (#894).
+        compact: "<?",
     },
     controller: [
         "$scope",

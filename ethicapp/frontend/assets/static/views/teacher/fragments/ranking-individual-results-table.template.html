@@ -13,7 +13,7 @@
         </tr>
     </thead>
     <tbody>
-        <tr ng-repeat="response in iptCtrl.sortedResponses track by response.uid">
+        <tr ng-repeat="response in iptCtrl.sortedResponses | participantSearch:iptCtrl.participantQuery track by response.uid">
             <td>{{ response.clusterCount }}</td>
             <td>{{ response.userName }}</td>
             <td>{{ response.role }}</td>

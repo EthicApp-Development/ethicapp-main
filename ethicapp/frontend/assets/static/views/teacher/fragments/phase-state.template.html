@@ -1,9 +1,9 @@
-<div>
-    <h4>{{ "responses_title_text" | translate }}</h4>
+<div class="phase-state">
     <div ng-if="ctrl.phaseData.descriptor.mode !== 'team'">
         <individual-phase-table
             phase-data="ctrl.phaseData"
             design-type="ctrl.designType"
+            participant-query="ctrl.participantQuery"
             on-select-response="ctrl.onSelectResponse({ response: response, phaseData: phaseData })">
         </individual-phase-table>
     </div>
@@ -11,6 +11,7 @@
         <group-phase-table
             phase-data="ctrl.phaseData"
             design-type="ctrl.designType"
+            participant-query="ctrl.participantQuery"
             on-select-response="ctrl.onSelectResponse({ response: response, phaseData: phaseData })"
             on-select-group="ctrl.onSelectGroup({ group: group, phaseData: phaseData })">
         </group-phase-table>

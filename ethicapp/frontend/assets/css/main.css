@@ -2762,6 +2762,356 @@ h2{
     }
 }
 
+/* Two-column activity dashboard (#894): a rail with the phase navigator and
+   the selected phase's context, and a main column with the responses first.
+   The rail is 260 px from 1200 px wide and 320 px from 1600 px; below
+   1200 px it stacks above the main column. The response table's header
+   sticks under the activity bar (56 px). */
+.activity-dashboard-page {
+    --activity-dashboard-sticky-top: calc(var(--teacher-topbar-height, 68px) + 56px);
+}
+
+.activity-dashboard-grid {
+    align-items: start;
+    display: grid;
+    gap: 16px;
+    grid-template-columns: minmax(0, 1fr);
+}
+
+@media (width >= 1200px) {
+    .activity-dashboard-grid {
+        grid-template-columns: 260px minmax(0, 1fr);
+    }
+}
+
+@media (width >= 1600px) {
+    .activity-dashboard-grid {
+        grid-template-columns: 320px minmax(0, 1fr);
+    }
+}
+
+.activity-dashboard-rail {
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+    gap: 12px;
+    min-width: 0;
+}
+
+.activity-dashboard-main {
+    min-width: 0;
+}
+
+.dashboard-card {
+    background: #fff;
+    border: 1px solid #d5dbe8;
+    border-radius: 6px;
+    padding: 10px 12px;
+}
+
+.dashboard-card-header {
+    align-items: baseline;
+    display: flex;
+    gap: 8px;
+    justify-content: space-between;
+}
+
+.dashboard-card-title {
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.3;
+    margin: 0 0 8px;
+}
+
+.dashboard-card-toggle {
+    flex: none;
+    padding: 0;
+}
+
+.dashboard-card-disclosure {
+    align-items: baseline;
+    background: none;
+    border: 0;
+    color: inherit;
+    display: flex;
+    font: inherit;
+    gap: 8px;
+    padding: 0;
+    text-align: left;
+    width: 100%;
+}
+
+.dashboard-card-summary {
+    color: #666;
+    flex: 1;
+    font-size: 12px;
+    font-weight: 400;
+    text-align: right;
+}
+
+.dashboard-activity-card .dashboard-card-title {
+    margin: 0;
+}
+
+.dashboard-activity-card .activity-item-panel {
+    border: 0;
+    box-shadow: none;
+    margin: 8px 0 0;
+}
+
+.dashboard-activity-card .activity-item-panel > .panel-heading {
+    display: none;
+}
+
+.dashboard-activity-card .activity-item-panel > .panel-body {
+    padding: 0;
+}
+
+.dashboard-chip {
+    border: 1px solid #c8cfdc;
+    border-radius: 999px;
+    display: inline-block;
+    font-size: 12px;
+    line-height: 1.4;
+    padding: 1px 8px;
+    white-space: nowrap;
+}
+
+/* Phase navigator */
+.phase-navigator-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.phase-navigator-item + .phase-navigator-item {
+    margin-top: 4px;
+}
+
+.phase-navigator-row {
+    align-items: center;
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    color: inherit;
+    column-gap: 10px;
+    display: grid;
+    grid-template-columns: 12px minmax(0, 1fr) auto;
+    padding: 6px 8px;
+    text-align: left;
+    width: 100%;
+}
+
+.phase-navigator-row:disabled {
+    color: #767676;
+    cursor: not-allowed;
+}
+
+.phase-navigator-row:focus-visible {
+    background: #f0f4ff;
+}
+
+.phase-navigator-row:hover:not(:disabled) {
+    background: #f0f4ff;
+}
+
+.phase-navigator-row-selected {
+    border-color: #2649ec;
+    font-weight: 700;
+}
+
+.phase-navigator-marker {
+    border: 2px solid #888;
+    border-radius: 50%;
+    height: 12px;
+    width: 12px;
+}
+
+.phase-navigator-row:not(:disabled) .phase-navigator-marker {
+    background: #888;
+}
+
+.phase-navigator-row.phase-navigator-row-current .phase-navigator-marker {
+    background: #3c763d;
+    border-color: #3c763d;
+}
+
+.phase-navigator-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.phase-navigator-count {
+    color: #555;
+    font-variant-numeric: tabular-nums;
+    font-weight: 400;
+}
+
+.phase-navigator-meter {
+    background: #e3e7ef;
+    border-radius: 3px;
+    display: block;
+    grid-column: 2;
+    height: 6px;
+    margin-top: 4px;
+    overflow: hidden;
+}
+
+.phase-navigator-meter-fill {
+    background: #3c763d;
+    display: block;
+    height: 100%;
+}
+
+/* "This phase": the compact phase descriptions */
+.phase-context-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    list-style: none;
+    margin: 0 0 8px;
+    padding: 0;
+}
+
+.phase-context-label {
+    color: #555;
+    font-size: 13px;
+    font-weight: 600;
+    margin: 8px 0 4px;
+}
+
+.phase-context-instructions {
+    line-height: 1.43;
+    max-height: calc(3 * 1.43em);
+    overflow: hidden;
+}
+
+.phase-context-instructions.phase-context-instructions-open {
+    max-height: none;
+}
+
+.phase-context-instructions > rich-text {
+    display: block;
+}
+
+.phase-context-instructions p,
+.phase-context-question-body p {
+    margin: 0 0 4px;
+}
+
+.phase-context-more {
+    padding: 0;
+}
+
+.phase-context-questions {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.phase-context-question {
+    border-top: 1px solid #e5e5e5;
+    display: grid;
+    gap: 8px;
+    grid-template-columns: 28px minmax(0, 1fr);
+    padding: 6px 0;
+}
+
+.phase-context-question-number {
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.phase-context-question-body {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.phase-context-question-body .phase-context-question-meta {
+    color: #666;
+    font-size: 12px;
+    margin: 2px 0 0;
+}
+
+/* "AI services" */
+.dashboard-ai-services .alert {
+    margin-bottom: 8px;
+    padding: 8px 10px;
+}
+
+.dashboard-ai-services .tutor-mode-warnings,
+.dashboard-ai-services .tutor-mode-basic-selected {
+    margin: 8px 0 0;
+    padding: 8px 10px;
+}
+
+/* Main column: tabs and the responses */
+.activity-dashboard-tabs {
+    margin-bottom: 0;
+}
+
+.activity-dashboard-panel {
+    padding-top: 8px;
+}
+
+.dashboard-responses-toolbar {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    margin-bottom: 8px;
+}
+
+.dashboard-responses-title {
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.3;
+    margin: 0;
+}
+
+.dashboard-responses-tools {
+    align-items: center;
+    display: flex;
+    gap: 8px;
+    margin-left: auto;
+}
+
+.dashboard-participant-search {
+    position: relative;
+    width: 240px;
+}
+
+.dashboard-participant-search-icon {
+    color: #888;
+    left: 10px;
+    pointer-events: none;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.dashboard-participant-search > input {
+    padding-left: 30px;
+}
+
+.dashboard-search-clear {
+    margin-left: 8px;
+}
+
+.activity-dashboard-page .phase-state .table > thead > tr > th {
+    background: #fff;
+    box-shadow: inset 0 -2px 0 #ddd;
+    position: sticky;
+    top: var(--activity-dashboard-sticky-top);
+    z-index: 2;
+}
+
+.activity-dashboard-design-explanation {
+    margin: 1em 0 2em;
+}
+
 .design-item-panel .design-item-actions {
     align-items: center;
     display: flex;
@@ -3241,6 +3591,25 @@ tr.group-summary {
 
 .phase-external-services-summary .phase-external-service-settings .help-block {
     margin: 2px 0 4px;
+}
+
+/* One line per service in the activity dashboard's AI services card
+   (#894), its settings on demand. */
+.phase-external-services-summary-compact .phase-external-service {
+    margin-bottom: 0;
+    padding: 4px 0;
+}
+
+.phase-external-services-summary-compact .phase-external-service + .phase-external-service {
+    border-top: 1px solid #e5e5e5;
+}
+
+.phase-external-services-summary-compact .phase-external-service-name {
+    margin: 0;
+}
+
+.phase-external-service-digest {
+    color: #666;
 }
 
 /* Teacher-written rich text (#765): block content with the surrounding text's

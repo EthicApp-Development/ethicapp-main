@@ -3,7 +3,21 @@ import * as DesignHelpers from "../../helpers/design-helpers.js";
 import { DashboardDataJoiners } from "../../helpers/dashboard-data-joiners.js";
 import { openSemanticDifferentialIndividualResponseModal } from "../../helpers/dashboard-individual-response-modal.helper.js";
 import { openSemanticDifferentialGroupResponseModal } from "../../helpers/dashboard-group-response-modal.helper.js";
-import { serviceDisplayName } from "../../helpers/service-configuration-summary.js";
+import {
+    phaseEnabledServiceIds,
+    serviceDisplayName,
+} from "../../helpers/service-configuration-summary.js";
+import { connectedStudentCount } from "../../helpers/activity-bar.js";
+import {
+    DEFAULT_DASHBOARD_TAB,
+    dashboardTab,
+    defaultPhaseContextExpanded,
+    defaultSelectedPhaseId,
+    participantMatchCount,
+    phaseResponseCounts,
+    resolveSelectedPhaseId,
+    selectedPhaseData,
+} from "../../helpers/activity-dashboard.js";
 
 /*eslint func-style: ["error", "expression"]*/
 export function DashboardController($scope, $routeParams, $http, 
@@ -19,8 +33,19 @@ export function DashboardController($scope, $routeParams, $http,
     vm.reachedLastPhase = false;
     vm.dashboardPhaseData = [];
     vm.dashboardPhaseUpdateState = new Map();
-    
-    vm.selectedTab = null;
+
+    // Two-column layout (#894, epic #892): the main tab, the phase selected
+    // in the navigator (null until one is chosen), the participant search,
+    // and the rail cards' open state. "This phase" starts collapsed to its
+    // questions below 1600 px; "Activity" starts collapsed.
+    vm.mainTab = DEFAULT_DASHBOARD_TAB;
+    vm.selectedPhaseId = null;
+    vm.participantQuery = "";
+    vm.phaseContextExpanded = defaultPhaseContextExpanded(window.innerWidth);
+    vm.activityCardExpanded = false;
+    // True once the started phases are read, so the "start the activity"
+    // notice does not flash while they load.
+    vm.phaseDataLoaded = false;
 
     // Services the design enables that will not run in this activity, shown
     // once right after launch (#815).
@@ -40,35 +65,83 @@ export function DashboardController($scope, $routeParams, $http,
         return Boolean(vm.associatedCase);
     };
 
-    vm.getPhaseTabId = function(phaseData) {
-        return `phase:${phaseData?.descriptor?.id}`;
+    vm.selectMainTab = function(tab) {
+        vm.mainTab = dashboardTab(tab);
     };
 
-    vm.selectCaseTab = function() {
-        vm.selectedTab = "case";
+    vm.isMainTabSelected = function(tab) {
+        return vm.mainTab === tab;
+    };
+
+    vm.currentPhaseId = function() {
+        return vm.activityState?.descriptor?.currentPhase?.id ?? null;
+    };
+
+    // Selects a started phase in the navigator: the rail's phase context and
+    // the responses table follow it.
+    vm.selectPhaseById = function(phaseId) {
+        if (selectedPhaseData(vm.dashboardPhaseData, phaseId)) {
+            vm.selectedPhaseId = phaseId;
+        }
     };
 
     vm.selectPhaseTab = function(phaseData) {
-        vm.selectedTab = vm.getPhaseTabId(phaseData);
-    };
-
-    vm.isCaseTabSelected = function() {
-        return vm.selectedTab === "case";
+        vm.selectPhaseById(phaseData?.descriptor?.id);
     };
 
     vm.isPhaseTabSelected = function(phaseData) {
-        return vm.selectedTab === vm.getPhaseTabId(phaseData);
+        return vm.selectedPhaseId !== null
+            && Number(phaseData?.descriptor?.id) === Number(vm.selectedPhaseId);
     };
 
+    // The current phase, or the last one started; keeps a phase the teacher
+    // selected while it is still listed.
     vm.selectDefaultProgressTab = function() {
-        if (vm.hasAssociatedCaseTab()) {
-            vm.selectCaseTab();
-            return;
-        }
+        vm.selectedPhaseId = resolveSelectedPhaseId(vm.selectedPhaseId, vm.dashboardPhaseData,
+            vm.currentPhaseId());
+    };
 
-        if (vm.dashboardPhaseData.length > 0) {
-            vm.selectPhaseTab(vm.dashboardPhaseData[0]);
-        }
+    vm.selectedPhase = function() {
+        return selectedPhaseData(vm.dashboardPhaseData, vm.selectedPhaseId);
+    };
+
+    // The design's entry for the selected phase: its features, instructions
+    // and external services.
+    vm.selectedDesignPhase = function() {
+        const phase = vm.selectedPhase();
+        return phase ? vm.getDesignPhaseForDescriptor(phase.descriptor) : null;
+    };
+
+    vm.selectedPhaseHasServices = function() {
+        return phaseEnabledServiceIds(vm.selectedDesignPhase()).length > 0;
+    };
+
+    vm.selectedPhaseCounts = function() {
+        return phaseResponseCounts(vm.selectedPhase());
+    };
+
+    vm.selectedPhaseMatchCount = function() {
+        return participantMatchCount(vm.selectedPhase(), vm.participantQuery);
+    };
+
+    vm.hasParticipantQuery = function() {
+        return typeof vm.participantQuery === "string" && vm.participantQuery.trim() !== "";
+    };
+
+    vm.clearParticipantQuery = function() {
+        vm.participantQuery = "";
+    };
+
+    vm.studentCount = function() {
+        return connectedStudentCount(vm.userList);
+    };
+
+    vm.togglePhaseContext = function() {
+        vm.phaseContextExpanded = !vm.phaseContextExpanded;
+    };
+
+    vm.toggleActivityCard = function() {
+        vm.activityCardExpanded = !vm.activityCardExpanded;
     };
 
     vm.loadAssociatedCase = async function(designId) {
@@ -243,8 +316,8 @@ export function DashboardController($scope, $routeParams, $http,
         // Session Id for this instance
         vm.sessionId = Number(id);
 
-        // Display the info tab by default
-        vm.activeTab = 'info';
+        // The responses come first (#894).
+        vm.mainTab = DEFAULT_DASHBOARD_TAB;
 
         vm.servicesNotRunning = ActivityCatalogService.takeLaunchNotice(vm.sessionId);
 
@@ -399,9 +472,8 @@ export function DashboardController($scope, $routeParams, $http,
 
             $scope.$applyAsync(() => {
                 vm.dashboardPhaseData = resolvedPhaseStates.filter(state => state !== null);
-                if (!vm.selectedTab) {
-                    vm.selectDefaultProgressTab();
-                }
+                vm.phaseDataLoaded = true;
+                vm.selectDefaultProgressTab();
             });
 
         } catch (error) {
@@ -432,11 +504,17 @@ export function DashboardController($scope, $routeParams, $http,
             if (!phaseData) {
                 phaseData = await vm.loadDashboardPhaseData(phaseId);
                 if (phaseData) {
-                    $scope.$applyAsync(() => {  
-                        vm.dashboardPhaseData.push(phaseData);
-                        if (!vm.selectedTab) {
-                            vm.selectDefaultProgressTab();
+                    $scope.$applyAsync(() => {
+                        // A queued update may have loaded the phase too: the
+                        // views track the phases by id, so keep one entry.
+                        const loaded = vm.dashboardPhaseData
+                            .findIndex(pd => Number(pd.descriptor.id) === Number(phaseId));
+                        if (loaded >= 0) {
+                            vm.dashboardPhaseData[loaded] = phaseData;
+                        } else {
+                            vm.dashboardPhaseData.push(phaseData);
                         }
+                        vm.selectDefaultProgressTab();
                     });
                 }
             }
@@ -618,28 +696,21 @@ export function DashboardController($scope, $routeParams, $http,
         }
 
         if (retryCount <= 0) {
-            if (vm.dashboardPhaseData.length > 0) {
-                vm.selectPhaseTab(vm.dashboardPhaseData[vm.dashboardPhaseData.length - 1]);
-            }
+            vm.selectPhaseById(defaultSelectedPhaseId(vm.dashboardPhaseData, vm.currentPhaseId()));
             return;
         }
 
         $timeout(() => vm.activatePhaseTabById(phaseId, retryCount - 1), 100);
     };
 
+    // Starting the next phase always moves the view to it, on the responses
+    // (#894). The event comes after an await, outside a digest.
     $scope.$on("activity:phase-advanced", (event, data) => {
-        vm.activeTab = "info";
         const phaseId = data?.phaseId;
-        if (phaseId) {
-            vm.activatePhaseTabById(phaseId);
-            return;
-        }
-
-        if (vm.dashboardPhaseData.length > 0) { 
-            $timeout(() => {
-                vm.selectPhaseTab(vm.dashboardPhaseData[vm.dashboardPhaseData.length - 1]);
-            }, 0);
-        }
+        $scope.$applyAsync(() => {
+            vm.selectMainTab(DEFAULT_DASHBOARD_TAB);
+            vm.activatePhaseTabById(phaseId || vm.currentPhaseId(), phaseId ? 8 : 0);
+        });
     });
 
     vm.lastPhaseReached = function() {

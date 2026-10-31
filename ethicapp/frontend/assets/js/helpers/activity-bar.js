@@ -13,6 +13,12 @@ const PHASE_MODE_KEYS = Object.freeze({
     individual: "activity_bar_phase_mode_individual",
 });
 
+// The translation key of a phase mode ("team" or "individual"); any other
+// mode reads as individual.
+export function phaseModeKey(mode) {
+    return PHASE_MODE_KEYS[mode === "team" ? "team" : "individual"];
+}
+
 // The role of students in `users.role`.
 const STUDENT_ROLE = "A";
 
@@ -48,12 +54,10 @@ export function currentPhaseSummary(descriptor, totalPhases) {
     // The current phase is the last one in `phases`; its entry carries the mode.
     const phase = descriptor.phases?.find(item => Number(item?.id) === Number(currentPhase.id))
         || currentPhase;
-    const mode = phase?.mode === "team" ? "team" : "individual";
-
     return {
         number,
         total:   Math.max(total, number),
-        modeKey: PHASE_MODE_KEYS[mode],
+        modeKey: phaseModeKey(phase?.mode),
     };
 }
 

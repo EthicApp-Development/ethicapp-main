@@ -5,14 +5,14 @@
             <th>{{ 'participant_column_header' | translate }}</th>
             <th>{{ 'group_column_header' | translate }}</th>
             <th ng-repeat="question in gptCtrl.phaseData.descriptor.questions">
-                {{ 'item_label' | translate }} {{ $index + 1 }} (1-{{ question.range }})
+                <abbr title="{{ 'item_label' | translate }} {{ $index + 1 }}">{{ 'dashboard_item_short' | translate:{ number: $index + 1 } }}</abbr> (1-{{ question.range }})
                 <span ng-if="question.justify" class="text-danger">*</span>
             </th>
             <th>{{ 'chat_column_header' | translate }}</th>
         </tr>
     </thead>
     <tbody>
-        <tr ng-repeat="user in gptCtrl.phaseData.state track by $index"
+        <tr ng-repeat="user in gptCtrl.phaseData.state | participantSearch:gptCtrl.participantQuery track by $index"
             ng-class="{'group-summary': user.groupStatistics}"
             ng-click="gptCtrl.onRowClick(user)"
             style="cursor: pointer;">

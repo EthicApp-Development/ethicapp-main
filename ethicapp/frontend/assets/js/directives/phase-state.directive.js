@@ -4,6 +4,9 @@ let phaseStateDirective = function() {
         scope: {
             designType: '<',
             phaseData: '<',
+            // The dashboard's participant search (#894): the tables show
+            // the rows whose participant's name contains it.
+            participantQuery: "<?",
             onSelectResponse: '&?',
             onSelectGroup: '&?'
         },

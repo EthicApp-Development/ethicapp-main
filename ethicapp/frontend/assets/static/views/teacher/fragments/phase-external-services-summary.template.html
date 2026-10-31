@@ -1,5 +1,6 @@
-<div class="phase-external-services-summary" ng-if="$ctrl.hasServices">
-    <h4>{{ 'external_services_title' | translate }}</h4>
+<div class="phase-external-services-summary" ng-if="$ctrl.hasServices"
+    ng-class="{ 'phase-external-services-summary-compact': $ctrl.compact }">
+    <h4 ng-if="!$ctrl.compact">{{ 'external_services_title' | translate }}</h4>
     <p class="help-block" ng-if="$ctrl.loading && $ctrl.services.length === 0">
         {{ 'service_settings_loading' | translate }}
     </p>
@@ -9,12 +10,22 @@
             <strong>{{ service.name || ((service.status === 'not_available'
                 ? 'service_summary_unavailable_service_name'
                 : 'service_summary_unnamed_service') | translate) }}</strong>
+            <!-- Compact: one line per service, its settings on demand (#894). -->
+            <span class="phase-external-service-digest" ng-if="$ctrl.compact && service.summaryLine">&middot; {{ service.summaryLine }}</span>
+            <button
+                ng-if="$ctrl.compact && (service.status === 'ready' || service.usesLlm)"
+                type="button"
+                class="btn btn-link btn-xs phase-external-service-details-toggle"
+                ng-click="service.expanded = !service.expanded"
+                aria-expanded="{{ service.expanded ? 'true' : 'false' }}">
+                {{ (service.expanded ? 'service_summary_hide_details' : 'service_summary_show_details') | translate }}
+            </button>
         </p>
-        <p class="help-block external-service-llm-notice" ng-if="service.usesLlm">
+        <p class="help-block external-service-llm-notice" ng-if="service.usesLlm && (!$ctrl.compact || service.expanded)">
             {{ 'external_services_llm_notice' | translate }}
         </p>
 
-        <div ng-if="service.status === 'ready'">
+        <div ng-if="service.status === 'ready' && (!$ctrl.compact || service.expanded)">
             <p class="help-block" ng-if="service.stale">{{ 'service_settings_stale' | translate }}</p>
             <ul class="list-with-dots phase-external-service-settings">
                 <li ng-repeat="row in service.rows track by row.key">
@@ -94,5 +105,5 @@
             </p>
         </div>
     </div>
-    <hr>
+    <hr ng-if="!$ctrl.compact">
 </div>
