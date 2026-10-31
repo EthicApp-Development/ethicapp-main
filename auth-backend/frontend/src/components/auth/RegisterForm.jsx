@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import PasswordField from './PasswordField';
+import PasswordRules from './PasswordRules';
 import TextField from '../common/TextField';
 import SelectField from '../common/SelectField';
 import { register } from '../../api/authApi';
@@ -8,6 +9,8 @@ import RecaptchaField from '../common/RecaptchaField';
 import { recaptchaProvider, recaptchaSiteKey } from '../../config/env';
 import { useI18n } from '../../app/i18n-context';
 import { useRegisterDraft } from '../../app/register-draft-context';
+import { usePasswordPolicy } from '../../hooks/usePasswordPolicy';
+import { checkPassword } from '../../utils/passwordPolicy';
 
 function RegisterForm() {
   const { locale, t } = useI18n();
@@ -30,15 +33,11 @@ function RegisterForm() {
     { value: 'O', label: t('register.genderOptions.other') }
   ];
 
-  const passwordChecks = useMemo(() => {
-    const password = draft.password || '';
-    const symbolCount = (password.match(/[^a-zA-Z0-9]/g) || []).length;
-
-    return {
-      minLength: password.length >= 10,
-      twoSymbols: symbolCount >= 2
-    };
-  }, [draft.password]);
+  const passwordPolicy = usePasswordPolicy();
+  const passwordChecks = useMemo(
+    () => checkPassword(draft.password, passwordPolicy),
+    [draft.password, passwordPolicy]
+  );
 
   useEffect(() => {
     if (!successMessage || !successAlertRef.current) {
@@ -119,8 +118,8 @@ function RegisterForm() {
 
     if (!draft.password) {
       nextErrors.password = t('register.errors.passwordRequired');
-    } else if (!passwordChecks.minLength || !passwordChecks.twoSymbols) {
-      nextErrors.password = t('register.errors.passwordInvalid');
+    } else if (passwordChecks && !passwordChecks.satisfied) {
+      nextErrors.password = t('register.errors.passwordInvalid', passwordPolicy);
     }
 
     if (!draft.password_confirmation) {
@@ -288,17 +287,10 @@ function RegisterForm() {
         onChange={handleChange}
         error={errors.password}
         autoComplete="new-password"
-        helpText={t('register.passwordRules.helpText')}
+        helpText={passwordPolicy ? t('register.passwordRules.helpText', passwordPolicy) : ''}
         required
       >
-        <ul className="auth-password-rules">
-          <li className={passwordChecks.minLength ? 'is-valid' : 'is-invalid'}>
-            {t('register.passwordRules.minLength')}
-          </li>
-          <li className={passwordChecks.twoSymbols ? 'is-valid' : 'is-invalid'}>
-            {t('register.passwordRules.twoSymbols')}
-          </li>
-        </ul>
+        <PasswordRules policy={passwordPolicy} checks={passwordChecks} keyPrefix="register.passwordRules" />
       </PasswordField>
 
       <PasswordField

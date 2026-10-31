@@ -1,8 +1,11 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import PasswordField from './PasswordField';
+import PasswordRules from './PasswordRules';
 import { resetPassword } from '../../api/authApi';
 import { useI18n } from '../../app/i18n-context';
+import { usePasswordPolicy } from '../../hooks/usePasswordPolicy';
+import { checkPassword } from '../../utils/passwordPolicy';
 
 function ResetPasswordForm() {
   const { t } = useI18n();
@@ -21,15 +24,11 @@ function ResetPasswordForm() {
   const [successMessage, setSuccessMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const passwordChecks = useMemo(() => {
-    const password = formData.password || '';
-    const symbolCount = (password.match(/[^a-zA-Z0-9]/g) || []).length;
-
-    return {
-      minLength: password.length >= 10,
-      twoSymbols: symbolCount >= 2
-    };
-  }, [formData.password]);
+  const passwordPolicy = usePasswordPolicy();
+  const passwordChecks = useMemo(
+    () => checkPassword(formData.password, passwordPolicy),
+    [formData.password, passwordPolicy]
+  );
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -57,8 +56,8 @@ function ResetPasswordForm() {
 
     if (!formData.password) {
       nextErrors.password = t('resetPassword.errors.passwordRequired');
-    } else if (!passwordChecks.minLength || !passwordChecks.twoSymbols) {
-      nextErrors.password = t('resetPassword.errors.passwordInvalid');
+    } else if (passwordChecks && !passwordChecks.satisfied) {
+      nextErrors.password = t('resetPassword.errors.passwordInvalid', passwordPolicy);
     }
 
     if (!formData.password_confirmation) {
@@ -134,17 +133,10 @@ function ResetPasswordForm() {
         onChange={handleChange}
         error={errors.password}
         autoComplete="new-password"
-        helpText={t('resetPassword.passwordRules.helpText')}
+        helpText={passwordPolicy ? t('resetPassword.passwordRules.helpText', passwordPolicy) : ''}
         required
       >
-        <ul className="auth-password-rules">
-          <li className={passwordChecks.minLength ? 'is-valid' : 'is-invalid'}>
-            {t('resetPassword.passwordRules.minLength')}
-          </li>
-          <li className={passwordChecks.twoSymbols ? 'is-valid' : 'is-invalid'}>
-            {t('resetPassword.passwordRules.twoSymbols')}
-          </li>
-        </ul>
+        <PasswordRules policy={passwordPolicy} checks={passwordChecks} keyPrefix="resetPassword.passwordRules" />
       </PasswordField>
 
       <PasswordField

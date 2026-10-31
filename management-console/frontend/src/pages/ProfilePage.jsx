@@ -12,15 +12,9 @@ import {
   startPasskeyRegistration
 } from '../api/profileApi.js';
 import { redirectToLogin } from '../api/sessionRedirect.js';
-
-function getPasswordChecks(password) {
-  const symbolCount = (password.match(/[^a-zA-Z0-9]/g) || []).length;
-
-  return {
-    minLength: password.length >= 10,
-    twoSymbols: symbolCount >= 2
-  };
-}
+import PasswordRules from '../components/common/PasswordRules.jsx';
+import { checkPassword } from '../components/common/passwordPolicy.js';
+import { usePasswordPolicy } from '../components/common/usePasswordPolicy.js';
 
 function ProfilePage() {
   const { locale, t } = useI18n();
@@ -44,7 +38,13 @@ function ProfilePage() {
     delete_password: ''
   });
 
-  const passwordChecks = useMemo(() => getPasswordChecks(form.new_password), [form.new_password]);
+  // auth-backend's limits; until they load, auth-backend's refusal is the
+  // only check.
+  const passwordPolicy = usePasswordPolicy();
+  const passwordChecks = useMemo(
+    () => checkPassword(form.new_password, passwordPolicy),
+    [form.new_password, passwordPolicy]
+  );
   const passkeysAvailable = typeof window !== 'undefined' && Boolean(window.PublicKeyCredential);
 
   useEffect(() => {
@@ -100,8 +100,8 @@ function ProfilePage() {
       return t('pages.profile.errors.required');
     }
 
-    if (!passwordChecks.minLength || !passwordChecks.twoSymbols) {
-      return t('pages.profile.errors.weakPassword');
+    if (passwordChecks && !passwordChecks.satisfied) {
+      return t('pages.profile.errors.weakPassword', passwordPolicy);
     }
 
     if (form.new_password !== form.password_confirmation) {
@@ -114,7 +114,6 @@ function ProfilePage() {
   function getPasswordRequestErrorMessage(requestError) {
     const errorsByCode = {
       MISSING_REQUIRED_FIELDS: t('pages.profile.errors.required'),
-      WEAK_PASSWORD: t('pages.profile.errors.weakPassword'),
       PASSWORD_CONFIRMATION_MISMATCH: t('pages.profile.errors.passwordMismatch')
     };
 
@@ -298,15 +297,8 @@ function ProfilePage() {
                   autoComplete="new-password"
                   required
                 />
-                <Form.Text>{t('pages.profile.passwordRules.helpText')}</Form.Text>
-                <ul className="password-rule-list mt-2 mb-0">
-                  <li className={passwordChecks.minLength ? 'text-success' : 'text-secondary'}>
-                    {t('pages.profile.passwordRules.minLength')}
-                  </li>
-                  <li className={passwordChecks.twoSymbols ? 'text-success' : 'text-secondary'}>
-                    {t('pages.profile.passwordRules.twoSymbols')}
-                  </li>
-                </ul>
+                {passwordPolicy ? <Form.Text>{t('passwordRules.helpText', passwordPolicy)}</Form.Text> : null}
+                <PasswordRules policy={passwordPolicy} password={form.new_password} />
               </Form.Group>
 
               <Form.Group className="mb-4" controlId="profile-password-confirmation">

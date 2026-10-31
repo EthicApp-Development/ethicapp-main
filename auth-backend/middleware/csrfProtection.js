@@ -33,7 +33,11 @@ function getRequestCsrfToken(req) {
   return String(req.get(CSRF_HEADER_NAME) || req.body?._csrf || '').trim();
 }
 
-function hasValidInternalServiceToken(req) {
+// Whether the request carries the internal service token that
+// management-console sends on its service-to-service calls. Besides
+// exempting those calls from CSRF, routes that only the console may call
+// require it outright.
+export function hasValidInternalServiceToken(req) {
   const expectedToken = getInternalServiceToken();
   const providedToken = String(req.get(INTERNAL_SERVICE_HEADER_NAME) || '').trim();
 

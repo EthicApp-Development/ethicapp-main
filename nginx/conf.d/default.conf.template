@@ -286,6 +286,22 @@ server {
         proxy_set_header X-Request-Id $ethicapp_request_id;
     }
 
+    # Setting another user's password (#889) is called only by
+    # management-console over the internal network, after its own step-up
+    # check. It is never served at the edge.
+    location ^~ /api/auth/admin/users/ {
+        add_header X-Request-Id $ethicapp_request_id always;
+        return 404;
+    }
+
+    # Express matches routes regardless of letter case, so other spellings
+    # (/api/auth/Admin/Users/) would reach auth-backend through the prefix
+    # location above.
+    location ~* ^/api/auth/admin/users/ {
+        add_header X-Request-Id $ethicapp_request_id always;
+        return 404;
+    }
+
     # ---------------------------------------
     # Endpoint interno para auth_request
     # ---------------------------------------
