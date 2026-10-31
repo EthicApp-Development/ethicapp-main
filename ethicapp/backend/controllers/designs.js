@@ -19,6 +19,7 @@ import {
     normalizeCaseDocumentSummaries,
 } from "../helpers/case-documents.js";
 import { copyReadyDesignAnalyses } from "../helpers/design-analyses-helper.js";
+import { checkDesignCase } from "../helpers/design-case-association.js";
 import { scheduleDesignAnalyses } from "../helpers/design-analyses-lifecycle-helper.js";
 import { DESIGN_HOOK_TRIGGERS } from "../helpers/design-analysis-hooks.js";
 import {
@@ -487,7 +488,7 @@ router.post("/designs", async (req, res) => {
         const sessionUid = req.session?.uid;
         const {
             design,
-            caseId = null,
+            caseId: requestedCaseId = null,
             visibility,
             licenseCode,
             license_code: licenseCodeSnake,
@@ -513,6 +514,13 @@ router.post("/designs", async (req, res) => {
         if (!areTagIdsValid(parsedTagIds)) {
             return res.status(400).json({ status: "err", message: "A design can have at most five semantic tags." });
         }
+
+        // The case must be one the teacher may pick (#924).
+        const caseCheck = await checkDesignCase({ requestedCaseId, userId: sessionUid });
+        if (caseCheck.refusal) {
+            return res.status(caseCheck.refusal.status).json(caseCheck.refusal.body);
+        }
+        const { caseId } = caseCheck;
 
         let { id, ...designNoId } = design;
         const configurationCheck = await validateServiceConfigurations(designNoId);
@@ -595,7 +603,7 @@ router.patch("/designs/:id", async (req, res) => {
         const designId = parseInt(req.params.id, 10); // Convert designId to an integer
         const {
             design,
-            caseId = null,
+            caseId: requestedCaseId = null,
             visibility,
             licenseCode,
             license_code: licenseCodeSnake,
@@ -627,7 +635,7 @@ router.patch("/designs/:id", async (req, res) => {
             dbcon: config.dbconnString,
             sql: `
                 SELECT id, creator, locked, design, visibility, license_code,
-                       attribution_text, language_code
+                       attribution_text, language_code, case_id
                 FROM designs
                 WHERE id = $1
             `,
@@ -638,6 +646,19 @@ router.patch("/designs/:id", async (req, res) => {
         if (refusal) {
             return res.status(refusal.status).json(refusal.body);
         }
+
+        // A new case must be one the teacher may pick; the design's current
+        // case is kept (#924).
+        const caseCheck = await checkDesignCase({
+            requestedCaseId,
+            storedCaseId: existingDesign.case_id ?? null,
+            userId:       sessionUid,
+            designId,
+        });
+        if (caseCheck.refusal) {
+            return res.status(caseCheck.refusal.status).json(caseCheck.refusal.body);
+        }
+        const { caseId } = caseCheck;
 
         const configurationCheck = await validateServiceConfigurations(
             design,

@@ -37,6 +37,9 @@
                         on-select="cdc.selectCase(caseItem)"
                         on-clear="cdc.clearAssociatedCase()">
                     </case-search-selector>
+                    <p class="text-danger" role="alert" ng-if="cdc.caseErrorKey">
+                        {{ cdc.caseErrorKey | translate }}
+                    </p>
                 </fieldset>
             </div>
         </div>

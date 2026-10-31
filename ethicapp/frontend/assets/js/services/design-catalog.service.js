@@ -113,8 +113,11 @@ let DesignCatalogService = ($rootScope, $http) => {
                     throw new Error("Failed to create design");
                 }
             } catch (error) {
+                // The caller tells the teacher why the design was not created
+                // (#924), so the rejection, with its status and error code,
+                // reaches it.
                 console.error("Error creating design:", error);
-                return null; // Return null to indicate failure
+                throw error;
             }
         },
 

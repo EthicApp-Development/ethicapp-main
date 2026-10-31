@@ -53,3 +53,58 @@ describe("DesignCatalogService.updateDesign", () => {
         }
     });
 });
+
+describe("DesignCatalogService.createDesign", () => {
+    function createPostService(postOutcome) {
+        const posts = [];
+        const $http = async () => ({ data: { status: "ok" } });
+        $http.get = async () => ({ data: { status: "ok", result: [] } });
+        $http.post = async (url, body) => {
+            posts.push({ url, body });
+            return postOutcome();
+        };
+        const $rootScope = { $broadcast() {}, $emit() {}, $applyAsync(fn) { fn?.(); } };
+
+        return { service: DesignCatalogService($rootScope, $http), posts };
+    }
+
+    async function quietly(action) {
+        const originalError = console.error;
+        console.error = () => {};
+        try {
+            return await action();
+        } finally {
+            console.error = originalError;
+        }
+    }
+
+    it("posts the design with its case and resolves the new id", async () => {
+        const { service, posts } = createPostService(async () => ({
+            data: { status: "ok", id: 31 },
+        }));
+
+        const design = { caseId: 3, languageCode: "es_CL", tags: [{ id: 9 }] };
+        const designId = await service.createDesign(design);
+
+        assert.equal(designId, 31);
+        assert.equal(posts[0].url, "/designs");
+        assert.equal(posts[0].body.caseId, 3);
+        assert.deepEqual(posts[0].body.tagIds, [9]);
+        assert.equal(service.designs[0], design);
+    });
+
+    it("rejects with the HTTP error when the case is refused (#924)", async () => {
+        const rejection = { status: 404, data: { status: "err", code: "CASE_NOT_AVAILABLE" } };
+        const { service } = createPostService(async () => { throw rejection; });
+
+        await quietly(() => assert.rejects(service.createDesign({ caseId: 43 }),
+            (error) => error === rejection));
+        assert.deepEqual(service.designs, []);
+    });
+
+    it("rejects when the API answers without ok", async () => {
+        const { service } = createPostService(async () => ({ data: { status: "err" } }));
+
+        await quietly(() => assert.rejects(service.createDesign({}), /Failed to create design/u));
+    });
+});

@@ -2,7 +2,10 @@ import designEditActions from "../../helpers/phase-edition-helpers.js";
 import * as phaseValidationHelpers from "../../helpers/phase-validation-helpers.js"
 import accordionStateHelpers from "../../helpers/accordeon-state-helpers.js"
 import { normalizeExternalServicesConfig } from "../../helpers/phase-external-services.js";
-import { designSaveErrorMessageKey } from "../../helpers/design-save-errors.js";
+import {
+    designSaveErrorMessageKey,
+    isCaseNotAvailableError,
+} from "../../helpers/design-save-errors.js";
 import { designVideoWarnings } from "../../helpers/case-video-embeds.js";
 
 export function DesignEditorController($scope, $translate, $timeout,
@@ -441,6 +444,11 @@ export function DesignEditorController($scope, $translate, $timeout,
         } catch (error) {
             if (error?.data?.code === "INVALID_SERVICE_CONFIGURATION") {
                 $scope.$applyAsync(() => vm.applyServerServiceErrors(error.data.errors));
+            }
+            // The case can no longer be associated (#924): clear it, so the
+            // teacher can pick another case or save without one.
+            if (isCaseNotAvailableError(error)) {
+                $scope.$applyAsync(() => vm.clearAssociatedCase());
             }
             vm.showSaveErrorToast(designSaveErrorMessageKey(error));
             console.error(error);
