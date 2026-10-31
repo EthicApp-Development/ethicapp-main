@@ -41,7 +41,7 @@
                 <strong ng-if="user.groupStatistics">{{ user.groupName }}</strong>
             </td>
 
-            <td>{{ user.groupStatistics ? user.groupNumber : user.groupNumber || '-' }}</td>
+            <td>{{ user.groupNumber || ('no_group_label' | translate) }}</td>
 
             <td ng-repeat="question in gptCtrl.phaseData.descriptor.questions">
                 <div ng-if="!user.groupStatistics">
@@ -74,7 +74,7 @@
                     </span>
                 </span>
                 <span ng-if="user.groupStatistics">
-                    <strong>Total:</strong>
+                    <strong>{{ 'group_chat_total_label' | translate }}:</strong>
                     <span class="badge badge-danger">
                         <i class="fa fa-comments"></i> {{ user.totalChatCount || 0 }}
                     </span>

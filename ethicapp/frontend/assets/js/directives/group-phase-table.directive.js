@@ -1,3 +1,4 @@
+import { addDifferentialGroupStatistics, addRankingGroupChatCounts } from "../helpers/group-phase-statistics.js";
 import { detailRowKey, isRowActivationKey, isRowInDetail } from "../helpers/response-detail.js";
 import { groupResultsTables } from "./templates/dashboard/dashboard-views.registry.js";
 
@@ -18,86 +19,11 @@ let groupPhaseTableDirective = function() {
         controller: function($scope) {
             const gptCtrl = this;
 
-            // Define statistics calculators for each design type
+            // The per-group figures for each design type (#919: students
+            // without a group form no group).
             const statisticsCalculators = {
-                ranking: function(groupData, questions) {
-                    // Group data by groupNumber
-                    const groupedData = groupData.reduce((acc, user) => {
-                        const groupNumber = user.groupNumber || 'Ungrouped';
-                        if (!acc[groupNumber]) acc[groupNumber] = [];
-                        acc[groupNumber].push(user);
-                        return acc;
-                    }, {});
-
-                    // Add total chat messages per group
-                    Object.keys(groupedData).forEach(groupNumber => {
-                        const groupMembers = groupedData[groupNumber];
-                        const totalChatCount = groupMembers.reduce(
-                            (sum, member) => sum + (member.totalChatCount || 0),
-                            0
-                        );
-
-                        // Assign totalChatCount to each member for display
-                        groupMembers.forEach(member => {
-                            member.groupChatMessages = totalChatCount;
-                        });
-                    });
-
-                    // Flatten grouped data back into a single array
-                    return Object.values(groupedData).flat();
-                },
-                semantic_differential: function (participantData, questions) {
-                    // Filter out individual participant data and group it by `groupNumber`
-                    const individualData = participantData.filter(participant => !participant.groupStatistics);
-                    const groupMap = individualData.reduce((acc, participant) => {
-                        const groupNumber = participant.groupNumber || 'Ungrouped';
-                        if (!acc[groupNumber]) acc[groupNumber] = [];
-                        acc[groupNumber].push(participant);
-                        return acc;
-                    }, {});
-            
-                    // Calculate statistics for each group
-                    Object.keys(groupMap).forEach(groupNumber => {
-                        const members = groupMap[groupNumber];
-                        const stats = {};
-            
-                        // Calculate average and coefficient of variation (CV) for each question
-                        questions.forEach((question, index) => {
-                            const key = `r${index + 1}`;
-                            const values = members.map(member => member[key]).filter(v => v !== null);
-            
-                            if (values.length > 0) {
-                                const avg = values.reduce((a, b) => a + b, 0) / values.length;
-                                const variance = values.reduce((sum, value) => sum + Math.pow(value - avg, 2), 0) / values.length;
-                                const stdDev = Math.sqrt(variance);
-                                const cv = avg !== 0 ? (stdDev / avg) : 0;
-            
-                                // Add calculated average and CV to stats object
-                                stats[`averageR${index + 1}`] = avg.toFixed(2);
-                                stats[`cvR${index + 1}`] = cv.toFixed(2);
-                            } else {
-                                // Default values if no data is available
-                                stats[`averageR${index + 1}`] = '-';
-                                stats[`cvR${index + 1}`] = '-';
-                            }
-                        });
-            
-                        // Locate or create the `groupStatistics` object for this group
-                        let groupStatsObject = participantData.find(obj => obj.groupStatistics && 
-                            obj.groupNumber === Number(groupNumber));
-                        if (!groupStatsObject) {
-                            // If the object does not exist, create and add it
-                            groupStatsObject = { groupStatistics: true, groupNumber, stats: {} };
-                            participantData.push(groupStatsObject);
-                        }
-            
-                        // Update the `groupStatistics` object with the calculated stats
-                        Object.assign(groupStatsObject, stats);
-                    });
-            
-                    // Return the updated participantData with `groupStatistics` objects in their original positions
-                    return participantData;
-                }
+                ranking: addRankingGroupChatCounts,
+                semantic_differential: addDifferentialGroupStatistics,
             };
 
             // General function to calculate statistics based on design type
