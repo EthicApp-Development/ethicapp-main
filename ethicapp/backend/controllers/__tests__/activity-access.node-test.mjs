@@ -1,8 +1,9 @@
 // The remaining endpoints of an activity, its phases and groups answer only to
 // the activity's owner, or to a student of the session where the student app
-// calls them (#910). So does the activity descriptor (#925). PostgreSQL is
-// replaced by a fake pg pool that answers by matching the SQL, so nothing here
-// needs a database or Redis. Finishing an activity is covered in
+// calls them (#910). So do the activity descriptor and the list of a
+// session's users (#925). PostgreSQL is replaced by a fake pg pool that
+// answers by matching the SQL, so nothing here needs a database or Redis.
+// Finishing an activity is covered in
 // activities/__tests__/activity-finish-route.node-test.mjs.
 import assert from "node:assert/strict";
 import { after, beforeEach, describe, it } from "node:test";
@@ -136,6 +137,10 @@ function rowsFor(sql, params = []) {
     }
 
     // What the endpoints read once the check lets them through.
+    if (/FROM users AS u\s+INNER JOIN sesusers AS su/u.test(sql)) {
+        return (sessions.get(first)?.participants ?? [])
+            .map(uid => ({ id: uid, name: names.get(uid) ?? null, role: "A", device: null }));
+    }
     if (/d\.design->>'type' AS design_type/u.test(sql)) {
         return [{ design_type: "semantic_differential" }];
     }
@@ -335,6 +340,47 @@ describe("PATCH /activities/:session_id/toggle_archived", () => {
         assert.match(update.sql, /SET archived = NOT archived/u);
         assert.deepEqual(update.params.map(Number), [SESSION_ID]);
     });
+});
+
+describe("GET /sessions/:id/users", () => {
+    function read(session, sessionId = SESSION_ID) {
+        return requestRouter(activitiesTeacherRouter, {
+            path: `/sessions/${sessionId}/users`,
+            session,
+        });
+    }
+
+    ownerOnlyCases(read, { notFound: "Session not found.", otherId: OTHER_SESSION_ID });
+
+    it("lists the session's users to the owner", async () => {
+        const { status, body } = await read(OWNER);
+
+        assert.equal(status, 200);
+        assert.deepEqual(body.users.map(({ id }) => id), sessions.get(SESSION_ID).participants);
+    });
+
+    it("answers an unknown session with the same 404 as another teacher's", async () => {
+        const unknown = await read(OWNER, UNKNOWN_ID);
+        const hidden = await read(OTHER_TEACHER);
+
+        assert.deepEqual(unknown, hidden);
+        assert.deepEqual(unknown, { status: 404, body: { error: "Session not found." } });
+    });
+
+    it("refuses another role with 403 before any lookup", async () => {
+        const { status } = await read({ uid: 3, role: "S" });
+
+        assert.equal(status, 403);
+        assert.equal(db.queries.length, 0);
+    });
+
+    it("keeps answering 400 for an id that is not a positive integer, without querying",
+        async () => {
+            const { status } = await read(OWNER, "abc");
+
+            assert.equal(status, 400);
+            assert.equal(db.queries.length, 0);
+        });
 });
 
 describe("GET /activities/:session_id/responses", () => {

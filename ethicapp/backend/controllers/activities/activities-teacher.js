@@ -139,29 +139,16 @@ router.get("/sessions/:id/users", async (req, res) => {
     }
 
     const sessionId = Number(req.params.id);
-    const teacherId = req.session.uid;
 
     if (!Number.isInteger(sessionId) || sessionId <= 0) {
         return res.status(400).json({ error: "Invalid or missing required parameter: session id." });
     }
 
     try {
-        const sessionRows = await rpg2.execSQL({
-            dbcon: config.dbconnString,
-            sql: `
-                SELECT id
-                FROM sessions
-                WHERE id = $1
-                  AND creator = $2
-            `,
-            sqlParams: [
-                rpg2.param("plain", sessionId),
-                rpg2.param("plain", teacherId),
-            ],
-        });
-
-        if (sessionRows.length === 0) {
-            return res.status(403).json({ error: "Access denied. User is not authorized for this session." });
+        // Only the activity's teacher lists its participants, and another
+        // teacher's session is answered as an unknown one (#925).
+        if (!await requireSessionOwner(req, res, sessionId)) {
+            return;
         }
 
         const users = await rpg2.execSQL({
