@@ -34,7 +34,7 @@ import {
 } from "../helpers/case-lifecycle-helper.js";
 import { insertRequestedCaseAnalyses } from "../helpers/case-analyses-helper.js";
 import { associableCaseSql } from "../helpers/design-case-association.js";
-import { applyCaseVisibilityToDesigns } from "../helpers/case-visibility.js";
+import { applyCaseVisibility } from "../helpers/case-visibility.js";
 import {
     caseVideoSummariesFromIds,
     caseVideosJsonSql,
@@ -414,7 +414,8 @@ const updateCaseSql = `
 
 // Writes the case form's fields and applies the case's visibility to the
 // designs that use it, in one transaction, the way the visibility switch does
-// (#934). Returns null when the user does not own the case.
+// (#934), and counts the designs of other teachers that keep the case (#939).
+// Returns null when the user does not own the case.
 async function updateCaseRecord(params) {
     return inTransaction(async (client) => {
         const result = await client.query(updateCaseSql, params);
@@ -423,12 +424,12 @@ async function updateCaseRecord(params) {
             return null;
         }
 
-        const affectedDesignIds = await applyCaseVisibilityToDesigns(
-            client,
-            updatedCase.id,
-            updatedCase.visibility
-        );
-        return { updatedCase, affectedDesignIds };
+        const visibilityEffects = await applyCaseVisibility(client, {
+            caseId:     updatedCase.id,
+            ownerId:    updatedCase.creator,
+            visibility: updatedCase.visibility,
+        });
+        return { updatedCase, ...visibilityEffects };
     });
 }
 
@@ -1100,7 +1101,7 @@ router.patch("/cases/:id", pdfUpload, async (req, res) => {
             await removeUploadedFile(req.file);
             return caseNotFoundResponse(res);
         }
-        const { updatedCase, affectedDesignIds } = saved;
+        const { updatedCase, affectedDesignIds, designsKeepingAccess } = saved;
         await replaceCaseAuthors(caseId, authors);
         await replaceCaseTags(caseId, tagIds, req.session.uid);
         if (videoSave.videoIds) {
@@ -1124,6 +1125,7 @@ router.patch("/cases/:id", pdfUpload, async (req, res) => {
 
         const result = await normalizeCaseWithMaterial(updatedCase);
         result.affectedDesignIds = affectedDesignIds;
+        result.designsKeepingAccess = designsKeepingAccess;
         return res.status(200).json({ status: "ok", result });
     } catch (error) {
         await removeUploadedFile(req.file);
@@ -1490,11 +1492,11 @@ router.patch("/cases/:id/visibility", async (req, res) => {
             return caseNotFoundResponse(res);
         }
 
-        const affectedDesignIds = await applyCaseVisibilityToDesigns(
-            client,
+        const { affectedDesignIds, designsKeepingAccess } = await applyCaseVisibility(client, {
             caseId,
-            updated.visibility
-        );
+            ownerId:    req.session.uid,
+            visibility: updated.visibility,
+        });
 
         await client.query("COMMIT");
 
@@ -1506,6 +1508,7 @@ router.patch("/cases/:id/visibility", async (req, res) => {
                 public: updated.visibility === PUBLIC_VISIBILITY,
                 licenseCode: updated.license_code,
                 affectedDesignIds,
+                designsKeepingAccess,
             },
         });
     } catch (error) {

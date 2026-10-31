@@ -24,7 +24,24 @@ const state = {
     publicDesignIds:  [],
     caseGone:         false,
     failDesigns:      false,
+    // The creator of each design that uses the case (#939).
+    designCreators:   [],
 };
+
+// A teacher id that must never reach the owner's answer (#939).
+const DESIGN_TEACHER_ID = 9017;
+
+const COUNT_SQL = /SELECT COUNT\(\*\)::int AS count\s+FROM designs\s+WHERE case_id = \$1/u;
+
+// The fake's answer to the count of designs that keep the case (#939).
+function designsKeepingAccess(caseId, ownerId) {
+    if (Number(caseId) !== CASE_ID) {
+        return 0;
+    }
+    return state.designCreators
+        .filter(creator => creator !== null && creator !== Number(ownerId))
+        .length;
+}
 
 function isOwnedCase(caseId, uid) {
     return Number(caseId) === CASE_ID && Number(uid) === OWNER_ID;
@@ -73,6 +90,9 @@ function rowsFor(sql, params) {
         }
         return Number(params[0]) === CASE_ID ? state.publicDesignIds.map(id => ({ id })) : [];
     }
+    if (COUNT_SQL.test(sql)) {
+        return [{ count: designsKeepingAccess(params[0], params[1]) }];
+    }
     if (/INSERT INTO ethical_case_author \(/u.test(sql)) {
         return [{ id: 5 }];
     }
@@ -105,6 +125,7 @@ beforeEach(() => {
     state.publicDesignIds = [];
     state.caseGone = false;
     state.failDesigns = false;
+    state.designCreators = [];
     connections.taken = 0;
     connections.released = 0;
 });
@@ -245,6 +266,78 @@ describe("PATCH /cases/:id making the case public", () => {
         assert.equal(ran(DESIGNS_UPDATE_SQL), false);
         assert.equal(caseUpdateTransaction().closer, "COMMIT");
         assert.equal(connections.released, connections.taken);
+    });
+});
+
+describe("PATCH /cases/:id and the designs that keep the case (#939)", () => {
+    function countIndex() {
+        return indexOf(COUNT_SQL);
+    }
+
+    it("reports none when no design uses the case", async () => {
+        const { status, body } = await saveCaseForm({ visibility: "private" });
+
+        assert.equal(status, 200);
+        assert.equal(body.result.designsKeepingAccess, 0);
+    });
+
+    it("reports none when only the owner's designs use the case", async () => {
+        state.publicDesignIds = [12];
+        state.designCreators = [OWNER_ID, OWNER_ID];
+
+        const { body } = await saveCaseForm({ visibility: "private" });
+
+        assert.deepEqual(body.result.affectedDesignIds, [12]);
+        assert.equal(body.result.designsKeepingAccess, 0);
+    });
+
+    it("counts other teachers' designs after the designs update, in the transaction", async () => {
+        state.publicDesignIds = [12];
+        state.designCreators = [OWNER_ID, OTHER_TEACHER_ID, DESIGN_TEACHER_ID, null];
+
+        const { status, body } = await saveCaseForm({ visibility: "private" });
+
+        assert.equal(status, 200);
+        assert.equal(body.result.designsKeepingAccess, 2);
+        assert.deepEqual(db.queries[countIndex()].params, [CASE_ID, OWNER_ID]);
+        const transaction = caseUpdateTransaction();
+        assert.equal(transaction.closer, "COMMIT");
+        assert.ok(indexOf(DESIGNS_UPDATE_SQL) < countIndex());
+        assert.ok(countIndex() < transaction.end);
+    });
+
+    it("reports the count when the case is made public too", async () => {
+        state.storedVisibility = "private";
+        state.designCreators = [DESIGN_TEACHER_ID];
+
+        const { body } = await saveCaseForm({ visibility: "public" });
+
+        assert.equal(body.result.designsKeepingAccess, 1);
+        assert.equal(ran(DESIGNS_UPDATE_SQL), false);
+    });
+
+    it("reveals no other teacher in the answer", async () => {
+        state.designCreators = [DESIGN_TEACHER_ID, DESIGN_TEACHER_ID, DESIGN_TEACHER_ID];
+
+        const { body } = await saveCaseForm({ visibility: "private" });
+
+        assert.equal(body.result.designsKeepingAccess, 3);
+        assert.equal(body.result.creator, OWNER_ID);
+        assert.doesNotMatch(JSON.stringify(body), new RegExp(String(DESIGN_TEACHER_ID), "u"));
+    });
+
+    it("counts nothing for a refused save", async () => {
+        state.designCreators = [DESIGN_TEACHER_ID];
+
+        const notOwned = await saveCaseForm({ uid: OTHER_TEACHER_ID });
+        assert.equal(notOwned.status, 404);
+        assert.equal(countIndex(), -1);
+
+        db.reset();
+        state.inUse = true;
+        const inUse = await saveCaseForm();
+        assert.equal(inUse.status, 409);
+        assert.equal(countIndex(), -1);
     });
 });
 
