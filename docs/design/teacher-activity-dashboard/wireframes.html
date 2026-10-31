@@ -1,0 +1,770 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Activity Dashboard Wireframes</title>
+<style>
+  :root {
+    --ink: #2b2b2b;
+    --muted: #6b6b6b;
+    --line: #9a9a9a;
+    --fill: #e9e9e9;
+    --fill-2: #f4f4f4;
+    --paper: #ffffff;
+    --page: #d9dde3;
+    --accent: #1f5fd1;
+    --note: #c2410c;
+    --ok: #2f7d32;
+    --ok-fill: #d7ecd8;
+    --danger: #b42318;
+    --fold: #d61f69;
+    --sel: #dbe7ff;
+    --own: #deffcf;
+    --agent: #fdf6c3;
+    --tip: #2b2b2b;
+    --tip-ink: #ffffff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ink: #e6e6e6; --muted: #a9a9a9; --line: #6f6f6f; --fill: #3a3a3a; --fill-2: #2f2f2f;
+      --paper: #232323; --page: #15171a; --accent: #7aa7ff; --note: #ff9a5c; --ok: #7fd18a;
+      --ok-fill: #29452c; --danger: #ff8a80; --fold: #ff6fae; --sel: #22324f; --own: #24432a;
+      --agent: #4a4422; --tip: #e6e6e6; --tip-ink: #1b1b1b;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ink: #e6e6e6; --muted: #a9a9a9; --line: #6f6f6f; --fill: #3a3a3a; --fill-2: #2f2f2f;
+    --paper: #232323; --page: #15171a; --accent: #7aa7ff; --note: #ff9a5c; --ok: #7fd18a;
+    --ok-fill: #29452c; --danger: #ff8a80; --fold: #ff6fae; --sel: #22324f; --own: #24432a;
+    --agent: #4a4422; --tip: #e6e6e6; --tip-ink: #1b1b1b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 24px 16px 64px; background: var(--page); color: var(--ink);
+    font: 15px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  .doc { max-width: 1100px; margin: 0 auto; }
+  h1 { font-size: 26px; margin: 0 0 4px; }
+  h2 { font-size: 20px; margin: 40px 0 6px; }
+  h2.part { font-size: 23px; margin-top: 56px; padding-top: 16px; border-top: 2px solid var(--line); }
+  .lede { color: var(--muted); margin: 0 0 16px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 13px; color: var(--muted); margin: 8px 0 0; }
+  .legend span::before { content: ""; display: inline-block; width: 18px; height: 0; border-top: 2px dashed var(--fold); vertical-align: middle; margin-right: 6px; }
+  .legend span.n::before { width: 14px; height: 14px; border: 0; border-radius: 50%; background: var(--note); }
+  .metrics { font-size: 13px; color: var(--muted); margin: 6px 0 10px; }
+  .metrics b { color: var(--ink); }
+  .decided { background: var(--paper); border-left: 4px solid var(--ok); border-radius: 6px; padding: 10px 16px; font-size: 14px; margin: 10px 0 0; }
+  .decided ul { margin: 4px 0 0; padding-left: 20px; }
+
+  /* A frame draws a viewport at its real pixel size, scaled down to fit. */
+  .frame-wrap { position: relative; overflow: hidden; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,.25); background: var(--paper); }
+  .frame { position: absolute; top: 0; left: 0; transform-origin: 0 0; background: var(--fill-2); overflow: hidden; }
+  .fold { position: absolute; left: 0; right: 0; border-top: 3px dashed var(--fold); z-index: 20; }
+  .fold::after { content: attr(data-label); position: absolute; right: 8px; top: -26px; background: var(--fold); color: #fff; font-size: 18px; padding: 2px 8px; border-radius: 4px; }
+
+  /* Wireframe vocabulary, in viewport pixels. */
+  .wf { font-size: 16px; color: var(--ink); }
+  .box { background: var(--paper); border: 2px solid var(--line); border-radius: 6px; }
+  .ph { background: var(--fill); border-radius: 4px; }
+  .lbl { font-weight: 600; }
+  .sub { color: var(--muted); font-size: 14px; }
+  .btn { display: inline-flex; align-items: center; gap: 6px; border: 2px solid var(--line); border-radius: 6px; padding: 6px 12px; background: var(--paper); font-size: 15px; white-space: nowrap; }
+  .btn.go { border-color: var(--ok); color: var(--ok); }
+  .btn.go.holding { background: linear-gradient(to right, var(--ok-fill) 45%, var(--paper) 45%); }
+  .btn.stop { border-color: var(--danger); color: var(--danger); }
+  .btn.icon { padding: 4px 10px; }
+  .chip { display: inline-block; border: 1.5px solid var(--line); border-radius: 999px; padding: 1px 10px; font-size: 14px; white-space: nowrap; }
+  .chip.live { border-color: var(--ok); color: var(--ok); }
+  .chip.on { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+  .code { font-family: ui-monospace, Menlo, monospace; background: var(--ink); color: var(--paper); border-radius: 4px; padding: 1px 8px; }
+  .n { position: absolute; width: 34px; height: 34px; border-radius: 50%; background: var(--note); color: #fff; font: 700 18px/34px sans-serif; text-align: center; z-index: 25; }
+
+  .appbar { position: absolute; left: 0; right: 0; top: 0; height: 68px; background: var(--paper); border-bottom: 2px solid var(--line); display: flex; align-items: center; gap: 18px; padding: 0 24px; }
+  .appnav { position: absolute; left: 0; top: 68px; bottom: 0; width: 244px; background: var(--paper); border-right: 2px solid var(--line); padding: 24px 16px; }
+  .appnav .ph { height: 22px; margin: 0 0 30px; }
+  .content { position: absolute; top: 68px; right: 0; bottom: 0; overflow: hidden; padding: 0 24px 24px; }
+
+  .bar { position: relative; display: flex; align-items: center; gap: 12px; padding: 10px 16px; margin: 0 -24px 20px; background: var(--paper); border-bottom: 2px solid var(--line); min-height: 64px; flex-wrap: nowrap; z-index: 14; }
+  .bar .title { font-size: 20px; font-weight: 700; min-width: 0; flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bar.compact .phase-chip, .bar.compact .people-label { display: none; }
+  .bar .grow { flex: 1; }
+  .sticky-tag { position: absolute; left: 16px; bottom: -14px; font-size: 13px; background: var(--accent); color: #fff; border-radius: 4px; padding: 0 6px; }
+  .hold { position: relative; }
+  .tip { position: absolute; top: calc(100% + 12px); right: 0; width: 300px; background: var(--tip); color: var(--tip-ink); font-size: 14px; line-height: 1.35; border-radius: 6px; padding: 8px 10px; white-space: normal; z-index: 16; }
+  .tip::before { content: ""; position: absolute; top: -7px; right: 40px; border: 7px solid transparent; border-top: 0; border-bottom-color: var(--tip); }
+
+  .cols { display: grid; gap: 20px; align-items: start; }
+  .rail { display: grid; gap: 14px; }
+  .strip { display: grid; gap: 10px; justify-items: center; padding: 10px 0; }
+  .strip .dot { width: 20px; height: 20px; }
+  .card { padding: 12px 14px; }
+  .card h4 { margin: 0 0 8px; font-size: 16px; display: flex; justify-content: space-between; }
+  .step { display: grid; grid-template-columns: 22px 1fr auto; gap: 8px; align-items: center; padding: 7px 8px; border-radius: 6px; }
+  .step.sel { outline: 2px solid var(--accent); background: var(--fill-2); }
+  .dot { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--line); }
+  .dot.done { background: var(--line); }
+  .dot.now { border-color: var(--ok); background: var(--ok); }
+  .meter { height: 8px; border-radius: 4px; background: var(--fill); overflow: hidden; }
+  .meter i { display: block; height: 100%; background: var(--ok); }
+  .lines .ph { height: 12px; margin: 7px 0; }
+  .qrow { display: grid; grid-template-columns: 40px 1fr; gap: 8px; padding: 6px 0; border-top: 1px solid var(--fill); font-size: 14px; }
+  .acc { padding: 10px 14px; display: flex; justify-content: space-between; gap: 12px; }
+  .acc .sub { text-align: right; }
+
+  .tabs { display: flex; gap: 4px; border-bottom: 2px solid var(--line); margin-bottom: 12px; }
+  .tab { padding: 8px 14px; border: 2px solid transparent; border-bottom: 0; border-radius: 6px 6px 0 0; color: var(--muted); white-space: nowrap; }
+  .tab.on { border-color: var(--line); background: var(--paper); color: var(--ink); font-weight: 600; margin-bottom: -2px; }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 10px; }
+  .search { width: 220px; height: 34px; }
+  table.wt { width: 100%; border-collapse: collapse; background: var(--paper); font-size: 15px; }
+  table.wt th { text-align: left; padding: 9px 10px; border-bottom: 2px solid var(--line); background: var(--fill-2); white-space: nowrap; }
+  table.wt td { padding: 9px 10px; border-bottom: 1px solid var(--fill); white-space: nowrap; }
+  table.wt tr.grp td { background: var(--fill); font-weight: 600; }
+  table.wt tr.sel td { background: var(--sel); }
+  table.wt tr.sel td:first-child { box-shadow: inset 4px 0 0 var(--accent); }
+  table.wt.tight { font-size: 14px; }
+  table.wt.tight th, table.wt.tight td { padding: 8px 7px; }
+  .pills { display: flex; gap: 8px; overflow: hidden; margin-bottom: 12px; }
+  .pill { border: 2px solid var(--line); border-radius: 999px; padding: 4px 12px; white-space: nowrap; }
+  .pill.on { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+
+  /* Response detail panel. */
+  .panel { display: flex; flex-direction: column; background: var(--paper); border: 2px solid var(--line); border-radius: 6px; overflow: hidden; }
+  .panel.drawer { position: absolute; right: 0; border-radius: 0; border-right: 0; border-bottom: 0; box-shadow: -6px 0 18px rgba(0,0,0,.18); z-index: 12; }
+  .panel-head { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 2px solid var(--line); }
+  .panel-head .lbl { font-size: 18px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .panel-meta { padding: 8px 14px; border-bottom: 1px solid var(--fill); font-size: 14px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px 14px; }
+  .panel-sec { display: flex; flex-direction: column; min-height: 0; }
+  .sec-head { display: flex; justify-content: space-between; align-items: center; padding: 8px 14px; background: var(--fill-2); border-bottom: 1px solid var(--fill); font-weight: 600; font-size: 15px; }
+  .scroll { overflow: hidden; padding: 10px 14px; flex: 1; min-height: 0; }
+  .splitter { height: 12px; display: grid; place-items: center; background: var(--fill-2); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); color: var(--muted); font-size: 12px; line-height: 1; }
+  .ptabs { display: flex; gap: 4px; padding: 8px 14px 0; border-bottom: 2px solid var(--line); }
+  .q { border: 1.5px solid var(--fill); border-radius: 6px; padding: 8px 10px; margin-bottom: 10px; }
+  .q-title { font-size: 14px; margin-bottom: 6px; }
+  .q-title b { margin-right: 6px; }
+  .ans { display: grid; grid-template-columns: 150px auto 1fr; gap: 4px 10px; align-items: start; padding: 6px 0; border-top: 1px solid var(--fill); font-size: 14px; }
+  .ans.solo { grid-template-columns: auto 1fr; }
+  .scale { display: inline-flex; gap: 3px; align-items: center; }
+  .scale i { width: 20px; height: 20px; border: 1.5px solid var(--line); border-radius: 4px; font: 600 12px/17px sans-serif; text-align: center; font-style: normal; color: var(--muted); }
+  .scale i.v { background: var(--accent); border-color: var(--accent); color: var(--paper); }
+  .scale .pole { font-size: 12px; color: var(--muted); margin: 0 4px; }
+  .just { color: var(--ink); line-height: 1.35; }
+  .just.clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .stats { font-size: 13px; color: var(--muted); padding-top: 6px; border-top: 1px solid var(--fill); }
+  .digest { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 14px; border-bottom: 1px solid var(--fill); font-size: 13px; }
+  .msgs { display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
+  .msg { display: flex; flex-direction: column; align-items: flex-start; max-width: 86%; }
+  .msg.own { align-self: flex-end; align-items: flex-end; }
+  .msg .who { font-size: 12px; color: var(--muted); margin-bottom: 2px; }
+  .bubble { border: 1px solid var(--line); border-radius: 8px; padding: 5px 9px; background: var(--paper); line-height: 1.35; }
+  .msg.own .bubble { background: var(--own); }
+  .msg.agent .bubble { background: var(--agent); }
+  .reply { font-size: 12px; color: var(--muted); border-left: 2px solid var(--line); padding: 0 6px; margin-bottom: 3px; }
+  .msg .act { font-size: 12px; color: var(--accent); margin-top: 2px; }
+  .earlier { align-self: center; font-size: 12px; color: var(--muted); }
+  .composer { border-top: 2px solid var(--line); padding: 8px 14px 10px; display: grid; gap: 6px; background: var(--paper); }
+  .composer .row { display: flex; gap: 8px; align-items: stretch; }
+  .composer .input { flex: 1; min-height: 40px; border: 2px solid var(--line); border-radius: 6px; padding: 8px 10px; color: var(--muted); font-size: 14px; }
+  .replying { font-size: 12px; color: var(--muted); }
+  .badge { display: inline-block; min-width: 20px; padding: 0 6px; border-radius: 999px; background: var(--accent); color: var(--paper); font-size: 12px; font-weight: 700; text-align: center; margin-left: 4px; }
+
+  .notes { background: var(--paper); border-radius: 6px; padding: 12px 18px 12px 36px; margin: 12px 0 0; font-size: 14px; }
+  .notes li { margin: 4px 0; }
+  .notes li::marker { color: var(--note); font-weight: 700; }
+  figure { margin: 10px 0 0; }
+  figure img { width: 100%; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,.25); display: block; }
+  figcaption { font-size: 13px; color: var(--muted); margin-top: 6px; }
+  .shots { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+</style>
+</head>
+<body>
+<div class="doc">
+  <h1>Teacher activity dashboard: layout wireframes</h1>
+  <p class="lede">Low fidelity, for discussing how the space is shared. Each frame is drawn at its real viewport size and scaled down; the dashed line is the fold. Labels are in Spanish, as a teacher sees them in es-CL. Names are fictional.</p>
+  <div class="legend"><span>fold (bottom of the viewport)</span><span class="n">numbered notes, explained under each frame</span></div>
+
+  <div class="decided"><b>Decided on 2026-10-30, after the first review:</b>
+    <ul>
+      <li>Starting the next phase always moves the view to the new phase's tab. The teacher can still open any earlier phase; the tabs never lock.</li>
+      <li>Phase changes keep today's hold-to-confirm button (held for 2.5 s), now with a tooltip that explains it.</li>
+      <li>The case is a tab of the main column; no split view of case and responses.</li>
+      <li>No presentation density for projectors. A "hide names" switch shows the table with pseudonyms instead.</li>
+      <li>The response detail opens in a side panel instead of today's modal. The second part of this page, from D on, shows it.</li>
+    </ul>
+    <b>And after reviewing the panel:</b>
+    <ul>
+      <li>A group's panel opens on Respuestas, as in a phase without chat. Frame E shows the Chat tab selected, to show how it looks.</li>
+      <li>Starting the next phase closes the panel. The previous phase's chat closes for the students, and each phase has its own chat, so nothing is kept from it.</li>
+      <li>"Ocultar nombres" always starts off. The teacher turns it on before sharing or projecting the screen.</li>
+      <li>Pseudonym numbers must not follow the class list. They are drawn in a random order once per activity, and while names are hidden the table is ordered by pseudonym, not by real name.</li>
+      <li>The rule for hidden names: <b>in a phase with groups, the group letter; in a phase without groups, the number.</b> Whether the group phase is anonymous for the students does not change it.
+        <ul>
+          <li>The letters (A, B, C…) are assigned to every group, anonymous or not, and they are drawn again for every group phase. In an anonymous phase they are what students see in their chat.</li>
+          <li>Numbers last the whole activity. Next to a letter, they would link the chat rooms of different phases. In a phase that is not anonymous, teammates who know each other's names could learn a number that identifies a classmate in every later phase.</li>
+        </ul></li>
+    </ul>
+  </div>
+
+  <h2>Today</h2>
+  <p class="metrics" id="today-metrics"></p>
+  <div class="shots">
+    <figure><img src="current/current-1920x1080-fold.png" alt="Current dashboard at 1920 by 1080, first screen"><figcaption>1920 × 1080, first screen: no response in sight.</figcaption></figure>
+    <figure><img src="current/current-1920x1080-full.png" alt="Current dashboard at 1920 by 1080, whole page"><figcaption>1920 × 1080, whole page: responses at 1370 px, under the case, features, instructions, questions and AI services.</figcaption></figure>
+  </div>
+
+  <h2>A. 1920 × 1080: two columns</h2>
+  <p class="metrics" data-metrics="A"></p>
+  <div id="A"></div>
+  <ol class="notes">
+    <li><b>Activity bar, sticky.</b> Name, status, current phase, access code, connected students and the controls (start next phase, end activity; reports once finished) stay in view while the teacher scrolls the responses. The controls keep their hold-to-confirm: on hover or focus, a tooltip says "Mantén presionado 2,5 s para iniciar la fase siguiente", and while the button is held it fills from left to right. Releasing it early cancels.</li>
+    <li><b>Phase navigator.</b> Replaces the case and phase tabs. Each phase shows its mode and how many students have answered; the current phase is marked. Starting the next phase selects the new phase automatically. Any earlier phase can be opened at any time.</li>
+    <li><b>This phase, condensed.</b> Mode, anonymity, chat and grouping as chips; instructions clamped to three lines with "ver más"; questions numbered Í1, Í2… so they double as the legend of the table columns.</li>
+    <li><b>AI services and warnings</b> of the phase: a compact line per service, with the configuration on demand. Alerts such as "service not running" also show here, not above the page.</li>
+    <li><b>Activity details</b>, collapsed: description, design and case links, launch date.</li>
+    <li><b>Main views as tabs:</b> Respuestas (default), Caso, Diseño, Participantes. Case, design and the connected users keep their current content but no longer sit above the responses.</li>
+    <li><b>Responses first.</b> Progress (answered / participants), search, the "Ocultar nombres" switch (see E), and the table with a sticky header. A row opens the response detail in the side panel (D to F).</li>
+  </ol>
+
+  <h2>B. 1366 × 768: two columns, narrower</h2>
+  <p class="metrics" data-metrics="B"></p>
+  <div id="B"></div>
+  <ol class="notes">
+    <li>Same structure with a 260 px rail. The phase card starts collapsed to its questions; instructions and features open on demand.</li>
+    <li>The bar stays on one line: the name truncates, and the phase chip and the "conectados" label drop, since the phase navigator already shows the phase.</li>
+  </ol>
+
+  <h2>C. Below 1200 px wide (1024 × 768): one column</h2>
+  <p class="metrics" data-metrics="C"></p>
+  <div id="C"></div>
+  <ol class="notes">
+    <li>The bar stays sticky on one line with the controls, the access code and the connected count; the name truncates.</li>
+    <li>The phase navigator becomes a row of pills over the main tabs. As in the rail, starting the next phase selects its pill, and earlier pills stay clickable.</li>
+    <li>The rail cards move under the table as collapsed sections ("Esta fase", "Servicios de IA", "Actividad"), so they never push the responses down. This frame shows the whole page. Since the question legend is now under the table, each Í column header shows its question text on hover and focus.</li>
+  </ol>
+
+  <h2 class="part">Response detail in a side panel</h2>
+  <p class="lede">Today a row opens a large modal with a static backdrop: the table disappears until it is closed. The group modal shows each question with every member's answer, then the group chat, where the teacher can write and reply. The panel keeps all of that, next to the table instead of over it.</p>
+  <ul class="notes" style="list-style: disc">
+    <li><b>Not modal.</b> The table stays visible and live. Clicking another row replaces the panel's content; the selected rows are highlighted. ‹ › (and the ↑ ↓ keys) move to the previous or next group or student. Esc or × closes it.</li>
+    <li><b>Its own scroll.</b> The panel is sticky under the activity bar and as tall as the viewport, so it scrolls on its own and the chat composer never leaves the screen.</li>
+    <li><b>Live.</b> New answers and chat messages arrive in the panel as they do in today's modal (the existing group chat subscription).</li>
+    <li><b>Closes on phase change.</b> Starting the next phase moves the view to the new phase and closes the panel. Each phase has its own chat, and the previous one closes for the students.</li>
+    <li><b>Same components.</b> The answers reuse the content of today's modals, and the chat reuses the <code>teacher-group-chat</code> component; only the container changes.</li>
+  </ul>
+
+  <h2>D. 1920 × 1080: group with chat, side by side</h2>
+  <p class="metrics" data-metrics="D"></p>
+  <div id="D"></div>
+  <ol class="notes">
+    <li><b>The table narrows</b> and stays usable: all its columns still fit, and Grupo 2's rows are highlighted.</li>
+    <li><b>Panel header:</b> the group, its phase, ‹ › to move between groups, × to close. Under it, how many members answered and the chat count.</li>
+    <li><b>Answers, by question.</b> Each member's value on the scale and the justification, clamped to two lines with "ver más". Members who have not answered are listed as such. The group's statistics close each question.</li>
+    <li><b>A splitter</b> between answers and chat; the teacher can drag it to give the chat more room.</li>
+    <li><b>Group chat, live.</b> Students, the discussion agent (yellow) and the teacher (green, on the right). "Responder" quotes a message, as today.</li>
+    <li><b>The composer is pinned</b> to the bottom of the panel: Enter sends, Shift+Enter adds a line.</li>
+  </ol>
+
+  <h2>E. 1366 × 768: group phase, panel tabs, names hidden</h2>
+  <p class="metrics" data-metrics="E"></p>
+  <div id="E"></div>
+  <ol class="notes">
+    <li><b>The rail folds into a strip</b> while the panel is open: the phases stay as dots and can still be selected. It unfolds when the panel closes.</li>
+    <li><b>"Ocultar nombres" is on, in a group phase.</b> It always starts off; the teacher turns it on before projecting.
+      <ul>
+        <li><b>Letters, not numbers,</b> in every group phase, anonymous or not. Each student shows as the letter they have in their group, "Integrante B", in the table, the panel and the chat authors. In an anonymous phase, it is the same letter the group sees in its chat.</li>
+        <li><b>Why letters:</b> they are drawn again for every group phase and last only that phase.
+          <ul>
+            <li>In an anonymous phase, students who meet again in another chat room cannot recognize each other; the activity-wide number next to the letter would link those rooms.</li>
+            <li>In a phase that is not anonymous, teammates already know each other's names. With a number, they could match a teammate through the answers and identify them in every phase projected later. With a letter, they learn nothing new.</li>
+          </ul></li>
+        <li><b>Order:</b> rows are listed by letter within each group.</li>
+        <li><b>Unchanged:</b> the teacher's own messages and the agent keep their labels.</li>
+      </ul></li>
+    <li><b>Answers and chat as tabs</b> inside the panel, because at 768 px of height a split leaves too little room for either. A group opens on Respuestas, as a phase without chat does; the frame shows the Chat tab to show its layout. The Chat tab shows how many messages arrived since it was last viewed.</li>
+    <li><b>A one-line digest</b> of the group's values above the transcript, so the teacher keeps the answers in mind while writing.</li>
+    <li>The transcript and the pinned composer use the panel's full height.</li>
+  </ol>
+
+  <h2>F. 1024 × 768: individual phase, one student, names hidden</h2>
+  <p class="metrics" data-metrics="F"></p>
+  <div id="F"></div>
+  <ol class="notes">
+    <li><b>Below 1200 px the panel slides over the right part of the table</b>, without a backdrop: the names and the first columns stay visible and clickable, so the teacher can move to another student.</li>
+    <li><b>One student's answers:</b> each question with its scale, the poles and the full justification, as in today's individual modal but with a readable line length. The teacher is reviewing phase 1, an earlier phase, while phase 2 runs.</li>
+    <li><b>"Ocultar nombres" in an individual phase:</b> students show as "Participante NN".
+      <ul>
+        <li>The numbers are drawn in a random order once per activity, so they do not follow the class list, and they stay the same in every phase. The teacher can still say "Participante 04" aloud.</li>
+        <li>Rows are ordered by pseudonym, not by real name: the alphabetical order would give the class list away.</li>
+        <li>Numbers are used only in phases without groups, and in the Participantes tab.</li>
+      </ul>
+      In a group phase, the panel's header line links to that student's group and its chat. With names hidden, that panel shows the letter, "Respuesta de Integrante B · Grupo 2", never the number.</li>
+  </ol>
+
+</div>
+
+<template id="tpl-bar">
+  <div class="bar">
+    <span class="title">Ética en la práctica · Sección 3</span>
+    <span class="chip live">● En curso</span>
+    <span class="chip phase-chip">Fase 2 de 3 · Grupal</span>
+    <span class="chip">Código <span class="code">k00211</span> ⧉</span>
+    <span class="chip">👥 28<span class="people-label"> conectados</span></span>
+    <span class="grow"></span>
+    <span class="hold"><span class="btn go">▶ Iniciar fase siguiente</span></span>
+    <span class="btn stop">■ Finalizar actividad</span>
+    <span class="sticky-tag">fija al hacer scroll</span>
+  </div>
+</template>
+
+<template id="tpl-nav">
+  <div class="box card">
+    <h4>Fases</h4>
+    <div class="step"><span class="dot done"></span><span>Fase 1 · Individual</span><span class="sub">28/28</span></div>
+    <div class="step sel"><span class="dot now"></span><span><b>Fase 2 · Grupal</b><div class="meter" style="margin-top:6px"><i style="width:64%"></i></div></span><span class="sub">18/28</span></div>
+    <div class="step"><span class="dot"></span><span>Fase 3 · Individual</span><span class="sub">—</span></div>
+  </div>
+</template>
+
+<template id="tpl-strip">
+  <div class="box strip">
+    <span class="sub" title="Fases">▸</span>
+    <span class="dot done" title="Fase 1"></span>
+    <span class="dot now" title="Fase 2" style="outline:2px solid var(--accent);outline-offset:3px"></span>
+    <span class="dot" title="Fase 3"></span>
+    <span class="sub" style="margin-top:8px">ⓘ</span>
+    <span class="sub">✦</span>
+  </div>
+</template>
+
+<template id="tpl-phase">
+  <div class="box card">
+    <h4>Esta fase <span class="sub">▾</span></h4>
+    <div><span class="chip">Grupal</span> <span class="chip">Anónimo</span> <span class="chip">Chat</span> <span class="chip">Grupos de 3</span></div>
+    <div class="lines" style="margin-top:8px"><span class="sub">Instrucciones</span><div class="ph"></div><div class="ph"></div><div class="ph" style="width:60%"></div><span class="sub" style="color:var(--accent)">ver más</span></div>
+    <div style="margin-top:6px"><span class="sub">Preguntas</span>
+      <div class="qrow"><b>Í1</b><span>Dada la situación de Sebastián… <span class="sub">(1–4, justif.)</span></span></div>
+      <div class="qrow"><b>Í2</b><span>¿Cuánto pesa la amistad…? <span class="sub">(1–6)</span></span></div>
+      <div class="qrow"><b>Í3</b><span>¿Es justo con el resto…? <span class="sub">(1–6)</span></span></div>
+    </div>
+  </div>
+</template>
+
+<template id="tpl-ai">
+  <div class="box card">
+    <h4>Servicios de IA <span class="sub">▸</span></h4>
+    <div class="sub">Agentes de discusión · básico · 15 min</div>
+    <div class="sub">Tutor de argumentación · avanzado</div>
+  </div>
+</template>
+
+<template id="tpl-activity">
+  <div class="box acc"><span class="lbl">Actividad</span><span class="sub">descripción, diseño, caso, inicio ▸</span></div>
+</template>
+
+<template id="tpl-main">
+  <div>
+    <div class="tabs"><span class="tab on">Respuestas</span><span class="tab">Caso</span><span class="tab">Diseño</span><span class="tab">Participantes (28)</span></div>
+    <div class="toolbar">
+      <span class="lbl" style="font-size:18px">Fase 2 · Grupal</span>
+      <span class="chip">18 de 28 respondieron</span>
+      <span class="grow" style="flex:1"></span>
+      <span class="box search"></span>
+      <span class="chip names">◐ Ocultar nombres</span>
+    </div>
+    <table class="wt" data-role="responses">
+      <thead><tr><th>Participante</th><th>Grupo</th><th>Í1 (1–4)*</th><th>Í2 (1–6)</th><th>Í3 (1–6)</th><th>Chat</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</template>
+
+<script>
+  // Builds one wireframe frame per layout, at its real viewport size.
+  const people = [
+    "Ana Rojas", "Benjamín Soto", "Camila Fuentes", "Diego Muñoz", "Elisa Contreras", "Felipe Araya",
+    "Gabriela Silva", "Hernán Torres", "Isidora Pérez", "Joaquín Reyes", "Karen Díaz", "Lucas Morales",
+    "Martina Herrera", "Nicolás Vargas", "Olivia Castro", "Pablo Navarro", "Renata Flores", "Tomás Lagos",
+  ];
+  const groupCount = 6;
+  const groupSize = 3;
+  const pad = (n) => String(n).padStart(2, "0");
+  const decimal = (x) => x.toFixed(1).replace(".", ",");
+  // Pseudonyms are drawn in a random order once per activity, so they do not follow the roster.
+  const pseudonym = [7, 15, 2, 11, 4, 17, 9, 1, 13, 6, 18, 3, 10, 14, 5, 12, 16, 8];
+  // `anon` is false, "numbers" (phases without groups) or "letters" (the group letters, in every group phase).
+  const nameOf = (index, anon) => anon === "letters" ? `Integrante ${"ABC"[index % groupSize]}`
+    : anon ? `Participante ${pad(pseudonym[index])}` : people[index];
+  // With names hidden, members are listed by pseudonym, not by real name.
+  const memberOrder = (g, anon) => [0, 1, 2].sort((x, y) =>
+    anon === "numbers" ? pseudonym[g * groupSize + x] - pseudonym[g * groupSize + y] : x - y);
+  const individualAnswers = (index) => [1 + index % 4, 1 + (index * 2) % 6, 1 + (index + 3) % 6];
+
+  // The same deterministic answers feed the table and the panel.
+  function answersOf(g, i) {
+    if ((g + i) % 4 === 3) return null;
+    return [1 + (g + i) % 4, 1 + (g * 2 + i) % 6, 1 + (g + 2 * i) % 6];
+  }
+
+  function groupStats(g, q) {
+    const values = [];
+    for (let i = 0; i < groupSize; i++) {
+      const a = answersOf(g, i);
+      if (a) values.push(a[q]);
+    }
+    const mean = values.reduce((s, v) => s + v, 0) / values.length;
+    const sd = Math.sqrt(values.reduce((s, v) => s + (v - mean) ** 2, 0) / values.length);
+    return { mean, cv: sd / mean };
+  }
+
+  function fillTable(table, { anon = false, individual = false, selectedGroup = null, selectedStudent = null } = {}) {
+    const body = table.querySelector("tbody");
+    if (individual) {
+      table.querySelector("thead").innerHTML = "<tr><th>Participante</th><th>Í1 (1–4)*</th><th>Í2 (1–6)</th><th>Í3 (1–6)</th></tr>";
+      const order = people.map((_, index) => index);
+      if (anon) order.sort((x, y) => pseudonym[x] - pseudonym[y]);
+      for (const index of order) {
+        const a = individualAnswers(index);
+        const row = document.createElement("tr");
+        if (index === selectedStudent) row.className = "sel";
+        row.innerHTML = `<td>${nameOf(index, anon)}</td><td>${a[0]} 📝</td><td>${a[1]}</td><td>${a[2]}</td>`;
+        body.appendChild(row);
+      }
+      return;
+    }
+    for (let g = 0; g < groupCount; g++) {
+      for (const i of memberOrder(g, anon)) {
+        const index = g * groupSize + i;
+        const a = answersOf(g, i);
+        const row = document.createElement("tr");
+        if (g === selectedGroup || index === selectedStudent) row.className = "sel";
+        row.innerHTML = `<td>${nameOf(index, anon)}</td><td>${g + 1}</td>`
+          + `<td>${a ? a[0] + " 📝" : "—"}</td><td>${a ? a[1] : "—"}</td><td>${a ? a[2] : "—"}</td>`
+          + `<td>💬 ${2 + (g + i) % 5}</td>`;
+        body.appendChild(row);
+      }
+      const s = [0, 1, 2].map((q) => groupStats(g, q));
+      const summary = document.createElement("tr");
+      summary.className = g === selectedGroup ? "grp sel" : "grp";
+      summary.innerHTML = `<td>Grupo ${g + 1}</td><td>${g + 1}</td>`
+        + `<td>x̄ ${decimal(s[0].mean)} · CV ${s[0].cv.toFixed(2).replace(".", ",")}</td>`
+        + `<td>x̄ ${decimal(s[1].mean)}</td><td>x̄ ${decimal(s[2].mean)}</td><td>💬 ${9 + g}</td>`;
+      body.appendChild(summary);
+    }
+  }
+
+  const questions = [
+    { code: "Í1", text: "Dada la situación de Sebastián, ¿debía avisar al profesor?", max: 4, left: "Avisar", right: "Callar" },
+    { code: "Í2", text: "¿Cuánto pesa la amistad en su decisión?", max: 6, left: "Nada", right: "Todo" },
+    { code: "Í3", text: "¿Es justo con el resto del curso?", max: 6, left: "Injusto", right: "Justo" },
+  ];
+  const justifications = {
+    3: "Tenía que avisar. Aunque sea su amigo, el resto del curso estudió y no es justo que algunos tengan ventaja en la prueba.",
+    4: "La amistad pesa, pero no justifica callar del todo. Yo primero hablaría con él para que se entregue antes de ir al profesor.",
+  };
+
+  const scale = (q, value, poles = false) => {
+    let cells = "";
+    for (let v = 1; v <= q.max; v++) cells += `<i class="${v === value ? "v" : ""}">${v}</i>`;
+    return `<span class="scale">${poles ? `<span class="pole">${q.left}</span>` : ""}${cells}${poles ? `<span class="pole">${q.right}</span>` : ""}</span>`;
+  };
+
+  function groupAnswers(g, anon) {
+    return questions.map((q, qi) => {
+      let rows = "";
+      for (const i of memberOrder(g, anon)) {
+        const index = g * groupSize + i;
+        const a = answersOf(g, i);
+        const just = qi === 0 && a ? `<span class="just clamp">${justifications[index] || ""}</span>` : "<span></span>";
+        rows += `<div class="ans"><span>${nameOf(index, anon)}</span>`
+          + (a ? `${scale(q, a[qi])}${just}` : `<span class="sub">sin respuesta</span><span></span>`)
+          + `</div>`;
+      }
+      const s = groupStats(g, qi);
+      return `<div class="q"><div class="q-title"><b>${q.code}</b>${q.text} <span class="sub">(1–${q.max}${qi === 0 ? ", justif." : ""})</span></div>`
+        + rows + `<div class="stats">Grupo: x̄ ${decimal(s.mean)} · CV ${s.cv.toFixed(2).replace(".", ",")}</div></div>`;
+    }).join("");
+  }
+
+  function chat(g, anon) {
+    const a = nameOf(g * groupSize, anon);
+    const b = nameOf(g * groupSize + 1, anon);
+    return `<div class="msgs">
+      <span class="earlier">↑ 4 mensajes anteriores</span>
+      <div class="msg"><span class="who">${a} · 10:42</span><span class="bubble">Yo puse 2 en la primera, creo que igual tenía que avisar.</span><span class="act">Responder</span></div>
+      <div class="msg"><span class="who">${b} · 10:43</span><span class="bubble">Pero es su amigo, no es tan simple. Yo puse 3.</span><span class="act">Responder</span></div>
+      <div class="msg agent"><span class="who">Agente de discusión · 10:43</span><span class="bubble">¿Qué pasaría si todos en el curso actuaran como Sebastián?</span><span class="act">Responder</span></div>
+      <div class="msg"><span class="who">${a} · 10:44</span><span class="reply">↳ Agente de discusión: ¿Qué pasaría si todos…</span><span class="bubble">Ahí sería injusto para el resto, eso sí.</span><span class="act">Responder</span></div>
+      <div class="msg own"><span class="who">Tú (docente) · 10:45</span><span class="bubble">Buen punto. ¿Cambia eso su respuesta a la Í3?</span></div>
+      <div class="msg"><span class="who">${b} · 10:45</span><span class="bubble">Sí, creo que la bajaría a 3.</span><span class="act">Responder</span></div>
+    </div>`;
+  }
+
+  const composer = (anon, g) => `<div class="composer">
+      <span class="replying">Respondiendo a ${nameOf(g * groupSize + 1, anon)} ✕</span>
+      <div class="row"><span class="input">Escribe un mensaje al grupo…</span><span class="btn go">Enviar</span></div>
+      <span class="sub" style="font-size:12px">Enter envía · Shift+Enter nueva línea</span>
+    </div>`;
+
+  function panelHead(title) {
+    return `<div class="panel-head"><span class="lbl">${title}</span>`
+      + `<span class="btn icon" title="Anterior">‹</span><span class="btn icon" title="Siguiente">›</span><span class="btn icon" title="Cerrar">✕</span></div>`;
+  }
+
+  function groupPanel(g, { mode, anon }) {
+    const panel = document.createElement("div");
+    panel.className = "panel";
+    panel.dataset.role = "panel";
+    const meta = `<div class="panel-meta"><span>3 integrantes</span><span>2 de 3 respondieron</span><span>💬 10 mensajes</span><span class="chip live">● chat en vivo</span></div>`;
+    if (mode === "split") {
+      panel.innerHTML = panelHead(`Grupo ${g + 1} · Fase 2`) + meta
+        + `<div class="panel-sec" data-role="answers" style="flex: 1 1 0"><div class="sec-head">Respuestas <span class="sub">▾</span></div><div class="scroll">${groupAnswers(g, anon)}</div></div>`
+        + `<div class="splitter">⋯ arrastrar ⋯</div>`
+        + `<div class="panel-sec" data-role="chat" style="flex: 1.3 1 0"><div class="sec-head">Chat del grupo <span class="sub">10 mensajes</span></div><div class="scroll" style="display:flex;flex-direction:column;justify-content:flex-end">${chat(g, anon)}</div>${composer(anon, g)}</div>`;
+    } else {
+      const digest = [0, 1, 2].map((qi) => {
+        const values = memberOrder(g, anon).map((i) => answersOf(g, i)?.[qi] ?? "—").join(" · ");
+        return `<span class="chip">${questions[qi].code} ${values}</span>`;
+      }).join("");
+      panel.innerHTML = panelHead(`Grupo ${g + 1} · Fase 2`) + meta
+        + `<div class="ptabs"><span class="tab">Respuestas</span><span class="tab on">Chat<span class="badge">2</span></span><span class="sub" style="margin-left:auto;align-self:center">abre en Respuestas</span></div>`
+        + `<div class="digest">${digest}</div>`
+        + `<div class="panel-sec" data-role="chat" style="flex: 1 1 0"><div class="scroll" style="display:flex;flex-direction:column;justify-content:flex-end">${chat(g, anon)}</div>${composer(anon, g)}</div>`;
+    }
+    return panel;
+  }
+
+  function studentPanel(index, anon, individual) {
+    const g = Math.floor(index / groupSize);
+    const a = individual ? individualAnswers(index) : answersOf(g, index % groupSize);
+    const panel = document.createElement("div");
+    panel.className = "panel drawer";
+    panel.dataset.role = "panel";
+    const items = questions.map((q, qi) =>
+      `<div class="q"><div class="q-title"><b>${q.code}</b>${q.text}</div>`
+      + `<div class="ans solo"><span class="sub">Respuesta</span>${scale(q, a[qi], true)}</div>`
+      + (qi === 0 ? `<div class="ans solo"><span class="sub">Justificación</span><span class="just">${justifications[a[0] <= 2 ? 3 : 4]}</span></div>` : "")
+      + `</div>`).join("");
+    panel.innerHTML = panelHead(`Respuesta de ${nameOf(index, anon)}`)
+      + (individual
+        ? `<div class="panel-meta"><span>Fase 1 · Individual</span><span>respondió a las 10:21</span></div>`
+        : `<div class="panel-meta"><span>Fase 2 · Grupal</span><span>Grupo ${g + 1}</span><span style="color:var(--accent)">Ver grupo ${g + 1} y su chat →</span></div>`)
+      + `<div class="panel-sec" style="flex:1 1 0"><div class="scroll">${items}</div></div>`;
+    return panel;
+  }
+
+  const use = (id) => document.getElementById(id).content.firstElementChild.cloneNode(true);
+
+  function frame(hostId, { width, height, appNav, layout, showFull = false, panel = null, anon = false, individual = false, tip = false, notes = [] }) {
+    const host = document.getElementById(hostId);
+    const wrap = document.createElement("div");
+    wrap.className = "frame-wrap";
+    const f = document.createElement("div");
+    f.className = "frame wf";
+    f.style.width = width + "px";
+    f.style.height = height + 420 + "px";
+
+    const appbar = document.createElement("div");
+    appbar.className = "appbar";
+    appbar.innerHTML = `<span style="font-size:26px">☰</span><span class="lbl" style="font-size:28px;color:var(--accent)">EthicApp</span><span style="flex:1"></span><span class="sub">Docente 650</span>`;
+    f.appendChild(appbar);
+    if (appNav) {
+      const nav = document.createElement("div");
+      nav.className = "appnav";
+      nav.innerHTML = '<div class="ph"></div><div class="ph"></div><div class="ph" style="outline:2px solid var(--accent)"></div><div class="ph"></div><div class="ph"></div>';
+      f.appendChild(nav);
+    }
+
+    const content = document.createElement("div");
+    content.className = "content";
+    content.style.left = (appNav ? 244 : 0) + "px";
+    if (showFull) content.style.bottom = "auto";
+    const bar = use("tpl-bar");
+    if (layout !== "two") bar.classList.add("compact");
+    if (tip) {
+      bar.querySelector(".btn.go").classList.add("holding");
+      bar.querySelector(".hold").insertAdjacentHTML("beforeend",
+        '<span class="tip">Mantén presionado 2,5 s para iniciar la fase siguiente. Si sueltas antes, no pasa nada.</span>');
+    }
+    content.appendChild(bar);
+
+    const main = use("tpl-main");
+    const table = main.querySelector("table");
+    fillTable(table, { anon, individual, selectedGroup: panel?.group ?? null, selectedStudent: panel?.student ?? null });
+    if (individual) {
+      main.querySelector(".toolbar .lbl").textContent = "Fase 1 · Individual";
+      main.querySelector(".toolbar .chip").textContent = "28 de 28 respondieron";
+    }
+    if (anon) {
+      const names = main.querySelector(".names");
+      names.classList.add("on");
+      names.textContent = "◑ Nombres ocultos";
+    }
+
+    let panelEl = null;
+    if (panel?.group !== undefined) panelEl = groupPanel(panel.group, { mode: panel.mode, anon });
+    if (panel?.student !== undefined) panelEl = studentPanel(panel.student, anon, individual);
+
+    if (layout === "one") {
+      const pills = document.createElement("div");
+      pills.className = "pills";
+      pills.innerHTML = individual
+        ? '<span class="pill on">✓ Fase 1 · 28/28</span><span class="pill">● Fase 2 · 18/28</span><span class="pill">Fase 3</span>'
+        : '<span class="pill">✓ Fase 1</span><span class="pill on">● Fase 2 · 18/28</span><span class="pill">Fase 3</span>';
+      content.appendChild(pills);
+      content.appendChild(main);
+      const below = document.createElement("div");
+      below.className = "rail";
+      below.style.marginTop = "16px";
+      below.innerHTML = '<div class="box acc"><span class="lbl">Esta fase</span><span class="sub">características, instrucciones, preguntas ▸</span></div>'
+        + '<div class="box acc"><span class="lbl">Servicios de IA</span><span class="sub">2 servicios ▸</span></div>';
+      below.appendChild(use("tpl-activity"));
+      content.appendChild(below);
+      if (panelEl) f.appendChild(panelEl);
+    } else {
+      const cols = document.createElement("div");
+      cols.className = "cols";
+      const folded = panelEl && layout === "two-narrow";
+      const railWidth = folded ? 48 : layout === "two-narrow" ? 260 : 320;
+      const panelWidth = layout === "two-narrow" ? 480 : 600;
+      cols.style.gridTemplateColumns = `${railWidth}px minmax(0, 1fr)` + (panelEl ? ` ${panelWidth}px` : "");
+      cols.style.gap = panelEl ? "16px" : "20px";
+      let rail;
+      if (folded) {
+        rail = use("tpl-strip");
+      } else {
+        rail = document.createElement("div");
+        rail.className = "rail";
+        rail.appendChild(use("tpl-nav"));
+        const phase = use("tpl-phase");
+        if (layout === "two-narrow") {
+          phase.querySelector(".lines").remove();
+          phase.querySelector("div").remove();
+        }
+        rail.appendChild(phase);
+        rail.appendChild(use("tpl-ai"));
+        rail.appendChild(use("tpl-activity"));
+      }
+      cols.appendChild(rail);
+      cols.appendChild(main);
+      if (panelEl) {
+        if (layout === "two-narrow") table.classList.add("tight");
+        main.querySelector(".search").style.width = "140px";
+        cols.appendChild(panelEl);
+      }
+      content.appendChild(cols);
+    }
+    f.appendChild(content);
+
+    const fold = document.createElement("div");
+    fold.className = "fold";
+    fold.style.top = height + "px";
+    fold.dataset.label = `fold · ${width} × ${height}`;
+    f.appendChild(fold);
+
+    wrap.appendChild(f);
+    host.appendChild(wrap);
+
+    const scaleOf = () => Math.min(1, wrap.clientWidth / width);
+    const place = () => {
+      const s = scaleOf();
+      f.style.transform = `scale(${s})`;
+      const shown = showFull ? content.scrollHeight + 68 + 24 : height + 120;
+      f.style.height = Math.max(shown, height + 120) + "px";
+      wrap.style.height = Math.round(Math.max(shown, height + 120) * s) + "px";
+    };
+    place();
+    window.addEventListener("resize", place);
+
+    const s = scaleOf();
+    const origin = f.getBoundingClientRect();
+    const box = (el) => {
+      const r = el.getBoundingClientRect();
+      return { left: (r.left - origin.left) / s, top: (r.top - origin.top) / s, width: r.width / s, height: r.height / s };
+    };
+
+    // The panel is sticky under the bar and ends at the bottom of the viewport.
+    if (panelEl) {
+      if (layout === "one") {
+        const barBox = box(bar);
+        const top = Math.round(barBox.top + barBox.height);
+        panelEl.style.top = top + "px";
+        panelEl.style.width = "470px";
+        panelEl.style.height = height - top + "px";
+      } else {
+        const top = box(panelEl).top;
+        panelEl.style.height = Math.round(height - top - 12) + "px";
+      }
+    }
+
+    // Numbered notes, placed next to the element they describe.
+    for (const [selector, number, dx = 0] of notes) {
+      const el = f.querySelector(selector);
+      if (!el) continue;
+      const r = box(el);
+      const n = document.createElement("span");
+      n.className = "n";
+      n.textContent = number;
+      n.style.left = Math.max(0, r.left - 14 + dx) + "px";
+      n.style.top = Math.max(0, r.top - 14) + "px";
+      f.appendChild(n);
+    }
+
+    // Measurements of this frame.
+    const firstRow = f.querySelector("table[data-role=responses] tbody tr");
+    const rowBox = box(firstRow);
+    const top = Math.round(rowBox.top);
+    const visible = Math.max(0, Math.floor((height - top) / rowBox.height));
+    const out = document.querySelector(`[data-metrics="${hostId}"]`);
+    if (!panelEl) {
+      out.innerHTML = `First response row at <b>${top} px</b> (today: 1399 px). About <b>${visible} rows</b> visible on the first screen (today: none).`;
+      return;
+    }
+    const p = box(panelEl);
+    const t = box(table);
+    const covered = layout === "one" ? Math.round(t.left + t.width - p.left) : 0;
+    const chatSec = panelEl.querySelector("[data-role=chat] .scroll");
+    const answers = panelEl.querySelector("[data-role=answers] .scroll");
+    const parts = [
+      `Panel <b>${Math.round(p.width)} × ${Math.round(p.height)} px</b>.`,
+      layout === "one"
+        ? `It covers the right <b>${covered} px</b> of the table and leaves <b>${Math.round(p.left - t.left)} px</b> of it visible.`
+        : `Table <b>${Math.round(t.width)} px</b> wide, with every column; <b>${visible} rows</b> visible.`,
+    ];
+    if (answers) parts.push(`Answers area <b>${Math.round(box(answers).height)} px</b> tall.`);
+    if (chatSec) parts.push(`Chat transcript <b>${Math.round(box(chatSec).height)} px</b> tall, composer always in view.`);
+    out.innerHTML = parts.join(" ");
+  }
+
+  document.getElementById("today-metrics").innerHTML =
+    "Measured on the local stack, in an activity with one question per phase: the page content is a fixed 1050 px column at every width, and the first response row is at <b>1399 px</b>, under the fold even at 1920 × 1080. More questions, longer instructions or more AI services push it further down.";
+
+  frame("A", {
+    width: 1920, height: 1080, appNav: true, layout: "two", tip: true,
+    notes: [[".bar", 1], [".rail .card:nth-child(1)", 2], [".rail .card:nth-child(2)", 3],
+      [".rail .card:nth-child(3)", 4], [".rail .acc", 5], [".tabs", 6], [".toolbar", 7]],
+  });
+  frame("B", {
+    width: 1366, height: 768, appNav: true, layout: "two-narrow",
+    notes: [[".rail .card:nth-child(2)", 1], [".bar", 2]],
+  });
+  frame("C", {
+    width: 1024, height: 768, appNav: false, layout: "one", showFull: true,
+    notes: [[".bar", 1], [".pills", 2], [".rail", 3]],
+  });
+  frame("D", {
+    width: 1920, height: 1080, appNav: true, layout: "two", panel: { group: 1, mode: "split" },
+    notes: [["table", 1], [".panel-head", 2], ["[data-role=answers] .q", 3], [".splitter", 4, 380],
+      ["[data-role=chat] .sec-head", 5], [".composer", 6]],
+  });
+  frame("E", {
+    width: 1366, height: 768, appNav: true, layout: "two-narrow", anon: "letters", panel: { group: 1, mode: "tabs" },
+    notes: [[".strip", 1], [".names", 2], [".ptabs", 3], [".digest", 4], [".composer", 5]],
+  });
+  frame("F", {
+    width: 1024, height: 768, appNav: false, layout: "one", anon: "numbers", individual: true, panel: { student: 4 },
+    notes: [[".panel", 1], [".panel .q", 2], ["table", 3]],
+  });
+</script>
+</body>
+</html>
