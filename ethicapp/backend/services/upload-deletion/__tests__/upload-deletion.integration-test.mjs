@@ -204,6 +204,47 @@ test("V32: a failing deletion is retried with backoff, and an administrator's re
     fs.rmSync(root, { recursive: true, force: true });
 });
 
+test("V32: an administrator's retry does not delete a directory a render may still be writing", {
+    skip: SKIP_REASON,
+}, async () => {
+    const root = makeRoot();
+    const userId = newUserId();
+    const directory = `cases/${userId}`;
+    write(root, `${directory}/rendered/page-1.png`);
+    // As forgetting records the directory of a case whose render is in
+    // flight: ten minutes ahead, in both next_attempt_at and not_before.
+    await dbQuery(
+        `INSERT INTO upload_deletion_requests (user_id, path, recursive, next_attempt_at, not_before)
+         VALUES ($1, $2, TRUE, now() + interval '10 minutes', now() + interval '10 minutes')`,
+        [userId, directory]
+    );
+    const store = new UploadDeletionRequestsStore({ dbQuery });
+    const processor = createUploadDeletionProcessor({ store, uploadsRoot: root, logger: silentLogger });
+
+    // The retry makes it pending with a fresh backoff, but not due before
+    // its not-before time, so nothing is deleted.
+    assert.equal(await store.resetForRetry(userId), 1);
+    assert.deepEqual(await processor.processDue({ userId }), { done: 0, skipped: 0, retrying: 0, failed: 0 });
+    assert.equal(fs.existsSync(path.join(root, directory)), true);
+    const [request] = await dbQuery(
+        `SELECT status, next_attempt_at >= not_before AS waits
+         FROM upload_deletion_requests WHERE user_id = $1`,
+        [userId]
+    );
+    assert.deepEqual(request, { status: "pending", waits: true });
+
+    // A due backoff alone does not make it due either.
+    await dbQuery("UPDATE upload_deletion_requests SET next_attempt_at = now() WHERE user_id = $1", [userId]);
+    assert.deepEqual(await store.claimDue({ limit: 10, leaseMs: 60_000, userId }), []);
+
+    // Once the not-before time has passed, it is deleted.
+    await dbQuery("UPDATE upload_deletion_requests SET not_before = now() WHERE user_id = $1", [userId]);
+    assert.deepEqual(await processor.processDue({ userId }), { done: 1, skipped: 0, retrying: 0, failed: 0 });
+    assert.equal(fs.existsSync(path.join(root, directory)), false);
+
+    fs.rmSync(root, { recursive: true, force: true });
+});
+
 test("V32: another teacher's copy still loads the PDF of a forgotten teacher's case", {
     skip: SKIP_REASON,
 }, async () => {

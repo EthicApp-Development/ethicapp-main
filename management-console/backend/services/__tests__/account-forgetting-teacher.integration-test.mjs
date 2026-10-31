@@ -15,6 +15,7 @@ import { randomUUID } from 'node:crypto';
 import test from 'node:test';
 import pg from 'pg';
 
+import { RENDER_IN_FLIGHT_DELETION_DELAY_SECONDS } from '../../helpers/upload-deletion-helper.js';
 import { ACCOUNT_FORGETTING_ERRORS, createAccountForgettingService } from '../account-forgetting.service.js';
 import { updateUserById } from '../user.service.js';
 
@@ -590,6 +591,37 @@ test('V32: the preview counts what forgetting would do, without changing anythin
     copiesByOthers: { cases: 1, designs: 1 }
   });
   assert.deepEqual(await existing('ethical_cases', [m.deletedCase]), [m.deletedCase]);
+});
+
+test('V32: renders in flight when the teacher is forgotten run again, and their deleted directories wait', {
+  skip: SKIP_REASON
+}, async () => {
+  const teacher = await insertUser();
+  // Kept (public), with a worker rendering it: the worker read the old email.
+  const keptCase = await insertCase(teacher.id, { visibility: 'public', authorEmail: teacher.mail, render: 'processing' });
+  // Deleted (private, unused), with a worker still writing into its directory.
+  const deletedCase = await insertCase(teacher.id, { authorEmail: teacher.mail, render: 'processing' });
+
+  const result = await forget(teacher);
+
+  assert.equal(result.status, 'anonymized');
+  assert.equal(result.materials.authorEmails.rerenders, 1);
+  // Still processing, so no other worker renders it while the first one
+  // writes; flagged, so ethicapp queues it again when that one completes.
+  const job = await one('SELECT status, metadata FROM pdf_render_jobs WHERE owner_id = $1', [keptCase]);
+  assert.equal(job.status, 'processing');
+  assert.equal(job.metadata.rerenderRequested, true);
+  assert.equal(job.metadata.reason, 'author_email_erased');
+
+  // The deleted case's directory waits ten minutes, and the wait is kept
+  // apart from the retry backoff.
+  const request = await one(
+    `SELECT EXTRACT(EPOCH FROM (not_before - now())) AS waits_s, next_attempt_at = not_before AS aligned
+     FROM upload_deletion_requests WHERE user_id = $1 AND path = $2`,
+    [teacher.id, `cases/${deletedCase}`]
+  );
+  assert.ok(Number(request.waits_s) > RENDER_IN_FLIGHT_DELETION_DELAY_SECONDS - 60);
+  assert.equal(request.aligned, true);
 });
 
 test('V32: student_anonymization_runs accepts teachers, and the audit log a target role', { skip: SKIP_REASON }, async () => {

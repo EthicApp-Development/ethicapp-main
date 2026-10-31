@@ -298,7 +298,8 @@ async function teacherAuthorEmails(client, teacherId, accountEmail) {
  * The cases and the author entries require an email, and the case editor and
  * the case document schema validate one, hence the addresses in the
  * reserved .invalid domain. The manifests rendered for the changed cases
- * still hold the old email, so their render jobs are queued again.
+ * still hold the old email, so their render jobs run again
+ * (RERENDER_ERASED_AUTHOR_EMAIL_SQL).
  */
 async function eraseAuthorEmails(client, emails, anonymousEmail) {
   if (emails.length === 0) {
@@ -334,22 +335,7 @@ async function eraseAuthorEmails(client, emails, anonymousEmail) {
 
   const caseIds = cases.rows.map((row) => Number(row.id));
   const rerenders = caseIds.length > 0
-    ? await client.query(
-      `
-        UPDATE pdf_render_jobs
-        SET status = 'pending',
-            attempt_count = 0,
-            next_attempt_at = now(),
-            started_at = NULL,
-            completed_at = NULL,
-            error_message = NULL,
-            metadata = metadata || '{"reason": "author_email_erased"}'::jsonb
-        WHERE owner_type = 'case'
-          AND owner_id = ANY($1::integer[])
-          AND status = 'completed'
-      `,
-      [caseIds]
-    )
+    ? await client.query(RERENDER_ERASED_AUTHOR_EMAIL_SQL, [caseIds])
     : { rowCount: 0 };
 
   return {
@@ -359,6 +345,35 @@ async function eraseAuthorEmails(client, emails, anonymousEmail) {
     rerenders: rerenders.rowCount || 0
   };
 }
+
+// The manifests rendered for cases whose author email was erased still hold
+// it, so their render jobs run again. A completed job is queued again. A job
+// a worker is processing cannot be: the worker read the case before the
+// change and will mark the job completed when it finishes. It is flagged
+// instead (metadata.rerenderRequested), and ethicapp's worker queues a
+// flagged job again when it completes it (pdf-render-job-statements.js).
+// The job stays `processing` meanwhile, so no other worker renders the case
+// while the first one is still writing its files. One statement handles
+// both: a job a worker completes while this runs is re-read and queued
+// again.
+export const RERENDER_ERASED_AUTHOR_EMAIL_SQL = `
+  UPDATE pdf_render_jobs
+  SET status = CASE WHEN status = 'completed' THEN 'pending' ELSE status END,
+      attempt_count = CASE WHEN status = 'completed' THEN 0 ELSE attempt_count END,
+      next_attempt_at = CASE WHEN status = 'completed' THEN now() ELSE next_attempt_at END,
+      started_at = CASE WHEN status = 'completed' THEN NULL ELSE started_at END,
+      completed_at = CASE WHEN status = 'completed' THEN NULL ELSE completed_at END,
+      error_message = CASE WHEN status = 'completed' THEN NULL ELSE error_message END,
+      metadata = metadata
+          || '{"reason": "author_email_erased"}'::jsonb
+          || CASE WHEN status = 'processing'
+                  THEN '{"rerenderRequested": true}'::jsonb
+                  ELSE '{}'::jsonb
+             END
+  WHERE owner_type = 'case'
+    AND owner_id = ANY($1::integer[])
+    AND status IN ('completed', 'processing')
+`;
 
 /**
  * Handles the materials of a teacher being forgotten, inside the caller's

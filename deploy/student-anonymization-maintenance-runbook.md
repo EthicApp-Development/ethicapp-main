@@ -213,17 +213,18 @@ SELECT service_id, status, attempts, last_error
 FROM user_erasure_requests
 WHERE user_id = <teacher id>;
 
-SELECT path, status, attempts, last_error
+SELECT path, status, attempts, last_error, next_attempt_at, not_before
 FROM upload_deletion_requests
 WHERE user_id = <teacher id>
 ORDER BY path;
 ```
 
 A deleted case's directory (`cases/<id>`) whose render was pending or in
-progress waits ten minutes before its first attempt. A request `failed` with
-`INVALID_PATH` names a path ethicapp refuses to delete; check it by hand. The
-retry on the teacher's page resets the requests and file deletions that are
-not complete.
+progress waits ten minutes before its first attempt (`not_before`). A request
+`failed` with `INVALID_PATH` names a path ethicapp refuses to delete; check it
+by hand. The retry on the teacher's page resets the requests and file
+deletions that are not complete; a directory still waiting for a render stays
+pending until its `not_before`.
 
 ## Failure Handling
 

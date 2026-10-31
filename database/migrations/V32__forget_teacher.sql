@@ -26,6 +26,12 @@
 -- with no leading slash and no `.` or `..` segment; ethicapp checks again
 -- that it resolves inside the root. recursive marks a directory.
 --
+-- not_before is the earliest time the path may be deleted. A case whose PDF
+-- render may still be writing into its directory waits ten minutes, so the
+-- render cannot recreate the directory after it is deleted. It is kept apart
+-- from next_attempt_at, which retries and an administrator's retry move, so
+-- that no retry runs the deletion earlier.
+--
 -- Status vocabulary:
 --
 --   pending: waiting for its next attempt at next_attempt_at. attempts > 0
@@ -73,6 +79,7 @@ CREATE TABLE IF NOT EXISTS upload_deletion_requests (
     status varchar(16) NOT NULL DEFAULT 'pending',
     attempts integer NOT NULL DEFAULT 0,
     next_attempt_at timestamptz NOT NULL DEFAULT now(),
+    not_before timestamptz NOT NULL DEFAULT now(),
     last_attempt_at timestamptz,
     last_error varchar(64),
     requested_at timestamptz NOT NULL DEFAULT now(),

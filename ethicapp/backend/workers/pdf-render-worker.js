@@ -6,6 +6,7 @@ import path from "path";
 import { promisify } from "util";
 import { dbconnString } from "../config/database.config.js";
 import { uploadsPath } from "../config/uploads.config.js";
+import { CLAIM_NEXT_JOB_SQL, MARK_JOB_COMPLETED_SQL } from "./pdf-render-job-statements.js";
 
 const execFileAsync = promisify(execFile);
 const { Pool } = pg;
@@ -272,27 +273,7 @@ async function claimNextPendingJob() {
     try {
         await client.query("BEGIN");
 
-        const result = await client.query(`
-            WITH next_job AS (
-                SELECT id
-                FROM pdf_render_jobs
-                WHERE status = 'pending'
-                  AND next_attempt_at <= now()
-                  AND attempt_count < max_attempts
-                ORDER BY requested_at ASC, id ASC
-                LIMIT 1
-                FOR UPDATE SKIP LOCKED
-            )
-            UPDATE pdf_render_jobs AS job
-            SET status = 'processing',
-                started_at = now(),
-                completed_at = NULL,
-                error_message = NULL,
-                attempt_count = job.attempt_count + 1
-            FROM next_job
-            WHERE job.id = next_job.id
-            RETURNING job.*;
-        `);
+        const result = await client.query(CLAIM_NEXT_JOB_SQL);
 
         await client.query("COMMIT");
         return result.rows[0] || null;
@@ -309,23 +290,16 @@ function getRetryDelaySeconds(job) {
     return Math.min(60 * attemptCount, 15 * 60);
 }
 
+// Resolves to the job's new status: `completed`, or `pending` when the case
+// changed while it was rendered and it must run again.
 async function markJobCompleted(job, { pageCount, manifestPath, metadata }) {
-    await pool.query(`
-        UPDATE pdf_render_jobs
-        SET status = 'completed',
-            completed_at = now(),
-            next_attempt_at = now(),
-            page_count = $2,
-            manifest_path = $3,
-            error_message = NULL,
-            metadata = metadata || $4::jsonb
-        WHERE id = $1;
-    `, [
+    const result = await pool.query(MARK_JOB_COMPLETED_SQL, [
         job.id,
         pageCount,
         manifestPath,
         JSON.stringify(metadata),
     ]);
+    return result.rows[0]?.status ?? null;
 }
 
 async function markJobFailedOrPending(job, error) {
@@ -393,7 +367,7 @@ async function processClaimedJob(job) {
         });
         const manifestPath = await writeManifest(job.owner_id, manifest);
 
-        await markJobCompleted(job, {
+        const status = await markJobCompleted(job, {
             pageCount,
             manifestPath,
             metadata: {
@@ -406,7 +380,9 @@ async function processClaimedJob(job) {
             },
         });
 
-        console.info("[pdf-render-worker] Completed PDF render job.", {
+        console.info(status === "pending"
+            ? "[pdf-render-worker] Rendered a case that changed meanwhile; queued it again."
+            : "[pdf-render-worker] Completed PDF render job.", {
             jobId: job.id,
             pageCount,
             manifestPath,

@@ -89,6 +89,9 @@ export class UploadDeletionRequestsStore extends LeasedRequestStore {
             toRequest,
             listOrder:         "path",
             completedStatuses: [UPLOAD_DELETION_STATUS.DONE, UPLOAD_DELETION_STATUS.SKIPPED],
+            // A deleted case's directory waits for a render that may still
+            // be writing into it; an administrator's retry must not skip that.
+            notBeforeColumn:   "not_before",
             dbQuery,
         });
     }

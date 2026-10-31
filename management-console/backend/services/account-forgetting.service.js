@@ -376,11 +376,15 @@ export function createAccountForgettingService({
           return refuse(client, auditEvent, refusal);
         }
 
-        // The account is locked: from here on the teacher cannot create an
-        // activity (the foreign key on sessions.creator waits for the lock),
-        // but one may have been started or created since ethicapp finished
-        // them. Anonymizing then would leave an activity running under a
-        // disabled account, so nothing is done; the administrator retries.
+        // The account is locked until this commits. ethicapp creates a
+        // session and moves one to a phase only while holding a share lock
+        // on the requesting teacher's account, and only when it is not
+        // anonymized (ethicapp/backend/helpers/teacher-activity-writes.js):
+        // a request arriving from here on waits, then writes nothing. One
+        // may have been started or created since ethicapp finished them,
+        // before the lock. Anonymizing then would leave an activity running
+        // under a disabled account, so nothing is done; the administrator
+        // retries.
         if (await countOpenActivities(client, teacherId) > 0) {
           return refuse(client, auditEvent, ACCOUNT_FORGETTING_ERRORS.openActivities);
         }

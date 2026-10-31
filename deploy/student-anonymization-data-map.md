@@ -135,7 +135,7 @@ Author data outside the user id columns:
 | Table and fields | Decision |
 | --- | --- |
 | `ethical_cases.author_firstname`, `author_lastname`, `source_case_author`, `attribution_text`, `designs.source_design_author`, `attribution_text`, `design.metainfo.author` | Kept, in the teacher's materials and in other teachers' copies. The license requires attribution. |
-| `ethical_cases.author_email` equal to the teacher's email (or to an author entry linked to the account) | Replaced with the account's anonymous address, in every case. The render jobs of those cases are queued again, so their manifests lose the email too. |
+| `ethical_cases.author_email` equal to the teacher's email (or to an author entry linked to the account) | Replaced with the account's anonymous address, in every case. The render jobs of those cases are queued again, so their manifests lose the email too; a job being rendered at that moment is queued again when it completes. |
 | `ethical_case_author.author_email` equal to those emails | Replaced with `anon-author-<id>@anonymous.invalid` (the column is unique and required). Entries left without a case by the deletions are deleted. |
 | Case texts and PDFs | Not changed; the terms of service say so (#880). |
 

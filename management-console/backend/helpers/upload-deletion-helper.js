@@ -84,7 +84,9 @@ function mergeEntries(entries) {
 
 /**
  * Records pending deletions of upload paths for ethicapp to process. A path
- * already recorded for the account is set back to pending.
+ * already recorded for the account is set back to pending. An entry's delay
+ * sets not_before, which no retry moves earlier: it keeps a deleted case's
+ * directory until a render that may be writing into it has stopped.
  * @param {{ query: Function }} client - A client inside the caller's transaction.
  * @param {number} userId - The forgotten account.
  * @param {number|null} runId - The anonymization run, for the audit trail.
@@ -100,8 +102,9 @@ export async function recordUploadDeletionRequests(client, userId, runId, entrie
   await client.query(
     `
       INSERT INTO upload_deletion_requests
-          (user_id, path, recursive, next_attempt_at, anonymization_run_id)
+          (user_id, path, recursive, next_attempt_at, not_before, anonymization_run_id)
       SELECT $1, entry.path, entry.recursive,
+             now() + (entry.delay_seconds * interval '1 second'),
              now() + (entry.delay_seconds * interval '1 second'), $5
       FROM unnest($2::text[], $3::boolean[], $4::integer[])
           AS entry (path, recursive, delay_seconds)
@@ -109,7 +112,8 @@ export async function recordUploadDeletionRequests(client, userId, runId, entrie
       SET recursive = EXCLUDED.recursive,
           status = 'pending',
           attempts = 0,
-          next_attempt_at = EXCLUDED.next_attempt_at,
+          next_attempt_at = GREATEST(EXCLUDED.next_attempt_at, upload_deletion_requests.not_before),
+          not_before = GREATEST(EXCLUDED.not_before, upload_deletion_requests.not_before),
           last_attempt_at = NULL,
           last_error = NULL,
           requested_at = now(),

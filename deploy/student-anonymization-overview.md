@@ -180,11 +180,15 @@ The forgetting runs in three steps:
    - locks the teacher and the recipient, in id order, and checks them again
      (`ACCOUNT_CHANGED`, `RECIPIENT_UNAVAILABLE`, `RECIPIENT_CHANGED`);
    - counts the teacher's activities that are not finished, or whose
-     finishing did not complete (`activity_finalizations`, V30). Once the
-     account row is locked the teacher cannot create a session (its foreign
-     key waits for the lock), but one may have been started between step 2
-     and the lock; then it refuses with `OPEN_ACTIVITIES` (409) and changes
-     nothing, and the administrator retries;
+     finishing did not complete (`activity_finalizations`, V30). ethicapp
+     creates a session and moves one to a phase only while holding a share
+     lock on the requesting teacher's account, and only when it is not
+     anonymized (`ethicapp/backend/helpers/teacher-activity-writes.js`). So
+     once the account row is locked, a request from the teacher, even one
+     already authorized, waits until the transaction ends and then writes
+     nothing. One may have been started between step 2 and the lock; then it
+     refuses with `OPEN_ACTIVITIES` (409) and changes nothing, and the
+     administrator retries;
    - creates a run of role `P`;
    - handles the materials (`teacher-materials-helper.js`):
      - deletes the designs that are private (`visibility` and the legacy
@@ -210,7 +214,11 @@ The forgetting runs in three steps:
        require an email, and the case editor and the case document schema
        validate one, hence addresses in the reserved `.invalid` domain;
      - queues the render jobs of the changed cases again, because their
-       manifests (`representation.json`) hold the author email;
+       manifests (`representation.json`) hold the author email. A job the
+       PDF render worker is processing stays `processing`, so no other worker
+       renders the case while that one still writes its files, and is marked
+       `metadata.rerenderRequested`: the worker read the case before the
+       change, so when it completes the job it queues it again instead;
    - runs the per-account step with the identity "Former Teacher <id>": the
      account, their chat messages replaced with the placeholder, their AI
      service payloads, the AI Additions erasure requests (the teacher's chat
@@ -257,7 +265,9 @@ lease and backoff of the erasure processor (both use
 - A file system error is retried with backoff (`FS_EACCES`, `FS_EBUSY`, ...).
 - The directory of a case whose render was pending or in progress waits ten
   minutes before its first attempt, longer than a render can take, because
-  the PDF render worker may still write pages for it.
+  the PDF render worker may still write pages for it. That wait is kept in
+  `not_before`, apart from the retry backoff in `next_attempt_at`, so no
+  retry, an administrator's included, runs the deletion before it ends.
 
 The user page shows the files next to the AI services
 ("EthicApp ✓ · Tutor ✓ · Polyadic ✓ · Files: pending"), with how many were

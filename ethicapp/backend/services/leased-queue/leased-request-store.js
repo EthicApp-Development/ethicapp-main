@@ -48,6 +48,9 @@ export class LeasedRequestStore {
      * @param {string} [options.listOrder] - ORDER BY of listForUser.
      * @param {string[]} [options.completedStatuses] - Statuses a retry
      *     leaves alone.
+     * @param {string|null} [options.notBeforeColumn] - A column holding the
+     *     earliest time a request may be attempted, apart from its backoff:
+     *     no claim takes the request before it, and no retry moves it.
      * @param {(sql: string, params: unknown[]) => Promise<object[]>} [options.dbQuery]
      *     Runs one statement and resolves to its rows.
      */
@@ -57,9 +60,14 @@ export class LeasedRequestStore {
         toRequest,
         listOrder = "id",
         completedStatuses = ["done"],
+        notBeforeColumn = null,
         dbQuery,
     }) {
-        for (const identifier of [table, ...columns, ...listOrder.split(/\s*,\s*/)]) {
+        const identifiers = [table, ...columns, ...listOrder.split(/\s*,\s*/)];
+        if (notBeforeColumn !== null) {
+            identifiers.push(notBeforeColumn);
+        }
+        for (const identifier of identifiers) {
             if (!IDENTIFIER_PATTERN.test(identifier)) {
                 throw new TypeError(`Invalid identifier: ${identifier}`);
             }
@@ -70,6 +78,10 @@ export class LeasedRequestStore {
         this._toRequest = toRequest;
         this._listOrder = listOrder;
         this._completedStatuses = [...completedStatuses];
+        this._dueCondition = notBeforeColumn
+            ? `next_attempt_at <= now() AND ${notBeforeColumn} <= now()`
+            : "next_attempt_at <= now()";
+        this._retryAttemptAt = notBeforeColumn ? `GREATEST(now(), ${notBeforeColumn})` : "now()";
         this._db = dbQuery || poolQuery;
     }
 
@@ -90,7 +102,7 @@ export class LeasedRequestStore {
                  SELECT id
                  FROM ${this._table}
                  WHERE status = 'pending'
-                   AND next_attempt_at <= now()
+                   AND ${this._dueCondition}
                    AND ($3::integer IS NULL OR user_id = $3::integer)
                  ORDER BY next_attempt_at, id
                  LIMIT $1
@@ -161,8 +173,9 @@ export class LeasedRequestStore {
 
     /**
      * An administrator's retry: every request of the user that is not
-     * complete becomes pending and due now, with a fresh backoff
-     * (attempts = 0). The last error is kept until the next attempt.
+     * complete becomes pending and due now, or at its not-before time if
+     * that is later, with a fresh backoff (attempts = 0). The last error is
+     * kept until the next attempt.
      * @returns {Promise<number>} How many requests were reset.
      */
     async resetForRetry(userId) {
@@ -170,7 +183,7 @@ export class LeasedRequestStore {
             `UPDATE ${this._table}
              SET status = 'pending',
                  attempts = 0,
-                 next_attempt_at = now()
+                 next_attempt_at = ${this._retryAttemptAt}
              WHERE user_id = $1
                AND status <> ALL($2::text[])
              RETURNING id`,
