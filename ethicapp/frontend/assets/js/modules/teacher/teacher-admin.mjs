@@ -212,6 +212,8 @@ app.controller("ConnectedUsersDirectiveController", ["$scope", "ActivityStateSer
     ConnectedUsersDirectiveController]);
 
 import { activityDescriptionComponent } from "../../components/activity-description.component.js";
+// The sticky bar of the activity dashboard (#893).
+import activityBarComponent from "../../components/activity-bar.component.js";
 import { designDescriptionComponent } from "../../components/design-description.component.js";
 import rankingItemEditorComponent from "../../components/ranking-item-editor.component.js";
 import sdItemEditorComponent from "../../components/sd-item-editor.component.js";
@@ -263,6 +265,7 @@ import teacherGroupChatComponent from "../../components/teacher-group-chat.compo
 import teacherToastComponent from "../../components/teacher-toast.component.js";
 
 app.component('activityDescription', activityDescriptionComponent);
+app.component("activityBar", activityBarComponent);
 app.component('designDescription', designDescriptionComponent);
 app.component('groupingModeSelector', groupingModeSelectorComponent);
 app.component("serviceConfigurationForm", serviceConfigurationFormComponent);

@@ -1,10 +1,12 @@
 <div class="container activity-dashboard-page" ng-controller="DashboardController as dc">
-    <!-- Page Title -->
-    <div class="row">
-        <div class="col-md-12 mb-2">
-            <h2><i class="fa-solid fa-gauge-high"></i> {{'activity_dashboard_title' | translate}}</h2>
-        </div>
-    </div>
+    <!-- Activity bar, sticky under the app bar (#893) -->
+    <activity-bar class="activity-bar-host"
+        activity="dc.activityState.descriptor"
+        total-phases="dc.designObj.phases.length"
+        users="dc.userList"
+        is-finished="dc.isActivityFinished">
+        <activity-controls is-last-phase="dc.reachedLastPhase" is-finished="dc.isActivityFinished" parent-ctrl="dc"></activity-controls>
+    </activity-bar>
 
     <!-- Tabs for "Information", "Users" and "Design" -->
     <div class="row">
@@ -45,8 +47,7 @@
                         </li>
                     </ul>
                 </div>
-                <activity-description activity="dc.activityState.descriptor" associated-case="dc.associatedCase" enable-link="false"></activity-description>
-                <activity-controls is-last-phase="dc.reachedLastPhase" is-finished="dc.isActivityFinished" parent-ctrl="dc"></activity-controls>              
+                <activity-description activity="dc.activityState.descriptor" associated-case="dc.associatedCase" enable-link="false" show-status-and-code="false"></activity-description>
                 <!-- Horizontal Rule -->
                 <hr>
                 <!-- Activity Phases Section -->

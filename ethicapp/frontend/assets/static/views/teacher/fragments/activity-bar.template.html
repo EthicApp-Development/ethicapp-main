@@ -1,0 +1,32 @@
+<section class="activity-bar" aria-label="{{ 'activity_bar_region_label' | translate }}">
+  <h2 class="activity-bar-name" title="{{ $ctrl.activity.name }}">{{ $ctrl.activity.name }}</h2>
+
+  <span class="activity-bar-chip activity-bar-status"
+        ng-if="$ctrl.statusName"
+        ng-class="'activity-bar-status-' + $ctrl.statusName">
+    <i class="fa-solid fa-circle activity-bar-status-dot" aria-hidden="true"></i>
+    {{ $ctrl.statusName | translate }}
+  </span>
+
+  <span class="activity-bar-chip activity-bar-phase" ng-if="$ctrl.phaseSummary">
+    {{ 'activity_bar_phase_label' | translate:{ number: $ctrl.phaseSummary.number, total: $ctrl.phaseSummary.total, mode: ($ctrl.phaseSummary.modeKey | translate) } }}
+  </span>
+  <span class="activity-bar-chip activity-bar-phase" ng-if="$ctrl.isWaitingForFirstPhase()">
+    {{ 'activity_bar_no_phase' | translate }}
+  </span>
+
+  <span class="activity-bar-chip activity-bar-code" ng-if="$ctrl.activity.code">
+    {{ 'activity_bar_access_code' | translate }}
+    <span copy-to-clipboard class="activity-bar-code-value fixed-width-font white-against-black-bg bold-text black-bg-rounded-corners copy-to-clipboard-parent">{{ $ctrl.activity.code }}</span>
+  </span>
+
+  <span class="activity-bar-chip activity-bar-connected" ng-if="$ctrl.activity">
+    <span aria-hidden="true">
+      <i class="fa-solid fa-users"></i>
+      {{ $ctrl.connectedCount }}<span class="activity-bar-connected-label"> {{ 'activity_bar_connected_label' | translate }}</span>
+    </span>
+    <span class="sr-only">{{ 'activity_bar_connected_description' | translate:{ count: $ctrl.connectedCount } }}</span>
+  </span>
+
+  <div class="activity-bar-controls" ng-transclude></div>
+</section>
