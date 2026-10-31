@@ -165,6 +165,8 @@
 	"chat_messages_label": "Chat Messages",
 	"group_column_header": "Group",
 	"group_label": "Group",
+	"no_group_label": "No group",
+	"group_chat_total_label": "Total",
 	"chat_column_header": "Chat Messages",	
 	"number_of_equal_column_header": "Number of Equal",
 	"author_column_header": "Author",
