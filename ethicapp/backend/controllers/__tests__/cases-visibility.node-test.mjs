@@ -17,7 +17,23 @@ const OTHER_TEACHER_ID = 8;
 const CASE_ID = 41;
 const MISSING_CASE_ID = 999;
 
-const state = { inUse: false, publicDesignIds: [12], failDesigns: false };
+// A teacher id that must never reach the owner's answer (#939).
+const DESIGN_TEACHER_ID = 9017;
+
+// `designCreators` lists the creator of each design that uses the case.
+const state = { inUse: false, publicDesignIds: [12], failDesigns: false, designCreators: [] };
+
+// The fake's answer to the count of designs that keep the case (#939).
+function designsKeepingAccess(caseId, ownerId) {
+    if (Number(caseId) !== CASE_ID) {
+        return 0;
+    }
+    return state.designCreators
+        .filter(creator => creator !== null && creator !== Number(ownerId))
+        .length;
+}
+
+const COUNT_SQL = /SELECT COUNT\(\*\)::int AS count\s+FROM designs\s+WHERE case_id = \$1/u;
 
 function caseExists(caseId) {
     return Number(caseId) === CASE_ID;
@@ -46,6 +62,9 @@ function rowsFor(sql, params) {
         }
         return Number(params[0]) === CASE_ID ? state.publicDesignIds.map(id => ({ id })) : [];
     }
+    if (COUNT_SQL.test(sql)) {
+        return [{ count: designsKeepingAccess(params[0], params[1]) }];
+    }
     return [];
 }
 
@@ -73,6 +92,7 @@ beforeEach(() => {
     state.inUse = false;
     state.publicDesignIds = [12];
     state.failDesigns = false;
+    state.designCreators = [];
     connections.taken = 0;
     connections.released = 0;
 });
@@ -241,5 +261,84 @@ describe("PATCH /cases/:id/visibility and the designs that use the case (#934)",
 
         assert.equal(status, 409);
         assert.equal(designsUpdateIndex(), -1);
+    });
+});
+
+describe("PATCH /cases/:id/visibility and the designs that keep the case (#939)", () => {
+    function countIndex() {
+        return statements().findIndex(sql => COUNT_SQL.test(sql));
+    }
+
+    it("reports none when no design uses the case", async () => {
+        state.publicDesignIds = [];
+
+        const { status, body } = await changeVisibility({ visibility: "private" });
+
+        assert.equal(status, 200);
+        assert.equal(body.result.designsKeepingAccess, 0);
+    });
+
+    it("reports none when only the owner's designs use the case", async () => {
+        state.designCreators = [OWNER_ID, OWNER_ID];
+
+        const { body } = await changeVisibility({ visibility: "private" });
+
+        assert.equal(body.result.designsKeepingAccess, 0);
+    });
+
+    it("counts other teachers' designs after the designs update, in the transaction", async () => {
+        state.publicDesignIds = [12, 13];
+        state.designCreators = [
+            OWNER_ID, OTHER_TEACHER_ID, DESIGN_TEACHER_ID, DESIGN_TEACHER_ID, null,
+        ];
+
+        const { status, body } = await changeVisibility({ visibility: "private" });
+
+        assert.equal(status, 200);
+        assert.equal(body.result.designsKeepingAccess, 3);
+        assert.deepEqual(db.queries[countIndex()].params, [CASE_ID, OWNER_ID]);
+        const sqls = statements();
+        assert.ok(designsUpdateIndex() < countIndex());
+        assert.ok(countIndex() < sqls.indexOf("COMMIT"));
+    });
+
+    it("reports the count when the case is made public too", async () => {
+        state.designCreators = [DESIGN_TEACHER_ID];
+
+        const { body } = await changeVisibility({ visibility: "public" });
+
+        assert.equal(body.result.designsKeepingAccess, 1);
+        assert.equal(designsUpdateIndex(), -1);
+    });
+
+    it("reveals no other teacher or design of theirs beyond #934's ids", async () => {
+        state.publicDesignIds = [];
+        state.designCreators = [DESIGN_TEACHER_ID, DESIGN_TEACHER_ID];
+
+        const { body } = await changeVisibility({ visibility: "private" });
+
+        assert.deepEqual(Object.keys(body.result).sort(), [
+            "affectedDesignIds",
+            "designsKeepingAccess",
+            "id",
+            "licenseCode",
+            "public",
+            "visibility",
+        ]);
+        assert.equal(body.result.designsKeepingAccess, 2);
+        assert.doesNotMatch(JSON.stringify(body), new RegExp(String(DESIGN_TEACHER_ID), "u"));
+    });
+
+    it("counts nothing for a refused change", async () => {
+        state.designCreators = [DESIGN_TEACHER_ID];
+        const notOwned = await changeVisibility({ uid: OTHER_TEACHER_ID, visibility: "private" });
+        assert.equal(notOwned.status, 404);
+        assert.equal(countIndex(), -1);
+
+        db.reset();
+        state.inUse = true;
+        const inUse = await changeVisibility({ visibility: "private" });
+        assert.equal(inUse.status, 409);
+        assert.equal(countIndex(), -1);
     });
 });
