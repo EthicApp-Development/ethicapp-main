@@ -157,7 +157,7 @@ app.controller("CreateDesignController",
 app.controller("DashboardController", 
     ["$scope", "$routeParams", "$http", "$translate", "$timeout", "$uibModal",
         "ActivityStateService", "ActivityCatalogService", "DesignCatalogService",
-        "CasesCatalogService", "TeacherGroupChatService", "LanguageCatalogService",
+        "CasesCatalogService", "TeacherGroupChatService", "LanguageCatalogService", "$window",
         DashboardController]);
 app.controller("DesignViewerController", 
     ["$scope", "$routeParams", "$window", "DesignCatalogService", "CasesCatalogService",

@@ -22,7 +22,7 @@ import {
 export function DashboardController($scope, $routeParams, $http, 
     $translate, $timeout, $uibModal, 
     ActivityStateService, ActivityCatalogService, DesignCatalogService, CasesCatalogService, TeacherGroupChatService,
-    LanguageCatalogService) {
+    LanguageCatalogService, $window) {
 
     const vm = this;
 
@@ -40,7 +40,7 @@ export function DashboardController($scope, $routeParams, $http,
     vm.mainTab = DEFAULT_DASHBOARD_TAB;
     vm.selectedPhaseId = null;
     vm.participantQuery = "";
-    vm.phaseContextExpanded = defaultPhaseContextExpanded(window.innerWidth);
+    vm.phaseContextExpanded = defaultPhaseContextExpanded($window.innerWidth);
     vm.activityCardExpanded = false;
     // True once the started phases are read, so the "start the activity"
     // notice does not flash while they load.
