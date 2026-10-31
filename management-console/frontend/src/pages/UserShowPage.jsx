@@ -17,6 +17,7 @@ import { useSensitiveActionConfirmation } from '../components/common/useSensitiv
 import AccountStatusSummary from '../components/users/AccountStatusSummary.jsx';
 import ErasureStatusPanel from '../components/users/ErasureStatusPanel.jsx';
 import ForgetStudentButton from '../components/users/ForgetStudentButton.jsx';
+import ForgetTeacherButton from '../components/users/ForgetTeacherButton.jsx';
 import SetPasswordButton from '../components/users/SetPasswordButton.jsx';
 import { unsavedChangesHint } from '../components/users/unsavedChangesHint.js';
 import {
@@ -90,6 +91,8 @@ function UserShowPage() {
   // its data has been erased (#876).
   const isAnonymizedAccount = accountStatus === ACCOUNT_STATUSES.anonymized;
   const canForgetStudent = savedForm?.role === 'A' && !isAnonymizedAccount;
+  // A teacher is forgotten with their materials (#877).
+  const canForgetTeacher = savedForm?.role === 'P' && !isAnonymizedAccount;
   // Students and teachers only; auth-backend refuses any other account.
   const canSetPassword = ['A', 'P'].includes(savedForm?.role) && !isAnonymizedAccount;
   const hasUnsavedChanges = savedForm !== null &&
@@ -99,7 +102,7 @@ function UserShowPage() {
       ...(isPendingAccount ? ['confirm'] : []),
       ...(canSetPassword ? ['setPassword'] : []),
       ...(canDeleteAccount ? ['delete'] : []),
-      ...(canForgetStudent ? ['forget'] : [])
+      ...(canForgetStudent || canForgetTeacher ? ['forget'] : [])
     ], t)
     : null;
   const unsavedHintId = unsavedHint ? UNSAVED_CHANGES_HINT_ID : undefined;
@@ -284,7 +287,14 @@ function UserShowPage() {
     await reloadUser();
   }
 
-  async function onForgetStudentError(message, { changed }) {
+  async function onTeacherForgotten() {
+    setError('');
+    setResetMessage('');
+    setSuccess(t('pages.userForgetTeacher.success', { name: accountName }));
+    await reloadUser();
+  }
+
+  async function onForgetError(message, { changed }) {
     setSuccess('');
     setError(message);
     if (changed) {
@@ -502,7 +512,7 @@ function UserShowPage() {
                 onError={onSetPasswordError}
               />
             ) : null}
-            {form.role === 'P' ? (
+            {form.role === 'P' && !isAnonymizedAccount ? (
               <Button
                 type="button"
                 variant="dark"
@@ -534,7 +544,19 @@ function UserShowPage() {
                 describedBy={unsavedHintId}
                 requestConfirmation={requestConfirmation}
                 onForgotten={onStudentForgotten}
-                onError={onForgetStudentError}
+                onError={onForgetError}
+              />
+            ) : null}
+            {canForgetTeacher ? (
+              <ForgetTeacherButton
+                userId={id}
+                accountName={accountName}
+                email={savedEmail}
+                disabled={hasUnsavedChanges}
+                describedBy={unsavedHintId}
+                requestConfirmation={requestConfirmation}
+                onForgotten={onTeacherForgotten}
+                onError={onForgetError}
               />
             ) : null}
           </div>

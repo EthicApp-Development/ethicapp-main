@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 import { buildAdminAuditEventParams } from '../admin-audit.service.js';
 import {
   BLOCKING_USER_REFERENCES,
+  FORGETTING_TREATMENTS,
   USER_REFERENCE_CATEGORIES,
   USER_REFERENCE_RULES,
   USER_REFERENCES,
@@ -62,9 +63,38 @@ describe('user references', () => {
         'student_anonymization_events.user_id',
         'teams.leader',
         'teamusers.uid',
+        'upload_deletion_requests.user_id',
         'user_erasure_requests.user_id'
       ]
     );
+  });
+
+  it('says what forgetting an account does with every column (#877)', () => {
+    for (const entry of USER_REFERENCES) {
+      assert.ok(
+        Object.values(FORGETTING_TREATMENTS).includes(entry.onForget),
+        `${entry.table}.${entry.column}`
+      );
+    }
+
+    const byTreatment = (treatment) => USER_REFERENCES
+      .filter((entry) => entry.onForget === treatment)
+      .map((entry) => `${entry.table}.${entry.column}`)
+      .sort();
+
+    assert.deepEqual(byTreatment(FORGETTING_TREATMENTS.materials), ['designs.creator', 'ethical_cases.creator']);
+    assert.deepEqual(byTreatment(FORGETTING_TREATMENTS.transferred), ['differential.creator', 'sessions.creator']);
+    assert.deepEqual(byTreatment(FORGETTING_TREATMENTS.textReplaced), [
+      'actor_selection.uid',
+      'chat.uid',
+      'differential_chat.uid',
+      'differential_selection.uid'
+    ]);
+    assert.deepEqual(byTreatment(FORGETTING_TREATMENTS.payloadRedacted), [
+      'external_service_jobs.user_id',
+      'external_service_results.user_id'
+    ]);
+    assert.deepEqual(byTreatment(FORGETTING_TREATMENTS.deleted), ['user_passkeys.user_id']);
   });
 
   it('gives every blocking table a reason code the audit log accepts', () => {

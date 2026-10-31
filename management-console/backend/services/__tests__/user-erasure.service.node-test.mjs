@@ -25,6 +25,16 @@ const REQUEST = Object.freeze({
   completedAt: null
 });
 
+const EMPTY_UPLOADS = Object.freeze({
+  total: 0,
+  pending: 0,
+  retrying: 0,
+  done: 0,
+  skipped: 0,
+  failed: 0,
+  lastError: null
+});
+
 function jsonResponse(status, body) {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 }
@@ -41,7 +51,8 @@ describe('user erasure client', () => {
       }
     });
 
-    assert.deepEqual(result, { ok: true, requests: [REQUEST] });
+    // An ethicapp that sends no file deletions reports none.
+    assert.deepEqual(result, { ok: true, requests: [REQUEST], uploadDeletions: EMPTY_UPLOADS });
     assert.match(seen[0].url, /\/api\/admin\/user-erasure\/users\/22$/);
     assert.equal(seen[0].init.method, 'GET');
     assert.equal(seen[0].init.headers['X-User-Id'], '7');
@@ -85,8 +96,28 @@ describe('user erasure client', () => {
     assert.deepEqual(sanitizeErasureRequestsBody({
       ok: true,
       requests: [{ ...REQUEST, lastError: 'connect ECONNREFUSED 10.0.0.1', completedAt: 'yesterday' }]
-    }), [{ ...REQUEST, lastError: null, completedAt: null }]);
+    }), { requests: [{ ...REQUEST, lastError: null, completedAt: null }], uploadDeletions: EMPTY_UPLOADS });
     assert.equal(sanitizeErasureRequestsBody({ ok: true, requests: [{ ...REQUEST, serviceId: 'Bad Id' }] }), null);
     assert.equal(sanitizeErasureRequestsBody({ ok: false }), null);
+  });
+
+  it('keeps the counters of the file deletions and only a code as their last error (#877)', () => {
+    const uploads = { total: 4, pending: 1, retrying: 1, done: 1, skipped: 1, failed: 0, lastError: 'FS_EACCES' };
+
+    assert.deepEqual(
+      sanitizeErasureRequestsBody({ ok: true, requests: [], uploadDeletions: { ...uploads, path: 'cases/12' } }),
+      { requests: [], uploadDeletions: uploads }
+    );
+    assert.equal(
+      sanitizeErasureRequestsBody({
+        ok: true,
+        requests: [],
+        uploadDeletions: { ...uploads, lastError: 'EACCES: permission denied, unlink /srv/uploads/x' }
+      }).uploadDeletions.lastError,
+      null
+    );
+    for (const malformed of [{ ...uploads, done: -1 }, { ...uploads, total: '4' }, 'none']) {
+      assert.equal(sanitizeErasureRequestsBody({ ok: true, requests: [], uploadDeletions: malformed }), null);
+    }
   });
 });

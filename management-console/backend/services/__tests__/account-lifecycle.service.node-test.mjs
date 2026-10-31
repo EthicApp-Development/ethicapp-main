@@ -103,7 +103,7 @@ describe('account lifecycle service: confirm a pending account', () => {
     assert.deepEqual(pool.clientCalls[1].params, [22]);
     assert.deepEqual(pool.clientCalls[2].params, [22]);
     assert.deepEqual(pool.clientCalls[3].params, ['Pat@Example.com']);
-    assert.deepEqual(pool.clientCalls[4].params, [7, 'account.confirm', 22, 'succeeded', null]);
+    assert.deepEqual(pool.clientCalls[4].params, [7, 'account.confirm', 22, 'succeeded', null, null]);
     assert.equal(pool.poolCalls.length, 0);
     assert.equal(pool.released, 1);
   });
@@ -143,7 +143,7 @@ describe('account lifecycle service: confirm a pending account', () => {
         'INSERT audit',
         'COMMIT'
       ]);
-      assert.deepEqual(pool.clientCalls[2].params, [7, 'account.confirm', 22, 'refused', 'ACCOUNT_NOT_PENDING']);
+      assert.deepEqual(pool.clientCalls[2].params, [7, 'account.confirm', 22, 'refused', 'ACCOUNT_NOT_PENDING', null]);
       assert.equal(pool.released, 1);
     });
   }
@@ -172,7 +172,7 @@ describe('account lifecycle service: confirm a pending account', () => {
         'INSERT audit',
         'COMMIT'
       ]);
-      assert.deepEqual(pool.clientCalls[2].params, [7, 'account.confirm', 22, 'refused', 'ACCOUNT_CHANGED']);
+      assert.deepEqual(pool.clientCalls[2].params, [7, 'account.confirm', 22, 'refused', 'ACCOUNT_CHANGED', null]);
       assert.equal(pool.poolCalls.length, 0);
     });
   }
@@ -227,7 +227,7 @@ describe('account lifecycle service: confirm a pending account', () => {
       'ROLLBACK'
     ]);
     assert.deepEqual(pool.poolCalls, [
-      { step: 'INSERT audit', params: [7, 'account.confirm', 22, 'failed', 'UNEXPECTED_ERROR'] }
+      { step: 'INSERT audit', params: [7, 'account.confirm', 22, 'failed', 'UNEXPECTED_ERROR', null] }
     ]);
     assert.equal(pool.released, 1);
   });

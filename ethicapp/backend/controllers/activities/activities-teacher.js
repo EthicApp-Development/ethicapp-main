@@ -16,6 +16,7 @@ import { getDesignTypeBySessionId } from "./activities-common.js";
 import { dispatchPhaseHook } from "../../helpers/external-service-dispatch.js";
 import { shouldDispatchActivityStarted } from "../../helpers/activity-lifecycle-helper.js";
 import activityFinisher from "../../helpers/activity-finish-helper.js";
+import { CREATE_SESSION_SQL, TRANSITION_SESSION_SQL } from "../../helpers/teacher-activity-writes.js";
 
 const router = express.Router();
 
@@ -32,13 +33,10 @@ router.post("/sessions", async (req, res) => {
     }
 
     try {
+        // Nothing is created for an account that was forgotten meanwhile.
         const session = await rpg2.singleSQL({
-            dbcon: config.dbconnString,
-            sql: `
-                INSERT INTO sessions (name, descr, creator, time, status, type)
-                VALUES ($1, $2, $3, now(), 1, $4)
-                RETURNING id;
-            `,
+            dbcon:     config.dbconnString,
+            sql:       CREATE_SESSION_SQL,
             sqlParams: [
                 rpg2.param("plain", name),
                 rpg2.param("plain", description || ""),
@@ -48,7 +46,10 @@ router.post("/sessions", async (req, res) => {
         });
 
         if (!session?.id) {
-            throw new Error("Session insert did not return an id.");
+            return res.status(403).json({
+                status:  "err",
+                message: "The account cannot create activities.",
+            });
         }
 
         await rpg2.singleSQL({
@@ -370,18 +371,20 @@ router.post("/activities/:session_id/phase_transition", async (req, res) => {
         const previousPhaseId = Number(sessionState.current_stage) || null;
         const previousStatus  = Number(sessionState.status) || null;
 
+        // Only the session's teacher, and not once the account is being
+        // forgotten (teacher-activity-writes.js).
         result = await rpg2.execSQL({
-            sql: `
-                UPDATE sessions
-                SET status = $1,
-                    current_stage = $2
-                WHERE id = $3
-            `,
-            dbcon: config.dbconnString,
-            sqlParams: [rpg2.param('plain', status), rpg2.param('plain', phaseId), rpg2.param('plain', sessionId)],
+            sql:       TRANSITION_SESSION_SQL,
+            dbcon:     config.dbconnString,
+            sqlParams: [
+                rpg2.param("plain", status),
+                rpg2.param("plain", phaseId),
+                rpg2.param("plain", sessionId),
+                rpg2.param("plain", req.session.uid),
+            ],
         });
 
-        if (result.rowCount === 0) {
+        if (result.length === 0) {
             return res.status(404).json({ error: "Session not found or no update performed." });
         }
 

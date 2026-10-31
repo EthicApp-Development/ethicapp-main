@@ -198,6 +198,7 @@ describe('UserShowPage: forgetting a student', () => {
   });
 
   it('offers to discard the edits of an account with no action that needs it, without a hint', async () => {
+    // An administrator account cannot be confirmed, deleted, forgotten or given a password.
     vi.mocked(fetchUserById).mockResolvedValue({ ...activeStudent, role: 'S' });
     await renderPage();
 

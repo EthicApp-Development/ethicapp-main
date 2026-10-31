@@ -42,8 +42,8 @@ import {
     buildAttributionText,
     buildLocalizedCopyTitle,
     getCaseAuthorName,
+    getDesignAuthorName,
     getDesignTitle,
-    getUserDisplayName,
     isPublicVisibility,
     normalizeLicenseCode,
     normalizeLanguageCode,
@@ -186,12 +186,7 @@ router.get("/languages", async (req, res) => {
 });
 
 function normalizeDesignRow(row) {
-    const creatorName = getUserDisplayName({
-        firstname: row.creator_firstname,
-        lastname:  row.creator_lastname,
-        name:      row.creator_name,
-        mail:      row.creator_email,
-    });
+    const creatorName = getDesignAuthorName(row, row.design);
     const visibility = normalizeVisibility(row.visibility, row.public ? PUBLIC_VISIBILITY : PRIVATE_VISIBILITY);
     const design = {
         ...row.design,
@@ -237,11 +232,18 @@ function normalizeDesignRow(row) {
     };
 
     if (!row.user_owned && creatorName) {
+        // An anonymized creator's address names no one, so none is shown.
+        const email = row.creator_anonymized === true
+            ? design.metainfo?.email
+            : row.creator_email || design.metainfo?.email;
         design.metainfo = {
             ...(design.metainfo || {}),
             authorName: creatorName,
-            email: row.creator_email || design.metainfo?.email,
+            email,
         };
+        if (!email) {
+            delete design.metainfo.email;
+        }
     }
 
     return design;
@@ -778,6 +780,7 @@ router.get("/designs", async (req, res) => {
                        u.lastname AS creator_lastname,
                        u.name AS creator_name,
                        u.mail AS creator_email,
+                       u.anonymized_at IS NOT NULL AS creator_anonymized,
                        CASE WHEN d.creator = $1 THEN TRUE ELSE FALSE END AS user_owned
                 FROM designs d
                 LEFT JOIN ethical_cases c ON c.id = d.case_id
@@ -1051,7 +1054,8 @@ router.post("/designs/:id/duplicate", async (req, res) => {
                        d.case_id, d.original_design_id,
                        c.language_code AS case_language_code,
                        u.firstname AS creator_firstname, u.lastname AS creator_lastname,
-                       u.name AS creator_name, u.mail AS creator_email
+                       u.name AS creator_name, u.mail AS creator_email,
+                       u.anonymized_at IS NOT NULL AS creator_anonymized
                 FROM designs d
                 LEFT JOIN ethical_cases c ON c.id = d.case_id
                 LEFT JOIN users u ON u.id = d.creator
@@ -1093,12 +1097,7 @@ router.post("/designs/:id/duplicate", async (req, res) => {
             }
 
             const sourceTitle = getDesignTitle(design.design);
-            const sourceAuthor = getUserDisplayName({
-                firstname: design.creator_firstname,
-                lastname:  design.creator_lastname,
-                name:      design.creator_name,
-                mail:      design.creator_email,
-            });
+            const sourceAuthor = getDesignAuthorName(design, design.design);
             const sourceLicenseCode = design.license_code || DESIGN_DEFAULT_LICENSE;
             const result = await client.query(`
                 INSERT INTO designs

@@ -1,8 +1,10 @@
 // Audit log of administrator actions (admin_audit_events, V27).
 //
 // A row names the administrator and the target account by id, the action,
-// the outcome and, for a refusal or a failure, an upper-case reason code. It
-// never carries personal data: no names, emails or free text.
+// the outcome and, for a refusal or a failure, an upper-case reason code.
+// Forgetting an account also records the role it was for (target_role, V32),
+// since it covers students and teachers. It never carries personal data: no
+// names, emails or free text.
 //
 // Record an event inside the action's transaction when the action succeeds
 // or is refused, so the row and the change commit together. When the action
@@ -27,6 +29,8 @@ export const ADMIN_AUDIT_OUTCOMES = Object.freeze({
 
 const KNOWN_ACTIONS = new Set(Object.values(ADMIN_AUDIT_ACTIONS));
 const KNOWN_OUTCOMES = new Set(Object.values(ADMIN_AUDIT_OUTCOMES));
+// Account roles a row may name as target_role.
+const KNOWN_TARGET_ROLES = new Set(['A', 'P', 'S']);
 const REASON_CODE_PATTERN = /^[A-Z][A-Z0-9_]*$/;
 const REASON_CODE_MAX_LENGTH = 64;
 
@@ -42,7 +46,8 @@ export function buildAdminAuditEventParams({
   action,
   targetUserId = null,
   outcome,
-  reasonCode = null
+  reasonCode = null,
+  targetRole = null
 } = {}) {
   const normalizedAdminUserId = Number(adminUserId);
   const normalizedTargetUserId = targetUserId === null || targetUserId === undefined
@@ -74,7 +79,11 @@ export function buildAdminAuditEventParams({
     throw new TypeError('Admin audit reasonCode must be an upper-case code');
   }
 
-  return [normalizedAdminUserId, action, normalizedTargetUserId, outcome, reasonCode];
+  if (targetRole !== null && !KNOWN_TARGET_ROLES.has(targetRole)) {
+    throw new TypeError('Admin audit targetRole must be null or an account role');
+  }
+
+  return [normalizedAdminUserId, action, normalizedTargetUserId, outcome, reasonCode, targetRole];
 }
 
 // Inserts one event. `executor` is anything with `query(text, params)`: a
@@ -85,8 +94,8 @@ export async function recordAdminAuditEvent(executor, event) {
   const result = await executor.query(
     `
       INSERT INTO admin_audit_events
-        (admin_user_id, action, target_user_id, outcome, reason_code)
-      VALUES ($1, $2, $3, $4, $5)
+        (admin_user_id, action, target_user_id, outcome, reason_code, target_role)
+      VALUES ($1, $2, $3, $4, $5, $6)
       RETURNING id, occurred_at
     `,
     params

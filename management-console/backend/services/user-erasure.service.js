@@ -1,14 +1,15 @@
 import { buildUrl, fetchInternalJson, internalIdentityHeaders } from './ethicapp.service.js';
 
-// The AI Additions erasure requests of a forgotten account (#876), read and
-// retried through ethicapp's internal endpoints
+// The background erasure of a forgotten account: its AI Additions erasure
+// requests (#876) and the deletion of its files (#877), read and retried
+// through ethicapp's internal endpoints
 // (`/api/admin/user-erasure/users/:id[/retry]`), which only ethicapp serves:
 // it holds the AI Additions credentials and processes the requests. The
 // console forwards the operator's cookie and identity headers, as for the AI
 // services page.
 //
-// Results are values, never thrown: { ok: true, requests } or
-// { ok: false, error } with one of USER_ERASURE_ERROR_CODES.
+// Results are values, never thrown: { ok: true, requests, uploadDeletions }
+// or { ok: false, error } with one of USER_ERASURE_ERROR_CODES.
 
 export const USER_ERASURE_ERROR_CODES = Object.freeze([
   // ethicapp could not be reached (it may be stopped or restarting).
@@ -23,7 +24,8 @@ export const ERASURE_REQUEST_STATUSES = Object.freeze(['pending', 'done', 'faile
 
 const STATUS_TIMEOUT_MS = 10000;
 // A retry attempts the requests before answering: up to two AI Additions
-// calls, each bounded by ethicapp's AI_ADDITIONS_HTTP_TIMEOUT_MS.
+// calls, each bounded by ethicapp's AI_ADDITIONS_HTTP_TIMEOUT_MS, and the
+// file deletions, which are local to ethicapp.
 const RETRY_TIMEOUT_MS = 45000;
 const SERVICE_ID_PATTERN = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
 const ERROR_CODE_PATTERN = /^[A-Z][A-Z0-9_]*$/;
@@ -61,6 +63,42 @@ function sanitizeRequest(request) {
   };
 }
 
+// Counters of the file deletions ethicapp reports, by status. `retrying`
+// counts the pending ones that already failed at least once.
+export const UPLOAD_DELETION_COUNTERS = Object.freeze(['total', 'pending', 'retrying', 'done', 'skipped', 'failed']);
+
+const EMPTY_UPLOAD_DELETIONS = Object.freeze({
+  total: 0,
+  pending: 0,
+  retrying: 0,
+  done: 0,
+  skipped: 0,
+  failed: 0,
+  lastError: null
+});
+
+function isCount(value) {
+  return Number.isInteger(value) && value >= 0;
+}
+
+// The summary of the account's file deletions, keeping only the documented
+// fields; an empty one when ethicapp sent none, or null when malformed.
+export function sanitizeUploadDeletions(summary) {
+  if (summary === undefined || summary === null) {
+    return { ...EMPTY_UPLOAD_DELETIONS };
+  }
+
+  if (typeof summary !== 'object' || !UPLOAD_DELETION_COUNTERS.every((key) => isCount(summary[key]))) {
+    return null;
+  }
+
+  const sanitized = Object.fromEntries(UPLOAD_DELETION_COUNTERS.map((key) => [key, summary[key]]));
+  sanitized.lastError = typeof summary.lastError === 'string' && ERROR_CODE_PATTERN.test(summary.lastError)
+    ? summary.lastError
+    : null;
+  return sanitized;
+}
+
 // The documented body, keeping only the documented fields, or null.
 export function sanitizeErasureRequestsBody(body) {
   if (!body || body.ok !== true || !Array.isArray(body.requests)) {
@@ -68,7 +106,12 @@ export function sanitizeErasureRequestsBody(body) {
   }
 
   const requests = body.requests.map(sanitizeRequest);
-  return requests.some((request) => request === null) ? null : requests;
+  const uploadDeletions = sanitizeUploadDeletions(body.uploadDeletions);
+  if (requests.some((request) => request === null) || !uploadDeletions) {
+    return null;
+  }
+
+  return { requests, uploadDeletions };
 }
 
 async function exchangeWithEthicapp(pathname, method, identity, { fetchImpl, timeoutMs }) {
@@ -86,8 +129,8 @@ async function exchangeWithEthicapp(pathname, method, identity, { fetchImpl, tim
     return { ok: false, error: 'ethicapp_error' };
   }
 
-  const requests = sanitizeErasureRequestsBody(exchange.body);
-  return requests ? { ok: true, requests } : { ok: false, error: 'invalid_response' };
+  const sanitized = sanitizeErasureRequestsBody(exchange.body);
+  return sanitized ? { ok: true, ...sanitized } : { ok: false, error: 'invalid_response' };
 }
 
 export async function fetchUserErasureRequestsFromEthicapp({

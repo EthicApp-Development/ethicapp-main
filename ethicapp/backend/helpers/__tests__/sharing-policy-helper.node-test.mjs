@@ -11,6 +11,7 @@ import {
     buildAttributionText,
     buildLocalizedCopyTitle,
     getCaseAuthorName,
+    getDesignAuthorName,
     getDesignTitle,
     getLocalizedCopyLabel,
     normalizeLanguageCode,
@@ -66,4 +67,34 @@ test("localized copy title helpers use the content language", () => {
     assert.equal(getLocalizedCopyLabel("en_US"), "copy");
     assert.equal(buildLocalizedCopyTitle("Caso base", "es_CL"), "Caso base (copia)");
     assert.equal(buildLocalizedCopyTitle("Base case", "en_US", 2), "Base case (copy 2)");
+});
+
+test("a design is attributed to its creator, or to the author it keeps once the creator is forgotten (#877)", () => {
+    const creator = {
+        creator_firstname: "Tom",
+        creator_lastname:  "Teacher",
+        creator_name:      "Tom Teacher",
+        creator_email:     "tom@example.test",
+    };
+    const document = { metainfo: { author: "Tomás Teacher", email: "tom@example.test" } };
+
+    assert.equal(getDesignAuthorName(creator, document), "Tom Teacher");
+    assert.equal(
+        getDesignAuthorName({
+            creator_firstname:  "Former",
+            creator_lastname:   "Teacher 31",
+            creator_name:       "Former Teacher 31",
+            creator_email:      "anon-teacher-31@anonymous.invalid",
+            creator_anonymized: true,
+        }, document),
+        "Tomás Teacher"
+    );
+    // Without a kept author, the anonymous name, never the anonymous address.
+    assert.equal(
+        getDesignAuthorName({
+            creator_email:      "anon-teacher-31@anonymous.invalid",
+            creator_anonymized: true,
+        }, { metainfo: {} }),
+        ""
+    );
 });

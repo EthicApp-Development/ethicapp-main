@@ -387,10 +387,63 @@ export default {
         unavailable: 'The erasure status of the AI services is unavailable right now, because EthicApp could not be reached.',
         retry: 'Retry the erasure',
         retryError: 'Unable to retry the erasure now, because EthicApp could not be reached.',
+        files: 'Files',
+        filesSummary: 'EthicApp deletes the files of deleted cases and the profile images in the background: {{done}} of {{total}} deleted, {{skipped}} kept because another case still uses them.',
         services: {
           'argumentation-tutor': 'Tutor',
           'polyadic-agent': 'Polyadic'
         }
+      }
+    },
+    userForgetTeacher: {
+      action: 'Forget this teacher',
+      success: 'EthicApp forgot {{name}}. The account is disabled and anonymized, and their materials were handled as the dialog described. Files and the AI services are erased in the background.',
+      error: 'Unable to forget the teacher.',
+      plan: {
+        title: 'Forget this teacher?',
+        body: 'EthicApp will forget {{name}} ({{email}}). This cannot be undone. This is what will happen:',
+        loading: 'Counting the teacher\'s activities and materials...',
+        loadError: 'Unable to count the teacher\'s activities and materials. Close this dialog and try again.',
+        openActivities: 'Open activities are finished first, with their students notified: {{count}}.',
+        openActivitiesUnavailable: 'Open activities: {{count}}. EthicApp could not be reached to finish them; until it can, forgetting stops before changing anything.',
+        casesDeleted: 'Cases deleted with their files, because they are private, were never used in an activity and were never copied: {{count}}.',
+        designsDeleted: 'Designs deleted, because they are private, were never used in an activity and were never copied: {{count}}.',
+        keptWithRecipient: 'What stays goes to {{name}}: cases ({{cases}}), designs ({{designs}}) and activities ({{activities}}).',
+        keptWithoutRecipient: 'What stays remains under the anonymized account, where nobody can edit it: cases ({{cases}}), designs ({{designs}}) and activities ({{activities}}).',
+        copies: 'Copies other teachers made keep working: cases ({{cases}}) and designs ({{designs}}).',
+        attribution: 'The teacher\'s name stays as the author of their cases and designs, and their email is erased everywhere. Case texts and PDFs are not changed.',
+        account: 'The account is disabled and becomes "Former Teacher {{id}}", their chat messages are replaced with a placeholder, and the AI services are asked to erase what they keep.',
+        recipientHeading: 'Recipient (optional)',
+        recipientHelp: 'Choose an active teacher to receive the cases, designs and activities that stay.',
+        recipientSearch: 'Search teachers by name or email',
+        recipientSearchButton: 'Search',
+        recipientNoResults: 'No other active teacher matches.',
+        recipientSearchError: 'Unable to search teachers.',
+        recipientSelected: 'Recipient: {{name}} ({{email}})',
+        recipientChoose: 'Choose',
+        recipientRemove: 'Remove recipient',
+        recipientWarning: '{{name}} will own the activities and will see their students\' names and responses.',
+        cancel: 'Cancel',
+        continue: 'Continue'
+      },
+      confirm: {
+        title: 'Forget this teacher?',
+        body: 'EthicApp will forget {{name}} ({{email}}). This cannot be undone.',
+        detailActivities: 'Open activities finished first: {{count}}.',
+        detailDeleted: 'Deleted: cases ({{cases}}) and designs ({{designs}}).',
+        detailRecipient: 'The remaining cases, designs and activities go to {{name}} ({{email}}).',
+        detailNoRecipient: 'The remaining cases, designs and activities stay under the anonymized account.',
+        detailAccount: 'The account is disabled and anonymized; the teacher\'s name stays only as the author of their materials.',
+        confirm: 'Forget teacher'
+      },
+      errors: {
+        accountAnonymized: 'This account was already anonymized, so it was not changed. Its current status is shown below.',
+        notATeacher: 'This account is no longer a teacher, so it was not forgotten. Check the account shown below.',
+        accountChanged: 'The email of this account changed since the page was loaded, so it was not forgotten. Check the account shown below and try again.',
+        recipientUnavailable: 'The chosen recipient is no longer an active teacher, so nothing was changed. Choose another recipient, or none.',
+        recipientChanged: 'The email of the chosen recipient changed, so nothing was changed. Choose the recipient again.',
+        openActivities: 'An activity of the teacher was opened while they were being forgotten, so nothing was anonymized. Try again: it will be finished first.',
+        activitiesNotFinished: 'EthicApp could not finish the teacher\'s open activities, so nothing was anonymized. Try again later.'
       }
     },
     profile: {

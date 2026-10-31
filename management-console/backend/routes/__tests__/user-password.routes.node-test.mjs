@@ -135,7 +135,7 @@ describe('POST /mng/api/users/:id/password (#889)', () => {
       cookie: 'auth.sid=auth-session',
       language: 'es-CL'
     }]);
-    assert.deepEqual(calls.auditParams, [[7, 'account.password_set', 22, 'succeeded', null]]);
+    assert.deepEqual(calls.auditParams, [[7, 'account.password_set', 22, 'succeeded', null, null]]);
   });
 
   it('refuses a wrong step-up without calling auth-backend, and audits it', async () => {
@@ -149,7 +149,7 @@ describe('POST /mng/api/users/:id/password (#889)', () => {
     });
 
     assert.equal(calls.setPassword.length, 0);
-    assert.deepEqual(calls.auditParams, [[7, 'account.password_set', 22, 'refused', 'STEP_UP_REFUSED']]);
+    assert.deepEqual(calls.auditParams, [[7, 'account.password_set', 22, 'refused', 'STEP_UP_REFUSED', null]]);
     assertNoPasswordIn(calls);
   });
 
@@ -164,7 +164,7 @@ describe('POST /mng/api/users/:id/password (#889)', () => {
     });
 
     assert.equal(calls.setPassword.length, 0);
-    assert.deepEqual(calls.auditParams, [[7, 'account.password_set', 22, 'refused', 'STEP_UP_REFUSED']]);
+    assert.deepEqual(calls.auditParams, [[7, 'account.password_set', 22, 'refused', 'STEP_UP_REFUSED', null]]);
   });
 
   it('refuses a non-administrator session before anything else', async () => {
@@ -223,7 +223,7 @@ describe('POST /mng/api/users/:id/password (#889)', () => {
         assertNoPasswordIn(calls, text);
       });
 
-      assert.deepEqual(calls.auditParams, [[7, 'account.password_set', 22, 'refused', code]]);
+      assert.deepEqual(calls.auditParams, [[7, 'account.password_set', 22, 'refused', code, null]]);
     });
   }
 
@@ -243,7 +243,7 @@ describe('POST /mng/api/users/:id/password (#889)', () => {
         assert.deepEqual(await response.json(), { error: 'AUTH_BACKEND_ERROR' });
       });
 
-      assert.deepEqual(calls.auditParams, [[7, 'account.password_set', 22, 'failed', reason]]);
+      assert.deepEqual(calls.auditParams, [[7, 'account.password_set', 22, 'failed', reason, null]]);
       assertNoPasswordIn(calls);
     });
   }
@@ -262,7 +262,7 @@ describe('POST /mng/api/users/:id/password (#889)', () => {
       assert.deepEqual(await response.json(), { error: 'AUTH_BACKEND_UNAVAILABLE' });
     });
 
-    assert.deepEqual(calls.auditParams, [[7, 'account.password_set', 22, 'failed', 'AUTH_BACKEND_UNREACHABLE']]);
+    assert.deepEqual(calls.auditParams, [[7, 'account.password_set', 22, 'failed', 'AUTH_BACKEND_UNREACHABLE', null]]);
     assert.equal(calls.logs.length, 1);
     assertNoPasswordIn(calls);
   });
@@ -280,6 +280,6 @@ describe('POST /mng/api/users/:id/password (#889)', () => {
     });
 
     assert.equal(calls.setPassword.length, 0);
-    assert.deepEqual(calls.auditParams, [[7, 'account.password_set', 22, 'failed', 'UNEXPECTED_ERROR']]);
+    assert.deepEqual(calls.auditParams, [[7, 'account.password_set', 22, 'failed', 'UNEXPECTED_ERROR', null]]);
   });
 });

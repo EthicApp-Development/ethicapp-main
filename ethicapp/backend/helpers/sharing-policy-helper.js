@@ -72,6 +72,28 @@ export function getUserDisplayName(user) {
     ].filter(Boolean).join(" ") || user?.name || user?.mail || "";
 }
 
+/**
+ * The name a design is attributed to: its creator's. When the creator's
+ * account was anonymized (#877), it names no one, so the design is
+ * attributed to the author name it keeps in `metainfo.author`, which
+ * forgetting a teacher keeps as attribution.
+ * @param {object} row - With creator_firstname, creator_lastname,
+ *     creator_name, creator_email and creator_anonymized.
+ * @param {object} [designDocument] - The design's jsonb document.
+ * @returns {string}
+ */
+export function getDesignAuthorName(row, designDocument) {
+    const anonymized = row?.creator_anonymized === true;
+    const keptAuthor = anonymized ? String(designDocument?.metainfo?.author || "").trim() : "";
+
+    return keptAuthor || getUserDisplayName({
+        firstname: row?.creator_firstname,
+        lastname:  row?.creator_lastname,
+        name:      row?.creator_name,
+        mail:      anonymized ? null : row?.creator_email,
+    });
+}
+
 export function buildAttributionText({ title, author, licenseCode }) {
     return [
         title ? `"${title}"` : null,

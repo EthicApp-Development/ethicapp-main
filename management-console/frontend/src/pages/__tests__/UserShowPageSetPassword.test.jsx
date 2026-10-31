@@ -276,7 +276,7 @@ describe('UserShowPage: setting a password (#889)', () => {
 
     expect(button.disabled).toBe(true);
     const hint = byTestId('unsaved-changes-hint');
-    expect(hint.textContent).toBe('Save or discard your changes before setting the password of this account.');
+    expect(hint.textContent).toBe('Save or discard your changes before setting the password of or forgetting this account.');
     expect(button.getAttribute('aria-describedby')).toBe(hint.id);
     await click(button);
     expect(passwordDialog()).toBeNull();
