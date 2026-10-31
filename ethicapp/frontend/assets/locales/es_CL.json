@@ -652,6 +652,8 @@
 	"search_activities_placeholder": "Buscar actividades",
 	"ethical_cases_create_success": "Caso creado",
 	"ethical_cases_update_success": "Caso actualizado",
+	"ethical_cases_designs_made_private_one": "El diseño público que usa este caso también quedó privado.",
+	"ethical_cases_designs_made_private_other": "Los {{count}} diseños públicos que usan este caso también quedaron privados.",
 	"ethical_cases_save_error": "No se pudo guardar el caso",
 	"ethical_cases_delete_success": "Caso eliminado",
 	"ethical_cases_delete_error": "No se pudo eliminar el caso",

@@ -328,6 +328,45 @@ the access, and it also removes the case from that design and from the
 activities launched from it (`used_by_activity`), which then show no case. Take a backup first
 ([`production-backup-runbook.md`](./production-backup-runbook.md)).
 
+### Private cases with public designs
+
+Anyone may read a case that a public design points at, together with its PDF
+and rendered pages. So when a case becomes private, the public designs that use
+it become private as well. `PATCH /cases/:id/visibility` (the share switch on
+the case card) has done so; from this release on, `PATCH /cases/:id` (the case
+form) does too (#934). Earlier releases left the designs public when the
+teacher made the case private through the form, and the case stayed readable by
+every teacher and student.
+
+Before deploying, run this read-only query against the production database and
+keep its output:
+
+```sql
+SELECT c.id AS case_id,
+       c.creator AS case_creator,
+       c.visibility AS case_visibility,
+       d.id AS design_id,
+       d.creator AS design_creator,
+       d.archived AS design_archived,
+       EXISTS (SELECT 1 FROM activity AS a WHERE a.design = d.id) AS used_by_activity
+FROM ethical_cases AS c
+INNER JOIN designs AS d ON d.case_id = c.id
+WHERE c.visibility IS DISTINCT FROM 'public'
+  AND d.visibility = 'public'
+ORDER BY c.id, d.id;
+```
+
+The query changes no data. Each row is a public design that keeps a private
+case readable. Once this release is deployed, the case's author repairs a case
+by saving it through the case form with the visibility left private, or by
+switching it to public and back to private on its card: both turn its public
+designs private. Neither works while a launched activity uses the case
+(`used_by_activity`, or another design of the case used by an activity), since
+both refuse to change such a case. For those cases, decide with the case's
+author, take a backup first, and run the statement the endpoints run, for one
+case at a time:
+`UPDATE designs SET visibility = 'private', public = false WHERE case_id = ... AND visibility = 'public'`.
+
 ## Health Diagnostics Targets
 
 `MNG_HEALTH_CHECK_TARGETS` is the allowlist used by the management-console

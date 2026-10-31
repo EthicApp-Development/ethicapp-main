@@ -652,6 +652,8 @@
 	"search_activities_placeholder": "Search Activities",
 	"ethical_cases_create_success": "Case created",
 	"ethical_cases_update_success": "Case updated",
+	"ethical_cases_designs_made_private_one": "The public design that uses this case is now private too.",
+	"ethical_cases_designs_made_private_other": "The {{count}} public designs that use this case are now private too.",
 	"ethical_cases_save_error": "Could not save the case",
 	"ethical_cases_delete_success": "Case deleted",
 	"ethical_cases_delete_error": "Could not delete the case",

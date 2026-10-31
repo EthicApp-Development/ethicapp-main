@@ -12,6 +12,7 @@ import {
     caseDocumentsFromCase,
 } from "../../helpers/case-documents-form.js";
 import { caseAnalysisSaveErrorKey } from "../../helpers/case-analysis-options.js";
+import { designsMadePrivateMessage } from "../../helpers/case-visibility-result.js";
 
 export function CasesController($scope, $routeParams, $window, $interval, $translate, toast,
     CasesCatalogService, LanguageCatalogService, UserProfileService) {
@@ -60,6 +61,15 @@ export function CasesController($scope, $routeParams, $window, $interval, $trans
             defaultToastClass: "toast",
             insertFromTop: true,
         });
+    };
+
+    // Tells the teacher that making the case private also made the public
+    // designs that use it private (#934).
+    vm.showDesignsMadePrivate = function(result) {
+        const message = designsMadePrivateMessage(result);
+        if (message) {
+            vm.showInfoToast($translate.instant(message.key, message.values));
+        }
     };
 
     vm.createEmptyCaseForm = function() {
@@ -446,10 +456,11 @@ export function CasesController($scope, $routeParams, $window, $interval, $trans
             vm.form.uploadErrorKey = "";
             vm.form.videoFieldErrors = {};
             vm.form.documentFieldErrors = {};
-            await CasesCatalogService.updateCase(caseId, vm.form);
+            const result = await CasesCatalogService.updateCase(caseId, vm.form);
             vm.form.initialVideoIds = caseVideoIds(vm.form.videos);
             vm.form.initialDocumentKeys = caseDocumentKeys(vm.form.documents);
             vm.showInfoToast(vm.translate("ethical_cases_update_success"));
+            vm.showDesignsMadePrivate(result);
             $scope.$applyAsync();
         } catch (error) {
             console.error("[CasesController::updateCase] Error updating case.", error);
@@ -544,6 +555,7 @@ export function CasesController($scope, $routeParams, $window, $interval, $trans
             const result = await CasesCatalogService.updateCaseVisibility(caseItem.id, nextVisibility);
             caseItem.visibility = result.visibility;
             caseItem.public = result.public;
+            vm.showDesignsMadePrivate(result);
         } catch (error) {
             caseItem.visibility = previousVisibility;
             caseItem.public = previousVisibility === "public";
