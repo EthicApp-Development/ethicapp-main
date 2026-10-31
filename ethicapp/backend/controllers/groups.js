@@ -5,13 +5,20 @@ import * as config from "../config/database.config.js";
 import * as rpg2 from "../db/rest-pg-2.js";
 import * as StudentActivityStatusHelper from "../helpers/student-activity-state-helper.js";
 import { requireRole, requireOwnershipOrRole } from "../helpers/auth-helper.js";
+import { requirePhaseOwner } from "../helpers/activity-owner-helper.js";
 
 const router = express.Router();
 
 /**
  * @route GET /phases/:id/groups
- * @description Retrieves all groups (teams) for a given phase (stage), along with their participants.
- *              The response includes the group ID, a sequential number for the group, and a list of participant IDs.
+ * @description Retrieves all groups (teams) of a phase (stage) with their
+ *              participants: the group id, a sequential number for the
+ *              group, the participants' ids, and each member's letter within
+ *              the group (`teamusers.anon_mask`), which the dashboard shows
+ *              in place of the name while the teacher hides names (#897).
+ *              Only the activity's owner may read them (or an administrator
+ *              impersonating them): in an anonymous phase, the letters are
+ *              all that students see of each other.
  * @param {string} id - The ID of the phase (from the URL path).
  * @returns {Object} - A JSON object containing the list of groups and their participants.
  *
@@ -25,20 +32,15 @@ const router = express.Router();
  *     {
  *       "id": 1,
  *       "number": 1,
- *       "participants": [101, 102, 103]
- *     },
- *     {
- *       "id": 2,
- *       "number": 2,
- *       "participants": [104, 105]
+ *       "participants": [101, 102],
+ *       "members": [{ "id": 101, "anon_mask": "A" }, { "id": 102, "anon_mask": "B" }]
  *     }
  *   ]
  * }
  *
- * // Response (missing required parameter)
- * {
- *   "error": "Missing required parameter: id."
- * }
+ * // 401 without a session; 403 for a student, or a teacher who does not own
+ * // the activity; 404 for an unknown phase:
+ * { "error": "Phase not found." }
  *
  * // Response (no groups found)
  * {
@@ -53,12 +55,12 @@ const router = express.Router();
 router.get("/phases/:id/groups", async (req, res) => {
     const { id } = req.params;
 
-    // Validate required parameter
-    if (!id || isNaN(Number(id))) {
-        return res.status(400).json({ error: "Invalid or missing required parameter: id." });
-    }
-
     try {
+        const owner = await requirePhaseOwner(req, res, id);
+        if (!owner) {
+            return;
+        }
+
         // Fetch group data from the database
         const results = await rpg2.execSQL({
             sql: `
@@ -71,8 +73,8 @@ router.get("/phases/:id/groups", async (req, res) => {
                 WHERE t.stageid = $1
                 ORDER BY t.id, tu.uid
             `,
-            dbcon: config.dbconnString,
-            sqlParams: [rpg2.param('plain', id)],
+            dbcon:     config.dbconnString,
+            sqlParams: [rpg2.param("plain", owner.phaseId)],
         });
 
         // Handle no results
@@ -82,17 +84,19 @@ router.get("/phases/:id/groups", async (req, res) => {
         }
 
         // Group the results by team_id
-        const groupedTeams = results.reduce((acc, { team_id, user_id }) => {
+        const groupedTeams = results.reduce((acc, { team_id, user_id, anon_mask }) => {
             if (!acc[team_id]) {
                 acc[team_id] = {
-                    id: team_id,
-                    number: Object.keys(acc).length + 1,
+                    id:           team_id,
+                    number:       Object.keys(acc).length + 1,
                     participants: [],
+                    members:      [],
                 };
             }
 
             if (user_id) {
                 acc[team_id].participants.push(user_id);
+                acc[team_id].members.push({ id: user_id, anon_mask: anon_mask ?? null });
             }
 
             return acc;
