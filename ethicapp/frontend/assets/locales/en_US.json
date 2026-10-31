@@ -934,5 +934,10 @@
 	"dashboard_participant_search_label": "Search participants by name",
 	"dashboard_participant_search_placeholder": "Search participants",
 	"dashboard_participant_search_no_match": "No participant matches “{{query}}”.",
-	"dashboard_participant_search_clear": "Clear search"
+	"dashboard_participant_search_clear": "Clear search",
+	"dashboard_phase_pill": "Phase {{number}}",
+	"dashboard_sections_label": "Phase and activity context",
+	"dashboard_this_phase_summary": "features, instructions, questions",
+	"dashboard_ai_services_summary_one": "1 service",
+	"dashboard_ai_services_summary_other": "{{count}} services"
 }

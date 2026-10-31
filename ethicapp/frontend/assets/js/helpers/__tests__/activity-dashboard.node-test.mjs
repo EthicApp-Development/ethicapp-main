@@ -4,20 +4,28 @@ import { describe, it } from "node:test";
 import {
     DASHBOARD_TABS,
     DEFAULT_DASHBOARD_TAB,
+    TWO_COLUMN_MEDIA_QUERY,
     dashboardTab,
     defaultPhaseContextExpanded,
     defaultSelectedPhaseId,
     filterRowsByParticipant,
+    isOneColumnLayout,
+    isOneColumnWidth,
     isParticipantRow,
     matchesParticipantQuery,
     normalizeSearchText,
     participantMatchCount,
     phaseNavigatorRows,
+    phasePillMarker,
+    phaseQuestionTexts,
     phaseResponseCounts,
     resolveSelectedPhaseId,
     sameNavigatorRows,
+    scrollLeftToReveal,
     selectedPhaseData,
+    watchOneColumnLayout,
 } from "../activity-dashboard.js";
+import { fakeMediaWindow, fakeResizeWindow } from "./fake-windows.mjs";
 
 // A started phase as the dashboard keeps it: its descriptor and its table.
 function startedPhase(id, number, mode, state = []) {
@@ -60,6 +68,129 @@ describe("defaultPhaseContextExpanded", () => {
         assert.equal(defaultPhaseContextExpanded(1599), false);
         assert.equal(defaultPhaseContextExpanded(1366), false);
         assert.equal(defaultPhaseContextExpanded(undefined), false);
+    });
+});
+
+describe("one-column layout", () => {
+    it("is one column below 1200 px", () => {
+        assert.equal(isOneColumnWidth(1024), true);
+        assert.equal(isOneColumnWidth(1199), true);
+        assert.equal(isOneColumnWidth(1200), false);
+        assert.equal(isOneColumnWidth(1920), false);
+    });
+
+    it("keeps two columns when the width is unknown", () => {
+        assert.equal(isOneColumnWidth(undefined), false);
+        assert.equal(isOneColumnWidth("wide"), false);
+        assert.equal(isOneColumnLayout(undefined), false);
+    });
+
+    it("asks the window the style sheet's media query", () => {
+        const win = fakeMediaWindow(1024);
+        assert.equal(isOneColumnLayout(win), true);
+        assert.deepEqual(win.queries, [TWO_COLUMN_MEDIA_QUERY]);
+        assert.equal(TWO_COLUMN_MEDIA_QUERY, "(min-width: 1200px)");
+
+        win.innerWidth = 1366;
+        assert.equal(isOneColumnLayout(win), false);
+    });
+
+    it("reads the width of a window without media queries", () => {
+        assert.equal(isOneColumnLayout({ innerWidth: 1024 }), true);
+        assert.equal(isOneColumnLayout({ innerWidth: 1920 }), false);
+    });
+
+    it("tells when the window crosses 1200 px, until it stops watching", () => {
+        const win = fakeMediaWindow(1366);
+        const changes = [];
+        const stop = watchOneColumnLayout(win, oneColumn => changes.push(oneColumn));
+
+        win.resize(1024);
+        win.resize(1280);
+        assert.deepEqual(changes, [true, false]);
+
+        stop();
+        assert.equal(win.listeners.size, 0);
+        win.resize(1024);
+        assert.deepEqual(changes, [true, false]);
+    });
+
+    it("falls back to resize events, telling only the crossings", () => {
+        const win = fakeResizeWindow(1366);
+        const changes = [];
+        const stop = watchOneColumnLayout(win, oneColumn => changes.push(oneColumn));
+
+        win.resize(1300);
+        win.resize(1100);
+        win.resize(1024);
+        win.resize(1600);
+        assert.deepEqual(changes, [true, false]);
+
+        stop();
+        assert.equal(win.listeners.size, 0);
+    });
+
+    it("watches nothing without a window", () => {
+        const changes = [];
+        const stop = watchOneColumnLayout({ innerWidth: 1024 },
+            oneColumn => changes.push(oneColumn));
+        assert.equal(typeof stop, "function");
+        stop();
+        assert.equal(watchOneColumnLayout(undefined, () => {})(), undefined);
+        assert.deepEqual(changes, []);
+    });
+});
+
+describe("phase pills", () => {
+    it("marks the current phase, checks the earlier ones and leaves the rest", () => {
+        assert.equal(phasePillMarker({ started: true, current: true }), "current");
+        assert.equal(phasePillMarker({ started: true, current: false }), "done");
+        assert.equal(phasePillMarker({ started: false, current: false }), "pending");
+        assert.equal(phasePillMarker(null), "pending");
+    });
+
+    it("scrolls a pill into view only when it is out of it", () => {
+        const list = { scrollLeft: 0, clientWidth: 300 };
+        assert.equal(scrollLeftToReveal(list, { offsetLeft: 40, offsetWidth: 100 }), 0);
+        // Past the right edge: its right side ends 8 px inside.
+        assert.equal(scrollLeftToReveal(list, { offsetLeft: 400, offsetWidth: 120 }), 228);
+        // Past the left edge: its left side starts 8 px inside.
+        assert.equal(scrollLeftToReveal({ scrollLeft: 250, clientWidth: 300 },
+            { offsetLeft: 100, offsetWidth: 80 }), 92);
+        assert.equal(scrollLeftToReveal({ scrollLeft: 50, clientWidth: 300 },
+            { offsetLeft: 4, offsetWidth: 80 }), 0);
+    });
+
+    it("keeps the scroll without a measure", () => {
+        assert.equal(scrollLeftToReveal({ scrollLeft: 30, clientWidth: 0 },
+            { offsetLeft: 400, offsetWidth: 80 }), 30);
+        assert.equal(scrollLeftToReveal({ scrollLeft: 30, clientWidth: 300 }, {}), 30);
+        assert.equal(scrollLeftToReveal(null, null), 0);
+    });
+});
+
+describe("phaseQuestionTexts", () => {
+    it("gives each question's text as plain text on one line, in column order", () => {
+        const designPhase = {
+            questions: [
+                { q_text: "¿Es justo  publicar\nlos datos?" },
+                { q_text: "**Riesgo** para _la_ comunidad", q_text_content_type: "text/markdown" },
+                { q_text: "" },
+                {},
+            ],
+        };
+
+        assert.deepEqual(phaseQuestionTexts(designPhase), [
+            "¿Es justo publicar los datos?",
+            "Riesgo para la comunidad",
+            "",
+            "",
+        ]);
+    });
+
+    it("has no texts for a phase without questions", () => {
+        assert.deepEqual(phaseQuestionTexts({ roles: [{ name: "Actor" }] }), []);
+        assert.deepEqual(phaseQuestionTexts(null), []);
     });
 });
 

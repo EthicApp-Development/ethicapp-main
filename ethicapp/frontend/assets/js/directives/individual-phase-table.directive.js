@@ -7,6 +7,7 @@ let individualPhaseTableDirective = function() {
             phaseData: '<',
             designType: '<',
             participantQuery: "<?", // The dashboard's participant search (#894)
+            questionTexts:    "<?", // The questions' text for the column headers (#895)
             onSelectResponse: '&?'
         },
         bindToController: true, // Bind the scope properties to the controller

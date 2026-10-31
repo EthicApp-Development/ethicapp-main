@@ -12,10 +12,13 @@ import {
     dashboardTab,
     defaultPhaseContextExpanded,
     defaultSelectedPhaseId,
+    isOneColumnLayout,
     participantMatchCount,
+    phaseQuestionTexts,
     phaseResponseCounts,
     resolveSelectedPhaseId,
     selectedPhaseData,
+    watchOneColumnLayout,
 } from "../../helpers/activity-dashboard.js";
 
 /*eslint func-style: ["error", "expression"]*/
@@ -45,6 +48,23 @@ export function DashboardController($scope, $routeParams, $http,
     // True once the started phases are read, so the "start the activity"
     // notice does not flash while they load.
     vm.phaseDataLoaded = false;
+
+    // One column below 1200 px (#895): the phases as pills above the main
+    // tabs and the rail's cards as sections under the main column, "This
+    // phase" and "AI services" collapsed. The layout follows the window
+    // without a reload; the selected phase, tab and search stay as they are.
+    vm.isOneColumn = isOneColumnLayout($window);
+    vm.phaseSectionOpen = false;
+    vm.servicesSectionOpen = false;
+    const stopWatchingLayout = watchOneColumnLayout($window, isOneColumn => {
+        $scope.$applyAsync(() => {
+            vm.isOneColumn = isOneColumn;
+        });
+    });
+    $scope.$on("$destroy", stopWatchingLayout);
+    // Each design phase's question texts, worked out once per phase so the
+    // tables' bindings keep the same array between digests.
+    const questionTextsByDesignPhase = new WeakMap();
 
     // Services the design enables that will not run in this activity, shown
     // once right after launch (#815).
@@ -111,8 +131,25 @@ export function DashboardController($scope, $routeParams, $http,
         return phase ? vm.getDesignPhaseForDescriptor(phase.descriptor) : null;
     };
 
+    vm.selectedPhaseServiceCount = function() {
+        return phaseEnabledServiceIds(vm.selectedDesignPhase()).length;
+    };
+
     vm.selectedPhaseHasServices = function() {
-        return phaseEnabledServiceIds(vm.selectedDesignPhase()).length > 0;
+        return vm.selectedPhaseServiceCount() > 0;
+    };
+
+    // The text of each question of a started phase, for the response table's
+    // column headers (#895). The same array on every call for a phase.
+    vm.questionTexts = function(phaseDescriptor) {
+        const designPhase = vm.getDesignPhaseForDescriptor(phaseDescriptor);
+        if (!designPhase || typeof designPhase !== "object") {
+            return null;
+        }
+        if (!questionTextsByDesignPhase.has(designPhase)) {
+            questionTextsByDesignPhase.set(designPhase, phaseQuestionTexts(designPhase));
+        }
+        return questionTextsByDesignPhase.get(designPhase);
     };
 
     vm.selectedPhaseCounts = function() {
@@ -141,6 +178,14 @@ export function DashboardController($scope, $routeParams, $http,
 
     vm.toggleActivityCard = function() {
         vm.activityCardExpanded = !vm.activityCardExpanded;
+    };
+
+    vm.togglePhaseSection = function() {
+        vm.phaseSectionOpen = !vm.phaseSectionOpen;
+    };
+
+    vm.toggleServicesSection = function() {
+        vm.servicesSectionOpen = !vm.servicesSectionOpen;
     };
 
     vm.loadAssociatedCase = async function(designId) {
