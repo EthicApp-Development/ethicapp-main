@@ -14,7 +14,17 @@
 //
 // The group's answers are read again whenever its members' rows in the live
 // table change, so the panel follows the table.
+//
+// With `hide-names` (#897), the members' rows carry their pseudonyms, which
+// name the answers and the chat's students; the names the server sends with
+// the answers and the messages are not used, the members are listed by
+// letter, and the teacher and the AI agents keep their labels.
 
+import {
+    hiddenChatAuthorName,
+    participantId,
+    pseudonymLabel,
+} from "../helpers/hidden-names.js";
 import {
     SPLIT_KEYBOARD_STEP,
     clampSplitHeight,
@@ -53,6 +63,7 @@ function SdGroupResponseDetailController($scope, $translate, $window, $element,
     // The messages the chat has shown; the Chat tab counts the others.
     const seenMessageIds = new Set();
     let answerSignature = null;
+    let memberNamesSignature = null;
     let participantNames = {};
     let responsesRequest = 0;
     let unsubscribeFromGroupChat = null;
@@ -82,13 +93,21 @@ function SdGroupResponseDetailController($scope, $translate, $window, $element,
         return Number($ctrl.questions[0]?.id);
     }
 
+    function hidesNames() {
+        return $ctrl.hideNames === true;
+    }
+
     function rebuildParticipantNames() {
         participantNames = {};
-        $ctrl.responses.forEach(response => {
-            if (response?.userId && response.userName) {
-                participantNames[response.userId] = response.userName;
-            }
-        });
+        // The answers carry the students' real names: not while they are
+        // hidden.
+        if (!hidesNames()) {
+            $ctrl.responses.forEach(response => {
+                if (response?.userId && response.userName) {
+                    participantNames[response.userId] = response.userName;
+                }
+            });
+        }
         $ctrl.members.forEach(member => {
             if (member?.userId && member.userName) {
                 participantNames[member.userId] = member.userName;
@@ -96,17 +115,31 @@ function SdGroupResponseDetailController($scope, $translate, $window, $element,
         });
     }
 
+    // What the members are called, and whether names are hidden: it changes
+    // when the teacher turns the switch, without any answer changing.
+    function namesSignature(members) {
+        return `${hidesNames()}|${members.map(member => member?.userName ?? "").join("\n")}`;
+    }
+
     // Reads the group's members from the live table. True when an answer
     // changed since the last read, not on the first one.
     function refreshMembers() {
         const members = groupMemberRows($ctrl.phaseData, groupSelection());
         const signature = groupAnswerSignature(members, $ctrl.questions);
+        const names = namesSignature(members);
         if (signature === answerSignature) {
+            if (names !== memberNamesSignature) {
+                memberNamesSignature = names;
+                $ctrl.members = members;
+                $ctrl.digest = groupValueDigest(members, $ctrl.questions);
+                rebuildParticipantNames();
+            }
             return false;
         }
 
         const firstRead = answerSignature === null;
         answerSignature = signature;
+        memberNamesSignature = names;
         $ctrl.members = members;
         $ctrl.digest = groupValueDigest(members, $ctrl.questions);
         rebuildParticipantNames();
@@ -257,15 +290,30 @@ function SdGroupResponseDetailController($scope, $translate, $window, $element,
         const questionId = Number(question?.id);
         const questionNumber = Number(question?.number);
 
-        return $ctrl.responses.filter(response => {
+        const responses = $ctrl.responses.filter(response => {
             const sameQuestionId = questionId && Number(response.questionId) === questionId;
             const sameQuestionOrder = questionNumber
                 && Number(response.questionOrder) === questionNumber;
             return sameQuestionId || sameQuestionOrder;
         });
+        if (!hidesNames()) {
+            return responses;
+        }
+
+        // In the members' order, by letter, never by name.
+        const order = new Map($ctrl.members.map((member, index) => [participantId(member), index]));
+        const place = response => order.get(participantId(response)) ?? order.size;
+        return responses.sort((left, right) => place(left) - place(right));
     };
 
+    function translateInstant(key, params) {
+        return typeof $translate?.instant === "function" ? $translate.instant(key, params) : key;
+    }
+
     $ctrl.getUserName = function(userId) {
+        if (hidesNames()) {
+            return participantNames[userId] || pseudonymLabel(null, translateInstant);
+        }
         return participantNames[userId] || `User ${userId}`;
     };
 
@@ -274,8 +322,16 @@ function SdGroupResponseDetailController($scope, $translate, $window, $element,
     };
 
     $ctrl.getChatAuthorName = function(message) {
+        const teacherLabel = translated("teacher_chat_author_label", "Teacher");
+        if (hidesNames()) {
+            return hiddenChatAuthorName(message, {
+                memberLabels: participantNames,
+                teacherLabel,
+                translate:    translateInstant,
+            });
+        }
         if ($ctrl.isTeacherMessage(message)) {
-            return translated("teacher_chat_author_label", "Teacher");
+            return teacherLabel;
         }
         return participantNames[message?.uid] || message?.authorName
             || $ctrl.getUserName(message?.uid);
@@ -384,6 +440,8 @@ export default {
         // Whether the teacher can write: only in the current phase of an
         // activity that is not finished. Otherwise the chat is read-only.
         canUseLiveChat: "<",
+        // Whether the dashboard hides the students' names (#897).
+        hideNames:      "<",
         // The activity case's videos (#785), for the videos in questions.
         caseVideos:     "<",
         // Tabs instead of a split, when the panel is not tall enough.

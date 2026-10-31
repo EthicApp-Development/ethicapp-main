@@ -14,6 +14,9 @@
 //   chat (`on-open-group`).
 // - A group shows its answers and chat split when the panel is tall enough,
 //   as tabs otherwise; the decision follows the window's height.
+// - While the dashboard hides names (#897), a student's heading reads
+//   "Answer of Member B · Group 2", and the group's chat names its students
+//   by pseudonym.
 
 import {
     detailKeyAction,
@@ -164,6 +167,10 @@ export default {
         // The selected phase, its questions merged with the design's.
         phaseData:      "<",
         canUseLiveChat: "<",
+        // Whether the dashboard hides the students' names (#897): `row` and
+        // `phase-data` then carry pseudonyms, and a student's heading names
+        // the student's group, since a letter only means something in it.
+        hideNames:      "<",
         caseVideos:     "<",
         hasPrevious:    "<",
         hasNext:        "<",

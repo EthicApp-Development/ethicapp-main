@@ -218,6 +218,8 @@ export function groupValueDigest(members, questions) {
 
 // A string that changes whenever a member of the group answers or changes an
 // answer or a justification, so the panel reloads the group's answers then.
+// The members' order does not count: hiding names (#897) reorders them by
+// letter without any answer changing.
 export function groupAnswerSignature(members, questions) {
     const rows = Array.isArray(members) ? members : [];
     const numbers = (Array.isArray(questions) ? questions : []).map(questionNumber);
@@ -225,6 +227,7 @@ export function groupAnswerSignature(members, questions) {
         `${member?.[`r${number}`] ?? ""}/${member?.[`commentR${number}`] ?? ""}`;
     return rows
         .map(member => [member?.userId, ...numbers.map(number => answer(member, number))].join(","))
+        .sort()
         .join(";");
 }
 

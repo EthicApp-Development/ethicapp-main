@@ -3212,6 +3212,79 @@ h2{
     margin-left: 8px;
 }
 
+/* "Hide names" (#897): a switch in the responses toolbar. The checkbox
+   keeps its keyboard focus and state for assistive technology; the track
+   beside it shows the state. */
+.dashboard-hide-names {
+    align-items: center;
+    cursor: pointer;
+    display: inline-flex;
+    font-size: 13px;
+    font-weight: 400;
+    gap: 6px;
+    margin: 0;
+    padding: 3px 10px 3px 8px;
+    position: relative;
+}
+
+.dashboard-hide-names-on {
+    background: #eaf2fb;
+    border-color: #337ab7;
+    color: #23527c;
+}
+
+.dashboard-hide-names-input {
+    height: 1px;
+    margin: 0;
+    opacity: 0;
+    position: absolute;
+    width: 1px;
+}
+
+.dashboard-hide-names-track {
+    background: #c8cfdc;
+    border-radius: 999px;
+    display: inline-block;
+    flex: none;
+    height: 14px;
+    position: relative;
+    transition: background-color .15s;
+    width: 26px;
+}
+
+.dashboard-hide-names-track::after {
+    background: #fff;
+    border-radius: 50%;
+    box-shadow: 0 1px 2px rgb(0 0 0 / 30%);
+    content: "";
+    height: 10px;
+    left: 2px;
+    position: absolute;
+    top: 2px;
+    transition: transform .15s;
+    width: 10px;
+}
+
+.dashboard-hide-names-input:checked + .dashboard-hide-names-track {
+    background: #337ab7;
+}
+
+.dashboard-hide-names-input:checked + .dashboard-hide-names-track::after {
+    transform: translateX(12px);
+}
+
+.dashboard-hide-names-input:focus-visible + .dashboard-hide-names-track {
+    outline: 2px solid #337ab7;
+    outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dashboard-hide-names-track,
+    .dashboard-hide-names-track::after {
+        transition: none;
+    }
+}
+
 .activity-dashboard-page .phase-state .table > thead > tr > th {
     background: #fff;
     box-shadow: inset 0 -2px 0 #ddd;

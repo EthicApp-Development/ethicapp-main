@@ -7,7 +7,7 @@
     <header class="response-detail-header">
         <h3 class="response-detail-heading" id="response-detail-heading" tabindex="-1">
             <span ng-if="$ctrl.isGroup()">{{ $ctrl.row.groupName }} &middot; {{ 'dashboard_phase_pill' | translate:{ number: $ctrl.phaseData.descriptor.number } }}</span>
-            <span ng-if="!$ctrl.isGroup()">{{ 'answerOf' | translate }} {{ $ctrl.row.userName }}</span>
+            <span ng-if="!$ctrl.isGroup()">{{ 'answerOf' | translate }} {{ $ctrl.row.userName }}<span ng-if="$ctrl.hideNames && $ctrl.studentGroup()"> &middot; {{ $ctrl.studentGroup().groupName }}</span></span>
         </h3>
         <div class="response-detail-actions">
             <button type="button" class="btn btn-default btn-sm"
@@ -63,6 +63,7 @@
                 group="$ctrl.row"
                 phase-data="$ctrl.phaseData"
                 can-use-live-chat="$ctrl.canUseLiveChat"
+                hide-names="$ctrl.hideNames"
                 case-videos="$ctrl.caseVideos"
                 use-tabs="$ctrl.useTabs"
                 initial-tab="content.initialTab"></sd-group-response-detail>

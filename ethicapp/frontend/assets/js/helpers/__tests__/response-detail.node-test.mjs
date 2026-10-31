@@ -212,6 +212,13 @@ describe("response detail chat", () => {
         members[0].commentR1 = "Lo pensé mejor";
         assert.notEqual(groupAnswerSignature(members, questions), answered);
     });
+
+    it("does not tell a change when only the members' order changed (#897)", () => {
+        const members = groupMemberRows(groupPhase(), { groupId: 8 });
+        const questions = [{ number: 1 }, { number: 2 }];
+        assert.equal(groupAnswerSignature([...members].reverse(), questions),
+            groupAnswerSignature(members, questions));
+    });
 });
 
 describe("response detail keys", () => {

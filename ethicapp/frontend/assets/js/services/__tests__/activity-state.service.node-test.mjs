@@ -173,3 +173,34 @@ describe("DashboardController.startNextPhase", () => {
         assert.deepEqual(updated, []);
     });
 });
+
+describe("ActivityStateService.getParticipantPseudonyms", () => {
+    function createPseudonymService(answer) {
+        const requests = [];
+        const $http = {
+            get: async url => {
+                requests.push(url);
+                return answer();
+            },
+        };
+        return { service: ActivityStateService($http, {}), requests };
+    }
+
+    it("reads the students' numbers of the activity (#897)", async () => {
+        const pseudonyms = [{ userId: 2, number: 4 }, { userId: 1, number: 37 }];
+        const { service, requests } = createPseudonymService(async () =>
+            ({ data: { pseudonyms } }));
+
+        assert.deepEqual(await service.getParticipantPseudonyms(SESSION_ID), pseudonyms);
+        assert.deepEqual(requests, [`/sessions/${SESSION_ID}/pseudonyms`]);
+    });
+
+    it("rejects on failures and unexpected answers, so the known numbers stay", async () => {
+        const forbidden = { status: 403, data: {} };
+        await assert.rejects(createPseudonymService(async () => {
+            throw forbidden;
+        }).service.getParticipantPseudonyms(SESSION_ID), error => error === forbidden);
+        await assert.rejects(createPseudonymService(async () => ({ data: {} }))
+            .service.getParticipantPseudonyms(SESSION_ID), /Invalid response format/u);
+    });
+});

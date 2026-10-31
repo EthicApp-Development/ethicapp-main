@@ -244,7 +244,10 @@ describe("group response detail", () => {
                 return { id: 100, uid: 50, authorRole: "P", content: payload.content };
             },
         };
-        const labels = { teacher_chat_author_label: "Docente" };
+        const labels = {
+            teacher_chat_author_label:     "Docente",
+            dashboard_hidden_name_pending: "Participante …",
+        };
         const $translate = { instant: key => labels[key] ?? key };
         const $scope = { $applyAsync: fn => fn() };
         const element = [{ querySelector: () => null }];
@@ -377,6 +380,62 @@ describe("group response detail", () => {
         }
         assert.equal(vm.chatLoading, false);
         assert.equal(vm.chatError, "Unable to load chat messages.");
+    });
+
+    // The members' rows as the dashboard hands them while names are hidden
+    // (#897): Ana is "Integrante B", Beto "Integrante A", ordered by letter.
+    function hiddenGroupState() {
+        return [
+            { userId: 2, userName: "Integrante A", groupId: 7, groupNumber: 1, groupLetter: "A" },
+            { ...groupState()[0], userName: "Integrante B", groupLetter: "B" },
+            groupState()[2],
+        ];
+    }
+
+    function hiddenBindings() {
+        const state = hiddenGroupState();
+        return { hideNames: true, group: state[2], phaseData: groupPhaseData(state) };
+    }
+
+    const AGENT = "Agente de discusión";
+    const BOTH_ANSWERS = [
+        { userId: 1, userName: "Ana", questionId: 90, questionOrder: 1, value: 2 },
+        { userId: 2, userName: "Beto", questionId: 90, questionOrder: 1, value: 4 },
+        { userId: 9, userName: "Zoe", questionId: 90, questionOrder: 1, value: 1 },
+    ];
+
+    it("names the students by pseudonym while names are hidden (#897)", async () => {
+        const messages = [
+            { id: 1, uid: 1, authorRole: "A", authorName: "Ana", content: "Hola" },
+            { id: 2, uid: 50, authorRole: "P", authorName: "Prof. Rojas", content: "¿Por qué?" },
+            { id: 3, uid: 1, authorRole: "external_service", authorName: AGENT, content: "¿Y?" },
+            { id: 4, uid: 9, authorRole: "A", authorName: "Zoe", content: "Ya" },
+        ];
+        const { vm } = createGroup(hiddenBindings(), { responses: BOTH_ANSWERS, messages });
+        await settle();
+
+        assert.deepEqual(messages.map(message => vm.getChatAuthorName(message)),
+            ["Integrante B", "Docente", AGENT, "Participante …"]);
+        assert.equal(vm.getUserName(1), "Integrante B", "not the name the answers carry");
+        assert.equal(vm.getUserName(9), "Participante …");
+        assert.deepEqual(vm.getQuestionResponses(vm.questions[0]).map(response => response.userId),
+            [2, 1, 9], "the answers by letter, never by name");
+    });
+
+    it("renames the members when the switch turns, without reading the answers again", async () => {
+        const { vm, calls } = createGroup({}, { responses: BOTH_ANSWERS, messages: MESSAGES });
+        await settle();
+        assert.equal(vm.getChatAuthorName(MESSAGES[0]), "Ana");
+
+        Object.assign(vm, hiddenBindings());
+        vm.$doCheck();
+        assert.equal(vm.getChatAuthorName(MESSAGES[0]), "Integrante B");
+        assert.equal(vm.getUserName(2), "Integrante A");
+        assert.equal(calls.responses.length, 1);
+
+        Object.assign(vm, { hideNames: false, phaseData: groupPhaseData(groupState()) });
+        vm.$doCheck();
+        assert.equal(vm.getChatAuthorName(MESSAGES[0]), "Ana");
     });
 
     it("ignores what arrives after it closed", async () => {
