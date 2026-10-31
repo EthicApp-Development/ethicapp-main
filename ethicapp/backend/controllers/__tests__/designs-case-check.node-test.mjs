@@ -316,7 +316,8 @@ describe("PATCH /designs/:id checks a new case (#924)", () => {
             session: { uid: OTHER_TEACHER_ID, role: "P" },
         });
 
-        assert.equal(status, 403);
+        // Another teacher's design is answered as a missing one (#929).
+        assert.equal(status, 404);
         assert.equal(caseLookups().length, 0);
         assert.deepEqual(designWrites(), []);
         assert.equal(securityWarnings().length, 0);
