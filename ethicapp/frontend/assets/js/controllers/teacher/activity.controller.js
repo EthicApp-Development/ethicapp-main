@@ -1,4 +1,3 @@
-import * as PhaseCreationHelpers from "../../helpers/phase-creation-helpers.js";
 import { statusCodes } from  "../../../../../common/modules/session-status.js";
 
 /*eslint func-style: ["error", "expression"]*/
@@ -77,44 +76,6 @@ export function ActivityController($scope, $http,
             console.error("Error creating session:", error);
         } finally {
             vm.showSpinner = false;
-        }
-    };
-
-    vm.startActivityDesign = async function (design, sessionId) {
-        try {
-            // Bootstrap the first phase of the design
-            const phase = design.phases[0];
-            const requestObj = PhaseCreationHelpers.phaseCreationRequestObject(phase, 1, sessionId);
-
-            const stageResponse = await $http({
-                url: `/activities/${sessionId}/phases`,
-                method: "post",
-                data: requestObj,
-            });
-            
-            const stageid = stageResponse.data.phaseId || stageResponse.data.id;
-            
-            if (stageid) {
-                // Build the phase items
-                const builder = PhaseCreationHelpers.itemBuilders[design.type];
-
-                if (builder) {
-                    await builder(phase, stageid, sessionId);
-                } else {
-                    console.warn(`No handler found for design type: ${design.type}`);
-                }
-            } else {
-                console.error("Error creating activity phase");
-            }
-
-            await $http({ 
-                url: `/activities/${sessionId}/phase_transition`, 
-                method: "post", 
-                data: { phaseId: stageid }
-            });
-                
-        } catch (error) {
-            console.error("Error in startActivityDesign:", error);
         }
     };
 

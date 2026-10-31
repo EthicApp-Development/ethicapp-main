@@ -1,4 +1,3 @@
-import * as PhaseCreationHelpers from "../../helpers/phase-creation-helpers.js";
 import * as DesignHelpers from "../../helpers/design-helpers.js";
 import { DashboardDataJoiners } from "../../helpers/dashboard-data-joiners.js";
 import { openSemanticDifferentialIndividualResponseModal } from "../../helpers/dashboard-individual-response-modal.helper.js";
@@ -284,75 +283,37 @@ export function DashboardController($scope, $routeParams, $http,
         });
     };
 
+    // Starts the next phase on the server (#906), which builds it from the
+    // stored design in one transaction. Resolves to the phase the dashboard
+    // should show: the new one, or, when another tab or request moved the
+    // activity first (409), the phase it is at now. Null when there is none.
     vm.startNextPhase = async function () {
+        const expectedPhaseNumber = vm.activityState.descriptor.currentPhase?.number ?? 0;
+
+        let phaseId = null;
         try {
-            // TODO: refactor, as the following operations should be performed by the service
-
-            // Check if there are existing phases
-            let currentPhaseNumber = vm.activityState.descriptor.currentPhase
-                ? vm.activityState.descriptor.currentPhase.number
-                : null;
-    
-            // Determine if we need to create the first phase
-            if (currentPhaseNumber === null) {
-                console.info("No phases found. Creating the first phase with number 1.");
-                currentPhaseNumber = 0; // Start with 0 so we can increment to 1 below
-            }
-    
-            // Check if we've already reached the last phase
-            if (currentPhaseNumber === vm.designObj.phases.length) {
-                console.error("Cannot advance any further, reached the last phase already.");
-                return null;
-            }
-    
-            const nextPhaseIndex = currentPhaseNumber;
-            const nextPhaseNumber = currentPhaseNumber + 1;
-
-            // Get the current design object of the current phase
-            const phase = vm.designObj.phases[nextPhaseIndex];
-            const designType = DesignHelpers.getDesignType(vm.designObj);
-
-            // Add the phase to the activity
-            const phaseId = await ActivityStateService.addPhaseToActivity(
-                phase,
-                nextPhaseNumber,
-                vm.sessionId
-            );
-    
-            // Add items to the newly created phase
-            if (phaseId) {
-                await ActivityStateService.addItemsToPhase(
-                    phase,
-                    phaseId,
-                    vm.sessionId,
-                    designType
-                );
-            } else {
-                console.error("Error creating activity phase.");
-                return null;
-            }
-    
-            // Transition to the newly created phase
-            await ActivityStateService.transitionToPhase(vm.sessionId, phaseId, phase);
-    
-            vm.isActivityFinished = vm.checkActivityFinished();
-    
-            if (vm.activityState.descriptor.currentPhase.id !== phaseId) {
-                throw new Error("Abnormal state found.");
-            }
-    
-            // Have we reached the last phase?
-            $scope.$applyAsync(() => {
-                vm.reachedLastPhase = vm.lastPhaseReached();
-            });
-    
-            // Update data for the current phase
-            await vm.updateDashboardPhaseData(phaseId);
-            return phaseId;
+            const phase = await ActivityStateService.startNextPhase(vm.sessionId,
+                expectedPhaseNumber);
+            phaseId = phase.id;
         } catch (error) {
-            console.error("Error in startNextPhase:", error);
-            return null;
+            if (error?.status !== 409) {
+                console.error("Error in startNextPhase:", error);
+                return null;
+            }
+            console.warn("The activity moved on before this phase started; showing where it is.",
+                error.data);
+            phaseId = vm.activityState.descriptor.currentPhase?.id ?? null;
         }
+
+        vm.isActivityFinished = vm.checkActivityFinished();
+        $scope.$applyAsync(() => {
+            vm.reachedLastPhase = vm.lastPhaseReached();
+        });
+
+        if (phaseId) {
+            await vm.updateDashboardPhaseData(phaseId);
+        }
+        return phaseId;
     };
 
     vm.initializeDashboardState = async function() {
