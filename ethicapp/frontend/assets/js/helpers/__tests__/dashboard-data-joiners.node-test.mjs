@@ -85,4 +85,31 @@ describe("dashboard data joiners", () => {
         assert.equal(state.length, 1);
         assert.equal(state[0].userId, 1);
     });
+
+    it("gives each group member their letter within the group (#897)", () => {
+        const state = [
+            { userId: 1, userName: "Ada" },
+            { userId: 2, userName: "Bruno" },
+            { userId: 3, userName: "Cleo" },
+        ];
+        const groups = [{
+            id:           7,
+            number:       1,
+            participants: [1, 2],
+            members:      [{ id: 1, anon_mask: "B" }, { id: 2, anon_mask: "A" }],
+        }];
+
+        const rows = DashboardDataJoiners.semantic_differential.addGroupInfo(state, groups);
+
+        assert.deepEqual(rows.map(row => [row.userId, row.groupNumber, row.groupLetter]),
+            [[1, 1, "B"], [2, 1, "A"], [3, null, null]]);
+    });
+
+    it("leaves the letters out when the groups carry no members", () => {
+        const rows = DashboardDataJoiners.semantic_differential.addGroupInfo(
+            [{ userId: 1, userName: "Ada" }], [{ id: 7, number: 1, participants: [1] }]
+        );
+        assert.equal(rows[0].groupId, 7);
+        assert.equal(rows[0].groupLetter, null);
+    });
 });

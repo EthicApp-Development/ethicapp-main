@@ -1,3 +1,6 @@
+<!-- While the dashboard hides names (#897), students show their number
+     instead of their name, have no email column, and the name column orders
+     by number. -->
 <div class="table-responsive">
     <table class="table table-bordered table-striped">
         <thead>
@@ -8,7 +11,7 @@
                         <i ng-class="ctrl.reverseSort ? 'fa fa-sort-desc' : 'fa fa-sort-asc'"></i>
                     </span>
                 </th>
-                <th>{{'email_column_header' | translate}}</th>
+                <th ng-if="!ctrl.hidesNames()">{{'email_column_header' | translate}}</th>
                 <th ng-click="ctrl.sortBy('role')" class="sortable-header">
                     {{'role_column_header' | translate}}
                     <span ng-if="ctrl.orderByField === 'role'">
@@ -19,9 +22,9 @@
             </tr>
         </thead>
         <tbody>
-            <tr ng-repeat="user in ctrl.users | orderBy:ctrl.orderByField:ctrl.reverseSort">
+            <tr ng-repeat="user in ctrl.displayUsers() | orderBy:ctrl.orderField():ctrl.reverseSort">
                 <td>{{ user.name }}</td>
-                <td>{{ user.mail }}</td>
+                <td ng-if="!ctrl.hidesNames()">{{ user.mail }}</td>
                 <td>{{ user.role | roleTranslate }}</td>
                 <td>{{ user.device }}</td>
             </tr>
