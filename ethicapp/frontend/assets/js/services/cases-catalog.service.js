@@ -1,6 +1,7 @@
 import { caseAnalysisServiceIdsPayload } from "../helpers/case-analysis-options.js";
 import { caseDocumentsPayload } from "../helpers/case-documents-form.js";
 import { caseVideosPayload } from "../helpers/case-videos-form.js";
+import { caseAffectedDesignIds } from "../helpers/case-visibility-result.js";
 
 let CasesCatalogService = ($rootScope, $http) => {
     let videoSupport = null;
@@ -37,6 +38,19 @@ let CasesCatalogService = ($rootScope, $http) => {
         formData.append("tag_ids", JSON.stringify((caseData.tags || []).map(tag => tag.id)));
         appendCaseVideos(formData, caseData);
         appendCaseDocuments(formData, caseData);
+    }
+
+    // Tells the design views which designs a case save turned private (#934):
+    // the case form and the share switch both report them.
+    function announceDesignsMadePrivate(caseId, result, visibility) {
+        const affectedDesignIds = caseAffectedDesignIds(result);
+        if (affectedDesignIds.length > 0) {
+            $rootScope.$broadcast("caseVisibilityUpdatedDesigns", {
+                caseId,
+                affectedDesignIds,
+                visibility,
+            });
+        }
     }
 
     const service = {
@@ -200,7 +214,9 @@ let CasesCatalogService = ($rootScope, $http) => {
             await service.getCases(true);
             await service.getPublicCases(true);
             await service.getArchivedCases(true);
-            return response.data.result;
+            const result = response.data.result;
+            announceDesignsMadePrivate(caseId, result, result?.visibility);
+            return result;
         },
 
         async deleteCase(caseId) {
@@ -215,13 +231,7 @@ let CasesCatalogService = ($rootScope, $http) => {
             await service.getCases(true);
             await service.getPublicCases(true);
             await service.getArchivedCases(true);
-            if (Array.isArray(response.data.result?.affectedDesignIds) && response.data.result.affectedDesignIds.length > 0) {
-                $rootScope.$broadcast("caseVisibilityUpdatedDesigns", {
-                    caseId,
-                    affectedDesignIds: response.data.result.affectedDesignIds,
-                    visibility,
-                });
-            }
+            announceDesignsMadePrivate(caseId, response.data.result, visibility);
             return response.data.result;
         },
 

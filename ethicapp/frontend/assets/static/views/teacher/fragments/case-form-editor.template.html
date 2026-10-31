@@ -90,11 +90,13 @@
                 ng-options="option.value as (option.labelKey | translate) for option in $ctrl.visibilityOptions"
                 ng-class="{'input-warning': $ctrl.shouldShowError(caseForm.visibility)}"
                 ng-disabled="$ctrl.isLocked()"
+                aria-describedby="caseVisibilityHelp"
                 required>
             </select>
             <p class="help-block text-danger" ng-if="$ctrl.shouldShowError(caseForm.visibility)">
                 {{ 'ethical_cases_validation_required' | translate }}
             </p>
+            <p id="caseVisibilityHelp" class="help-block">{{ 'case_visibility_public_help' | translate }}</p>
         </div>
     </fieldset>
     <fieldset>

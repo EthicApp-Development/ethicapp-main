@@ -2592,6 +2592,12 @@ h2{
     margin-bottom: 10px;
 }
 
+/* What sharing a case means for the teachers who use it (#939). */
+.case-card-share-help {
+    margin: 4px auto 0;
+    max-width: 200px;
+}
+
 .resource-pagination-controls {
     align-items: center;
     display: flex;
