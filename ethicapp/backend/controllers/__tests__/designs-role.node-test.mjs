@@ -150,7 +150,8 @@ describe("design authoring endpoints require role P", () => {
             session: { uid: TEACHER_ID + 1, role: "P" },
         });
 
-        assert.equal(status, 403);
+        // Another teacher's design is answered as a missing one (#929).
+        assert.equal(status, 404);
         assert.ok(!db.queries.some(query => /^\s*DELETE FROM designs/u.test(query.sql)));
     });
 });
