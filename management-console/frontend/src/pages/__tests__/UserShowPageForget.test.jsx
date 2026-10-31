@@ -178,7 +178,7 @@ describe('UserShowPage: forgetting a student', () => {
 
     expect(button.disabled).toBe(true);
     const hint = byTestId('unsaved-changes-hint');
-    expect(hint.textContent).toBe('Save or discard your changes before forgetting this account.');
+    expect(hint.textContent).toBe('Save or discard your changes before setting the password of or forgetting this account.');
     expect(button.getAttribute('aria-describedby')).toBe(hint.id);
     await click(button);
     expect(dialog()).toBeNull();
@@ -198,7 +198,7 @@ describe('UserShowPage: forgetting a student', () => {
   });
 
   it('offers to discard the edits of an account with no action that needs it, without a hint', async () => {
-    // An administrator account cannot be confirmed, deleted or forgotten.
+    // An administrator account cannot be confirmed, deleted, forgotten or given a password.
     vi.mocked(fetchUserById).mockResolvedValue({ ...activeStudent, role: 'S' });
     await renderPage();
 

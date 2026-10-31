@@ -15,6 +15,8 @@ import authMessages from '../i18n/messages/auth-messages.js';
 import { inferPreferredLocaleFromRequest, normalizePreferredLocale, translateMessage } from '../i18n/locale.js';
 import { csrfTokenHandler } from '../middleware/csrfProtection.js';
 import { initializeSessionPolicy } from '../middleware/sessionPolicy.js';
+import { getPasswordPolicy, isStrongPassword } from '../services/password-policy.js';
+import passwordResetService from '../services/password-reset.service.js';
 
 const router = express.Router();
 
@@ -22,15 +24,6 @@ const SALT_ROUNDS = Number(process.env.BCRYPT_SALT_ROUNDS || 10);
 const RESET_TOKEN_TTL_MINUTES = Number(process.env.RESET_TOKEN_TTL_MINUTES || 60);
 const PASSKEY_REGISTRATION_TIMEOUT_MS = Number(process.env.WEBAUTHN_REGISTRATION_TIMEOUT_MS || 60000);
 const PASSKEY_AUTHENTICATION_TIMEOUT_MS = Number(process.env.WEBAUTHN_AUTHENTICATION_TIMEOUT_MS || 60000);
-
-function isStrongPassword(password) {
-  if (!password || password.length < 10) {
-    return false;
-  }
-
-  const symbolCount = (password.match(/[^a-zA-Z0-9]/g) || []).length;
-  return symbolCount >= 2;
-}
 
 function sha256Hex(value) {
   return crypto
@@ -272,6 +265,13 @@ function t(req, key) {
 }
 
 router.get('/csrf-token', csrfTokenHandler);
+
+// The password strength limits, public and read-only: the frontends build
+// their live checklists from them. The routes that set a password decide.
+router.get('/password-policy', (req, res) => {
+  res.set('Cache-Control', 'public, max-age=300');
+  return res.status(200).json(getPasswordPolicy());
+});
 
 router.get('/institution', async (req, res, next) => {
   try {
@@ -1388,74 +1388,30 @@ router.post('/reset-password', async (req, res) => {
 
     const tokenDigest = sha256Hex(token);
 
-    const resetResult = await db.query(
-      `
-        SELECT mail
-        FROM pass_reset
-        WHERE token = $1
-          AND token_purpose = 'password_reset'
-          AND ctime > NOW() - ($2 * INTERVAL '1 minute')
-        LIMIT 1
-      `,
-      [tokenDigest, RESET_TOKEN_TTL_MINUTES]
-    );
+    // Checked before hashing, then again under the account lock
+    // (services/password-reset.service.js).
+    const tokenMail = await passwordResetService.findValidTokenMail({
+      tokenDigest,
+      ttlMinutes: RESET_TOKEN_TTL_MINUTES
+    });
 
-    if (resetResult.rowCount === 0) {
+    if (!tokenMail) {
       return res.status(400).json({
         error: t(req, 'invalidOrExpiredToken')
       });
     }
 
-    const resetRequest = resetResult.rows[0];
+    const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+    const refusal = await passwordResetService.resetPassword({
+      tokenDigest,
+      ttlMinutes: RESET_TOKEN_TTL_MINUTES,
+      passwordHash
+    });
 
-    const userResult = await db.query(
-      `
-        SELECT id, active, email_confirmed
-        FROM users
-        WHERE lower(mail) = lower($1)
-          AND (active = true OR email_confirmed = false)
-        LIMIT 1
-      `,
-      [resetRequest.mail]
-    );
-
-    if (userResult.rowCount === 0) {
+    if (refusal) {
       return res.status(400).json({
         error: t(req, 'invalidOrExpiredToken')
       });
-    }
-
-    const user = userResult.rows[0];
-    const passwordBcrypt = await bcrypt.hash(password, SALT_ROUNDS);
-
-    await db.query('BEGIN');
-
-    try {
-      await db.query(
-        `
-          UPDATE users
-          SET password_bcrypt = $1,
-              active = CASE WHEN email_confirmed = false THEN true ELSE active END,
-              email_confirmed = true,
-              session_version = session_version + 1
-          WHERE id = $2
-        `,
-        [passwordBcrypt, user.id]
-      );
-
-      await db.query(
-        `
-          DELETE FROM pass_reset
-          WHERE lower(mail) = lower($1)
-            AND token_purpose = 'password_reset'
-        `,
-        [resetRequest.mail]
-      );
-
-      await db.query('COMMIT');
-    } catch (txErr) {
-      await db.query('ROLLBACK');
-      throw txErr;
     }
 
     return res.json({

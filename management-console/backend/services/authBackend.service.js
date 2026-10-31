@@ -277,3 +277,56 @@ export async function triggerAdminPasswordResetWithAuthBackend({ email, cookie, 
 
   return body;
 }
+
+// Sets the password of a student or teacher account (#889), through
+// auth-backend's internal endpoint, after the console's step-up check.
+// auth-backend decides everything: the strength rule, the target and the
+// expected email.
+//
+// Resolves to { ok: true, message } when the password was set, or to
+// { ok: false, status, code, message } when auth-backend refused it or
+// failed: `code` is its machine-readable code (WEAK_PASSWORD,
+// ACCOUNT_CHANGED, ...) or null, and `message` its localized text. Rejects
+// only when auth-backend cannot be reached. The password is sent in the body
+// only, and no field of the request is ever placed in an error.
+export async function setUserPasswordWithAuthBackend({
+  userId,
+  newPassword,
+  passwordConfirmation,
+  expectedEmail,
+  cookie,
+  language,
+  fetchImpl = fetch
+}) {
+  const response = await fetchImpl(buildUrl(`/admin/users/${encodeURIComponent(userId)}/password`), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Cookie: cookie || '',
+      'Accept-Language': language || 'en-US',
+      ...internalServiceHeaders()
+    },
+    body: JSON.stringify({
+      new_password: newPassword,
+      password_confirmation: passwordConfirmation,
+      expected_email: expectedEmail
+    })
+  });
+
+  const body = await response.json().catch(() => ({}));
+  const message = typeof body?.error === 'string' ? body.error : '';
+
+  if (!response.ok) {
+    return {
+      ok: false,
+      status: response.status,
+      code: typeof body?.code === 'string' ? body.code : null,
+      message
+    };
+  }
+
+  return {
+    ok: true,
+    message: typeof body?.message === 'string' ? body.message : ''
+  };
+}

@@ -56,6 +56,12 @@ export default {
       passkeyFailed: 'La confirmación con passkey no terminó. No se cambió nada; puedes intentarlo de nuevo.'
     }
   },
+  passwordRules: {
+    helpText: 'Mínimo {{minLength}} caracteres y al menos {{minSymbols}} símbolos.',
+    minLength: 'Al menos {{minLength}} caracteres',
+    minSymbols: 'Al menos {{minSymbols}} símbolos',
+    matches: 'La confirmación coincide'
+  },
   pages: {
     aiServices: {
       heading: 'Servicios de IA',
@@ -250,6 +256,7 @@ export default {
         confirm: 'confirmar',
         delete: 'eliminar',
         forget: 'olvidar',
+        setPassword: 'establecer la contraseña de',
         or: 'o',
         orBeforeO: 'u'
       },
@@ -478,18 +485,45 @@ export default {
         newPassword: 'Nueva contraseña',
         passwordConfirmation: 'Confirmar nueva contraseña'
       },
-      passwordRules: {
-        helpText: 'Mínimo 10 caracteres y al menos 2 símbolos.',
-        minLength: 'Al menos 10 caracteres',
-        twoSymbols: 'Al menos 2 símbolos'
-      },
       errors: {
         required: 'Completa todos los campos de contraseña.',
-        weakPassword: 'La nueva contraseña debe tener al menos 10 caracteres y 2 símbolos.',
+        weakPassword: 'La nueva contraseña debe tener al menos {{minLength}} caracteres y {{minSymbols}} símbolos.',
         passwordMismatch: 'La nueva contraseña y su confirmación no coinciden.'
       },
       actions: {
         changePassword: 'Cambiar contraseña'
+      }
+    },
+    userSetPassword: {
+      action: 'Establecer contraseña',
+      title: 'Establecer una contraseña para {{name}}',
+      intro: 'Elige una contraseña temporal para {{name}} ({{email}}).',
+      sessionsNote: 'Todas las sesiones abiertas de este usuario se cierran de inmediato.',
+      handOverNote: 'Entrega la contraseña al usuario en persona. EthicApp no se la envía ni le pide cambiarla.',
+      fields: {
+        newPassword: 'Nueva contraseña',
+        passwordConfirmation: 'Confirma la nueva contraseña'
+      },
+      show: 'Mostrar contraseñas',
+      hide: 'Ocultar contraseñas',
+      cancel: 'Cancelar',
+      continue: 'Continuar',
+      confirm: {
+        title: '¿Establecer esta contraseña?',
+        body: 'Se reemplazará la contraseña de {{name}} ({{email}}).',
+        detailSessions: 'Todas las sesiones abiertas de este usuario se cierran de inmediato.',
+        detailHandOver: 'Entrega la contraseña al usuario en persona.',
+        confirm: 'Establecer contraseña'
+      },
+      success: 'Se estableció la contraseña de {{name}} y se cerraron sus sesiones abiertas. Entrégale la contraseña en persona.',
+      error: 'No se pudo establecer la contraseña.',
+      errors: {
+        accountChanged: 'El correo de esta cuenta cambió desde que se cargó la página, así que no se estableció la contraseña. Revisa la cuenta que se muestra abajo e inténtalo de nuevo.',
+        accountAnonymized: 'Esta cuenta fue anonimizada, así que no se estableció su contraseña.',
+        roleNotAllowed: 'Aquí solo se puede establecer la contraseña de cuentas de estudiantes y profesores, así que no se estableció.',
+        ownAccount: 'Cambia tu propia contraseña desde tu perfil.',
+        notLocalAccount: 'Esta cuenta no inicia sesión con contraseña, así que no se estableció ninguna.',
+        userNotFound: 'Esta cuenta ya no existe.'
       }
     },
     diagnostics: {

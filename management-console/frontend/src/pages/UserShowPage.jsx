@@ -18,6 +18,7 @@ import AccountStatusSummary from '../components/users/AccountStatusSummary.jsx';
 import ErasureStatusPanel from '../components/users/ErasureStatusPanel.jsx';
 import ForgetStudentButton from '../components/users/ForgetStudentButton.jsx';
 import ForgetTeacherButton from '../components/users/ForgetTeacherButton.jsx';
+import SetPasswordButton from '../components/users/SetPasswordButton.jsx';
 import { unsavedChangesHint } from '../components/users/unsavedChangesHint.js';
 import {
   ACCOUNT_STATUSES,
@@ -92,11 +93,14 @@ function UserShowPage() {
   const canForgetStudent = savedForm?.role === 'A' && !isAnonymizedAccount;
   // A teacher is forgotten with their materials (#877).
   const canForgetTeacher = savedForm?.role === 'P' && !isAnonymizedAccount;
+  // Students and teachers only; auth-backend refuses any other account.
+  const canSetPassword = ['A', 'P'].includes(savedForm?.role) && !isAnonymizedAccount;
   const hasUnsavedChanges = savedForm !== null &&
     EDITABLE_FIELDS.some((fieldName) => form[fieldName] !== savedForm[fieldName]);
   const unsavedHint = hasUnsavedChanges
     ? unsavedChangesHint([
       ...(isPendingAccount ? ['confirm'] : []),
+      ...(canSetPassword ? ['setPassword'] : []),
       ...(canDeleteAccount ? ['delete'] : []),
       ...(canForgetStudent || canForgetTeacher ? ['forget'] : [])
     ], t)
@@ -330,6 +334,20 @@ function UserShowPage() {
     }
   }
 
+  function onPasswordSet() {
+    setError('');
+    setResetMessage('');
+    setSuccess(t('pages.userSetPassword.success', { name: accountName }));
+  }
+
+  async function onSetPasswordError(message, { changed }) {
+    setSuccess('');
+    setError(message);
+    if (changed) {
+      await reloadUser();
+    }
+  }
+
   if (loading) {
     return <Spinner />;
   }
@@ -481,6 +499,18 @@ function UserShowPage() {
                 <i className="fa-solid fa-key me-2" aria-hidden="true" />
                 {t('pages.userShow.actions.triggerPasswordReset')}
               </Button>
+            ) : null}
+            {canSetPassword ? (
+              <SetPasswordButton
+                userId={id}
+                accountName={accountName}
+                email={savedEmail}
+                disabled={hasUnsavedChanges}
+                describedBy={unsavedHintId}
+                requestConfirmation={requestConfirmation}
+                onPasswordSet={onPasswordSet}
+                onError={onSetPasswordError}
+              />
             ) : null}
             {form.role === 'P' && !isAnonymizedAccount ? (
               <Button

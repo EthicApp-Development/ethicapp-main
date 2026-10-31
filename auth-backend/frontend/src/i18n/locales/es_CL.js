@@ -55,9 +55,9 @@ const esCL = {
       other: 'Otro'
     },
     passwordRules: {
-      helpText: 'Mínimo 10 caracteres y al menos 2 símbolos.',
-      minLength: 'Mínimo 10 caracteres',
-      twoSymbols: 'Al menos 2 símbolos'
+      helpText: 'Mínimo {{minLength}} caracteres y al menos {{minSymbols}} símbolos.',
+      minLength: 'Mínimo {{minLength}} caracteres',
+      minSymbols: 'Al menos {{minSymbols}} símbolos'
     },
     submit: 'Crear cuenta',
     submitting: 'Registrando...',
@@ -83,7 +83,7 @@ const esCL = {
       emailInvalid: 'Introduce un correo electrónico válido.',
       genderRequired: 'Debes seleccionar una opción.',
       passwordRequired: 'La contraseña es obligatoria.',
-      passwordInvalid: 'La contraseña debe tener al menos 10 caracteres y 2 símbolos.',
+      passwordInvalid: 'La contraseña debe tener al menos {{minLength}} caracteres y {{minSymbols}} símbolos.',
       passwordConfirmationRequired: 'Debes confirmar la contraseña.',
       passwordMismatch: 'Las contraseñas no coinciden.',
       privacyAcceptanceRequired: 'Debes aceptar la Política de Privacidad para crear una cuenta.',
@@ -120,14 +120,14 @@ const esCL = {
     backToLogin: 'Volver a iniciar sesión',
     successMessage: 'La contraseña se actualizó correctamente. Si tu cuenta estaba pendiente de confirmación, ya quedó activa. Serás redirigido para iniciar sesión.',
     passwordRules: {
-      helpText: 'Mínimo 10 caracteres y al menos 2 símbolos.',
-      minLength: 'Mínimo 10 caracteres',
-      twoSymbols: 'Al menos 2 símbolos'
+      helpText: 'Mínimo {{minLength}} caracteres y al menos {{minSymbols}} símbolos.',
+      minLength: 'Mínimo {{minLength}} caracteres',
+      minSymbols: 'Al menos {{minSymbols}} símbolos'
     },
     errors: {
       invalidToken: 'El enlace de recuperación no es válido.',
       passwordRequired: 'La nueva contraseña es obligatoria.',
-      passwordInvalid: 'La contraseña debe tener al menos 10 caracteres y 2 símbolos.',
+      passwordInvalid: 'La contraseña debe tener al menos {{minLength}} caracteres y {{minSymbols}} símbolos.',
       passwordConfirmationRequired: 'Debes confirmar la contraseña.',
       passwordMismatch: 'Las contraseñas no coinciden.',
       genericResetError: 'No se ha podido restablecer la contraseña. Solicita un nuevo enlace.'

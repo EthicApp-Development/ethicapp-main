@@ -64,3 +64,10 @@ export async function fetchInstitution() {
   const response = await authApiClient.get('/institution');
   return response.data;
 }
+
+// The password strength limits ({ minLength, minSymbols }) that auth-backend
+// enforces, for the live checklists.
+export async function fetchPasswordPolicy() {
+  const response = await authApiClient.get('/password-policy');
+  return response.data;
+}

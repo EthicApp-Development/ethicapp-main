@@ -181,7 +181,7 @@ describe('UserShowPage: deleting a never-activated account', () => {
 
     expect(button.disabled).toBe(true);
     const hint = byTestId('unsaved-changes-hint');
-    expect(hint.textContent).toBe('Save or discard your changes before confirming, deleting or forgetting this account.');
+    expect(hint.textContent).toBe('Save or discard your changes before confirming, setting the password of, deleting or forgetting this account.');
     expect(button.getAttribute('aria-describedby')).toBe(hint.id);
 
     await click(button);

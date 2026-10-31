@@ -11,6 +11,10 @@ const mailMock = {
   sendPasswordResetEmail: mock.fn(),
   sendAccountConfirmationEmail: mock.fn()
 };
+const passwordResetMock = {
+  findValidTokenMail: mock.fn(),
+  resetPassword: mock.fn()
+};
 const simpleWebAuthnServerMock = {
   generateAuthenticationOptions: mock.fn(),
   generateRegistrationOptions: mock.fn(),
@@ -21,6 +25,7 @@ const simpleWebAuthnServerMock = {
 mock.module('../config/database.js', { defaultExport: dbMock });
 mock.module('../services/recaptcha.service.js', { defaultExport: recaptchaMock });
 mock.module('../services/mail.service.js', { defaultExport: mailMock });
+mock.module('../services/password-reset.service.js', { defaultExport: passwordResetMock });
 mock.module('@simplewebauthn/server', {
   namedExports: simpleWebAuthnServerMock
 });
@@ -86,6 +91,8 @@ describe('Auth Routes', () => {
   beforeEach(() => {
     dbMock.query.mock.resetCalls();
     dbMock.query.mock.restore();
+    passwordResetMock.findValidTokenMail.mock.resetCalls();
+    passwordResetMock.resetPassword.mock.resetCalls();
     recaptchaMock.verifyRecaptchaToken.mock.resetCalls();
     recaptchaMock.verifyRecaptchaToken.mock.restore();
     mailMock.sendPasswordResetEmail.mock.resetCalls();
@@ -489,7 +496,7 @@ describe('Auth Routes', () => {
   });
 
   test('POST /reset-password - rejects invalid or expired tokens', async () => {
-    dbMock.query.mock.mockImplementationOnce(() => Promise.resolve({ rowCount: 0, rows: [] }));
+    passwordResetMock.findValidTokenMail.mock.mockImplementationOnce(() => Promise.resolve(null));
 
     const res = await supertest(app)
       .post('/reset-password')
@@ -501,27 +508,16 @@ describe('Auth Routes', () => {
 
     assert.strictEqual(res.status, 400);
     assert.strictEqual(res.body.error, 'Token is invalid or has expired');
-    assert.deepStrictEqual(dbMock.query.mock.calls[0].arguments[1], [sha256Hex('expired-token'), 60]);
+    assert.deepStrictEqual(passwordResetMock.findValidTokenMail.mock.calls[0].arguments[0], {
+      tokenDigest: sha256Hex('expired-token'),
+      ttlMinutes: 60
+    });
+    assert.strictEqual(passwordResetMock.resetPassword.mock.callCount(), 0);
   });
 
   test('POST /reset-password - updates password and consumes reset token', async () => {
-    dbMock.query.mock.mockImplementation((queryStr) => {
-      if (queryStr.includes('FROM pass_reset')) {
-        return Promise.resolve({
-          rowCount: 1,
-          rows: [{ mail: 'person@example.com' }]
-        });
-      }
-
-      if (queryStr.includes('FROM users')) {
-        return Promise.resolve({
-          rowCount: 1,
-          rows: [{ id: 9, active: false, email_confirmed: false }]
-        });
-      }
-
-      return Promise.resolve({ rowCount: 0, rows: [] });
-    });
+    passwordResetMock.findValidTokenMail.mock.mockImplementationOnce(() => Promise.resolve('person@example.com'));
+    passwordResetMock.resetPassword.mock.mockImplementationOnce(() => Promise.resolve(null));
 
     const res = await supertest(app)
       .post('/reset-password')
@@ -534,14 +530,27 @@ describe('Auth Routes', () => {
     assert.strictEqual(res.status, 200);
     assert.strictEqual(res.body.message, 'Password updated successfully');
 
-    const updateCall = dbMock.query.mock.calls.find((call) => call.arguments[0].includes('UPDATE users'));
-    const deleteCall = dbMock.query.mock.calls.find((call) => call.arguments[0].includes('DELETE FROM pass_reset'));
-    assert.strictEqual(await bcrypt.compare('FreshPassword123!@', updateCall.arguments[1][0]), true);
-    assert.strictEqual(updateCall.arguments[1][1], 9);
-    assert.deepStrictEqual(deleteCall.arguments[1], ['person@example.com']);
-    assert.match(updateCall.arguments[0], /active = CASE WHEN email_confirmed = false THEN true ELSE active END/);
-    assert.match(updateCall.arguments[0], /email_confirmed = true/);
-    assert.match(updateCall.arguments[0], /session_version = session_version \+ 1/);
+    const [{ tokenDigest, ttlMinutes, passwordHash }] = passwordResetMock.resetPassword.mock.calls[0].arguments;
+    assert.strictEqual(tokenDigest, sha256Hex('valid-token'));
+    assert.strictEqual(ttlMinutes, 60);
+    assert.strictEqual(await bcrypt.compare('FreshPassword123!@', passwordHash), true);
+  });
+
+  test('POST /reset-password - refuses a token revoked while the password was hashed', async () => {
+    passwordResetMock.findValidTokenMail.mock.mockImplementationOnce(() => Promise.resolve('person@example.com'));
+    passwordResetMock.resetPassword.mock.mockImplementationOnce(() => Promise.resolve('invalidOrExpiredToken'));
+
+    const res = await supertest(app)
+      .post('/reset-password')
+      .set('Accept-Language', 'es-CL')
+      .send({
+        token: 'revoked-token',
+        password: 'FreshPassword123!@',
+        password_confirmation: 'FreshPassword123!@'
+      });
+
+    assert.strictEqual(res.status, 400);
+    assert.strictEqual(res.body.error, 'El token es inválido o ha expirado');
   });
 
   test('POST /admin/change-password - updates administrator password after current password verification', async () => {
@@ -725,4 +734,85 @@ describe('Auth Routes', () => {
       transports: ['internal']
     }]);
   });
+});
+
+describe('Password policy (#889)', () => {
+  const WEAK_EN = 'Password must be at least 10 characters long and contain at least 2 symbols';
+  const WEAK_ES = 'La contraseña debe tener al menos 10 caracteres y al menos 2 símbolos';
+
+  beforeEach(() => {
+    dbMock.query.mock.resetCalls();
+    dbMock.query.mock.restore();
+    passwordResetMock.findValidTokenMail.mock.resetCalls();
+    passwordResetMock.resetPassword.mock.resetCalls();
+    recaptchaMock.verifyRecaptchaToken.mock.resetCalls();
+    recaptchaMock.verifyRecaptchaToken.mock.mockImplementation(() => Promise.resolve(true));
+  });
+
+  test('GET /password-policy - returns the limits the routes enforce', async () => {
+    const res = await supertest(app).get('/password-policy');
+
+    assert.strictEqual(res.status, 200);
+    assert.deepStrictEqual(res.body, { minLength: 10, minSymbols: 2 });
+    assert.match(res.headers['cache-control'], /public/);
+    assert.strictEqual(dbMock.query.mock.calls.length, 0);
+  });
+
+  // Every route that sets a password refuses one just below either limit,
+  // with the same localized message.
+  const routes = [
+    {
+      name: 'POST /register',
+      path: '/register',
+      payload: (password) => validRegistrationPayload({ password, password_confirmation: password })
+    },
+    {
+      name: 'POST /register-prof',
+      path: '/register-prof',
+      admin: true,
+      payload: (password) => ({
+        firstname: 'Pat',
+        lastname: 'Teacher',
+        dni: '1-9',
+        gender: 'F',
+        email: 'pat@example.com',
+        password,
+        password_confirmation: password
+      })
+    },
+    {
+      name: 'POST /reset-password',
+      path: '/reset-password',
+      payload: (password) => ({ token: 'raw-token', password, password_confirmation: password })
+    },
+    {
+      name: 'POST /admin/change-password',
+      path: '/admin/change-password',
+      admin: true,
+      payload: (password) => ({
+        current_password: 'CurrentPassword123!@',
+        new_password: password,
+        password_confirmation: password
+      })
+    }
+  ];
+
+  for (const route of routes) {
+    for (const [label, password] of [['nine characters', 'abcdefg!!'], ['one symbol', 'abcdefghi!']]) {
+      for (const [language, message] of [['en-US', WEAK_EN], ['es-CL', WEAK_ES]]) {
+        test(`${route.name} - refuses a password with ${label} (${language})`, async () => {
+          let request = supertest(app).post(route.path).set('Accept-Language', language);
+          if (route.admin) {
+            request = request.set('X-Test-User-Id', '7').set('X-Test-User-Role', 'S');
+          }
+
+          const res = await request.send(route.payload(password));
+
+          assert.strictEqual(res.status, 400);
+          assert.strictEqual(res.body.error, message);
+          assert.strictEqual(dbMock.query.mock.calls.length, 0);
+        });
+      }
+    }
+  }
 });

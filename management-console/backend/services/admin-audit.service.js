@@ -17,7 +17,8 @@ export const ADMIN_AUDIT_ACTIONS = Object.freeze({
   accountConfirm: 'account.confirm',
   accountDelete: 'account.delete',
   accountForget: 'account.forget',
-  accountErasureRetry: 'account.erasure_retry'
+  accountErasureRetry: 'account.erasure_retry',
+  accountPasswordSet: 'account.password_set'
 });
 
 export const ADMIN_AUDIT_OUTCOMES = Object.freeze({

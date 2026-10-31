@@ -56,6 +56,12 @@ export default {
       passkeyFailed: 'The passkey confirmation did not complete. Nothing was changed; you can try again.'
     }
   },
+  passwordRules: {
+    helpText: 'Minimum {{minLength}} characters and at least {{minSymbols}} symbols.',
+    minLength: 'At least {{minLength}} characters',
+    minSymbols: 'At least {{minSymbols}} symbols',
+    matches: 'The confirmation matches'
+  },
   pages: {
     aiServices: {
       heading: 'AI services',
@@ -250,6 +256,7 @@ export default {
         confirm: 'confirming',
         delete: 'deleting',
         forget: 'forgetting',
+        setPassword: 'setting the password of',
         or: 'or',
         orBeforeO: 'or'
       },
@@ -478,18 +485,45 @@ export default {
         newPassword: 'New password',
         passwordConfirmation: 'Confirm new password'
       },
-      passwordRules: {
-        helpText: 'Minimum 10 characters and at least 2 symbols.',
-        minLength: 'At least 10 characters',
-        twoSymbols: 'At least 2 symbols'
-      },
       errors: {
         required: 'Complete all password fields.',
-        weakPassword: 'The new password must have at least 10 characters and 2 symbols.',
+        weakPassword: 'The new password must have at least {{minLength}} characters and {{minSymbols}} symbols.',
         passwordMismatch: 'New password and confirmation do not match.'
       },
       actions: {
         changePassword: 'Change password'
+      }
+    },
+    userSetPassword: {
+      action: 'Set password',
+      title: 'Set a password for {{name}}',
+      intro: 'Choose a temporary password for {{name}} ({{email}}).',
+      sessionsNote: 'Every open session of this user ends at once.',
+      handOverNote: 'Give the password to the user in person. EthicApp does not send it and does not ask them to change it.',
+      fields: {
+        newPassword: 'New password',
+        passwordConfirmation: 'Confirm the new password'
+      },
+      show: 'Show passwords',
+      hide: 'Hide passwords',
+      cancel: 'Cancel',
+      continue: 'Continue',
+      confirm: {
+        title: 'Set this password?',
+        body: 'The password of {{name}} ({{email}}) will be replaced.',
+        detailSessions: 'Every open session of this user ends at once.',
+        detailHandOver: 'Give the password to the user in person.',
+        confirm: 'Set password'
+      },
+      success: 'The password of {{name}} was set and their open sessions were closed. Give them the password in person.',
+      error: 'Unable to set the password.',
+      errors: {
+        accountChanged: 'The email of this account changed since the page was loaded, so the password was not set. Check the account shown below and try again.',
+        accountAnonymized: 'This account was anonymized, so its password was not set.',
+        roleNotAllowed: 'Only student and teacher accounts can have their password set here, so it was not set.',
+        ownAccount: 'Change your own password from your profile.',
+        notLocalAccount: 'This account does not sign in with a password, so none was set.',
+        userNotFound: 'This account no longer exists.'
       }
     },
     diagnostics: {

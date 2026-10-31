@@ -15,6 +15,7 @@ import {
 
 import viewRoutes from './routes/view.routes.js';
 import authRoutes from './routes/auth.routes.js';
+import adminUserPasswordRoutes from './routes/admin-user-password.routes.js';
 
 const app = express();
 const { Strategy: LocalStrategy } = passportLocal;
@@ -138,6 +139,7 @@ app.use(function exposeAuthState(req, res, next) {
 app.use('/', viewRoutes);
 app.use('/api/auth', csrfProtection);
 app.use('/api/auth', authRoutes);
+app.use('/api/auth', adminUserPasswordRoutes);
 
 // --------------------------------------------------
 // Health check
