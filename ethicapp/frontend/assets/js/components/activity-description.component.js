@@ -1,20 +1,26 @@
 import * as StatusCode from "../../../../common/modules/session-status.js";
 
 const activityDescriptionComponent = {
+    // `showStatusAndCode` is false where the dashboard's activity bar shows
+    // them instead (#893).
     bindings: {
-        activity: '<',
-        associatedCase: '<?',
-        enableLink: '<',
-        onSelect: '<?',
-        onArchive: '<?',
-        onUnarchive: '<?',
-        onView: '<?',
+        activity:          "<",
+        associatedCase:    "<?",
+        enableLink:        "<",
+        onSelect:          "<?",
+        onArchive:         "<?",
+        onUnarchive:       "<?",
+        onView:            "<?",
+        showStatusAndCode: "<?",
     },
     templateUrl: "/assets/static/views/teacher/fragments/activity-description.template.html",
     controller: function() {
         this.$onInit = function() {
             if (angular.isUndefined(this.enableLink)) {
                 this.enableLink = true;
+            }
+            if (angular.isUndefined(this.showStatusAndCode)) {
+                this.showStatusAndCode = true;
             }
         };
 

@@ -2624,6 +2624,144 @@ h2{
     width: 100%;
 }
 
+/* Activity bar of the teacher's dashboard, sticky under the app bar (#893).
+   Its z-index keeps it over the page content and under the sidebar, the
+   app bar and Bootstrap's modals (1040 and up). */
+.activity-bar-host {
+    display: block;
+    margin-bottom: 12px;
+    position: sticky;
+    top: var(--teacher-topbar-height, 68px);
+    z-index: 1000;
+}
+
+.activity-bar {
+    align-items: center;
+    background: #fff;
+    border-bottom: 1px solid #d5dbe8;
+    box-shadow: 0 4px 12px rgb(7 28 120 / 6%);
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 10px;
+    min-height: 56px;
+    padding: 8px 12px;
+}
+
+.activity-bar-name {
+    flex: 0 1 auto;
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.3;
+    margin: 0;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.activity-bar-chip {
+    border: 1px solid #c8cfdc;
+    border-radius: 999px;
+    flex: none;
+    font-size: 13px;
+    line-height: 1.4;
+    padding: 2px 10px;
+    white-space: nowrap;
+}
+
+.activity-bar-status-in_progress {
+    border-color: #3c763d;
+    color: #3c763d;
+}
+
+.activity-bar-status-finished,
+.activity-bar-status-initiated {
+    color: #555;
+}
+
+.activity-bar-status-dot {
+    font-size: 9px;
+    vertical-align: 1px;
+}
+
+.activity-bar-code-value {
+    padding: 0 6px;
+}
+
+.activity-bar-controls {
+    flex: none;
+    margin-left: auto;
+}
+
+.activity-controls .action-buttons,
+.activity-controls .report-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.activity-hold {
+    display: inline-block;
+    position: relative;
+}
+
+/* The tooltip of a hold-to-confirm button, on hover and keyboard focus. The
+   transparent padding bridges the gap to the button, so the pointer can move
+   onto the tooltip without hiding it. */
+.activity-hold-tip {
+    display: none;
+    padding-top: 10px;
+    position: absolute;
+    right: 0;
+    top: 100%;
+    width: 300px;
+}
+
+.activity-hold:hover .activity-hold-tip,
+.activity-hold:focus-within .activity-hold-tip {
+    display: block;
+}
+
+.activity-hold.activity-hold-tip-dismissed .activity-hold-tip {
+    display: none;
+}
+
+.activity-hold-tip-body {
+    background: #222;
+    border-radius: 6px;
+    color: #fff;
+    display: block;
+    font-size: 13px;
+    line-height: 1.4;
+    padding: 8px 10px;
+    position: relative;
+    white-space: normal;
+}
+
+.activity-hold-tip-body::before {
+    border: 7px solid transparent;
+    border-bottom-color: #222;
+    border-top: 0;
+    content: "";
+    position: absolute;
+    right: 32px;
+    top: -7px;
+}
+
+/* Below 1600 px the bar keeps one line: the phase chip and the
+   "connected" label give way. */
+@media (width < 1600px) {
+    .activity-bar-phase,
+    .activity-bar-connected-label {
+        display: none;
+    }
+}
+
+@media (width < 768px) {
+    .activity-bar-host {
+        top: 62px;
+    }
+}
+
 .design-item-panel .design-item-actions {
     align-items: center;
     display: flex;
