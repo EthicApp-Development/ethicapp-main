@@ -10,6 +10,7 @@ import { after, beforeEach, describe, it } from "node:test";
 import {
     PHASE_ACCESS_SQL,
     SESSION_ACCESS_SQL,
+    isSessionParticipant,
     requireSessionOwnerOrParticipant,
 } from "../activity-owner-helper.js";
 import { installFakePgPool } from "../../controllers/__tests__/fake-pg-pool.mjs";
@@ -203,5 +204,30 @@ describe("SESSION_ACCESS_SQL", () => {
         const columns = (sql) => sql.slice(sql.indexOf("COALESCE"), sql.indexOf("AS participant"));
 
         assert.equal(columns(SESSION_ACCESS_SQL), columns(PHASE_ACCESS_SQL));
+    });
+});
+
+// The participant half of the rule, for the response submission policy (#927).
+describe("isSessionParticipant", () => {
+    it("is true for a student enrolled in the session", async () => {
+        assert.equal(await isSessionParticipant(SESSION_ID, STUDENT.uid), true);
+
+        assert.equal(db.queries.length, 1);
+        const [{ sql, params }] = db.queries;
+        assert.equal(sql, SESSION_ACCESS_SQL);
+        assert.deepEqual(params.map(Number), [SESSION_ID, STUDENT.uid]);
+    });
+
+    it("is false for an anonymized student, an outsider and an unknown session", async () => {
+        assert.equal(await isSessionParticipant(SESSION_ID, FORGOTTEN_STUDENT.uid), false);
+        assert.equal(await isSessionParticipant(SESSION_ID, OUTSIDER.uid), false);
+        assert.equal(await isSessionParticipant(UNKNOWN_SESSION_ID, STUDENT.uid), false);
+    });
+
+    it("is false for an id that is not a positive integer, without querying", async () => {
+        for (const id of ["abc", "1.5", "0", "-3", null]) {
+            assert.equal(await isSessionParticipant(id, STUDENT.uid), false);
+        }
+        assert.equal(db.queries.length, 0);
     });
 });

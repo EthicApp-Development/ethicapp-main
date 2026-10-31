@@ -145,6 +145,14 @@ const esCL = {
     responseSubmitError: 'No fue posible enviar tu respuesta.',
     responseSelectScaleFirst: 'Selecciona un valor de la escala antes de enviar.',
     responseCooldown: 'Espera antes de volver a enviar esta pregunta.',
+    responseRefusals: {
+      sessionNotFound: 'No encontramos esta actividad en tu cuenta. Vuelve a tus actividades y ábrela otra vez.',
+      activityFinished: 'Esta actividad ya terminó y no recibe más respuestas.',
+      noActivePhase: 'La actividad no tiene una fase en curso. Espera a que el profesor la inicie.',
+      phaseChanged: 'La actividad pasó a otra fase. Actualizamos la vista para que respondas la fase actual.',
+      unsupportedDesignType: 'Esta actividad no recibe respuestas desde aquí.',
+      questionNotInPhase: 'Esta pregunta ya no es parte de la fase actual. Actualiza la página e inténtalo de nuevo.'
+    },
     externalResponseProcessing: 'Un servicio externo está procesando tu respuesta...',
     externalResponseProcessingButton: 'Esperando retroalimentación externa...',
     externalResultTitle: 'Resultado del servicio externo',

@@ -329,3 +329,33 @@ export async function requireSessionOwnerOrParticipant(
     });
     return access && { sessionId: access.sessionId };
 }
+
+/**
+ * Whether user `userId` is a participant of session `sessionId`: enrolled in
+ * it (`sesusers`) with an account that is not anonymized. It is the
+ * participant half of requireSessionOwnerOrParticipant's rule, with the same
+ * query, for a caller that answers the refusal itself, such as the response
+ * submission policy (#927). It checks no role and sends nothing; an unknown
+ * session, or an id that is not a positive integer, is not participated in.
+ *
+ * @param {number|string} sessionId - The session id from the route.
+ * @param {number|string} userId - The requester's id.
+ * @returns {Promise<boolean>}
+ */
+export async function isSessionParticipant(sessionId, userId) {
+    const id = positiveInteger(sessionId);
+    if (id === null) {
+        return false;
+    }
+
+    const rows = await rpg2.execSQL({
+        dbcon:     config.dbconnString,
+        sql:       SESSION_ACCESS_SQL,
+        sqlParams: [
+            rpg2.param("plain", id),
+            rpg2.param("plain", userId),
+        ],
+    });
+
+    return rows.length > 0 && rows[0].participant === true;
+}
