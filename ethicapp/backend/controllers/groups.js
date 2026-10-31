@@ -7,7 +7,10 @@ import * as GroupsHelper from "../helpers/groups-helper.js"
 import * as ActivitiesHelper from "../helpers/activities-helper.js";
 import * as StudentActivityStatusHelper from "../helpers/student-activity-state-helper.js";
 import { requireRole, requireOwnershipOrRole } from "../helpers/auth-helper.js";
-import { requirePhaseOwner } from "../helpers/activity-owner-helper.js";
+import {
+    requirePhaseOwner,
+    requirePhaseOwnerOrParticipant,
+} from "../helpers/activity-owner-helper.js";
 
 const router = express.Router();
 
@@ -56,12 +59,12 @@ const router = express.Router();
 router.get("/phases/:id/groups", async (req, res) => {
     const { id } = req.params;
 
-    // Validate required parameter
-    if (!id || isNaN(Number(id))) {
-        return res.status(400).json({ error: "Invalid or missing required parameter: id." });
-    }
-
     try {
+        const owner = await requirePhaseOwner(req, res, id);
+        if (!owner) {
+            return;
+        }
+
         // Fetch group data from the database
         const results = await rpg2.execSQL({
             sql: `
@@ -74,8 +77,8 @@ router.get("/phases/:id/groups", async (req, res) => {
                 WHERE t.stageid = $1
                 ORDER BY t.id, tu.uid
             `,
-            dbcon: config.dbconnString,
-            sqlParams: [rpg2.param('plain', id)],
+            dbcon:     config.dbconnString,
+            sqlParams: [rpg2.param("plain", owner.phaseId)],
         });
 
         // Handle no results
@@ -123,7 +126,19 @@ router.get("/phases/:id/user_group/:user_id", async (req, res) => {
         return res.status(400).json({ error: "Missing required parameters: phase_id and/or user_id" });
     }
 
+    // The activity's teacher may ask for any user; a student, only for
+    // themselves, in a session they participate in (#910). The answer names
+    // the group's members.
+    if (!requireOwnershipOrRole(req, res, userId, ["P"])) {
+        return;
+    }
+
     try {
+        const access = await requirePhaseOwnerOrParticipant(req, res, phaseId);
+        if (!access) {
+            return;
+        }
+
         // Query to find the group (team) of the specified user in the given phase
         const results = await rpg2.execSQL({
             sql: `
@@ -140,7 +155,7 @@ router.get("/phases/:id/user_group/:user_id", async (req, res) => {
                 ORDER BY tu.uid
             `,
             dbcon: config.dbconnString,
-            sqlParams: [rpg2.param('plain', phaseId), rpg2.param('plain', userId)],
+            sqlParams: [rpg2.param("plain", access.phaseId), rpg2.param("plain", userId)],
         });
 
         // If no group is found for the user, return an empty success response
@@ -221,6 +236,11 @@ router.get("/phases/:id/user_group/:user_id/previous_responses", async (req, res
     }
 
     try {
+        // Only in a session the student participates in (#910).
+        if (!await requirePhaseOwnerOrParticipant(req, res, phaseId)) {
+            return;
+        }
+
         const previousResponses = await StudentActivityStatusHelper.getCachedPreviousGroupResponses(
             Number(phaseId),
             Number(userId),
