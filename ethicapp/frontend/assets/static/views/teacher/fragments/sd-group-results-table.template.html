@@ -25,10 +25,17 @@
         </tr>
     </thead>
     <tbody>
+        <!-- A row opens the response detail panel (#896), by click or by
+             Enter or Space: a student's row the student, a group's row the
+             group. The rows the panel shows are highlighted. -->
         <tr ng-repeat="user in gptCtrl.phaseData.state | participantSearch:gptCtrl.participantQuery track by $index"
-            ng-class="{'group-summary': user.groupStatistics}"
-            ng-click="gptCtrl.onRowClick(user)"
-            style="cursor: pointer;">
+            class="response-detail-row"
+            ng-class="{ 'group-summary': user.groupStatistics, 'response-detail-row-selected': gptCtrl.isRowInDetail(user) }"
+            ng-attr-aria-current="{{ gptCtrl.isRowInDetail(user) ? 'true' : undefined }}"
+            data-detail-key="{{ gptCtrl.detailKey(user) }}"
+            tabindex="0"
+            ng-keydown="gptCtrl.onRowKeydown($event, user)"
+            ng-click="gptCtrl.onRowClick(user)">
             <td>
                 <span ng-if="!user.groupStatistics">{{ user.userName }}</span>
                 <strong ng-if="user.groupStatistics">{{ user.groupName }}</strong>

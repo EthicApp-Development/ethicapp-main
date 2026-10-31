@@ -1,0 +1,36 @@
+<!-- One student's answers in the response detail panel (#896): each question
+     with its scale, its poles and the full justification. It was the body of
+     the individual response modal. -->
+<div class="response-detail-questions" ng-if="$ctrl.questions.length > 0">
+    <div class="panel panel-default response-detail-question" ng-repeat="question in $ctrl.questions track by question.number">
+        <div class="panel-heading">
+            <strong>{{ 'item_label' | translate }} {{ $index + 1 }}</strong>
+        </div>
+        <div class="panel-body">
+            <rich-text ng-if="question.text.trim()" text="question.text"
+                content-type="question.contentType" videos="$ctrl.caseVideos"></rich-text>
+            <p ng-if="!question.text.trim()">{{ 'no_response' | translate }}</p>
+
+            <div class="response-detail-scale">
+                <strong class="response-detail-pole">{{ question.leftPole || ('left_pole_label' | translate) }}</strong>
+                <span class="response-detail-scale-options">
+                    <label class="radio-inline"
+                           ng-repeat="option in $ctrl.buildScaleOptions(question) track by option">
+                        <input type="radio"
+                               disabled
+                               ng-checked="$ctrl.getResponseValue(question) == option">
+                        {{ option }}
+                    </label>
+                </span>
+                <strong class="response-detail-pole">{{ question.rightPole || ('right_pole_label' | translate) }}</strong>
+            </div>
+
+            <div class="response-detail-justification" ng-if="question.justify">
+                <strong>{{ 'comment' | translate }}</strong>
+                <p>{{ $ctrl.getResponseComment(question) || ('no_response' | translate) }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<p ng-if="$ctrl.questions.length === 0">{{ 'no_response' | translate }}</p>

@@ -1,0 +1,29 @@
+<!-- The rail folded into a strip of phase dots while the response detail
+     panel is open between 1200 and 1599 px (#896): one dot per phase of the
+     design, the current one filled, the selected one ringed. Started phases
+     can still be selected; the ones not started are disabled. -->
+<nav class="phase-dots" aria-label="{{ 'dashboard_phases_title' | translate }}">
+    <ol class="phase-dots-list">
+        <li class="phase-dots-item" ng-repeat="row in $ctrl.rows track by row.number">
+            <button type="button" class="phase-dot"
+                ng-class="{
+                    'phase-dot-selected': $ctrl.isSelected(row),
+                    'phase-dot-current': row.current,
+                    'phase-dot-pending': !row.started
+                }"
+                ng-disabled="!row.started"
+                ng-attr-aria-current="{{ $ctrl.isSelected(row) ? 'true' : undefined }}"
+                title="{{ 'dashboard_phase_name' | translate:{ number: row.number, mode: (row.modeKey | translate) } }}"
+                ng-click="$ctrl.select(row)">
+                <span class="sr-only">
+                    {{ 'dashboard_phase_name' | translate:{ number: row.number, mode: (row.modeKey | translate) } }}
+                </span>
+                <span class="sr-only" ng-if="row.started">
+                    {{ 'dashboard_answered_count' | translate:{ answered: row.answered, participants: row.participants } }}
+                </span>
+                <span class="sr-only" ng-if="row.current">{{ 'dashboard_phase_current' | translate }}</span>
+                <span class="sr-only" ng-if="!row.started">{{ 'dashboard_phase_not_started' | translate }}</span>
+            </button>
+        </li>
+    </ol>
+</nav>

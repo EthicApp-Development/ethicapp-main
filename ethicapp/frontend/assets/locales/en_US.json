@@ -939,5 +939,19 @@
 	"dashboard_sections_label": "Phase and activity context",
 	"dashboard_this_phase_summary": "features, instructions, questions",
 	"dashboard_ai_services_summary_one": "1 service",
-	"dashboard_ai_services_summary_other": "{{count}} services"
+	"dashboard_ai_services_summary_other": "{{count}} services",
+	"response_detail_previous": "Previous",
+	"response_detail_next": "Next",
+	"response_detail_close": "Close",
+	"response_detail_member_count": "Members: {{count}}",
+	"response_detail_message_count": "Messages: {{count}}",
+	"response_detail_chat_live": "Live chat",
+	"response_detail_chat_read_only": "Read-only chat",
+	"response_detail_open_group": "See {{group}}",
+	"response_detail_open_group_chat": "See {{group}} and its chat",
+	"response_detail_unread_messages": "New messages: {{count}}",
+	"response_detail_digest_label": "The group's values per item:",
+	"response_detail_splitter_label": "Resize the answers and the chat",
+	"response_detail_chat_load_error": "Unable to load chat messages.",
+	"response_detail_chat_send_error": "Unable to send chat message."
 }

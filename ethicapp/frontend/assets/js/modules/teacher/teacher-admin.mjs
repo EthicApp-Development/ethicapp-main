@@ -155,9 +155,9 @@ app.controller("CreateDesignController",
     ["$scope", "$window", "DesignCatalogService", "UserProfileService",
         "LanguageCatalogService", CreateDesignController]);
 app.controller("DashboardController", 
-    ["$scope", "$routeParams", "$http", "$translate", "$timeout", "$uibModal",
+    ["$scope", "$routeParams", "$http", "$translate", "$timeout",
         "ActivityStateService", "ActivityCatalogService", "DesignCatalogService",
-        "CasesCatalogService", "TeacherGroupChatService", "LanguageCatalogService", "$window",
+        "CasesCatalogService", "LanguageCatalogService", "$window",
         DashboardController]);
 app.controller("DesignViewerController", 
     ["$scope", "$routeParams", "$window", "DesignCatalogService", "CasesCatalogService",
@@ -219,6 +219,11 @@ import { activityDescriptionComponent } from "../../components/activity-descript
 import activityBarComponent from "../../components/activity-bar.component.js";
 // The phase navigator in the activity dashboard's rail (#894).
 import phaseNavigatorComponent from "../../components/phase-navigator.component.js";
+// The response detail panel of the activity dashboard and its contents (#896).
+import responseDetailPanelComponent from "../../components/response-detail-panel.component.js";
+import sdStudentResponseDetailComponent
+    from "../../components/sd-student-response-detail.component.js";
+import sdGroupResponseDetailComponent from "../../components/sd-group-response-detail.component.js";
 import { designDescriptionComponent } from "../../components/design-description.component.js";
 import rankingItemEditorComponent from "../../components/ranking-item-editor.component.js";
 import sdItemEditorComponent from "../../components/sd-item-editor.component.js";
@@ -272,6 +277,9 @@ import teacherToastComponent from "../../components/teacher-toast.component.js";
 app.component('activityDescription', activityDescriptionComponent);
 app.component("activityBar", activityBarComponent);
 app.component("phaseNavigator", phaseNavigatorComponent);
+app.component("responseDetailPanel", responseDetailPanelComponent);
+app.component("sdStudentResponseDetail", sdStudentResponseDetailComponent);
+app.component("sdGroupResponseDetail", sdGroupResponseDetailComponent);
 app.component('designDescription', designDescriptionComponent);
 app.component('groupingModeSelector', groupingModeSelectorComponent);
 app.component("serviceConfigurationForm", serviceConfigurationFormComponent);

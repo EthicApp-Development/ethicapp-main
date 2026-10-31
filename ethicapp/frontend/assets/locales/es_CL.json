@@ -939,5 +939,19 @@
 	"dashboard_sections_label": "Contexto de la fase y de la actividad",
 	"dashboard_this_phase_summary": "características, instrucciones, preguntas",
 	"dashboard_ai_services_summary_one": "1 servicio",
-	"dashboard_ai_services_summary_other": "{{count}} servicios"
+	"dashboard_ai_services_summary_other": "{{count}} servicios",
+	"response_detail_previous": "Anterior",
+	"response_detail_next": "Siguiente",
+	"response_detail_close": "Cerrar",
+	"response_detail_member_count": "Integrantes: {{count}}",
+	"response_detail_message_count": "Mensajes: {{count}}",
+	"response_detail_chat_live": "Chat en vivo",
+	"response_detail_chat_read_only": "Chat de solo lectura",
+	"response_detail_open_group": "Ver {{group}}",
+	"response_detail_open_group_chat": "Ver {{group}} y su chat",
+	"response_detail_unread_messages": "Mensajes nuevos: {{count}}",
+	"response_detail_digest_label": "Valores del grupo por ítem:",
+	"response_detail_splitter_label": "Ajustar la altura de las respuestas y del chat",
+	"response_detail_chat_load_error": "No se pudieron cargar los mensajes del chat.",
+	"response_detail_chat_send_error": "No se pudo enviar el mensaje."
 }

@@ -21,8 +21,8 @@ function createDashboard($window) {
         $applyAsync: fn => fn(),
     };
     const vm = {};
-    DashboardController.call(vm, $scope, {}, null, null, null, null, {},
-        { takeLaunchNotice: () => [] }, null, null, null, null, $window);
+    DashboardController.call(vm, $scope, {}, null, null, null, {},
+        { takeLaunchNotice: () => [] }, null, null, null, $window);
     return { vm, destroy: () => destroyHandlers.forEach(handler => handler()) };
 }
 

@@ -1,3 +1,4 @@
+import { detailRowKey, isRowActivationKey, isRowInDetail } from "../helpers/response-detail.js";
 import { individualResultsTables } from "./templates/dashboard/dashboard-views.registry.js";
 
 let individualPhaseTableDirective = function() {
@@ -8,6 +9,7 @@ let individualPhaseTableDirective = function() {
             designType: '<',
             participantQuery: "<?", // The dashboard's participant search (#894)
             questionTexts:    "<?", // The questions' text for the column headers (#895)
+            detailSelection:  "<?", // What the response detail panel shows (#896)
             onSelectResponse: '&?'
         },
         bindToController: true, // Bind the scope properties to the controller
@@ -104,6 +106,24 @@ let individualPhaseTableDirective = function() {
                     return `/assets/static/views/teacher/fragments/default-template.html`;
                 }
                 return template;
+            };
+
+            // The response detail panel (#896): its rows are highlighted,
+            // each row is known by its key so the focus can come back to it,
+            // and Enter or Space opens a row as a click does.
+            iptCtrl.isRowInDetail = function(row) {
+                return isRowInDetail(iptCtrl.detailSelection, row);
+            };
+
+            iptCtrl.detailKey = function(row) {
+                return detailRowKey(row);
+            };
+
+            iptCtrl.onResponseRowKeydown = function(event, response) {
+                if (isRowActivationKey(event)) {
+                    event.preventDefault();
+                    iptCtrl.onResponseRowClick(response);
+                }
             };
 
             iptCtrl.onResponseRowClick = function(response) {
