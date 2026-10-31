@@ -4,13 +4,13 @@
         <tr>
             <th>{{ 'participant_column_header' | translate }}</th>
             <th ng-repeat="question in iptCtrl.phaseData.descriptor.questions">
-                {{ 'item_label' | translate }} {{ $index + 1 }} (1-{{ question.range }})
+                <abbr title="{{ 'item_label' | translate }} {{ $index + 1 }}">{{ 'dashboard_item_short' | translate:{ number: $index + 1 } }}</abbr> (1-{{ question.range }})
                 <span ng-if="question.justify" class="text-danger">*</span>
             </th>
         </tr>
     </thead>
     <tbody>
-        <tr ng-repeat="response in iptCtrl.sortedResponses track by response.userId"
+        <tr ng-repeat="response in iptCtrl.sortedResponses | participantSearch:iptCtrl.participantQuery track by response.userId"
             ng-click="iptCtrl.onResponseRowClick(response)"
             style="cursor: pointer;">
             <td>{{ response.userName }}</td>

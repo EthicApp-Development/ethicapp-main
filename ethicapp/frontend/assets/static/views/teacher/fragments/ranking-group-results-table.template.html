@@ -10,7 +10,7 @@
         </tr>
     </thead>
     <tbody>
-        <tr ng-repeat="response in sortedResponses track by response.uid">
+        <tr ng-repeat="response in sortedResponses | participantSearch:gptCtrl.participantQuery track by response.uid">
             <td>{{ response.clusterCount }}</td>
             <td>
                 {{ response.userName }}

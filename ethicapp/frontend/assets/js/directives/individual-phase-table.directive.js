@@ -6,6 +6,7 @@ let individualPhaseTableDirective = function() {
         scope: {
             phaseData: '<',
             designType: '<',
+            participantQuery: "<?", // The dashboard's participant search (#894)
             onSelectResponse: '&?'
         },
         bindToController: true, // Bind the scope properties to the controller

@@ -191,6 +191,8 @@ import tooltipDirective from   '../../directives/tooltip.directive.js';
 import holdToConfirmDirective from "../../directives/hold-to-confirm.directive.js";
 import { caseAnalysisComponentHostDirective }
     from "../../directives/case-analysis-component-host.directive.js";
+// "Show more" for clamped text in the activity dashboard's rail (#894).
+import { clampOverflowDirective } from "../../directives/clamp-overflow.directive.js";
 
 app.directive("connectedUsers", connectedUsersDirective);
 app.directive("activityControls", activityControlsDirective);
@@ -207,6 +209,7 @@ app.directive("copyToClipboard", copyToClipboardDirective);
 app.directive("phaseDeleter", ["$translate", phaseDeleterDirective]);
 app.directive("holdToConfirm", ["$timeout", holdToConfirmDirective]);
 app.directive("caseAnalysisComponentHost", ["$compile", caseAnalysisComponentHostDirective]);
+app.directive("clampOverflow", ["$parse", clampOverflowDirective]);
 
 app.controller("ConnectedUsersDirectiveController", ["$scope", "ActivityStateService", 
     ConnectedUsersDirectiveController]);
@@ -214,6 +217,8 @@ app.controller("ConnectedUsersDirectiveController", ["$scope", "ActivityStateSer
 import { activityDescriptionComponent } from "../../components/activity-description.component.js";
 // The sticky bar of the activity dashboard (#893).
 import activityBarComponent from "../../components/activity-bar.component.js";
+// The phase navigator in the activity dashboard's rail (#894).
+import phaseNavigatorComponent from "../../components/phase-navigator.component.js";
 import { designDescriptionComponent } from "../../components/design-description.component.js";
 import rankingItemEditorComponent from "../../components/ranking-item-editor.component.js";
 import sdItemEditorComponent from "../../components/sd-item-editor.component.js";
@@ -266,6 +271,7 @@ import teacherToastComponent from "../../components/teacher-toast.component.js";
 
 app.component('activityDescription', activityDescriptionComponent);
 app.component("activityBar", activityBarComponent);
+app.component("phaseNavigator", phaseNavigatorComponent);
 app.component('designDescription', designDescriptionComponent);
 app.component('groupingModeSelector', groupingModeSelectorComponent);
 app.component("serviceConfigurationForm", serviceConfigurationFormComponent);
@@ -312,3 +318,6 @@ app.component("toast", teacherToastComponent);
 
 import { userRolesFilter } from '../../filters/user-roles.filter.js';
 app.filter("roleTranslate", ["$translate", userRolesFilter]);
+// The participant search over the activity dashboard's tables (#894).
+import { participantSearchFilter } from "../../filters/participant-search.filter.js";
+app.filter("participantSearch", participantSearchFilter);

@@ -1,0 +1,33 @@
+<!-- The features and instructions of a phase in the activity dashboard's
+     rail (#894), shared by the compact phase descriptions of every design
+     type. Included from them, with their `ctrl` (phaseDescription). -->
+<div class="phase-context-details" ng-if="ctrl.expanded">
+    <h4 class="sr-only">{{ 'features_title_text' | translate }}</h4>
+    <ul class="phase-context-chips">
+        <li class="dashboard-chip">{{ (ctrl.phaseMode === 'team' ? 'activity_bar_phase_mode_team' : 'activity_bar_phase_mode_individual') | translate }}</li>
+        <li class="dashboard-chip" ng-if="ctrl.phaseMode === 'team'">{{ (ctrl.phaseDetails.anonymous ? 'dashboard_chip_anonymous' : 'dashboard_chip_identified') | translate }}</li>
+        <li class="dashboard-chip" ng-if="ctrl.phaseMode === 'team' && ctrl.phaseDetails.chat">{{ 'dashboard_chip_chat' | translate }}</li>
+        <li class="dashboard-chip" ng-if="ctrl.phaseMode === 'team' && ctrl.phaseDetails.stdntAmount">{{ 'dashboard_chip_group_size' | translate:{ size: ctrl.phaseDetails.stdntAmount } }}</li>
+        <li class="dashboard-chip" ng-if="ctrl.phaseMode === 'team' && ctrl.phaseDetails.grouping_algorithm"
+            title="{{ 'grouping_algorithm_label' | translate }}">{{ ctrl.phaseDetails.grouping_algorithm | translate }}</li>
+        <li class="dashboard-chip" ng-if="ctrl.phaseDetails.prevPhasesResponse && ctrl.phaseDetails.prevPhasesResponse.length > 0"
+            title="{{ 'previous_phases_label' | translate }}">{{ 'dashboard_chip_previous_phases' | translate:{ phases: ctrl.phaseDetails.prevPhasesResponse.join(', ') } }}</li>
+    </ul>
+
+    <div ng-if="ctrl.phaseDetails.instructions && ctrl.phaseDetails.instructions.trim().length > 0">
+        <h4 class="phase-context-label">{{ 'phase_instructions_title' | translate }}</h4>
+        <div class="phase-context-instructions"
+            ng-class="{ 'phase-context-instructions-open': ctrl.instructionsOpen }"
+            clamp-overflow="ctrl.instructionsOverflow">
+            <rich-text text="ctrl.phaseDetails.instructions"
+                content-type="ctrl.phaseDetails.instructionsContentType"
+                videos="ctrl.caseVideos"></rich-text>
+        </div>
+        <button type="button" class="btn btn-link btn-xs phase-context-more"
+            ng-if="ctrl.instructionsOverflow || ctrl.instructionsOpen"
+            ng-click="ctrl.instructionsOpen = !ctrl.instructionsOpen"
+            aria-expanded="{{ ctrl.instructionsOpen ? 'true' : 'false' }}">
+            {{ (ctrl.instructionsOpen ? 'dashboard_show_less' : 'dashboard_show_more') | translate }}
+        </button>
+    </div>
+</div>

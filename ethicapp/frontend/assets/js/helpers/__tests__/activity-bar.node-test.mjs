@@ -6,6 +6,7 @@ import {
     activityStatus,
     connectedStudentCount,
     currentPhaseSummary,
+    phaseModeKey,
 } from "../activity-bar.js";
 
 describe("activityStatus", () => {
@@ -99,5 +100,13 @@ describe("connectedStudentCount", () => {
         assert.equal(connectedStudentCount(undefined), 0);
         assert.equal(connectedStudentCount(null), 0);
         assert.equal(connectedStudentCount([]), 0);
+    });
+});
+
+describe("phaseModeKey", () => {
+    it("names team phases and reads any other mode as individual", () => {
+        assert.equal(phaseModeKey("team"), "activity_bar_phase_mode_team");
+        assert.equal(phaseModeKey("individual"), "activity_bar_phase_mode_individual");
+        assert.equal(phaseModeKey(undefined), "activity_bar_phase_mode_individual");
     });
 });

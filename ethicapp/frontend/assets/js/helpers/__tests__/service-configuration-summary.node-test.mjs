@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
+    compactSettingsLine,
     phaseEnabledServiceIds,
     phaseServiceConfiguration,
     serviceDisplayName,
@@ -162,5 +163,25 @@ describe("phase external services summary (#757)", () => {
             { key: "anonymous_guide", text: "false" },
         ]);
         assert.deepEqual(storedSettingRows({}), []);
+    });
+});
+
+describe("compactSettingsLine (#894)", () => {
+    it("joins the first values shown as text", () => {
+        const rows = [
+            { key: "style", text: "básico", booleanValue: null },
+            { key: "anonymous", text: null, booleanValue: true },
+            { key: "minutes", text: "15 min", booleanValue: null },
+            { key: "language", text: "  ", booleanValue: null },
+            { key: "agents", text: "2", booleanValue: null },
+            { key: "model", text: "small", booleanValue: null },
+        ];
+        assert.equal(compactSettingsLine(rows), "básico · 15 min · 2");
+        assert.equal(compactSettingsLine(rows, 1), "básico");
+    });
+
+    it("is empty without rows", () => {
+        assert.equal(compactSettingsLine([]), "");
+        assert.equal(compactSettingsLine(undefined), "");
     });
 });

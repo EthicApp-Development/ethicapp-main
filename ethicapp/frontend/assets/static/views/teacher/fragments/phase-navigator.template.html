@@ -1,0 +1,31 @@
+<section class="dashboard-card phase-navigator" aria-labelledby="phase-navigator-title">
+    <h3 class="dashboard-card-title" id="phase-navigator-title">{{ 'dashboard_phases_title' | translate }}</h3>
+    <ol class="phase-navigator-list">
+        <li class="phase-navigator-item" ng-repeat="row in $ctrl.rows track by row.number">
+            <button type="button" class="phase-navigator-row"
+                ng-class="{
+                    'phase-navigator-row-selected': $ctrl.isSelected(row),
+                    'phase-navigator-row-current': row.current,
+                    'phase-navigator-row-pending': !row.started
+                }"
+                ng-disabled="!row.started"
+                ng-attr-aria-current="{{ $ctrl.isSelected(row) ? 'true' : undefined }}"
+                ng-click="$ctrl.select(row)">
+                <span class="phase-navigator-marker" aria-hidden="true"></span>
+                <span class="phase-navigator-name">
+                    {{ 'dashboard_phase_name' | translate:{ number: row.number, mode: (row.modeKey | translate) } }}
+                </span>
+                <span class="phase-navigator-count" ng-if="row.started" aria-hidden="true">{{ row.answered }}/{{ row.participants }}</span>
+                <span class="phase-navigator-count" ng-if="!row.started" aria-hidden="true">&mdash;</span>
+                <span class="sr-only" ng-if="row.started">
+                    {{ 'dashboard_answered_count' | translate:{ answered: row.answered, participants: row.participants } }}
+                </span>
+                <span class="sr-only" ng-if="row.current">{{ 'dashboard_phase_current' | translate }}</span>
+                <span class="sr-only" ng-if="!row.started">{{ 'dashboard_phase_not_started' | translate }}</span>
+                <span class="phase-navigator-meter" ng-if="row.current" aria-hidden="true">
+                    <span class="phase-navigator-meter-fill" ng-style="{ width: row.progress + '%' }"></span>
+                </span>
+            </button>
+        </li>
+    </ol>
+</section>
