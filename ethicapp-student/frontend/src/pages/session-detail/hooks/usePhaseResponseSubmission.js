@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { describeResponseSubmissionError } from '../../../utils/responseSubmissionOutcome.js';
 
 const RESPONSE_COOLDOWN_MS = 3000;
 
@@ -39,8 +40,15 @@ export function usePhaseResponseSubmission({
       });
       await loadFullState({ sessionId: selectedSessionId, userId, invalidate: true });
       return { ok: true, message: t('sessionDetail.responseSubmitted') };
-    } catch {
-      return { ok: false, message: t('sessionDetail.responseSubmitError') };
+    } catch (error) {
+      const { message, reload } = describeResponseSubmissionError(error, t);
+
+      // The activity moved on or ended: show where it is now.
+      if (reload) {
+        loadFullState({ sessionId: selectedSessionId, userId, invalidate: true }).catch(() => {});
+      }
+
+      return { ok: false, message };
     }
   };
 

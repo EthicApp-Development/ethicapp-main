@@ -6,7 +6,7 @@ import * as StudentActivityStatusHelper from "../../helpers/student-activity-sta
 import * as config from "../../config/database.config.js";
 import * as rpg2 from "../../db/rest-pg-2.js";
 import { teacherNotifications } from "../../config/socket.config.js";
-import { getDesignTypeBySessionId } from "./activities-common.js";
+import { evaluateStudentResponse } from "../../helpers/student-response-policy.js";
 import { dispatchPhaseHook } from "../../helpers/external-service-dispatch.js";
 import { describeError } from "../../helpers/log-safety.js";
 
@@ -134,6 +134,11 @@ router.get("/activities/:id/users/:user_id/full_state", async (req, res) => {
     }
 });
 
+// The student's response to the current phase. Role A is checked before any
+// lookup (403); the response policy then refuses, with a code, a session the
+// student is not enrolled in, a finished or archived activity, a phase that
+// is not the current one and a task outside it (#927). A refusal writes
+// nothing, notifies no teacher and dispatches no hook.
 router.post("/activities/:id/response", async (req, res) => {
     const sessionId = Number(req.params.id);
     const userId = Number(req.session?.uid);
@@ -157,12 +162,17 @@ router.post("/activities/:id/response", async (req, res) => {
     }
 
     try {
-        const phaseId = await getCurrentPhaseIdForSession(sessionId);
-        if (!phaseId) {
-            return res.status(409).json({ error: "Session has no active phase." });
+        const decision = await evaluateStudentResponse({
+            sessionId,
+            userId,
+            questionId: Number(questionId),
+            payload:    req.body,
+        });
+        if (!decision.allowed) {
+            return res.status(decision.status).json({ error: decision.error, code: decision.code });
         }
 
-        const designType = await getDesignTypeBySessionId(sessionId);
+        const { phaseId, designType, taskId, task } = decision;
         const handler = responseSubmissionHandlers[designType];
 
         if (!handler) {
@@ -170,15 +180,15 @@ router.post("/activities/:id/response", async (req, res) => {
         }
 
         const notificationData = await handler({
-            sessionId,
-            phaseId,
             userId,
-            questionId: Number(questionId),
-            payload:    req.body,
+            phaseId,
+            taskId,
+            task,
+            payload: req.body,
         });
 
-        emitResponseSubmittedNotification(sessionId, phaseId, notificationData);
-        dispatchStudentResponseHook({
+        responseSubmissionEffects.notifyTeacher(sessionId, phaseId, notificationData);
+        responseSubmissionEffects.dispatchHook({
             sessionId,
             phaseId,
             userId,
@@ -207,6 +217,12 @@ const responseSubmissionHandlers = {
     ranking:               submitRankingResponse,
 };
 
+// What an accepted response sets off, in an object so tests can observe it.
+export const responseSubmissionEffects = {
+    notifyTeacher: emitResponseSubmittedNotification,
+    dispatchHook:  dispatchStudentResponseHook,
+};
+
 async function dispatchStudentResponseHook(context) {
     try {
         await dispatchPhaseHook("student-response-submitted", context);
@@ -216,14 +232,10 @@ async function dispatchStudentResponseHook(context) {
     }
 }
 
-async function submitSemanticDifferentialResponse({ phaseId, userId, questionId, payload }) {
+// `task` is the phase's question that the response policy found.
+async function submitSemanticDifferentialResponse({ userId, taskId: questionId, task, payload }) {
     const value = Number(payload.value);
     const justification = normalizeText(payload.justification);
-
-    const task = await getSemanticDifferentialTask(phaseId, questionId);
-    if (!task) {
-        throw badRequest("Question not found in the current phase.");
-    }
 
     if (!Number.isInteger(value) || value < 1 || value > Number(task.num_values)) {
         throw badRequest(
@@ -277,22 +289,14 @@ async function submitSemanticDifferentialResponse({ phaseId, userId, questionId,
     };
 }
 
-async function submitRankingResponse({ phaseId, userId, questionId, payload }) {
-    const itemId = Number(payload.itemId ?? questionId);
+// `task` is the phase's ranking item that the response policy found, from
+// `itemId` or `questionId`.
+async function submitRankingResponse({ phaseId, userId, taskId: itemId, task, payload }) {
     const order = Number(payload.order);
     const justification = normalizeText(payload.justification);
 
-    if (!itemId || isNaN(itemId)) {
-        throw badRequest("Missing or invalid itemId.");
-    }
-
     if (!Number.isInteger(order) || order < 1) {
         throw badRequest("Invalid order. It must be an integer greater than or equal to 1.");
-    }
-
-    const task = await getRankingTask(phaseId, itemId);
-    if (!task) {
-        throw badRequest("Ranking item not found in the current phase.");
     }
 
     validateJustification({
@@ -360,57 +364,6 @@ function emitResponseSubmittedNotification(sessionId, phaseId, responsePayload) 
     );
 }
 
-async function getCurrentPhaseIdForSession(sessionId) {
-    const result = await rpg2.execSQL({
-        dbcon: config.dbconnString,
-        sql:   `
-            SELECT current_stage
-            FROM sessions
-            WHERE id = $1
-            LIMIT 1;
-        `,
-        sqlParams: [rpg2.param("plain", Number(sessionId))],
-    });
-
-    if (!result.length) {
-        throw notFound("Session not found.");
-    }
-
-    return result[0].current_stage;
-}
-
-async function getSemanticDifferentialTask(phaseId, questionId) {
-    const result = await rpg2.execSQL({
-        dbcon: config.dbconnString,
-        sql:   `
-            SELECT id, num AS num_values, justify AS requires_justification, word_count AS min_word_count
-            FROM differential
-            WHERE stageid = $1
-              AND id = $2
-            LIMIT 1;
-        `,
-        sqlParams: [rpg2.param("plain", Number(phaseId)), rpg2.param("plain", Number(questionId))],
-    });
-
-    return result[0];
-}
-
-async function getRankingTask(phaseId, itemId) {
-    const result = await rpg2.execSQL({
-        dbcon: config.dbconnString,
-        sql:   `
-            SELECT id, justified AS requires_justification, word_count AS min_word_count
-            FROM actors
-            WHERE stageid = $1
-              AND id = $2
-            LIMIT 1;
-        `,
-        sqlParams: [rpg2.param("plain", Number(phaseId)), rpg2.param("plain", Number(itemId))],
-    });
-
-    return result[0];
-}
-
 function validateJustification({ justification, requiresJustification, minWordCount }) {
     const hasJustification = Boolean(justification);
     const minimumWordCount = Number(minWordCount) || 0;
@@ -439,12 +392,6 @@ function countWords(value) {
 function badRequest(message) {
     const error = new Error(message);
     error.statusCode = 400;
-    return error;
-}
-
-function notFound(message) {
-    const error = new Error(message);
-    error.statusCode = 404;
     return error;
 }
 
