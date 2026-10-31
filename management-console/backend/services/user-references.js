@@ -108,6 +108,11 @@ export const USER_REFERENCES = Object.freeze([
   reference('upload_deletion_requests', 'user_id', null, true, administration, recorded),
   // Rows the deletion removes with the account (V10).
   reference('user_passkeys', 'user_id', cascade, false, accountData, deleted),
+  // The pseudonym numbers of an activity's students on the teacher's
+  // dashboard (V34, #897). A number means nothing without its account and
+  // never blocks a deletion; sesusers already does while the account takes
+  // part in a session. Forgetting keeps it: it is not personal data.
+  reference('activity_participant_pseudonyms', 'user_id', cascade, false, activities, kept),
   // Rows that keep their meaning without the account and lose the id (V4,
   // V6, V7, V21, V22, V25).
   reference('activity_report_exports', 'actor_user_id', setNull, false, administration, kept),

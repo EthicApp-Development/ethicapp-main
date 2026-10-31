@@ -1,6 +1,6 @@
 // Compares the list of columns that hold a users.id (user-references.js)
 // with the real schema, against a PostgreSQL database with migrations
-// V1-V28 or later applied. A migration that adds a reference to users fails
+// V1-V34 or later applied. A migration that adds a reference to users fails
 // here until the reference is listed, so the deletion of a never-activated
 // account cannot miss a table.
 //

@@ -342,6 +342,21 @@ answers no longer matter, the teacher may prefer to delete it instead. A phase
 numbered above its activity's current phase that is not a duplicate is left
 alone: it was never started, and the next start of that phase removes it.
 
+## Participant Pseudonyms
+
+Migration `V34__activity_participant_pseudonyms.sql` (#897) creates the empty
+table `activity_participant_pseudonyms`, with the numbers the teacher's
+dashboard shows in place of students' names while the teacher hides them. It
+changes no existing row and needs no environment variable or operator action;
+apply it with the rest of the release's migrations, after V33.
+
+ethicapp fills the table as teachers open their dashboards: one row per student
+and activity. Its foreign keys cascade, so deleting a session or an account
+deletes its rows, and forgetting a student or a teacher keeps them, as
+[`student-anonymization-data-map.md`](./student-anonymization-data-map.md)
+explains. Should the table be emptied, the dashboard draws new numbers, which
+differ from the ones shown before.
+
 ## Health Diagnostics Targets
 
 `MNG_HEALTH_CHECK_TARGETS` is the allowlist used by the management-console
