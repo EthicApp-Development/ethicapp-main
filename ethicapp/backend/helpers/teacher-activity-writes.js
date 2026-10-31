@@ -14,7 +14,9 @@
  * its foreign key check stopped waiting.
  *
  * Both lock the account before the session, as forgetting does, so they
- * cannot deadlock with it.
+ * cannot deadlock with it. The transaction that starts a phase
+ * (phase-start-helper.js, #906) takes the same locks in the same order before
+ * it writes anything, and ends with TRANSITION_SESSION_SQL.
  */
 
 // $1 name, $2 description, $3 teacher id, $4 type. Returns the new id, or no

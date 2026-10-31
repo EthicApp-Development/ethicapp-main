@@ -441,8 +441,8 @@ Current event hooks:
 The phase transition and `activity-started` hooks are dispatched from:
 
 ```text
-ethicapp/backend/controllers/activities/activities-teacher.js
-POST /activities/:session_id/phase_transition
+ethicapp/backend/helpers/phase-start-helper.js
+POST /activities/:session_id/phases/next (after its transaction commits)
 ```
 
 The `activity-finished` hook is dispatched from:

@@ -1,5 +1,3 @@
-import * as PhaseCreationHelpers from "../helpers/phase-creation-helpers.js";
-
 let ActivityStateService = function($http, TeacherSocketService) {
     const CHAT_NOTIFY_THROTTLE_MS = 3000;
     const CHAT_REFRESH_WATCHDOG_MS = 10000;
@@ -603,78 +601,44 @@ let ActivityStateService = function($http, TeacherSocketService) {
             }
             return service.activityStates[sessionId];
         },
-        addPhaseToActivity: async function(phaseObj, phaseNumber, sessionId) {
-            // Create the next phase
-            const requestObj = PhaseCreationHelpers.phaseCreationRequestObject(
-                phaseObj,
-                phaseNumber,
-                sessionId
-            );
-    
-            const stageResponse = await $http({
-                url: `/activities/${sessionId}/phases`,
-                method: "post",
-                data: requestObj,
-            });
-    
-            const phaseId = stageResponse.data.phaseId;
-            return phaseId;
-        },
-        addItemsToPhase: async function(phase, phaseId, sessionId, designType) {
+        /**
+         * Starts the activity's next phase on the server (#906), which builds it
+         * from the stored design in one transaction, then reloads the phases,
+         * the descriptor and the responses. When the activity is no longer at
+         * `expectedPhaseNumber` (409, another tab or request moved it first),
+         * they are reloaded too, so the dashboard shows where it is, and the
+         * error is thrown.
+         *
+         * @param {number|string} sessionId
+         * @param {number} expectedPhaseNumber The current phase's number, 0
+         *   before the first phase.
+         * @returns {Promise<{ id: number, number: number }>} The new phase.
+         */
+        startNextPhase: async function(sessionId, expectedPhaseNumber) {
+            let response;
             try {
-                const builder = PhaseCreationHelpers.itemBuilders[designType];
-                
-                if (builder) {
-                    const phaseItems = builder(phase, phaseId, sessionId);
-
-                    // TODO: refactor the backend endpoint so that it can receive a list of
-                    // items...
-                    // Iterate over the phase items and make HTTP POST requests for each item
-                    await Promise.all(
-                        phaseItems.map(item => {
-                            return $http({
-                                url: `/phases/${phaseId}/items`,
-                                method: "POST",
-                                data: item
-                            });
-                        })
-                    );
-                    console.info(`Items successfully added to phase ${phaseId}`);
-                } else {
-                    console.warn(`No handler found for design type: ${designType}`);
-                }
-            } catch (error) {
-                console.error(`Failed to add items to phase ${phaseId}:`, error);
-                throw new Error("Error adding items to phase.");
-            }
-        },
-        transitionToPhase: async function(sessionId, phaseId, phaseObj) {
-            const phaseMode = phaseObj.mode;
-
-            // Form groups if the phase mode is "team"
-            if (phaseMode == "team") {
-                await $http({
-                    url: `/phases/${phaseId}/groups`,
-                    method: "post"
+                response = await $http.post(`/activities/${sessionId}/phases/next`, {
+                    expectedPhaseNumber,
                 });
+            } catch (error) {
+                if (error?.status === 409) {
+                    await service.reloadPhaseState(sessionId).catch((reloadError) => {
+                        console.error(`Failed to reload the phases of session ${sessionId}:`,
+                            reloadError);
+                    });
+                }
+                throw error;
             }
 
-            // Transition to the newly created phase
-            await $http({
-                url: `/activities/${sessionId}/phase_transition`,
-                method: "post",
-                data: { phaseId },
-            });
+            await service.reloadPhaseState(sessionId);
+            return response.data.phase;
+        },
 
-            // Update the phases
+        reloadPhaseState: async function(sessionId) {
             await service.getInstancedPhases(sessionId, true);
-
-            // Update the activity descriptor
             await service.getActivityDescriptor(sessionId, true);
-
-            // Update the responses
             await service.getResponses(sessionId, true);
-        }
+        },
     };
 
     service.responseMergeHandlers = {

@@ -1,20 +1,19 @@
 /**
- * Who may build or advance an activity's phases: a teacher (role P) who
- * created the activity's session and whose account is not anonymized. It is
- * the rule with which teacher-activity-writes.js opens and advances an
- * activity, checked here before the endpoints that build a phase write
- * anything (#905).
+ * Who may advance an activity's phases: a teacher (role P) who created the
+ * activity's session and whose account is not anonymized. It is the rule with
+ * which teacher-activity-writes.js opens and advances an activity (#905).
+ * Starting the next phase checks it here before its transaction, so a
+ * refusal answers as the other endpoints do, and again inside the
+ * transaction, under lock (helpers/phase-start-helper.js, #906).
  *
- * Each check sends the error response itself and resolves to null when the
+ * The check sends the error response itself and resolves to null when the
  * request must stop:
  * - 401 without a signed-in user, 403 for any role other than P;
- * - 404 when the session or phase does not exist;
+ * - 404 when the session does not exist;
  * - 403 when it exists but the requester does not own it, or the account is
  *   anonymized.
  *
- * The check is a read, not a lock. The writes that follow it on these legacy
- * endpoints are separate statements, so an account forgotten between the
- * check and the write is not caught here; TRANSITION_SESSION_SQL still is.
+ * The check is a read, not a lock.
  */
 import * as config from "../config/database.config.js";
 import * as rpg2 from "../db/rest-pg-2.js";
@@ -31,56 +30,12 @@ export const SESSION_OWNERSHIP_SQL = `
     WHERE s.id = $1
 `;
 
-// $1 phase id, $2 requester id. One row when the phase exists.
-export const PHASE_OWNERSHIP_SQL = `
-    SELECT s.id AS session_id,
-           COALESCE(s.creator = requester.id, false) AS owned
-    FROM stages AS st
-    INNER JOIN sessions AS s
-        ON s.id = st.sesid
-    LEFT JOIN users AS requester
-        ON requester.id = $2
-       AND requester.anonymized_at IS NULL
-    WHERE st.id = $1
-`;
-
 function positiveInteger(value) {
     const number = Number(value);
     return Number.isSafeInteger(number) && number > 0 ? number : null;
 }
 
-async function requireOwner(req, res, { id, sql, notFound }) {
-    if (!requireRole(req, res, "P")) {
-        return null;
-    }
-
-    const resourceId = positiveInteger(id);
-    if (resourceId === null) {
-        res.status(404).json({ error: notFound });
-        return null;
-    }
-
-    const rows = await rpg2.execSQL({
-        dbcon:     config.dbconnString,
-        sql,
-        sqlParams: [
-            rpg2.param("plain", resourceId),
-            rpg2.param("plain", req.session.uid),
-        ],
-    });
-
-    if (rows.length === 0) {
-        res.status(404).json({ error: notFound });
-        return null;
-    }
-
-    if (rows[0].owned !== true) {
-        res.status(403).json({ error: "Access denied. User is not authorized for this activity." });
-        return null;
-    }
-
-    return { resourceId, sessionId: Number(rows[0].session_id) };
-}
+const NOT_FOUND = "Session not found.";
 
 /**
  * Lets the request through only for the owner of session `sessionId`.
@@ -91,29 +46,34 @@ async function requireOwner(req, res, { id, sql, notFound }) {
  * @returns {Promise<{sessionId: number}|null>} null once a response was sent.
  */
 export async function requireSessionOwner(req, res, sessionId) {
-    const owner = await requireOwner(req, res, {
-        id:       sessionId,
-        sql:      SESSION_OWNERSHIP_SQL,
-        notFound: "Session not found.",
-    });
-    return owner && { sessionId: owner.sessionId };
-}
+    if (!requireRole(req, res, "P")) {
+        return null;
+    }
 
-/**
- * Lets the request through only for the owner of the session that phase
- * `phaseId` belongs to (`stages.sesid`).
- *
- * @param {Object} req - Express request.
- * @param {Object} res - Express response.
- * @param {number|string} phaseId - The phase (stage) id from the route.
- * @returns {Promise<{phaseId: number, sessionId: number}|null>} null once a
- *   response was sent.
- */
-export async function requirePhaseOwner(req, res, phaseId) {
-    const owner = await requireOwner(req, res, {
-        id:       phaseId,
-        sql:      PHASE_OWNERSHIP_SQL,
-        notFound: "Phase not found.",
+    const id = positiveInteger(sessionId);
+    if (id === null) {
+        res.status(404).json({ error: NOT_FOUND });
+        return null;
+    }
+
+    const rows = await rpg2.execSQL({
+        dbcon:     config.dbconnString,
+        sql:       SESSION_OWNERSHIP_SQL,
+        sqlParams: [
+            rpg2.param("plain", id),
+            rpg2.param("plain", req.session.uid),
+        ],
     });
-    return owner && { phaseId: owner.resourceId, sessionId: owner.sessionId };
+
+    if (rows.length === 0) {
+        res.status(404).json({ error: NOT_FOUND });
+        return null;
+    }
+
+    if (rows[0].owned !== true) {
+        res.status(403).json({ error: "Access denied. User is not authorized for this activity." });
+        return null;
+    }
+
+    return { sessionId: Number(rows[0].session_id) };
 }
