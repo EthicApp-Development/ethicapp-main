@@ -432,6 +432,12 @@ async function copyCaseForUser(client, sourceCaseId, userId, visibility = PRIVAT
 // a design the teacher may not read is answered as if it did not exist (#929).
 const READABLE_DESIGN_CONDITION = "(creator = $2 OR visibility = 'public')";
 
+// The answer for a missing design, also given for a design the caller may not
+// see or act on, so it does not reveal that the design exists (#929).
+function designNotFoundResponse(res) {
+    return res.status(404).json({ status: "err", message: "Design not found" });
+}
+
 // After a design copy is committed (#848): its case is rendered when it has no
 // render yet, so analyses and screens get its text, and the copy, a new
 // design, requests the analyses it did not inherit (design-created). Both run
@@ -833,14 +839,10 @@ router.patch("/designs/:id/toggle_public", async (req, res) => {
                 FOR UPDATE OF d;
             `, [designId]);
             const design = result.rows[0];
-            if (!design) {
+            // Another teacher's design is answered as a missing one (#929).
+            if (!design || !sameId(sessionUid, design.creator)) {
                 await client.query("ROLLBACK");
-                return res.status(404).json({ status: "err", message: "Design not found" });
-            }
-
-            if (!sameId(sessionUid, design.creator)) {
-                await client.query("ROLLBACK");
-                return res.status(403).json({ status: "err", message: "Forbidden: You do not have permission to publish this design." });
+                return designNotFoundResponse(res);
             }
 
             const nextVisibility = isPublicVisibility(design.visibility) ? PRIVATE_VISIBILITY : PUBLIC_VISIBILITY;
@@ -946,13 +948,10 @@ router.patch("/designs/:id/lock", async (req, res) => {
             sqlParams: [rpg2.param("plain", designId)],
         });
 
-        // singleSQL returns {} when no row matches.
-        if (!design?.id) {
-            return res.status(404).json({ status: "err", message: "Design not found" });
-        }
-
-        if (!sameId(sessionUid, design.creator)) {
-            return res.status(403).json({ status: "err", message: "Forbidden: You do not have permission to lock this design." });
+        // singleSQL returns {} when no row matches. Another teacher's design
+        // is answered as a missing one (#929).
+        if (!design?.id || !sameId(sessionUid, design.creator)) {
+            return designNotFoundResponse(res);
         }
 
         await rpg2.execSQL({
@@ -995,12 +994,10 @@ router.patch("/designs/:id/archive", async (req, res) => {
             sqlParams: [rpg2.param("plain", designId)],
         });
 
-        if (!design) {
-            return res.status(404).json({ status: "err", message: "Design not found" });
-        }
-
-        if (!sameId(sessionUid, design.creator)) {
-            return res.status(403).json({ status: "err", message: "Forbidden: You do not have permission to archive this design." });
+        // singleSQL returns {} when no row matches. Another teacher's design
+        // is answered as a missing one (#929).
+        if (!design?.id || !sameId(sessionUid, design.creator)) {
+            return designNotFoundResponse(res);
         }
 
         const archived = req.body?.archived === true;
@@ -1066,14 +1063,15 @@ router.post("/designs/:id/duplicate", async (req, res) => {
             `, [designId]);
             const design = designResult.rows[0];
 
-            if (!design) {
+            // Another teacher's private or archived design is answered as a
+            // missing one (#929); a public, non-archived design stays duplicable.
+            const duplicable = design && (
+                sameId(sessionUid, design.creator)
+                || (isPublicVisibility(design.visibility) && design.archived !== true)
+            );
+            if (!duplicable) {
                 await client.query("ROLLBACK");
-                return res.status(404).json({ status: "err", message: "Design not found" });
-            }
-
-            if (!sameId(sessionUid, design.creator) && (!isPublicVisibility(design.visibility) || design.archived === true)) {
-                await client.query("ROLLBACK");
-                return res.status(403).json({ status: "err", message: "Forbidden: You cannot clone a private design you do not own." });
+                return designNotFoundResponse(res);
             }
 
             const designNoId = buildDesignCopyDocument(design.design, {
@@ -1193,13 +1191,10 @@ router.delete("/designs/:id", async (req, res) => {
             sqlParams: [rpg2.param("plain", designId)],
         });
 
-        if (!design) {
-            return res.status(404).json({ status: "err", message: "Design not found" });
-        }
-
-        // Check if the user is an admin or the creator of the design
-        if (!sameId(sessionUid, design.creator)) {
-            return res.status(403).json({ status: "err", message: "Forbidden: You do not have permission to delete this design." });
+        // singleSQL returns {} when no row matches. Another teacher's design
+        // is answered as a missing one (#929).
+        if (!design?.id || !sameId(sessionUid, design.creator)) {
+            return designNotFoundResponse(res);
         }
 
         // Delete the design
@@ -1254,7 +1249,7 @@ router.get('/designs/:id/valid', async (req, res) => {
         // A missing design and one the teacher may not read get the same
         // answer. singleSQL resolves to {} when no row matches.
         if (!result?.id) {
-            return res.status(404).json({ status: 'err', message: 'Design not found' });
+            return designNotFoundResponse(res);
         }
 
         // Convert 'valid' to a boolean
