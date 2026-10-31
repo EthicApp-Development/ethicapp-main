@@ -95,8 +95,8 @@ describe("DashboardController.startNextPhase", () => {
         };
         const $scope = { navigateTo() {}, $on() {}, $applyAsync: fn => fn() };
         const vm = {};
-        DashboardController.call(vm, $scope, {}, null, null, null, null, ActivityStateService,
-            { takeLaunchNotice: () => [] }, null, null, null, null, { innerWidth: 1920 });
+        DashboardController.call(vm, $scope, {}, null, null, null, ActivityStateService,
+            { takeLaunchNotice: () => [] }, null, null, null, { innerWidth: 1920 });
         vm.sessionId = SESSION_ID;
         vm.activityState = activityState;
         vm.designObj = { phases: [{}, {}, {}] };

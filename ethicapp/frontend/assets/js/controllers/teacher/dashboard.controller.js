@@ -1,7 +1,5 @@
 import * as DesignHelpers from "../../helpers/design-helpers.js";
 import { DashboardDataJoiners } from "../../helpers/dashboard-data-joiners.js";
-import { openSemanticDifferentialIndividualResponseModal } from "../../helpers/dashboard-individual-response-modal.helper.js";
-import { openSemanticDifferentialGroupResponseModal } from "../../helpers/dashboard-group-response-modal.helper.js";
 import {
     phaseEnabledServiceIds,
     serviceDisplayName,
@@ -20,11 +18,17 @@ import {
     selectedPhaseData,
     watchOneColumnLayout,
 } from "../../helpers/activity-dashboard.js";
+import {
+    adjacentDetailRow,
+    detailRows,
+    detailSelection,
+    findDetailRow,
+} from "../../helpers/response-detail.js";
 
 /*eslint func-style: ["error", "expression"]*/
-export function DashboardController($scope, $routeParams, $http, 
-    $translate, $timeout, $uibModal, 
-    ActivityStateService, ActivityCatalogService, DesignCatalogService, CasesCatalogService, TeacherGroupChatService,
+export function DashboardController($scope, $routeParams, $http,
+    $translate, $timeout,
+    ActivityStateService, ActivityCatalogService, DesignCatalogService, CasesCatalogService,
     LanguageCatalogService, $window) {
 
     const vm = this;
@@ -62,6 +66,15 @@ export function DashboardController($scope, $routeParams, $http,
         });
     });
     $scope.$on("$destroy", stopWatchingLayout);
+
+    // The response detail panel (#896): what it shows (see
+    // helpers/response-detail.js), or null while it is closed. It closes
+    // when the teacher starts the next phase, selects another phase or
+    // leaves the responses; nothing of it is kept.
+    vm.detail = null;
+    // Each phase's data with its questions merged with the design's, worked
+    // out once per phase data so the panel's bindings settle.
+    const detailPhaseDataByPhase = new WeakMap();
     // Each design phase's question texts, worked out once per phase so the
     // tables' bindings keep the same array between digests.
     const questionTextsByDesignPhase = new WeakMap();
@@ -86,6 +99,9 @@ export function DashboardController($scope, $routeParams, $http,
 
     vm.selectMainTab = function(tab) {
         vm.mainTab = dashboardTab(tab);
+        if (vm.mainTab !== DEFAULT_DASHBOARD_TAB) {
+            vm.closeResponseDetail();
+        }
     };
 
     vm.isMainTabSelected = function(tab) {
@@ -100,6 +116,9 @@ export function DashboardController($scope, $routeParams, $http,
     // the responses table follow it.
     vm.selectPhaseById = function(phaseId) {
         if (selectedPhaseData(vm.dashboardPhaseData, phaseId)) {
+            if (Number(phaseId) !== Number(vm.selectedPhaseId)) {
+                vm.closeResponseDetail();
+            }
             vm.selectedPhaseId = phaseId;
         }
     };
@@ -216,48 +235,78 @@ export function DashboardController($scope, $routeParams, $http,
         }
     };
 
-    vm.openIndividualResponseModal = function(response, phaseData) {
-        if (!response || !phaseData || vm.designObj?.type !== "semantic_differential") {
+    // Opens the response detail panel on a row of a phase's table: a
+    // student's answers, or a group's answers and chat. Only
+    // semantic-differential designs have a detail. Another row replaces the
+    // panel's content.
+    vm.openResponseDetail = function(row, phaseData, options = {}) {
+        if (vm.designObj?.type !== "semantic_differential") {
             return;
         }
-
-        const hydratedPhaseData = vm.hydratePhaseDataForIndividualModal(phaseData);
-        openSemanticDifferentialIndividualResponseModal($uibModal, response, hydratedPhaseData,
-            vm.associatedCase?.videos);
+        const selection = detailSelection(row, phaseData, options);
+        if (selection) {
+            vm.detail = selection;
+        }
     };
 
-    vm.openGroupResponseModal = async function(group, phaseData) {
-        if (!group?.groupStatistics || !group.groupId || !phaseData || vm.designObj?.type !== "semantic_differential") {
-            return;
+    vm.closeResponseDetail = function() {
+        vm.detail = null;
+    };
+
+    vm.isResponseDetailOpen = function() {
+        return vm.detail !== null && vm.detailRow() !== null;
+    };
+
+    // The phase the panel shows, while it is the selected one.
+    const detailPhase = function() {
+        const phase = vm.selectedPhase();
+        return vm.detail && phase && Number(phase.descriptor?.id) === Number(vm.detail.phaseId)
+            ? phase
+            : null;
+    };
+
+    // The panel's row of the live table, so new answers show at once. The
+    // whole table is searched: a row the participant search hides stays open.
+    vm.detailRow = function() {
+        return findDetailRow(detailPhase()?.state, vm.detail?.key);
+    };
+
+    vm.detailPhaseData = function() {
+        const phase = detailPhase();
+        if (!phase) {
+            return null;
         }
-
-        const hydratedPhaseData = vm.hydratePhaseDataForIndividualModal(phaseData);
-        const phaseId = hydratedPhaseData?.descriptor?.id;
-        const firstQuestionId = hydratedPhaseData?.descriptor?.questions?.[0]?.id;
-
-        if (!phaseId || !firstQuestionId) {
-            return;
+        if (!detailPhaseDataByPhase.has(phase)) {
+            detailPhaseDataByPhase.set(phase, vm.hydratePhaseDataForDetail(phase));
         }
+        return detailPhaseDataByPhase.get(phase);
+    };
 
-        try {
-            const [responses, chatMessages] = await Promise.all([
-                ActivityStateService.getGroupResponses(group.groupId, phaseId),
-                ActivityStateService.getChatMessages(group.groupId, firstQuestionId),
-            ]);
+    vm.detailCanUseLiveChat = function() {
+        const phaseData = vm.detailPhaseData();
+        return Boolean(phaseData) && vm.canUseLiveGroupChat(phaseData);
+    };
 
-            openSemanticDifferentialGroupResponseModal(
-                $uibModal,
-                TeacherGroupChatService,
-                group,
-                hydratedPhaseData,
-                responses,
-                chatMessages,
-                vm.canUseLiveGroupChat(hydratedPhaseData),
-                vm.associatedCase?.videos
-            );
-        } catch (error) {
-            console.error("Error opening group response modal:", error);
+    // The row before (-1) or after (1) the panel's, in the table's order.
+    const adjacentRow = function(step) {
+        const rows = detailRows(detailPhase(), vm.participantQuery);
+        return adjacentDetailRow(rows, vm.detail?.key, step);
+    };
+
+    vm.detailHasAdjacent = function(step) {
+        return adjacentRow(step) !== null;
+    };
+
+    vm.navigateResponseDetail = function(step) {
+        const row = adjacentRow(step);
+        if (row) {
+            vm.openResponseDetail(row, detailPhase());
         }
+    };
+
+    // From a student's panel to the student's group, on its chat.
+    vm.openGroupResponseDetail = function(group) {
+        vm.openResponseDetail(group, detailPhase(), { initialTab: "chat" });
     };
 
     vm.canUseLiveGroupChat = function(phaseData) {
@@ -289,7 +338,7 @@ export function DashboardController($scope, $routeParams, $http,
         return vm.getDesignPhaseForDescriptor(phaseDescriptor)?.chat === true;
     };
 
-    vm.hydratePhaseDataForIndividualModal = function(phaseData) {
+    vm.hydratePhaseDataForDetail = function(phaseData) {
         const descriptor = phaseData?.descriptor;
         const descriptorQuestions = descriptor?.questions || [];
 
@@ -714,6 +763,9 @@ export function DashboardController($scope, $routeParams, $http,
     $scope.$on("activity:phase-advanced", (event, data) => {
         const phaseId = data?.phaseId;
         $scope.$applyAsync(() => {
+            // The previous phase's chat closes for the students; the panel
+            // closes with it (#896).
+            vm.closeResponseDetail();
             vm.selectMainTab(DEFAULT_DASHBOARD_TAB);
             vm.activatePhaseTabById(phaseId || vm.currentPhaseId(), phaseId ? 8 : 0);
         });

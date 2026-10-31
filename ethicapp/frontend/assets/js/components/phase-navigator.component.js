@@ -10,6 +10,10 @@
 // above the main tabs (#895): the same rows and selection, a pill per phase
 // that scrolls sideways when they do not fit, and the selected pill brought
 // into view whenever the selection changes, as when the next phase starts.
+//
+// With `layout="dots"` it is the rail folded into a strip of phase dots,
+// while the response detail panel is open between 1200 and 1599 px (#896):
+// the same rows and selection, one dot per phase.
 
 import {
     phaseNavigatorRows,
@@ -73,6 +77,17 @@ function PhaseNavigatorController($element, $timeout) {
     }
 }
 
+const LAYOUT_TEMPLATES = Object.freeze({
+    pills: "phase-pills.template.html",
+    dots:  "phase-dots.template.html",
+});
+
+// The template of a layout: the rail's navigator unless `layout` names
+// another.
+export function phaseNavigatorTemplateUrl(layout) {
+    return `${TEMPLATES}/${LAYOUT_TEMPLATES[layout] || "phase-navigator.template.html"}`;
+}
+
 export default {
     bindings: {
         designPhases:    "<",
@@ -82,7 +97,5 @@ export default {
         onSelect:        "&",
     },
     controller:  ["$element", "$timeout", PhaseNavigatorController],
-    templateUrl: ["$attrs", $attrs => ($attrs.layout === "pills"
-        ? `${TEMPLATES}/phase-pills.template.html`
-        : `${TEMPLATES}/phase-navigator.template.html`)],
+    templateUrl: ["$attrs", $attrs => phaseNavigatorTemplateUrl($attrs.layout)],
 };

@@ -1,3 +1,4 @@
+import { detailRowKey, isRowActivationKey, isRowInDetail } from "../helpers/response-detail.js";
 import { groupResultsTables } from "./templates/dashboard/dashboard-views.registry.js";
 
 let groupPhaseTableDirective = function() {
@@ -8,6 +9,7 @@ let groupPhaseTableDirective = function() {
             designType: '<',  // Design type ('ranking', 'semantic_differential', etc.)
             participantQuery: "<?",  // The dashboard's participant search (#894)
             questionTexts:    "<?",  // The questions' text for the column headers (#895)
+            detailSelection:  "<?",  // What the response detail panel shows (#896)
             onSelectResponse: '&?',
             onSelectGroup: '&?'
         },
@@ -154,6 +156,24 @@ let groupPhaseTableDirective = function() {
                     return `/assets/static/views/teacher/fragments/default-template.html`;
                 }
                 return template;
+            };
+
+            // The response detail panel (#896): its rows are highlighted,
+            // each row is known by its key so the focus can come back to it,
+            // and Enter or Space opens a row as a click does.
+            gptCtrl.isRowInDetail = function(row) {
+                return isRowInDetail(gptCtrl.detailSelection, row);
+            };
+
+            gptCtrl.detailKey = function(row) {
+                return detailRowKey(row);
+            };
+
+            gptCtrl.onRowKeydown = function(event, row) {
+                if (isRowActivationKey(event)) {
+                    event.preventDefault();
+                    gptCtrl.onRowClick(row);
+                }
             };
 
             gptCtrl.onRowClick = function(row) {

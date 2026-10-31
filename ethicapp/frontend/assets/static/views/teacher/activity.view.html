@@ -13,11 +13,21 @@
          first. Below 1200 px, one column (#895): the phases as pills above
          the main tabs, and the rail's cards as collapsed sections under the
          main column. The selected phase, tab and search live in dc, so
-         resizing across 1200 px keeps them. -->
+         resizing across 1200 px keeps them. A response row opens its
+         detail in a side panel (#896): a third column from 1600 px, a
+         narrower one from 1200 px with the rail folded into phase dots, and
+         over the right part of the table below 1200 px. -->
     <div class="activity-dashboard-grid"
-        ng-class="dc.isOneColumn ? 'activity-dashboard-one-column' : 'activity-dashboard-two-columns'">
+        ng-class="[dc.isOneColumn ? 'activity-dashboard-one-column' : 'activity-dashboard-two-columns', { 'activity-dashboard-with-detail': dc.isResponseDetailOpen() }]">
         <aside class="activity-dashboard-rail" ng-if="!dc.isOneColumn"
             aria-label="{{ 'dashboard_rail_label' | translate }}">
+            <phase-navigator layout="dots" class="phase-dots-host" ng-if="dc.designObj && dc.isResponseDetailOpen()"
+                design-phases="dc.designObj.phases"
+                phases="dc.dashboardPhaseData"
+                current-phase-id="dc.currentPhaseId()"
+                selected-phase-id="dc.selectedPhaseId"
+                on-select="dc.selectPhaseById(phaseId)"></phase-navigator>
+
             <phase-navigator ng-if="dc.designObj"
                 design-phases="dc.designObj.phases"
                 phases="dc.dashboardPhaseData"
@@ -105,8 +115,9 @@
                         design-type="dc.designObj.type"
                         participant-query="dc.participantQuery"
                         question-texts="dc.questionTexts(phase.descriptor)"
-                        on-select-response="dc.openIndividualResponseModal(response, phaseData)"
-                        on-select-group="dc.openGroupResponseModal(group, phaseData)">
+                        detail-selection="dc.detail"
+                        on-select-response="dc.openResponseDetail(response, phaseData)"
+                        on-select-group="dc.openResponseDetail(group, phaseData)">
                     </phase-state>
                 </div>
             </div>
@@ -142,6 +153,20 @@
                 <connected-users session-id="{{dc.sessionId}}"></connected-users>
             </div>
         </div>
+
+        <!-- The response detail panel (#896), not modal: the table stays
+             visible and live next to it. -->
+        <response-detail-panel class="response-detail-host" ng-if="dc.isResponseDetailOpen()"
+            selection="dc.detail"
+            row="dc.detailRow()"
+            phase-data="dc.detailPhaseData()"
+            can-use-live-chat="dc.detailCanUseLiveChat()"
+            case-videos="dc.associatedCase.videos"
+            has-previous="dc.detailHasAdjacent(-1)"
+            has-next="dc.detailHasAdjacent(1)"
+            on-navigate="dc.navigateResponseDetail(step)"
+            on-close="dc.closeResponseDetail()"
+            on-open-group="dc.openGroupResponseDetail(group)"></response-detail-panel>
 
         <!-- One column: the rail's cards under the main column, collapsed -->
         <aside class="activity-dashboard-sections activity-dashboard-context" ng-if="dc.isOneColumn"

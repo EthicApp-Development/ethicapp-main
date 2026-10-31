@@ -23,9 +23,16 @@
         </tr>
     </thead>
     <tbody>
+        <!-- A row opens the response detail panel (#896), by click or by
+             Enter or Space; the row the panel shows is highlighted. -->
         <tr ng-repeat="response in iptCtrl.sortedResponses | participantSearch:iptCtrl.participantQuery track by response.userId"
-            ng-click="iptCtrl.onResponseRowClick(response)"
-            style="cursor: pointer;">
+            class="response-detail-row"
+            ng-class="{ 'response-detail-row-selected': iptCtrl.isRowInDetail(response) }"
+            ng-attr-aria-current="{{ iptCtrl.isRowInDetail(response) ? 'true' : undefined }}"
+            data-detail-key="{{ iptCtrl.detailKey(response) }}"
+            tabindex="0"
+            ng-keydown="iptCtrl.onResponseRowKeydown($event, response)"
+            ng-click="iptCtrl.onResponseRowClick(response)">
             <td>{{ response.userName }}</td>
             <td ng-repeat="question in iptCtrl.phaseData.descriptor.questions">
                 {{ response['r' + question.number] || ('no_response' | translate) }}
