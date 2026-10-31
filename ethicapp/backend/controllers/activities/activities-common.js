@@ -6,6 +6,7 @@ import * as rpg2 from "../../db/rest-pg-2.js";
 import * as DesignTypes from "../../../common/modules/design-types.js";
 import * as StatusCodes from "../../../common/modules/session-status.js";
 import { requireRole } from "../../helpers/auth-helper.js";
+import { requireSessionOwnerOrParticipant } from "../../helpers/activity-owner-helper.js";
 
 const router = express.Router();
 
@@ -20,6 +21,12 @@ router.get("/activities/:session_id/descriptor", async (req, res) => {
     }
 
     try {
+        // Only the activity's teacher and the students enrolled in its
+        // session read its join code and design (#925).
+        if (!await requireSessionOwnerOrParticipant(req, res, session_id)) {
+            return;
+        }
+
         const pool = await rpg2.getDBInstance(config.dbconnString);
 
         if (!pool || typeof pool.query !== "function") {

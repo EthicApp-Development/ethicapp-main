@@ -7,8 +7,8 @@
  *
  * Each check sends the error response itself and resolves to null when the
  * request must stop:
- * - 401 without a signed-in user, 403 for any role other than P, checked
- *   before any lookup;
+ * - 401 without a signed-in user, 403 for any role other than P (P or A for
+ *   the owner-or-participant checks below), checked before any lookup;
  * - 404 when the session or phase does not exist, and the same 404 when it
  *   exists but the requester does not own it or the account is anonymized,
  *   so the answer does not reveal that it exists (#923).
@@ -115,12 +115,12 @@ export async function requirePhaseOwner(req, res, phaseId) {
     return owner && { phaseId: owner.resourceId, sessionId: owner.sessionId };
 }
 
-// --- Launching, and reading as a participant (#910) ------------------------
+// --- Launching, and reading as a participant (#910, #923) ------------------
 // The owner rule above also guards finishing and archiving an activity and
 // reading its phases, responses, groups and statistics. Launching adds the
-// design's check; the endpoints the student app calls let in a participant.
-// These checks repeat the owner checks' steps instead of sharing a private
-// function with them, so each reads on its own.
+// design's check. The endpoints the student app calls let in a participant
+// too, for one phase or for a whole session; both owner-or-participant checks
+// share requireOwnerOrParticipant.
 
 // $1 design id, $2 requester id. One row when the design exists.
 export const DESIGN_LAUNCH_SQL = `
@@ -130,19 +130,23 @@ export const DESIGN_LAUNCH_SQL = `
     WHERE d.id = $1
 `;
 
-// $1 phase id, $2 requester id. One row when the phase exists. A participant
-// is a user enrolled in the phase's session (sesusers), the rule of the
-// socket rooms (sockets/socket-room-access.js).
-export const PHASE_ACCESS_SQL = `
-    SELECT st.id AS phase_id,
-           s.id AS session_id,
+// The owner and participant flags of session `s` for `requester`, a users row
+// joined only while the account is not anonymized. A participant is a user
+// enrolled in the session (sesusers), the rule of the socket rooms
+// (sockets/socket-room-access.js).
+const OWNER_OR_PARTICIPANT_COLUMNS = `
            COALESCE(s.creator = requester.id, false) AS owned,
            EXISTS (
                SELECT 1
                FROM sesusers AS su
                WHERE su.sesid = s.id
                  AND su.uid = requester.id
-           ) AS participant
+           ) AS participant`;
+
+// $1 phase id, $2 requester id. One row when the phase exists.
+export const PHASE_ACCESS_SQL = `
+    SELECT st.id AS phase_id,
+           s.id AS session_id,${OWNER_OR_PARTICIPANT_COLUMNS}
     FROM stages AS st
     INNER JOIN sessions AS s
         ON s.id = st.sesid
@@ -150,6 +154,16 @@ export const PHASE_ACCESS_SQL = `
         ON requester.id = $2
        AND requester.anonymized_at IS NULL
     WHERE st.id = $1
+`;
+
+// $1 session id, $2 requester id. One row when the session exists.
+export const SESSION_ACCESS_SQL = `
+    SELECT s.id AS session_id,${OWNER_OR_PARTICIPANT_COLUMNS}
+    FROM sessions AS s
+    LEFT JOIN users AS requester
+        ON requester.id = $2
+       AND requester.anonymized_at IS NULL
+    WHERE s.id = $1
 `;
 
 /**
@@ -196,6 +210,52 @@ export async function requireLaunchableDesign(req, res, designId) {
     return { designId: id };
 }
 
+/*
+ * The owner-or-participant rule, for the resource `id` that `sql` looks up
+ * (a phase or a session). It lets through the session's owner (role P) or a
+ * student (role A) enrolled in it, while the requester's account is not
+ * anonymized. With `subjectUserId`, the user whose data the request asks for,
+ * a student passes only for themselves; the owner may ask for anyone.
+ *
+ * 401 without a signed-in user and 403 for any other role, before any lookup.
+ * Every other refusal is the same 404 with `notFound` (#923).
+ */
+async function requireOwnerOrParticipant(req, res, { id, sql, notFound, subjectUserId }) {
+    if (!requireRole(req, res, ["P", "A"])) {
+        return null;
+    }
+
+    const resourceId = positiveInteger(id);
+    const otherStudent = req.session.role === "A"
+        && subjectUserId !== undefined
+        && Number(subjectUserId) !== Number(req.session.uid);
+    if (resourceId === null || otherStudent) {
+        res.status(404).json({ error: notFound });
+        return null;
+    }
+
+    const rows = await rpg2.execSQL({
+        dbcon:     config.dbconnString,
+        sql,
+        sqlParams: [
+            rpg2.param("plain", resourceId),
+            rpg2.param("plain", req.session.uid),
+        ],
+    });
+
+    // A teacher passes only as the owner: the teacher's own enrolment in the
+    // session (POST /sessions) does not make them a participant.
+    const allowed = rows.length > 0 && (req.session.role === "P"
+        ? rows[0].owned === true
+        : rows[0].participant === true);
+    if (!allowed) {
+        res.status(404).json({ error: notFound });
+        return null;
+    }
+
+    return { resourceId, sessionId: Number(rows[0].session_id) };
+}
+
 /**
  * Lets the request through for the owner of the session of phase `phaseId`
  * (role P, as requirePhaseOwner) or for a student (role A) enrolled in that
@@ -217,37 +277,55 @@ export async function requireLaunchableDesign(req, res, designId) {
  *   response was sent.
  */
 export async function requirePhaseOwnerOrParticipant(req, res, phaseId, { subjectUserId } = {}) {
-    if (!requireRole(req, res, ["P", "A"])) {
-        return null;
-    }
-
-    const id = positiveInteger(phaseId);
-    const otherStudent = req.session.role === "A"
-        && subjectUserId !== undefined
-        && Number(subjectUserId) !== Number(req.session.uid);
-    if (id === null || otherStudent) {
-        res.status(404).json({ error: "Phase not found." });
-        return null;
-    }
-
-    const rows = await rpg2.execSQL({
-        dbcon:     config.dbconnString,
-        sql:       PHASE_ACCESS_SQL,
-        sqlParams: [
-            rpg2.param("plain", id),
-            rpg2.param("plain", req.session.uid),
-        ],
+    const access = await requireOwnerOrParticipant(req, res, {
+        id:       phaseId,
+        sql:      PHASE_ACCESS_SQL,
+        notFound: "Phase not found.",
+        subjectUserId,
     });
+    return access && { phaseId: access.resourceId, sessionId: access.sessionId };
+}
 
-    // A teacher passes only as the owner: the teacher's own enrolment in the
-    // session (POST /sessions) does not make them a participant.
-    const allowed = rows.length > 0 && (req.session.role === "P"
-        ? rows[0].owned === true
-        : rows[0].participant === true);
-    if (!allowed) {
-        res.status(404).json({ error: "Phase not found." });
-        return null;
-    }
-
-    return { phaseId: id, sessionId: Number(rows[0].session_id) };
+/**
+ * Lets the request through for the owner of session `sessionId` (role P,
+ * `sessions.creator`, as requireSessionOwner) or for a student (role A)
+ * enrolled in it (`sesusers`), while the requester's account is not
+ * anonymized. With `subjectUserId`, the user whose data the request asks for,
+ * a student passes only for themselves; the owner may ask for anyone. It is
+ * the session-level twin of requirePhaseOwnerOrParticipant, with the same
+ * rule (#925).
+ *
+ * Answers, and sends:
+ * - 401 without a signed-in user, and 403 for any role other than P or A,
+ *   before any lookup;
+ * - 404 `{ "error": "Session not found." }` for an id that is not a positive
+ *   integer, an unknown session, a teacher who does not own it (being
+ *   enrolled in it is not enough), a student not enrolled in it, an
+ *   anonymized account, and a student asking for another user (this last
+ *   one without a query). The body is the same in every case, so the answer
+ *   does not reveal that the session exists (#923).
+ *
+ * An endpoint that only students may call (role A) checks the role itself
+ * first: this check lets the owner through too. Like the other checks here it
+ * is a read, not a lock.
+ *
+ * @param {Object} req - Express request.
+ * @param {Object} res - Express response.
+ * @param {number|string} sessionId - The session id from the route.
+ * @param {{subjectUserId?: number|string}} [options]
+ * @returns {Promise<{sessionId: number}|null>} null once a response was sent.
+ */
+export async function requireSessionOwnerOrParticipant(
+    req,
+    res,
+    sessionId,
+    { subjectUserId } = {},
+) {
+    const access = await requireOwnerOrParticipant(req, res, {
+        id:       sessionId,
+        sql:      SESSION_ACCESS_SQL,
+        notFound: "Session not found.",
+        subjectUserId,
+    });
+    return access && { sessionId: access.sessionId };
 }
