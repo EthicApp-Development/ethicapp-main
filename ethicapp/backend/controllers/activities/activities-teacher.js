@@ -17,6 +17,7 @@ import { dispatchPhaseHook } from "../../helpers/external-service-dispatch.js";
 import { shouldDispatchActivityStarted } from "../../helpers/activity-lifecycle-helper.js";
 import activityFinisher from "../../helpers/activity-finish-helper.js";
 import { CREATE_SESSION_SQL, TRANSITION_SESSION_SQL } from "../../helpers/teacher-activity-writes.js";
+import { requireSessionOwner } from "../../helpers/activity-owner-helper.js";
 
 const router = express.Router();
 
@@ -340,18 +341,24 @@ router.post("/activities/:session_id/phase_transition", async (req, res) => {
     const status = StatusCodes.getStatusCode("in_progress");
 
     try {
+        if (!await requireSessionOwner(req, res, sessionId)) {
+            return;
+        }
+
+        // Only a phase of this session (#905).
         let result = await rpg2.execSQL({
             sql: `
                 SELECT COUNT(*)::integer
                 FROM stages
                 WHERE id = $1
+                  AND sesid = $2
             `,
             dbcon: config.dbconnString,
-            sqlParams: [rpg2.param('plain', phaseId)],
+            sqlParams: [rpg2.param("plain", phaseId), rpg2.param("plain", sessionId)],
         });
 
         if (!(result.length > 0 && result[0].count === 1)) {
-            return res.status(400).json({ error: "The phase does not exist." });
+            return res.status(400).json({ error: "The phase does not exist in this session." });
         }
 
         const sessionState = await rpg2.singleSQL({
@@ -552,6 +559,11 @@ router.post("/activities/:session_id/phases", async (req, res) => {
     ];
 
     try {
+        // Only the activity's teacher builds its phases (#905).
+        if (!await requireSessionOwner(req, res, session_id)) {
+            return;
+        }
+
         const result = await rpg2.execSQL({
             sql: `
                 INSERT INTO stages (number, type, anon, chat, sesid, prev_ans, question, grouping)

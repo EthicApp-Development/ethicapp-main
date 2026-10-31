@@ -5,6 +5,7 @@ import * as config from "../config/database.config.js";
 import * as rpg2 from "../db/rest-pg-2.js";
 import * as DesignTypes from "../../common/modules/design-types.js";
 import { storedTextContentType } from "../../common/modules/text-content-types.js";
+import { requirePhaseOwner } from "../helpers/activity-owner-helper.js";
 
 const router = express.Router();
 
@@ -132,19 +133,19 @@ router.post("/phases/:id/items", async (req, res) => {
     const { id } = req.params; // Phase (stage) ID
     const payload = req.body; // Item details from the request body
 
-    const userId = req.session?.uid;
-
-    if (!userId) {
-        return res.status(401).json({ status: "err", message: "Unauthorized" });
-    }
-
     if (!id) {
         return res.status(400).json({ error: "Missing required parameter: id." });
     }
 
     try {
+        // Only the activity's teacher adds items to its phases (#905).
+        const owner = await requirePhaseOwner(req, res, id);
+        if (!owner) {
+            return;
+        }
+
         // Determine the design type for the phase
-        const designType = await getDesignTypeByPhaseId(id);
+        const designType = await getDesignTypeByPhaseId(owner.phaseId);
 
         // Find the handler for the design type
         const handler = phaseCreationHandlers[designType];
@@ -152,8 +153,14 @@ router.post("/phases/:id/items", async (req, res) => {
             return res.status(400).json({ error: `Unsupported design type: ${designType}` });
         }
 
-        // Execute the appropriate handler
-        await handler({ userId, stageId: id, ...payload });
+        // The phase, its session and the creator come from the checked route
+        // and session, never from the body.
+        await handler({
+            ...payload,
+            userId:    req.session.uid,
+            stageId:   owner.phaseId,
+            sessionId: owner.sessionId,
+        });
 
         res.status(201).json({ status: "ok", message: "Item added successfully." });
     } catch (err) {
