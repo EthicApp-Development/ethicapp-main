@@ -167,8 +167,7 @@ function transition(session, { sessionId = SESSION_ID, phaseId = PHASE_ID } = {}
 
 // --- Shared expectations ---------------------------------------------------
 
-const DENIED = { error: "Access denied. User is not authorized for this activity." };
-
+// A refusal after the lookup is answered as an unknown id (#923).
 function refusalCases(send, { notFound, unknown, forgotten, other, invalidIdStatus = 404 }) {
     it("refuses a student without querying or writing anything", async () => {
         const { status } = await send(STUDENT);
@@ -177,27 +176,27 @@ function refusalCases(send, { notFound, unknown, forgotten, other, invalidIdStat
         assert.equal(db.queries.length, 0);
     });
 
-    it("refuses a teacher who does not own the activity", async () => {
+    it("answers a teacher who does not own the activity as an unknown id", async () => {
         const { status, body } = await send(OTHER_TEACHER);
 
-        assert.equal(status, 403);
-        assert.deepEqual(body, DENIED);
+        assert.equal(status, 404);
+        assert.deepEqual(body, { error: notFound });
         assert.deepEqual(writes(), []);
     });
 
-    it("refuses the owner once the account is anonymized", async () => {
+    it("answers the owner as an unknown id once the account is anonymized", async () => {
         const { status, body } = await send(FORGOTTEN_OWNER, forgotten);
 
-        assert.equal(status, 403);
-        assert.deepEqual(body, DENIED);
+        assert.equal(status, 404);
+        assert.deepEqual(body, { error: notFound });
         assert.deepEqual(writes(), []);
     });
 
-    it("refuses the owner's request on another teacher's activity", async () => {
+    it("answers the owner's request on another teacher's activity as an unknown id", async () => {
         const { status, body } = await send(OWNER, other);
 
-        assert.equal(status, 403);
-        assert.deepEqual(body, DENIED);
+        assert.equal(status, 404);
+        assert.deepEqual(body, { error: notFound });
         assert.deepEqual(writes(), []);
     });
 

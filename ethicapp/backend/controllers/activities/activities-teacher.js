@@ -17,7 +17,11 @@ import { dispatchPhaseHook } from "../../helpers/external-service-dispatch.js";
 import { shouldDispatchActivityStarted } from "../../helpers/activity-lifecycle-helper.js";
 import activityFinisher from "../../helpers/activity-finish-helper.js";
 import { CREATE_SESSION_SQL, TRANSITION_SESSION_SQL } from "../../helpers/teacher-activity-writes.js";
-import { requireSessionOwner } from "../../helpers/activity-owner-helper.js";
+import {
+    requireLaunchableDesign,
+    requirePhaseOwner,
+    requireSessionOwner,
+} from "../../helpers/activity-owner-helper.js";
 
 const router = express.Router();
 
@@ -197,6 +201,13 @@ router.post("/activities", async (req, res) => {
             return res.status(400).json({ status: "err", message: "Missing session or design ID" });
         }
 
+        // Only the session's teacher launches it, with a design of theirs
+        // (#910).
+        if (!await requireSessionOwner(req, res, sessionId)
+            || !await requireLaunchableDesign(req, res, designId)) {
+            return;
+        }
+
         const sessionCode = ActivitiesHelper.generateSessionCode(sessionId);
 
         const { policyVersionId } = await launchActivity({ sessionId, designId, sessionCode });
@@ -263,6 +274,11 @@ router.get("/activities/:session_id/responses", async (req, res) => {
     }
 
     try {
+        // Only the activity's teacher reads its responses (#910).
+        if (!await requireSessionOwner(req, res, session_id)) {
+            return;
+        }
+
         const designType = await getDesignTypeBySessionId(session_id);
 
         const handler = activityResponsesFetchHandlers[designType];
@@ -308,6 +324,12 @@ router.get("/groups/:group_id/responses", async (req, res) => {
     }
 
     try {
+        // Only the activity's teacher reads a group's responses (#910). The
+        // group must then belong to that phase.
+        if (!await requirePhaseOwner(req, res, phaseId)) {
+            return;
+        }
+
         const designType = await getDesignTypeByGroupAndPhase(groupId, phaseId);
 
         const handler = groupResponsesFetchHandlers[designType];
@@ -466,6 +488,11 @@ router.post("/activities/:session_id/finish", async (req, res) => {
     }
 
     try {
+        // Only the activity's teacher finishes it (#910).
+        if (!await requireSessionOwner(req, res, sessionId)) {
+            return;
+        }
+
         // Shared with the internal endpoint that finishes every open activity
         // of a teacher (#881): status, phase-ended, student notification and
         // activity-finished to every service enabled in the design.
@@ -497,6 +524,11 @@ router.get("/activities/:session_id/phases", async (req, res) => {
     }
 
     try {
+        // Only the activity's teacher reads its phases (#910).
+        if (!await requireSessionOwner(req, res, session_id)) {
+            return;
+        }
+
         const phases = await rpg2.execSQL({
             dbcon: config.dbconnString,
             sql: `
@@ -602,6 +634,11 @@ router.patch("/activities/:session_id/toggle_archived", async (req, res) => {
 
         if (!sessionId) {
             return res.status(400).json({ status: "err", message: "Session ID is required" });
+        }
+
+        // Only the activity's teacher archives it (#910).
+        if (!await requireSessionOwner(req, res, sessionId)) {
+            return;
         }
 
         await rpg2.execSQL({
