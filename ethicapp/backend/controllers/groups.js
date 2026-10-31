@@ -6,7 +6,7 @@ import * as rpg2 from "../db/rest-pg-2.js";
 import * as GroupsHelper from "../helpers/groups-helper.js"
 import * as ActivitiesHelper from "../helpers/activities-helper.js";
 import * as StudentActivityStatusHelper from "../helpers/student-activity-state-helper.js";
-import { requireRole, requireOwnershipOrRole } from "../helpers/auth-helper.js";
+import { requireRole } from "../helpers/auth-helper.js";
 import {
     requirePhaseOwner,
     requirePhaseOwnerOrParticipant,
@@ -126,15 +126,13 @@ router.get("/phases/:id/user_group/:user_id", async (req, res) => {
         return res.status(400).json({ error: "Missing required parameters: phase_id and/or user_id" });
     }
 
-    // The activity's teacher may ask for any user; a student, only for
-    // themselves, in a session they participate in (#910). The answer names
-    // the group's members.
-    if (!requireOwnershipOrRole(req, res, userId, ["P"])) {
-        return;
-    }
-
     try {
-        const access = await requirePhaseOwnerOrParticipant(req, res, phaseId);
+        // The activity's teacher may ask for any user; a student, only for
+        // themselves, in a session they participate in (#910). The answer
+        // names the group's members.
+        const access = await requirePhaseOwnerOrParticipant(req, res, phaseId, {
+            subjectUserId: userId,
+        });
         if (!access) {
             return;
         }
@@ -222,10 +220,6 @@ router.get("/phases/:id/user_group/:user_id/previous_responses", async (req, res
         return;
     }
 
-    if (!requireOwnershipOrRole(req, res, userId, [])) {
-        return;
-    }
-
     const phaseNumbers = String(rawPhaseNumbers)
         .split(",")
         .map(value => Number(value.trim()))
@@ -236,8 +230,9 @@ router.get("/phases/:id/user_group/:user_id/previous_responses", async (req, res
     }
 
     try {
-        // Only in a session the student participates in (#910).
-        if (!await requirePhaseOwnerOrParticipant(req, res, phaseId)) {
+        // Only the student's own responses, in a session they participate in
+        // (#910).
+        if (!await requirePhaseOwnerOrParticipant(req, res, phaseId, { subjectUserId: userId })) {
             return;
         }
 

@@ -114,17 +114,16 @@ describe("POST /activities/:session_id/finish", () => {
         assert.equal(finish.mock.callCount(), 0);
     });
 
-    it("refuses a teacher who does not own the activity without finishing anything", async () => {
+    it("answers another teacher as for an unknown session, finishing nothing", async () => {
         const finish = mock.method(activityFinisher, "finishActivity", async () => {
             throw new Error("must not be called");
         });
 
         const { status, body } = await postFinish(OTHER_TEACHER);
 
-        assert.equal(status, 403);
-        assert.deepEqual(body, {
-            error: "Access denied. User is not authorized for this activity.",
-        });
+        // The same answer as an unknown session (#923).
+        assert.equal(status, 404);
+        assert.deepEqual(body, { error: "Session not found." });
         assert.equal(finish.mock.callCount(), 0);
     });
 

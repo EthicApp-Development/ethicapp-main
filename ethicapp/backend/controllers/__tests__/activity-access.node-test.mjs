@@ -202,11 +202,13 @@ function writes() {
 
 // --- Shared expectations ---------------------------------------------------
 
-const DENIED = { error: "Access denied. User is not authorized for this activity." };
+const PHASE_NOT_FOUND = { error: "Phase not found." };
 
 /**
  * The refusals every owner-only endpoint shares. `send(session, id)` sends
- * the request for the session or phase `id` (its own one when omitted).
+ * the request for the session or phase `id` (its own one when omitted). A
+ * wrong role is refused with 403 before any lookup; a resource the requester
+ * may not see is answered as an unknown one (#923).
  */
 function ownerOnlyCases(send, { notFound, otherId }) {
     it("refuses a student without querying or writing anything", async () => {
@@ -216,19 +218,19 @@ function ownerOnlyCases(send, { notFound, otherId }) {
         assert.equal(db.queries.length, 0);
     });
 
-    it("refuses a teacher who does not own the activity", async () => {
+    it("answers a teacher who does not own the activity as an unknown id", async () => {
         const { status, body } = await send(OTHER_TEACHER);
 
-        assert.equal(status, 403);
-        assert.deepEqual(body, DENIED);
+        assert.equal(status, 404);
+        assert.deepEqual(body, { error: notFound });
         assert.deepEqual(writes(), []);
     });
 
-    it("refuses the owner's request on another teacher's activity", async () => {
+    it("answers the owner's request on another teacher's activity as an unknown id", async () => {
         const { status, body } = await send(OWNER, otherId);
 
-        assert.equal(status, 403);
-        assert.deepEqual(body, DENIED);
+        assert.equal(status, 404);
+        assert.deepEqual(body, { error: notFound });
         assert.deepEqual(writes(), []);
     });
 
@@ -258,11 +260,11 @@ describe("POST /activities", () => {
         otherId:  OTHER_SESSION_ID,
     });
 
-    it("refuses another teacher's design, even a public one, without writing", async () => {
+    it("answers another teacher's design, even a public one, as unknown", async () => {
         const { status, body } = await launch(OWNER, { designId: OTHER_DESIGN_ID });
 
-        assert.equal(status, 403);
-        assert.deepEqual(body, { error: "Access denied. User is not authorized for this design." });
+        assert.equal(status, 404);
+        assert.deepEqual(body, { error: "Design not found." });
         assert.deepEqual(writes(), []);
     });
 
@@ -433,25 +435,28 @@ describe("GET /phases/:id/user_group/:user_id", () => {
         assert.deepEqual(body.participants.map(({ name }) => name), ["Ana", "Beto"]);
     });
 
-    it("refuses a student asking for another student, without querying", async () => {
-        const { status } = await read(STUDENT, { userId: PEER.uid });
+    it("answers a student asking for another student as an unknown phase, without querying",
+        async () => {
+            const { status, body } = await read(STUDENT, { userId: PEER.uid });
 
-        assert.equal(status, 403);
-        assert.equal(db.queries.length, 0);
-    });
+            assert.equal(status, 404);
+            assert.deepEqual(body, PHASE_NOT_FOUND);
+            assert.equal(db.queries.length, 0);
+        });
 
-    it("refuses a student who does not participate in the session", async () => {
+    it("answers a student who does not participate as an unknown phase", async () => {
         const { status, body } = await read(OUTSIDER);
 
-        assert.equal(status, 403);
-        assert.deepEqual(body, DENIED);
+        assert.equal(status, 404);
+        assert.deepEqual(body, PHASE_NOT_FOUND);
         assert.equal(db.queries.length, 1);
     });
 
-    it("refuses a participant whose account is anonymized", async () => {
-        const { status } = await read(FORGOTTEN_STUDENT);
+    it("answers a participant whose account is anonymized as an unknown phase", async () => {
+        const { status, body } = await read(FORGOTTEN_STUDENT);
 
-        assert.equal(status, 403);
+        assert.equal(status, 404);
+        assert.deepEqual(body, PHASE_NOT_FOUND);
     });
 
     it("lets the owner ask for any student of the session", async () => {
@@ -461,24 +466,35 @@ describe("GET /phases/:id/user_group/:user_id", () => {
         assert.equal(body.team_id, GROUP_ID);
     });
 
-    it("refuses a teacher who does not own the activity", async () => {
+    it("answers a teacher who does not own the activity as an unknown phase", async () => {
         const { status, body } = await read(OTHER_TEACHER, { userId: STUDENT.uid });
 
-        assert.equal(status, 403);
-        assert.deepEqual(body, DENIED);
+        assert.equal(status, 404);
+        assert.deepEqual(body, PHASE_NOT_FOUND);
     });
 
-    it("refuses the owner on another teacher's phase", async () => {
-        const { status } = await read(OWNER, { phaseId: OTHER_PHASE_ID, userId: OUTSIDER.uid });
+    it("answers the owner on another teacher's phase as an unknown phase", async () => {
+        const { status, body } = await read(OWNER, {
+            phaseId: OTHER_PHASE_ID,
+            userId:  OUTSIDER.uid,
+        });
 
-        assert.equal(status, 403);
+        assert.equal(status, 404);
+        assert.deepEqual(body, PHASE_NOT_FOUND);
     });
 
     it("answers 404 for an unknown phase", async () => {
         const { status, body } = await read(STUDENT, { phaseId: UNKNOWN_ID });
 
         assert.equal(status, 404);
-        assert.deepEqual(body, { error: "Phase not found." });
+        assert.deepEqual(body, PHASE_NOT_FOUND);
+    });
+
+    it("refuses another role with 403 before any lookup", async () => {
+        const { status } = await read({ uid: 3, role: "S" }, { userId: STUDENT.uid });
+
+        assert.equal(status, 403);
+        assert.equal(db.queries.length, 0);
     });
 });
 
@@ -496,22 +512,24 @@ describe("GET /phases/:id/user_group/:user_id/previous_responses", () => {
         assert.equal(status, 200);
     });
 
-    it("refuses a student who does not participate in the session", async () => {
+    it("answers a student who does not participate as an unknown phase", async () => {
         const { status, body } = await read(OUTSIDER);
 
-        assert.equal(status, 403);
-        assert.deepEqual(body, DENIED);
+        assert.equal(status, 404);
+        assert.deepEqual(body, PHASE_NOT_FOUND);
         assert.equal(db.queries.length, 1);
     });
 
-    it("refuses a student asking for another student, without querying", async () => {
-        const { status } = await read(STUDENT, { userId: PEER.uid });
+    it("answers a student asking for another student as an unknown phase, without querying",
+        async () => {
+            const { status, body } = await read(STUDENT, { userId: PEER.uid });
 
-        assert.equal(status, 403);
-        assert.equal(db.queries.length, 0);
-    });
+            assert.equal(status, 404);
+            assert.deepEqual(body, PHASE_NOT_FOUND);
+            assert.equal(db.queries.length, 0);
+        });
 
-    it("refuses a teacher, as before", async () => {
+    it("refuses a teacher with 403 before any lookup, as before", async () => {
         const { status } = await read(OWNER, { userId: STUDENT.uid });
 
         assert.equal(status, 403);
@@ -519,8 +537,9 @@ describe("GET /phases/:id/user_group/:user_id/previous_responses", () => {
     });
 
     it("answers 404 for an unknown phase", async () => {
-        const { status } = await read(STUDENT, { phaseId: UNKNOWN_ID });
+        const { status, body } = await read(STUDENT, { phaseId: UNKNOWN_ID });
 
         assert.equal(status, 404);
+        assert.deepEqual(body, PHASE_NOT_FOUND);
     });
 });

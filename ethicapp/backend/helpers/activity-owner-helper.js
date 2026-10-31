@@ -7,10 +7,11 @@
  *
  * Each check sends the error response itself and resolves to null when the
  * request must stop:
- * - 401 without a signed-in user, 403 for any role other than P;
- * - 404 when the session or phase does not exist;
- * - 403 when it exists but the requester does not own it, or the account is
- *   anonymized.
+ * - 401 without a signed-in user, 403 for any role other than P, checked
+ *   before any lookup;
+ * - 404 when the session or phase does not exist, and the same 404 when it
+ *   exists but the requester does not own it or the account is anonymized,
+ *   so the answer does not reveal that it exists (#923).
  *
  * The check is a read, not a lock. The writes that follow it on these legacy
  * endpoints are separate statements, so an account forgotten between the
@@ -69,13 +70,9 @@ async function requireOwner(req, res, { id, sql, notFound }) {
         ],
     });
 
-    if (rows.length === 0) {
+    // Another teacher's activity is answered as an unknown one (#923).
+    if (rows.length === 0 || rows[0].owned !== true) {
         res.status(404).json({ error: notFound });
-        return null;
-    }
-
-    if (rows[0].owned !== true) {
-        res.status(403).json({ error: "Access denied. User is not authorized for this activity." });
         return null;
     }
 
@@ -163,8 +160,8 @@ export const PHASE_ACCESS_SQL = `
  * the teacher's own designs. Run it after requireSessionOwner, which already
  * refuses an anonymized account.
  *
- * Answers 401 without a signed-in user, 403 for any role other than P, 404
- * for an unknown design, and 403 for another teacher's design.
+ * Answers 401 without a signed-in user, 403 for any role other than P, and
+ * the same 404 for an unknown design and for another teacher's (#923).
  *
  * @param {Object} req - Express request.
  * @param {Object} res - Express response.
@@ -191,13 +188,8 @@ export async function requireLaunchableDesign(req, res, designId) {
         ],
     });
 
-    if (rows.length === 0) {
+    if (rows.length === 0 || rows[0].owned !== true) {
         res.status(404).json({ error: "Design not found." });
-        return null;
-    }
-
-    if (rows[0].owned !== true) {
-        res.status(403).json({ error: "Access denied. User is not authorized for this design." });
         return null;
     }
 
@@ -207,26 +199,33 @@ export async function requireLaunchableDesign(req, res, designId) {
 /**
  * Lets the request through for the owner of the session of phase `phaseId`
  * (role P, as requirePhaseOwner) or for a student (role A) enrolled in that
- * session, while the requester's account is not anonymized. The caller limits
- * a student to their own data.
+ * session, while the requester's account is not anonymized. With
+ * `subjectUserId`, the user whose data the request asks for, a student passes
+ * only for themselves; the owner may ask for anyone.
  *
- * Answers 401 without a signed-in user, 403 for any other role, 404 for an
- * unknown phase, and 403 for a teacher who does not own the session or a
- * student who does not participate in it.
+ * Answers 401 without a signed-in user and 403 for any other role, before any
+ * lookup. An unknown phase, a teacher who does not own the session, a student
+ * who does not participate in it and a student asking for another user all
+ * get the same 404, so the answer does not reveal that the phase exists
+ * (#923).
  *
  * @param {Object} req - Express request.
  * @param {Object} res - Express response.
  * @param {number|string} phaseId - The phase id from the route.
+ * @param {{subjectUserId?: number|string}} [options]
  * @returns {Promise<{phaseId: number, sessionId: number}|null>} null once a
  *   response was sent.
  */
-export async function requirePhaseOwnerOrParticipant(req, res, phaseId) {
+export async function requirePhaseOwnerOrParticipant(req, res, phaseId, { subjectUserId } = {}) {
     if (!requireRole(req, res, ["P", "A"])) {
         return null;
     }
 
     const id = positiveInteger(phaseId);
-    if (id === null) {
+    const otherStudent = req.session.role === "A"
+        && subjectUserId !== undefined
+        && Number(subjectUserId) !== Number(req.session.uid);
+    if (id === null || otherStudent) {
         res.status(404).json({ error: "Phase not found." });
         return null;
     }
@@ -240,18 +239,13 @@ export async function requirePhaseOwnerOrParticipant(req, res, phaseId) {
         ],
     });
 
-    if (rows.length === 0) {
-        res.status(404).json({ error: "Phase not found." });
-        return null;
-    }
-
     // A teacher passes only as the owner: the teacher's own enrolment in the
     // session (POST /sessions) does not make them a participant.
-    const allowed = req.session.role === "P"
+    const allowed = rows.length > 0 && (req.session.role === "P"
         ? rows[0].owned === true
-        : rows[0].participant === true;
+        : rows[0].participant === true);
     if (!allowed) {
-        res.status(403).json({ error: "Access denied. User is not authorized for this activity." });
+        res.status(404).json({ error: "Phase not found." });
         return null;
     }
 
