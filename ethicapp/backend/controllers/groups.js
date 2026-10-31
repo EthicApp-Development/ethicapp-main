@@ -7,6 +7,7 @@ import * as GroupsHelper from "../helpers/groups-helper.js"
 import * as ActivitiesHelper from "../helpers/activities-helper.js";
 import * as StudentActivityStatusHelper from "../helpers/student-activity-state-helper.js";
 import { requireRole, requireOwnershipOrRole } from "../helpers/auth-helper.js";
+import { requirePhaseOwner } from "../helpers/activity-owner-helper.js";
 
 const router = express.Router();
 
@@ -239,25 +240,15 @@ router.get("/phases/:id/user_group/:user_id/previous_responses", async (req, res
  * Route: POST /phases/:id/groups
  */
 router.post("/phases/:id/groups", async (req, res) => {
-    const { id: phaseId } = req.params; // Get the stage ID from the route parameter
-
     try {
-        // Retrieve the session ID associated with the stage
-        const sessionResult = await rpg2.execSQL({
-            dbcon: config.dbconnString,
-            sql: `
-                SELECT sesid
-                FROM stages
-                WHERE id = $1
-            `,
-            sqlParams: [rpg2.param('plain', phaseId)],
-        });
-
-        if (sessionResult.length === 0) {
-            return res.status(404).json({ error: "Phase not found." });
+        // Only the activity's teacher forms its groups (#905). The check also
+        // resolves the phase's session (stages.sesid), or answers 404.
+        const owner = await requirePhaseOwner(req, res, req.params.id);
+        if (!owner) {
+            return;
         }
 
-        const sessionId = sessionResult[0].sesid;
+        const { phaseId, sessionId } = owner;
 
         // Retrieve the design associated with the session
         const designResult = await rpg2.execSQL({
