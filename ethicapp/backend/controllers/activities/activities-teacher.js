@@ -101,7 +101,8 @@ router.get("/activities", async (req, res) => {
                     ON activity.session = sessions.id
                 INNER JOIN designs
                     ON activity.design = designs.id
-                WHERE sessions.creator = $1;
+                WHERE sessions.creator = $1
+                ORDER BY sessions.time DESC, sessions.id DESC;
             `,
             sqlParams: [rpg2.param("plain", userId)],
         });
