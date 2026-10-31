@@ -7,6 +7,7 @@ let groupPhaseTableDirective = function() {
             phaseData: '<',  // Processed group-phase data
             designType: '<',  // Design type ('ranking', 'semantic_differential', etc.)
             participantQuery: "<?",  // The dashboard's participant search (#894)
+            questionTexts:    "<?",  // The questions' text for the column headers (#895)
             onSelectResponse: '&?',
             onSelectGroup: '&?'
         },

@@ -1,10 +1,13 @@
-// The two-column layout of the teacher's activity dashboard (#894, epic
-// #892): which phase and which main tab are selected, the phase navigator's
-// rows, how many participants answered a phase, and the participant search
-// over the response tables. Plain functions over the dashboard's phase data
-// (`{ descriptor, state }` per started phase) and the design's phases.
+// The layout of the teacher's activity dashboard (#894 and #895, epic #892):
+// which phase and which main tab are selected, whether the page has one
+// column or two, the phase navigator's rows and pills, how many participants
+// answered a phase, the questions' text for the table's column headers, and
+// the participant search over the response tables. Plain functions over the
+// dashboard's phase data (`{ descriptor, state }` per started phase) and the
+// design's phases.
 
 import { phaseModeKey } from "./activity-bar.js";
+import { toPlainText } from "./rich-text.js";
 
 export const DASHBOARD_TABS = Object.freeze(["responses", "case", "design", "participants"]);
 export const DEFAULT_DASHBOARD_TAB = "responses";
@@ -12,6 +15,13 @@ export const DEFAULT_DASHBOARD_TAB = "responses";
 // From this viewport width the rail is wide enough to open the "This phase"
 // card whole; below it the card starts collapsed to the questions.
 export const WIDE_RAIL_MIN_WIDTH = 1600;
+
+// From this viewport width the dashboard has two columns, the rail and the
+// main column. Below it, one column: the phases as pills above the main tabs,
+// and the rail's cards as collapsed sections under the main column (#895).
+// The style sheet uses the same breakpoint.
+export const TWO_COLUMN_MIN_WIDTH = 1200;
+export const TWO_COLUMN_MEDIA_QUERY = `(min-width: ${TWO_COLUMN_MIN_WIDTH}px)`;
 
 // The keys a response table row keeps its answers in: `r1`, `r2`…
 const ANSWER_KEY = /^r\d+$/;
@@ -29,6 +39,51 @@ export function dashboardTab(tab) {
 // Whether the "This phase" card starts open at this viewport width.
 export function defaultPhaseContextExpanded(viewportWidth) {
     return Number(viewportWidth) >= WIDE_RAIL_MIN_WIDTH;
+}
+
+// Whether the dashboard has one column at this viewport width. An unknown
+// width keeps two columns.
+export function isOneColumnWidth(viewportWidth) {
+    const width = Number(viewportWidth);
+    return Number.isFinite(width) && width < TWO_COLUMN_MIN_WIDTH;
+}
+
+function twoColumnMediaQuery(win) {
+    return typeof win?.matchMedia === "function" ? win.matchMedia(TWO_COLUMN_MEDIA_QUERY) : null;
+}
+
+// Whether the dashboard has one column in this window now. The media query
+// counts the width as the style sheet does, so both switch together.
+export function isOneColumnLayout(win) {
+    const query = twoColumnMediaQuery(win);
+    return query ? !query.matches : isOneColumnWidth(win?.innerWidth);
+}
+
+// Calls `onChange(isOneColumn)` whenever the window crosses the two-column
+// breakpoint, so the layout switches without a reload. Returns the function
+// that stops watching. Without a window to watch, it never calls.
+export function watchOneColumnLayout(win, onChange) {
+    const query = twoColumnMediaQuery(win);
+    if (query && typeof query.addEventListener === "function") {
+        const listener = event => onChange(!event.matches);
+        query.addEventListener("change", listener);
+        return () => query.removeEventListener("change", listener);
+    }
+
+    if (typeof win?.addEventListener === "function") {
+        let oneColumn = isOneColumnLayout(win);
+        const listener = () => {
+            const next = isOneColumnLayout(win);
+            if (next !== oneColumn) {
+                oneColumn = next;
+                onChange(next);
+            }
+        };
+        win.addEventListener("resize", listener);
+        return () => win.removeEventListener("resize", listener);
+    }
+
+    return () => {};
 }
 
 // A row of a student, not a group's summary row.
@@ -155,6 +210,47 @@ export function sameNavigatorRows(left, right) {
 
     return left.every((row, index) => NAVIGATOR_ROW_FIELDS
         .every(field => row[field] === right[index][field]));
+}
+
+// What a phase pill shows before its name: a dot on the current phase, a
+// check on the other started phases, nothing on the phases not started.
+export function phasePillMarker(row) {
+    if (row?.current) {
+        return "current";
+    }
+    return row?.started ? "done" : "pending";
+}
+
+// The `scrollLeft` that brings an item into view in a list that scrolls
+// sideways, with `margin` px around it; the same one when the item is already
+// in view. The item's `offsetLeft` is measured from the list's left edge.
+export function scrollLeftToReveal(list, item, margin = 8) {
+    const scrollLeft = Number(list?.scrollLeft) || 0;
+    const viewWidth = Number(list?.clientWidth) || 0;
+    const itemLeft = Number(item?.offsetLeft);
+    const itemWidth = Number(item?.offsetWidth) || 0;
+    if (!Number.isFinite(itemLeft) || viewWidth <= 0) {
+        return scrollLeft;
+    }
+
+    if (itemLeft - margin < scrollLeft) {
+        return Math.max(0, itemLeft - margin);
+    }
+    if (itemLeft + itemWidth + margin > scrollLeft + viewWidth) {
+        return Math.max(0, itemLeft + itemWidth + margin - viewWidth);
+    }
+    return scrollLeft;
+}
+
+// The text of each question of a design phase, in the order of the response
+// table's columns, as plain text on one line: the columns' headers show it on
+// hover and focus. Empty for a question without text; no texts for a phase
+// without questions (a ranking phase has roles).
+export function phaseQuestionTexts(designPhase) {
+    const questions = Array.isArray(designPhase?.questions) ? designPhase.questions : [];
+    return questions.map(question => toPlainText(question?.q_text, question?.q_text_content_type)
+        .replace(/\s+/gu, " ")
+        .trim());
 }
 
 // Text for a case- and accent-insensitive comparison: "Álvarez" matches

@@ -5,7 +5,20 @@
             <th>{{ 'participant_column_header' | translate }}</th>
             <th>{{ 'group_column_header' | translate }}</th>
             <th ng-repeat="question in gptCtrl.phaseData.descriptor.questions">
-                <abbr title="{{ 'item_label' | translate }} {{ $index + 1 }}">{{ 'dashboard_item_short' | translate:{ number: $index + 1 } }}</abbr> (1-{{ question.range }})
+                <!-- The question's text on hover and keyboard focus (#895); Escape hides it -->
+                <span class="dashboard-item" ng-if="gptCtrl.questionTexts[$index]"
+                    ng-class="{ 'dashboard-item-end': $last && !$first, 'dashboard-item-tip-dismissed': tipDismissed }"
+                    ng-mouseleave="tipDismissed = false">
+                    <button type="button" class="dashboard-item-header"
+                        aria-describedby="dashboard-item-tip-{{ $id }}"
+                        ng-keydown="tipDismissed = $event.key === 'Escape' || tipDismissed"
+                        ng-blur="tipDismissed = false">
+                        <span aria-hidden="true">{{ 'dashboard_item_short' | translate:{ number: $index + 1 } }}</span>
+                        <span class="sr-only">{{ 'item_label' | translate }} {{ $index + 1 }}</span>
+                    </button>
+                    <span class="dashboard-item-tip" role="tooltip" id="dashboard-item-tip-{{ $id }}"><span class="dashboard-item-tip-body">{{ gptCtrl.questionTexts[$index] }}</span></span>
+                </span>
+                <abbr ng-if="!gptCtrl.questionTexts[$index]" title="{{ 'item_label' | translate }} {{ $index + 1 }}">{{ 'dashboard_item_short' | translate:{ number: $index + 1 } }}</abbr> (1-{{ question.range }})
                 <span ng-if="question.justify" class="text-danger">*</span>
             </th>
             <th>{{ 'chat_column_header' | translate }}</th>
