@@ -70,6 +70,12 @@ cd auth-backend && npm test
 cd management-console/backend && npm test
 ```
 
+The legacy teacher frontend has its own `node:test` suite for helpers, services and component controllers, run with fakes and no browser. The `ethicapp` image build does not run it:
+
+```bash
+cd ethicapp/frontend && npm test
+```
+
 Common repository-level commands (run from repository root when available):
 
 ```bash
@@ -214,22 +220,26 @@ Production-oriented changes must stay aligned with the repository-owned deployme
 
 For the legacy app inside `ethicapp/`, keep backend and frontend routing concerns separated and colocated:
 
-- Backend Express bootstrapping and route registration live in `ethicapp/app.js`.
+- Backend Express bootstrapping and route registration live in `ethicapp/backend/app.js`.
 - Backend route handlers/controllers live in `ethicapp/backend/controllers/`.
-- Legacy teacher AngularJS module wiring is under:
-  - `ethicapp/frontend/assets/js/ngmodules/teacher/`
-  - `ethicapp/frontend/assets/js/controllers/teacher/`
-  - `ethicapp/frontend/assets/js/services/`
-- Legacy teacher HTML templates are primarily under:
-  - `ethicapp/frontend/views/partials/teacher/`
-  - `ethicapp/frontend/assets/static/views/teacher/` (for static Angular partials used by new teacher CRUD flows)
+- Server-rendered EJS views live in `ethicapp/backend/views/`. `GET /home` (`controllers/teacher-home.js`, role `P`) renders `home.ejs` inside `layouts/teacher-app.ejs`; it is the only page that boots AngularJS.
+- The teacher app is a single AngularJS module, `TeacherApp`:
+  - `ethicapp/frontend/assets/js/modules/teacher/teacher-admin.mjs` registers every controller, service, directive, component and filter, and configures `$translate`;
+  - `ethicapp/frontend/assets/js/modules/teacher/teacher-routes.js` holds the ngRoute hash routes (`#!/...`); each route names a template, and the template declares its controller with `ng-controller`.
+- Legacy teacher AngularJS code is under `ethicapp/frontend/assets/js/`:
+  - `controllers/teacher/` (and `controllers/common/` for the shell);
+  - `services/`;
+  - `directives/` and `components/`;
+  - `helpers/`, plain ES modules with no AngularJS dependency, where most testable logic lives.
+- Legacy teacher HTML templates live in `ethicapp/frontend/assets/static/views/teacher/`: route templates at the top level, and component, directive and `ng-include` partials in `fragments/`. They are fetched at runtime, not bundled.
+- `ethicapp/scripts/build-frontend-assets.sh` (and `watch-frontend-assets.sh` in development) bundles the JavaScript with esbuild into `assets/js/dist/` and compiles the Sass; `dist/` is not committed.
 
 When adding teacher-facing features in legacy EthicApp:
 
-1. Register API routes via controller modules mounted from `ethicapp/app.js`.
-2. Expose AngularJS services for API communication in `assets/js/services`.
-3. Wire controllers/services in `teacher-admin.mjs`.
-4. Add/update teacher navigation entry points in `ethicapp/frontend/views/home.ejs`.
+1. Register API routes via controller modules imported and mounted from `ethicapp/backend/app.js`.
+2. Expose AngularJS services for API communication in `ethicapp/frontend/assets/js/services/`.
+3. Wire controllers/services in `teacher-admin.mjs`, and add new pages to `teacher-routes.js`.
+4. Add/update teacher navigation entry points in `ethicapp/backend/views/home.ejs`.
 5. When adding or modifying UI text in legacy EthicApp AngularJS views, add/update the corresponding translation keys in `ethicapp/frontend/assets/locales/` and use `{{'key'|translate}}` in templates instead of hardcoded strings.
 6. For role-based authorization in legacy backend endpoints, prefer `requireRole` from `ethicapp/backend/helpers/auth-helper.js`; it accepts either a single role (`"P"`) or an array (for example `["P", "A"]`) for professor/student shared access.
 7. For teacher view actions, prefer Bootstrap 3 small default buttons (`btn btn-default btn-sm`) unless the action semantics require another contextual style.
@@ -286,7 +296,7 @@ Use this policy for all new i18n-related changes in this repository.
 
 ### `ethicapp` i18n implementation
 
-- Legacy teacher AngularJS app currently determines language from browser preferences (`$translateProvider.determinePreferredLanguage()`), with configured fallback.
+- Legacy teacher AngularJS app starts from browser preferences (`$translateProvider.determinePreferredLanguage()`, fallback `en_US`), then switches to the profile's `preferred_locale` once it loads (`run` block in `teacher-admin.mjs`).
 - User locale persistence uses `preferred_locale` at database level (not legacy `lang`).
 - When reading/updating user locale in backend controllers/helpers, use `preferred_locale` and apply the same normalization rule (`es_*` => `es_CL`, else `en_US`).
 
