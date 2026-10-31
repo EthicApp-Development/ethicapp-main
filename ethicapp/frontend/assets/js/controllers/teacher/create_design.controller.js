@@ -1,4 +1,8 @@
 import { designFactories } from  "../../../../../common/modules/design-types.js";
+import {
+    designSaveErrorMessageKey,
+    isCaseNotAvailableError,
+} from "../../helpers/design-save-errors.js";
 
 /*eslint func-style: ["error", "expression"]*/
 export function CreateDesignController($scope, $window,
@@ -27,13 +31,19 @@ export function CreateDesignController($scope, $window,
 
     vm.selectCase = function(caseItem) {
         vm.associatedCase = caseItem || null;
+        vm.caseErrorKey = null;
     };
 
     vm.clearAssociatedCase = function() {
         vm.associatedCase = null;
     };
 
+    // Translation key of the message shown under the case selector when the
+    // selected case can no longer be associated (#924), or null.
+    vm.caseErrorKey = null;
+
     vm.uploadDesign = async function (title, type) {
+        vm.caseErrorKey = null;
         try {
             const factory = designFactories[type];
             if (!factory) {
@@ -58,6 +68,15 @@ export function CreateDesignController($scope, $window,
             // Switch to the editor view
             $scope.navigateTo(`/designs/${designId}/edit`);
         } catch (error) {
+            // The case can no longer be associated (#924): explain it and
+            // clear the case, so the teacher can pick another case or create
+            // the design without one.
+            if (isCaseNotAvailableError(error)) {
+                $scope.$applyAsync(() => {
+                    vm.clearAssociatedCase();
+                    vm.caseErrorKey = designSaveErrorMessageKey(error);
+                });
+            }
             // Log and handle any errors encountered during the HTTP request or response processing
             console.error("Error uploading design:", error.message || error);
         }

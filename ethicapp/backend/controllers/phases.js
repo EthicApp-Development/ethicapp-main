@@ -3,6 +3,7 @@
 import express from "express";
 import * as config from "../config/database.config.js";
 import * as rpg2 from "../db/rest-pg-2.js";
+import { requirePhaseOwner } from "../helpers/activity-owner-helper.js";
 
 const router = express.Router();
 
@@ -12,9 +13,15 @@ const designStatistics = {
 };
 
 router.get("/phases/:id/stats", async (req, res) => {
-    const { id: phaseId } = req.params;
-
     try {
+        // Only the activity's teacher reads its statistics (#910).
+        const owner = await requirePhaseOwner(req, res, req.params.id);
+        if (!owner) {
+            return;
+        }
+
+        const { phaseId } = owner;
+
         // Retrieve the design associated with the phase
         const designResult = await rpg2.execSQL({
             dbcon: config.dbconnString,

@@ -13,10 +13,11 @@
  *
  * The checks send the error response themselves and resolve to null when the
  * request must stop:
- * - 401 without a signed-in user, 403 for any role other than P;
- * - 404 when the session (or the phase) does not exist;
- * - 403 when it exists but the requester does not own its session, or the
- *   account is anonymized.
+ * - 401 without a signed-in user, 403 for any role other than P, checked
+ *   before any lookup;
+ * - 404 when the session or phase does not exist, and the same 404 when it
+ *   exists but the requester does not own it or the account is anonymized,
+ *   so the answer does not reveal that it exists (#923).
  *
  * The check is a read, not a lock.
  */
@@ -37,11 +38,10 @@ export const SESSION_OWNERSHIP_SQL = `
 
 // $1 phase id, $2 requester id. One row when the phase exists.
 export const PHASE_OWNERSHIP_SQL = `
-    SELECT st.id AS phase_id,
-           st.sesid AS session_id,
+    SELECT s.id AS session_id,
            COALESCE(s.creator = requester.id, false) AS owned
     FROM stages AS st
-    LEFT JOIN sessions AS s
+    INNER JOIN sessions AS s
         ON s.id = st.sesid
     LEFT JOIN users AS requester
         ON requester.id = $2
@@ -54,9 +54,34 @@ function positiveInteger(value) {
     return Number.isSafeInteger(number) && number > 0 ? number : null;
 }
 
-const NOT_FOUND = "Session not found.";
-const PHASE_NOT_FOUND = "Phase not found.";
-const DENIED = "Access denied. User is not authorized for this activity.";
+async function requireOwner(req, res, { id, sql, notFound }) {
+    if (!requireRole(req, res, "P")) {
+        return null;
+    }
+
+    const resourceId = positiveInteger(id);
+    if (resourceId === null) {
+        res.status(404).json({ error: notFound });
+        return null;
+    }
+
+    const rows = await rpg2.execSQL({
+        dbcon:     config.dbconnString,
+        sql,
+        sqlParams: [
+            rpg2.param("plain", resourceId),
+            rpg2.param("plain", req.session.uid),
+        ],
+    });
+
+    // Another teacher's activity is answered as an unknown one (#923).
+    if (rows.length === 0 || rows[0].owned !== true) {
+        res.status(404).json({ error: notFound });
+        return null;
+    }
+
+    return { resourceId, sessionId: Number(rows[0].session_id) };
+}
 
 /**
  * Lets the request through only for the owner of session `sessionId`.
@@ -67,77 +92,166 @@ const DENIED = "Access denied. User is not authorized for this activity.";
  * @returns {Promise<{sessionId: number}|null>} null once a response was sent.
  */
 export async function requireSessionOwner(req, res, sessionId) {
+    const owner = await requireOwner(req, res, {
+        id:       sessionId,
+        sql:      SESSION_OWNERSHIP_SQL,
+        notFound: "Session not found.",
+    });
+    return owner && { sessionId: owner.sessionId };
+}
+
+/**
+ * Lets the request through only for the owner of the session that phase
+ * `phaseId` belongs to (`stages.sesid`).
+ *
+ * @param {Object} req - Express request.
+ * @param {Object} res - Express response.
+ * @param {number|string} phaseId - The phase (stage) id from the route.
+ * @returns {Promise<{phaseId: number, sessionId: number}|null>} null once a
+ *   response was sent.
+ */
+export async function requirePhaseOwner(req, res, phaseId) {
+    const owner = await requireOwner(req, res, {
+        id:       phaseId,
+        sql:      PHASE_OWNERSHIP_SQL,
+        notFound: "Phase not found.",
+    });
+    return owner && { phaseId: owner.resourceId, sessionId: owner.sessionId };
+}
+
+// --- Launching, and reading as a participant (#910) ------------------------
+// The owner rule above also guards finishing and archiving an activity and
+// reading its phases, responses, groups and statistics. Launching adds the
+// design's check; the endpoints the student app calls let in a participant.
+// These checks repeat the owner checks' steps instead of sharing a private
+// function with them, so each reads on its own.
+
+// $1 design id, $2 requester id. One row when the design exists.
+export const DESIGN_LAUNCH_SQL = `
+    SELECT d.id AS design_id,
+           COALESCE(d.creator = $2, false) AS owned
+    FROM designs AS d
+    WHERE d.id = $1
+`;
+
+// $1 phase id, $2 requester id. One row when the phase exists. A participant
+// is a user enrolled in the phase's session (sesusers), the rule of the
+// socket rooms (sockets/socket-room-access.js).
+export const PHASE_ACCESS_SQL = `
+    SELECT st.id AS phase_id,
+           s.id AS session_id,
+           COALESCE(s.creator = requester.id, false) AS owned,
+           EXISTS (
+               SELECT 1
+               FROM sesusers AS su
+               WHERE su.sesid = s.id
+                 AND su.uid = requester.id
+           ) AS participant
+    FROM stages AS st
+    INNER JOIN sessions AS s
+        ON s.id = st.sesid
+    LEFT JOIN users AS requester
+        ON requester.id = $2
+       AND requester.anonymized_at IS NULL
+    WHERE st.id = $1
+`;
+
+/**
+ * Lets a teacher launch an activity with design `designId` only when the
+ * design is theirs: launching locks the design, and only its creator may lock
+ * it (PATCH /designs/:id/lock). A public design of another teacher is
+ * imported first (POST /designs/:id/duplicate); the launch page offers only
+ * the teacher's own designs. Run it after requireSessionOwner, which already
+ * refuses an anonymized account.
+ *
+ * Answers 401 without a signed-in user, 403 for any role other than P, and
+ * the same 404 for an unknown design and for another teacher's (#923).
+ *
+ * @param {Object} req - Express request.
+ * @param {Object} res - Express response.
+ * @param {number|string} designId - The design id from the request.
+ * @returns {Promise<{designId: number}|null>} null once a response was sent.
+ */
+export async function requireLaunchableDesign(req, res, designId) {
     if (!requireRole(req, res, "P")) {
         return null;
     }
 
-    const id = positiveInteger(sessionId);
+    const id = positiveInteger(designId);
     if (id === null) {
-        res.status(404).json({ error: NOT_FOUND });
+        res.status(404).json({ error: "Design not found." });
         return null;
     }
 
     const rows = await rpg2.execSQL({
         dbcon:     config.dbconnString,
-        sql:       SESSION_OWNERSHIP_SQL,
+        sql:       DESIGN_LAUNCH_SQL,
         sqlParams: [
             rpg2.param("plain", id),
             rpg2.param("plain", req.session.uid),
         ],
     });
 
-    if (rows.length === 0) {
-        res.status(404).json({ error: NOT_FOUND });
+    if (rows.length === 0 || rows[0].owned !== true) {
+        res.status(404).json({ error: "Design not found." });
         return null;
     }
 
-    if (rows[0].owned !== true) {
-        res.status(403).json({ error: DENIED });
-        return null;
-    }
-
-    return { sessionId: Number(rows[0].session_id) };
+    return { designId: id };
 }
 
 /**
- * Lets the request through only for the owner of the session of phase
- * `phaseId`.
+ * Lets the request through for the owner of the session of phase `phaseId`
+ * (role P, as requirePhaseOwner) or for a student (role A) enrolled in that
+ * session, while the requester's account is not anonymized. With
+ * `subjectUserId`, the user whose data the request asks for, a student passes
+ * only for themselves; the owner may ask for anyone.
+ *
+ * Answers 401 without a signed-in user and 403 for any other role, before any
+ * lookup. An unknown phase, a teacher who does not own the session, a student
+ * who does not participate in it and a student asking for another user all
+ * get the same 404, so the answer does not reveal that the phase exists
+ * (#923).
  *
  * @param {Object} req - Express request.
  * @param {Object} res - Express response.
  * @param {number|string} phaseId - The phase id from the route.
+ * @param {{subjectUserId?: number|string}} [options]
  * @returns {Promise<{phaseId: number, sessionId: number}|null>} null once a
- *          response was sent.
+ *   response was sent.
  */
-export async function requirePhaseOwner(req, res, phaseId) {
-    if (!requireRole(req, res, "P")) {
+export async function requirePhaseOwnerOrParticipant(req, res, phaseId, { subjectUserId } = {}) {
+    if (!requireRole(req, res, ["P", "A"])) {
         return null;
     }
 
     const id = positiveInteger(phaseId);
-    if (id === null) {
-        res.status(404).json({ error: PHASE_NOT_FOUND });
+    const otherStudent = req.session.role === "A"
+        && subjectUserId !== undefined
+        && Number(subjectUserId) !== Number(req.session.uid);
+    if (id === null || otherStudent) {
+        res.status(404).json({ error: "Phase not found." });
         return null;
     }
 
     const rows = await rpg2.execSQL({
         dbcon:     config.dbconnString,
-        sql:       PHASE_OWNERSHIP_SQL,
+        sql:       PHASE_ACCESS_SQL,
         sqlParams: [
             rpg2.param("plain", id),
             rpg2.param("plain", req.session.uid),
         ],
     });
 
-    if (rows.length === 0) {
-        res.status(404).json({ error: PHASE_NOT_FOUND });
+    // A teacher passes only as the owner: the teacher's own enrolment in the
+    // session (POST /sessions) does not make them a participant.
+    const allowed = rows.length > 0 && (req.session.role === "P"
+        ? rows[0].owned === true
+        : rows[0].participant === true);
+    if (!allowed) {
+        res.status(404).json({ error: "Phase not found." });
         return null;
     }
 
-    if (rows[0].owned !== true) {
-        res.status(403).json({ error: DENIED });
-        return null;
-    }
-
-    return { phaseId: Number(rows[0].phase_id), sessionId: Number(rows[0].session_id) };
+    return { phaseId: id, sessionId: Number(rows[0].session_id) };
 }

@@ -35,7 +35,6 @@ const FORGOTTEN_SESSION_ID = 30;
 const PHASE_ID = 100;
 const UNKNOWN_ID = 999;
 
-const DENIED = { error: "Access denied. User is not authorized for this activity." };
 
 // --- Fake PostgreSQL -------------------------------------------------------
 
@@ -139,8 +138,9 @@ describe("POST /activities/:session_id/phases/next: who may start a phase", () =
     it("refuses a teacher who does not own the activity", async () => {
         const { status, body } = await startNext(OTHER_TEACHER);
 
-        assert.equal(status, 403);
-        assert.deepEqual(body, DENIED);
+        // Answered as an unknown session (#923).
+        assert.equal(status, 404);
+        assert.deepEqual(body, { error: "Session not found." });
         assert.deepEqual(starter.calls, []);
     });
 
@@ -148,16 +148,18 @@ describe("POST /activities/:session_id/phases/next: who may start a phase", () =
         const { status, body } = await startNext(FORGOTTEN_OWNER,
             { sessionId: FORGOTTEN_SESSION_ID });
 
-        assert.equal(status, 403);
-        assert.deepEqual(body, DENIED);
+        // Answered as an unknown session (#923).
+        assert.equal(status, 404);
+        assert.deepEqual(body, { error: "Session not found." });
         assert.deepEqual(starter.calls, []);
     });
 
     it("refuses the owner's request on another teacher's activity", async () => {
         const { status, body } = await startNext(OWNER, { sessionId: OTHER_SESSION_ID });
 
-        assert.equal(status, 403);
-        assert.deepEqual(body, DENIED);
+        // Answered as an unknown session (#923).
+        assert.equal(status, 404);
+        assert.deepEqual(body, { error: "Session not found." });
         assert.deepEqual(starter.calls, []);
     });
 
@@ -221,7 +223,8 @@ describe("POST /activities/:session_id/phases/next: the request", () => {
 
 describe("POST /activities/:session_id/phases/next: outcomes", () => {
     const cases = [
-        [{ status: "forbidden" }, 403, DENIED],
+        // A refusal inside the transaction answers as an unknown session (#923).
+        [{ status: "forbidden" }, 404, { error: "Session not found." }],
         [{ status: "not_found" }, 404, { error: "Session not found." }],
         [{ status: "not_launched" }, 404,
             { error: "The session has no activity.", code: "ACTIVITY_NOT_FOUND" }],

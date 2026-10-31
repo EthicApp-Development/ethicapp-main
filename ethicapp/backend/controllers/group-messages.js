@@ -11,6 +11,7 @@ import { messageCountHandlers,
     chatTranscriptHandlers,
     saveChatMessage } from "../helpers/chat-helper.js";
 import { studentNotifications, teacherNotifications } from "../config/socket.config.js";
+import { requirePhaseOwner } from "../helpers/activity-owner-helper.js";
 
 const router = express.Router();
 
@@ -30,6 +31,11 @@ router.get("/phases/:id/message_count", async (req, res) => {
     }
 
     try {
+        // Only the activity's teacher reads its message counts (#910).
+        if (!await requirePhaseOwner(req, res, id)) {
+            return;
+        }
+
         // Fetch the design type for the phase
         const designType = await getDesignTypeByPhaseId(id);
 

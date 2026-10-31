@@ -40,7 +40,6 @@ const PHASE_ID = 100;
 const FORGOTTEN_PHASE_ID = 300;
 const UNKNOWN_ID = 999;
 
-const DENIED = { error: "Access denied. User is not authorized for this activity." };
 const UNAUTHORIZED = { status: "err", message: "Unauthorized" };
 const FORBIDDEN = { status: "err", message: "Forbidden" };
 
@@ -178,11 +177,12 @@ describe("GET /sessions/:id/pseudonyms", () => {
         ["another teacher", OTHER_TEACHER, SESSION_ID],
         ["an owner whose account is anonymized", FORGOTTEN_OWNER, FORGOTTEN_SESSION_ID],
     ]) {
-        it(`answers 403 to ${who} and assigns nothing`, async () => {
+        // Answered as an unknown session (#923).
+        it(`answers 404 to ${who} and assigns nothing`, async () => {
             const { status, body } = await readPseudonyms(session, sessionId);
 
-            assert.equal(status, 403);
-            assert.deepEqual(body, DENIED);
+            assert.equal(status, 404);
+            assert.deepEqual(body, { error: "Session not found." });
             assert.deepEqual(db.queries.map((entry) => entry.sql), [SESSION_OWNERSHIP_SQL]);
             assert.deepEqual(assigner.calls, []);
         });
@@ -277,11 +277,12 @@ describe("GET /phases/:id/groups", () => {
         ["another teacher", OTHER_TEACHER, PHASE_ID],
         ["an owner whose account is anonymized", FORGOTTEN_OWNER, FORGOTTEN_PHASE_ID],
     ]) {
-        it(`answers 403 to ${who} without reading the groups`, async () => {
+        // Answered as an unknown phase (#923).
+        it(`answers 404 to ${who} without reading the groups`, async () => {
             const { status, body } = await readGroups(session, phaseId);
 
-            assert.equal(status, 403);
-            assert.deepEqual(body, DENIED);
+            assert.equal(status, 404);
+            assert.deepEqual(body, { error: "Phase not found." });
             assert.deepEqual(db.queries.map((entry) => entry.sql), [PHASE_OWNERSHIP_SQL]);
         });
     }

@@ -5,14 +5,12 @@ import { requireRole } from "../../helpers/auth-helper.js";
 import { requireSessionOwner } from "../../helpers/activity-owner-helper.js";
 import defaultPhaseStarter from "../../helpers/phase-start-helper.js";
 
-const DENIED = "Access denied. User is not authorized for this activity.";
-
 // The status and body of each outcome other than "started"
 // (helpers/phase-start-helper.js).
 function refusal(result) {
     switch (result.status) {
+    // Another teacher's activity is answered as an unknown one (#923).
     case "forbidden":
-        return [403, { error: DENIED }];
     case "not_found":
         return [404, { error: "Session not found." }];
     case "not_launched":
