@@ -33,6 +33,7 @@ import {
     resolveCaseAnalysisServiceIds,
 } from "../helpers/case-lifecycle-helper.js";
 import { insertRequestedCaseAnalyses } from "../helpers/case-analyses-helper.js";
+import { associableCaseSql } from "../helpers/design-case-association.js";
 import {
     caseVideoSummariesFromIds,
     caseVideosJsonSql,
@@ -616,8 +617,7 @@ router.get("/cases/search", async (req, res) => {
                        ${pdfRenderJobSelectSql}
                 FROM ethical_cases c
                 ${pdfRenderJobJoinSql}
-                WHERE (c.creator = $2 OR c.visibility = 'public')
-                  AND COALESCE(c.archived, false) = false
+                WHERE ${associableCaseSql("c", "$2")}
                   AND (
                     LOWER(c.title) LIKE LOWER($1)
                     OR LOWER(c.author_firstname) LIKE LOWER($1)

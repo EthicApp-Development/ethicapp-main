@@ -284,6 +284,50 @@ protected uploads volume used by `ethicapp`. Do not expose rendered PDF pages or
 manifests through NGINX/static mounts; they must stay behind authorization-aware
 application endpoints.
 
+## Design Case Associations
+
+From this release on, `POST /designs` and `PATCH /designs/:id` accept a case
+only when the teacher may pick it in the design editor's case search: it
+exists, it is not archived, and it is the teacher's own or public (#924).
+Earlier releases stored any `caseId`, and a design's creator may read its case,
+the case PDF and the rendered pages. A design that points at another teacher's
+private case therefore gives its creator read access to that case.
+
+Such a row has one of two origins. A teacher may have picked the case while it
+was public, before its author made it private: `PATCH /cases/:id/visibility`
+turns the public designs that use the case private and leaves every design's
+`case_id` as it is. Or someone crafted a request to an earlier release. The new
+check keeps a design's unchanged `case_id` on update, so the rows below remain
+until someone acts on them.
+
+Before deploying, run this read-only query against the production database and
+keep its output:
+
+```sql
+SELECT d.id AS design_id,
+       d.creator AS design_creator,
+       d.visibility AS design_visibility,
+       d.locked AS design_locked,
+       c.id AS case_id,
+       c.creator AS case_creator,
+       c.archived AS case_archived,
+       EXISTS (SELECT 1 FROM activity AS a WHERE a.design = d.id) AS used_by_activity
+FROM designs AS d
+INNER JOIN ethical_cases AS c ON c.id = d.case_id
+WHERE c.visibility IS DISTINCT FROM 'public'
+  AND c.creator IS DISTINCT FROM d.creator
+ORDER BY c.id, d.id;
+```
+
+The query changes no data. Each row is a design whose creator reads another
+teacher's private case through it. The database records neither when a design
+was created nor when the case became private, so the data alone cannot tell the
+two origins apart: review each row with the case's author before changing it.
+Detaching a case (`UPDATE designs SET case_id = NULL WHERE id = ...`) removes
+the access, and it also removes the case from that design and from the
+activities launched from it (`used_by_activity`), which then show no case. Take a backup first
+([`production-backup-runbook.md`](./production-backup-runbook.md)).
+
 ## Health Diagnostics Targets
 
 `MNG_HEALTH_CHECK_TARGETS` is the allowlist used by the management-console
