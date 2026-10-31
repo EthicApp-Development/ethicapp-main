@@ -427,6 +427,11 @@ async function copyCaseForUser(client, sourceCaseId, userId, visibility = PRIVAT
     return inserted.rows[0].id;
 }
 
+// The designs a teacher may read: their own and the public ones, with the
+// teacher's id as $2. GET /designs/:id and GET /designs/:id/valid share it, so
+// a design the teacher may not read is answered as if it did not exist (#929).
+const READABLE_DESIGN_CONDITION = "(creator = $2 OR visibility = 'public')";
+
 // After a design copy is committed (#848): its case is rendered when it has no
 // render yet, so analyses and screens get its text, and the copy, a new
 // design, requests the analyses it did not inherit (design-created). Both run
@@ -459,10 +464,7 @@ router.get("/designs/:id", async (req, res) => {
                 SELECT design
                 FROM designs
                 WHERE id = $1
-                  AND (
-                    creator = $2
-                    OR visibility = 'public'
-                  )
+                  AND ${READABLE_DESIGN_CONDITION}
             `,
             sqlParams: [
                 rpg2.param("plain", designId),
@@ -1218,8 +1220,14 @@ router.delete("/designs/:id", async (req, res) => {
     }
 });
 
-// Endpoint to check the validity of a design
+// Endpoint to check the validity of a design. It answers only for a design
+// the teacher may read under GET /designs/:id's rule; any other design gets
+// the same 404 as a missing one (#929).
 router.get('/designs/:id/valid', async (req, res) => {
+    if (!requireRole(req, res, "P")) {
+        return;
+    }
+
     try {
         const designId = parseInt(req.params.id, 10);
 
@@ -1232,15 +1240,20 @@ router.get('/designs/:id/valid', async (req, res) => {
         const result = await rpg2.singleSQL({
             dbcon: config.dbconnString,
             sql: `
-                SELECT design ->> 'valid' AS valid
+                SELECT id, design ->> 'valid' AS valid
                 FROM designs
                 WHERE id = $1
+                  AND ${READABLE_DESIGN_CONDITION}
             `,
-            sqlParams: [rpg2.param("plain", designId)],
+            sqlParams: [
+                rpg2.param("plain", designId),
+                rpg2.param("plain", req.session.uid),
+            ],
         });
 
-        // Check if the design exists
-        if (!result) {
+        // A missing design and one the teacher may not read get the same
+        // answer. singleSQL resolves to {} when no row matches.
+        if (!result?.id) {
             return res.status(404).json({ status: 'err', message: 'Design not found' });
         }
 
