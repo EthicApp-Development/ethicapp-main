@@ -1,3 +1,4 @@
+import { newestActivitiesFirst } from "../../helpers/activity-order.js";
 import { statusCodes } from  "../../../../../common/modules/session-status.js";
 
 /*eslint func-style: ["error", "expression"]*/
@@ -80,12 +81,15 @@ export function ActivityController($scope, $http,
     };
 
     vm.updateActivities = function() {
-        const activities = ActivityCatalogService.getActivities();
+        const catalog = ActivityCatalogService.getActivities();
 
-        if (!activities) {
+        if (!catalog) {
             console.warn("[ActivityController::updateActivities] No activities found.");
             return;
         }
+
+        // The newest first, in the lists and in the home's recent activities (#918).
+        const activities = newestActivitiesFirst(catalog);
 
         const normalizeStatus = (status) => {
             const parsedStatus = Number(status);
@@ -154,13 +158,8 @@ export function ActivityController($scope, $http,
 
     vm.getPaginatedActivities = function() {
         const startIndex = (vm.currentPage - 1) * vm.pageSize;
-        return vm.getFilteredActivities()
-            .sort((firstActivity, secondActivity) => {
-                const firstTime = Number(new Date(firstActivity.time)) || 0;
-                const secondTime = Number(new Date(secondActivity.time)) || 0;
-                return secondTime - firstTime;
-            })
-            .slice(startIndex, startIndex + vm.pageSize);
+        // The lists are already the newest first (updateActivities).
+        return vm.getFilteredActivities().slice(startIndex, startIndex + vm.pageSize);
     };
 
     vm.setPage = function(pageNumber) {

@@ -40,20 +40,12 @@ function sameId(left, right) {
 
 // Why the session user cannot update `existingDesign` (as read from
 // `designs`: id, creator, locked), as `{ status, body }`, or null when the
-// update may proceed.
+// update may proceed. Another teacher's design gets the same 404 as a missing
+// one, so the answer does not reveal that it exists (#929, epic #923).
 export function designUpdateRefusal(existingDesign, sessionUid) {
     // rest-pg-2's singleSQL returns {} when no row matches.
-    if (!existingDesign?.id) {
+    if (!existingDesign?.id || !sameId(sessionUid, existingDesign.creator)) {
         return { status: 404, body: { status: "err", message: "Design not found" } };
-    }
-    if (!sameId(sessionUid, existingDesign.creator)) {
-        return {
-            status: 403,
-            body:   {
-                status:  "err",
-                message: "Forbidden: You do not have permission to update this design.",
-            },
-        };
     }
     if (existingDesign.locked === true) {
         return designLockedRefusal();

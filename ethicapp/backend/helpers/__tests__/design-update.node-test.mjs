@@ -30,11 +30,14 @@ test("designUpdateRefusal: 404 for a missing design, including singleSQL's empty
     }
 });
 
-test("designUpdateRefusal: ownership is checked before the lock", () => {
-    assert.equal(designUpdateRefusal({ id: 1, creator: 8, locked: true }, OWNER).status, 403);
-    assert.equal(designUpdateRefusal({ id: 1, creator: 8, locked: false }, OWNER).status, 403);
+test("designUpdateRefusal: another teacher's design gets a missing design's 404 (#929)", () => {
+    const missing = designUpdateRefusal({}, OWNER);
+
+    assert.deepEqual(designUpdateRefusal({ id: 1, creator: 8, locked: true }, OWNER), missing,
+        "ownership is checked before the lock");
+    assert.deepEqual(designUpdateRefusal({ id: 1, creator: 8, locked: false }, OWNER), missing);
     const unlocked = { id: 1, creator: OWNER, locked: false };
-    assert.equal(designUpdateRefusal(unlocked, undefined).status, 403);
+    assert.deepEqual(designUpdateRefusal(unlocked, undefined), missing);
 });
 
 test("the content UPDATE repeats the lock check and reports whether it ran", () => {

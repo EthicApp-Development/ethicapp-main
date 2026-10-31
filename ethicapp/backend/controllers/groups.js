@@ -4,8 +4,11 @@ import express from "express";
 import * as config from "../config/database.config.js";
 import * as rpg2 from "../db/rest-pg-2.js";
 import * as StudentActivityStatusHelper from "../helpers/student-activity-state-helper.js";
-import { requireRole, requireOwnershipOrRole } from "../helpers/auth-helper.js";
-import { requirePhaseOwner } from "../helpers/activity-owner-helper.js";
+import { requireRole } from "../helpers/auth-helper.js";
+import {
+    requirePhaseOwner,
+    requirePhaseOwnerOrParticipant,
+} from "../helpers/activity-owner-helper.js";
 
 const router = express.Router();
 
@@ -125,6 +128,16 @@ router.get("/phases/:id/user_group/:user_id", async (req, res) => {
     }
 
     try {
+        // The activity's teacher may ask for any user; a student, only for
+        // themselves, in a session they participate in (#910). The answer
+        // names the group's members.
+        const access = await requirePhaseOwnerOrParticipant(req, res, phaseId, {
+            subjectUserId: userId,
+        });
+        if (!access) {
+            return;
+        }
+
         // Query to find the group (team) of the specified user in the given phase
         const results = await rpg2.execSQL({
             sql: `
@@ -141,7 +154,7 @@ router.get("/phases/:id/user_group/:user_id", async (req, res) => {
                 ORDER BY tu.uid
             `,
             dbcon: config.dbconnString,
-            sqlParams: [rpg2.param('plain', phaseId), rpg2.param('plain', userId)],
+            sqlParams: [rpg2.param("plain", access.phaseId), rpg2.param("plain", userId)],
         });
 
         // If no group is found for the user, return an empty success response
@@ -208,10 +221,6 @@ router.get("/phases/:id/user_group/:user_id/previous_responses", async (req, res
         return;
     }
 
-    if (!requireOwnershipOrRole(req, res, userId, [])) {
-        return;
-    }
-
     const phaseNumbers = String(rawPhaseNumbers)
         .split(",")
         .map(value => Number(value.trim()))
@@ -222,6 +231,12 @@ router.get("/phases/:id/user_group/:user_id/previous_responses", async (req, res
     }
 
     try {
+        // Only the student's own responses, in a session they participate in
+        // (#910).
+        if (!await requirePhaseOwnerOrParticipant(req, res, phaseId, { subjectUserId: userId })) {
+            return;
+        }
+
         const previousResponses = await StudentActivityStatusHelper.getCachedPreviousGroupResponses(
             Number(phaseId),
             Number(userId),

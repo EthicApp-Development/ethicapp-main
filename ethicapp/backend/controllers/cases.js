@@ -33,6 +33,7 @@ import {
     resolveCaseAnalysisServiceIds,
 } from "../helpers/case-lifecycle-helper.js";
 import { insertRequestedCaseAnalyses } from "../helpers/case-analyses-helper.js";
+import { associableCaseSql } from "../helpers/design-case-association.js";
 import {
     caseVideoSummariesFromIds,
     caseVideosJsonSql,
@@ -555,6 +556,14 @@ function lockedCaseResponse(res) {
     });
 }
 
+function caseNotFoundResponse(res) {
+    return res.status(404).json({
+        status:  "err",
+        message: "Case not found.",
+        code:    "CASE_NOT_FOUND",
+    });
+}
+
 router.get("/cases", async (req, res) => {
     if (!requireRole(req, res, "P")) {
         return;
@@ -616,8 +625,7 @@ router.get("/cases/search", async (req, res) => {
                        ${pdfRenderJobSelectSql}
                 FROM ethical_cases c
                 ${pdfRenderJobJoinSql}
-                WHERE (c.creator = $2 OR c.visibility = 'public')
-                  AND COALESCE(c.archived, false) = false
+                WHERE ${associableCaseSql("c", "$2")}
                   AND (
                     LOWER(c.title) LIKE LOWER($1)
                     OR LOWER(c.author_firstname) LIKE LOWER($1)
@@ -1407,6 +1415,25 @@ router.patch("/cases/:id/visibility", async (req, res) => {
     try {
         await client.query("BEGIN");
 
+        // Ownership comes before the in-use check, so a teacher who does not
+        // own the case gets the same 404 as for a missing case, whether or
+        // not a launched activity uses it (#929).
+        const ownedResult = await client.query(
+            `
+                SELECT id
+                FROM ethical_cases
+                WHERE id = $1
+                  AND creator = $2
+                FOR UPDATE;
+            `,
+            [caseId, req.session.uid]
+        );
+
+        if (!ownedResult.rows[0]?.id) {
+            await client.query("ROLLBACK");
+            return caseNotFoundResponse(res);
+        }
+
         if (await hasLaunchedDesignActivity(caseId)) {
             await client.query("ROLLBACK");
             return lockedCaseResponse(res);
@@ -1428,11 +1455,7 @@ router.patch("/cases/:id/visibility", async (req, res) => {
 
         if (!updated || !updated.id) {
             await client.query("ROLLBACK");
-            return res.status(404).json({
-                status:  "err",
-                message: "Case not found.",
-                code:    "CASE_NOT_FOUND",
-            });
+            return caseNotFoundResponse(res);
         }
 
         let affectedDesignIds = [];

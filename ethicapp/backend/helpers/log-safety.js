@@ -75,3 +75,27 @@ export function summarizeCallbackResult({ serviceId, hookName, result, context =
         resultBytes: byteSize(result),
     };
 }
+
+// A positive integer, or a string of digits that is one; null otherwise.
+function positiveIdOrNull(value) {
+    const id = typeof value === "string" && /^[0-9]{1,15}$/u.test(value) ? Number(value) : value;
+    return Number.isSafeInteger(id) && id > 0 ? id : null;
+}
+
+/**
+ * A refused request that may point to tampering, as it may be logged (#924):
+ * the event and the ids involved. Ids often come from the request, so each one
+ * is kept only when it is a positive integer and is null otherwise; no other
+ * request value reaches the log.
+ * @param {string} event - A constant that names the refusal, never request
+ *     input.
+ * @param {Object<string, unknown>} [ids] - Such as `{ userId, designId }`.
+ * @returns {Object} `{ event, ...ids }`.
+ */
+export function summarizeSecurityRefusal(event, ids = {}) {
+    const entry = { event };
+    for (const [name, value] of Object.entries(ids)) {
+        entry[name] = positiveIdOrNull(value);
+    }
+    return entry;
+}
