@@ -518,6 +518,19 @@ let ActivityStateService = function($http, TeacherSocketService) {
             }
         },
 
+        // The pseudonym numbers of the activity's students (#897), which the
+        // dashboard shows in place of their names while the teacher hides
+        // them: `[{ userId, number }]`. Each call assigns a number to the
+        // students who joined since the last one. Only the activity's owner
+        // may read them. Throws when they cannot be read.
+        getParticipantPseudonyms: async function(sessionId) {
+            const response = await $http.get(`/sessions/${sessionId}/pseudonyms`);
+            if (!Array.isArray(response?.data?.pseudonyms)) {
+                throw new Error("Invalid response format received from server.");
+            }
+            return response.data.pseudonyms;
+        },
+
         getChatMessageCount: async function(phaseId) {
             try {
                 // Make the HTTP GET request to the endpoint

@@ -211,7 +211,7 @@ app.directive("holdToConfirm", ["$timeout", holdToConfirmDirective]);
 app.directive("caseAnalysisComponentHost", ["$compile", caseAnalysisComponentHostDirective]);
 app.directive("clampOverflow", ["$parse", clampOverflowDirective]);
 
-app.controller("ConnectedUsersDirectiveController", ["$scope", "ActivityStateService", 
+app.controller("ConnectedUsersDirectiveController", ["$scope", "ActivityStateService", "$translate",
     ConnectedUsersDirectiveController]);
 
 import { activityDescriptionComponent } from "../../components/activity-description.component.js";

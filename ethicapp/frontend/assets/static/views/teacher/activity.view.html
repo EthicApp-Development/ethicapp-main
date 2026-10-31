@@ -92,7 +92,7 @@
                         </span>
                         <div class="dashboard-responses-tools">
                             <div class="dashboard-participant-search">
-                                <label class="sr-only" for="dashboard-participant-search">{{ 'dashboard_participant_search_label' | translate }}</label>
+                                <label class="sr-only" for="dashboard-participant-search">{{ (dc.namesHidden ? 'dashboard_participant_search_label_hidden' : 'dashboard_participant_search_label') | translate }}</label>
                                 <i class="fa-solid fa-magnifying-glass dashboard-participant-search-icon" aria-hidden="true"></i>
                                 <input type="search" id="dashboard-participant-search" class="form-control input-sm"
                                     ng-model="dc.participantQuery"
@@ -100,7 +100,18 @@
                                     placeholder="{{ 'dashboard_participant_search_placeholder' | translate }}"
                                     autocomplete="off">
                             </div>
-                            <!-- Room for the "hide names" switch (#897). -->
+                            <!-- "Hide names" (#897): pseudonyms instead of the
+                                 students' names, to share or project the
+                                 dashboard. Off on every load, not kept. -->
+                            <label class="dashboard-chip dashboard-hide-names"
+                                ng-class="{ 'dashboard-hide-names-on': dc.namesHidden }"
+                                title="{{ 'dashboard_hide_names_hint' | translate }}">
+                                <input type="checkbox" role="switch" class="dashboard-hide-names-input"
+                                    ng-model="dc.namesHidden"
+                                    ng-change="dc.onNamesHiddenChange()">
+                                <span class="dashboard-hide-names-track" aria-hidden="true"></span>
+                                {{ 'dashboard_hide_names' | translate }}
+                            </label>
                         </div>
                     </div>
                     <p class="help-block dashboard-search-empty" role="status"
@@ -111,7 +122,7 @@
                         </button>
                     </p>
                     <phase-state
-                        phase-data="phase"
+                        phase-data="dc.displayPhase(phase)"
                         design-type="dc.designObj.type"
                         participant-query="dc.participantQuery"
                         question-texts="dc.questionTexts(phase.descriptor)"
@@ -150,7 +161,9 @@
                         <p>{{ 'connected_users_colon' | translate }} {{ dc.userList.length }}</p>
                     </div>
                 </div>
-                <connected-users session-id="{{dc.sessionId}}"></connected-users>
+                <connected-users session-id="{{dc.sessionId}}"
+                    hide-names="dc.namesHidden"
+                    pseudonym-numbers="dc.pseudonymNumbers()"></connected-users>
             </div>
         </div>
 
@@ -161,6 +174,7 @@
             row="dc.detailRow()"
             phase-data="dc.detailPhaseData()"
             can-use-live-chat="dc.detailCanUseLiveChat()"
+            hide-names="dc.namesHidden"
             case-videos="dc.associatedCase.videos"
             has-previous="dc.detailHasAdjacent(-1)"
             has-next="dc.detailHasAdjacent(1)"

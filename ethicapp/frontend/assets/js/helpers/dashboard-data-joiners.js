@@ -271,21 +271,33 @@ let assignRankingClusters = (rankingData) => {
 };
 
 function addParticipantGroupInfo(phaseData, groups) {
-    // Step 1: Create a map of participant ID to group details
+    // Step 1: Create a map of participant ID to group details, with each
+    // member's letter within the group (`anon_mask`), which the dashboard
+    // shows while names are hidden (#897).
     const participantGroupMap = groups.reduce((map, group) => {
+        const letters = (group.members || []).reduce((acc, member) => {
+            acc[member.id] = member.anon_mask ?? null;
+            return acc;
+        }, {});
         group.participants.forEach(participantId => {
-            map[participantId] = { groupId: group.id, groupNumber: group.number };
+            map[participantId] = {
+                groupId:     group.id,
+                groupNumber: group.number,
+                groupLetter: letters[participantId] ?? null,
+            };
         });
         return map;
     }, {});
 
     // Step 2: Add group info to each user object
     const updatedUsers = phaseData.map(user => {
-        const groupInfo = participantGroupMap[user.userId] || { groupId: null, groupNumber: null };
+        const groupInfo = participantGroupMap[user.userId]
+            || { groupId: null, groupNumber: null, groupLetter: null };
         return {
             ...user,
             groupId: groupInfo.groupId,
-            groupNumber: groupInfo.groupNumber
+            groupNumber: groupInfo.groupNumber,
+            groupLetter: groupInfo.groupLetter
         };
     });
 

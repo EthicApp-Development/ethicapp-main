@@ -24,6 +24,7 @@ import {
     detailSelection,
     findDetailRow,
 } from "../../helpers/response-detail.js";
+import { hiddenNamePhase, pseudonymNumberMap } from "../../helpers/hidden-names.js";
 
 /*eslint func-style: ["error", "expression"]*/
 export function DashboardController($scope, $routeParams, $http,
@@ -78,6 +79,21 @@ export function DashboardController($scope, $routeParams, $http,
     // Each design phase's question texts, worked out once per phase so the
     // tables' bindings keep the same array between digests.
     const questionTextsByDesignPhase = new WeakMap();
+
+    // "Hide names" (#897): while it is on, every student is shown by a
+    // pseudonym (helpers/hidden-names.js). It always starts off and is not
+    // remembered, so a reload turns it off; it only changes the display.
+    // The pseudonym numbers are read when it is turned on, and again when a
+    // student joins while it is on.
+    vm.namesHidden = false;
+    let pseudonymNumbers = new Map();
+    // Grows with every set of numbers read, so the phases shown with hidden
+    // names are worked out again.
+    let pseudonymsVersion = 0;
+    let pseudonymsRequest = 0;
+    // Each phase's data as it shows with hidden names, worked out once per
+    // phase data, numbers and language so the tables' bindings settle.
+    const hiddenNamePhases = new WeakMap();
 
     // Services the design enables that will not run in this activity, shown
     // once right after launch (#815).
@@ -139,8 +155,73 @@ export function DashboardController($scope, $routeParams, $http,
             vm.currentPhaseId());
     };
 
+    // The selected phase as the dashboard shows it: with hidden names while
+    // the switch is on.
     vm.selectedPhase = function() {
-        return selectedPhaseData(vm.dashboardPhaseData, vm.selectedPhaseId);
+        return vm.displayPhase(selectedPhaseData(vm.dashboardPhaseData, vm.selectedPhaseId));
+    };
+
+    const translateInstant = function(key, params) {
+        return typeof $translate?.instant === "function" ? $translate.instant(key, params) : key;
+    };
+
+    const currentLanguage = function() {
+        return typeof $translate?.use === "function" ? $translate.use() : "";
+    };
+
+    // A started phase's data as the tables and the panel show it: the phase
+    // itself while names show; while they are hidden, a copy whose students
+    // are named and ordered by pseudonym. The same object on every call
+    // until the phase, the numbers or the language change.
+    vm.displayPhase = function(phaseData) {
+        if (!vm.namesHidden || !phaseData || typeof phaseData !== "object") {
+            return phaseData;
+        }
+        const signature = `${pseudonymsVersion}|${currentLanguage()}`;
+        const cached = hiddenNamePhases.get(phaseData);
+        if (cached?.signature === signature) {
+            return cached.phase;
+        }
+        const phase = hiddenNamePhase(phaseData, {
+            numbers:   pseudonymNumbers,
+            translate: translateInstant,
+        });
+        hiddenNamePhases.set(phaseData, { signature, phase });
+        return phase;
+    };
+
+    // The students' numbers, for the Participants tab.
+    vm.pseudonymNumbers = function() {
+        return pseudonymNumbers;
+    };
+
+    // Reads the students' numbers; the server assigns one to every student
+    // who has none yet. Only the latest read counts; a failed read keeps the
+    // numbers already known.
+    vm.loadPseudonyms = async function() {
+        if (!vm.sessionId) {
+            return;
+        }
+        const request = ++pseudonymsRequest;
+        try {
+            const pseudonyms = await ActivityStateService.getParticipantPseudonyms(vm.sessionId);
+            $scope.$applyAsync(() => {
+                if (request === pseudonymsRequest) {
+                    pseudonymNumbers = pseudonymNumberMap(pseudonyms);
+                    pseudonymsVersion += 1;
+                }
+            });
+        } catch (error) {
+            console.error("[DashboardController::loadPseudonyms] Cannot read the pseudonyms.",
+                error);
+        }
+    };
+
+    // The switch changed: the numbers are read again each time it turns on.
+    vm.onNamesHiddenChange = function() {
+        if (vm.namesHidden) {
+            vm.loadPseudonyms();
+        }
     };
 
     // The design's entry for the selected phase: its features, instructions
@@ -728,6 +809,11 @@ export function DashboardController($scope, $routeParams, $http,
         $scope.$applyAsync(() => {
             vm.userList = users;
         });
+
+        // While names are hidden, the student who joined gets a number.
+        if (vm.namesHidden) {
+            vm.loadPseudonyms();
+        }
 
         if (currentPhaseId) {
             vm.updateDashboardPhaseData(currentPhaseId);
