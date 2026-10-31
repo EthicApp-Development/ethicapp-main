@@ -262,7 +262,7 @@
 	"save_design_failure": "Failed to save the design. Please try again in a few minutes.",
 	"save_design_locked": "This design is used by an activity and can no longer be edited. Duplicate it to make changes.",
 	"save_design_invalid_service_settings": "Some AI service settings in this design are not valid. Review them and try again.",
-	"save_design_case_not_available": "The selected case is no longer available, so the design was not saved. The case was removed from the editor: choose another case, or save the design without one.",
+	"save_design_case_not_available": "The selected case is no longer available, so the design was not saved. The case has been cleared: choose another case, or continue without one.",
 	"error_no_phases_defined" : "The current design has no phases. Try adding a phase to create a working design for EthicApp.",
 	"other_phase_errors_title" : "General errors",
 	"error_phase_instructions_required" : "If instructions are enabled for this phase, the instructions text cannot be empty.",
