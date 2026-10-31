@@ -1,7 +1,8 @@
 "use strict";
 
 import express from "express";
-import { requireOwnershipOrRole, requireRole } from "../../helpers/auth-helper.js";
+import { requireRole } from "../../helpers/auth-helper.js";
+import { requireSessionOwnerOrParticipant } from "../../helpers/activity-owner-helper.js";
 import * as StudentActivityStatusHelper from "../../helpers/student-activity-state-helper.js";
 import * as config from "../../config/database.config.js";
 import * as rpg2 from "../../db/rest-pg-2.js";
@@ -16,15 +17,24 @@ router.get("/activities/:session_id/current_phase_state", async (req, res) => {
     const sessionId = Number(req.params.session_id);
     const invalidate = req.query.invalidate === "true";
 
-    if (!sessionId || isNaN(sessionId)) {
-        return res.status(400).json({ error: "Invalid session ID." });
-    }
-
+    // Only students call this endpoint: a wrong role is refused before any
+    // lookup.
     if (!requireRole(req, res, "A")) {
         return;
     }
 
+    if (!sessionId || isNaN(sessionId)) {
+        return res.status(400).json({ error: "Invalid session ID." });
+    }
+
     try {
+        // Only a student enrolled in the session reads its state or flushes
+        // its caches with `invalidate`; anyone else gets the 404 of an
+        // unknown session (#926).
+        if (!await requireSessionOwnerOrParticipant(req, res, sessionId)) {
+            return;
+        }
+
         const { descriptor } = await StudentActivityStatusHelper.
             getCachedStudentActivityDescriptor(sessionId, invalidate);
         const currentPhaseId = Number(descriptor?.currentPhaseId);
@@ -46,19 +56,27 @@ router.get("/activities/:id/users/:user_id/full_state", async (req, res) => {
     const userId = Number(req.params.user_id);
     const invalidate = req.query.invalidate === "true";
 
-    if (!sessionId || !userId) {
-        return res.status(400).json({ error: "Invalid session ID or user ID." });
-    }
-
+    // Only students call this endpoint: a wrong role is refused before any
+    // lookup.
     if (!requireRole(req, res, "A")) {
         return;
     }
 
-    if (!requireOwnershipOrRole(req, res, userId, [])) {
-        return;
+    if (!sessionId || !userId) {
+        return res.status(400).json({ error: "Invalid session ID or user ID." });
     }
 
     try {
+        // Only a student enrolled in the session, asking for their own state,
+        // reads it or flushes its caches with `invalidate`. Another user's id,
+        // a session the student is not enrolled in and an unknown one all get
+        // the same 404 (#926).
+        if (!await requireSessionOwnerOrParticipant(req, res, sessionId, {
+            subjectUserId: userId,
+        })) {
+            return;
+        }
+
         const { descriptor } = await StudentActivityStatusHelper.
             getCachedStudentActivityDescriptor(sessionId, invalidate);
 
