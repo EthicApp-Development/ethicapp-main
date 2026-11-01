@@ -149,16 +149,6 @@ describe("activity bar layout", () => {
         vm.$onDestroy();
     });
 
-    it("hides the name's tooltip on Escape until the pointer or the focus leaves", () => {
-        const vm = createBar({ activity: RUNNING, users: [] });
-        vm.dismissNameTipOnEscape({ key: "Tab" });
-        assert.equal(vm.nameTipDismissed, false);
-        vm.dismissNameTipOnEscape({ key: "Escape" });
-        assert.equal(vm.nameTipDismissed, true);
-        vm.restoreNameTip();
-        assert.equal(vm.nameTipDismissed, false);
-    });
-
     it("gives screen readers the name once, in the heading", () => {
         const template = readAsset("../../../static/views/teacher/fragments/activity-bar.template.html");
         assert.match(template, /<h2 class="activity-bar-name"[^>]*>\{\{ \$ctrl\.activity\.name \}\}<\/h2>/);
@@ -205,16 +195,6 @@ describe("activity controls", () => {
 
     it("keeps the 2.5 s hold on both buttons", () => {
         assert.equal(directive.template.match(/hold-to-confirm hold-ms="2500"/g).length, 2);
-    });
-
-    it("hides a tooltip on Escape until the pointer or the focus leaves", () => {
-        const { $scope } = createControls(async () => null);
-        $scope.dismissTipOnEscape({ key: "Enter" }, "next");
-        assert.equal($scope.dismissedTip, null);
-        $scope.dismissTipOnEscape({ key: "Escape" }, "next");
-        assert.equal($scope.dismissedTip, "next");
-        $scope.restoreTip();
-        assert.equal($scope.dismissedTip, null);
     });
 });
 

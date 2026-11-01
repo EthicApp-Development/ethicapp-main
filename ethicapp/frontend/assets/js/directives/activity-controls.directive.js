@@ -2,8 +2,9 @@
 // start the next phase and end the activity, both held for 2.5 s
 // (`hold-to-confirm`), or the reports once the activity is finished. A tooltip
 // on hover and keyboard focus explains the hold; it is also each button's
-// accessible description, and Escape hides it until the pointer or the focus
-// leaves the button.
+// accessible description. Escape hides it while it is hovered or focused,
+// until both the pointer and the focus leave the button (`dismissible-tip`,
+// #956).
 let activityControlsDirective = function() {
     return {
         restrict: "E",
@@ -17,7 +18,6 @@ let activityControlsDirective = function() {
                 next: `activity-hold-tip-next-${$scope.$id}`,
                 end:  `activity-hold-tip-end-${$scope.$id}`,
             };
-            $scope.dismissedTip = null;
 
             $scope.startNextPhaseAndNotify = async function() {
                 const phaseId = await $scope.parentCtrl.startNextPhase();
@@ -25,29 +25,16 @@ let activityControlsDirective = function() {
                     $scope.$emit("activity:phase-advanced", { phaseId });
                 }
             };
-
-            $scope.dismissTipOnEscape = function(event, tip) {
-                if (event?.key === "Escape") {
-                    $scope.dismissedTip = tip;
-                }
-            };
-
-            $scope.restoreTip = function() {
-                $scope.dismissedTip = null;
-            };
         }],
         template: `
             <div class="activity-controls">
                 <div ng-if="!isFinished" class="action-buttons">
                     <span ng-if="!isLastPhase" class="activity-hold"
-                          ng-class="{'activity-hold-tip-dismissed': dismissedTip === 'next'}"
-                          ng-mouseleave="restoreTip()">
+                          dismissible-tip="activity-hold-tip-dismissed">
                         <button type="button" class="btn btn-default btn-sm hold-button"
                                 hold-to-confirm hold-ms="2500"
                                 on-confirm="startNextPhaseAndNotify()"
-                                aria-describedby="{{ tipIds.next }}"
-                                ng-keydown="dismissTipOnEscape($event, 'next')"
-                                ng-blur="restoreTip()">
+                                aria-describedby="{{ tipIds.next }}">
                             <i class="fa-solid fa-forward text-success" aria-hidden="true"></i>
                             {{ 'start_next_phase_button' | translate }}
                             <span class="hold-progress" aria-hidden="true"></span>
@@ -59,14 +46,11 @@ let activityControlsDirective = function() {
                         </span>
                     </span>
                     <span class="activity-hold"
-                          ng-class="{'activity-hold-tip-dismissed': dismissedTip === 'end'}"
-                          ng-mouseleave="restoreTip()">
+                          dismissible-tip="activity-hold-tip-dismissed">
                         <button type="button" class="btn btn-default btn-sm hold-button"
                                 hold-to-confirm hold-ms="2500"
                                 on-confirm="parentCtrl.endActivity()"
-                                aria-describedby="{{ tipIds.end }}"
-                                ng-keydown="dismissTipOnEscape($event, 'end')"
-                                ng-blur="restoreTip()">
+                                aria-describedby="{{ tipIds.end }}">
                             <i class="fa-solid fa-stop-circle text-danger" aria-hidden="true"></i>
                             {{ 'end_activity_button' | translate }}
                             <span class="hold-progress" aria-hidden="true"></span>

@@ -5,14 +5,13 @@
             <th>{{ 'participant_column_header' | translate }}</th>
             <th>{{ 'group_column_header' | translate }}</th>
             <th ng-repeat="question in gptCtrl.phaseData.descriptor.questions">
-                <!-- The question's text on hover and keyboard focus (#895); Escape hides it -->
+                <!-- The question's text on hover and keyboard focus (#895); Escape hides it
+                     while it is hovered or focused (#956) -->
                 <span class="dashboard-item" ng-if="gptCtrl.questionTexts[$index]"
-                    ng-class="{ 'dashboard-item-end': $last && !$first, 'dashboard-item-tip-dismissed': tipDismissed }"
-                    ng-mouseleave="tipDismissed = false">
+                    ng-class="{ 'dashboard-item-end': $last && !$first }"
+                    dismissible-tip="dashboard-item-tip-dismissed">
                     <button type="button" class="dashboard-item-header"
-                        aria-describedby="dashboard-item-tip-{{ $id }}"
-                        ng-keydown="tipDismissed = $event.key === 'Escape' || tipDismissed"
-                        ng-blur="tipDismissed = false">
+                        aria-describedby="dashboard-item-tip-{{ $id }}">
                         <span aria-hidden="true">{{ 'dashboard_item_short' | translate:{ number: $index + 1 } }}</span>
                         <span class="sr-only">{{ 'item_label' | translate }} {{ $index + 1 }}</span>
                     </button>

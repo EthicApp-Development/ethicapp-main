@@ -196,6 +196,8 @@ import { caseAnalysisComponentHostDirective }
     from "../../directives/case-analysis-component-host.directive.js";
 // "Show more" for clamped text in the activity dashboard's rail (#894).
 import { clampOverflowDirective } from "../../directives/clamp-overflow.directive.js";
+// Escape hides a dashboard tooltip while it is hovered or focused (#956).
+import { dismissibleTipDirective } from "../../directives/dismissible-tip.directive.js";
 
 app.directive("connectedUsers", connectedUsersDirective);
 app.directive("activityControls", activityControlsDirective);
@@ -213,6 +215,7 @@ app.directive("phaseDeleter", ["$translate", phaseDeleterDirective]);
 app.directive("holdToConfirm", ["$timeout", holdToConfirmDirective]);
 app.directive("caseAnalysisComponentHost", ["$compile", caseAnalysisComponentHostDirective]);
 app.directive("clampOverflow", ["$parse", clampOverflowDirective]);
+app.directive("dismissibleTip", ["$document", dismissibleTipDirective]);
 
 app.controller("ConnectedUsersDirectiveController", ["$scope", "ActivityStateService", "$translate",
     ConnectedUsersDirectiveController]);
