@@ -153,18 +153,18 @@
   <table class="roles">
     <tr><th></th><th>Diseños (this proposal)</th><th>Lanzar actividad (<code>docs/design/launch-activity-wizard</code>)</th></tr>
     <tr><td><b>Job</b></td><td>Create, edit, organize and share designs; import designs other teachers shared.</td><td>Choose one design and start an activity with it.</td></tr>
-    <tr><td><b>What it lists</b></td><td>All the teacher's designs, including those with errors; the shared library; the archived designs.</td><td>Only the teacher's designs that can be launched.</td></tr>
-    <tr><td><b>Shape</b></td><td>A table: status, sharing and edit actions on every row; tabs for mine, library and archived.</td><td>A two-step wizard: rows with a radio button, a preview, and a fixed bar with "Siguiente".</td></tr>
-    <tr><td><b>Primary action</b></td><td>"Nuevo diseño"; per row, "Editar" (or "Corregir", "Duplicar para editar"); in the library, "Importar".</td><td>"Lanzar actividad".</td></tr>
-    <tr><td><b>Bridge to the other</b></td><td>The role line links to Lanzar actividad. Each row's menu has "Lanzar actividad con este diseño", which opens the wizard on step 2.</td><td>The list's footer links to Diseños with the "Con errores" filter.</td></tr>
+    <tr><td><b>What it lists</b></td><td>All the teacher's designs, including those with errors; the designs other teachers shared; the archived designs.</td><td>Only the teacher's designs that can be launched.</td></tr>
+    <tr><td><b>Shape</b></td><td>A table: status, sharing and edit actions on every row; tabs for mine, shared by others and archived.</td><td>A two-step wizard: rows with a radio button, a preview, and a fixed bar with "Siguiente".</td></tr>
+    <tr><td><b>Primary action</b></td><td>"Nuevo diseño"; per row, "Editar" (or "Corregir", "Duplicar para editar"); in "Compartidos por otros", "Importar".</td><td>"Lanzar actividad".</td></tr>
+    <tr><td><b>Bridge to the other</b></td><td>The role line links to Lanzar actividad. Rows have no launch action.</td><td>The list's footer links to Diseños with the "Con errores" filter.</td></tr>
   </table>
 
-  <div class="open"><b>Open questions</b> (see the README):
+  <div class="open"><b>Decisions, 2026-11-01</b> (see the README):
     <ul>
-      <li>Should "Lanzar actividad con este diseño" stay in the row's menu, or leave Diseños altogether?</li>
-      <li>Tab name for others' designs: "Biblioteca compartida", "Compartidos por otros docentes", or keep "De otros"?</li>
-      <li>Should a row click open the design's view (drawn) or its editor?</li>
-      <li>Deleting a design that has copies: allow it and keep the copies' attribution, or refuse it with a message? Today it fails with a 500 and the page says nothing.</li>
+      <li>Diseños has no launch action: "Lanzar actividad con este diseño" left the row menu.</li>
+      <li>The tab of others' designs is "Compartidos por otros".</li>
+      <li>A click on a row's title opens the design's view, not the editor.</li>
+      <li>A design that has copies can be deleted; the copies keep their source title, author and license (#963).</li>
     </ul>
   </div>
 
@@ -181,17 +181,17 @@
   <div id="A"></div>
   <ol class="notes">
     <li><b>The page says what it is for.</b> "Crea, edita y organiza tus diseños, o importa los que otros docentes comparten." and, next to it, the way out for the other task: "¿Quieres usar uno con tus estudiantes? Lanzar actividad →".</li>
-    <li><b>Page actions:</b> "+ Nuevo diseño" (primary) and "Importar de la biblioteca", which opens the library tab.</li>
-    <li><b>Tabs with counts:</b> "Mis diseños", "Biblioteca compartida", "Archivados" (today "Tuyos", "De otros", "Archivadas"). The tab is part of the URL, so links can open one directly.</li>
+    <li><b>Page actions:</b> "+ Nuevo diseño" (primary) and "Importar diseño compartido", which opens the "Compartidos por otros" tab.</li>
+    <li><b>Tabs with counts:</b> "Mis diseños", "Compartidos por otros", "Archivados" (today "Tuyos", "De otros", "Archivadas"). The tab is part of the URL, so links can open one directly.</li>
     <li><b>Filters for management, not for launching:</b> search over title, case and tags; type; status ("Listos", "Con errores", "En uso", "Compartidos"). The order is stated: "Más recientes primero".</li>
     <li><b>One table row per design</b>, 12 on the first screen against one card today:
       <ul>
-        <li><b>Diseño:</b> title, with the case and the number of phases under it. A click on the title opens the design's view.</li>
+        <li><b>Diseño:</b> title, with the case and the number of phases under it. A click on the title opens the design's view, not the editor.</li>
         <li><b>Estado:</b> "● Listo"; "⚠ 2 errores", which cannot be launched yet; or "🔒 En uso · 3 actividades", which cannot be edited or deleted. The lock and error lines of today's card become this one column.</li>
-        <li><b>Compartido:</b> the switch that shares the design in the library, as today's "Compartir Diseño". A design with errors cannot be shared, so its switch is disabled.</li>
+        <li><b>Compartido:</b> the switch that shares the design with other teachers, as today's "Compartir Diseño". A design with errors cannot be shared, so its switch is disabled.</li>
       </ul></li>
     <li><b>One visible action per row, the one that fits its state:</b> "Editar" for a ready design, "Corregir" for one with errors, "Duplicar para editar" for one in use. Everything else is in the row's "⋯" menu.</li>
-    <li><b>The row menu</b> (open on the third row): Ver, Duplicar, Archivar, "Lanzar actividad con este diseño ↗", and Eliminar, in red and last. For a design in use, Eliminar is disabled and says why: "en uso por 3 actividades".</li>
+    <li><b>The row menu</b> (open on the third row): Ver, Duplicar, Archivar, and Eliminar, in red and last. It has no launch entry: launching starts from Lanzar actividad. For a design in use, Eliminar is disabled and says why: "en uso por 3 actividades".</li>
   </ol>
 
   <h2>B. 1366 × 768: designs with errors</h2>
@@ -203,11 +203,11 @@
     <li>At this width the type moves under the title; the columns are Diseño, Estado, Compartido and the actions.</li>
   </ol>
 
-  <h2>C. 1366 × 768: the shared library, after an import</h2>
+  <h2>C. 1366 × 768: designs shared by others, after an import</h2>
   <p class="metrics" data-metrics="C"></p>
   <div id="C"></div>
   <ol class="notes">
-    <li><b>What the library is, in one line:</b> designs other teachers shared; importing one creates a private, editable copy in Mis diseños, and the original does not change.</li>
+    <li><b>What the tab holds, in one line:</b> designs other teachers shared; importing one creates a private, editable copy in Mis diseños, and the original does not change.</li>
     <li><b>Rows show what matters to decide an import:</b> author, case, license and type. The case is public, since a shared design needs a public case.</li>
     <li><b>"Importar" is the row's only action.</b> A design already imported shows "Importado · Ver copia" instead, so it is not imported twice by mistake.</li>
     <li><b>A design that can no longer be imported</b> because its case stopped being public says so, with the button disabled.</li>
@@ -218,7 +218,7 @@
   <p class="metrics" data-metrics="D"></p>
   <div id="D"></div>
   <ol class="notes">
-    <li><b>Eliminar asks for confirmation.</b> Today the button deletes at once. The dialog names the design and says it cannot be undone; the confirm button repeats the action, "Eliminar diseño".</li>
+    <li><b>Eliminar asks for confirmation.</b> Today the button deletes at once. The dialog names the design and says it cannot be undone; the confirm button repeats the action, "Eliminar diseño". Copies of the design stay, with their source title, author and license (#963).</li>
     <li>It suggests the reversible alternative: "Si solo quieres quitarlo de la vista, archívalo."</li>
   </ol>
 
@@ -258,7 +258,7 @@
     { t: "Transparencia en reportes financieros", cs: "El balance del trimestre", type: "Diferencial semántico", ph: 2, st: "ok", shared: false },
     { t: "Conflictos en el equipo de proyecto", cs: "La entrega atrasada", type: "Diferencial semántico", ph: 2, st: "use", uses: 3, shared: false },
   ];
-  const LIBRARY = [
+  const SHARED = [
     { t: "Dilemas de privacidad en redes sociales", by: "Prof. Andrea Rojas", cs: "La foto viral", lic: "CC BY-SA 4.0", type: "Diferencial semántico", ph: 3, state: "new" },
     { t: "Ingeniería y comunidades indígenas", by: "Prof. Tomás Pérez", cs: "La represa del valle", lic: "CC BY 4.0", type: "Ranking", ph: 2, state: "imported" },
     { t: "Algoritmos de contratación", by: "Prof. Lucía Herrera", cs: "El filtro de currículums", lic: "CC BY-SA 4.0", type: "Diferencial semántico", ph: 2, state: "new" },
@@ -297,27 +297,27 @@
       <div class="row2">${status(d)}<span class="sub">Compartido ${share(d)}</span><span style="flex:1"></span>${mainAction(d)}<span class="kebab">⋯</span></div></div>`).join("")}</div>`;
   }
 
-  function libraryTable() {
+  function sharedTable() {
     const act = (d) => d.state === "imported" ? '<span class="st ok">✓ Importado</span> <span class="btn sm ghost">Ver copia</span>'
       : d.state === "blocked" ? '<span class="btn sm disabled">Importar</span><div class="sub" style="font-size:12px">Su caso dejó de ser público</div>'
       : '<span class="btn sm">⤓ Importar</span>';
-    const body = LIBRARY.map((d) => `<tr><td class="t"><div class="title">${d.t}</div><div class="meta">${d.type} · ${d.ph} ${d.ph === 1 ? "fase" : "fases"} · Caso: ${d.cs}</div></td>
+    const body = SHARED.map((d) => `<tr><td class="t"><div class="title">${d.t}</div><div class="meta">${d.type} · ${d.ph} ${d.ph === 1 ? "fase" : "fases"} · Caso: ${d.cs}</div></td>
       <td class="sub">${d.by}</td><td class="sub">${d.lic}</td><td class="acts" style="text-align:right">${act(d)}</td></tr>`).join("");
     return `<table class="dt" data-role="designs"><thead><tr><th>Diseño</th><th>Autor</th><th>Licencia</th><th></th></tr></thead><tbody>${body}</tbody></table>`;
   }
 
   function page({ tab, narrow, one, filter, rows }) {
-    const counts = { mine: 68, library: 24, archived: 3 };
+    const counts = { mine: 68, others: 24, archived: 3 };
     const tabs = `<div class="tabs"><span class="tab${tab === "mine" ? " on" : ""}">Mis diseños<span class="count">${counts.mine}</span></span>
-      <span class="tab${tab === "library" ? " on" : ""}">Biblioteca compartida<span class="count">${counts.library}</span></span>
+      <span class="tab${tab === "shared" ? " on" : ""}">Compartidos por otros<span class="count">${counts.others}</span></span>
       <span class="tab${tab === "archived" ? " on" : ""}">Archivados<span class="count">${counts.archived}</span></span></div>`;
     const head = `<div class="head"><div class="titles"><h3>🖌 Diseños</h3><div class="role">Crea, edita y organiza tus diseños, o importa los que otros docentes comparten. ¿Quieres usar uno con tus estudiantes? <a>Lanzar actividad →</a></div></div>
-      <div class="acts"><span class="btn">⤓ Importar de la biblioteca</span><span class="btn primary">+ Nuevo diseño</span></div></div>`;
-    if (tab === "library") {
+      <div class="acts"><span class="btn">⤓ Importar diseño compartido</span><span class="btn primary">+ Nuevo diseño</span></div></div>`;
+    if (tab === "shared") {
       return head + tabs
         + '<div class="banner lib">Diseños que otros docentes compartieron. Al importar uno se crea una <b>copia privada y editable</b> en Mis diseños; el original no cambia.</div>'
         + '<div class="tools"><span class="search">🔍 Buscar por título, autor, caso o etiqueta</span><span class="chip on">Todos</span><span class="chip">Diferencial semántico</span><span class="chip">Ranking</span><span class="sub sort">Más recientes primero ▾</span></div>'
-        + libraryTable();
+        + sharedTable();
     }
     const st = (k, label) => `<span class="chip${filter === k ? " on" : ""}" data-k="${k}">${label}</span>`;
     const tools = `<div class="tools"><span class="search">🔍 Buscar por título, caso o etiqueta</span>
@@ -382,7 +382,6 @@
       const d = MINE[2];
       f.insertAdjacentHTML("beforeend", `<div class="menu" style="left:${Math.round(k.left + k.width - 300)}px; top:${Math.round(k.top + k.height + 6)}px">
         <div class="mi focus">👁 Ver</div><div class="mi">⧉ Duplicar</div><div class="mi">🗄 Archivar</div><hr>
-        <div class="mi">🚀 Lanzar actividad con este diseño <small>↗</small></div><hr>
         <div class="mi dis">🗑 Eliminar <small>en uso por ${d.uses} actividades</small></div></div>`);
     }
     if (overlay === "import-toast") {
@@ -394,7 +393,7 @@
       const mw = 520;
       f.insertAdjacentHTML("beforeend", `<div class="modal" role="dialog" style="left:${Math.round((width - mw) / 2 + (appNav ? 122 : 0))}px; top:${Math.round(height / 2 - 140)}px">
         <div class="mh">¿Eliminar "Ética del trabajo remoto"?</div>
-        <div class="mb">Se borrará definitivamente, con sus fases y preguntas. No se puede deshacer.<br><span class="sub">Si solo quieres quitarlo de la vista, archívalo.</span></div>
+        <div class="mb">Se borrará definitivamente, con sus fases y preguntas. No se puede deshacer. Las copias de este diseño se conservan.<br><span class="sub">Si solo quieres quitarlo de la vista, archívalo.</span></div>
         <div class="mf"><span class="btn">Archivar en su lugar</span><span class="btn">Cancelar</span><span class="btn danger">Eliminar diseño</span></div></div>`);
     }
 
@@ -425,10 +424,10 @@
     notes: [[".head .role", 1, -30], [".head .acts", 2, -10], [".tabs", 3], [".tools", 4], ['[data-role="designs"] thead', 5], ['[data-role="designs"] tbody tr:nth-child(2) .acts', 6, -10], [".menu", 7, -10]] });
   frame("B", { width: 1366, height: 768, appNav: true, tab: "mine", narrow: true, filter: "errors",
     notes: [['[data-k="errors"]', 1], ['[data-role="designs"] tbody tr .acts', 2, -10], ['[data-role="designs"] thead', 3]] });
-  frame("C", { width: 1366, height: 768, appNav: true, tab: "library", overlay: "import-toast",
+  frame("C", { width: 1366, height: 768, appNav: true, tab: "shared", overlay: "import-toast",
     notes: [[".banner", 1], ['[data-role="designs"] thead', 2], ['[data-role="designs"] tbody tr:nth-child(1) .acts', 3, -10], ['[data-role="designs"] tbody tr:nth-child(5) .acts', 4, -10], [".toast", 5]] });
   frame("D", { width: 1366, height: 768, appNav: true, tab: "mine", narrow: true, rows: 14, overlay: "delete",
-    notes: [[".modal .mh", 1], [".modal .mb .sub", 2]] });
+    notes: [[".modal .mh", 1], [".modal .mb .sub", 2, -16]] });
   frame("E", { width: 1024, height: 768, appNav: false, tab: "mine", one: true, rows: 8,
     notes: [[".head", 1], ['[data-role="designs"] > .card:nth-child(1)', 2]] });
 </script>
