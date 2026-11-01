@@ -80,13 +80,12 @@ The page was measured with headless Chrome. The numbers are the same at 1920 and
 
 **Filters**
 - The search covers title, case and tags.
-- The type filter is a menu.
+- There is no type filter (see Decisions).
 - The status chips are "Todos", "Listos", "Con errores · n", "En uso" and "Compartidos".
 - The order is stated: "Más recientes primero".
 
 **One row per design**
 - **Diseño:** the title, with the number of phases and the case under it. The title opens the design's view, not the editor: the row's visible action is the way to edit.
-- **Tipo:** a column of its own from 1200 px; at 1366 px it moves under the title.
 - **Estado:** one of
   - "● Listo": it can be launched and edited;
   - "⚠ n errores": it cannot be launched yet;
@@ -117,7 +116,7 @@ The page was measured with headless Chrome. The numbers are the same at 1920 and
 ### Compartidos por otros (frame C)
 
 - **A one-line banner explains the tab:** "Diseños que otros docentes compartieron. Al importar uno se crea una copia privada y editable en Mis diseños; el original no cambia."
-- **Columns:** design (type, phases, case), author and license.
+- **Columns:** design (phases, case), author and license.
 - **"⤓ Importar" is the row's only action.**
   - A design the teacher already imported shows "✓ Importado · Ver copia" instead, so it is not imported twice by mistake.
   - A design whose case stopped being public cannot be imported. It says so, with the button disabled, instead of failing after the click.
@@ -159,6 +158,7 @@ Each notice disappears after a few seconds and can be dismissed.
 | Tabs "Tuyos", "De otros", "Archivadas" | "Mis diseños", "Compartidos por otros", "Archivados", with counts |
 | 376 px `design-item` card, 5 per page | Table row, "Mostrar más" |
 | Validity and lock sentences | The Estado column |
+| Type, on the card and as a filter | Removed (see Decisions) |
 | Visibility line and the "Compartir Diseño" On/Off switch | The Compartido column's switch |
 | License line | The Licencia column of "Compartidos por otros"; in Mis diseños, in the design's view |
 | "Lanzar Actividad" as the first button | Removed; the role line links to Lanzar actividad |
@@ -196,6 +196,7 @@ Each notice disappears after a few seconds and can be dismissed.
 
 ## Decisions
 
+- **2026-11-01: designs are not told apart by type.** The lists show no type and have no type filter. A new canonical design schema will let one design mix item types, and new ones are coming (open response, multiple choice), so a per-design type is going away. Ranking will not be finished on the current schema and teacher frontend, so every design is treated as a semantic differential design.
 - **2026-11-01: Diseños has no launch action.** The row menu's "Lanzar actividad con este diseño" is removed, so Diseños only manages and Lanzar actividad only launches. The role line still links to Lanzar actividad.
 - **2026-11-01: the tab of others' designs is "Compartidos por otros".** "Biblioteca compartida" could be read as the teacher's own shared designs.
 - **2026-11-01: a click on a row's title opens the design's view,** not the editor.
