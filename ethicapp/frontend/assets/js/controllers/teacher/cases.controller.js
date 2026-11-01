@@ -12,15 +12,20 @@ import {
     caseDocumentsFromCase,
 } from "../../helpers/case-documents-form.js";
 import { caseAnalysisSaveErrorKey } from "../../helpers/case-analysis-options.js";
+import { caseVisibilityResultMessages } from "../../helpers/case-visibility-result.js";
+import { confirmCasePublication } from "../../helpers/case-publication.js";
 
 export function CasesController($scope, $routeParams, $window, $interval, $translate, toast,
-    CasesCatalogService, LanguageCatalogService, UserProfileService) {
+    CasesCatalogService, LanguageCatalogService, UserProfileService,
+    CasePublicationNoticeService) {
     const vm = this;
     const documentProcessingPollIntervalMs = 5000;
     const activeDocumentProcessingStatuses = ["pending", "processing"];
     let documentProcessingPoll = null;
     const TOAST_INFO_TIMEOUT_MS = 4 * 1000;
     const TOAST_ERROR_TIMEOUT_MS = 6 * 1000;
+    // Long enough to read what changed for the designs that use the case.
+    const TOAST_VISIBILITY_TIMEOUT_MS = 12 * 1000;
 
     vm.cases = [];
     vm.ownCases = [];
@@ -39,9 +44,9 @@ export function CasesController($scope, $routeParams, $window, $interval, $trans
         return $translate.instant(key);
     };
 
-    vm.showInfoToast = function(message) {
+    vm.showInfoToast = function(message, timeout = TOAST_INFO_TIMEOUT_MS) {
         toast.create({
-            timeout: TOAST_INFO_TIMEOUT_MS,
+            timeout,
             message,
             containerClass: "cases-toast-container",
             dismissible: false,
@@ -60,6 +65,26 @@ export function CasesController($scope, $routeParams, $window, $interval, $trans
             defaultToastClass: "toast",
             insertFromTop: true,
         });
+    };
+
+    // Tells the teacher, in one message, that making the case private also made
+    // the public designs that use it private (#934) and, when the save took a
+    // public case private, how many designs of other teachers keep it (#939).
+    vm.showCaseVisibilityResult = function(result, previousVisibility) {
+        const messages = caseVisibilityResultMessages(result, previousVisibility);
+        if (messages.length > 0) {
+            vm.showInfoToast(
+                messages.map(message => $translate.instant(message.key, message.values)).join(" "),
+                TOAST_VISIBILITY_TIMEOUT_MS
+            );
+        }
+    };
+
+    // Asks the author to confirm before a case becomes public (#939). Resolves
+    // true when the save may go ahead.
+    vm.confirmPublication = function(previousVisibility, nextVisibility) {
+        return confirmCasePublication(previousVisibility, nextVisibility,
+            () => CasePublicationNoticeService.confirm());
     };
 
     vm.createEmptyCaseForm = function() {
@@ -416,6 +441,12 @@ export function CasesController($scope, $routeParams, $window, $interval, $trans
     };
 
     vm.createCase = async function() {
+        // A new case has no previous visibility. Cancelling keeps the form as
+        // it is, public visibility included, and creates nothing.
+        if (!(await vm.confirmPublication(null, vm.form.visibility))) {
+            return;
+        }
+
         try {
             vm.form.uploadErrorKey = "";
             vm.form.videoFieldErrors = {};
@@ -442,14 +473,24 @@ export function CasesController($scope, $routeParams, $window, $interval, $trans
             return;
         }
 
+        // The visibility the case had when it was loaded or last saved.
+        const previousVisibility = vm.caseObj?.visibility;
+        if (!(await vm.confirmPublication(previousVisibility, vm.form.visibility))) {
+            return;
+        }
+
         try {
             vm.form.uploadErrorKey = "";
             vm.form.videoFieldErrors = {};
             vm.form.documentFieldErrors = {};
-            await CasesCatalogService.updateCase(caseId, vm.form);
+            const result = await CasesCatalogService.updateCase(caseId, vm.form);
             vm.form.initialVideoIds = caseVideoIds(vm.form.videos);
             vm.form.initialDocumentKeys = caseDocumentKeys(vm.form.documents);
+            if (vm.caseObj && result?.visibility) {
+                vm.caseObj.visibility = result.visibility;
+            }
             vm.showInfoToast(vm.translate("ethical_cases_update_success"));
+            vm.showCaseVisibilityResult(result, previousVisibility);
             $scope.$applyAsync();
         } catch (error) {
             console.error("[CasesController::updateCase] Error updating case.", error);
@@ -537,6 +578,16 @@ export function CasesController($scope, $routeParams, $window, $interval, $trans
     vm.toggleCaseVisibility = async function(caseItem) {
         const previousVisibility = caseItem.visibility || "private";
         const nextVisibility = previousVisibility === "public" ? "private" : "public";
+
+        // Cancelling the publication puts the switch back, which its click
+        // has already turned on (#939).
+        if (!(await vm.confirmPublication(previousVisibility, nextVisibility))) {
+            caseItem.visibility = previousVisibility;
+            caseItem.public = previousVisibility === "public";
+            $scope.$applyAsync();
+            return;
+        }
+
         caseItem.visibility = nextVisibility;
         caseItem.public = nextVisibility === "public";
 
@@ -544,6 +595,7 @@ export function CasesController($scope, $routeParams, $window, $interval, $trans
             const result = await CasesCatalogService.updateCaseVisibility(caseItem.id, nextVisibility);
             caseItem.visibility = result.visibility;
             caseItem.public = result.public;
+            vm.showCaseVisibilityResult(result, previousVisibility);
         } catch (error) {
             caseItem.visibility = previousVisibility;
             caseItem.public = previousVisibility === "public";

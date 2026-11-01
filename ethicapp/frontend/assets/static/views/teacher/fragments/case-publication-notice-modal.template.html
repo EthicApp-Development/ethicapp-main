@@ -1,0 +1,14 @@
+<div class="modal-header">
+    <button type="button" class="close" ng-click="$ctrl.cancel()" aria-label="{{ 'cancel' | translate }}">
+        <span aria-hidden="true">&times;</span>
+    </button>
+    <h4 id="casePublicationNoticeTitle" class="modal-title">{{ 'case_publication_notice_title' | translate }}</h4>
+</div>
+<div id="casePublicationNoticeBody" class="modal-body">
+    <p>{{ 'case_publication_notice_body' | translate }}</p>
+    <p>{{ 'case_publication_notice_private_later' | translate }}</p>
+</div>
+<div class="modal-footer">
+    <button type="button" class="btn btn-default btn-sm case-publication-notice-cancel" ng-click="$ctrl.cancel()">{{ 'cancel' | translate }}</button>
+    <button type="button" class="btn btn-primary btn-sm case-publication-notice-confirm" ng-click="$ctrl.confirm()">{{ 'case_publication_notice_confirm' | translate }}</button>
+</div>

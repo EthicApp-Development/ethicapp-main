@@ -34,6 +34,7 @@ import {
 } from "../helpers/case-lifecycle-helper.js";
 import { insertRequestedCaseAnalyses } from "../helpers/case-analyses-helper.js";
 import { associableCaseSql } from "../helpers/design-case-association.js";
+import { applyCaseVisibility } from "../helpers/case-visibility.js";
 import {
     caseVideoSummariesFromIds,
     caseVideosJsonSql,
@@ -371,14 +372,65 @@ async function inTransaction(work) {
 
     try {
         await client.query("BEGIN");
-        await work(client);
+        const result = await work(client);
         await client.query("COMMIT");
+        return result;
     } catch (error) {
         await client.query("ROLLBACK");
         throw error;
     } finally {
         client.release();
     }
+}
+
+// $1 title, $2-$4 primary author, $5 PDF path, $6 case id, $7 user id,
+// $8 visibility, $9 license, $10 attribution, $11 rights status,
+// $12 license notes, $13 permission statement, $14 commercial source,
+// $15 language.
+const updateCaseSql = `
+    UPDATE ethical_cases
+    SET title = $1,
+        author_firstname = $2,
+        author_lastname = $3,
+        author_email = $4,
+        pdf_path = $5,
+        visibility = $8,
+        license_code = $9,
+        attribution_text = $10,
+        rights_status = $11,
+        license_notes = $12,
+        permission_statement = $13,
+        commercial_source = $14,
+        language_code = $15,
+        updated_at = NOW()
+    WHERE id = $6 AND creator = $7
+    RETURNING id, case_uuid, title, author_firstname, author_lastname, author_email,
+              pdf_path, creator, visibility, license_code, attribution_text,
+              original_case_id, imported_from_case_id, source_case_title,
+              source_case_author, source_case_license_code, is_editable_copy,
+              rights_status, license_notes, permission_statement, commercial_source,
+              language_code, created_at, updated_at;
+`;
+
+// Writes the case form's fields and applies the case's visibility to the
+// designs that use it, in one transaction, the way the visibility switch does
+// (#934), and counts the designs of other teachers that keep the case (#939).
+// Returns null when the user does not own the case.
+async function updateCaseRecord(params) {
+    return inTransaction(async (client) => {
+        const result = await client.query(updateCaseSql, params);
+        const updatedCase = result.rows[0];
+        if (!updatedCase?.id) {
+            return null;
+        }
+
+        const visibilityEffects = await applyCaseVisibility(client, {
+            caseId:     updatedCase.id,
+            ownerId:    updatedCase.creator,
+            visibility: updatedCase.visibility,
+        });
+        return { updatedCase, ...visibilityEffects };
+    });
 }
 
 async function saveCaseVideos(caseId, videoIds) {
@@ -989,9 +1041,11 @@ router.patch("/cases/:id", pdfUpload, async (req, res) => {
 
         if (!existingCase || !existingCase.id) {
             await removeUploadedFile(req.file);
-            return res.status(404).json({ status: "err", message: "Case not found." });
+            return caseNotFoundResponse(res);
         }
 
+        // A case a launched activity uses is locked: the form refuses every
+        // change, its visibility included, as the visibility switch does.
         if (await hasLaunchedDesignActivity(caseId)) {
             await removeUploadedFile(req.file);
             return lockedCaseResponse(res);
@@ -1026,50 +1080,28 @@ router.patch("/cases/:id", pdfUpload, async (req, res) => {
         const normalizedRightsStatus = normalizeRightsStatus(rightsStatus ?? rightsStatusCamel, existingCase.rights_status);
         const normalizedVisibility = normalizeVisibility(visibility, existingCase.visibility || PRIVATE_VISIBILITY);
 
-        const updatedCase = await rpg2.singleSQL({
-            dbcon: config.dbconnString,
-            sql: `
-                UPDATE ethical_cases
-                SET title = $1,
-                    author_firstname = $2,
-                    author_lastname = $3,
-                    author_email = $4,
-                    pdf_path = $5,
-                    visibility = $8,
-                    license_code = $9,
-                    attribution_text = $10,
-                    rights_status = $11,
-                    license_notes = $12,
-                    permission_statement = $13,
-                    commercial_source = $14,
-                    language_code = $15,
-                    updated_at = NOW()
-                WHERE id = $6 AND creator = $7
-                RETURNING id, case_uuid, title, author_firstname, author_lastname, author_email,
-                          pdf_path, creator, visibility, license_code, attribution_text,
-                          original_case_id, imported_from_case_id, source_case_title,
-                          source_case_author, source_case_license_code, is_editable_copy,
-                          rights_status, license_notes, permission_statement, commercial_source,
-                          language_code, created_at, updated_at;
-            `,
-            sqlParams: [
-                rpg2.param("plain", title),
-                rpg2.param("plain", primaryAuthor.authorFirstname),
-                rpg2.param("plain", primaryAuthor.authorLastname),
-                rpg2.param("plain", primaryAuthor.authorEmail),
-                rpg2.param("plain", pdfPath),
-                rpg2.param("plain", caseId),
-                rpg2.param("plain", req.session.uid),
-                rpg2.param("plain", normalizedVisibility),
-                rpg2.param("plain", normalizedLicenseCode),
-                rpg2.param("plain", attributionText ?? attributionTextCamel ?? existingCase.attribution_text ?? null),
-                rpg2.param("plain", normalizedRightsStatus),
-                rpg2.param("plain", licenseNotes ?? licenseNotesCamel ?? existingCase.license_notes ?? null),
-                rpg2.param("plain", permissionStatement ?? permissionStatementCamel ?? existingCase.permission_statement ?? null),
-                rpg2.param("plain", commercialSource ?? commercialSourceCamel ?? existingCase.commercial_source ?? null),
-                rpg2.param("plain", normalizeLanguageCode(languageCode ?? languageCodeCamel, existingCase.language_code || DEFAULT_LANGUAGE_CODE)),
-            ],
-        });
+        const saved = await updateCaseRecord([
+            title,
+            primaryAuthor.authorFirstname,
+            primaryAuthor.authorLastname,
+            primaryAuthor.authorEmail,
+            pdfPath,
+            caseId,
+            req.session.uid,
+            normalizedVisibility,
+            normalizedLicenseCode,
+            attributionText ?? attributionTextCamel ?? existingCase.attribution_text ?? null,
+            normalizedRightsStatus,
+            licenseNotes ?? licenseNotesCamel ?? existingCase.license_notes ?? null,
+            permissionStatement ?? permissionStatementCamel ?? existingCase.permission_statement ?? null,
+            commercialSource ?? commercialSourceCamel ?? existingCase.commercial_source ?? null,
+            normalizeLanguageCode(languageCode ?? languageCodeCamel, existingCase.language_code || DEFAULT_LANGUAGE_CODE),
+        ]);
+        if (!saved) {
+            await removeUploadedFile(req.file);
+            return caseNotFoundResponse(res);
+        }
+        const { updatedCase, affectedDesignIds, designsKeepingAccess } = saved;
         await replaceCaseAuthors(caseId, authors);
         await replaceCaseTags(caseId, tagIds, req.session.uid);
         if (videoSave.videoIds) {
@@ -1092,6 +1124,8 @@ router.patch("/cases/:id", pdfUpload, async (req, res) => {
         }
 
         const result = await normalizeCaseWithMaterial(updatedCase);
+        result.affectedDesignIds = affectedDesignIds;
+        result.designsKeepingAccess = designsKeepingAccess;
         return res.status(200).json({ status: "ok", result });
     } catch (error) {
         await removeUploadedFile(req.file);
@@ -1458,21 +1492,11 @@ router.patch("/cases/:id/visibility", async (req, res) => {
             return caseNotFoundResponse(res);
         }
 
-        let affectedDesignIds = [];
-        if (visibility === PRIVATE_VISIBILITY) {
-            const affectedDesigns = await client.query(
-                `
-                    UPDATE designs
-                    SET visibility = 'private',
-                        public = false
-                    WHERE case_id = $1
-                      AND visibility = 'public'
-                    RETURNING id;
-                `,
-                [caseId]
-            );
-            affectedDesignIds = affectedDesigns.rows.map(row => row.id);
-        }
+        const { affectedDesignIds, designsKeepingAccess } = await applyCaseVisibility(client, {
+            caseId,
+            ownerId:    req.session.uid,
+            visibility: updated.visibility,
+        });
 
         await client.query("COMMIT");
 
@@ -1484,6 +1508,7 @@ router.patch("/cases/:id/visibility", async (req, res) => {
                 public: updated.visibility === PUBLIC_VISIBILITY,
                 licenseCode: updated.license_code,
                 affectedDesignIds,
+                designsKeepingAccess,
             },
         });
     } catch (error) {

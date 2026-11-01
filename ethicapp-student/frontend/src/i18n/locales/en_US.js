@@ -144,6 +144,14 @@ const enUS = {
     responseSubmitError: 'Unable to submit your response.',
     responseSelectScaleFirst: 'Select a scale value before submitting.',
     responseCooldown: 'Please wait before submitting this question again.',
+    responseRefusals: {
+      sessionNotFound: 'We could not find this activity in your account. Go back to your activities and open it again.',
+      activityFinished: 'This activity has finished and no longer accepts responses.',
+      noActivePhase: 'The activity has no phase in progress. Wait for your teacher to start it.',
+      phaseChanged: 'The activity moved to another phase. We updated the view so you can answer the current phase.',
+      unsupportedDesignType: 'This activity does not accept responses here.',
+      questionNotInPhase: 'This question is no longer part of the current phase. Reload the page and try again.'
+    },
     externalResponseProcessing: 'An external service is processing your response...',
     externalResponseProcessingButton: 'Waiting for external feedback...',
     externalResultTitle: 'External service result',
