@@ -5,23 +5,42 @@
             <th>{{ 'participant_column_header' | translate }}</th>
             <th>{{ 'group_column_header' | translate }}</th>
             <th ng-repeat="question in gptCtrl.phaseData.descriptor.questions">
-                {{ 'item_label' | translate }} {{ $index + 1 }} (1-{{ question.range }})
+                <!-- The question's text on hover and keyboard focus (#895); Escape hides it
+                     while it is hovered or focused (#956) -->
+                <span class="dashboard-item" ng-if="gptCtrl.questionTexts[$index]"
+                    ng-class="{ 'dashboard-item-end': $last && !$first }"
+                    dismissible-tip="dashboard-item-tip-dismissed">
+                    <button type="button" class="dashboard-item-header"
+                        aria-describedby="dashboard-item-tip-{{ $id }}">
+                        <span aria-hidden="true">{{ 'dashboard_item_short' | translate:{ number: $index + 1 } }}</span>
+                        <span class="sr-only">{{ 'item_label' | translate }} {{ $index + 1 }}</span>
+                    </button>
+                    <span class="dashboard-item-tip" role="tooltip" id="dashboard-item-tip-{{ $id }}"><span class="dashboard-item-tip-body">{{ gptCtrl.questionTexts[$index] }}</span></span>
+                </span>
+                <abbr ng-if="!gptCtrl.questionTexts[$index]" title="{{ 'item_label' | translate }} {{ $index + 1 }}">{{ 'dashboard_item_short' | translate:{ number: $index + 1 } }}</abbr> (1-{{ question.range }})
                 <span ng-if="question.justify" class="text-danger">*</span>
             </th>
             <th>{{ 'chat_column_header' | translate }}</th>
         </tr>
     </thead>
     <tbody>
-        <tr ng-repeat="user in gptCtrl.phaseData.state track by $index"
-            ng-class="{'group-summary': user.groupStatistics}"
-            ng-click="gptCtrl.onRowClick(user)"
-            style="cursor: pointer;">
+        <!-- A row opens the response detail panel (#896), by click or by
+             Enter or Space: a student's row the student, a group's row the
+             group. The rows the panel shows are highlighted. -->
+        <tr ng-repeat="user in gptCtrl.phaseData.state | participantSearch:gptCtrl.participantQuery track by $index"
+            class="response-detail-row"
+            ng-class="{ 'group-summary': user.groupStatistics, 'response-detail-row-selected': gptCtrl.isRowInDetail(user) }"
+            ng-attr-aria-current="{{ gptCtrl.isRowInDetail(user) ? 'true' : undefined }}"
+            data-detail-key="{{ gptCtrl.detailKey(user) }}"
+            tabindex="0"
+            ng-keydown="gptCtrl.onRowKeydown($event, user)"
+            ng-click="gptCtrl.onRowClick(user)">
             <td>
                 <span ng-if="!user.groupStatistics">{{ user.userName }}</span>
                 <strong ng-if="user.groupStatistics">{{ user.groupName }}</strong>
             </td>
 
-            <td>{{ user.groupStatistics ? user.groupNumber : user.groupNumber || '-' }}</td>
+            <td>{{ user.groupNumber || ('no_group_label' | translate) }}</td>
 
             <td ng-repeat="question in gptCtrl.phaseData.descriptor.questions">
                 <div ng-if="!user.groupStatistics">
@@ -54,7 +73,7 @@
                     </span>
                 </span>
                 <span ng-if="user.groupStatistics">
-                    <strong>Total:</strong>
+                    <strong>{{ 'group_chat_total_label' | translate }}:</strong>
                     <span class="badge badge-danger">
                         <i class="fa fa-comments"></i> {{ user.totalChatCount || 0 }}
                     </span>

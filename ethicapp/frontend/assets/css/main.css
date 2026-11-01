@@ -2630,6 +2630,1214 @@ h2{
     width: 100%;
 }
 
+/* Activity bar of the teacher's dashboard, sticky under the app bar (#893).
+   Its z-index keeps it over the page content and under the sidebar, the
+   app bar and Bootstrap's modals (1040 and up). */
+.activity-bar-host {
+    display: block;
+    margin-bottom: 12px;
+    position: sticky;
+    top: var(--activity-bar-top, var(--teacher-topbar-height, 68px));
+    z-index: 1000;
+}
+
+.activity-bar {
+    align-items: center;
+    background: #fff;
+    border-bottom: 1px solid #d5dbe8;
+    box-shadow: 0 4px 12px rgb(7 28 120 / 6%);
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 10px;
+    min-height: 56px;
+    padding: 8px 12px;
+}
+
+/* The name holds one line with an ellipsis while the bar has one row. The
+   component measures it on that row (activity-bar-layout.js) and, when it
+   cannot show at least 280 px, stacks the bar (#951): the name on its own
+   row, two lines at most, and the chips and the controls below, wrapping. */
+.activity-bar-title {
+    flex: 0 1 auto;
+    min-width: 0;
+    position: relative;
+}
+
+.activity-bar-name {
+    display: block;
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.3;
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.activity-bar-name:focus-visible {
+    outline: 2px solid #2649ec;
+    outline-offset: 2px;
+}
+
+.activity-bar.activity-bar-stacked {
+    flex-wrap: wrap;
+    row-gap: 6px;
+}
+
+.activity-bar-stacked .activity-bar-title {
+    flex: 1 0 100%;
+}
+
+.activity-bar-stacked .activity-bar-name {
+    -webkit-box-orient: vertical;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow-wrap: anywhere;
+    white-space: normal;
+}
+
+/* The tooltip of a cut name, on hover and keyboard focus, as wide as the
+   name at most so it stays on the page. Its transparent padding bridges the
+   gap to the name, so the pointer can move onto it without hiding it. */
+.activity-bar-name-tip {
+    display: none;
+    left: 0;
+    max-width: 100%;
+    padding-top: 6px;
+    position: absolute;
+    top: 100%;
+    width: max-content;
+    z-index: 3;
+}
+
+.activity-bar-name-truncated .activity-bar-title:hover .activity-bar-name-tip,
+.activity-bar-name-truncated .activity-bar-name:focus-visible + .activity-bar-name-tip {
+    display: block;
+}
+
+.activity-bar-name-truncated .activity-bar-title.activity-bar-title-tip-dismissed .activity-bar-name-tip {
+    display: none;
+}
+
+.activity-bar-name-tip-body {
+    background: #222;
+    border-radius: 6px;
+    color: #fff;
+    display: block;
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+    padding: 8px 10px;
+    white-space: normal;
+}
+
+.activity-bar-chip {
+    border: 1px solid #c8cfdc;
+    border-radius: 999px;
+    flex: none;
+    font-size: 13px;
+    line-height: 1.4;
+    padding: 2px 10px;
+    white-space: nowrap;
+}
+
+.activity-bar-status-in_progress {
+    border-color: #3c763d;
+    color: #3c763d;
+}
+
+.activity-bar-status-finished,
+.activity-bar-status-initiated {
+    color: #555;
+}
+
+.activity-bar-status-dot {
+    font-size: 9px;
+    vertical-align: 1px;
+}
+
+.activity-bar-code-value {
+    padding: 0 6px;
+}
+
+.activity-bar-controls {
+    flex: none;
+    margin-left: auto;
+}
+
+.activity-controls .action-buttons,
+.activity-controls .report-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+/* On a stacked bar the controls wrap too, if the row is narrower than
+   they are (#951). */
+.activity-bar-stacked .activity-bar-controls {
+    flex: 0 1 auto;
+    min-width: 0;
+}
+
+.activity-bar-stacked .activity-controls .action-buttons,
+.activity-bar-stacked .activity-controls .report-buttons {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.activity-hold {
+    display: inline-block;
+    position: relative;
+}
+
+/* The tooltip of a hold-to-confirm button, on hover and keyboard focus. The
+   transparent padding bridges the gap to the button, so the pointer can move
+   onto the tooltip without hiding it. */
+.activity-hold-tip {
+    display: none;
+    padding-top: 10px;
+    position: absolute;
+    right: 0;
+    top: 100%;
+    width: 300px;
+}
+
+.activity-hold:hover .activity-hold-tip,
+.activity-hold:focus-within .activity-hold-tip {
+    display: block;
+}
+
+.activity-hold.activity-hold-tip-dismissed .activity-hold-tip {
+    display: none;
+}
+
+.activity-hold-tip-body {
+    background: #222;
+    border-radius: 6px;
+    color: #fff;
+    display: block;
+    font-size: 13px;
+    line-height: 1.4;
+    padding: 8px 10px;
+    position: relative;
+    white-space: normal;
+}
+
+.activity-hold-tip-body::before {
+    border: 7px solid transparent;
+    border-bottom-color: #222;
+    border-top: 0;
+    content: "";
+    position: absolute;
+    right: 32px;
+    top: -7px;
+}
+
+/* Below 1600 px the bar keeps one line: the phase chip and the
+   "connected" label give way. */
+@media (width < 1600px) {
+    .activity-bar-phase,
+    .activity-bar-connected-label {
+        display: none;
+    }
+}
+
+/* Below 1200 px the name gives up some size, so the bar keeps one line
+   with the controls, the code and the connected count (#895). */
+@media (width < 1200px) {
+    .activity-bar-name {
+        font-size: 18px;
+    }
+}
+
+/* Two-column activity dashboard (#894): a rail with the phase navigator and
+   the selected phase's context, and a main column with the responses first.
+   The rail is 260 px from 1200 px wide and 320 px from 1600 px. Below
+   1200 px the dashboard is one column (#895): the phases as pills above the
+   main tabs, and the rail's cards as collapsed sections under the main
+   column. The controller sets the layout class from the same media query,
+   (min-width: 1200px). The response table's header sticks under the
+   activity bar, which sticks under the app bar (62 px tall below 768 px).
+   The bar publishes its height as --activity-bar-height on this page; 56 px,
+   its one-row height, until it does (#951). */
+.activity-dashboard-page {
+    --activity-bar-top: var(--teacher-topbar-height, 68px);
+    --activity-dashboard-sticky-top: calc(var(--activity-bar-top) + var(--activity-bar-height, 56px));
+}
+
+@media (width < 768px) {
+    .activity-dashboard-page {
+        --activity-bar-top: 62px;
+    }
+}
+
+.activity-dashboard-grid {
+    align-items: start;
+    display: grid;
+    gap: 16px;
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.activity-dashboard-grid.activity-dashboard-two-columns {
+    grid-template-columns: 260px minmax(0, 1fr);
+}
+
+@media (width >= 1600px) {
+    .activity-dashboard-grid.activity-dashboard-two-columns {
+        grid-template-columns: 320px minmax(0, 1fr);
+    }
+}
+
+.activity-dashboard-rail {
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+    gap: 12px;
+    min-width: 0;
+}
+
+/* The context cards, in the rail or under the main column */
+.activity-dashboard-context {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0;
+}
+
+.activity-dashboard-main {
+    min-width: 0;
+}
+
+.dashboard-card {
+    background: #fff;
+    border: 1px solid #d5dbe8;
+    border-radius: 6px;
+    padding: 10px 12px;
+}
+
+.dashboard-card-header {
+    align-items: baseline;
+    display: flex;
+    gap: 8px;
+    justify-content: space-between;
+}
+
+.dashboard-card-title {
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.3;
+    margin: 0 0 8px;
+}
+
+.dashboard-card-header > .dashboard-card-title {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.dashboard-card-toggle {
+    flex: none;
+    padding: 0;
+}
+
+.dashboard-card-disclosure {
+    align-items: baseline;
+    background: none;
+    border: 0;
+    color: inherit;
+    display: flex;
+    font: inherit;
+    gap: 8px;
+    padding: 0;
+    text-align: left;
+    width: 100%;
+}
+
+.dashboard-card-disclosure:focus-visible {
+    outline: 2px solid #2649ec;
+    outline-offset: 2px;
+}
+
+.dashboard-card-summary {
+    color: #666;
+    flex: 1;
+    font-size: 12px;
+    font-weight: 400;
+    text-align: right;
+}
+
+.dashboard-activity-card .dashboard-card-title {
+    margin: 0;
+}
+
+.dashboard-activity-card .activity-item-panel {
+    border: 0;
+    box-shadow: none;
+    margin: 8px 0 0;
+}
+
+.dashboard-activity-card .activity-item-panel > .panel-heading {
+    display: none;
+}
+
+.dashboard-activity-card .activity-item-panel > .panel-body {
+    padding: 0;
+}
+
+.dashboard-chip {
+    border: 1px solid #c8cfdc;
+    border-radius: 999px;
+    display: inline-block;
+    font-size: 12px;
+    line-height: 1.4;
+    padding: 1px 8px;
+    white-space: nowrap;
+}
+
+/* Phase navigator */
+.phase-navigator-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.phase-navigator-item + .phase-navigator-item {
+    margin-top: 4px;
+}
+
+.phase-navigator-row {
+    align-items: center;
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    color: inherit;
+    column-gap: 10px;
+    display: grid;
+    grid-template-columns: 12px minmax(0, 1fr) auto;
+    padding: 6px 8px;
+    text-align: left;
+    width: 100%;
+}
+
+.phase-navigator-row:disabled {
+    color: #767676;
+    cursor: not-allowed;
+}
+
+.phase-navigator-row:focus-visible {
+    background: #f0f4ff;
+}
+
+.phase-navigator-row:hover:not(:disabled) {
+    background: #f0f4ff;
+}
+
+.phase-navigator-row-selected {
+    border-color: #2649ec;
+    font-weight: 700;
+}
+
+.phase-navigator-marker {
+    border: 2px solid #888;
+    border-radius: 50%;
+    height: 12px;
+    width: 12px;
+}
+
+.phase-navigator-row:not(:disabled) .phase-navigator-marker {
+    background: #888;
+}
+
+.phase-navigator-row.phase-navigator-row-current .phase-navigator-marker {
+    background: #3c763d;
+    border-color: #3c763d;
+}
+
+.phase-navigator-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.phase-navigator-count {
+    color: #555;
+    font-variant-numeric: tabular-nums;
+    font-weight: 400;
+}
+
+.phase-navigator-meter {
+    background: #e3e7ef;
+    border-radius: 3px;
+    display: block;
+    grid-column: 2;
+    height: 6px;
+    margin-top: 4px;
+    overflow: hidden;
+}
+
+.phase-navigator-meter-fill {
+    background: #3c763d;
+    display: block;
+    height: 100%;
+}
+
+/* Phase pills, above the main tabs in one column (#895). The list scrolls
+   sideways when they do not fit; its padding leaves room for the focus
+   ring, and it is the pills' offset parent for bringing one into view. */
+.phase-pills-list {
+    display: flex;
+    gap: 8px;
+    list-style: none;
+    margin: 0 0 8px;
+    overflow-x: auto;
+    padding: 4px;
+    position: relative;
+    scrollbar-width: thin;
+}
+
+.phase-pills-item {
+    flex: none;
+}
+
+.phase-pill {
+    align-items: center;
+    background: #fff;
+    border: 1px solid #c8cfdc;
+    border-radius: 999px;
+    color: inherit;
+    display: inline-flex;
+    gap: 6px;
+    line-height: 1.4;
+    padding: 4px 12px;
+    white-space: nowrap;
+}
+
+.phase-pill:disabled {
+    color: #767676;
+    cursor: not-allowed;
+}
+
+.phase-pill:focus-visible {
+    background: #f0f4ff;
+    outline: 2px solid #2649ec;
+    outline-offset: 2px;
+}
+
+.phase-pill:hover:not(:disabled) {
+    background: #f0f4ff;
+}
+
+.phase-pill-selected {
+    border-color: #2649ec;
+    box-shadow: inset 0 0 0 1px #2649ec;
+    color: #2649ec;
+    font-weight: 700;
+}
+
+.phase-pill-dot {
+    background: #3c763d;
+    border-radius: 50%;
+    flex: none;
+    height: 10px;
+    width: 10px;
+}
+
+.phase-pill-check {
+    color: #3c763d;
+    font-size: 12px;
+}
+
+.phase-pill-count {
+    font-variant-numeric: tabular-nums;
+}
+
+/* "This phase": the compact phase descriptions */
+.phase-context-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    list-style: none;
+    margin: 0 0 8px;
+    padding: 0;
+}
+
+.phase-context-label {
+    color: #555;
+    font-size: 13px;
+    font-weight: 600;
+    margin: 8px 0 4px;
+}
+
+.phase-context-instructions {
+    line-height: 1.43;
+    max-height: calc(3 * 1.43em);
+    overflow: hidden;
+}
+
+.phase-context-instructions.phase-context-instructions-open {
+    max-height: none;
+}
+
+.phase-context-instructions > rich-text {
+    display: block;
+}
+
+.phase-context-instructions p,
+.phase-context-question-body p {
+    margin: 0 0 4px;
+}
+
+.phase-context-more {
+    padding: 0;
+}
+
+.phase-context-questions {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.phase-context-question {
+    border-top: 1px solid #e5e5e5;
+    display: grid;
+    gap: 8px;
+    grid-template-columns: 28px minmax(0, 1fr);
+    padding: 6px 0;
+}
+
+.phase-context-question-number {
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.phase-context-question-body {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.phase-context-question-body .phase-context-question-meta {
+    color: #666;
+    font-size: 12px;
+    margin: 2px 0 0;
+}
+
+/* "AI services" */
+.dashboard-ai-services .alert {
+    margin-bottom: 8px;
+    padding: 8px 10px;
+}
+
+.dashboard-ai-services .tutor-mode-warnings,
+.dashboard-ai-services .tutor-mode-basic-selected {
+    margin: 8px 0 0;
+    padding: 8px 10px;
+}
+
+/* One column: the context cards as collapsed sections under the main
+   column (#895), with the rail's type size */
+.activity-dashboard-sections {
+    font-size: 13px;
+}
+
+.activity-dashboard-sections .dashboard-card-title {
+    margin: 0;
+}
+
+.activity-dashboard-sections .dashboard-card-body,
+.activity-dashboard-sections .dashboard-ai-services .alert {
+    margin-top: 8px;
+}
+
+/* Main column: tabs and the responses */
+.activity-dashboard-tabs {
+    margin-bottom: 0;
+}
+
+.activity-dashboard-panel {
+    padding-top: 8px;
+}
+
+.dashboard-responses-toolbar {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    margin-bottom: 8px;
+}
+
+.dashboard-responses-title {
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.3;
+    margin: 0;
+}
+
+/* The search and the "hide names" switch, at the end of the title's line or
+   on a line of their own. They wrap rather than push the page sideways when
+   they do not fit the column (#957). */
+.dashboard-responses-tools {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-left: auto;
+    max-width: 100%;
+    min-width: 0;
+}
+
+.dashboard-participant-search {
+    position: relative;
+    width: 240px;
+}
+
+.dashboard-participant-search-icon {
+    color: #888;
+    left: 10px;
+    pointer-events: none;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.dashboard-participant-search > input {
+    padding-left: 30px;
+}
+
+/* The "no match" line repeats the query, which may be one long word (#957) */
+.dashboard-search-empty {
+    overflow-wrap: anywhere;
+}
+
+.dashboard-search-clear {
+    margin-left: 8px;
+}
+
+/* Below 768 px the tools take a line of their own under the title and the
+   count: the search fills what the switch leaves, down to 160 px, and the
+   switch moves under it when even that does not fit (#957). */
+@media (width < 768px) {
+    .dashboard-responses-tools {
+        flex: 1 1 100%;
+        justify-content: flex-start;
+        margin-left: 0;
+    }
+
+    .dashboard-participant-search {
+        flex: 1 1 160px;
+        min-width: 0;
+        width: auto;
+    }
+
+    .dashboard-hide-names {
+        flex: none;
+    }
+}
+
+/* "Hide names" (#897): a switch in the responses toolbar. The checkbox
+   keeps its keyboard focus and state for assistive technology; the track
+   beside it shows the state. */
+.dashboard-hide-names {
+    align-items: center;
+    cursor: pointer;
+    display: inline-flex;
+    font-size: 13px;
+    font-weight: 400;
+    gap: 6px;
+    margin: 0;
+    padding: 3px 10px 3px 8px;
+    position: relative;
+}
+
+.dashboard-hide-names-on {
+    background: #eaf2fb;
+    border-color: #337ab7;
+    color: #23527c;
+}
+
+.dashboard-hide-names-input {
+    height: 1px;
+    margin: 0;
+    opacity: 0;
+    position: absolute;
+    width: 1px;
+}
+
+.dashboard-hide-names-track {
+    background: #c8cfdc;
+    border-radius: 999px;
+    display: inline-block;
+    flex: none;
+    height: 14px;
+    position: relative;
+    transition: background-color .15s;
+    width: 26px;
+}
+
+.dashboard-hide-names-track::after {
+    background: #fff;
+    border-radius: 50%;
+    box-shadow: 0 1px 2px rgb(0 0 0 / 30%);
+    content: "";
+    height: 10px;
+    left: 2px;
+    position: absolute;
+    top: 2px;
+    transition: transform .15s;
+    width: 10px;
+}
+
+.dashboard-hide-names-input:checked + .dashboard-hide-names-track {
+    background: #337ab7;
+}
+
+.dashboard-hide-names-input:checked + .dashboard-hide-names-track::after {
+    transform: translateX(12px);
+}
+
+.dashboard-hide-names-input:focus-visible + .dashboard-hide-names-track {
+    outline: 2px solid #337ab7;
+    outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dashboard-hide-names-track,
+    .dashboard-hide-names-track::after {
+        transition: none;
+    }
+}
+
+.activity-dashboard-page .phase-state .table > thead > tr > th {
+    background: #fff;
+    box-shadow: inset 0 -2px 0 #ddd;
+    position: sticky;
+    top: var(--activity-dashboard-sticky-top);
+    z-index: 2;
+}
+
+/* A question column's header: its text on hover and keyboard focus (#895).
+   The tip's transparent padding bridges the gap to the header, so the
+   pointer can move onto it without hiding it; Escape hides it until both
+   the pointer and the focus have left (`dismissible-tip`, #956). The last
+   column's tip opens leftwards, so it stays on the page. */
+.dashboard-item {
+    display: inline-block;
+    position: relative;
+}
+
+.dashboard-item-header {
+    background: none;
+    border: 0;
+    border-bottom: 1px dotted currentcolor;
+    color: inherit;
+    font: inherit;
+    padding: 0;
+}
+
+.dashboard-item-header:focus-visible {
+    outline: 2px solid #2649ec;
+    outline-offset: 2px;
+}
+
+.dashboard-item-tip {
+    display: none;
+    left: 0;
+    padding-top: 6px;
+    position: absolute;
+    top: 100%;
+    width: max-content;
+    max-width: 320px;
+    z-index: 3;
+}
+
+.dashboard-item-end .dashboard-item-tip {
+    left: auto;
+    right: 0;
+}
+
+.dashboard-item:hover .dashboard-item-tip,
+.dashboard-item-header:focus-visible + .dashboard-item-tip {
+    display: block;
+}
+
+.dashboard-item.dashboard-item-tip-dismissed .dashboard-item-tip {
+    display: none;
+}
+
+.dashboard-item-tip-body {
+    background: #222;
+    border-radius: 6px;
+    color: #fff;
+    display: block;
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1.4;
+    padding: 8px 10px;
+    text-align: left;
+    white-space: normal;
+}
+
+.activity-dashboard-design-explanation {
+    margin: 1em 0 2em;
+}
+
+/* Response detail side panel (#896): a row of a semantic-differential table
+   opens one student's answers, or a group's answers and chat, next to the
+   table, which stays visible and live. From 1600 px the panel is a third
+   column, 600 px wide; from 1200 px it is 480 px wide and the rail folds into
+   a strip of phase dots; below 1200 px it is 470 px wide and lies over the
+   right part of the table, without a backdrop. It sticks under the activity
+   bar, as tall as the window, and scrolls on its own. */
+.activity-dashboard-page .phase-state .response-detail-row {
+    cursor: pointer;
+}
+
+.activity-dashboard-page .phase-state .response-detail-row:focus-visible {
+    outline: 2px solid #2649ec;
+    outline-offset: -2px;
+}
+
+.activity-dashboard-page .phase-state .table > tbody > tr.response-detail-row-selected > td {
+    background-color: #e3ebff;
+}
+
+.activity-dashboard-page .phase-state .table > tbody > tr.response-detail-row-selected > td:first-child {
+    box-shadow: inset 3px 0 0 #2649ec;
+}
+
+.activity-dashboard-grid.activity-dashboard-two-columns.activity-dashboard-with-detail {
+    grid-template-columns: 48px minmax(0, 1fr) 480px;
+}
+
+@media (width >= 1600px) {
+    .activity-dashboard-grid.activity-dashboard-two-columns.activity-dashboard-with-detail {
+        grid-template-columns: 320px minmax(0, 1fr) 600px;
+    }
+
+    .activity-dashboard-rail > .phase-dots-host {
+        display: none;
+    }
+}
+
+/* Between 1200 and 1599 px, the open panel folds the rail into the dots */
+@media (width < 1600px) {
+    .activity-dashboard-with-detail > .activity-dashboard-rail > :not(.phase-dots-host) {
+        display: none;
+    }
+}
+
+.phase-dots-host {
+    display: block;
+}
+
+.phase-dots-list {
+    align-items: center;
+    background: #fff;
+    border: 1px solid #d5dbe8;
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    list-style: none;
+    margin: 0;
+    padding: 10px 0;
+}
+
+.phase-dot {
+    background: #fff;
+    border: 2px solid #8a94a6;
+    border-radius: 50%;
+    display: block;
+    height: 22px;
+    padding: 0;
+    width: 22px;
+}
+
+.phase-dot:disabled {
+    border-color: #c8cfdc;
+    cursor: not-allowed;
+}
+
+.phase-dot:not(:disabled) {
+    background: #8a94a6;
+}
+
+.phase-dot.phase-dot-current {
+    background: #3c763d;
+    border-color: #3c763d;
+}
+
+.phase-dot-selected {
+    box-shadow: 0 0 0 2px #fff, 0 0 0 4px #2649ec;
+}
+
+.phase-dot:focus-visible {
+    outline: 2px solid #2649ec;
+    outline-offset: 4px;
+}
+
+.response-detail-host {
+    display: block;
+    min-width: 0;
+}
+
+.activity-dashboard-two-columns > .response-detail-host {
+    height: calc(100vh - var(--activity-dashboard-sticky-top) - 24px);
+    position: sticky;
+    top: calc(var(--activity-dashboard-sticky-top) + 12px);
+}
+
+/* Below 1200 px: over the right part of the table, under the activity bar */
+.activity-dashboard-one-column > .response-detail-host {
+    bottom: 0;
+    box-shadow: -8px 0 24px rgb(7 28 120 / 12%);
+    max-width: 100%;
+    position: fixed;
+    right: 0;
+    top: var(--activity-dashboard-sticky-top);
+    width: 470px;
+    z-index: 990;
+}
+
+.response-detail-panel {
+    background: #fff;
+    border: 1px solid #d5dbe8;
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+    height: 100%;
+    overflow: hidden;
+}
+
+.activity-dashboard-one-column .response-detail-panel {
+    border-radius: 0;
+}
+
+.response-detail-header {
+    align-items: center;
+    border-bottom: 1px solid #d5dbe8;
+    display: flex;
+    flex: none;
+    gap: 8px;
+    padding: 10px 12px;
+}
+
+.response-detail-heading {
+    flex: 1 1 auto;
+    font-size: 17px;
+    font-weight: 700;
+    line-height: 1.3;
+    margin: 0;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.response-detail-heading:focus {
+    outline: none;
+}
+
+.response-detail-heading:focus-visible {
+    outline: 2px solid #2649ec;
+    outline-offset: 2px;
+}
+
+.response-detail-actions {
+    display: flex;
+    flex: none;
+    gap: 4px;
+}
+
+.response-detail-meta {
+    align-items: center;
+    color: #555;
+    display: flex;
+    flex: none;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    padding: 8px 12px;
+}
+
+.response-detail-chat-live {
+    border-color: #3c763d;
+    color: #3c763d;
+}
+
+.response-detail-group-link {
+    padding: 0;
+}
+
+/* The content: a student's answers scroll; a group's parts share the height */
+.response-detail-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 0 12px 12px;
+}
+
+.response-detail-body.response-detail-body-group {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding-bottom: 0;
+}
+
+.response-detail-body-group > .response-detail-content,
+.response-detail-body-group sd-group-response-detail {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.response-detail-group {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.response-detail-part {
+    min-height: 0;
+}
+
+.response-detail-answers {
+    flex: 1 1 0;
+    overflow-y: auto;
+}
+
+.response-detail-chat {
+    display: flex;
+    flex: 1 1 0;
+    flex-direction: column;
+    min-height: 140px;
+    padding-bottom: 12px;
+}
+
+.response-detail-group-tabs .response-detail-answers,
+.response-detail-group-tabs .response-detail-chat {
+    padding-top: 8px;
+}
+
+.response-detail-part-title {
+    font-size: 14px;
+    font-weight: 700;
+    margin: 8px 0;
+}
+
+.response-detail-part-count {
+    color: #555;
+    font-weight: 400;
+}
+
+.response-detail-splitter {
+    align-items: center;
+    border-top: 1px solid #d5dbe8;
+    cursor: row-resize;
+    display: flex;
+    flex: none;
+    height: 12px;
+    justify-content: center;
+}
+
+.response-detail-splitter:focus-visible {
+    outline: 2px solid #2649ec;
+    outline-offset: -2px;
+}
+
+.response-detail-splitter-grip {
+    background: #c8cfdc;
+    border-radius: 2px;
+    height: 4px;
+    width: 40px;
+}
+
+.response-detail-tabs {
+    flex: none;
+    margin-top: 4px;
+}
+
+.response-detail-unread {
+    background: #2649ec;
+    margin-left: 4px;
+}
+
+.response-detail-digest {
+    display: flex;
+    flex: none;
+    flex-wrap: nowrap;
+    gap: 4px;
+    margin: 0 0 8px;
+    overflow-x: auto;
+    white-space: nowrap;
+}
+
+.response-detail-digest-item {
+    flex: none;
+}
+
+/* The chat fills the rest of its part: the transcript scrolls and the
+   composer stays at the bottom. */
+.response-detail-chat teacher-group-chat {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.response-detail-chat .teacher-group-chat-transcript {
+    flex: 1 1 auto;
+    max-height: none;
+    min-height: 0;
+}
+
+.response-detail-chat teacher-group-chat > p.text-muted:not(.small) {
+    flex: 1 1 auto;
+}
+
+/* The answers, as in the modals they come from, fitted to the panel */
+.response-detail-question {
+    margin: 8px 0;
+}
+
+.response-detail-panel .response-detail-question > .panel-heading,
+.response-detail-panel .response-detail-question > .panel-body {
+    padding: 8px 10px;
+}
+
+.response-detail-member + .response-detail-member {
+    border-top: 1px solid #eee;
+    margin-top: 8px;
+    padding-top: 8px;
+}
+
+.response-detail-member-name {
+    display: block;
+}
+
+.response-detail-scale {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 10px;
+    margin: 6px 0;
+}
+
+.response-detail-scale-options .radio-inline {
+    margin: 0 4px;
+}
+
+.response-detail-scale-options .radio-inline + .radio-inline {
+    margin-left: 4px;
+}
+
+.response-detail-justification > p {
+    margin: 2px 0 0;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+}
+
 .design-item-panel .design-item-actions {
     align-items: center;
     display: flex;
@@ -3109,6 +4317,25 @@ tr.group-summary {
 
 .phase-external-services-summary .phase-external-service-settings .help-block {
     margin: 2px 0 4px;
+}
+
+/* One line per service in the activity dashboard's AI services card
+   (#894), its settings on demand. */
+.phase-external-services-summary-compact .phase-external-service {
+    margin-bottom: 0;
+    padding: 4px 0;
+}
+
+.phase-external-services-summary-compact .phase-external-service + .phase-external-service {
+    border-top: 1px solid #e5e5e5;
+}
+
+.phase-external-services-summary-compact .phase-external-service-name {
+    margin: 0;
+}
+
+.phase-external-service-digest {
+    color: #666;
 }
 
 /* Teacher-written rich text (#765): block content with the surrounding text's

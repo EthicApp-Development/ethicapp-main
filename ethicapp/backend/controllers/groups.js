@@ -3,8 +3,6 @@
 import express from "express";
 import * as config from "../config/database.config.js";
 import * as rpg2 from "../db/rest-pg-2.js";
-import * as GroupsHelper from "../helpers/groups-helper.js"
-import * as ActivitiesHelper from "../helpers/activities-helper.js";
 import * as StudentActivityStatusHelper from "../helpers/student-activity-state-helper.js";
 import { requireRole } from "../helpers/auth-helper.js";
 import {
@@ -16,8 +14,14 @@ const router = express.Router();
 
 /**
  * @route GET /phases/:id/groups
- * @description Retrieves all groups (teams) for a given phase (stage), along with their participants.
- *              The response includes the group ID, a sequential number for the group, and a list of participant IDs.
+ * @description Retrieves all groups (teams) of a phase (stage) with their
+ *              participants: the group id, a sequential number for the
+ *              group, the participants' ids, and each member's letter within
+ *              the group (`teamusers.anon_mask`), which the dashboard shows
+ *              in place of the name while the teacher hides names (#897).
+ *              Only the activity's owner may read them (or an administrator
+ *              impersonating them): in an anonymous phase, the letters are
+ *              all that students see of each other.
  * @param {string} id - The ID of the phase (from the URL path).
  * @returns {Object} - A JSON object containing the list of groups and their participants.
  *
@@ -31,20 +35,15 @@ const router = express.Router();
  *     {
  *       "id": 1,
  *       "number": 1,
- *       "participants": [101, 102, 103]
- *     },
- *     {
- *       "id": 2,
- *       "number": 2,
- *       "participants": [104, 105]
+ *       "participants": [101, 102],
+ *       "members": [{ "id": 101, "anon_mask": "A" }, { "id": 102, "anon_mask": "B" }]
  *     }
  *   ]
  * }
  *
- * // Response (missing required parameter)
- * {
- *   "error": "Missing required parameter: id."
- * }
+ * // 401 without a session; 403 for a student, or a teacher who does not own
+ * // the activity; 404 for an unknown phase:
+ * { "error": "Phase not found." }
  *
  * // Response (no groups found)
  * {
@@ -88,17 +87,19 @@ router.get("/phases/:id/groups", async (req, res) => {
         }
 
         // Group the results by team_id
-        const groupedTeams = results.reduce((acc, { team_id, user_id }) => {
+        const groupedTeams = results.reduce((acc, { team_id, user_id, anon_mask }) => {
             if (!acc[team_id]) {
                 acc[team_id] = {
-                    id: team_id,
-                    number: Object.keys(acc).length + 1,
+                    id:           team_id,
+                    number:       Object.keys(acc).length + 1,
                     participants: [],
+                    members:      [],
                 };
             }
 
             if (user_id) {
                 acc[team_id].participants.push(user_id);
+                acc[team_id].members.push({ id: user_id, anon_mask: anon_mask ?? null });
             }
 
             return acc;
@@ -247,111 +248,6 @@ router.get("/phases/:id/user_group/:user_id/previous_responses", async (req, res
     } catch (err) {
         console.error("Error fetching previous group responses:", err);
         return res.status(500).json({ error: "Internal server error" });
-    }
-});
-
-/**
- * Endpoint to create groups for a specific phase (stage).
- * Route: POST /phases/:id/groups
- */
-router.post("/phases/:id/groups", async (req, res) => {
-    try {
-        // Only the activity's teacher forms its groups (#905). The check also
-        // resolves the phase's session (stages.sesid), or answers 404.
-        const owner = await requirePhaseOwner(req, res, req.params.id);
-        if (!owner) {
-            return;
-        }
-
-        const { phaseId, sessionId } = owner;
-
-        // Retrieve the design associated with the session
-        const designResult = await rpg2.execSQL({
-            dbcon: config.dbconnString,
-            sql: `
-                SELECT d.design
-                FROM designs d
-                INNER JOIN activity a ON d.id = a.design
-                WHERE a.session = $1
-            `,
-            sqlParams: [rpg2.param('plain', sessionId)],
-        });
-
-        if (designResult.length === 0) {
-            return res.status(404).json({ error: "Design not found for the session." });
-        }
-
-        const design = designResult[0].design;
-
-        // Get the phases for the session
-        const phases = await ActivitiesHelper.getPhasesForSession(sessionId);
-
-        // Match the phase ID to its corresponding phase in the design
-        const phase = phases.find(p => p.id === Number(phaseId));
-        if (!phase) {
-            return res.status(404).json({ error: "Phase not found in the session." });
-        }
-
-        const phaseDesign = design.phases[phase.number - 1];
-        if (!phaseDesign) {
-            return res.status(404).json({ error: "Phase design not found in the instructional design." });
-        }
-
-        const groupSize = phaseDesign.stdntAmount; // Expected group size
-        const groupingAlgorithm = phaseDesign.grouping_algorithm; // Grouping strategy
-
-        // Delete any existing groups for the current phase
-        await GroupsHelper.deleteGroupsForPhase(phaseId);
-
-        // Select the appropriate grouping algorithm
-        const algorithm = GroupsHelper.groupingAlgorithms[groupingAlgorithm];
-        if (!algorithm) {
-            return res.status(400).json({ error: `Unsupported grouping algorithm: ${groupingAlgorithm}` });
-        }
-
-        // Compute groups using the selected algorithm
-        const groups = await algorithm(sessionId, phases, groupSize);
-
-        // Save the created groups into the database
-        for (const group of groups) {
-            // Insert a new team record for each group
-            const team = await rpg2.singleSQL({
-                dbcon: config.dbconnString,
-                sql: `
-                    INSERT INTO teams (sesid, stageid)
-                    VALUES ($1, $2)
-                    RETURNING id
-                `,
-                sqlParams: [rpg2.param('plain', sessionId), rpg2.param('plain', phaseId)],
-            });
-
-            let maskCode = 'A'.charCodeAt(0);
-
-            for (const { uid } of group) {
-                if (maskCode > 'Z'.charCodeAt(0)) {
-                    throw new Error("Exceeded allowed characters for anon_mask.");
-                }
-
-                const mask = String.fromCharCode(maskCode);
-                await rpg2.execSQL({
-                    dbcon: config.dbconnString,
-                    sql: `
-                        INSERT INTO teamusers (tmid, uid, anon_mask)
-                        VALUES ($1, $2, $3)
-                    `,
-                    sqlParams: [rpg2.param('plain', team.id), rpg2.param('plain', uid),
-                        rpg2.param('plain', mask)],
-                });
-                maskCode++;
-            }
-        }
-
-        // Respond with success
-        res.status(201).json({ message: "Groups successfully created." });
-    } catch (error) {
-        // Log and handle any errors that occur during group creation
-        console.error("Error creating groups:", error);
-        res.status(500).json({ error: "Error occurred while creating groups." });
     }
 });
 

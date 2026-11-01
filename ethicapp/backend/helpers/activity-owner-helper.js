@@ -1,11 +1,17 @@
 /**
- * Who may build or advance an activity's phases: a teacher (role P) who
- * created the activity's session and whose account is not anonymized. It is
- * the rule with which teacher-activity-writes.js opens and advances an
- * activity, checked here before the endpoints that build a phase write
- * anything (#905).
+ * Who may advance an activity's phases: a teacher (role P) who created the
+ * activity's session and whose account is not anonymized. It is the rule with
+ * which teacher-activity-writes.js opens and advances an activity (#905).
+ * Starting the next phase checks it here before its transaction, so a
+ * refusal answers as the other endpoints do, and again inside the
+ * transaction, under lock (helpers/phase-start-helper.js, #906). The
+ * dashboard's owner-only reads use it too: the students' pseudonym numbers
+ * and a phase's groups with their letters (#897).
  *
- * Each check sends the error response itself and resolves to null when the
+ * An administrator impersonating the teacher passes: impersonation signs the
+ * session in as the teacher, with role P (controllers/users/impersonation.js).
+ *
+ * The checks send the error response themselves and resolve to null when the
  * request must stop:
  * - 401 without a signed-in user, 403 for any role other than P (P or A for
  *   the owner-or-participant checks below), checked before any lookup;
@@ -13,9 +19,7 @@
  *   exists but the requester does not own it or the account is anonymized,
  *   so the answer does not reveal that it exists (#923).
  *
- * The check is a read, not a lock. The writes that follow it on these legacy
- * endpoints are separate statements, so an account forgotten between the
- * check and the write is not caught here; TRANSITION_SESSION_SQL still is.
+ * The check is a read, not a lock.
  */
 import * as config from "../config/database.config.js";
 import * as rpg2 from "../db/rest-pg-2.js";

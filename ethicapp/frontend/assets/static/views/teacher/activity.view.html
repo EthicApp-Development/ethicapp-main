@@ -1,132 +1,190 @@
-<div class="container activity-dashboard-page" ng-controller="DashboardController as dc">
-    <!-- Page Title -->
-    <div class="row">
-        <div class="col-md-12 mb-2">
-            <h2><i class="fa-solid fa-gauge-high"></i> {{'activity_dashboard_title' | translate}}</h2>
-        </div>
-    </div>
+<div class="activity-dashboard-page" ng-controller="DashboardController as dc">
+    <!-- Activity bar, sticky under the app bar (#893) -->
+    <activity-bar class="activity-bar-host"
+        activity="dc.activityState.descriptor"
+        total-phases="dc.designObj.phases.length"
+        users="dc.userList"
+        is-finished="dc.isActivityFinished">
+        <activity-controls is-last-phase="dc.reachedLastPhase" is-finished="dc.isActivityFinished" parent-ctrl="dc"></activity-controls>
+    </activity-bar>
 
-    <!-- Tabs for "Information", "Users" and "Design" -->
-    <div class="row">
-        <div class="col-md-12">
-            <ul class="nav nav-tabs">
-                <li class="nav-item" ng-class="{active: dc.activeTab === 'info'}">
-                    <a class="nav-link" href="" ng-click="dc.activeTab = 'info'">
-                        <i class="fa-solid fa-circle-info"></i> {{ 'activity_information_tab_title' | translate }}
+    <!-- Two columns from 1200 px (#894): the rail with the phases and the
+         selected phase's context, and the main column with the responses
+         first. Below 1200 px, one column (#895): the phases as pills above
+         the main tabs, and the rail's cards as collapsed sections under the
+         main column. The selected phase, tab and search live in dc, so
+         resizing across 1200 px keeps them. A response row opens its
+         detail in a side panel (#896): a third column from 1600 px, a
+         narrower one from 1200 px with the rail folded into phase dots, and
+         over the right part of the table below 1200 px. -->
+    <div class="activity-dashboard-grid"
+        ng-class="[dc.isOneColumn ? 'activity-dashboard-one-column' : 'activity-dashboard-two-columns', { 'activity-dashboard-with-detail': dc.isResponseDetailOpen() }]">
+        <aside class="activity-dashboard-rail" ng-if="!dc.isOneColumn"
+            aria-label="{{ 'dashboard_rail_label' | translate }}">
+            <phase-navigator layout="dots" class="phase-dots-host" ng-if="dc.designObj && dc.isResponseDetailOpen()"
+                design-phases="dc.designObj.phases"
+                phases="dc.dashboardPhaseData"
+                current-phase-id="dc.currentPhaseId()"
+                selected-phase-id="dc.selectedPhaseId"
+                on-select="dc.selectPhaseById(phaseId)"></phase-navigator>
+
+            <phase-navigator ng-if="dc.designObj"
+                design-phases="dc.designObj.phases"
+                phases="dc.dashboardPhaseData"
+                current-phase-id="dc.currentPhaseId()"
+                selected-phase-id="dc.selectedPhaseId"
+                on-select="dc.selectPhaseById(phaseId)"></phase-navigator>
+
+            <div class="activity-dashboard-context"
+                ng-include="'/assets/static/views/teacher/fragments/activity-dashboard-context.template.html'"></div>
+        </aside>
+
+        <div class="activity-dashboard-main">
+            <phase-navigator layout="pills" ng-if="dc.isOneColumn && dc.designObj"
+                design-phases="dc.designObj.phases"
+                phases="dc.dashboardPhaseData"
+                current-phase-id="dc.currentPhaseId()"
+                selected-phase-id="dc.selectedPhaseId"
+                on-select="dc.selectPhaseById(phaseId)"></phase-navigator>
+
+            <ul class="nav nav-tabs activity-dashboard-tabs" role="tablist"
+                aria-label="{{ 'dashboard_main_tabs_label' | translate }}">
+                <li role="presentation" ng-class="{ active: dc.isMainTabSelected('responses') }">
+                    <a href="" role="tab" ng-click="dc.selectMainTab('responses')"
+                        aria-selected="{{ dc.isMainTabSelected('responses') ? 'true' : 'false' }}">
+                        {{ 'responses_title_text' | translate }}
                     </a>
                 </li>
-                <li class="nav-item" ng-class="{active: dc.activeTab === 'users'}">
-                    <a class="nav-link" href="" ng-click="dc.activeTab = 'users'">
-                        <i class="fa-solid fa-users"></i> {{ 'activity_users_tab_title' | translate }}
+                <li role="presentation" ng-if="dc.hasAssociatedCaseTab()" ng-class="{ active: dc.isMainTabSelected('case') }">
+                    <a href="" role="tab" ng-click="dc.selectMainTab('case')"
+                        aria-selected="{{ dc.isMainTabSelected('case') ? 'true' : 'false' }}">
+                        {{ 'activity_case_tab_title' | translate }}
                     </a>
                 </li>
-                <li class="nav-item" ng-class="{active: dc.activeTab === 'design'}">
-                    <a class="nav-link" href="" ng-click="dc.activeTab = 'design'">
-                        <i class="fa-solid fa-paint-brush"></i> {{ 'activity_design_tab_title' | translate }}
+                <li role="presentation" ng-class="{ active: dc.isMainTabSelected('design') }">
+                    <a href="" role="tab" ng-click="dc.selectMainTab('design')"
+                        aria-selected="{{ dc.isMainTabSelected('design') ? 'true' : 'false' }}">
+                        {{ 'activity_design_tab_title' | translate }}
+                    </a>
+                </li>
+                <li role="presentation" ng-class="{ active: dc.isMainTabSelected('participants') }">
+                    <a href="" role="tab" ng-click="dc.selectMainTab('participants')"
+                        aria-selected="{{ dc.isMainTabSelected('participants') ? 'true' : 'false' }}">
+                        {{ 'dashboard_participants_tab' | translate:{ count: dc.studentCount() } }}
                     </a>
                 </li>
             </ul>
-        </div>
-    </div>
 
-    <!-- Tabs Content -->
-    <div class="row">
-        <div class="col-md-12">
-            <div ng-show="dc.activeTab === 'info'" class="margin-top-8">
-                <div class="alert alert-warning" role="alert" ng-if="dc.servicesNotRunning.length > 0">
-                    <button type="button" class="close" ng-click="dc.dismissServicesNotRunning()"
-                        aria-label="{{ 'activity_services_not_running_dismiss' | translate }}">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                    <p>{{ 'activity_services_not_running_text' | translate }}</p>
-                    <ul>
-                        <li ng-repeat="service in dc.servicesNotRunning track by service.id">
-                            {{ dc.serviceNotRunningName(service) }}
-                        </li>
-                    </ul>
+            <!-- Responses: the selected phase's table -->
+            <div role="tabpanel" class="activity-dashboard-panel" ng-show="dc.isMainTabSelected('responses')">
+                <div class="alert alert-warning" role="alert"
+                    ng-if="dc.phaseDataLoaded && dc.dashboardPhaseData.length === 0">
+                    <p>{{ 'start_activity_instructions_text' | translate }}</p>
                 </div>
-                <activity-description activity="dc.activityState.descriptor" associated-case="dc.associatedCase" enable-link="false"></activity-description>
-                <activity-controls is-last-phase="dc.reachedLastPhase" is-finished="dc.isActivityFinished" parent-ctrl="dc"></activity-controls>              
-                <!-- Horizontal Rule -->
-                <hr>
-                <!-- Activity Phases Section -->
-                <div class="row" ng-if="dc.dashboardPhaseData && dc.dashboardPhaseData.length === 0">
-                    <div class="col-md-12">
-                        <h3 style="margin-bottom: 1em;">{{ 'activity_progress_title' | translate }}</h3>
-                        <div class="alert alert-warning" role="alert">
-                            <p>{{ 'start_activity_instructions_text' | translate }}</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="row" ng-if="dc.dashboardPhaseData && dc.dashboardPhaseData.length > 0">
-                    <div class="col-md-12">
-                        <h3 style="margin-bottom: 1em;">{{ 'activity_progress_title' | translate }}</h3>
-                        <div>
-                            <ul class="nav nav-tabs" role="tablist">
-                                <li role="presentation" ng-if="dc.hasAssociatedCaseTab()"
-                                    ng-class="{active: dc.isCaseTabSelected()}">
-                                    <a href="" ng-click="dc.selectCaseTab()" role="tab">
-                                        <i class="fa-solid fa-book" aria-hidden="true"></i>
-                                        {{ 'activity_case_tab_title' | translate }}
-                                    </a>
-                                </li>
-                                <!-- Tab headers -->
-                                <li role="presentation" ng-repeat="phase in dc.dashboardPhaseData track by $index" 
-                                    ng-class="{active: dc.isPhaseTabSelected(phase)}">
-                                    <a href="" ng-click="dc.selectPhaseTab(phase)" role="tab">
-                                        {{ 'phase_title_text' | translate }} {{ phase.descriptor.number }}
-                                    </a>
-                                </li>
-                            </ul>
-                        
-                            <div class="tab-content">
-                                <div role="tabpanel"
-                                     class="tab-pane activity-case-tab-pane"
-                                     ng-class="{active: dc.isCaseTabSelected()}"
-                                     ng-if="dc.hasAssociatedCaseTab()">
-                                    <case-document-viewer case-item="dc.associatedCase" frameless="true"></case-document-viewer>
-                                    <case-material case-item="dc.associatedCase"></case-material>
-                                </div>
-                                <div role="tabpanel" class="tab-pane" style="margin-bottom: 2em; padding:1em; border-bottom: 1px solid #ddd; border-left: 1px solid #ddd; border-right: 1px solid #ddd;"
-                                     ng-class="{active: dc.isPhaseTabSelected(phase)}"
-                                     id="phase-{{ $index }}" 
-                                     ng-if="dc.dashboardPhaseData.length > 0"
-                                     ng-repeat="phase in dc.dashboardPhaseData track by $index">
-                                    <phase-description phase-number="phase.descriptor.number" design-object="dc.designObj"
-                                        case-videos="dc.associatedCase.videos"></phase-description>
-                                    <tutor-mode-warnings session-id="dc.sessionId" phase-id="phase.descriptor.id"
-                                        data-phase-number="{{ phase.descriptor.number }}"></tutor-mode-warnings>
-                                    <phase-state
-                                        phase-data="phase"
-                                        design-type="dc.designObj.type"
-                                        on-select-response="dc.openIndividualResponseModal(response, phaseData)"
-                                        on-select-group="dc.openGroupResponseModal(group, phaseData)">
-                                    </phase-state>
-                                </div>
+                <div ng-repeat="phase in dc.dashboardPhaseData track by phase.descriptor.id"
+                    ng-if="dc.isPhaseTabSelected(phase)">
+                    <div class="dashboard-responses-toolbar">
+                        <h3 class="dashboard-responses-title">
+                            {{ 'dashboard_phase_name' | translate:{ number: phase.descriptor.number, mode: ((phase.descriptor.mode === 'team' ? 'activity_bar_phase_mode_team' : 'activity_bar_phase_mode_individual') | translate) } }}
+                        </h3>
+                        <span class="dashboard-chip dashboard-responses-count">
+                            {{ 'dashboard_answered_count' | translate:dc.selectedPhaseCounts() }}
+                        </span>
+                        <div class="dashboard-responses-tools">
+                            <div class="dashboard-participant-search">
+                                <label class="sr-only" for="dashboard-participant-search">{{ (dc.namesHidden ? 'dashboard_participant_search_label_hidden' : 'dashboard_participant_search_label') | translate }}</label>
+                                <i class="fa-solid fa-magnifying-glass dashboard-participant-search-icon" aria-hidden="true"></i>
+                                <input type="search" id="dashboard-participant-search" class="form-control input-sm"
+                                    ng-model="dc.participantQuery"
+                                    ng-model-options="{ debounce: 150 }"
+                                    placeholder="{{ 'dashboard_participant_search_placeholder' | translate }}"
+                                    autocomplete="off">
                             </div>
+                            <!-- "Hide names" (#897): pseudonyms instead of the
+                                 students' names, to share or project the
+                                 dashboard. Off on every load, not kept. -->
+                            <label class="dashboard-chip dashboard-hide-names"
+                                ng-class="{ 'dashboard-hide-names-on': dc.namesHidden }"
+                                title="{{ 'dashboard_hide_names_hint' | translate }}">
+                                <input type="checkbox" role="switch" class="dashboard-hide-names-input"
+                                    ng-model="dc.namesHidden"
+                                    ng-change="dc.onNamesHiddenChange()">
+                                <span class="dashboard-hide-names-track" aria-hidden="true"></span>
+                                {{ 'dashboard_hide_names' | translate }}
+                            </label>
                         </div>
                     </div>
+                    <p class="help-block dashboard-search-empty" role="status"
+                        ng-if="dc.hasParticipantQuery() && dc.selectedPhaseMatchCount() === 0">
+                        {{ 'dashboard_participant_search_no_match' | translate:{ query: dc.participantQuery } }}
+                        <button type="button" class="btn btn-default btn-sm dashboard-search-clear" ng-click="dc.clearParticipantQuery()">
+                            {{ 'dashboard_participant_search_clear' | translate }}
+                        </button>
+                    </p>
+                    <phase-state
+                        phase-data="dc.displayPhase(phase)"
+                        design-type="dc.designObj.type"
+                        participant-query="dc.participantQuery"
+                        question-texts="dc.questionTexts(phase.descriptor)"
+                        detail-selection="dc.detail"
+                        on-select-response="dc.openResponseDetail(response, phaseData)"
+                        on-select-group="dc.openResponseDetail(group, phaseData)">
+                    </phase-state>
                 </div>
             </div>
-            <div ng-show="dc.activeTab === 'users'" class="margin-top-8">
-                <div class="panel panel-default">
-                    <div class="panel-body">
-                        <p>{{ 'connected_users_colon' | translate }} {{ dc.userList.length }}</p>
-                    </div>
-                </div>
-                <connected-users session-id="{{dc.sessionId}}"></connected-users>
+
+            <!-- Case -->
+            <div role="tabpanel" class="activity-dashboard-panel activity-case-tab-pane"
+                ng-if="dc.hasAssociatedCaseTab()"
+                ng-show="dc.isMainTabSelected('case')">
+                <case-document-viewer case-item="dc.associatedCase" frameless="true"></case-document-viewer>
+                <case-material case-item="dc.associatedCase"></case-material>
             </div>
-            <div ng-show="dc.activeTab === 'design'" class="margin-top-8">
+
+            <!-- Design -->
+            <div role="tabpanel" class="activity-dashboard-panel" ng-show="dc.isMainTabSelected('design')">
                 <design-item
                     design="dc.designObj"
                     associated-case="dc.associatedCase"
                     is-owner="dc.designObj.userOwned">
                 </design-item>
-                <h4 style="margin-top:1em; margin-bottom:2em">
+                <h4 class="activity-dashboard-design-explanation">
                     {{ 'design_explanation_text' | translate }}
                 </h4>
                 <design-viewer design="dc.designObj" case-videos="dc.associatedCase.videos"></design-viewer>
             </div>
+
+            <!-- Participants: read again whenever the tab opens -->
+            <div role="tabpanel" class="activity-dashboard-panel" ng-if="dc.isMainTabSelected('participants')">
+                <div class="panel panel-default">
+                    <div class="panel-body">
+                        <p>{{ 'connected_users_colon' | translate }} {{ dc.userList.length }}</p>
+                    </div>
+                </div>
+                <connected-users session-id="{{dc.sessionId}}"
+                    hide-names="dc.namesHidden"
+                    pseudonym-numbers="dc.pseudonymNumbers()"></connected-users>
+            </div>
         </div>
+
+        <!-- The response detail panel (#896), not modal: the table stays
+             visible and live next to it. -->
+        <response-detail-panel class="response-detail-host" ng-if="dc.isResponseDetailOpen()"
+            selection="dc.detail"
+            row="dc.detailRow()"
+            phase-data="dc.detailPhaseData()"
+            can-use-live-chat="dc.detailCanUseLiveChat()"
+            hide-names="dc.namesHidden"
+            case-videos="dc.associatedCase.videos"
+            has-previous="dc.detailHasAdjacent(-1)"
+            has-next="dc.detailHasAdjacent(1)"
+            on-navigate="dc.navigateResponseDetail(step)"
+            on-close="dc.closeResponseDetail()"
+            on-open-group="dc.openGroupResponseDetail(group)"></response-detail-panel>
+
+        <!-- One column: the rail's cards under the main column, collapsed -->
+        <aside class="activity-dashboard-sections activity-dashboard-context" ng-if="dc.isOneColumn"
+            aria-label="{{ 'dashboard_sections_label' | translate }}"
+            ng-include="'/assets/static/views/teacher/fragments/activity-dashboard-context.template.html'"></aside>
     </div>
 </div>

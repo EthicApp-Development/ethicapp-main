@@ -1,15 +1,36 @@
-import * as PhaseCreationHelpers from "../../helpers/phase-creation-helpers.js";
 import * as DesignHelpers from "../../helpers/design-helpers.js";
 import { DashboardDataJoiners } from "../../helpers/dashboard-data-joiners.js";
-import { openSemanticDifferentialIndividualResponseModal } from "../../helpers/dashboard-individual-response-modal.helper.js";
-import { openSemanticDifferentialGroupResponseModal } from "../../helpers/dashboard-group-response-modal.helper.js";
-import { serviceDisplayName } from "../../helpers/service-configuration-summary.js";
+import {
+    phaseEnabledServiceIds,
+    serviceDisplayName,
+} from "../../helpers/service-configuration-summary.js";
+import { connectedStudentCount } from "../../helpers/activity-bar.js";
+import {
+    DEFAULT_DASHBOARD_TAB,
+    dashboardTab,
+    defaultPhaseContextExpanded,
+    defaultSelectedPhaseId,
+    isOneColumnLayout,
+    participantMatchCount,
+    phaseQuestionTexts,
+    phaseResponseCounts,
+    resolveSelectedPhaseId,
+    selectedPhaseData,
+    watchOneColumnLayout,
+} from "../../helpers/activity-dashboard.js";
+import {
+    adjacentDetailRow,
+    detailRows,
+    detailSelection,
+    findDetailRow,
+} from "../../helpers/response-detail.js";
+import { hiddenNamePhase, pseudonymNumberMap } from "../../helpers/hidden-names.js";
 
 /*eslint func-style: ["error", "expression"]*/
-export function DashboardController($scope, $routeParams, $http, 
-    $translate, $timeout, $uibModal, 
-    ActivityStateService, ActivityCatalogService, DesignCatalogService, CasesCatalogService, TeacherGroupChatService,
-    LanguageCatalogService) {
+export function DashboardController($scope, $routeParams, $http,
+    $translate, $timeout,
+    ActivityStateService, ActivityCatalogService, DesignCatalogService, CasesCatalogService,
+    LanguageCatalogService, $window) {
 
     const vm = this;
 
@@ -19,8 +40,60 @@ export function DashboardController($scope, $routeParams, $http,
     vm.reachedLastPhase = false;
     vm.dashboardPhaseData = [];
     vm.dashboardPhaseUpdateState = new Map();
-    
-    vm.selectedTab = null;
+
+    // Two-column layout (#894, epic #892): the main tab, the phase selected
+    // in the navigator (null until one is chosen), the participant search,
+    // and the rail cards' open state. "This phase" starts collapsed to its
+    // questions below 1600 px; "Activity" starts collapsed.
+    vm.mainTab = DEFAULT_DASHBOARD_TAB;
+    vm.selectedPhaseId = null;
+    vm.participantQuery = "";
+    vm.phaseContextExpanded = defaultPhaseContextExpanded($window.innerWidth);
+    vm.activityCardExpanded = false;
+    // True once the started phases are read, so the "start the activity"
+    // notice does not flash while they load.
+    vm.phaseDataLoaded = false;
+
+    // One column below 1200 px (#895): the phases as pills above the main
+    // tabs and the rail's cards as sections under the main column, "This
+    // phase" and "AI services" collapsed. The layout follows the window
+    // without a reload; the selected phase, tab and search stay as they are.
+    vm.isOneColumn = isOneColumnLayout($window);
+    vm.phaseSectionOpen = false;
+    vm.servicesSectionOpen = false;
+    const stopWatchingLayout = watchOneColumnLayout($window, isOneColumn => {
+        $scope.$applyAsync(() => {
+            vm.isOneColumn = isOneColumn;
+        });
+    });
+    $scope.$on("$destroy", stopWatchingLayout);
+
+    // The response detail panel (#896): what it shows (see
+    // helpers/response-detail.js), or null while it is closed. It closes
+    // when the teacher starts the next phase, selects another phase or
+    // leaves the responses; nothing of it is kept.
+    vm.detail = null;
+    // Each phase's data with its questions merged with the design's, worked
+    // out once per phase data so the panel's bindings settle.
+    const detailPhaseDataByPhase = new WeakMap();
+    // Each design phase's question texts, worked out once per phase so the
+    // tables' bindings keep the same array between digests.
+    const questionTextsByDesignPhase = new WeakMap();
+
+    // "Hide names" (#897): while it is on, every student is shown by a
+    // pseudonym (helpers/hidden-names.js). It always starts off and is not
+    // remembered, so a reload turns it off; it only changes the display.
+    // The pseudonym numbers are read when it is turned on, and again when a
+    // student joins while it is on.
+    vm.namesHidden = false;
+    let pseudonymNumbers = new Map();
+    // Grows with every set of numbers read, so the phases shown with hidden
+    // names are worked out again.
+    let pseudonymsVersion = 0;
+    let pseudonymsRequest = 0;
+    // Each phase's data as it shows with hidden names, worked out once per
+    // phase data, numbers and language so the tables' bindings settle.
+    const hiddenNamePhases = new WeakMap();
 
     // Services the design enables that will not run in this activity, shown
     // once right after launch (#815).
@@ -40,35 +113,179 @@ export function DashboardController($scope, $routeParams, $http,
         return Boolean(vm.associatedCase);
     };
 
-    vm.getPhaseTabId = function(phaseData) {
-        return `phase:${phaseData?.descriptor?.id}`;
+    vm.selectMainTab = function(tab) {
+        vm.mainTab = dashboardTab(tab);
+        if (vm.mainTab !== DEFAULT_DASHBOARD_TAB) {
+            vm.closeResponseDetail();
+        }
     };
 
-    vm.selectCaseTab = function() {
-        vm.selectedTab = "case";
+    vm.isMainTabSelected = function(tab) {
+        return vm.mainTab === tab;
+    };
+
+    vm.currentPhaseId = function() {
+        return vm.activityState?.descriptor?.currentPhase?.id ?? null;
+    };
+
+    // Selects a started phase in the navigator: the rail's phase context and
+    // the responses table follow it.
+    vm.selectPhaseById = function(phaseId) {
+        if (selectedPhaseData(vm.dashboardPhaseData, phaseId)) {
+            if (Number(phaseId) !== Number(vm.selectedPhaseId)) {
+                vm.closeResponseDetail();
+            }
+            vm.selectedPhaseId = phaseId;
+        }
     };
 
     vm.selectPhaseTab = function(phaseData) {
-        vm.selectedTab = vm.getPhaseTabId(phaseData);
-    };
-
-    vm.isCaseTabSelected = function() {
-        return vm.selectedTab === "case";
+        vm.selectPhaseById(phaseData?.descriptor?.id);
     };
 
     vm.isPhaseTabSelected = function(phaseData) {
-        return vm.selectedTab === vm.getPhaseTabId(phaseData);
+        return vm.selectedPhaseId !== null
+            && Number(phaseData?.descriptor?.id) === Number(vm.selectedPhaseId);
     };
 
+    // The current phase, or the last one started; keeps a phase the teacher
+    // selected while it is still listed.
     vm.selectDefaultProgressTab = function() {
-        if (vm.hasAssociatedCaseTab()) {
-            vm.selectCaseTab();
+        vm.selectedPhaseId = resolveSelectedPhaseId(vm.selectedPhaseId, vm.dashboardPhaseData,
+            vm.currentPhaseId());
+    };
+
+    // The selected phase as the dashboard shows it: with hidden names while
+    // the switch is on.
+    vm.selectedPhase = function() {
+        return vm.displayPhase(selectedPhaseData(vm.dashboardPhaseData, vm.selectedPhaseId));
+    };
+
+    const translateInstant = function(key, params) {
+        return typeof $translate?.instant === "function" ? $translate.instant(key, params) : key;
+    };
+
+    const currentLanguage = function() {
+        return typeof $translate?.use === "function" ? $translate.use() : "";
+    };
+
+    // A started phase's data as the tables and the panel show it: the phase
+    // itself while names show; while they are hidden, a copy whose students
+    // are named and ordered by pseudonym. The same object on every call
+    // until the phase, the numbers or the language change.
+    vm.displayPhase = function(phaseData) {
+        if (!vm.namesHidden || !phaseData || typeof phaseData !== "object") {
+            return phaseData;
+        }
+        const signature = `${pseudonymsVersion}|${currentLanguage()}`;
+        const cached = hiddenNamePhases.get(phaseData);
+        if (cached?.signature === signature) {
+            return cached.phase;
+        }
+        const phase = hiddenNamePhase(phaseData, {
+            numbers:   pseudonymNumbers,
+            translate: translateInstant,
+        });
+        hiddenNamePhases.set(phaseData, { signature, phase });
+        return phase;
+    };
+
+    // The students' numbers, for the Participants tab.
+    vm.pseudonymNumbers = function() {
+        return pseudonymNumbers;
+    };
+
+    // Reads the students' numbers; the server assigns one to every student
+    // who has none yet. Only the latest read counts; a failed read keeps the
+    // numbers already known.
+    vm.loadPseudonyms = async function() {
+        if (!vm.sessionId) {
             return;
         }
-
-        if (vm.dashboardPhaseData.length > 0) {
-            vm.selectPhaseTab(vm.dashboardPhaseData[0]);
+        const request = ++pseudonymsRequest;
+        try {
+            const pseudonyms = await ActivityStateService.getParticipantPseudonyms(vm.sessionId);
+            $scope.$applyAsync(() => {
+                if (request === pseudonymsRequest) {
+                    pseudonymNumbers = pseudonymNumberMap(pseudonyms);
+                    pseudonymsVersion += 1;
+                }
+            });
+        } catch (error) {
+            console.error("[DashboardController::loadPseudonyms] Cannot read the pseudonyms.",
+                error);
         }
+    };
+
+    // The switch changed: the numbers are read again each time it turns on.
+    vm.onNamesHiddenChange = function() {
+        if (vm.namesHidden) {
+            vm.loadPseudonyms();
+        }
+    };
+
+    // The design's entry for the selected phase: its features, instructions
+    // and external services.
+    vm.selectedDesignPhase = function() {
+        const phase = vm.selectedPhase();
+        return phase ? vm.getDesignPhaseForDescriptor(phase.descriptor) : null;
+    };
+
+    vm.selectedPhaseServiceCount = function() {
+        return phaseEnabledServiceIds(vm.selectedDesignPhase()).length;
+    };
+
+    vm.selectedPhaseHasServices = function() {
+        return vm.selectedPhaseServiceCount() > 0;
+    };
+
+    // The text of each question of a started phase, for the response table's
+    // column headers (#895). The same array on every call for a phase.
+    vm.questionTexts = function(phaseDescriptor) {
+        const designPhase = vm.getDesignPhaseForDescriptor(phaseDescriptor);
+        if (!designPhase || typeof designPhase !== "object") {
+            return null;
+        }
+        if (!questionTextsByDesignPhase.has(designPhase)) {
+            questionTextsByDesignPhase.set(designPhase, phaseQuestionTexts(designPhase));
+        }
+        return questionTextsByDesignPhase.get(designPhase);
+    };
+
+    vm.selectedPhaseCounts = function() {
+        return phaseResponseCounts(vm.selectedPhase());
+    };
+
+    vm.selectedPhaseMatchCount = function() {
+        return participantMatchCount(vm.selectedPhase(), vm.participantQuery);
+    };
+
+    vm.hasParticipantQuery = function() {
+        return typeof vm.participantQuery === "string" && vm.participantQuery.trim() !== "";
+    };
+
+    vm.clearParticipantQuery = function() {
+        vm.participantQuery = "";
+    };
+
+    vm.studentCount = function() {
+        return connectedStudentCount(vm.userList);
+    };
+
+    vm.togglePhaseContext = function() {
+        vm.phaseContextExpanded = !vm.phaseContextExpanded;
+    };
+
+    vm.toggleActivityCard = function() {
+        vm.activityCardExpanded = !vm.activityCardExpanded;
+    };
+
+    vm.togglePhaseSection = function() {
+        vm.phaseSectionOpen = !vm.phaseSectionOpen;
+    };
+
+    vm.toggleServicesSection = function() {
+        vm.servicesSectionOpen = !vm.servicesSectionOpen;
     };
 
     vm.loadAssociatedCase = async function(designId) {
@@ -99,48 +316,78 @@ export function DashboardController($scope, $routeParams, $http,
         }
     };
 
-    vm.openIndividualResponseModal = function(response, phaseData) {
-        if (!response || !phaseData || vm.designObj?.type !== "semantic_differential") {
+    // Opens the response detail panel on a row of a phase's table: a
+    // student's answers, or a group's answers and chat. Only
+    // semantic-differential designs have a detail. Another row replaces the
+    // panel's content.
+    vm.openResponseDetail = function(row, phaseData, options = {}) {
+        if (vm.designObj?.type !== "semantic_differential") {
             return;
         }
-
-        const hydratedPhaseData = vm.hydratePhaseDataForIndividualModal(phaseData);
-        openSemanticDifferentialIndividualResponseModal($uibModal, response, hydratedPhaseData,
-            vm.associatedCase?.videos);
+        const selection = detailSelection(row, phaseData, options);
+        if (selection) {
+            vm.detail = selection;
+        }
     };
 
-    vm.openGroupResponseModal = async function(group, phaseData) {
-        if (!group?.groupStatistics || !group.groupId || !phaseData || vm.designObj?.type !== "semantic_differential") {
-            return;
+    vm.closeResponseDetail = function() {
+        vm.detail = null;
+    };
+
+    vm.isResponseDetailOpen = function() {
+        return vm.detail !== null && vm.detailRow() !== null;
+    };
+
+    // The phase the panel shows, while it is the selected one.
+    const detailPhase = function() {
+        const phase = vm.selectedPhase();
+        return vm.detail && phase && Number(phase.descriptor?.id) === Number(vm.detail.phaseId)
+            ? phase
+            : null;
+    };
+
+    // The panel's row of the live table, so new answers show at once. The
+    // whole table is searched: a row the participant search hides stays open.
+    vm.detailRow = function() {
+        return findDetailRow(detailPhase()?.state, vm.detail?.key);
+    };
+
+    vm.detailPhaseData = function() {
+        const phase = detailPhase();
+        if (!phase) {
+            return null;
         }
-
-        const hydratedPhaseData = vm.hydratePhaseDataForIndividualModal(phaseData);
-        const phaseId = hydratedPhaseData?.descriptor?.id;
-        const firstQuestionId = hydratedPhaseData?.descriptor?.questions?.[0]?.id;
-
-        if (!phaseId || !firstQuestionId) {
-            return;
+        if (!detailPhaseDataByPhase.has(phase)) {
+            detailPhaseDataByPhase.set(phase, vm.hydratePhaseDataForDetail(phase));
         }
+        return detailPhaseDataByPhase.get(phase);
+    };
 
-        try {
-            const [responses, chatMessages] = await Promise.all([
-                ActivityStateService.getGroupResponses(group.groupId, phaseId),
-                ActivityStateService.getChatMessages(group.groupId, firstQuestionId),
-            ]);
+    vm.detailCanUseLiveChat = function() {
+        const phaseData = vm.detailPhaseData();
+        return Boolean(phaseData) && vm.canUseLiveGroupChat(phaseData);
+    };
 
-            openSemanticDifferentialGroupResponseModal(
-                $uibModal,
-                TeacherGroupChatService,
-                group,
-                hydratedPhaseData,
-                responses,
-                chatMessages,
-                vm.canUseLiveGroupChat(hydratedPhaseData),
-                vm.associatedCase?.videos
-            );
-        } catch (error) {
-            console.error("Error opening group response modal:", error);
+    // The row before (-1) or after (1) the panel's, in the table's order.
+    const adjacentRow = function(step) {
+        const rows = detailRows(detailPhase(), vm.participantQuery);
+        return adjacentDetailRow(rows, vm.detail?.key, step);
+    };
+
+    vm.detailHasAdjacent = function(step) {
+        return adjacentRow(step) !== null;
+    };
+
+    vm.navigateResponseDetail = function(step) {
+        const row = adjacentRow(step);
+        if (row) {
+            vm.openResponseDetail(row, detailPhase());
         }
+    };
+
+    // From a student's panel to the student's group, on its chat.
+    vm.openGroupResponseDetail = function(group) {
+        vm.openResponseDetail(group, detailPhase(), { initialTab: "chat" });
     };
 
     vm.canUseLiveGroupChat = function(phaseData) {
@@ -172,7 +419,7 @@ export function DashboardController($scope, $routeParams, $http,
         return vm.getDesignPhaseForDescriptor(phaseDescriptor)?.chat === true;
     };
 
-    vm.hydratePhaseDataForIndividualModal = function(phaseData) {
+    vm.hydratePhaseDataForDetail = function(phaseData) {
         const descriptor = phaseData?.descriptor;
         const descriptorQuestions = descriptor?.questions || [];
 
@@ -243,8 +490,8 @@ export function DashboardController($scope, $routeParams, $http,
         // Session Id for this instance
         vm.sessionId = Number(id);
 
-        // Display the info tab by default
-        vm.activeTab = 'info';
+        // The responses come first (#894).
+        vm.mainTab = DEFAULT_DASHBOARD_TAB;
 
         vm.servicesNotRunning = ActivityCatalogService.takeLaunchNotice(vm.sessionId);
 
@@ -284,75 +531,37 @@ export function DashboardController($scope, $routeParams, $http,
         });
     };
 
+    // Starts the next phase on the server (#906), which builds it from the
+    // stored design in one transaction. Resolves to the phase the dashboard
+    // should show: the new one, or, when another tab or request moved the
+    // activity first (409), the phase it is at now. Null when there is none.
     vm.startNextPhase = async function () {
+        const expectedPhaseNumber = vm.activityState.descriptor.currentPhase?.number ?? 0;
+
+        let phaseId = null;
         try {
-            // TODO: refactor, as the following operations should be performed by the service
-
-            // Check if there are existing phases
-            let currentPhaseNumber = vm.activityState.descriptor.currentPhase
-                ? vm.activityState.descriptor.currentPhase.number
-                : null;
-    
-            // Determine if we need to create the first phase
-            if (currentPhaseNumber === null) {
-                console.info("No phases found. Creating the first phase with number 1.");
-                currentPhaseNumber = 0; // Start with 0 so we can increment to 1 below
-            }
-    
-            // Check if we've already reached the last phase
-            if (currentPhaseNumber === vm.designObj.phases.length) {
-                console.error("Cannot advance any further, reached the last phase already.");
-                return null;
-            }
-    
-            const nextPhaseIndex = currentPhaseNumber;
-            const nextPhaseNumber = currentPhaseNumber + 1;
-
-            // Get the current design object of the current phase
-            const phase = vm.designObj.phases[nextPhaseIndex];
-            const designType = DesignHelpers.getDesignType(vm.designObj);
-
-            // Add the phase to the activity
-            const phaseId = await ActivityStateService.addPhaseToActivity(
-                phase,
-                nextPhaseNumber,
-                vm.sessionId
-            );
-    
-            // Add items to the newly created phase
-            if (phaseId) {
-                await ActivityStateService.addItemsToPhase(
-                    phase,
-                    phaseId,
-                    vm.sessionId,
-                    designType
-                );
-            } else {
-                console.error("Error creating activity phase.");
-                return null;
-            }
-    
-            // Transition to the newly created phase
-            await ActivityStateService.transitionToPhase(vm.sessionId, phaseId, phase);
-    
-            vm.isActivityFinished = vm.checkActivityFinished();
-    
-            if (vm.activityState.descriptor.currentPhase.id !== phaseId) {
-                throw new Error("Abnormal state found.");
-            }
-    
-            // Have we reached the last phase?
-            $scope.$applyAsync(() => {
-                vm.reachedLastPhase = vm.lastPhaseReached();
-            });
-    
-            // Update data for the current phase
-            await vm.updateDashboardPhaseData(phaseId);
-            return phaseId;
+            const phase = await ActivityStateService.startNextPhase(vm.sessionId,
+                expectedPhaseNumber);
+            phaseId = phase.id;
         } catch (error) {
-            console.error("Error in startNextPhase:", error);
-            return null;
+            if (error?.status !== 409) {
+                console.error("Error in startNextPhase:", error);
+                return null;
+            }
+            console.warn("The activity moved on before this phase started; showing where it is.",
+                error.data);
+            phaseId = vm.activityState.descriptor.currentPhase?.id ?? null;
         }
+
+        vm.isActivityFinished = vm.checkActivityFinished();
+        $scope.$applyAsync(() => {
+            vm.reachedLastPhase = vm.lastPhaseReached();
+        });
+
+        if (phaseId) {
+            await vm.updateDashboardPhaseData(phaseId);
+        }
+        return phaseId;
     };
 
     vm.initializeDashboardState = async function() {
@@ -399,9 +608,8 @@ export function DashboardController($scope, $routeParams, $http,
 
             $scope.$applyAsync(() => {
                 vm.dashboardPhaseData = resolvedPhaseStates.filter(state => state !== null);
-                if (!vm.selectedTab) {
-                    vm.selectDefaultProgressTab();
-                }
+                vm.phaseDataLoaded = true;
+                vm.selectDefaultProgressTab();
             });
 
         } catch (error) {
@@ -432,11 +640,17 @@ export function DashboardController($scope, $routeParams, $http,
             if (!phaseData) {
                 phaseData = await vm.loadDashboardPhaseData(phaseId);
                 if (phaseData) {
-                    $scope.$applyAsync(() => {  
-                        vm.dashboardPhaseData.push(phaseData);
-                        if (!vm.selectedTab) {
-                            vm.selectDefaultProgressTab();
+                    $scope.$applyAsync(() => {
+                        // A queued update may have loaded the phase too: the
+                        // views track the phases by id, so keep one entry.
+                        const loaded = vm.dashboardPhaseData
+                            .findIndex(pd => Number(pd.descriptor.id) === Number(phaseId));
+                        if (loaded >= 0) {
+                            vm.dashboardPhaseData[loaded] = phaseData;
+                        } else {
+                            vm.dashboardPhaseData.push(phaseData);
                         }
+                        vm.selectDefaultProgressTab();
                     });
                 }
             }
@@ -596,6 +810,11 @@ export function DashboardController($scope, $routeParams, $http,
             vm.userList = users;
         });
 
+        // While names are hidden, the student who joined gets a number.
+        if (vm.namesHidden) {
+            vm.loadPseudonyms();
+        }
+
         if (currentPhaseId) {
             vm.updateDashboardPhaseData(currentPhaseId);
         }
@@ -618,28 +837,24 @@ export function DashboardController($scope, $routeParams, $http,
         }
 
         if (retryCount <= 0) {
-            if (vm.dashboardPhaseData.length > 0) {
-                vm.selectPhaseTab(vm.dashboardPhaseData[vm.dashboardPhaseData.length - 1]);
-            }
+            vm.selectPhaseById(defaultSelectedPhaseId(vm.dashboardPhaseData, vm.currentPhaseId()));
             return;
         }
 
         $timeout(() => vm.activatePhaseTabById(phaseId, retryCount - 1), 100);
     };
 
+    // Starting the next phase always moves the view to it, on the responses
+    // (#894). The event comes after an await, outside a digest.
     $scope.$on("activity:phase-advanced", (event, data) => {
-        vm.activeTab = "info";
         const phaseId = data?.phaseId;
-        if (phaseId) {
-            vm.activatePhaseTabById(phaseId);
-            return;
-        }
-
-        if (vm.dashboardPhaseData.length > 0) { 
-            $timeout(() => {
-                vm.selectPhaseTab(vm.dashboardPhaseData[vm.dashboardPhaseData.length - 1]);
-            }, 0);
-        }
+        $scope.$applyAsync(() => {
+            // The previous phase's chat closes for the students; the panel
+            // closes with it (#896).
+            vm.closeResponseDetail();
+            vm.selectMainTab(DEFAULT_DASHBOARD_TAB);
+            vm.activatePhaseTabById(phaseId || vm.currentPhaseId(), phaseId ? 8 : 0);
+        });
     });
 
     vm.lastPhaseReached = function() {

@@ -10,7 +10,7 @@
         </tr>
     </thead>
     <tbody>
-        <tr ng-repeat="response in sortedResponses track by response.uid">
+        <tr ng-repeat="response in sortedResponses | participantSearch:gptCtrl.participantQuery track by response.uid">
             <td>{{ response.clusterCount }}</td>
             <td>
                 {{ response.userName }}
@@ -19,10 +19,13 @@
                 </span>
             </td>
             <td>
-                {{ response.groupNumber || '-' }}
-                <span class="badge badge-primary">
-                    <i class="fa fa-comments"></i> {{ response.groupChatMessages || 0 }}
+                <span ng-if="response.groupNumber">
+                    {{ response.groupNumber }}
+                    <span class="badge badge-primary">
+                        <i class="fa fa-comments"></i> {{ response.groupChatMessages || 0 }}
+                    </span>
                 </span>
+                <span ng-if="!response.groupNumber">{{ 'no_group_label' | translate }}</span>
             </td>
             <td ng-repeat="question in gptCtrl.phaseData.descriptor.questions">
                 <span>

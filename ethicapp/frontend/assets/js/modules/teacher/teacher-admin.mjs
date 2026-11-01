@@ -157,9 +157,9 @@ app.controller("CreateDesignController",
     ["$scope", "$window", "DesignCatalogService", "UserProfileService",
         "LanguageCatalogService", CreateDesignController]);
 app.controller("DashboardController", 
-    ["$scope", "$routeParams", "$http", "$translate", "$timeout", "$uibModal",
+    ["$scope", "$routeParams", "$http", "$translate", "$timeout",
         "ActivityStateService", "ActivityCatalogService", "DesignCatalogService",
-        "CasesCatalogService", "TeacherGroupChatService", "LanguageCatalogService",
+        "CasesCatalogService", "LanguageCatalogService", "$window",
         DashboardController]);
 app.controller("DesignViewerController", 
     ["$scope", "$routeParams", "$window", "DesignCatalogService", "CasesCatalogService",
@@ -194,6 +194,10 @@ import tooltipDirective from   '../../directives/tooltip.directive.js';
 import holdToConfirmDirective from "../../directives/hold-to-confirm.directive.js";
 import { caseAnalysisComponentHostDirective }
     from "../../directives/case-analysis-component-host.directive.js";
+// "Show more" for clamped text in the activity dashboard's rail (#894).
+import { clampOverflowDirective } from "../../directives/clamp-overflow.directive.js";
+// Escape hides a dashboard tooltip while it is hovered or focused (#956).
+import { dismissibleTipDirective } from "../../directives/dismissible-tip.directive.js";
 
 app.directive("connectedUsers", connectedUsersDirective);
 app.directive("activityControls", activityControlsDirective);
@@ -210,11 +214,22 @@ app.directive("copyToClipboard", copyToClipboardDirective);
 app.directive("phaseDeleter", ["$translate", phaseDeleterDirective]);
 app.directive("holdToConfirm", ["$timeout", holdToConfirmDirective]);
 app.directive("caseAnalysisComponentHost", ["$compile", caseAnalysisComponentHostDirective]);
+app.directive("clampOverflow", ["$parse", clampOverflowDirective]);
+app.directive("dismissibleTip", ["$document", dismissibleTipDirective]);
 
-app.controller("ConnectedUsersDirectiveController", ["$scope", "ActivityStateService", 
+app.controller("ConnectedUsersDirectiveController", ["$scope", "ActivityStateService", "$translate",
     ConnectedUsersDirectiveController]);
 
 import { activityDescriptionComponent } from "../../components/activity-description.component.js";
+// The sticky bar of the activity dashboard (#893).
+import activityBarComponent from "../../components/activity-bar.component.js";
+// The phase navigator in the activity dashboard's rail (#894).
+import phaseNavigatorComponent from "../../components/phase-navigator.component.js";
+// The response detail panel of the activity dashboard and its contents (#896).
+import responseDetailPanelComponent from "../../components/response-detail-panel.component.js";
+import sdStudentResponseDetailComponent
+    from "../../components/sd-student-response-detail.component.js";
+import sdGroupResponseDetailComponent from "../../components/sd-group-response-detail.component.js";
 import { designDescriptionComponent } from "../../components/design-description.component.js";
 import rankingItemEditorComponent from "../../components/ranking-item-editor.component.js";
 import sdItemEditorComponent from "../../components/sd-item-editor.component.js";
@@ -266,6 +281,11 @@ import teacherGroupChatComponent from "../../components/teacher-group-chat.compo
 import teacherToastComponent from "../../components/teacher-toast.component.js";
 
 app.component('activityDescription', activityDescriptionComponent);
+app.component("activityBar", activityBarComponent);
+app.component("phaseNavigator", phaseNavigatorComponent);
+app.component("responseDetailPanel", responseDetailPanelComponent);
+app.component("sdStudentResponseDetail", sdStudentResponseDetailComponent);
+app.component("sdGroupResponseDetail", sdGroupResponseDetailComponent);
 app.component('designDescription', designDescriptionComponent);
 app.component('groupingModeSelector', groupingModeSelectorComponent);
 app.component("serviceConfigurationForm", serviceConfigurationFormComponent);
@@ -312,3 +332,6 @@ app.component("toast", teacherToastComponent);
 
 import { userRolesFilter } from '../../filters/user-roles.filter.js';
 app.filter("roleTranslate", ["$translate", userRolesFilter]);
+// The participant search over the activity dashboard's tables (#894).
+import { participantSearchFilter } from "../../filters/participant-search.filter.js";
+app.filter("participantSearch", participantSearchFilter);

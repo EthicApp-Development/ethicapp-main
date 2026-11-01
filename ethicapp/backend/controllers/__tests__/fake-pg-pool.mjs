@@ -33,7 +33,11 @@ export function installFakePgPool(rowsFor) {
     };
 }
 
-/** Sends one JSON request to `router`, mounted in an app with a fixed session. */
+/**
+ * Sends one JSON request to `router` (or to each router of an array, mounted
+ * in order) in an app with a fixed session. A body that is not JSON comes
+ * back as text.
+ */
 export async function requestRouter(router, {
     method = "GET",
     path,
@@ -46,7 +50,9 @@ export async function requestRouter(router, {
         req.session = session;
         next();
     });
-    app.use(router);
+    for (const mounted of [router].flat()) {
+        app.use(mounted);
+    }
 
     const server = app.listen(0, "127.0.0.1");
     await new Promise((resolve) => server.once("listening", resolve));
@@ -57,7 +63,9 @@ export async function requestRouter(router, {
             headers: { "Content-Type": "application/json" },
             body:    body === undefined ? undefined : JSON.stringify(body),
         });
-        return { status: response.status, body: await response.json() };
+        const isJson = response.headers.get("content-type")?.includes("application/json");
+        const responseBody = isJson ? await response.json() : await response.text();
+        return { status: response.status, body: responseBody };
     } finally {
         await new Promise((resolve) => server.close(resolve));
     }

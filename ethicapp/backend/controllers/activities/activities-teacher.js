@@ -6,17 +6,10 @@ import * as rpg2 from "../../db/rest-pg-2.js";
 import * as ActivitiesHelper from "../../helpers/activities-helper.js";
 import { launchActivity } from "../../helpers/activity-launch-helper.js";
 import { listServicesNotRunning } from "../../helpers/ai-service-launch-notice.js";
-import * as StatusCodes from "../../../common/modules/session-status.js";
 import { requireRole } from "../../helpers/auth-helper.js";
-import { studentNotifications } from "../../config/socket.config.js";
-import {
-    invalidateCachedStudentActivityDescriptor,
-} from "../../helpers/student-activity-state-helper.js";
 import { getDesignTypeBySessionId } from "./activities-common.js";
-import { dispatchPhaseHook } from "../../helpers/external-service-dispatch.js";
-import { shouldDispatchActivityStarted } from "../../helpers/activity-lifecycle-helper.js";
 import activityFinisher from "../../helpers/activity-finish-helper.js";
-import { CREATE_SESSION_SQL, TRANSITION_SESSION_SQL } from "../../helpers/teacher-activity-writes.js";
+import { CREATE_SESSION_SQL } from "../../helpers/teacher-activity-writes.js";
 import {
     requireLaunchableDesign,
     requirePhaseOwner,
@@ -337,133 +330,6 @@ router.get("/groups/:group_id/responses", async (req, res) => {
     }
 });
 
-router.post("/activities/:session_id/phase_transition", async (req, res) => {
-    if (!requireRole(req, res, "P")) {
-        return;
-    }
-    const sessionId = Number(req.params.session_id);
-    const phaseId = Number(req.body.phaseId || req.body.phase_id);
-
-    if (!sessionId || !phaseId) {
-        return res.status(400).json({ error: "Missing required parameters: session_id or phase_id." });
-    }
-
-    const status = StatusCodes.getStatusCode("in_progress");
-
-    try {
-        if (!await requireSessionOwner(req, res, sessionId)) {
-            return;
-        }
-
-        // Only a phase of this session (#905).
-        let result = await rpg2.execSQL({
-            sql: `
-                SELECT COUNT(*)::integer
-                FROM stages
-                WHERE id = $1
-                  AND sesid = $2
-            `,
-            dbcon: config.dbconnString,
-            sqlParams: [rpg2.param("plain", phaseId), rpg2.param("plain", sessionId)],
-        });
-
-        if (!(result.length > 0 && result[0].count === 1)) {
-            return res.status(400).json({ error: "The phase does not exist in this session." });
-        }
-
-        const sessionState = await rpg2.singleSQL({
-            sql: `
-                SELECT current_stage, status
-                FROM sessions
-                WHERE id = $1
-            `,
-            dbcon: config.dbconnString,
-            sqlParams: [rpg2.param('plain', sessionId)],
-        });
-
-        if (!sessionState) {
-            return res.status(404).json({ error: "Session not found." });
-        }
-
-        const previousPhaseId = Number(sessionState.current_stage) || null;
-        const previousStatus  = Number(sessionState.status) || null;
-
-        // Only the session's teacher, and not once the account is being
-        // forgotten (teacher-activity-writes.js).
-        result = await rpg2.execSQL({
-            sql:       TRANSITION_SESSION_SQL,
-            dbcon:     config.dbconnString,
-            sqlParams: [
-                rpg2.param("plain", status),
-                rpg2.param("plain", phaseId),
-                rpg2.param("plain", sessionId),
-                rpg2.param("plain", req.session.uid),
-            ],
-        });
-
-        if (result.length === 0) {
-            return res.status(404).json({ error: "Session not found or no update performed." });
-        }
-
-        await invalidateCachedStudentActivityDescriptor(sessionId);
-        studentNotifications.phaseTransition(sessionId);
-        dispatchPhaseTransitionHooks({
-            sessionId,
-            startedPhaseId: phaseId,
-            endedPhaseId:   previousPhaseId,
-        });
-
-        // Fire activity-started only on the transition into in_progress (the
-        // activity's first phase), not on ordinary phase-to-phase advances.
-        if (shouldDispatchActivityStarted(previousStatus)) {
-            dispatchActivityStartedHook({
-                sessionId,
-                phaseId:        phaseId,
-                startedPhaseId: phaseId,
-                endedPhaseId:   previousPhaseId,
-            });
-        }
-
-        res.status(200).json({ status: "ok", message: "Session transitioned to the new phase." });
-    } catch (err) {
-        console.error("Error transitioning session stage:", err);
-        res.status(500).json({ error: "Internal server error" });
-    }
-});
-
-async function dispatchPhaseTransitionHooks({ sessionId, startedPhaseId, endedPhaseId }) {
-    try {
-        if (endedPhaseId && endedPhaseId !== startedPhaseId) {
-            await dispatchPhaseHook("phase-ended", {
-                sessionId,
-                phaseId: endedPhaseId,
-                startedPhaseId,
-                endedPhaseId,
-            });
-        }
-
-        await dispatchPhaseHook("phase-started", {
-            sessionId,
-            phaseId: startedPhaseId,
-            startedPhaseId,
-            endedPhaseId,
-        });
-    } catch (error) {
-        console.error("[external-services] Error dispatching phase transition hooks.", error);
-    }
-}
-
-// Broadcasts activity-started to the services enabled for the phase being
-// entered (phase-scoped, since preparation is relevant to that phase), isolating
-// any adapter failure so it never breaks the teacher request.
-async function dispatchActivityStartedHook(context) {
-    try {
-        await dispatchPhaseHook("activity-started", context);
-    } catch (error) {
-        console.error("[external-services] Error dispatching activity-started hook.", error);
-    }
-}
-
 router.post("/activities/:session_id/finish", async (req, res) => {
     if (!requireRole(req, res, "P")) {
         return;
@@ -543,72 +409,6 @@ router.get("/activities/:session_id/phases", async (req, res) => {
     } catch (err) {
         console.error(`Error fetching phases for session_id: ${session_id}`, err);
         return res.status(500).json({ error: "Internal server error" });
-    }
-});
-
-router.post("/activities/:session_id/phases", async (req, res) => {
-    if (!requireRole(req, res, "P")) {
-        return;
-    }
-    const { session_id } = req.params;
-    const {
-        number,
-        type,
-        anon,
-        chat,
-        prev_ans,
-        question,
-        grouping,
-    } = req.body;
-
-    if (!session_id || !number || !type) {
-        return res.status(400).json({
-            error: "Missing required parameters: session_id, number, or type.",
-        });
-    }
-
-    const queryParams = [
-        rpg2.param('plain', number),
-        rpg2.param('plain', type),
-        rpg2.param('plain', anon || false),
-        rpg2.param('plain', chat || false),
-        rpg2.param('plain', session_id),
-        rpg2.param('plain', JSON.stringify(prev_ans) || null),
-        rpg2.param('plain', question || null),
-        rpg2.param('plain', grouping || null),
-    ];
-
-    try {
-        // Only the activity's teacher builds its phases (#905).
-        if (!await requireSessionOwner(req, res, session_id)) {
-            return;
-        }
-
-        const result = await rpg2.execSQL({
-            sql: `
-                INSERT INTO stages (number, type, anon, chat, sesid, prev_ans, question, grouping)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-                RETURNING id
-            `,
-            dbcon: config.dbconnString,
-            sqlParams: queryParams,
-        });
-
-        if (result.rowCount === 0) {
-            return res.status(500).json({
-                error: "Failed to add the phase. No rows were inserted.",
-            });
-        }
-
-        res.status(201).json({
-            status: "ok",
-            id: result[0].id,
-            phaseId: result[0].id,
-            message: "Phase added successfully.",
-        });
-    } catch (err) {
-        console.error("Error adding phase:", err);
-        res.status(500).json({ error: "Internal server error" });
     }
 });
 

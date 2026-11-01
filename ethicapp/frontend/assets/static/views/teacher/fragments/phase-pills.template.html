@@ -1,0 +1,32 @@
+<!-- The one-column dashboard's phases (#895): one pill per phase of the
+     design, the current one marked with a dot and its answered count, the
+     earlier ones with a check. Started phases can be selected; the ones not
+     started are disabled. The row scrolls sideways when the pills do not fit. -->
+<nav class="phase-pills" aria-label="{{ 'dashboard_phases_title' | translate }}">
+    <ol class="phase-pills-list">
+        <li class="phase-pills-item" ng-repeat="row in $ctrl.rows track by row.number">
+            <button type="button" class="phase-pill"
+                ng-class="{
+                    'phase-pill-selected': $ctrl.isSelected(row),
+                    'phase-pill-current': row.current,
+                    'phase-pill-pending': !row.started
+                }"
+                ng-disabled="!row.started"
+                ng-attr-aria-current="{{ $ctrl.isSelected(row) ? 'true' : undefined }}"
+                ng-click="$ctrl.select(row)">
+                <span class="phase-pill-dot" ng-if="$ctrl.marker(row) === 'current'" aria-hidden="true"></span>
+                <i class="fa-solid fa-check phase-pill-check" ng-if="$ctrl.marker(row) === 'done'" aria-hidden="true"></i>
+                <span aria-hidden="true">{{ 'dashboard_phase_pill' | translate:{ number: row.number } }}</span><span
+                    class="phase-pill-count" ng-if="row.current" aria-hidden="true"> &middot; {{ row.answered }}/{{ row.participants }}</span>
+                <span class="sr-only">
+                    {{ 'dashboard_phase_name' | translate:{ number: row.number, mode: (row.modeKey | translate) } }}
+                </span>
+                <span class="sr-only" ng-if="row.started">
+                    {{ 'dashboard_answered_count' | translate:{ answered: row.answered, participants: row.participants } }}
+                </span>
+                <span class="sr-only" ng-if="row.current">{{ 'dashboard_phase_current' | translate }}</span>
+                <span class="sr-only" ng-if="!row.started">{{ 'dashboard_phase_not_started' | translate }}</span>
+            </button>
+        </li>
+    </ol>
+</nav>

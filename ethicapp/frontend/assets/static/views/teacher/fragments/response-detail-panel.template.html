@@ -1,0 +1,72 @@
+<!-- The response detail panel of the activity dashboard (#896): one
+     student's answers, or one group's answers and chat, next to the table.
+     ‹ › and ↑ ↓ move through the table's rows; Esc and × close it. -->
+<aside class="response-detail-panel"
+       aria-labelledby="response-detail-heading"
+       ng-keydown="$ctrl.onKeydown($event)">
+    <header class="response-detail-header">
+        <h3 class="response-detail-heading" id="response-detail-heading" tabindex="-1">
+            <span ng-if="$ctrl.isGroup()">{{ $ctrl.row.groupName }} &middot; {{ 'dashboard_phase_pill' | translate:{ number: $ctrl.phaseData.descriptor.number } }}</span>
+            <span ng-if="!$ctrl.isGroup()">{{ 'answerOf' | translate }} {{ $ctrl.row.userName }}<span ng-if="$ctrl.hideNames && $ctrl.studentGroup()"> &middot; {{ $ctrl.studentGroup().groupName }}</span></span>
+        </h3>
+        <div class="response-detail-actions">
+            <button type="button" class="btn btn-default btn-sm"
+                    ng-click="$ctrl.navigate(-1)" ng-disabled="!$ctrl.hasPrevious"
+                    aria-label="{{ 'response_detail_previous' | translate }}"
+                    title="{{ 'response_detail_previous' | translate }}">
+                <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+            </button>
+            <button type="button" class="btn btn-default btn-sm"
+                    ng-click="$ctrl.navigate(1)" ng-disabled="!$ctrl.hasNext"
+                    aria-label="{{ 'response_detail_next' | translate }}"
+                    title="{{ 'response_detail_next' | translate }}">
+                <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+            </button>
+            <button type="button" class="btn btn-default btn-sm"
+                    ng-click="$ctrl.close()"
+                    aria-label="{{ 'response_detail_close' | translate }}"
+                    title="{{ 'response_detail_close' | translate }}">
+                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+            </button>
+        </div>
+    </header>
+
+    <div class="response-detail-meta" ng-if="$ctrl.isGroup()">
+        <span>{{ 'response_detail_member_count' | translate:{ count: $ctrl.groupCounts().participants } }}</span>
+        <span>{{ 'dashboard_answered_count' | translate:$ctrl.groupCounts() }}</span>
+        <span ng-if="$ctrl.isChatPhase()">
+            <i class="fa-regular fa-comments" aria-hidden="true"></i>
+            {{ 'response_detail_message_count' | translate:{ count: $ctrl.row.totalChatCount || 0 } }}
+        </span>
+        <span class="dashboard-chip response-detail-chat-state"
+              ng-if="$ctrl.isChatPhase()"
+              ng-class="{ 'response-detail-chat-live': $ctrl.canUseLiveChat }">
+            {{ ($ctrl.canUseLiveChat ? 'response_detail_chat_live' : 'response_detail_chat_read_only') | translate }}
+        </span>
+    </div>
+    <div class="response-detail-meta" ng-if="!$ctrl.isGroup()">
+        <span>{{ 'dashboard_phase_name' | translate:{ number: $ctrl.phaseData.descriptor.number, mode: ($ctrl.phaseModeKey() | translate) } }}</span>
+        <button type="button" class="btn btn-link btn-sm response-detail-group-link"
+                ng-if="$ctrl.studentGroup()"
+                ng-click="$ctrl.openStudentGroup()">
+            {{ (($ctrl.isChatPhase() ? 'response_detail_open_group_chat' : 'response_detail_open_group') | translate:{ group: $ctrl.studentGroup().groupName }) }}
+        </button>
+    </div>
+
+    <div class="response-detail-body" ng-class="{ 'response-detail-body-group': $ctrl.isGroup() }">
+        <div class="response-detail-content" ng-repeat="content in $ctrl.contents track by content.key">
+            <sd-student-response-detail ng-if="content.kind === 'student'"
+                response="$ctrl.row"
+                phase-data="$ctrl.phaseData"
+                case-videos="$ctrl.caseVideos"></sd-student-response-detail>
+            <sd-group-response-detail ng-if="content.kind === 'group'"
+                group="$ctrl.row"
+                phase-data="$ctrl.phaseData"
+                can-use-live-chat="$ctrl.canUseLiveChat"
+                hide-names="$ctrl.hideNames"
+                case-videos="$ctrl.caseVideos"
+                use-tabs="$ctrl.useTabs"
+                initial-tab="content.initialTab"></sd-group-response-detail>
+        </div>
+    </div>
+</aside>

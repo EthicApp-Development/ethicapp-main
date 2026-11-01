@@ -284,6 +284,79 @@ protected uploads volume used by `ethicapp`. Do not expose rendered PDF pages or
 manifests through NGINX/static mounts; they must stay behind authorization-aware
 application endpoints.
 
+## Phase Numbers
+
+Migration `V33__stages_unique_session_number.sql` (#906) adds
+`UNIQUE (sesid, number)` to `stages`: an activity has at most one phase with
+each number. Before this release, a phase was built by several requests from
+the teacher's browser, and a failure between them, a retry or a second tab
+could leave two phases with the same number in one activity.
+
+The migration first removes the duplicates it can remove safely. Of each set of
+phases that share an activity and a number, it keeps the activity's current
+phase, and deletes the others, oldest first, with their questions or roles and
+their groups, as long as nothing else refers to them: no student response,
+chat message, external service job or result, or pending finalization. It
+prints a notice for each phase it deletes or keeps.
+
+When two phases of a set both hold data, the migration stops with
+`Some sessions still have two phases with the same number, both holding data.`
+and changes nothing (Flyway rolls it back). The application must not be
+started on the new release until the migration has run. To list the
+duplicates and what each phase holds, run this read-only query against the
+database:
+
+```sql
+SELECT st.sesid,
+       st.number,
+       st.id AS phase_id,
+       st.id = s.current_stage AS is_current,
+       (SELECT count(*) FROM differential_selection AS ds
+        INNER JOIN differential AS d ON ds.did = d.id
+        WHERE d.stageid = st.id) AS differential_answers,
+       (SELECT count(*) FROM actor_selection AS a WHERE a.stageid = st.id) AS ranking_answers,
+       (SELECT count(*) FROM chat AS c WHERE c.stageid = st.id) AS chat_messages,
+       (SELECT count(*) FROM differential_chat AS dc
+        INNER JOIN differential AS d ON dc.did = d.id
+        WHERE d.stageid = st.id) AS differential_chat_messages,
+       (SELECT count(*) FROM external_service_jobs AS j WHERE j.phase_id = st.id) AS service_jobs
+FROM stages AS st
+INNER JOIN sessions AS s ON st.sesid = s.id
+WHERE (st.sesid, st.number) IN (
+    SELECT sesid, number
+    FROM stages
+    WHERE sesid IS NOT NULL
+    GROUP BY sesid, number
+    HAVING count(*) > 1
+)
+ORDER BY st.sesid, st.number, st.id;
+```
+
+Resolving such a set means deciding which phase's answers to keep, so it is a
+decision about the course's data, not an automatic step. Take a backup first
+([`production-backup-runbook.md`](./production-backup-runbook.md)), keep the
+activity's current phase or else the one with the answers, and delete the
+other phase's answers, chat messages, groups, questions or roles and the phase
+itself, then run the migration job again. If the activity is finished and its
+answers no longer matter, the teacher may prefer to delete it instead. A phase
+numbered above its activity's current phase that is not a duplicate is left
+alone: it was never started, and the next start of that phase removes it.
+
+## Participant Pseudonyms
+
+Migration `V34__activity_participant_pseudonyms.sql` (#897) creates the empty
+table `activity_participant_pseudonyms`, with the numbers the teacher's
+dashboard shows in place of students' names while the teacher hides them. It
+changes no existing row and needs no environment variable or operator action;
+apply it with the rest of the release's migrations, after V33.
+
+ethicapp fills the table as teachers open their dashboards: one row per student
+and activity. Its foreign keys cascade, so deleting a session or an account
+deletes its rows, and forgetting a student or a teacher keeps them, as
+[`student-anonymization-data-map.md`](./student-anonymization-data-map.md)
+explains. Should the table be emptied, the dashboard draws new numbers, which
+differ from the ones shown before.
+
 ## Design Case Associations
 
 From this release on, `POST /designs` and `PATCH /designs/:id` accept a case

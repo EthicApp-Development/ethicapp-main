@@ -1,0 +1,19 @@
+<!-- A ranking phase in the activity dashboard's rail (#894): the actors to
+     rank, numbered. -->
+<div class="phase-context">
+    <div ng-include="'/assets/static/views/teacher/fragments/phase-context-features.template.html'"></div>
+
+    <h4 class="phase-context-label">{{ 'actors_label' | translate }}</h4>
+    <ol class="phase-context-questions">
+        <li class="phase-context-question" ng-repeat="actor in ctrl.phaseActors">
+            <span class="phase-context-question-number" aria-hidden="true">{{ $index + 1 }}</span>
+            <div class="phase-context-question-body">
+                {{ actor.name }}
+                <p class="phase-context-question-meta" ng-if="actor.justificationRequired">
+                    {{ 'dashboard_question_justified' | translate }}<span ng-if="actor.minJustificationLength > 0">,
+                    {{ 'dashboard_question_min_words' | translate:{ count: actor.minJustificationLength } }}</span>
+                </p>
+            </div>
+        </li>
+    </ol>
+</div>

@@ -1,0 +1,99 @@
+<!-- The activity dashboard's context cards: "This phase", "AI services" and
+     "Activity". In the rail from 1200 px wide (#894); below, collapsed
+     sections under the main column (#895), so they never push the responses
+     down. Included by activity.view.html under DashboardController as dc. -->
+
+<!-- This phase: features, instructions and questions, condensed -->
+<section class="dashboard-card dashboard-phase-context" ng-if="dc.selectedPhase()"
+    aria-labelledby="dashboard-this-phase-title">
+    <div class="dashboard-card-header">
+        <h3 class="dashboard-card-title" id="dashboard-this-phase-title">
+            <span ng-if="!dc.isOneColumn">{{ 'dashboard_this_phase_title' | translate }}</span>
+            <button type="button" class="dashboard-card-disclosure" ng-if="dc.isOneColumn"
+                ng-click="dc.togglePhaseSection()"
+                aria-expanded="{{ dc.phaseSectionOpen ? 'true' : 'false' }}"
+                aria-controls="dashboard-this-phase-body">
+                <span>{{ 'dashboard_this_phase_title' | translate }}</span>
+                <span class="dashboard-card-summary"><span ng-if="!dc.phaseSectionOpen">{{ 'dashboard_this_phase_summary' | translate }}</span></span>
+                <i class="fa-solid" ng-class="dc.phaseSectionOpen ? 'fa-chevron-up' : 'fa-chevron-down'" aria-hidden="true"></i>
+            </button>
+        </h3>
+        <button type="button" class="btn btn-link btn-xs dashboard-card-toggle" ng-if="!dc.isOneColumn"
+            ng-click="dc.togglePhaseContext()"
+            aria-expanded="{{ dc.phaseContextExpanded ? 'true' : 'false' }}">
+            {{ (dc.phaseContextExpanded ? 'dashboard_this_phase_hide_details' : 'dashboard_this_phase_show_details') | translate }}
+            <i class="fa-solid" ng-class="dc.phaseContextExpanded ? 'fa-chevron-up' : 'fa-chevron-down'" aria-hidden="true"></i>
+        </button>
+    </div>
+    <div id="dashboard-this-phase-body" class="dashboard-card-body"
+        ng-if="!dc.isOneColumn || dc.phaseSectionOpen">
+        <div ng-repeat="phase in dc.dashboardPhaseData track by phase.descriptor.id"
+            ng-if="dc.isPhaseTabSelected(phase)">
+            <phase-description phase-number="phase.descriptor.number" design-object="dc.designObj"
+                case-videos="dc.associatedCase.videos"
+                compact="true" expanded="dc.isOneColumn || dc.phaseContextExpanded"></phase-description>
+        </div>
+    </div>
+</section>
+
+<!-- AI services: the phase's external services, the tutor-mode warnings and
+     the "services not running" notice, which stays at the top of the section
+     while it is collapsed -->
+<section class="dashboard-card dashboard-ai-services"
+    ng-if="dc.servicesNotRunning.length > 0 || dc.selectedPhaseHasServices()"
+    aria-labelledby="dashboard-ai-services-title">
+    <h3 class="dashboard-card-title" id="dashboard-ai-services-title">
+        <span ng-if="!dc.isOneColumn">{{ 'dashboard_ai_services_title' | translate }}</span>
+        <button type="button" class="dashboard-card-disclosure" ng-if="dc.isOneColumn"
+            ng-click="dc.toggleServicesSection()"
+            aria-expanded="{{ dc.servicesSectionOpen ? 'true' : 'false' }}"
+            aria-controls="dashboard-ai-services-body">
+            <span>{{ 'dashboard_ai_services_title' | translate }}</span>
+            <span class="dashboard-card-summary"><span ng-if="!dc.servicesSectionOpen && dc.selectedPhaseServiceCount() > 0">
+                {{ (dc.selectedPhaseServiceCount() === 1 ? 'dashboard_ai_services_summary_one' : 'dashboard_ai_services_summary_other') | translate:{ count: dc.selectedPhaseServiceCount() } }}
+            </span></span>
+            <i class="fa-solid" ng-class="dc.servicesSectionOpen ? 'fa-chevron-up' : 'fa-chevron-down'" aria-hidden="true"></i>
+        </button>
+    </h3>
+    <div class="alert alert-warning" role="alert" ng-if="dc.servicesNotRunning.length > 0">
+        <button type="button" class="close" ng-click="dc.dismissServicesNotRunning()"
+            aria-label="{{ 'activity_services_not_running_dismiss' | translate }}">
+            <span aria-hidden="true">&times;</span>
+        </button>
+        <p>{{ 'activity_services_not_running_text' | translate }}</p>
+        <ul>
+            <li ng-repeat="service in dc.servicesNotRunning track by service.id">
+                {{ dc.serviceNotRunningName(service) }}
+            </li>
+        </ul>
+    </div>
+    <div id="dashboard-ai-services-body" class="dashboard-card-body"
+        ng-if="!dc.isOneColumn || dc.servicesSectionOpen">
+        <div ng-repeat="phase in dc.dashboardPhaseData track by phase.descriptor.id"
+            ng-if="dc.isPhaseTabSelected(phase)">
+            <phase-external-services-summary
+                phase="dc.getDesignPhaseForDescriptor(phase.descriptor)"
+                compact="true"></phase-external-services-summary>
+            <tutor-mode-warnings session-id="dc.sessionId" phase-id="phase.descriptor.id"
+                data-phase-number="{{ phase.descriptor.number }}"></tutor-mode-warnings>
+        </div>
+    </div>
+</section>
+
+<!-- Activity details, collapsed -->
+<section class="dashboard-card dashboard-activity-card" ng-if="dc.activityState.descriptor">
+    <h3 class="dashboard-card-title">
+        <button type="button" class="dashboard-card-disclosure"
+            ng-click="dc.toggleActivityCard()"
+            aria-expanded="{{ dc.activityCardExpanded ? 'true' : 'false' }}"
+            aria-controls="dashboard-activity-card-body">
+            <span>{{ 'dashboard_activity_card_title' | translate }}</span>
+            <span class="dashboard-card-summary"><span ng-if="!dc.activityCardExpanded">{{ 'dashboard_activity_card_summary' | translate }}</span></span>
+            <i class="fa-solid" ng-class="dc.activityCardExpanded ? 'fa-chevron-up' : 'fa-chevron-down'" aria-hidden="true"></i>
+        </button>
+    </h3>
+    <div id="dashboard-activity-card-body" ng-if="dc.activityCardExpanded">
+        <activity-description activity="dc.activityState.descriptor" associated-case="dc.associatedCase"
+            enable-link="false" show-status-and-code="false"></activity-description>
+    </div>
+</section>

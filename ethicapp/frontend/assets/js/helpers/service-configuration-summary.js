@@ -100,6 +100,19 @@ export function summarizeServiceSettings(fields, configuration = {}) {
 }
 
 /**
+ * A one-line digest of a service's settings for the activity dashboard's AI
+ * services card (#894): the first `limit` values shown as text, in the form's
+ * order, joined by " · ". Yes/no settings are left to the details.
+ */
+export function compactSettingsLine(rows, limit = 3) {
+    return (Array.isArray(rows) ? rows : [])
+        .filter(row => typeof row?.text === "string" && row.text.trim() !== "")
+        .slice(0, limit)
+        .map(row => row.text.trim())
+        .join(" · ");
+}
+
+/**
  * The stored settings as `key: value` rows, for when the service cannot
  * provide labels: strings as they are, anything else as JSON.
  */

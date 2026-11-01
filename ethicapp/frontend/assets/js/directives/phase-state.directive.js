@@ -4,6 +4,15 @@ let phaseStateDirective = function() {
         scope: {
             designType: '<',
             phaseData: '<',
+            // The dashboard's participant search (#894): the tables show
+            // the rows whose participant's name contains it.
+            participantQuery: "<?",
+            // The text of each question, which the column headers show on
+            // hover and focus (#895).
+            questionTexts:    "<?",
+            // What the response detail panel shows (#896): its rows are
+            // highlighted in the tables.
+            detailSelection:  "<?",
             onSelectResponse: '&?',
             onSelectGroup: '&?'
         },

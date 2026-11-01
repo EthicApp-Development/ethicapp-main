@@ -1,0 +1,117 @@
+<!-- A group's answers and chat in the response detail panel (#896). It was
+     the body of the group response modal. With room for both, the answers
+     sit above the chat with a splitter between them; otherwise they are the
+     tabs Responses and Chat, the chat with a one-line digest of the group's
+     values. Both parts stay rendered, so switching tabs keeps the draft. -->
+<div class="response-detail-group"
+     ng-class="$ctrl.useTabs ? 'response-detail-group-tabs' : 'response-detail-group-split'">
+    <ul class="nav nav-tabs response-detail-tabs" role="tablist" ng-if="$ctrl.useTabs">
+        <li role="presentation" ng-class="{ active: $ctrl.isTabSelected('answers') }">
+            <a href="" role="tab" id="response-detail-tab-answers-{{ $ctrl.uid }}"
+               aria-controls="response-detail-answers-{{ $ctrl.uid }}"
+               aria-selected="{{ $ctrl.isTabSelected('answers') ? 'true' : 'false' }}"
+               ng-click="$ctrl.selectTab('answers')">
+                {{ 'responses_title_text' | translate }}
+            </a>
+        </li>
+        <li role="presentation" ng-class="{ active: $ctrl.isTabSelected('chat') }">
+            <a href="" role="tab" id="response-detail-tab-chat-{{ $ctrl.uid }}"
+               aria-controls="response-detail-chat-{{ $ctrl.uid }}"
+               aria-selected="{{ $ctrl.isTabSelected('chat') ? 'true' : 'false' }}"
+               ng-click="$ctrl.selectTab('chat')">
+                {{ 'dashboard_chip_chat' | translate }}
+                <span class="badge response-detail-unread" ng-if="$ctrl.unreadCount() > 0">
+                    <span aria-hidden="true">{{ $ctrl.unreadCount() }}</span>
+                    <span class="sr-only">{{ 'response_detail_unread_messages' | translate:{ count: $ctrl.unreadCount() } }}</span>
+                </span>
+            </a>
+        </li>
+    </ul>
+
+    <section class="response-detail-part response-detail-answers"
+             id="response-detail-answers-{{ $ctrl.uid }}"
+             ng-attr-role="{{ $ctrl.useTabs ? 'tabpanel' : undefined }}"
+             ng-attr-aria-labelledby="{{ $ctrl.useTabs ? 'response-detail-tab-answers-' + $ctrl.uid : undefined }}"
+             ng-show="!$ctrl.useTabs || $ctrl.isTabSelected('answers')"
+             ng-style="$ctrl.answersStyle()">
+        <h4 class="response-detail-part-title" ng-if="!$ctrl.useTabs">{{ 'responses_title_text' | translate }}</h4>
+        <p class="text-muted" ng-if="$ctrl.responsesLoading">{{ 'loading' | translate }}</p>
+
+        <div class="panel panel-default response-detail-question"
+             ng-repeat="question in $ctrl.questions track by question.number">
+            <div class="panel-heading">
+                <strong>{{ 'item_label' | translate }} {{ $index + 1 }}</strong>
+            </div>
+            <div class="panel-body">
+                <rich-text ng-if="question.text.trim()" text="question.text"
+                    content-type="question.contentType" videos="$ctrl.caseVideos"></rich-text>
+                <p ng-if="!question.text.trim()">{{ 'no_response' | translate }}</p>
+
+                <div ng-if="!$ctrl.responsesLoading && $ctrl.getQuestionResponses(question).length === 0">
+                    <p class="text-muted">{{ 'no_response' | translate }}</p>
+                </div>
+
+                <div class="response-detail-member"
+                     ng-repeat="response in $ctrl.getQuestionResponses(question) track by response.userId">
+                    <strong class="response-detail-member-name">{{ $ctrl.getUserName(response.userId) }}</strong>
+                    <div class="response-detail-scale">
+                        <strong class="response-detail-pole">{{ question.leftPole || ('left_pole_label' | translate) }}</strong>
+                        <span class="response-detail-scale-options">
+                            <label class="radio-inline"
+                                   ng-repeat="option in $ctrl.buildScaleOptions(question) track by option">
+                                <input type="radio"
+                                       disabled
+                                       ng-checked="response.value == option">
+                                {{ option }}
+                            </label>
+                        </span>
+                        <strong class="response-detail-pole">{{ question.rightPole || ('right_pole_label' | translate) }}</strong>
+                    </div>
+
+                    <div class="response-detail-justification" ng-if="question.justify">
+                        <strong>{{ 'comment' | translate }}</strong>
+                        <p>{{ response.comment || ('no_response' | translate) }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <p ng-if="$ctrl.questions.length === 0">{{ 'no_response' | translate }}</p>
+    </section>
+
+    <div class="response-detail-splitter" ng-if="!$ctrl.useTabs"
+         role="separator" tabindex="0" aria-orientation="horizontal"
+         aria-label="{{ 'response_detail_splitter_label' | translate }}"
+         aria-valuenow="{{ $ctrl.splitRatio }}" aria-valuemin="0" aria-valuemax="100"
+         ng-keydown="$ctrl.onSplitterKeydown($event)"
+         ng-mousedown="$ctrl.startSplitDrag($event)">
+        <span class="response-detail-splitter-grip" aria-hidden="true"></span>
+    </div>
+
+    <section class="response-detail-part response-detail-chat"
+             id="response-detail-chat-{{ $ctrl.uid }}"
+             ng-attr-role="{{ $ctrl.useTabs ? 'tabpanel' : undefined }}"
+             ng-attr-aria-labelledby="{{ $ctrl.useTabs ? 'response-detail-tab-chat-' + $ctrl.uid : undefined }}"
+             ng-show="!$ctrl.useTabs || $ctrl.isTabSelected('chat')">
+        <h4 class="response-detail-part-title" ng-if="!$ctrl.useTabs">
+            {{ 'chat_messages_label' | translate }}
+            <span class="response-detail-part-count">({{ $ctrl.chatMessages.length }})</span>
+        </h4>
+        <p class="response-detail-digest" ng-if="$ctrl.useTabs && $ctrl.digest.length > 0">
+            <span class="sr-only">{{ 'response_detail_digest_label' | translate }}</span>
+            <span class="dashboard-chip response-detail-digest-item" ng-repeat="item in $ctrl.digest track by item.number">
+                {{ 'dashboard_item_short' | translate:{ number: item.number } }} {{ item.text }}
+            </span>
+        </p>
+        <teacher-group-chat
+            messages="$ctrl.chatMessages"
+            chat-loading="$ctrl.chatLoading"
+            chat-sending="$ctrl.chatSending"
+            chat-error="$ctrl.chatError"
+            can-use-live-chat="$ctrl.canUseLiveChat"
+            on-send="$ctrl.sendChatMessage(content, parentId)"
+            resolve-author-name="$ctrl.getChatAuthorName(message)"
+            resolve-is-own-message="$ctrl.isTeacherMessage(message)">
+        </teacher-group-chat>
+    </section>
+</div>
