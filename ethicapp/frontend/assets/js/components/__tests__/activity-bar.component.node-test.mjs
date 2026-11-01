@@ -4,6 +4,7 @@ import { describe, it } from "node:test";
 
 import activityBarComponent from "../activity-bar.component.js";
 import { activityControlsDirective } from "../../directives/activity-controls.directive.js";
+import { fakeActivityBar, fakeLayoutWindow } from "../../helpers/__tests__/fake-activity-bar.mjs";
 
 // The controller is the last entry of the component's annotated array.
 const ActivityBarController = activityBarComponent.controller.at(-1);
@@ -74,6 +75,95 @@ describe("activity bar", () => {
         assert.equal(createBar({ activity: undefined, totalPhases: 3, users: [] }).isWaitingForFirstPhase(), false);
         assert.equal(createBar({ activity: waiting, totalPhases: 3, users: [], isFinished: true })
             .isWaitingForFirstPhase(), false);
+    });
+});
+
+describe("activity bar layout", () => {
+    // The 130-character name of #951 at 390 px: the chips and the controls
+    // leave it nothing on one row.
+    const LONG_NAME = { ...RUNNING, name: "Dilemas éticos en la práctica profesional de ingeniería" };
+
+    function mountBar(fakeOptions, winOptions) {
+        const fake = fakeActivityBar(fakeOptions);
+        const win = fakeLayoutWindow(winOptions);
+        const vm = new ActivityBarController([fake.host], win);
+        Object.assign(vm, { activity: undefined, totalPhases: 3, users: [] });
+        vm.$doCheck();
+        vm.$postLink();
+        win.frame();
+        return { vm, fake, win };
+    }
+
+    it("moves a long name to its own row once it arrives, and back when there is room", () => {
+        const { vm, fake, win } = mountBar({ width: 342, nameWidth: 0, othersWidth: 422 });
+        assert.equal(fake.isStacked(), false, "no name yet");
+
+        vm.activity = LONG_NAME;
+        fake.state.nameWidth = 1100;
+        vm.$doCheck();
+        win.frame();
+        assert.equal(fake.isStacked(), true);
+        assert.equal(fake.barHeight(), "108px");
+
+        fake.state.width = 1656;
+        win.resize();
+        win.frame();
+        assert.equal(fake.isStacked(), false);
+        assert.equal(fake.barHeight(), "56px");
+    });
+
+    it("lays the bar out again only when the name changes", () => {
+        const { vm, win } = mountBar({ width: 1256, nameWidth: 0, othersWidth: 600 });
+        vm.activity = LONG_NAME;
+        vm.$doCheck();
+        assert.equal(win.frames.length, 1);
+        win.frame();
+
+        vm.$doCheck();
+        vm.users = [{ role: "A" }];
+        vm.$doCheck();
+        assert.equal(win.frames.length, 0);
+    });
+
+    it("follows the window without ResizeObserver", () => {
+        const { vm, fake, win } = mountBar({ width: 1256, nameWidth: 0, othersWidth: 600 }, { resizeObserver: false });
+        vm.activity = LONG_NAME;
+        fake.state.nameWidth = 1100;
+        vm.$doCheck();
+        win.frame();
+        assert.equal(fake.isStacked(), false);
+
+        fake.state.width = 342;
+        win.resize();
+        win.frame();
+        assert.equal(fake.isStacked(), true);
+    });
+
+    it("stops watching when the dashboard goes", () => {
+        const { vm, fake, win } = mountBar({ width: 342, nameWidth: 1100, othersWidth: 422 });
+        assert.ok(fake.barHeight());
+
+        vm.$onDestroy();
+        assert.equal(win.observers[0].disconnected, true);
+        assert.equal(fake.barHeight(), undefined);
+        vm.$onDestroy();
+    });
+
+    it("hides the name's tooltip on Escape until the pointer or the focus leaves", () => {
+        const vm = createBar({ activity: RUNNING, users: [] });
+        vm.dismissNameTipOnEscape({ key: "Tab" });
+        assert.equal(vm.nameTipDismissed, false);
+        vm.dismissNameTipOnEscape({ key: "Escape" });
+        assert.equal(vm.nameTipDismissed, true);
+        vm.restoreNameTip();
+        assert.equal(vm.nameTipDismissed, false);
+    });
+
+    it("gives screen readers the name once, in the heading", () => {
+        const template = readAsset("../../../static/views/teacher/fragments/activity-bar.template.html");
+        assert.match(template, /<h2 class="activity-bar-name"[^>]*>\{\{ \$ctrl\.activity\.name \}\}<\/h2>/);
+        assert.match(template, /<span class="activity-bar-name-tip" aria-hidden="true">/);
+        assert.doesNotMatch(template, /title="\{\{ \$ctrl\.activity\.name \}\}"/, "no native tooltip on top of ours");
     });
 });
 

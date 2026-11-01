@@ -1,5 +1,16 @@
 <section class="activity-bar" aria-label="{{ 'activity_bar_region_label' | translate }}">
-  <h2 class="activity-bar-name" title="{{ $ctrl.activity.name }}">{{ $ctrl.activity.name }}</h2>
+  <!-- A cut name takes a tab stop, and its tooltip shows it whole on hover
+       and keyboard focus; Escape hides it until the pointer or the focus
+       leaves (#951). Screen readers read the heading, which holds the whole
+       name, so the tooltip is hidden from them. -->
+  <div class="activity-bar-title"
+       ng-class="{ 'activity-bar-title-tip-dismissed': $ctrl.nameTipDismissed }"
+       ng-mouseleave="$ctrl.restoreNameTip()">
+    <h2 class="activity-bar-name"
+        ng-keydown="$ctrl.dismissNameTipOnEscape($event)"
+        ng-blur="$ctrl.restoreNameTip()">{{ $ctrl.activity.name }}</h2>
+    <span class="activity-bar-name-tip" aria-hidden="true"><span class="activity-bar-name-tip-body">{{ $ctrl.activity.name }}</span></span>
+  </div>
 
   <span class="activity-bar-chip activity-bar-status"
         ng-if="$ctrl.statusName"
