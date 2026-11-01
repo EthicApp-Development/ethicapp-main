@@ -924,7 +924,7 @@
 	"dashboard_rail_label": "Fases y contexto de la fase",
 	"dashboard_phases_title": "Fases",
 	"dashboard_phase_name": "Fase {{number}} · {{mode}}",
-	"dashboard_answered_count": "{{answered}} de {{participants}} respondieron",
+	"dashboard_answered_count": "{{answered}} de {{participants}} respondieron todo",
 	"dashboard_phase_current": "Fase actual",
 	"dashboard_phase_not_started": "Aún no iniciada",
 	"dashboard_this_phase_title": "Esta fase",
