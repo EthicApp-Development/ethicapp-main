@@ -1,0 +1,449 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Launch Activity Wireframes</title>
+<style>
+  :root {
+    --ink: #2b2b2b;
+    --muted: #6b6b6b;
+    --line: #9a9a9a;
+    --fill: #e9e9e9;
+    --fill-2: #f4f4f4;
+    --paper: #ffffff;
+    --page: #d9dde3;
+    --accent: #1f5fd1;
+    --accent-ink: #ffffff;
+    --note: #c2410c;
+    --ok: #2f7d32;
+    --ok-fill: #d7ecd8;
+    --warn: #8a5a00;
+    --warn-fill: #fff3d6;
+    --fold: #d61f69;
+    --sel: #dbe7ff;
+    --off: #b9b9b9;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ink: #e6e6e6; --muted: #a9a9a9; --line: #6f6f6f; --fill: #3a3a3a; --fill-2: #2f2f2f;
+      --paper: #232323; --page: #15171a; --accent: #7aa7ff; --accent-ink: #10203f; --note: #ff9a5c;
+      --ok: #7fd18a; --ok-fill: #29452c; --warn: #ffd27a; --warn-fill: #3d3220; --fold: #ff6fae;
+      --sel: #22324f; --off: #555555;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ink: #e6e6e6; --muted: #a9a9a9; --line: #6f6f6f; --fill: #3a3a3a; --fill-2: #2f2f2f;
+    --paper: #232323; --page: #15171a; --accent: #7aa7ff; --accent-ink: #10203f; --note: #ff9a5c;
+    --ok: #7fd18a; --ok-fill: #29452c; --warn: #ffd27a; --warn-fill: #3d3220; --fold: #ff6fae;
+    --sel: #22324f; --off: #555555;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 24px 16px 64px; background: var(--page); color: var(--ink);
+    font: 15px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  .doc { max-width: 1100px; margin: 0 auto; }
+  h1 { font-size: 26px; margin: 0 0 4px; }
+  h2 { font-size: 20px; margin: 40px 0 6px; }
+  .lede { color: var(--muted); margin: 0 0 16px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 13px; color: var(--muted); margin: 8px 0 0; }
+  .legend span::before { content: ""; display: inline-block; width: 18px; height: 0; border-top: 2px dashed var(--fold); vertical-align: middle; margin-right: 6px; }
+  .legend span.n::before { width: 14px; height: 14px; border: 0; border-radius: 50%; background: var(--note); }
+  .metrics { font-size: 13px; color: var(--muted); margin: 6px 0 10px; }
+  .metrics b { color: var(--ink); }
+  .open { background: var(--paper); border-left: 4px solid var(--note); border-radius: 6px; padding: 10px 16px; font-size: 14px; margin: 10px 0 0; }
+  .open ul { margin: 4px 0 0; padding-left: 20px; }
+  .notes { background: var(--paper); border-radius: 6px; padding: 12px 18px 12px 36px; margin: 12px 0 0; font-size: 14px; }
+  .notes li { margin: 4px 0; }
+  .notes li::marker { color: var(--note); font-weight: 700; }
+  figure { margin: 10px 0 0; }
+  figure img { width: 100%; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,.25); display: block; }
+  figcaption { font-size: 13px; color: var(--muted); margin-top: 6px; }
+  .shots { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+
+  /* A frame draws a viewport at its real pixel size, scaled down to fit. */
+  .frame-wrap { position: relative; overflow: hidden; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,.25); background: var(--paper); }
+  .frame { position: absolute; top: 0; left: 0; transform-origin: 0 0; background: var(--fill-2); overflow: hidden; }
+  .fold { position: absolute; left: 0; right: 0; border-top: 3px dashed var(--fold); z-index: 30; }
+  .fold::after { content: attr(data-label); position: absolute; right: 8px; top: 6px; background: var(--fold); color: #fff; font-size: 18px; padding: 2px 8px; border-radius: 4px; }
+
+  /* Wireframe vocabulary, in viewport pixels. */
+  .wf { font-size: 16px; color: var(--ink); }
+  .box { background: var(--paper); border: 2px solid var(--line); border-radius: 6px; }
+  .lbl { font-weight: 600; }
+  .sub { color: var(--muted); font-size: 14px; }
+  .btn { display: inline-flex; align-items: center; gap: 6px; border: 2px solid var(--line); border-radius: 6px; padding: 7px 14px; background: var(--paper); font-size: 15px; white-space: nowrap; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+  .btn.primary.disabled { background: var(--fill); border-color: var(--fill); color: var(--muted); }
+  .btn.link { border-color: transparent; color: var(--accent); padding-left: 4px; padding-right: 4px; }
+  .chip { display: inline-block; border: 1.5px solid var(--line); border-radius: 999px; padding: 1px 10px; font-size: 14px; white-space: nowrap; }
+  .chip.on { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+  .chip.ai { border-color: var(--accent); color: var(--accent); }
+  .chip.ai.off { border-color: var(--off); color: var(--off); text-decoration: line-through; }
+  .n { position: absolute; width: 34px; height: 34px; border-radius: 50%; background: var(--note); color: #fff; font: 700 18px/34px sans-serif; text-align: center; z-index: 25; }
+
+  .appbar { position: absolute; left: 0; right: 0; top: 0; height: 68px; background: var(--paper); border-bottom: 2px solid var(--line); display: flex; align-items: center; gap: 18px; padding: 0 24px; z-index: 5; }
+  .appnav { position: absolute; left: 0; top: 68px; bottom: 0; width: 244px; background: var(--paper); border-right: 2px solid var(--line); padding: 24px 16px; }
+  .appnav .item { height: 40px; border-radius: 8px; margin: 0 0 16px; display: flex; align-items: center; padding: 0 14px; color: var(--muted); }
+  .appnav .item.on { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+  .content { position: absolute; top: 68px; right: 0; bottom: 0; overflow: hidden; padding: 20px 24px 24px; }
+
+  /* Page head and stepper. */
+  .head { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; margin-bottom: 18px; }
+  .head h3 { margin: 0; font-size: 26px; color: var(--accent); white-space: nowrap; }
+  .stepper { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+  .st { display: flex; align-items: center; gap: 8px; white-space: nowrap; color: var(--muted); }
+  .st i { width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center; font: 700 15px/1 sans-serif; font-style: normal; }
+  .st.now { color: var(--ink); font-weight: 700; }
+  .st.now i { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .st.done i { background: var(--ok); border-color: var(--ok); color: #fff; }
+  .st small { display: block; font-weight: 400; color: var(--muted); font-size: 13px; }
+  .st-line { flex: 0 1 60px; height: 2px; background: var(--line); }
+  .stepper.compact .st small { display: none; }
+
+  /* Step 1: list and preview. */
+  .cols { display: grid; gap: 20px; align-items: start; }
+  .tools { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 10px; }
+  .search { flex: 1 1 260px; height: 38px; border: 2px solid var(--line); border-radius: 6px; padding: 7px 12px; color: var(--muted); background: var(--paper); }
+  .sort { margin-left: auto; }
+  .list { padding: 6px; }
+  .row { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 12px; border-radius: 6px; border: 2px solid transparent; }
+  .row + .row { margin-top: 2px; }
+  .row .radio { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--line); }
+  .row.sel { background: var(--sel); border-color: var(--accent); }
+  .row.sel .radio { border: 6px solid var(--accent); }
+  .row .t { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .row .m { font-size: 14px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .row .r { display: flex; gap: 6px; align-items: center; justify-content: flex-end; }
+  .row .when { font-size: 13px; color: var(--muted); min-width: 118px; text-align: right; }
+  .row .inline { grid-column: 2 / 4; border-top: 1px solid var(--line); margin-top: 8px; padding-top: 8px; }
+  .listfoot { display: flex; justify-content: space-between; gap: 12px; padding: 10px 12px 4px; font-size: 14px; color: var(--muted); }
+  .preview { padding: 16px; }
+  .preview h4 { margin: 0 0 4px; font-size: 19px; }
+  .kv { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 12px; }
+  .case { border: 1.5px solid var(--fill); border-radius: 6px; padding: 10px 12px; margin-bottom: 12px; font-size: 14px; display: flex; justify-content: space-between; gap: 8px; }
+  .ph-row { display: grid; grid-template-columns: 70px 1fr; gap: 8px; padding: 8px 0; border-top: 1px solid var(--fill); font-size: 14px; }
+  .ph-row b { white-space: nowrap; }
+  .ph-row .ai-line { color: var(--accent); }
+  .ph-row .ai-line.off { color: var(--off); text-decoration: line-through; }
+
+  /* Step 2: form. */
+  .card { padding: 16px 18px; }
+  .card h4 { margin: 0 0 10px; font-size: 17px; display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+  .field-label { font-weight: 600; margin-bottom: 4px; }
+  .req { color: var(--note); }
+  .input { border: 2px solid var(--accent); border-radius: 6px; padding: 9px 12px; min-height: 42px; background: var(--paper); }
+  .input .caret { display: inline-block; width: 2px; height: 18px; background: var(--ink); vertical-align: -3px; margin-left: 1px; }
+  .help { font-size: 14px; color: var(--muted); margin-top: 6px; }
+  .suggest { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 8px; font-size: 14px; }
+  .switch { display: inline-block; width: 46px; height: 26px; border-radius: 13px; background: var(--ok); position: relative; flex: none; }
+  .switch::after { content: ""; position: absolute; top: 3px; left: 23px; width: 20px; height: 20px; border-radius: 50%; background: #fff; }
+  .switch.off { background: var(--off); }
+  .switch.off::after { left: 3px; }
+  .sw-row { display: flex; gap: 12px; align-items: flex-start; }
+  .svc { display: grid; grid-template-columns: 110px 1fr; gap: 8px; padding: 7px 0; border-top: 1px solid var(--fill); font-size: 14px; }
+  .svc .ai-line { color: var(--accent); }
+  .svc.off .ai-line { color: var(--off); text-decoration: line-through; }
+  .callout { border-radius: 6px; padding: 8px 12px; font-size: 14px; margin-top: 10px; }
+  .callout.info { background: var(--fill-2); border: 1.5px solid var(--fill); }
+  .callout.warn { background: var(--warn-fill); color: var(--warn); }
+  .actcard { border: 2px solid var(--line); border-radius: 6px; overflow: hidden; font-size: 14px; }
+  .actcard .top { background: var(--fill-2); padding: 8px 12px; font-weight: 600; border-bottom: 1.5px solid var(--fill); }
+  .actcard .body { padding: 8px 12px; display: grid; gap: 4px; }
+  .actcard .hl { background: var(--sel); border-radius: 4px; padding: 0 4px; }
+  .chosen { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 16px; align-items: center; }
+
+  /* Action bar, fixed to the bottom of the viewport. */
+  .actions { position: absolute; left: 0; right: 0; display: flex; align-items: center; gap: 14px; padding: 12px 24px; background: var(--paper); border-top: 2px solid var(--line); z-index: 15; }
+  .actions .grow { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sticky-tag { position: absolute; left: 24px; top: -14px; font-size: 13px; background: var(--accent); color: #fff; border-radius: 4px; padding: 0 6px; }
+
+  /* ?frame=X renders one frame alone at its real size, for the PNGs in frames/. */
+  body.solo { padding: 0; background: var(--paper); }
+  body.solo .doc > :not(.solo-host) { display: none; }
+  body.solo .doc { max-width: none; }
+</style>
+</head>
+<body>
+<div class="doc">
+  <h1>Launch an activity: wizard wireframes</h1>
+  <p class="lede">Low fidelity, for discussing the flow and how the space is shared. Each frame is drawn at its real viewport size and scaled down; the dashed line is the fold. Labels are in Spanish, as a teacher sees them in es-CL. Titles, cases and courses are fictional.</p>
+  <div class="legend"><span>fold (bottom of the viewport)</span><span class="n">numbered notes, explained under each frame</span></div>
+
+  <div class="open"><b>Open questions</b> (see the README):
+    <ul>
+      <li>Order of the list: most recently created first (today's order, by design id), or most recently launched first?</li>
+      <li>Should the description become required?</li>
+      <li>Should the dashboard's activity bar and the activity lists show the description next to the name, since the name is always the design's title?</li>
+      <li>AI services: one switch for the whole activity (drawn here), or one per service?</li>
+      <li>Should step 2 check whether each AI service is running before launch, instead of warning on the dashboard after it?</li>
+    </ul>
+  </div>
+
+  <h2>Today</h2>
+  <p class="metrics" id="today-metrics"></p>
+  <div class="shots">
+    <figure><img src="current/current-1366x768-fold.png" alt="Current Launch Activity page at 1366 by 768, first screen"><figcaption>1366 × 768, first screen: instructions, the search, and the top of the first design card.</figcaption></figure>
+    <figure><img src="current/current-1366x768-selected.png" alt="Current page after selecting a design, scrolled to step 2"><figcaption>After selecting a design, the page scrolls to step 2, at 2489 px. Step 2 does not say which design was chosen.</figcaption></figure>
+    <figure><img src="current/current-1920x1080-full.png" alt="Current page at 1920 by 1080, whole page"><figcaption>1920 × 1080, whole page: five 353 px cards per page, 13 pages for 65 designs.</figcaption></figure>
+  </div>
+
+  <h2>A. 1920 × 1080: step 1, choose a design</h2>
+  <p class="metrics" data-metrics="A"></p>
+  <div id="A"></div>
+  <ol class="notes">
+    <li><b>Stepper.</b> Two steps, always visible: "Elegir diseño" and "Identificar y lanzar". The current step is marked; a completed step shows a check and can be clicked to go back. It is a <code>nav</code> with <code>aria-current="step"</code>.</li>
+    <li><b>Find a design.</b> The search filters as the teacher types (title, case and tags), with no typeahead popup. The type chips narrow the list. The list states its order, "Más recientes primero", and its count.</li>
+    <li><b>One line per design</b>, instead of a 353 px card: a radio, the title, the type, the number of phases and the case, then the AI services the design uses and when it was last launched. The whole row selects; there are no other buttons. 11 designs fit on the first screen.</li>
+    <li><b>Designs that cannot be launched are explained, not silently hidden.</b> Designs with errors are not listed, and the footer says how many and links to Diseños. Archived designs are not listed either.</li>
+    <li><b>Preview of the selected design</b>, so the teacher can check it without leaving the page: type, phases with their mode, questions and AI services, the case, and when it was created and last launched. "Ver diseño completo" opens the design in a new tab, so the wizard keeps its state.</li>
+    <li><b>Action bar, fixed to the bottom.</b> It names the chosen design and moves on: "Siguiente: identificar la actividad". The button is disabled until a design is selected. Double-clicking a row also moves on.</li>
+  </ol>
+
+  <h2>B. 1366 × 768: step 1, narrower</h2>
+  <p class="metrics" data-metrics="B"></p>
+  <div id="B"></div>
+  <ol class="notes">
+    <li>Same structure, with a 380 px preview. The row drops the type and phases from its second line when they do not fit; the preview shows them.</li>
+    <li>6 designs fit on the first screen, against no full card today.</li>
+  </ol>
+
+  <h2>C. 1366 × 768: step 2, identify and launch</h2>
+  <p class="metrics" data-metrics="C"></p>
+  <div id="C"></div>
+  <ol class="notes">
+    <li><b>The chosen design stays in sight</b>, with "Cambiar diseño" to go back to step 1. The selection, the search and the scroll position of step 1 are kept.</li>
+    <li><b>Description, to recognize the activity later.</b> The label and the help say what it is for: course, section, semester or date. Under it, the descriptions this teacher used in their last activities, as chips that fill the field in one click.</li>
+    <li><b>AI services of the design</b>, on by default. One switch turns them off for this activity only; the design does not change. The list shows which service runs in which phase. A design with no AI services shows one line instead: "Este diseño no usa servicios de IA."</li>
+    <li><b>How it will look</b>: a preview of the activity card in Actividades, with the description highlighted. The name is the design's title, as today.</li>
+    <li><b>What launching does.</b> Launching opens the activity's dashboard, and the design becomes read-only, as today; the note says so before launch, and that it can be duplicated to edit it.</li>
+    <li><b>"Lanzar actividad"</b>, the only primary action. While the launch runs, it shows "Preparando el panel…" and is disabled. If the design turns out to be invalid, the message appears in this bar.</li>
+  </ol>
+
+  <h2>D. 1024 × 768: step 1, one column</h2>
+  <p class="metrics" data-metrics="D"></p>
+  <div id="D"></div>
+  <ol class="notes">
+    <li>Below 1200 px the app's side menu folds, and the stepper drops its second lines.</li>
+    <li>The preview moves into the list: the selected row expands under itself with the phases, the AI services and the case. Selecting another row collapses it.</li>
+    <li>The action bar stays fixed to the bottom.</li>
+  </ol>
+
+  <h2>E. 1024 × 768: step 2, AI services off</h2>
+  <p class="metrics" data-metrics="E"></p>
+  <div id="E"></div>
+  <ol class="notes">
+    <li><b>AI services turned off.</b> The services are struck through, and a note says what changes: the phases run without the tutor and the discussion agent; the design keeps them for later activities.</li>
+    <li>In one column the activity card preview sits under the form. The action bar keeps "Atrás" and "Lanzar actividad" in sight.</li>
+  </ol>
+</div>
+
+<script>
+  const DESIGNS = [
+    { t: "Privacidad en apps de salud", type: "Diferencial semántico", phases: 3, cs: "Datos de pacientes en la nube", ai: ["Tutor", "Agente"], when: "Lanzado 2 veces · 28 oct." },
+    { t: "Dilema del examen: ayudar a un compañero", type: "Diferencial semántico", phases: 2, cs: "El examen de Sebastián", ai: ["Tutor"], when: "Lanzado 5 veces · 21 oct." },
+    { t: "Responsabilidades en el colapso del puente", type: "Ranking", phases: 2, cs: "El puente del río Claro", ai: [], when: "Nunca lanzado" },
+    { t: "Conflicto de interés en consultoría", type: "Diferencial semántico", phases: 3, cs: "La consultora y el municipio", ai: ["Agente"], when: "Lanzado 1 vez · 2 sep." },
+    { t: "Seguridad frente a plazos en obra", type: "Diferencial semántico", phases: 2, cs: "Andamios en la torre B", ai: ["Tutor"], when: "Lanzado 3 veces · 18 ago." },
+    { t: "Denunciar una falla de software", type: "Diferencial semántico", phases: 2, cs: "El bug del sistema de frenos", ai: [], when: "Lanzado 4 veces · 30 jul." },
+    { t: "IA generativa en la evaluación", type: "Diferencial semántico", phases: 3, cs: "El ensayo de Camila", ai: ["Tutor", "Agente"], when: "Lanzado 2 veces · 9 jul." },
+    { t: "Datos abiertos municipales", type: "Ranking", phases: 2, cs: "Mapa de la delincuencia", ai: [], when: "Lanzado 1 vez · 12 jun." },
+    { t: "Accesibilidad en el diseño de software", type: "Diferencial semántico", phases: 2, cs: "El portal de trámites", ai: ["Tutor"], when: "Nunca lanzado" },
+    { t: "Propiedad intelectual en la tesis", type: "Diferencial semántico", phases: 2, cs: "El código del laboratorio", ai: [], when: "Lanzado 2 veces · 20 may." },
+    { t: "Impacto ambiental de la planta", type: "Ranking", phases: 3, cs: "La planta de celulosa", ai: ["Agente"], when: "Lanzado 1 vez · 8 may." },
+    { t: "Sesgo en el algoritmo de admisión", type: "Diferencial semántico", phases: 2, cs: "Admisión automatizada", ai: ["Tutor"], when: "Lanzado 3 veces · 14 abr." },
+    { t: "Regalos de proveedores", type: "Diferencial semántico", phases: 2, cs: "La cena de fin de año", ai: [], when: "Lanzado 6 veces · 2 abr." },
+    { t: "Ética del trabajo remoto", type: "Diferencial semántico", phases: 2, cs: "Monitoreo de pantallas", ai: [], when: "Nunca lanzado" },
+    { t: "Pruebas con animales", type: "Ranking", phases: 2, cs: "El laboratorio de toxicología", ai: [], when: "Lanzado 1 vez · 3 mar." },
+    { t: "Plagio en el informe final", type: "Diferencial semántico", phases: 2, cs: "Dos informes muy parecidos", ai: ["Tutor"], when: "Lanzado 2 veces · 27 feb." },
+  ];
+  const SELECTED = 0;
+  const PHASES = [
+    ["Fase 1", "Individual · 2 preguntas", "Tutor de argumentación"],
+    ["Fase 2", "Grupal, grupos de 3 · chat · 2 preguntas", "Agente de discusión (abogado del diablo)"],
+    ["Fase 3", "Individual · 2 preguntas", "Tutor de argumentación"],
+  ];
+  const AI_LABEL = { Tutor: "Tutor", Agente: "Agente" };
+
+  function stepper(step, compact) {
+    const s1 = step === 1 ? "now" : "done";
+    const s2 = step === 2 ? "now" : "";
+    return `<nav class="stepper${compact ? " compact" : ""}">
+      <span class="st ${s1}"><i>${step === 1 ? "1" : "✓"}</i><span>Elegir diseño<small>${step === 1 ? "Busca y selecciona" : DESIGNS[SELECTED].t}</small></span></span>
+      <span class="st-line"></span>
+      <span class="st ${s2}"><i>2</i><span>Identificar y lanzar<small>Descripción y servicios de IA</small></span></span>
+    </nav>`;
+  }
+
+  function row(d, i, { narrow, inline }) {
+    const sel = i === SELECTED;
+    const meta = narrow ? `Caso: ${d.cs}` : `${d.type} · ${d.phases} fases · Caso: ${d.cs}`;
+    const ai = d.ai.map((a) => `<span class="chip ai">${AI_LABEL[a]}</span>`).join("");
+    const extra = sel && inline
+      ? `<div class="inline">${PHASES.map((p) => `<div class="ph-row"><b>${p[0]}</b><span>${p[1]}<br><span class="ai-line">✦ ${p[2]}</span></span></div>`).join("")}
+         <div class="sub" style="margin-top:6px">Creado el 12 sep. · ${d.when} · <span style="color:var(--accent)">Ver diseño completo ↗</span></div></div>`
+      : "";
+    return `<div class="row${sel ? " sel" : ""}"><span class="radio"></span>
+      <span style="min-width:0"><div class="t">${d.t}</div><div class="m">${meta}</div></span>
+      <span class="r">${ai}<span class="when">${d.when}</span></span>${extra}</div>`;
+  }
+
+  function step1({ layout, rows }) {
+    const narrow = layout === "two-narrow";
+    const one = layout === "one";
+    const list = `<div class="box list">
+        ${DESIGNS.slice(0, rows).map((d, i) => row(d, i, { narrow, inline: one })).join("")}
+        <div class="listfoot"><span>Mostrando ${rows} de 24 · <span style="color:var(--accent)">Mostrar más</span></span><span>3 diseños con errores no aparecen · <span style="color:var(--accent)">Revisar en Diseños</span></span></div>
+      </div>`;
+    const tools = `<div class="tools"><span class="search">🔍 Buscar por título, caso o etiqueta</span>
+        <span class="chip on">Todos</span><span class="chip">Diferencial semántico</span><span class="chip">Ranking</span>
+        <span class="sub sort">Más recientes primero ▾ · 24 diseños</span></div>`;
+    if (one) return tools + list;
+    const d = DESIGNS[SELECTED];
+    const preview = `<div class="box preview">
+        <div class="sub">Vista previa</div>
+        <h4>${d.t}</h4>
+        <div class="kv"><span class="chip">${d.type}</span><span class="chip">${d.phases} fases</span><span class="chip ai">✦ 2 servicios de IA</span></div>
+        <div class="case"><span>📖 Caso: <b>${d.cs}</b></span><span style="color:var(--accent)">Ver caso ↗</span></div>
+        ${PHASES.map((p) => `<div class="ph-row"><b>${p[0]}</b><span>${p[1]}<br><span class="ai-line">✦ ${p[2]}</span></span></div>`).join("")}
+        <div class="sub" style="margin:10px 0 12px">Creado el 12 sep. · ${d.when}</div>
+        <span class="btn">Ver diseño completo ↗</span>
+      </div>`;
+    return `<div class="cols" style="grid-template-columns: minmax(0, 1fr) ${narrow ? 380 : 460}px">
+        <div>${tools}${list}</div>${preview}</div>`;
+  }
+
+  function step2({ layout, aiOff }) {
+    const one = layout === "one";
+    const d = DESIGNS[SELECTED];
+    const chosen = `<div class="box card chosen"><span style="min-width:0"><div class="sub">Diseño elegido</div>
+        <div class="lbl" style="font-size:17px">${d.t}</div><div class="sub">${d.type} · ${d.phases} fases · Caso: ${d.cs}</div></span>
+        <span class="btn link">← Cambiar diseño</span></div>`;
+    const desc = `<div class="box card desc">
+        <div class="field-label">Descripción de la actividad <span class="req">*</span></div>
+        <div class="input">Ética Profesional · Sección 3 · 2026-2<span class="caret"></span></div>
+        <div class="help">Para reconocerla después en Actividades: curso, sección, semestre o fecha.</div>
+        <div class="suggest"><span class="sub">Usadas antes:</span><span class="chip">Ética Profesional · Sección 3 · 2026-2</span><span class="chip">Ética Profesional · Sección 1 · 2026-2</span><span class="chip">Taller de Ingeniería · 2026-2</span></div>
+      </div>`;
+    const svc = PHASES.map((p) => `<div class="svc${aiOff ? " off" : ""}"><b>${p[0]}</b><span class="ai-line">✦ ${p[2]}</span></div>`).join("");
+    const ai = `<div class="box card ai-card">
+        <div class="sw-row"><span class="switch${aiOff ? " off" : ""}"></span><span><div class="lbl">Usar los servicios de IA de este diseño</div>
+        <div class="sub">${aiOff ? "Desactivados para esta actividad." : "Activados por defecto. Puedes desactivarlos solo para esta actividad."}</div></span></div>
+        <div style="margin-top:10px">${svc}</div>
+        ${aiOff ? '<div class="callout warn">Las fases se realizarán sin tutor ni agente de discusión. El diseño no cambia: los conserva para tus próximas actividades.</div>' : ""}
+      </div>`;
+    const card = `<div class="box card look"><h4>Así la verás en Actividades</h4>
+        <div class="actcard"><div class="top">${d.t}</div><div class="body">
+        <span>✱ Descripción: <span class="hl">Ética Profesional · Sección 3 · 2026-2</span></span>
+        <span class="sub">● Iniciada · Código k00347 · Hoy</span></div></div>
+        <div class="callout info lock">🔒 Al lanzarla, el diseño queda bloqueado para edición. Podrás duplicarlo si necesitas cambiarlo.</div></div>`;
+    if (one) return `<div style="display:grid; gap:14px">${chosen}${desc}${ai}${card}</div>`;
+    return `<div class="cols" style="grid-template-columns: minmax(0, 1fr) 400px">
+        <div style="display:grid; gap:14px">${chosen}${desc}${ai}</div>${card}</div>`;
+  }
+
+  function frame(hostId, { width, height, appNav, step, layout, rows = 10, aiOff = false, notes = [] }) {
+    const host = document.getElementById(hostId);
+    const solo = new URLSearchParams(location.search).get("frame");
+    if (solo && solo !== hostId) return;
+    if (solo) { document.body.classList.add("solo"); host.classList.add("solo-host"); host.parentElement.appendChild(host); }
+
+    const wrap = document.createElement("div");
+    wrap.className = "frame-wrap";
+    const f = document.createElement("div");
+    f.className = "frame wf";
+    f.style.width = width + "px";
+    f.style.height = height + 40 + "px";
+
+    f.insertAdjacentHTML("beforeend", `<div class="appbar"><span style="font-size:26px">☰</span><span class="lbl" style="font-size:28px;color:var(--accent)">EthicApp</span><span style="flex:1"></span><span class="sub">Docente 650</span></div>`);
+    if (appNav) {
+      f.insertAdjacentHTML("beforeend", `<div class="appnav"><div class="item">Inicio</div><div class="item on">Lanzar Actividad</div><div class="item">Actividades</div><div class="item">Diseños</div><div class="item">Casos</div></div>`);
+    }
+
+    const content = document.createElement("div");
+    content.className = "content";
+    content.style.left = (appNav ? 244 : 0) + "px";
+    content.innerHTML = `<div class="head"><h3>🚀 Lanzar una actividad</h3>${stepper(step, layout === "one")}</div>`
+      + (step === 1 ? step1({ layout, rows }) : step2({ layout, aiOff }));
+    f.appendChild(content);
+
+    const actions = document.createElement("div");
+    actions.className = "actions";
+    actions.style.left = (appNav ? 244 : 0) + "px";
+    actions.innerHTML = step === 1
+      ? `<span class="btn">Cancelar</span><span class="grow sub">Elegido: <b style="color:var(--ink)">${DESIGNS[SELECTED].t}</b></span><span class="btn primary">Siguiente: identificar la actividad →</span><span class="sticky-tag">fija abajo</span>`
+      : `<span class="btn">← Atrás</span><span class="grow sub">${aiOff ? "Sin servicios de IA" : "Con 2 servicios de IA"} · ${DESIGNS[SELECTED].t}</span><span class="btn primary">🚀 Lanzar actividad</span><span class="sticky-tag">fija abajo</span>`;
+    f.appendChild(actions);
+
+    const fold = document.createElement("div");
+    fold.className = "fold";
+    fold.style.top = height + "px";
+    fold.dataset.label = `fold · ${width} × ${height}`;
+    f.appendChild(fold);
+
+    wrap.appendChild(f);
+    host.appendChild(wrap);
+
+    const scaleOf = () => (solo ? 1 : Math.min(1, wrap.clientWidth / width));
+    const place = () => {
+      const s = scaleOf();
+      f.style.transform = `scale(${s})`;
+      wrap.style.height = Math.round((height + 40) * s) + "px";
+      if (solo) wrap.style.width = width + "px";
+    };
+    place();
+    window.addEventListener("resize", place);
+    actions.style.top = height - actions.offsetHeight + "px";
+
+    const s = scaleOf();
+    const origin = f.getBoundingClientRect();
+    const box = (el) => {
+      const r = el.getBoundingClientRect();
+      return { left: (r.left - origin.left) / s, top: (r.top - origin.top) / s, width: r.width / s, height: r.height / s };
+    };
+
+    for (const [selector, number, dx = 0] of notes) {
+      const el = f.querySelector(selector);
+      if (!el) continue;
+      const r = box(el);
+      const n = document.createElement("span");
+      n.className = "n";
+      n.textContent = number;
+      n.style.left = Math.max(0, r.left - 14 + dx) + "px";
+      n.style.top = Math.max(0, r.top - 14) + "px";
+      f.appendChild(n);
+    }
+
+    // Measurements of this frame: what fits above the action bar.
+    const out = document.querySelector(`[data-metrics="${hostId}"]`);
+    if (!out) return;
+    const limit = box(actions).top;
+    if (step === 1) {
+      const rowsIn = [...f.querySelectorAll(".row")].filter((r) => { const b = box(r); return b.top + b.height <= limit; }).length;
+      const firstRow = Math.round(box(f.querySelector(".row")).top);
+      out.innerHTML = `First design at <b>${firstRow} px</b> (today: 506 px). <b>${rowsIn} designs</b> fully visible above the action bar (today: ${width >= 1920 ? "1" : "none"}). The next step is always in view.`;
+    } else {
+      const last = [...f.querySelectorAll(".content .box")].map(box).reduce((m, b) => Math.max(m, b.top + b.height), 0);
+      out.innerHTML = last <= limit
+        ? `The whole step fits above the action bar (content ends at <b>${Math.round(last)} px</b>, bar at ${Math.round(limit)} px): no scrolling to launch.`
+        : `Content ends at <b>${Math.round(last)} px</b>; the page scrolls under the fixed action bar (at ${Math.round(limit)} px), and "Lanzar actividad" is always in view. Today step 2 starts at 2489 px.`;
+    }
+  }
+
+  document.getElementById("today-metrics").innerHTML =
+    "Measured on the local stack with 65 launchable designs: a fixed-width column with the instructions first, then <b>five 353 px cards per page</b> (13 pages), each with a title link, validity, lock warning, date, type, visibility, license, case, phases and 2 buttons. The first card starts at <b>506 px</b>: at 1920 × 1080 one card fits on the first screen, at 1366 × 768 and 1024 × 768 none does. Selecting a design reveals step 2 at <b>2489 px</b> and scrolls there, out of sight of the list; step 2 does not name the chosen design.";
+
+  frame("A", { width: 1920, height: 1080, appNav: true, step: 1, layout: "two", rows: 16,
+    notes: [[".stepper", 1, -30], [".tools", 2], [".row.sel", 3], [".listfoot", 4, 560], [".preview", 5], [".actions .btn.primary", 6, -30]] });
+  frame("B", { width: 1366, height: 768, appNav: true, step: 1, layout: "two-narrow", rows: 10,
+    notes: [[".preview", 1], [".list", 2]] });
+  frame("C", { width: 1366, height: 768, appNav: true, step: 2, layout: "two-narrow",
+    notes: [[".chosen", 1], [".desc", 2], [".ai-card", 3], [".look", 4], [".lock", 5, -24], [".actions .btn.primary", 6, -30]] });
+  frame("D", { width: 1024, height: 768, appNav: false, step: 1, layout: "one", rows: 8,
+    notes: [[".stepper", 1, -30], [".row.sel .inline", 2], [".actions .grow", 3]] });
+  frame("E", { width: 1024, height: 768, appNav: false, step: 2, layout: "one", aiOff: true,
+    notes: [[".ai-card", 1], [".actions .btn.primary", 2, -30]] });
+</script>
+</body>
+</html>
