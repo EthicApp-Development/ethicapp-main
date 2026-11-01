@@ -152,7 +152,8 @@ Older activities without a description keep showing the name alone.
 ### Entry points
 
 - **The side menu's "Lanzar Actividad" and the home page** open step 1.
-- **A design's "Lanzar Actividad" button** (Diseños, the design view) opens `#!/activities/new/:designId` directly on step 2, with that design chosen. "Cambiar diseño" leads to step 1 with it selected.
+- **The design view's "Lanzar Actividad" button** opens `#!/activities/new/:designId` directly on step 2, with that design chosen. "Cambiar diseño" leads to step 1 with it selected.
+- **Diseños has no launch action** (decided 2026-11-01 in [`../designs-index`](../designs-index/README.md), #962). Its role line links to step 1.
 - **The browser's back button** moves from step 2 to step 1. The step is part of the URL, for example `?step=2`.
 
 ### Where today's pieces go
