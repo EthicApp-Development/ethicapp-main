@@ -1,0 +1,435 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Designs Index Wireframes</title>
+<style>
+  :root {
+    --ink: #2b2b2b; --muted: #6b6b6b; --line: #9a9a9a; --fill: #e9e9e9; --fill-2: #f4f4f4;
+    --paper: #ffffff; --page: #d9dde3; --accent: #1f5fd1; --accent-ink: #ffffff; --note: #c2410c;
+    --ok: #2f7d32; --ok-fill: #d7ecd8; --warn: #8a5a00; --warn-fill: #fff3d6; --danger: #b42318;
+    --danger-fill: #fde7e4; --fold: #d61f69; --sel: #dbe7ff; --off: #b9b9b9; --shade: rgba(0,0,0,.38);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ink: #e6e6e6; --muted: #a9a9a9; --line: #6f6f6f; --fill: #3a3a3a; --fill-2: #2f2f2f;
+      --paper: #232323; --page: #15171a; --accent: #7aa7ff; --accent-ink: #10203f; --note: #ff9a5c;
+      --ok: #7fd18a; --ok-fill: #29452c; --warn: #ffd27a; --warn-fill: #3d3220; --danger: #ff8a80;
+      --danger-fill: #4a2522; --fold: #ff6fae; --sel: #22324f; --off: #555555; --shade: rgba(0,0,0,.6);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ink: #e6e6e6; --muted: #a9a9a9; --line: #6f6f6f; --fill: #3a3a3a; --fill-2: #2f2f2f;
+    --paper: #232323; --page: #15171a; --accent: #7aa7ff; --accent-ink: #10203f; --note: #ff9a5c;
+    --ok: #7fd18a; --ok-fill: #29452c; --warn: #ffd27a; --warn-fill: #3d3220; --danger: #ff8a80;
+    --danger-fill: #4a2522; --fold: #ff6fae; --sel: #22324f; --off: #555555; --shade: rgba(0,0,0,.6);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 24px 16px 64px; background: var(--page); color: var(--ink);
+    font: 15px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  .doc { max-width: 1100px; margin: 0 auto; }
+  h1 { font-size: 26px; margin: 0 0 4px; }
+  h2 { font-size: 20px; margin: 40px 0 6px; }
+  .lede { color: var(--muted); margin: 0 0 16px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 13px; color: var(--muted); margin: 8px 0 0; }
+  .legend span::before { content: ""; display: inline-block; width: 18px; height: 0; border-top: 2px dashed var(--fold); vertical-align: middle; margin-right: 6px; }
+  .legend span.n::before { width: 14px; height: 14px; border: 0; border-radius: 50%; background: var(--note); }
+  .metrics { font-size: 13px; color: var(--muted); margin: 6px 0 10px; }
+  .metrics b { color: var(--ink); }
+  .open { background: var(--paper); border-left: 4px solid var(--note); border-radius: 6px; padding: 10px 16px; font-size: 14px; margin: 10px 0 0; }
+  .open ul { margin: 4px 0 0; padding-left: 20px; }
+  .roles { width: 100%; border-collapse: collapse; background: var(--paper); border-radius: 6px; overflow: hidden; font-size: 14px; margin-top: 10px; }
+  .roles th, .roles td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--fill); vertical-align: top; }
+  .roles th { background: var(--fill-2); }
+  .notes { background: var(--paper); border-radius: 6px; padding: 12px 18px 12px 36px; margin: 12px 0 0; font-size: 14px; }
+  .notes li { margin: 4px 0; }
+  .notes li::marker { color: var(--note); font-weight: 700; }
+  figure { margin: 10px 0 0; }
+  figure img { width: 100%; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,.25); display: block; }
+  figcaption { font-size: 13px; color: var(--muted); margin-top: 6px; }
+  .shots { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+
+  /* A frame draws a viewport at its real pixel size, scaled down to fit. */
+  .frame-wrap { position: relative; overflow: hidden; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,.25); background: var(--paper); }
+  .frame { position: absolute; top: 0; left: 0; transform-origin: 0 0; background: var(--fill-2); overflow: hidden; }
+  .fold { position: absolute; left: 0; right: 0; border-top: 3px dashed var(--fold); z-index: 40; }
+  .fold::after { content: attr(data-label); position: absolute; right: 8px; top: 6px; background: var(--fold); color: #fff; font-size: 18px; padding: 2px 8px; border-radius: 4px; }
+
+  /* Wireframe vocabulary, in viewport pixels. */
+  .wf { font-size: 16px; color: var(--ink); }
+  .box { background: var(--paper); border: 2px solid var(--line); border-radius: 6px; }
+  .lbl { font-weight: 600; }
+  .sub { color: var(--muted); font-size: 14px; }
+  .btn { display: inline-flex; align-items: center; gap: 6px; border: 2px solid var(--line); border-radius: 6px; padding: 7px 14px; background: var(--paper); font-size: 15px; white-space: nowrap; }
+  .btn.sm { padding: 3px 10px; font-size: 14px; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+  .btn.danger { background: var(--danger); border-color: var(--danger); color: #fff; font-weight: 600; }
+  .btn.ghost { border-color: transparent; color: var(--accent); }
+  .btn.disabled { color: var(--off); border-color: var(--fill); }
+  .chip { display: inline-block; border: 1.5px solid var(--line); border-radius: 999px; padding: 1px 10px; font-size: 14px; white-space: nowrap; }
+  .chip.on { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+  .n { position: absolute; width: 34px; height: 34px; border-radius: 50%; background: var(--note); color: #fff; font: 700 18px/34px sans-serif; text-align: center; z-index: 45; }
+
+  .appbar { position: absolute; left: 0; right: 0; top: 0; height: 68px; background: var(--paper); border-bottom: 2px solid var(--line); display: flex; align-items: center; gap: 18px; padding: 0 24px; z-index: 5; }
+  .appnav { position: absolute; left: 0; top: 68px; bottom: 0; width: 244px; background: var(--paper); border-right: 2px solid var(--line); padding: 24px 16px; }
+  .appnav .item { height: 40px; border-radius: 8px; margin: 0 0 16px; display: flex; align-items: center; padding: 0 14px; color: var(--muted); }
+  .appnav .item.on { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+  .content { position: absolute; top: 68px; right: 0; bottom: 0; overflow: hidden; padding: 20px 24px 24px; }
+
+  /* Page head: title, role, actions. */
+  .head { display: flex; align-items: flex-start; gap: 18px; margin-bottom: 14px; }
+  .head .titles { flex: 1; min-width: 0; }
+  .head h3 { margin: 0 0 4px; font-size: 26px; color: var(--accent); }
+  .head .role { font-size: 15px; color: var(--muted); }
+  .head .role a { color: var(--accent); text-decoration: none; font-weight: 600; }
+  .head .acts { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+  .tabs { display: flex; gap: 4px; border-bottom: 2px solid var(--line); margin-bottom: 12px; }
+  .tab { padding: 8px 14px; border: 2px solid transparent; border-bottom: 0; border-radius: 6px 6px 0 0; color: var(--muted); white-space: nowrap; }
+  .tab.on { border-color: var(--line); background: var(--paper); color: var(--ink); font-weight: 600; margin-bottom: -2px; }
+  .tab .count { font-size: 13px; color: var(--muted); font-weight: 400; margin-left: 4px; }
+  .tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
+  .search { flex: 0 1 340px; height: 38px; border: 2px solid var(--line); border-radius: 6px; padding: 7px 12px; color: var(--muted); background: var(--paper); }
+  .tools .sep { width: 1px; height: 26px; background: var(--line); margin: 0 4px; }
+  .tools .sort { margin-left: auto; }
+  .banner { border-radius: 6px; padding: 10px 14px; font-size: 14px; background: var(--paper); border: 1.5px solid var(--fill); margin-bottom: 10px; }
+
+  /* The management table. */
+  table.dt { width: 100%; border-collapse: collapse; background: var(--paper); font-size: 15px; }
+  table.dt th { text-align: left; padding: 9px 12px; border-bottom: 2px solid var(--line); background: var(--fill-2); white-space: nowrap; font-size: 14px; }
+  table.dt td { padding: 9px 12px; border-bottom: 1px solid var(--fill); vertical-align: middle; }
+  table.dt td.t { max-width: 1px; width: 40%; }
+  table.dt td.t .title { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  table.dt td.t .meta { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  table.dt td.acts { text-align: right; white-space: nowrap; width: 1%; }
+  table.dt tr.hl td { background: var(--sel); }
+  table.dt tr.hl td:first-child { box-shadow: inset 4px 0 0 var(--accent); }
+  .st { display: inline-flex; align-items: center; gap: 5px; font-size: 14px; white-space: nowrap; }
+  .st.ok { color: var(--ok); }
+  .st.err { color: var(--danger); }
+  .st.use { color: var(--warn); }
+  .switch { display: inline-block; width: 40px; height: 22px; border-radius: 11px; background: var(--off); position: relative; vertical-align: middle; }
+  .switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; }
+  .switch.on { background: var(--ok); }
+  .switch.on::after { left: 21px; }
+  .switch.na { background: var(--fill); }
+  .kebab { display: inline-grid; place-items: center; width: 34px; height: 32px; border: 2px solid var(--line); border-radius: 6px; margin-left: 6px; font-weight: 700; }
+  .menu { position: absolute; z-index: 30; width: 300px; background: var(--paper); border: 2px solid var(--line); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.2); padding: 6px; font-size: 15px; }
+  .menu .mi { padding: 8px 10px; border-radius: 6px; display: flex; justify-content: space-between; gap: 10px; }
+  .menu .mi.focus { background: var(--fill-2); }
+  .menu .mi.danger { color: var(--danger); }
+  .menu .mi.dis { color: var(--off); }
+  .menu .mi small { color: var(--muted); font-size: 12px; }
+  .menu hr { border: 0; border-top: 1px solid var(--fill); margin: 4px 0; }
+  .foot { display: flex; justify-content: space-between; padding: 10px 4px; font-size: 14px; color: var(--muted); }
+  .toast { position: absolute; z-index: 35; width: 460px; background: var(--ink); color: var(--paper); border-radius: 8px; padding: 12px 14px; font-size: 14px; box-shadow: 0 8px 24px rgba(0,0,0,.25); }
+  .toast a { color: #9cc0ff; font-weight: 600; }
+  .shade { position: absolute; inset: 0; background: var(--shade); z-index: 32; }
+  .modal { position: absolute; z-index: 34; width: 520px; background: var(--paper); border-radius: 10px; box-shadow: 0 12px 36px rgba(0,0,0,.35); }
+  .modal .mh { padding: 16px 20px 6px; font-size: 19px; font-weight: 700; }
+  .modal .mb { padding: 4px 20px 14px; font-size: 15px; }
+  .modal .mf { padding: 12px 20px; border-top: 1px solid var(--fill); display: flex; justify-content: flex-end; gap: 10px; }
+  .cards { display: grid; gap: 8px; }
+  .card { padding: 10px 12px; }
+  .card .row1 { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+  .card .row2 { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 6px; }
+
+  /* ?frame=X renders one frame alone at its real size, for the PNGs in frames/. */
+  body.solo { padding: 0; background: var(--paper); }
+  body.solo .doc > :not(.solo-host) { display: none; }
+  body.solo .doc { max-width: none; }
+</style>
+</head>
+<body>
+<div class="doc">
+  <h1>Designs: management page wireframes</h1>
+  <p class="lede">Low fidelity, for discussing the role of the page and how it differs from "Lanzar actividad". Each frame is drawn at its real viewport size and scaled down; the dashed line is the fold. Labels are in Spanish, as a teacher sees them in es-CL. Titles, cases and people are fictional.</p>
+  <div class="legend"><span>fold (bottom of the viewport)</span><span class="n">numbered notes, explained under each frame</span></div>
+
+  <h2>Two pages, two jobs</h2>
+  <p class="lede" style="margin-bottom:0">Today both pages show the same 350–380 px design card with the same controller, and the first button of every card in Diseños is "Lanzar Actividad". The proposal makes each page look like what it does.</p>
+  <table class="roles">
+    <tr><th></th><th>Diseños (this proposal)</th><th>Lanzar actividad (<code>docs/design/launch-activity-wizard</code>)</th></tr>
+    <tr><td><b>Job</b></td><td>Create, edit, organize and share designs; import designs other teachers shared.</td><td>Choose one design and start an activity with it.</td></tr>
+    <tr><td><b>What it lists</b></td><td>All the teacher's designs, including those with errors; the designs other teachers shared; the archived designs.</td><td>Only the teacher's designs that can be launched.</td></tr>
+    <tr><td><b>Shape</b></td><td>A table: status, sharing and edit actions on every row; tabs for mine, shared by others and archived.</td><td>A two-step wizard: rows with a radio button, a preview, and a fixed bar with "Siguiente".</td></tr>
+    <tr><td><b>Primary action</b></td><td>"Nuevo diseño"; per row, "Editar" (or "Corregir", "Duplicar para editar"); in "Compartidos por otros", "Importar".</td><td>"Lanzar actividad".</td></tr>
+    <tr><td><b>Bridge to the other</b></td><td>The role line links to Lanzar actividad. Rows have no launch action.</td><td>The list's footer links to Diseños with the "Con errores" filter.</td></tr>
+  </table>
+
+  <div class="open"><b>Decisions, 2026-11-01</b> (see the README):
+    <ul>
+      <li>Diseños has no launch action: "Lanzar actividad con este diseño" left the row menu.</li>
+      <li>The tab of others' designs is "Compartidos por otros".</li>
+      <li>A click on a row's title opens the design's view, not the editor.</li>
+      <li>A design that has copies can be deleted; the copies keep their source title, author and license (#963).</li>
+    </ul>
+  </div>
+
+  <h2>Today</h2>
+  <p class="metrics" id="today-metrics"></p>
+  <div class="shots">
+    <figure><img src="current/current-1366x768-fold.png" alt="Current designs page at 1366 by 768, first screen"><figcaption>1366 × 768, first screen ("Tuyos"): the first card's details and, at the fold, its buttons, the first of which is "Lanzar Actividad".</figcaption></figure>
+    <figure><img src="current/current-1366x768-by-others.png" alt="Current designs page, tab De otros"><figcaption>"De otros": the same card, with "Importar diseño". The page's only explanation is about importing, on every tab.</figcaption></figure>
+    <figure><img src="current/current-1920x1080-full.png" alt="Current designs page at 1920 by 1080, whole page"><figcaption>1920 × 1080, whole page: five 376 px cards per page, 14 pages for 68 designs.</figcaption></figure>
+  </div>
+
+  <h2>A. 1920 × 1080: my designs</h2>
+  <p class="metrics" data-metrics="A"></p>
+  <div id="A"></div>
+  <ol class="notes">
+    <li><b>The page says what it is for.</b> "Crea, edita y organiza tus diseños, o importa los que otros docentes comparten." and, next to it, the way out for the other task: "¿Quieres usar uno con tus estudiantes? Lanzar actividad →".</li>
+    <li><b>Page actions:</b> "+ Nuevo diseño" (primary) and "Importar diseño compartido", which opens the "Compartidos por otros" tab.</li>
+    <li><b>Tabs with counts:</b> "Mis diseños", "Compartidos por otros", "Archivados" (today "Tuyos", "De otros", "Archivadas"). The tab is part of the URL, so links can open one directly.</li>
+    <li><b>Filters for management, not for launching:</b> search over title, case and tags; type; status ("Listos", "Con errores", "En uso", "Compartidos"). The order is stated: "Más recientes primero".</li>
+    <li><b>One table row per design</b>, 12 on the first screen against one card today:
+      <ul>
+        <li><b>Diseño:</b> title, with the case and the number of phases under it. A click on the title opens the design's view, not the editor.</li>
+        <li><b>Estado:</b> "● Listo"; "⚠ 2 errores", which cannot be launched yet; or "🔒 En uso · 3 actividades", which cannot be edited or deleted. The lock and error lines of today's card become this one column.</li>
+        <li><b>Compartido:</b> the switch that shares the design with other teachers, as today's "Compartir Diseño". A design with errors cannot be shared, so its switch is disabled.</li>
+      </ul></li>
+    <li><b>One visible action per row, the one that fits its state:</b> "Editar" for a ready design, "Corregir" for one with errors, "Duplicar para editar" for one in use. Everything else is in the row's "⋯" menu.</li>
+    <li><b>The row menu</b> (open on the third row): Ver, Duplicar, Archivar, and Eliminar, in red and last. It has no launch entry: launching starts from Lanzar actividad. For a design in use, Eliminar is disabled and says why: "en uso por 3 actividades".</li>
+  </ol>
+
+  <h2>B. 1366 × 768: designs with errors</h2>
+  <p class="metrics" data-metrics="B"></p>
+  <div id="B"></div>
+  <ol class="notes">
+    <li><b>The "Con errores" filter is on.</b> This is where the wizard's "3 diseños con errores no aparecen · Revisar en Diseños" lands (<code>#!/designs?status=errors</code>).</li>
+    <li>Each row says how many errors it has and offers "Corregir", which opens the editor on the first error.</li>
+    <li>At this width the type moves under the title; the columns are Diseño, Estado, Compartido and the actions.</li>
+  </ol>
+
+  <h2>C. 1366 × 768: designs shared by others, after an import</h2>
+  <p class="metrics" data-metrics="C"></p>
+  <div id="C"></div>
+  <ol class="notes">
+    <li><b>What the tab holds, in one line:</b> designs other teachers shared; importing one creates a private, editable copy in Mis diseños, and the original does not change.</li>
+    <li><b>Rows show what matters to decide an import:</b> author, case, license and type. The case is public, since a shared design needs a public case.</li>
+    <li><b>"Importar" is the row's only action.</b> A design already imported shows "Importado · Ver copia" instead, so it is not imported twice by mistake.</li>
+    <li><b>A design that can no longer be imported</b> because its case stopped being public says so, with the button disabled.</li>
+    <li><b>After importing,</b> a notice names the new copy and offers "Editar copia" and "Ver en Mis diseños". Today the notice says only "Diseño importado en tu colección" and stays for 100 seconds.</li>
+  </ol>
+
+  <h2>D. 1366 × 768: deleting asks first</h2>
+  <p class="metrics" data-metrics="D"></p>
+  <div id="D"></div>
+  <ol class="notes">
+    <li><b>Eliminar asks for confirmation.</b> Today the button deletes at once. The dialog names the design and says it cannot be undone; the confirm button repeats the action, "Eliminar diseño". Copies of the design stay, with their source title, author and license (#963).</li>
+    <li>It suggests the reversible alternative: "Si solo quieres quitarlo de la vista, archívalo."</li>
+  </ol>
+
+  <h2>E. 1024 × 768: one column</h2>
+  <p class="metrics" data-metrics="E"></p>
+  <div id="E"></div>
+  <ol class="notes">
+    <li>Below 1200 px the app's menu folds, the role line wraps under the title, and the page actions stay at the top right.</li>
+    <li>The table becomes a list of compact rows: title and case, then status, sharing and the actions on a second line. The same row menu holds the other actions.</li>
+  </ol>
+</div>
+
+<script>
+  const MINE = [
+    { t: "Privacidad en apps de salud", cs: "Datos de pacientes en la nube", type: "Diferencial semántico", ph: 3, st: "use", uses: 2, shared: true },
+    { t: "Responsabilidades en el colapso del puente", cs: "El puente del río Claro", type: "Ranking", ph: 2, st: "ok", shared: false },
+    { t: "Dilema del examen: ayudar a un compañero", cs: "El examen de Sebastián", type: "Diferencial semántico", ph: 2, st: "use", uses: 5, shared: true },
+    { t: "Borrador: ética en la inteligencia artificial", cs: "Sin caso", type: "Diferencial semántico", ph: 1, st: "err", errs: 2, shared: false },
+    { t: "Conflicto de interés en consultoría", cs: "La consultora y el municipio", type: "Diferencial semántico", ph: 3, st: "use", uses: 1, shared: false },
+    { t: "Seguridad frente a plazos en obra", cs: "Andamios en la torre B", type: "Diferencial semántico", ph: 2, st: "use", uses: 3, shared: false },
+    { t: "Denunciar una falla de software", cs: "El bug del sistema de frenos", type: "Diferencial semántico", ph: 2, st: "use", uses: 4, shared: true },
+    { t: "Accesibilidad en el diseño de software", cs: "El portal de trámites", type: "Diferencial semántico", ph: 2, st: "ok", shared: false },
+    { t: "Ranking de prioridades en emergencias", cs: "Sin caso", type: "Ranking", ph: 2, st: "err", errs: 1, shared: false },
+    { t: "IA generativa en la evaluación", cs: "El ensayo de Camila", type: "Diferencial semántico", ph: 3, st: "use", uses: 2, shared: false },
+    { t: "Datos abiertos municipales", cs: "Mapa de la delincuencia", type: "Ranking", ph: 2, st: "use", uses: 1, shared: false },
+    { t: "Propiedad intelectual en la tesis", cs: "El código del laboratorio", type: "Diferencial semántico", ph: 2, st: "use", uses: 2, shared: false },
+    { t: "Impacto ambiental de la planta", cs: "La planta de celulosa", type: "Ranking", ph: 3, st: "use", uses: 1, shared: true },
+    { t: "Sesgo en el algoritmo de admisión", cs: "Admisión automatizada", type: "Diferencial semántico", ph: 2, st: "use", uses: 3, shared: false },
+    { t: "Regalos de proveedores", cs: "La cena de fin de año", type: "Diferencial semántico", ph: 2, st: "use", uses: 6, shared: false },
+    { t: "Pruebas con animales", cs: "El laboratorio de toxicología", type: "Ranking", ph: 2, st: "use", uses: 1, shared: false },
+    { t: "Plagio en el informe final", cs: "Dos informes muy parecidos", type: "Diferencial semántico", ph: 2, st: "use", uses: 2, shared: false },
+    { t: "Ética del trabajo remoto", cs: "Monitoreo de pantallas", type: "Diferencial semántico", ph: 2, st: "ok", shared: false },
+    { t: "Huella de carbono del data center", cs: "El centro de datos del norte", type: "Ranking", ph: 2, st: "use", uses: 1, shared: false },
+    { t: "Consentimiento en estudios con usuarios", cs: "La encuesta de la app", type: "Diferencial semántico", ph: 3, st: "ok", shared: false },
+    { t: "Proveedores y trabajo infantil", cs: "La cadena de suministro", type: "Ranking", ph: 2, st: "use", uses: 2, shared: false },
+    { t: "Responsabilidad en accidentes de vehículos autónomos", cs: "El cruce de la avenida", type: "Diferencial semántico", ph: 3, st: "use", uses: 1, shared: false },
+    { t: "Transparencia en reportes financieros", cs: "El balance del trimestre", type: "Diferencial semántico", ph: 2, st: "ok", shared: false },
+    { t: "Conflictos en el equipo de proyecto", cs: "La entrega atrasada", type: "Diferencial semántico", ph: 2, st: "use", uses: 3, shared: false },
+  ];
+  const SHARED = [
+    { t: "Dilemas de privacidad en redes sociales", by: "Prof. Andrea Rojas", cs: "La foto viral", lic: "CC BY-SA 4.0", type: "Diferencial semántico", ph: 3, state: "new" },
+    { t: "Ingeniería y comunidades indígenas", by: "Prof. Tomás Pérez", cs: "La represa del valle", lic: "CC BY 4.0", type: "Ranking", ph: 2, state: "imported" },
+    { t: "Algoritmos de contratación", by: "Prof. Lucía Herrera", cs: "El filtro de currículums", lic: "CC BY-SA 4.0", type: "Diferencial semántico", ph: 2, state: "new" },
+    { t: "Seguridad informática y divulgación", by: "Prof. Diego Soto", cs: "La vulnerabilidad del banco", lic: "CC BY-NC 4.0", type: "Diferencial semántico", ph: 3, state: "new" },
+    { t: "Ética en la minería", by: "Prof. Carla Muñoz", cs: "El relave", lic: "CC BY-SA 4.0", type: "Ranking", ph: 2, state: "blocked" },
+    { t: "Deberes del ingeniero en obra pública", by: "Prof. Andrea Rojas", cs: "El paso nivel", lic: "CC BY-SA 4.0", type: "Diferencial semántico", ph: 2, state: "new" },
+    { t: "Telemedicina en zonas rurales", by: "Prof. Iván Castro", cs: "La consulta remota", lic: "CC BY 4.0", type: "Diferencial semántico", ph: 3, state: "new" },
+    { t: "Datos genéticos y seguros", by: "Prof. Lucía Herrera", cs: "El examen de ADN", lic: "CC BY-SA 4.0", type: "Diferencial semántico", ph: 2, state: "new" },
+    { t: "Obsolescencia programada", by: "Prof. Diego Soto", cs: "La impresora", lic: "CC BY-SA 4.0", type: "Ranking", ph: 2, state: "new" },
+    { t: "Drones y vigilancia", by: "Prof. Tomás Pérez", cs: "El barrio vigilado", lic: "CC BY 4.0", type: "Diferencial semántico", ph: 2, state: "new" },
+  ];
+
+  const status = (d) => d.st === "ok" ? '<span class="st ok">● Listo</span>'
+    : d.st === "err" ? `<span class="st err">⚠ ${d.errs} ${d.errs === 1 ? "error" : "errores"}</span>`
+    : `<span class="st use">🔒 En uso · ${d.uses} ${d.uses === 1 ? "actividad" : "actividades"}</span>`;
+  const share = (d) => d.st === "err" ? '<span class="switch na"></span>' : `<span class="switch${d.shared ? " on" : ""}"></span>`;
+  const mainAction = (d) => d.st === "ok" ? '<span class="btn sm">✎ Editar</span>'
+    : d.st === "err" ? '<span class="btn sm">⚠ Corregir</span>'
+    : '<span class="btn sm">⧉ Duplicar para editar</span>';
+
+  function mineTable(rows, { narrow, menuRow }) {
+    const head = narrow
+      ? "<tr><th>Diseño</th><th>Estado</th><th>Compartido</th><th></th></tr>"
+      : "<tr><th>Diseño</th><th>Tipo</th><th>Estado</th><th>Compartido</th><th></th></tr>";
+    const body = rows.map((d, i) => {
+      const meta = narrow ? `${d.type} · ${d.ph} ${d.ph === 1 ? "fase" : "fases"} · Caso: ${d.cs}` : `${d.ph} ${d.ph === 1 ? "fase" : "fases"} · Caso: ${d.cs}`;
+      return `<tr${i === menuRow ? ' class="hl"' : ""}><td class="t"><div class="title">${d.t}</div><div class="meta">${meta}</div></td>`
+        + (narrow ? "" : `<td class="sub">${d.type}</td>`)
+        + `<td>${status(d)}</td><td>${share(d)}</td><td class="acts">${mainAction(d)}<span class="kebab"${i === menuRow ? ' data-menu="1"' : ""}>⋯</span></td></tr>`;
+    }).join("");
+    return `<table class="dt" data-role="designs"><thead>${head}</thead><tbody>${body}</tbody></table>`;
+  }
+
+  function mineList(rows) {
+    return `<div class="cards" data-role="designs">${rows.map((d) => `<div class="box card"><div class="row1"><span style="min-width:0"><div class="lbl">${d.t}</div><div class="sub">${d.type} · ${d.ph} ${d.ph === 1 ? "fase" : "fases"} · Caso: ${d.cs}</div></span></div>
+      <div class="row2">${status(d)}<span class="sub">Compartido ${share(d)}</span><span style="flex:1"></span>${mainAction(d)}<span class="kebab">⋯</span></div></div>`).join("")}</div>`;
+  }
+
+  function sharedTable() {
+    const act = (d) => d.state === "imported" ? '<span class="st ok">✓ Importado</span> <span class="btn sm ghost">Ver copia</span>'
+      : d.state === "blocked" ? '<span class="btn sm disabled">Importar</span><div class="sub" style="font-size:12px">Su caso dejó de ser público</div>'
+      : '<span class="btn sm">⤓ Importar</span>';
+    const body = SHARED.map((d) => `<tr><td class="t"><div class="title">${d.t}</div><div class="meta">${d.type} · ${d.ph} ${d.ph === 1 ? "fase" : "fases"} · Caso: ${d.cs}</div></td>
+      <td class="sub">${d.by}</td><td class="sub">${d.lic}</td><td class="acts" style="text-align:right">${act(d)}</td></tr>`).join("");
+    return `<table class="dt" data-role="designs"><thead><tr><th>Diseño</th><th>Autor</th><th>Licencia</th><th></th></tr></thead><tbody>${body}</tbody></table>`;
+  }
+
+  function page({ tab, narrow, one, filter, rows }) {
+    const counts = { mine: 68, others: 24, archived: 3 };
+    const tabs = `<div class="tabs"><span class="tab${tab === "mine" ? " on" : ""}">Mis diseños<span class="count">${counts.mine}</span></span>
+      <span class="tab${tab === "shared" ? " on" : ""}">Compartidos por otros<span class="count">${counts.others}</span></span>
+      <span class="tab${tab === "archived" ? " on" : ""}">Archivados<span class="count">${counts.archived}</span></span></div>`;
+    const head = `<div class="head"><div class="titles"><h3>🖌 Diseños</h3><div class="role">Crea, edita y organiza tus diseños, o importa los que otros docentes comparten. ¿Quieres usar uno con tus estudiantes? <a>Lanzar actividad →</a></div></div>
+      <div class="acts"><span class="btn">⤓ Importar diseño compartido</span><span class="btn primary">+ Nuevo diseño</span></div></div>`;
+    if (tab === "shared") {
+      return head + tabs
+        + '<div class="banner lib">Diseños que otros docentes compartieron. Al importar uno se crea una <b>copia privada y editable</b> en Mis diseños; el original no cambia.</div>'
+        + '<div class="tools"><span class="search">🔍 Buscar por título, autor, caso o etiqueta</span><span class="chip on">Todos</span><span class="chip">Diferencial semántico</span><span class="chip">Ranking</span><span class="sub sort">Más recientes primero ▾</span></div>'
+        + sharedTable();
+    }
+    const st = (k, label) => `<span class="chip${filter === k ? " on" : ""}" data-k="${k}">${label}</span>`;
+    const tools = `<div class="tools"><span class="search">🔍 Buscar por título, caso o etiqueta</span>
+      <span class="chip on">Todos los tipos ▾</span><span class="sep"></span>
+      ${st("all", "Todos")}${st("ok", "Listos")}${st("errors", "Con errores · 2")}${st("use", "En uso")}${st("shared", "Compartidos")}
+      <span class="sub sort">Más recientes primero ▾</span></div>`;
+    const list = filter === "errors" ? MINE.filter((d) => d.st === "err") : MINE.slice(0, rows);
+    const foot = `<div class="foot"><span>${filter === "errors" ? "2 de 68 diseños" : `Mostrando ${list.length} de 68 · <span style="color:var(--accent)">Mostrar más</span>`}</span><span>Archivar un diseño lo quita de esta lista y de Lanzar actividad; puedes restaurarlo.</span></div>`;
+    return head + tabs + tools + (one ? mineList(list) : mineTable(list, { narrow, menuRow: tab === "mine" && filter === "all" && !narrow ? 2 : -1 })) + foot;
+  }
+
+  function frame(hostId, { width, height, appNav, tab, narrow = false, one = false, filter = "all", rows = 24, overlay = null, notes = [] }) {
+    const host = document.getElementById(hostId);
+    const solo = new URLSearchParams(location.search).get("frame");
+    if (solo && solo !== hostId) return;
+    if (solo) { document.body.classList.add("solo"); host.classList.add("solo-host"); host.parentElement.appendChild(host); }
+
+    const wrap = document.createElement("div");
+    wrap.className = "frame-wrap";
+    const f = document.createElement("div");
+    f.className = "frame wf";
+    f.style.width = width + "px";
+    f.style.height = height + 40 + "px";
+    f.insertAdjacentHTML("beforeend", `<div class="appbar"><span style="font-size:26px">☰</span><span class="lbl" style="font-size:28px;color:var(--accent)">EthicApp</span><span style="flex:1"></span><span class="sub">Docente 650</span></div>`);
+    if (appNav) {
+      f.insertAdjacentHTML("beforeend", `<div class="appnav"><div class="item">Inicio</div><div class="item">Lanzar Actividad</div><div class="item">Actividades</div><div class="item on">Diseños</div><div class="item">Casos</div></div>`);
+    }
+    const content = document.createElement("div");
+    content.className = "content";
+    content.style.left = (appNav ? 244 : 0) + "px";
+    content.innerHTML = page({ tab, narrow, one, filter, rows });
+    f.appendChild(content);
+
+    const fold = document.createElement("div");
+    fold.className = "fold";
+    fold.style.top = height + "px";
+    fold.dataset.label = `fold · ${width} × ${height}`;
+    f.appendChild(fold);
+    wrap.appendChild(f);
+    host.appendChild(wrap);
+
+    const scaleOf = () => (solo ? 1 : Math.min(1, wrap.clientWidth / width));
+    const place = () => {
+      const s = scaleOf();
+      f.style.transform = `scale(${s})`;
+      wrap.style.height = Math.round((height + 40) * s) + "px";
+      if (solo) wrap.style.width = width + "px";
+    };
+    place();
+    window.addEventListener("resize", place);
+    const s = scaleOf();
+    const origin = f.getBoundingClientRect();
+    const box = (el) => {
+      const r = el.getBoundingClientRect();
+      return { left: (r.left - origin.left) / s, top: (r.top - origin.top) / s, width: r.width / s, height: r.height / s };
+    };
+
+    // The open row menu, under its "⋯" button.
+    const kebab = f.querySelector('[data-menu="1"]');
+    if (kebab) {
+      const k = box(kebab);
+      const d = MINE[2];
+      f.insertAdjacentHTML("beforeend", `<div class="menu" style="left:${Math.round(k.left + k.width - 300)}px; top:${Math.round(k.top + k.height + 6)}px">
+        <div class="mi focus">👁 Ver</div><div class="mi">⧉ Duplicar</div><div class="mi">🗄 Archivar</div><hr>
+        <div class="mi dis">🗑 Eliminar <small>en uso por ${d.uses} actividades</small></div></div>`);
+    }
+    if (overlay === "import-toast") {
+      const t = box(f.querySelector(".tabs"));
+      f.insertAdjacentHTML("beforeend", `<div class="toast" style="left:${Math.round(t.left + t.width - 460)}px; top:${height - 96}px">✓ Se creó <b>"Ingeniería y comunidades indígenas"</b> en Mis diseños.<br><a>Editar copia</a> · <a>Ver en Mis diseños</a></div>`);
+    }
+    if (overlay === "delete") {
+      f.insertAdjacentHTML("beforeend", '<div class="shade"></div>');
+      const mw = 520;
+      f.insertAdjacentHTML("beforeend", `<div class="modal" role="dialog" style="left:${Math.round((width - mw) / 2 + (appNav ? 122 : 0))}px; top:${Math.round(height / 2 - 140)}px">
+        <div class="mh">¿Eliminar "Ética del trabajo remoto"?</div>
+        <div class="mb">Se borrará definitivamente, con sus fases y preguntas. No se puede deshacer. Las copias de este diseño se conservan.<br><span class="sub">Si solo quieres quitarlo de la vista, archívalo.</span></div>
+        <div class="mf"><span class="btn">Archivar en su lugar</span><span class="btn">Cancelar</span><span class="btn danger">Eliminar diseño</span></div></div>`);
+    }
+
+    for (const [selector, number, dx = 0] of notes) {
+      const el = f.querySelector(selector);
+      if (!el) continue;
+      const r = box(el);
+      const n = document.createElement("span");
+      n.className = "n";
+      n.textContent = number;
+      n.style.left = Math.max(0, r.left - 14 + dx) + "px";
+      n.style.top = Math.max(0, r.top - 14) + "px";
+      f.appendChild(n);
+    }
+
+    const out = document.querySelector(`[data-metrics="${hostId}"]`);
+    if (!out) return;
+    const items = [...f.querySelectorAll('[data-role="designs"] tbody tr, [data-role="designs"] > .card')];
+    const inView = items.filter((r) => { const b = box(r); return b.top + b.height <= height; }).length;
+    const first = items[0] ? Math.round(box(items[0]).top) : 0;
+    out.innerHTML = `First design at <b>${first} px</b> (today: 433 px). <b>${inView} designs</b> fully visible on the first screen (today: ${width >= 1920 ? "1" : "none"}).`;
+  }
+
+  document.getElementById("today-metrics").innerHTML =
+    "Measured on the local stack with 68 designs of one teacher: title, \"Volver\", \"Crear un diseño\", a sentence about importing, the search, then the tabs \"Tuyos\", \"De otros\", \"Archivadas\". The first card starts at <b>433 px</b> and is <b>376 px</b> tall, five per page (<b>14 pages</b>). Its buttons are \"Lanzar Actividad\", \"Ver\", \"Duplicar\", \"Archivar\" (plus \"Editar\" and \"Eliminar\" when not in use) and a sharing switch. \"Eliminar\" deletes without asking.";
+
+  frame("A", { width: 1920, height: 1080, appNav: true, tab: "mine", rows: 24,
+    notes: [[".head .role", 1, -30], [".head .acts", 2, -10], [".tabs", 3], [".tools", 4], ['[data-role="designs"] thead', 5], ['[data-role="designs"] tbody tr:nth-child(2) .acts', 6, -10], [".menu", 7, -10]] });
+  frame("B", { width: 1366, height: 768, appNav: true, tab: "mine", narrow: true, filter: "errors",
+    notes: [['[data-k="errors"]', 1], ['[data-role="designs"] tbody tr .acts', 2, -10], ['[data-role="designs"] thead', 3]] });
+  frame("C", { width: 1366, height: 768, appNav: true, tab: "shared", overlay: "import-toast",
+    notes: [[".banner", 1], ['[data-role="designs"] thead', 2], ['[data-role="designs"] tbody tr:nth-child(1) .acts', 3, -10], ['[data-role="designs"] tbody tr:nth-child(5) .acts', 4, -10], [".toast", 5]] });
+  frame("D", { width: 1366, height: 768, appNav: true, tab: "mine", narrow: true, rows: 14, overlay: "delete",
+    notes: [[".modal .mh", 1], [".modal .mb .sub", 2, -16]] });
+  frame("E", { width: 1024, height: 768, appNav: false, tab: "mine", one: true, rows: 8,
+    notes: [[".head", 1], ['[data-role="designs"] > .card:nth-child(1)', 2]] });
+</script>
+</body>
+</html>
