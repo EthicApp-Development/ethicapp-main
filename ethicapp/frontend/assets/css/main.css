@@ -3418,9 +3418,9 @@ h2{
 
 /* A question column's header: its text on hover and keyboard focus (#895).
    The tip's transparent padding bridges the gap to the header, so the
-   pointer can move onto it without hiding it; Escape hides it until the
-   pointer leaves or the focus moves. The last column's tip opens leftwards,
-   so it stays on the page. */
+   pointer can move onto it without hiding it; Escape hides it until both
+   the pointer and the focus have left (`dismissible-tip`, #956). The last
+   column's tip opens leftwards, so it stays on the page. */
 .dashboard-item {
     display: inline-block;
     position: relative;

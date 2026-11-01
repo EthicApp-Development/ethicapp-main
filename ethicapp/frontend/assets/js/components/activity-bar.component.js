@@ -22,8 +22,6 @@ function ActivityBarController($element, $window) {
     vm.statusName = null;
     vm.phaseSummary = null;
     vm.connectedCount = 0;
-    // Escape hides the name's tooltip until the pointer or the focus leaves.
-    vm.nameTipDismissed = false;
 
     vm.$postLink = function() {
         layout = watchActivityBarLayout($element[0], $window);
@@ -50,16 +48,6 @@ function ActivityBarController($element, $window) {
             laidOutName = vm.activity?.name;
             layout.refresh();
         }
-    };
-
-    vm.dismissNameTipOnEscape = function(event) {
-        if (event?.key === "Escape") {
-            vm.nameTipDismissed = true;
-        }
-    };
-
-    vm.restoreNameTip = function() {
-        vm.nameTipDismissed = false;
     };
 
     // True once the activity and its design are loaded but no phase started.
