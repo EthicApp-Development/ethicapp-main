@@ -4,20 +4,35 @@
 // It reads the activity descriptor and the user list the dashboard keeps live
 // through ActivityStateService, and works the values out on every digest, so
 // a phase transition, a student joining or the end of the activity shows at
-// once.
+// once. A long name moves to a row of its own above the chips and the
+// controls, and its tooltip shows it whole (#951; see activity-bar-layout.js).
 
 import {
     activityStatus,
     connectedStudentCount,
     currentPhaseSummary,
 } from "../helpers/activity-bar.js";
+import { watchActivityBarLayout } from "../helpers/activity-bar-layout.js";
 
-function ActivityBarController() {
+function ActivityBarController($element, $window) {
     const vm = this;
+    let layout = null;
+    let laidOutName;
 
     vm.statusName = null;
     vm.phaseSummary = null;
     vm.connectedCount = 0;
+    // Escape hides the name's tooltip until the pointer or the focus leaves.
+    vm.nameTipDismissed = false;
+
+    vm.$postLink = function() {
+        layout = watchActivityBarLayout($element[0], $window);
+    };
+
+    vm.$onDestroy = function() {
+        layout?.stop();
+        layout = null;
+    };
 
     vm.$doCheck = function() {
         vm.statusName = activityStatus(vm.activity?.status, vm.isFinished === true);
@@ -29,6 +44,22 @@ function ActivityBarController() {
         }
 
         vm.connectedCount = connectedStudentCount(vm.users);
+
+        // The name usually arrives after the bar; lay the bar out for it.
+        if (layout && vm.activity?.name !== laidOutName) {
+            laidOutName = vm.activity?.name;
+            layout.refresh();
+        }
+    };
+
+    vm.dismissNameTipOnEscape = function(event) {
+        if (event?.key === "Escape") {
+            vm.nameTipDismissed = true;
+        }
+    };
+
+    vm.restoreNameTip = function() {
+        vm.nameTipDismissed = false;
     };
 
     // True once the activity and its design are loaded but no phase started.
@@ -55,6 +86,6 @@ export default {
         isFinished:  "<",
     },
     transclude:  true,
-    controller:  [ActivityBarController],
+    controller:  ["$element", "$window", ActivityBarController],
     templateUrl: "/assets/static/views/teacher/fragments/activity-bar.template.html",
 };

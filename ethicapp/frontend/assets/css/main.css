@@ -2637,7 +2637,7 @@ h2{
     display: block;
     margin-bottom: 12px;
     position: sticky;
-    top: var(--teacher-topbar-height, 68px);
+    top: var(--activity-bar-top, var(--teacher-topbar-height, 68px));
     z-index: 1000;
 }
 
@@ -2653,16 +2653,84 @@ h2{
     padding: 8px 12px;
 }
 
-.activity-bar-name {
+/* The name holds one line with an ellipsis while the bar has one row. The
+   component measures it on that row (activity-bar-layout.js) and, when it
+   cannot show at least 280 px, stacks the bar (#951): the name on its own
+   row, two lines at most, and the chips and the controls below, wrapping. */
+.activity-bar-title {
     flex: 0 1 auto;
+    min-width: 0;
+    position: relative;
+}
+
+.activity-bar-name {
+    display: block;
     font-size: 20px;
     font-weight: 700;
     line-height: 1.3;
     margin: 0;
-    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.activity-bar-name:focus-visible {
+    outline: 2px solid #2649ec;
+    outline-offset: 2px;
+}
+
+.activity-bar.activity-bar-stacked {
+    flex-wrap: wrap;
+    row-gap: 6px;
+}
+
+.activity-bar-stacked .activity-bar-title {
+    flex: 1 0 100%;
+}
+
+.activity-bar-stacked .activity-bar-name {
+    -webkit-box-orient: vertical;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow-wrap: anywhere;
+    white-space: normal;
+}
+
+/* The tooltip of a cut name, on hover and keyboard focus, as wide as the
+   name at most so it stays on the page. Its transparent padding bridges the
+   gap to the name, so the pointer can move onto it without hiding it. */
+.activity-bar-name-tip {
+    display: none;
+    left: 0;
+    max-width: 100%;
+    padding-top: 6px;
+    position: absolute;
+    top: 100%;
+    width: max-content;
+    z-index: 3;
+}
+
+.activity-bar-name-truncated .activity-bar-title:hover .activity-bar-name-tip,
+.activity-bar-name-truncated .activity-bar-name:focus-visible + .activity-bar-name-tip {
+    display: block;
+}
+
+.activity-bar-name-truncated .activity-bar-title.activity-bar-title-tip-dismissed .activity-bar-name-tip {
+    display: none;
+}
+
+.activity-bar-name-tip-body {
+    background: #222;
+    border-radius: 6px;
+    color: #fff;
+    display: block;
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+    padding: 8px 10px;
+    white-space: normal;
 }
 
 .activity-bar-chip {
@@ -2703,6 +2771,19 @@ h2{
 .activity-controls .report-buttons {
     display: flex;
     gap: 8px;
+}
+
+/* On a stacked bar the controls wrap too, if the row is narrower than
+   they are (#951). */
+.activity-bar-stacked .activity-bar-controls {
+    flex: 0 1 auto;
+    min-width: 0;
+}
+
+.activity-bar-stacked .activity-controls .action-buttons,
+.activity-bar-stacked .activity-controls .report-buttons {
+    flex-wrap: wrap;
+    justify-content: flex-end;
 }
 
 .activity-hold {
@@ -2770,12 +2851,6 @@ h2{
     }
 }
 
-@media (width < 768px) {
-    .activity-bar-host {
-        top: 62px;
-    }
-}
-
 /* Two-column activity dashboard (#894): a rail with the phase navigator and
    the selected phase's context, and a main column with the responses first.
    The rail is 260 px from 1200 px wide and 320 px from 1600 px. Below
@@ -2783,9 +2858,18 @@ h2{
    main tabs, and the rail's cards as collapsed sections under the main
    column. The controller sets the layout class from the same media query,
    (min-width: 1200px). The response table's header sticks under the
-   activity bar (56 px). */
+   activity bar, which sticks under the app bar (62 px tall below 768 px).
+   The bar publishes its height as --activity-bar-height on this page; 56 px,
+   its one-row height, until it does (#951). */
 .activity-dashboard-page {
-    --activity-dashboard-sticky-top: calc(var(--teacher-topbar-height, 68px) + 56px);
+    --activity-bar-top: var(--teacher-topbar-height, 68px);
+    --activity-dashboard-sticky-top: calc(var(--activity-bar-top) + var(--activity-bar-height, 56px));
+}
+
+@media (width < 768px) {
+    .activity-dashboard-page {
+        --activity-bar-top: 62px;
+    }
 }
 
 .activity-dashboard-grid {
