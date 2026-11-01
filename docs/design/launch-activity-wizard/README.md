@@ -14,7 +14,8 @@ Files:
   - A and B show step 1 at 1920 × 1080 and 1366 × 768.
   - C shows step 2 at 1366 × 768.
   - D and E show both steps in one column at 1024 × 768; E has the AI services turned off.
-  - `wireframes.html?frame=A`, and likewise for B to E, renders one frame alone at its real size.
+  - F shows step 2 when the design's AI services are not available.
+  - `wireframes.html?frame=A`, and likewise for B to F, renders one frame alone at its real size.
 - `frames/` holds each frame rendered as a PNG (light theme), for viewing without opening the HTML.
 - `current/` holds screenshots of today's page at 1920 × 1080, 1366 × 768 and 1024 × 768 (first screen and whole page), plus 1366 × 768 after selecting a design. They were taken on the local stack with 65 launchable designs.
 
@@ -45,12 +46,12 @@ The page was measured with headless Chrome. The numbers are the same at 1920, 13
 **Step 2.**
 - Selecting a design reveals step 2 at 2489 px and scrolls there. The list and the selection leave the screen.
 - Step 2 does not name the chosen design.
-- It asks for "Breve descripción de esta actividad (opcional)" with no hint of what makes it useful. The activity's name is always the design's title, so two activities launched from the same design differ only by this description.
+- It asks for "Breve descripción de esta actividad (opcional)" with no hint of what makes it useful. The activity's name is always the design's title, so two activities launched from the same design differ only by this description. Yet the dashboard's activity bar shows only the name.
 - Launching locks the design for editing, which the page does not mention.
 
 **Order.**
-- `GET /designs` already returns the teacher's designs newest first (`ORDER BY d.id DESC`), but the page does not say so.
-- The creation date shown on each card comes from `metainfo.creation_date` in the design document. Nothing in the current code sets it, 6 of the 98 local designs lack it, and copies keep the original's date, so it cannot be used to order the list.
+- `GET /designs` returns the teacher's designs newest first (`ORDER BY d.id DESC`), but the page does not say so.
+- The creation date shown on each card comes from `metainfo.creation_date` in the design document. Nothing in the current code sets it, 6 of the 98 local designs lack it, and copies keep the original's date. The `designs` table has no creation timestamp.
 
 ## Proposal
 
@@ -66,13 +67,16 @@ The page was measured with headless Chrome. The numbers are the same at 1920, 13
 **Finding a design**
 - The search filters the list as the teacher types, over title, case and tags. It has no typeahead popup.
 - Type chips (Todos, Diferencial semántico, Ranking) narrow the list.
-- The list says how it is ordered and how many designs it holds: "Más recientes primero · 24 diseños".
+
+**Order**
+- The list is ordered by last launch, most recent first, and says so: "Por último lanzamiento · 24 diseños".
+- A design that was never launched is placed by its creation date. A design created yesterday therefore sits above one last launched a month ago, and a design just written for this class is at the top.
 
 **One row per design**
 - Each row shows:
   - a radio button, the title, and the type, number of phases and case;
-  - the AI services the design uses, as chips;
-  - when it was last launched, for example "Lanzado 2 veces · 28 oct." or "Nunca lanzado".
+  - "✦ IA" when any of the design's phases enables an AI service;
+  - when it was last launched ("Lanzado 2 veces · 28 oct.") or, if never, created ("Creado 25 oct. · nunca lanzado").
 - The whole row selects the design, and it has no other buttons. Double-clicking a row moves on to step 2.
 - The list shows the first 20 rows, then "Mostrar más". There are no pages.
 - 11 rows fit on the first screen at 1920 × 1080, 6 at 1366 × 768, and 3 at 1024 × 768 with the selected row expanded.
@@ -89,42 +93,53 @@ The page was measured with headless Chrome. The numbers are the same at 1920, 13
   - each phase with its mode, group size, chat, number of questions and AI service;
   - when the design was created and last launched;
   - "Ver diseño completo ↗", which opens in a new tab.
+- The AI services are named with each service's own UI texts, as in the design editor and the dashboard.
 
 **Action bar**
 - It shows "Elegido: <title>" and "Siguiente: identificar la actividad →".
 - "Siguiente" is disabled until a design is selected.
 - "Cancelar" goes back to where the teacher came from, as today's "Volver" does.
 
-### Step 2: identify and launch (frames C, E)
+### Step 2: identify and launch (frames C, E, F)
 
 **The chosen design**
 - It is shown at the top, with "← Cambiar diseño".
 - Going back keeps step 1's search, filter and selection.
 
-**Description of the activity**
-- The label and the help text say what the description is for: "Para reconocerla después en Actividades: curso, sección, semestre o fecha."
-- The example placeholder reads "Ej.: Ética Profesional · Sección 3 · 2026-2".
+**Description of the activity, required**
+- The label, the help text and the placeholder say what it is for: "Obligatoria. Para reconocerla después: curso, sección, semestre o fecha." The placeholder reads "Ej.: Ética Profesional · Sección 3 · 2026-2".
 - Under the field, "Usadas antes" offers the teacher's last distinct descriptions as chips. One click fills the field, so the teacher can reuse a course label exactly.
-- Whether the description is required is an open question; the frames show it as required.
+- "Lanzar actividad" stays disabled while the description is empty or blank. The server rejects a launch without one.
 
-**AI services of the design**
-- A switch, "Usar los servicios de IA de este diseño", is on by default.
-- The switch lists which service runs in which phase, for example "Fase 1 · Tutor de argumentación" and "Fase 2 · Agente de discusión".
-- Off: the services are struck through, and a note says that the phases run without them and that the design keeps them for later activities.
+**AI services of the design, checked before the launch**
+- When step 2 opens, the page asks the server which of the design's services can run, using the same rules as today's launch notice (see below).
+- Each service is listed by phase, with its state:
+  - **All can run (frame C):** each service shows "● Disponible", and the switch "Usar los servicios de IA de este diseño" is offered, on by default.
+  - **Turned off (frame E):** the services are struck through, and a note says that the phases run without them and that the design keeps them for later activities. The switch applies to the whole activity; the design does not change.
+  - **None can run (frame F):** there is no switch, since there is nothing to turn off. Today's "services not available" notice is shown here, before the launch: "No están disponibles ahora. La actividad se realizará sin ellos."
+  - **Some can run:** the switch is offered for those, and the others are listed under the same warning.
 - A design without AI services shows one line instead: "Este diseño no usa servicios de IA."
-- The switch applies to this activity only. The design does not change.
 
 **How it will look**
-- A preview of the activity card in Actividades, with the design's title as the name and the description highlighted.
+- A preview of the activity card, with the design's title as the name and the description next to it. Activities and the dashboard will show it the same way (see "Beyond this page").
 
 **Before launching**
 - A note says that launching makes the design read-only, and that it can be duplicated to edit it.
 
 **Action bar**
-- It shows "← Atrás", a summary ("Con 2 servicios de IA · <title>") and "🚀 Lanzar actividad".
+- It shows "← Atrás", a summary ("Con 2 servicios de IA", "Sin servicios de IA" or "Servicios de IA no disponibles", then the title) and "🚀 Lanzar actividad".
 - While the launch runs, the button reads "Preparando el panel…" and is disabled.
 - If the design turns out to be invalid at launch, the error appears in the bar.
 - A successful launch opens the activity's dashboard, as today.
+
+### Beyond this page: the description next to the name
+
+The activity's name is the design's title, so activities launched from the same design look alike. The description is shown next to the name wherever activities are listed or opened:
+- **in the dashboard's activity bar** (#892 and #951), as a secondary part of the title, "Privacidad en apps de salud · Ética Profesional · Sección 3 · 2026-2". When space runs short, the description is cut before the name;
+- **in the activity cards** of Actividades and the home page, in the card's heading, instead of a separate "Descripción:" line;
+- **in the browser tab's title** of the dashboard.
+
+Older activities without a description keep showing the name alone.
 
 ### Widths
 
@@ -150,8 +165,9 @@ The page was measured with headless Chrome. The numbers are the same at 1920, 13
 | Validity and lock lines on every card | Only launchable designs are listed; the footer counts the ones with errors |
 | Visibility and license lines | Dropped from this page; they stay in Diseños |
 | Step 2 panel revealed under the list | Step 2 of the wizard |
-| "Breve descripción de esta actividad (opcional)" | "Descripción de la actividad", with help, an example and previous descriptions |
-| — | AI services switch |
+| "Breve descripción de esta actividad (opcional)" | "Descripción de la actividad", required, with help, an example and previous descriptions |
+| — | AI services, checked before launch, with a switch when they can run |
+| "Servicios no disponibles" notice on the dashboard after launch | The same notice in step 2, before the launch |
 | — | Activity card preview and the note about locking |
 | "Lanzar la actividad" with a spinner below | "Lanzar actividad" in the action bar, with its progress and errors |
 
@@ -164,11 +180,40 @@ The page was measured with headless Chrome. The numbers are the same at 1920, 13
 
 **Rows**
 - A compact row component replaces `design-item` on this page only. `design-item` stays in Diseños.
-- The list is today's `DesignCatalogService.getUserDesigns()`, filtered by `valid`, in its current order.
-- "Last launched" and the launch count come from the teacher's activities. `GET /activities` already returns `designId` and `time` for each activity, so the activity catalog can be joined on the client side.
+- The list is today's `DesignCatalogService.getUserDesigns()`, filtered by `valid`.
+
+**Order**
+- Last launches come from the teacher's activities. `GET /activities` already returns `designId` and `time` for each activity, so the activity catalog can be joined on the client side.
+- Placing never-launched designs by creation needs a creation time:
+  - a migration adds `designs.created_at timestamptz DEFAULT now()`;
+  - existing rows keep it null, since `metainfo.creation_date` is not reliable;
+  - the sort key is the last launch, else `created_at`, with ties and nulls broken by id, newest first;
+  - so existing designs that were never launched go after every dated one.
+
+**"✦ IA" in the list**
+- It is a property of the design alone: some phase has a non-empty `externalServices.enabledServiceIds`. The helper `unionEnabledServiceIds` already computes this on the server.
+- The list does not enumerate or name services, so it needs no service catalog and does not change when services are added.
+
+**Service names in the preview and in step 2**
+- They come from the services' own UI texts (`getUiTranslations` of each adapter, as the design editor and the dashboard already use). No service name is written in the page.
 
 **Previous descriptions**
-- They are the teacher's most recent distinct `description` values from the same catalog, for example the last five.
+- They are the teacher's most recent distinct `description` values from the activity catalog, for example the last five.
+
+**Required description**
+- The client validates the field.
+- `POST /sessions` rejects an empty or blank description with a coded 400.
+- Existing activities without a description are not changed.
+
+**Checking the AI services before launch**
+- A read-only endpoint, for example `GET /designs/:id/ai-services`, lists each service the design enables with its UI texts and whether it can run.
+- It reuses `listServicesNotRunning` (`helpers/ai-service-launch-notice.js`), evaluated against the AI service policy version the launch would pin.
+- "Can run" means what today's notice means:
+  - the policy allows the service;
+  - an AI Additions connection is stored;
+  - the adapter is registered.
+
+  It is not a live health probe of the remote service; that belongs with the platform health epic (#642).
 
 **AI services switch**
 - **The launch.** The request needs one more field, for example `aiServices: false` on `POST /activities`, stored on the session (`sessions.options`, or a dedicated column).
@@ -183,22 +228,16 @@ The page was measured with headless Chrome. The numbers are the same at 1920, 13
 
 ## Decisions
 
-None yet; this is the first version for review.
-
-## Open questions
-
-1. **Order of the list.** The frames order designs by creation, newest first, which is today's order by design id, and show the last launch as information. The alternative is to order by last launch, so a design used every semester stays on top. A third option is to offer both in the "Más recientes primero ▾" menu.
-2. **Required description.** Making it required helps the teacher tell activities apart later, but it adds friction for a quick test launch. The frames show it as required.
-3. **The description in the dashboard and the lists.**
-   - The activity's name is always the design's title, so the activity bar of the dashboard (#892) shows the same name for every activity launched from that design.
-   - Should the bar and the activity lists show the description next to the name?
-   - Alternatively, should step 2 let the teacher edit the name, prefilled with the design's title?
-4. **AI services granularity.** One switch for the whole activity (drawn), or one per service, for example keeping the tutor and turning off the discussion agent?
-5. **Checking AI services before launch.** Today a service that is not running is reported on the dashboard after the launch. Step 2 could check the services first and warn before launching. That needs a read-only status endpoint for the services the design uses.
+- **2026-11-01: the list is ordered by last launch.** A design never launched is placed by its creation date.
+- **2026-11-01: the description is required.**
+- **2026-11-01: the description is shown next to the activity's name** in the dashboard's activity bar and in the activity lists, so activities launched from the same design can be told apart.
+- **2026-11-01: one switch turns off the AI services for the whole activity.**
+- **2026-11-01: step 2 checks whether the design's AI services can run before offering the switch.** If they cannot, it shows the "services not available" notice instead, before the launch.
+- **2026-11-01: the list only marks that a design uses AI ("✦ IA").** Enumerating services as chips would need the list to cross the service catalog with every design, for little gain. The preview names the service of each phase.
 
 ## Out of scope
 
 - Launching another teacher's public design directly. It still has to be imported into the teacher's own designs first.
 - Editing a design from this page.
-- Changing the dashboard that opens after the launch.
+- Live health checks of the AI services (#642).
 - Phones: the page is used on laptops. Below 1024 px the one-column layout keeps working but is not optimized.

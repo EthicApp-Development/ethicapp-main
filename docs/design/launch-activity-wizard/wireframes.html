@@ -163,6 +163,12 @@
   body.solo { padding: 0; background: var(--paper); }
   body.solo .doc > :not(.solo-host) { display: none; }
   body.solo .doc { max-width: none; }
+  .decided { background: var(--paper); border-left: 4px solid var(--ok); border-radius: 6px; padding: 10px 16px; font-size: 14px; margin: 10px 0 0; }
+  .decided ul { margin: 4px 0 0; padding-left: 20px; }
+  .svc .state { margin-left: 10px; font-size: 13px; }
+  .svc .state.ok { color: var(--ok); }
+  .svc .state.down { color: var(--warn); }
+  .svc.down .ai-line { color: var(--muted); }
 </style>
 </head>
 <body>
@@ -171,13 +177,14 @@
   <p class="lede">Low fidelity, for discussing the flow and how the space is shared. Each frame is drawn at its real viewport size and scaled down; the dashed line is the fold. Labels are in Spanish, as a teacher sees them in es-CL. Titles, cases and courses are fictional.</p>
   <div class="legend"><span>fold (bottom of the viewport)</span><span class="n">numbered notes, explained under each frame</span></div>
 
-  <div class="open"><b>Open questions</b> (see the README):
+  <div class="decided"><b>Decided on 2026-11-01, after the first review:</b>
     <ul>
-      <li>Order of the list: most recently created first (today's order, by design id), or most recently launched first?</li>
-      <li>Should the description become required?</li>
-      <li>Should the dashboard's activity bar and the activity lists show the description next to the name, since the name is always the design's title?</li>
-      <li>AI services: one switch for the whole activity (drawn here), or one per service?</li>
-      <li>Should step 2 check whether each AI service is running before launch, instead of warning on the dashboard after it?</li>
+      <li>The list is ordered by last launch. A design never launched is placed by its creation date.</li>
+      <li>The description is required.</li>
+      <li>The description is shown next to the activity's name, in the dashboard's activity bar and in the activity lists, so activities launched from the same design can be told apart.</li>
+      <li>One switch turns off the AI services for the whole activity.</li>
+      <li>Step 2 checks whether the design's AI services can run before offering the switch. If they cannot, it shows today's "services not available" notice instead, before the launch.</li>
+      <li>The list only marks that a design uses AI. The preview names the service of each phase.</li>
     </ul>
   </div>
 
@@ -193,20 +200,36 @@
   <p class="metrics" data-metrics="A"></p>
   <div id="A"></div>
   <ol class="notes">
-    <li><b>Stepper.</b> Two steps, always visible: "Elegir diseño" and "Identificar y lanzar". The current step is marked; a completed step shows a check and can be clicked to go back. It is a <code>nav</code> with <code>aria-current="step"</code>.</li>
-    <li><b>Find a design.</b> The search filters as the teacher types (title, case and tags), with no typeahead popup. The type chips narrow the list. The list states its order, "Más recientes primero", and its count.</li>
-    <li><b>One line per design</b>, instead of a 353 px card: a radio, the title, the type, the number of phases and the case, then the AI services the design uses and when it was last launched. The whole row selects; there are no other buttons. 11 designs fit on the first screen.</li>
+    <li><b>Stepper.</b> Two steps, always visible: "Elegir diseño" and "Identificar y lanzar". The current step is marked, and a completed step shows a check and can be clicked to go back. It is a <code>nav</code> with <code>aria-current="step"</code>.</li>
+    <li><b>Find a design.</b> The search filters as the teacher types, over title, case and tags, with no typeahead popup. The type chips narrow the list.
+      <ul>
+        <li><b>The list says its order</b>: "Por último lanzamiento". The most recently launched designs come first.</li>
+        <li><b>A design never launched</b> is placed by its creation date. A design created yesterday sits above one last launched a month ago, so a design just written for this class is at the top.</li>
+      </ul></li>
+    <li><b>One line per design</b>, instead of a 353 px card.
+      <ul>
+        <li>It shows a radio button, the title, the type, the number of phases and the case.</li>
+        <li><b>"✦ IA"</b> marks a design that uses AI services in any phase. It comes from the design itself, so the list needs no catalog of services.</li>
+        <li>On the right, when the design was last launched, or created if it never was.</li>
+        <li>The whole row selects; there are no other buttons.</li>
+        <li>11 designs fit on the first screen.</li>
+      </ul></li>
     <li><b>Designs that cannot be launched are explained, not silently hidden.</b> Designs with errors are not listed, and the footer says how many and links to Diseños. Archived designs are not listed either.</li>
-    <li><b>Preview of the selected design</b>, so the teacher can check it without leaving the page: type, phases with their mode, questions and AI services, the case, and when it was created and last launched. "Ver diseño completo" opens the design in a new tab, so the wizard keeps its state.</li>
-    <li><b>Action bar, fixed to the bottom.</b> It names the chosen design and moves on: "Siguiente: identificar la actividad". The button is disabled until a design is selected. Double-clicking a row also moves on.</li>
+    <li><b>Preview of the selected design</b>, so the teacher can check it without leaving the page.
+      <ul>
+        <li>It shows the type, the case, each phase with its mode and questions, and when the design was created and last launched.</li>
+        <li><b>It names the AI service of each phase</b> with the service's own texts, as the design editor and the dashboard do.</li>
+        <li>"Ver diseño completo" opens the design in a new tab, so the wizard keeps its state.</li>
+      </ul></li>
+    <li><b>Action bar, fixed to the bottom.</b> It names the chosen design and moves on with "Siguiente: identificar la actividad". The button is disabled until a design is selected. Double-clicking a row also moves on.</li>
   </ol>
 
   <h2>B. 1366 × 768: step 1, narrower</h2>
   <p class="metrics" data-metrics="B"></p>
   <div id="B"></div>
   <ol class="notes">
-    <li>Same structure, with a 380 px preview. The row drops the type and phases from its second line when they do not fit; the preview shows them.</li>
-    <li>6 designs fit on the first screen, against no full card today.</li>
+    <li>Same structure, with a 380 px preview. When the type and the phases do not fit on a row's second line, the row drops them; the preview still shows them.</li>
+    <li>6 designs fit on the first screen. Today not one full card does.</li>
   </ol>
 
   <h2>C. 1366 × 768: step 2, identify and launch</h2>
@@ -214,10 +237,15 @@
   <div id="C"></div>
   <ol class="notes">
     <li><b>The chosen design stays in sight</b>, with "Cambiar diseño" to go back to step 1. The selection, the search and the scroll position of step 1 are kept.</li>
-    <li><b>Description, to recognize the activity later.</b> The label and the help say what it is for: course, section, semester or date. Under it, the descriptions this teacher used in their last activities, as chips that fill the field in one click.</li>
-    <li><b>AI services of the design</b>, on by default. One switch turns them off for this activity only; the design does not change. The list shows which service runs in which phase. A design with no AI services shows one line instead: "Este diseño no usa servicios de IA."</li>
-    <li><b>How it will look</b>: a preview of the activity card in Actividades, with the description highlighted. The name is the design's title, as today.</li>
-    <li><b>What launching does.</b> Launching opens the activity's dashboard, and the design becomes read-only, as today; the note says so before launch, and that it can be duplicated to edit it.</li>
+    <li><b>Description, required, to recognize the activity later.</b>
+      <ul>
+        <li>The label and the help say what it is for: course, section, semester or date.</li>
+        <li>Under it, the descriptions this teacher used in their last activities, as chips. One click fills the field.</li>
+        <li>"Lanzar actividad" stays disabled while the description is empty.</li>
+      </ul></li>
+    <li><b>AI services of the design, checked when step 2 opens.</b> Here they can all run, so each one shows "Disponible", and the switch is offered, on by default. It turns the services off for this activity only, and the design does not change. A design with no AI services shows one line instead: "Este diseño no usa servicios de IA."</li>
+    <li><b>How it will look</b>: the activity card, with the design's title as the name and the description next to it, as the activity lists and the dashboard's bar will show them.</li>
+    <li><b>What launching does.</b> Launching opens the activity's dashboard, and the design becomes read-only, as today. The note says so before the launch, and that the design can be duplicated to edit it.</li>
     <li><b>"Lanzar actividad"</b>, the only primary action. While the launch runs, it shows "Preparando el panel…" and is disabled. If the design turns out to be invalid, the message appears in this bar.</li>
   </ol>
 
@@ -226,45 +254,58 @@
   <div id="D"></div>
   <ol class="notes">
     <li>Below 1200 px the app's side menu folds, and the stepper drops its second lines.</li>
-    <li>The preview moves into the list: the selected row expands under itself with the phases, the AI services and the case. Selecting another row collapses it.</li>
+    <li>The preview moves into the list: the selected row expands under itself, with the phases, their AI services and the case. Selecting another row collapses it.</li>
     <li>The action bar stays fixed to the bottom.</li>
   </ol>
 
-  <h2>E. 1024 × 768: step 2, AI services off</h2>
+  <h2>E. 1024 × 768: step 2, AI services turned off</h2>
   <p class="metrics" data-metrics="E"></p>
   <div id="E"></div>
   <ol class="notes">
-    <li><b>AI services turned off.</b> The services are struck through, and a note says what changes: the phases run without the tutor and the discussion agent; the design keeps them for later activities.</li>
+    <li><b>AI services turned off.</b> The services are struck through, and a note says what changes: the phases run without the tutor and the discussion agent, and the design keeps them for later activities.</li>
     <li>In one column the activity card preview sits under the form. The action bar keeps "Atrás" and "Lanzar actividad" in sight.</li>
+  </ol>
+
+  <h2>F. 1366 × 768: step 2, AI services not available</h2>
+  <p class="metrics" data-metrics="F"></p>
+  <div id="F"></div>
+  <ol class="notes">
+    <li><b>No switch when nothing can run.</b> The check found that none of the design's services can run now, so there is nothing to turn off.
+      <ul>
+        <li><b>Why a service cannot run:</b> the AI service policy does not allow it, the AI Additions connection is not set up, or the service is not installed. These are the reasons behind today's notice, which the dashboard shows after the launch; here the teacher sees it before launching.</li>
+        <li><b>If only some services can run,</b> the switch is offered for those, and the others are listed under the same warning.</li>
+      </ul></li>
+    <li>The bar's summary says it too: "Servicios de IA no disponibles". The teacher can still launch; the activity runs without them, as it does today.</li>
   </ol>
 </div>
 
 <script>
   const DESIGNS = [
-    { t: "Privacidad en apps de salud", type: "Diferencial semántico", phases: 3, cs: "Datos de pacientes en la nube", ai: ["Tutor", "Agente"], when: "Lanzado 2 veces · 28 oct." },
-    { t: "Dilema del examen: ayudar a un compañero", type: "Diferencial semántico", phases: 2, cs: "El examen de Sebastián", ai: ["Tutor"], when: "Lanzado 5 veces · 21 oct." },
-    { t: "Responsabilidades en el colapso del puente", type: "Ranking", phases: 2, cs: "El puente del río Claro", ai: [], when: "Nunca lanzado" },
-    { t: "Conflicto de interés en consultoría", type: "Diferencial semántico", phases: 3, cs: "La consultora y el municipio", ai: ["Agente"], when: "Lanzado 1 vez · 2 sep." },
-    { t: "Seguridad frente a plazos en obra", type: "Diferencial semántico", phases: 2, cs: "Andamios en la torre B", ai: ["Tutor"], when: "Lanzado 3 veces · 18 ago." },
-    { t: "Denunciar una falla de software", type: "Diferencial semántico", phases: 2, cs: "El bug del sistema de frenos", ai: [], when: "Lanzado 4 veces · 30 jul." },
-    { t: "IA generativa en la evaluación", type: "Diferencial semántico", phases: 3, cs: "El ensayo de Camila", ai: ["Tutor", "Agente"], when: "Lanzado 2 veces · 9 jul." },
-    { t: "Datos abiertos municipales", type: "Ranking", phases: 2, cs: "Mapa de la delincuencia", ai: [], when: "Lanzado 1 vez · 12 jun." },
-    { t: "Accesibilidad en el diseño de software", type: "Diferencial semántico", phases: 2, cs: "El portal de trámites", ai: ["Tutor"], when: "Nunca lanzado" },
-    { t: "Propiedad intelectual en la tesis", type: "Diferencial semántico", phases: 2, cs: "El código del laboratorio", ai: [], when: "Lanzado 2 veces · 20 may." },
-    { t: "Impacto ambiental de la planta", type: "Ranking", phases: 3, cs: "La planta de celulosa", ai: ["Agente"], when: "Lanzado 1 vez · 8 may." },
-    { t: "Sesgo en el algoritmo de admisión", type: "Diferencial semántico", phases: 2, cs: "Admisión automatizada", ai: ["Tutor"], when: "Lanzado 3 veces · 14 abr." },
-    { t: "Regalos de proveedores", type: "Diferencial semántico", phases: 2, cs: "La cena de fin de año", ai: [], when: "Lanzado 6 veces · 2 abr." },
-    { t: "Ética del trabajo remoto", type: "Diferencial semántico", phases: 2, cs: "Monitoreo de pantallas", ai: [], when: "Nunca lanzado" },
-    { t: "Pruebas con animales", type: "Ranking", phases: 2, cs: "El laboratorio de toxicología", ai: [], when: "Lanzado 1 vez · 3 mar." },
-    { t: "Plagio en el informe final", type: "Diferencial semántico", phases: 2, cs: "Dos informes muy parecidos", ai: ["Tutor"], when: "Lanzado 2 veces · 27 feb." },
+    { t: "Privacidad en apps de salud", type: "Diferencial semántico", phases: 3, cs: "Datos de pacientes en la nube", ai: true, when: "Lanzado 2 veces · 28 oct." },
+    { t: "Responsabilidades en el colapso del puente", type: "Ranking", phases: 2, cs: "El puente del río Claro", ai: false, when: "Creado 25 oct. · nunca lanzado" },
+    { t: "Dilema del examen: ayudar a un compañero", type: "Diferencial semántico", phases: 2, cs: "El examen de Sebastián", ai: true, when: "Lanzado 5 veces · 21 oct." },
+    { t: "Conflicto de interés en consultoría", type: "Diferencial semántico", phases: 3, cs: "La consultora y el municipio", ai: true, when: "Lanzado 1 vez · 2 sep." },
+    { t: "Seguridad frente a plazos en obra", type: "Diferencial semántico", phases: 2, cs: "Andamios en la torre B", ai: true, when: "Lanzado 3 veces · 18 ago." },
+    { t: "Denunciar una falla de software", type: "Diferencial semántico", phases: 2, cs: "El bug del sistema de frenos", ai: false, when: "Lanzado 4 veces · 30 jul." },
+    { t: "IA generativa en la evaluación", type: "Diferencial semántico", phases: 3, cs: "El ensayo de Camila", ai: true, when: "Lanzado 2 veces · 9 jul." },
+    { t: "Datos abiertos municipales", type: "Ranking", phases: 2, cs: "Mapa de la delincuencia", ai: false, when: "Lanzado 1 vez · 12 jun." },
+    { t: "Accesibilidad en el diseño de software", type: "Diferencial semántico", phases: 2, cs: "El portal de trámites", ai: true, when: "Creado 3 jun. · nunca lanzado" },
+    { t: "Propiedad intelectual en la tesis", type: "Diferencial semántico", phases: 2, cs: "El código del laboratorio", ai: false, when: "Lanzado 2 veces · 20 may." },
+    { t: "Impacto ambiental de la planta", type: "Ranking", phases: 3, cs: "La planta de celulosa", ai: true, when: "Lanzado 1 vez · 8 may." },
+    { t: "Sesgo en el algoritmo de admisión", type: "Diferencial semántico", phases: 2, cs: "Admisión automatizada", ai: true, when: "Lanzado 3 veces · 14 abr." },
+    { t: "Regalos de proveedores", type: "Diferencial semántico", phases: 2, cs: "La cena de fin de año", ai: false, when: "Lanzado 6 veces · 2 abr." },
+    { t: "Pruebas con animales", type: "Ranking", phases: 2, cs: "El laboratorio de toxicología", ai: false, when: "Lanzado 1 vez · 3 mar." },
+    { t: "Plagio en el informe final", type: "Diferencial semántico", phases: 2, cs: "Dos informes muy parecidos", ai: true, when: "Lanzado 2 veces · 27 feb." },
+    { t: "Ética del trabajo remoto", type: "Diferencial semántico", phases: 2, cs: "Monitoreo de pantallas", ai: false, when: "Creado 1 feb. · nunca lanzado" },
   ];
   const SELECTED = 0;
+  const DESCRIPTION = "Ética Profesional · Sección 3 · 2026-2";
+  // The AI service of each phase, named with the service's own UI texts.
   const PHASES = [
     ["Fase 1", "Individual · 2 preguntas", "Tutor de argumentación"],
     ["Fase 2", "Grupal, grupos de 3 · chat · 2 preguntas", "Agente de discusión (abogado del diablo)"],
     ["Fase 3", "Individual · 2 preguntas", "Tutor de argumentación"],
   ];
-  const AI_LABEL = { Tutor: "Tutor", Agente: "Agente" };
 
   function stepper(step, compact) {
     const s1 = step === 1 ? "now" : "done";
@@ -276,12 +317,14 @@
     </nav>`;
   }
 
+  const phaseRows = () => PHASES.map((p) => `<div class="ph-row"><b>${p[0]}</b><span>${p[1]}<br><span class="ai-line">✦ ${p[2]}</span></span></div>`).join("");
+
   function row(d, i, { narrow, inline }) {
     const sel = i === SELECTED;
     const meta = narrow ? `Caso: ${d.cs}` : `${d.type} · ${d.phases} fases · Caso: ${d.cs}`;
-    const ai = d.ai.map((a) => `<span class="chip ai">${AI_LABEL[a]}</span>`).join("");
+    const ai = d.ai ? '<span class="chip ai">✦ IA</span>' : "";
     const extra = sel && inline
-      ? `<div class="inline">${PHASES.map((p) => `<div class="ph-row"><b>${p[0]}</b><span>${p[1]}<br><span class="ai-line">✦ ${p[2]}</span></span></div>`).join("")}
+      ? `<div class="inline">${phaseRows()}
          <div class="sub" style="margin-top:6px">Creado el 12 sep. · ${d.when} · <span style="color:var(--accent)">Ver diseño completo ↗</span></div></div>`
       : "";
     return `<div class="row${sel ? " sel" : ""}"><span class="radio"></span>
@@ -298,15 +341,15 @@
       </div>`;
     const tools = `<div class="tools"><span class="search">🔍 Buscar por título, caso o etiqueta</span>
         <span class="chip on">Todos</span><span class="chip">Diferencial semántico</span><span class="chip">Ranking</span>
-        <span class="sub sort">Más recientes primero ▾ · 24 diseños</span></div>`;
+        <span class="sub sort">Por último lanzamiento · 24 diseños</span></div>`;
     if (one) return tools + list;
     const d = DESIGNS[SELECTED];
     const preview = `<div class="box preview">
         <div class="sub">Vista previa</div>
         <h4>${d.t}</h4>
-        <div class="kv"><span class="chip">${d.type}</span><span class="chip">${d.phases} fases</span><span class="chip ai">✦ 2 servicios de IA</span></div>
+        <div class="kv"><span class="chip">${d.type}</span><span class="chip">${d.phases} fases</span><span class="chip ai">✦ IA</span></div>
         <div class="case"><span>📖 Caso: <b>${d.cs}</b></span><span style="color:var(--accent)">Ver caso ↗</span></div>
-        ${PHASES.map((p) => `<div class="ph-row"><b>${p[0]}</b><span>${p[1]}<br><span class="ai-line">✦ ${p[2]}</span></span></div>`).join("")}
+        ${phaseRows()}
         <div class="sub" style="margin:10px 0 12px">Creado el 12 sep. · ${d.when}</div>
         <span class="btn">Ver diseño completo ↗</span>
       </div>`;
@@ -314,7 +357,24 @@
         <div>${tools}${list}</div>${preview}</div>`;
   }
 
-  function step2({ layout, aiOff }) {
+  function aiCard(ai) {
+    const svc = (status) => PHASES.map((p) => `<div class="svc${ai === "off" ? " off" : ai === "down" ? " down" : ""}"><b>${p[0]}</b><span><span class="ai-line">✦ ${p[2]}</span>${status}</span></div>`).join("");
+    if (ai === "down") {
+      return `<div class="box card ai-card">
+        <div class="lbl">Servicios de IA de este diseño</div>
+        <div class="callout warn">⚠ No están disponibles ahora. La actividad se realizará sin ellos. Si esperabas usarlos, avisa a quien administra EthicApp.</div>
+        <div style="margin-top:10px">${svc('<span class="state down">○ No disponible</span>')}</div>
+      </div>`;
+    }
+    return `<div class="box card ai-card">
+        <div class="sw-row"><span class="switch${ai === "off" ? " off" : ""}"></span><span><div class="lbl">Usar los servicios de IA de este diseño</div>
+        <div class="sub">${ai === "off" ? "Desactivados para esta actividad." : "Activados por defecto. Puedes desactivarlos solo para esta actividad."}</div></span></div>
+        <div style="margin-top:10px">${svc(ai === "off" ? "" : '<span class="state ok">● Disponible</span>')}</div>
+        ${ai === "off" ? '<div class="callout warn">Las fases se realizarán sin tutor ni agente de discusión. El diseño no cambia: los conserva para tus próximas actividades.</div>' : ""}
+      </div>`;
+  }
+
+  function step2({ layout, ai }) {
     const one = layout === "one";
     const d = DESIGNS[SELECTED];
     const chosen = `<div class="box card chosen"><span style="min-width:0"><div class="sub">Diseño elegido</div>
@@ -322,28 +382,22 @@
         <span class="btn link">← Cambiar diseño</span></div>`;
     const desc = `<div class="box card desc">
         <div class="field-label">Descripción de la actividad <span class="req">*</span></div>
-        <div class="input">Ética Profesional · Sección 3 · 2026-2<span class="caret"></span></div>
-        <div class="help">Para reconocerla después en Actividades: curso, sección, semestre o fecha.</div>
+        <div class="input">${DESCRIPTION}<span class="caret"></span></div>
+        <div class="help">Obligatoria. Para reconocerla después: curso, sección, semestre o fecha.</div>
         <div class="suggest"><span class="sub">Usadas antes:</span><span class="chip">Ética Profesional · Sección 3 · 2026-2</span><span class="chip">Ética Profesional · Sección 1 · 2026-2</span><span class="chip">Taller de Ingeniería · 2026-2</span></div>
       </div>`;
-    const svc = PHASES.map((p) => `<div class="svc${aiOff ? " off" : ""}"><b>${p[0]}</b><span class="ai-line">✦ ${p[2]}</span></div>`).join("");
-    const ai = `<div class="box card ai-card">
-        <div class="sw-row"><span class="switch${aiOff ? " off" : ""}"></span><span><div class="lbl">Usar los servicios de IA de este diseño</div>
-        <div class="sub">${aiOff ? "Desactivados para esta actividad." : "Activados por defecto. Puedes desactivarlos solo para esta actividad."}</div></span></div>
-        <div style="margin-top:10px">${svc}</div>
-        ${aiOff ? '<div class="callout warn">Las fases se realizarán sin tutor ni agente de discusión. El diseño no cambia: los conserva para tus próximas actividades.</div>' : ""}
-      </div>`;
-    const card = `<div class="box card look"><h4>Así la verás en Actividades</h4>
-        <div class="actcard"><div class="top">${d.t}</div><div class="body">
-        <span>✱ Descripción: <span class="hl">Ética Profesional · Sección 3 · 2026-2</span></span>
+    const card = `<div class="box card look"><h4>Así la verás en Actividades y en su panel</h4>
+        <div class="actcard"><div class="top">${d.t} <span class="hl">· ${DESCRIPTION}</span></div><div class="body">
         <span class="sub">● Iniciada · Código k00347 · Hoy</span></div></div>
         <div class="callout info lock">🔒 Al lanzarla, el diseño queda bloqueado para edición. Podrás duplicarlo si necesitas cambiarlo.</div></div>`;
-    if (one) return `<div style="display:grid; gap:14px">${chosen}${desc}${ai}${card}</div>`;
+    if (one) return `<div style="display:grid; gap:14px">${chosen}${desc}${aiCard(ai)}${card}</div>`;
     return `<div class="cols" style="grid-template-columns: minmax(0, 1fr) 400px">
-        <div style="display:grid; gap:14px">${chosen}${desc}${ai}</div>${card}</div>`;
+        <div style="display:grid; gap:14px">${chosen}${desc}${aiCard(ai)}</div>${card}</div>`;
   }
 
-  function frame(hostId, { width, height, appNav, step, layout, rows = 10, aiOff = false, notes = [] }) {
+  const AI_SUMMARY = { on: "Con 2 servicios de IA", off: "Sin servicios de IA", down: "Servicios de IA no disponibles" };
+
+  function frame(hostId, { width, height, appNav, step, layout, rows = 10, ai = "on", notes = [] }) {
     const host = document.getElementById(hostId);
     const solo = new URLSearchParams(location.search).get("frame");
     if (solo && solo !== hostId) return;
@@ -365,7 +419,7 @@
     content.className = "content";
     content.style.left = (appNav ? 244 : 0) + "px";
     content.innerHTML = `<div class="head"><h3>🚀 Lanzar una actividad</h3>${stepper(step, layout === "one")}</div>`
-      + (step === 1 ? step1({ layout, rows }) : step2({ layout, aiOff }));
+      + (step === 1 ? step1({ layout, rows }) : step2({ layout, ai }));
     f.appendChild(content);
 
     const actions = document.createElement("div");
@@ -373,7 +427,7 @@
     actions.style.left = (appNav ? 244 : 0) + "px";
     actions.innerHTML = step === 1
       ? `<span class="btn">Cancelar</span><span class="grow sub">Elegido: <b style="color:var(--ink)">${DESIGNS[SELECTED].t}</b></span><span class="btn primary">Siguiente: identificar la actividad →</span><span class="sticky-tag">fija abajo</span>`
-      : `<span class="btn">← Atrás</span><span class="grow sub">${aiOff ? "Sin servicios de IA" : "Con 2 servicios de IA"} · ${DESIGNS[SELECTED].t}</span><span class="btn primary">🚀 Lanzar actividad</span><span class="sticky-tag">fija abajo</span>`;
+      : `<span class="btn">← Atrás</span><span class="grow sub">${AI_SUMMARY[ai]} · ${DESIGNS[SELECTED].t}</span><span class="btn primary">🚀 Lanzar actividad</span><span class="sticky-tag">fija abajo</span>`;
     f.appendChild(actions);
 
     const fold = document.createElement("div");
@@ -438,12 +492,14 @@
     notes: [[".stepper", 1, -30], [".tools", 2], [".row.sel", 3], [".listfoot", 4, 560], [".preview", 5], [".actions .btn.primary", 6, -30]] });
   frame("B", { width: 1366, height: 768, appNav: true, step: 1, layout: "two-narrow", rows: 10,
     notes: [[".preview", 1], [".list", 2]] });
-  frame("C", { width: 1366, height: 768, appNav: true, step: 2, layout: "two-narrow",
+  frame("C", { width: 1366, height: 768, appNav: true, step: 2, layout: "two-narrow", ai: "on",
     notes: [[".chosen", 1], [".desc", 2], [".ai-card", 3], [".look", 4], [".lock", 5, -24], [".actions .btn.primary", 6, -30]] });
   frame("D", { width: 1024, height: 768, appNav: false, step: 1, layout: "one", rows: 8,
     notes: [[".stepper", 1, -30], [".row.sel .inline", 2], [".actions .grow", 3]] });
-  frame("E", { width: 1024, height: 768, appNav: false, step: 2, layout: "one", aiOff: true,
+  frame("E", { width: 1024, height: 768, appNav: false, step: 2, layout: "one", ai: "off",
     notes: [[".ai-card", 1], [".actions .btn.primary", 2, -30]] });
+  frame("F", { width: 1366, height: 768, appNav: true, step: 2, layout: "two-narrow", ai: "down",
+    notes: [[".ai-card", 1], [".actions .grow", 2, 420]] });
 </script>
 </body>
 </html>
