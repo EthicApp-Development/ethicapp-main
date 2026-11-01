@@ -1,10 +1,10 @@
 // The layout of the teacher's activity dashboard (#894 and #895, epic #892):
 // which phase and which main tab are selected, whether the page has one
 // column or two, the phase navigator's rows and pills, how many participants
-// answered a phase, the questions' text for the table's column headers, and
-// the participant search over the response tables. Plain functions over the
-// dashboard's phase data (`{ descriptor, state }` per started phase) and the
-// design's phases.
+// answered every question of a phase, the questions' text for the table's
+// column headers, and the participant search over the response tables. Plain
+// functions over the dashboard's phase data (`{ descriptor, state }` per
+// started phase) and the design's phases.
 
 import { phaseModeKey } from "./activity-bar.js";
 import { toPlainText } from "./rich-text.js";
@@ -91,19 +91,27 @@ export function isParticipantRow(row) {
     return Boolean(row) && typeof row === "object" && !row.groupStatistics;
 }
 
-function hasAnswer(row) {
-    return Object.keys(row).some(key => ANSWER_KEY.test(key)
-        && row[key] !== null && row[key] !== undefined && row[key] !== "");
+function isAnswered(value) {
+    return value !== null && value !== undefined && value !== "";
 }
 
-// How many participants of a phase answered at least one of its questions,
-// out of the participants in its table.
+// Whether a participant answered every question of the phase. Their row has
+// one answer key per question (semantic differential) or per position
+// (ranking), empty until answered, so a row with no answer key has nothing
+// answered.
+function answeredEveryQuestion(row) {
+    const answers = Object.keys(row).filter(key => ANSWER_KEY.test(key)).map(key => row[key]);
+    return answers.length > 0 && answers.every(isAnswered);
+}
+
+// How many participants of a phase answered every one of its questions (in a
+// ranking, filled every position), out of the participants in its table.
 export function phaseResponseCounts(phaseData) {
     const rows = Array.isArray(phaseData?.state) ? phaseData.state : [];
     const participants = rows.filter(isParticipantRow);
 
     return {
-        answered:     participants.filter(hasAnswer).length,
+        answered:     participants.filter(answeredEveryQuestion).length,
         participants: participants.length,
     };
 }
@@ -160,9 +168,9 @@ function phaseMode(mode) {
 
 // One row per phase of the design, for the phase navigator: its number and
 // mode, whether it started, whether it is the activity's current phase, and
-// how many participants answered it. Phases that have not started have no id,
-// no counts and cannot be selected. A started phase missing from the design
-// is listed too.
+// how many participants answered every question of it. Phases that have not
+// started have no id, no counts and cannot be selected. A started phase
+// missing from the design is listed too.
 export function phaseNavigatorRows(designPhases, startedPhases, currentPhaseId) {
     const design = Array.isArray(designPhases) ? designPhases : [];
     const started = (Array.isArray(startedPhases) ? startedPhases : []).filter(phaseId);

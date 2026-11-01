@@ -180,6 +180,10 @@ describe("response detail panel", () => {
         vm.row = phaseData.state[2];
         assert.equal(vm.studentGroup(), null);
         assert.deepEqual(vm.groupCounts(), { answered: 1, participants: 2 });
+        phaseData.state[1].r1 = 4;
+        assert.deepEqual(vm.groupCounts(), { answered: 1, participants: 2 }, "one of two answered");
+        phaseData.state[1].r2 = 5;
+        assert.deepEqual(vm.groupCounts(), { answered: 2, participants: 2 }, "both questions");
         assert.equal(vm.isChatPhase(), true);
     });
 

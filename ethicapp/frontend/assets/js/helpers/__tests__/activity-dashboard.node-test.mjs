@@ -32,8 +32,10 @@ function startedPhase(id, number, mode, state = []) {
     return { descriptor: { id, number, mode }, state };
 }
 
+// A two-question phase's table: one participant answered both questions, one
+// none and one only the second.
 const INDIVIDUAL_ROWS = [
-    { userId: 1, userName: "Ana Rojas", r1: 3, r2: null },
+    { userId: 1, userName: "Ana Rojas", r1: 3, r2: 4 },
     { userId: 2, userName: "Benjamín Soto", r1: null, r2: null },
     { userId: 3, userName: "Camila Fuentes", r1: null, r2: 5 },
 ];
@@ -195,27 +197,83 @@ describe("phaseQuestionTexts", () => {
 });
 
 describe("phaseResponseCounts", () => {
-    it("counts the participants who answered at least one question", () => {
-        assert.deepEqual(phaseResponseCounts({ state: INDIVIDUAL_ROWS }), { answered: 2, participants: 3 });
+    const counts = rows => phaseResponseCounts({ state: rows });
+
+    it("counts the participants who answered every question", () => {
+        assert.deepEqual(counts(INDIVIDUAL_ROWS), { answered: 1, participants: 3 });
+    });
+
+    it("counts a participant of a one-question phase once they answer it", () => {
+        const rows = [
+            { userId: 1, userName: "Ana", r1: 3 },
+            { userId: 2, userName: "Beto", r1: null },
+            { userId: 3, userName: "Carla", r1: 1 },
+        ];
+        assert.deepEqual(counts(rows), { answered: 2, participants: 3 });
+    });
+
+    it("counts a participant of a three-question phase only once all three are answered", () => {
+        const rows = [
+            { userId: 1, userName: "Ana", r1: null, r2: null, r3: null },
+            { userId: 2, userName: "Beto", r1: 2, r2: null, r3: null },
+            { userId: 3, userName: "Carla", r1: 2, r2: null, r3: 5 },
+            { userId: 4, userName: "Diego", r1: 2, r2: 4, r3: 5 },
+        ];
+        assert.deepEqual(counts(rows), { answered: 1, participants: 4 });
+        assert.deepEqual(rows.map(row => counts([row]).answered), [0, 0, 0, 1]);
     });
 
     it("leaves the groups' summary rows out", () => {
-        assert.deepEqual(phaseResponseCounts({ state: GROUP_ROWS }), { answered: 2, participants: 3 });
+        assert.deepEqual(counts(GROUP_ROWS), { answered: 2, participants: 3 });
         assert.equal(isParticipantRow(GROUP_ROWS[2]), false);
         assert.equal(isParticipantRow(GROUP_ROWS[0]), true);
     });
 
-    it("counts ranking answers, kept as text", () => {
+    it("does not count a group's summary row even when it looks answered", () => {
         const rows = [
-            { uid: 1, userName: "Ana", r1: "Actor A", r2: "Actor B", idR1: 4 },
-            { uid: 2, userName: "Beto", r1: null, r2: null, idR1: null },
+            { userId: 1, userName: "Ana", groupId: 70, r1: 2, r2: null },
+            { groupStatistics: true, groupId: 70, groupName: "Grupo 1", r1: 2, r2: 3, chatR1: 4 },
         ];
-        assert.deepEqual(phaseResponseCounts({ state: rows }), { answered: 1, participants: 2 });
+        assert.deepEqual(counts(rows), { answered: 0, participants: 1 });
     });
 
-    it("does not take chat counts or comments for answers", () => {
-        const rows = [{ userId: 1, userName: "Ana", r1: null, chatR1: 4, commentR1: "hola", totalChatCount: 4 }];
-        assert.deepEqual(phaseResponseCounts({ state: rows }), { answered: 0, participants: 1 });
+    it("counts a ranking participant once every position is filled", () => {
+        // A ranking row keeps each position's item in `r<n>` and its id in `idR<n>`.
+        const rankingRow = (uid, userName, [r1, r2, r3], [idR1, idR2, idR3]) =>
+            ({ uid, userName, r1, r2, r3, idR1, idR2, idR3 });
+        const rows = [
+            rankingRow(1, "Ana", ["Actor A", "Actor B", "Actor C"], [4, 5, 6]),
+            rankingRow(2, "Beto", ["Actor B", "Actor A", null], [5, 4, null]),
+            rankingRow(3, "Carla", [null, null, null], [null, null, null]),
+        ];
+        assert.deepEqual(counts(rows), { answered: 1, participants: 3 });
+    });
+
+    it("takes an empty text for no answer", () => {
+        const rows = [
+            { userId: 1, userName: "Ana", r1: "Porque sí", r2: "" },
+            { userId: 2, userName: "Beto", r1: "Porque sí", r2: "Porque no" },
+        ];
+        assert.deepEqual(counts(rows), { answered: 1, participants: 2 });
+    });
+
+    it("takes zero for an answer", () => {
+        const rows = [{ userId: 1, userName: "Ana", r1: 0, r2: 3 }];
+        assert.deepEqual(counts(rows), { answered: 1, participants: 1 });
+    });
+
+    it("does not take chat counts, comments or ranked items' ids for answers", () => {
+        const rows = [
+            { userId: 1, userName: "Ana", r1: null, chatR1: 4, commentR1: "hola" },
+            { uid: 2, userName: "Beto", r1: "Actor A", r2: null, idR1: 4, idR2: 5 },
+            { userId: 3, userName: "Carla", r1: 2, chatR2: 1, commentR2: "chao", idR2: 7 },
+        ];
+        assert.deepEqual(counts(rows), { answered: 1, participants: 3 });
+    });
+
+    it("does not count a row without answer keys", () => {
+        const rows = [{ userId: 1, userName: "Ana", chatR1: 2, totalChatCount: 2 }];
+        assert.deepEqual(counts(rows), { answered: 0, participants: 1 });
     });
 
     it("is zero without a table", () => {
@@ -275,14 +333,14 @@ describe("phaseNavigatorRows", () => {
             [2, "team", 41, true, true],
             [3, "individual", null, false, false],
         ]);
-        assert.deepEqual(rows.map(row => [row.answered, row.participants]), [[2, 3], [2, 3], [null, null]]);
+        assert.deepEqual(rows.map(row => [row.answered, row.participants]), [[1, 3], [2, 3], [null, null]]);
         assert.equal(rows[1].modeKey, "activity_bar_phase_mode_team");
         assert.equal(rows[2].modeKey, "activity_bar_phase_mode_individual");
     });
 
     it("gives the progress as a percentage of the participants", () => {
         const rows = phaseNavigatorRows(designPhases, [startedPhase(40, 1, "individual", INDIVIDUAL_ROWS)], 40);
-        assert.equal(rows[0].progress, 67);
+        assert.equal(rows[0].progress, 33);
         assert.equal(rows[1].progress, 0);
 
         const empty = phaseNavigatorRows(designPhases, [startedPhase(40, 1, "individual", [])], 40);
@@ -309,11 +367,11 @@ describe("phaseNavigatorRows", () => {
         const first = phaseNavigatorRows(designPhases, phases, 40);
         assert.equal(sameNavigatorRows(first, phaseNavigatorRows(designPhases, phases, 40)), true);
 
-        INDIVIDUAL_ROWS[1].r1 = 4;
+        INDIVIDUAL_ROWS[2].r1 = 4;
         try {
             assert.equal(sameNavigatorRows(first, phaseNavigatorRows(designPhases, phases, 40)), false);
         } finally {
-            INDIVIDUAL_ROWS[1].r1 = null;
+            INDIVIDUAL_ROWS[2].r1 = null;
         }
         assert.equal(sameNavigatorRows(first, first.slice(1)), false);
         assert.equal(sameNavigatorRows(first, undefined), false);
