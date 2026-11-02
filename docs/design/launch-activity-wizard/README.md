@@ -66,7 +66,6 @@ The page was measured with headless Chrome. The numbers are the same at 1920, 13
 
 **Finding a design**
 - The search filters the list as the teacher types, over title, case and tags. It has no typeahead popup.
-- Type chips (Todos, Diferencial semántico, Ranking) narrow the list.
 
 **Order**
 - The list is ordered by last launch, most recent first, and says so: "Por último lanzamiento · 24 diseños".
@@ -74,12 +73,12 @@ The page was measured with headless Chrome. The numbers are the same at 1920, 13
 
 **One row per design**
 - Each row shows:
-  - a radio button, the title, and the type, number of phases and case;
+  - a radio button, the title, and the number of phases and case;
   - "✦ IA" when any of the design's phases enables an AI service;
   - when it was last launched ("Lanzado 2 veces · 28 oct.") or, if never, created ("Creado 25 oct. · nunca lanzado").
 - The whole row selects the design, and it has no other buttons. Double-clicking a row moves on to step 2.
 - The list shows the first 20 rows, then "Mostrar más". There are no pages.
-- 11 rows fit on the first screen at 1920 × 1080, 6 at 1366 × 768, and 3 at 1024 × 768 with the selected row expanded.
+- 11 rows fit on the first screen at 1920 × 1080, 7 at 1366 × 768, and 3 at 1024 × 768 with the selected row expanded.
 
 **Designs that cannot be launched**
 - Designs with errors and archived designs are not listed.
@@ -88,7 +87,7 @@ The page was measured with headless Chrome. The numbers are the same at 1920, 13
 **Preview of the selected design**
 - From 1200 px, the preview is a 460 px panel (380 px at 1366) next to the list. Below 1200 px, the selected row expands in place.
 - It shows:
-  - the type and number of phases;
+  - the number of phases;
   - the case, with "Ver caso ↗";
   - each phase with its mode, group size, chat, number of questions and AI service;
   - when the design was created and last launched;
@@ -161,7 +160,7 @@ Older activities without a description keep showing the name alone.
 | Today | Proposal |
 | --- | --- |
 | Title, "Volver", "Indicaciones" (two bullet points) | Title and stepper; "Volver" becomes "Cancelar" in the action bar |
-| Step 1 panel: typeahead search, 353 px `design-item` cards, 5 per page | Live search, type chips, one row per design, "Mostrar más" |
+| Step 1 panel: typeahead search, 353 px `design-item` cards, 5 per page | Live search, one row per design, "Mostrar más" |
 | "Ver" button (leaves the page) | Inline preview; "Ver diseño completo ↗" in a new tab |
 | Validity and lock lines on every card | Only launchable designs are listed; the footer counts the ones with errors |
 | Visibility and license lines | Dropped from this page; they stay in Diseños |
@@ -235,6 +234,7 @@ Older activities without a description keep showing the name alone.
 - **2026-11-01: one switch turns off the AI services for the whole activity.**
 - **2026-11-01: step 2 checks whether the design's AI services can run before offering the switch.** If they cannot, it shows the "services not available" notice instead, before the launch.
 - **2026-11-01: the list only marks that a design uses AI ("✦ IA").** Enumerating services as chips would need the list to cross the service catalog with every design, for little gain. The preview names the service of each phase.
+- **2026-11-01: designs are not told apart by type.** The lists show no type and have no type filter. A new canonical design schema will let one design mix item types, and new ones are coming (open response, multiple choice), so a per-design type is going away. Ranking will not be finished on the current schema and teacher frontend, so every design is treated as a semantic differential design.
 
 ## Out of scope
 

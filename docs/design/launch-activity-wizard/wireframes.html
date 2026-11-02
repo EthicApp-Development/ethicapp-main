@@ -201,14 +201,14 @@
   <div id="A"></div>
   <ol class="notes">
     <li><b>Stepper.</b> Two steps, always visible: "Elegir diseño" and "Identificar y lanzar". The current step is marked, and a completed step shows a check and can be clicked to go back. It is a <code>nav</code> with <code>aria-current="step"</code>.</li>
-    <li><b>Find a design.</b> The search filters as the teacher types, over title, case and tags, with no typeahead popup. The type chips narrow the list.
+    <li><b>Find a design.</b> The search filters as the teacher types, over title, case and tags, with no typeahead popup.
       <ul>
         <li><b>The list says its order</b>: "Por último lanzamiento". The most recently launched designs come first.</li>
         <li><b>A design never launched</b> is placed by its creation date. A design created yesterday sits above one last launched a month ago, so a design just written for this class is at the top.</li>
       </ul></li>
     <li><b>One line per design</b>, instead of a 353 px card.
       <ul>
-        <li>It shows a radio button, the title, the type, the number of phases and the case.</li>
+        <li>It shows a radio button, the title, the number of phases and the case.</li>
         <li><b>"✦ IA"</b> marks a design that uses AI services in any phase. It comes from the design itself, so the list needs no catalog of services.</li>
         <li>On the right, when the design was last launched, or created if it never was.</li>
         <li>The whole row selects; there are no other buttons.</li>
@@ -217,7 +217,7 @@
     <li><b>Designs that cannot be launched are explained, not silently hidden.</b> Designs with errors are not listed, and the footer says how many and links to Diseños. Archived designs are not listed either.</li>
     <li><b>Preview of the selected design</b>, so the teacher can check it without leaving the page.
       <ul>
-        <li>It shows the type, the case, each phase with its mode and questions, and when the design was created and last launched.</li>
+        <li>It shows the case, each phase with its mode and questions, and when the design was created and last launched.</li>
         <li><b>It names the AI service of each phase</b> with the service's own texts, as the design editor and the dashboard do.</li>
         <li>"Ver diseño completo" opens the design in a new tab, so the wizard keeps its state.</li>
       </ul></li>
@@ -228,8 +228,8 @@
   <p class="metrics" data-metrics="B"></p>
   <div id="B"></div>
   <ol class="notes">
-    <li>Same structure, with a 380 px preview. When the type and the phases do not fit on a row's second line, the row drops them; the preview still shows them.</li>
-    <li>6 designs fit on the first screen. Today not one full card does.</li>
+    <li>Same structure, with a 380 px preview. When the phases do not fit on a row's second line, the row drops them; the preview still shows them.</li>
+    <li>7 designs fit on the first screen. Today not one full card does.</li>
   </ol>
 
   <h2>C. 1366 × 768: step 2, identify and launch</h2>
@@ -281,22 +281,22 @@
 
 <script>
   const DESIGNS = [
-    { t: "Privacidad en apps de salud", type: "Diferencial semántico", phases: 3, cs: "Datos de pacientes en la nube", ai: true, when: "Lanzado 2 veces · 28 oct." },
-    { t: "Responsabilidades en el colapso del puente", type: "Ranking", phases: 2, cs: "El puente del río Claro", ai: false, when: "Creado 25 oct. · nunca lanzado" },
-    { t: "Dilema del examen: ayudar a un compañero", type: "Diferencial semántico", phases: 2, cs: "El examen de Sebastián", ai: true, when: "Lanzado 5 veces · 21 oct." },
-    { t: "Conflicto de interés en consultoría", type: "Diferencial semántico", phases: 3, cs: "La consultora y el municipio", ai: true, when: "Lanzado 1 vez · 2 sep." },
-    { t: "Seguridad frente a plazos en obra", type: "Diferencial semántico", phases: 2, cs: "Andamios en la torre B", ai: true, when: "Lanzado 3 veces · 18 ago." },
-    { t: "Denunciar una falla de software", type: "Diferencial semántico", phases: 2, cs: "El bug del sistema de frenos", ai: false, when: "Lanzado 4 veces · 30 jul." },
-    { t: "IA generativa en la evaluación", type: "Diferencial semántico", phases: 3, cs: "El ensayo de Camila", ai: true, when: "Lanzado 2 veces · 9 jul." },
-    { t: "Datos abiertos municipales", type: "Ranking", phases: 2, cs: "Mapa de la delincuencia", ai: false, when: "Lanzado 1 vez · 12 jun." },
-    { t: "Accesibilidad en el diseño de software", type: "Diferencial semántico", phases: 2, cs: "El portal de trámites", ai: true, when: "Creado 3 jun. · nunca lanzado" },
-    { t: "Propiedad intelectual en la tesis", type: "Diferencial semántico", phases: 2, cs: "El código del laboratorio", ai: false, when: "Lanzado 2 veces · 20 may." },
-    { t: "Impacto ambiental de la planta", type: "Ranking", phases: 3, cs: "La planta de celulosa", ai: true, when: "Lanzado 1 vez · 8 may." },
-    { t: "Sesgo en el algoritmo de admisión", type: "Diferencial semántico", phases: 2, cs: "Admisión automatizada", ai: true, when: "Lanzado 3 veces · 14 abr." },
-    { t: "Regalos de proveedores", type: "Diferencial semántico", phases: 2, cs: "La cena de fin de año", ai: false, when: "Lanzado 6 veces · 2 abr." },
-    { t: "Pruebas con animales", type: "Ranking", phases: 2, cs: "El laboratorio de toxicología", ai: false, when: "Lanzado 1 vez · 3 mar." },
-    { t: "Plagio en el informe final", type: "Diferencial semántico", phases: 2, cs: "Dos informes muy parecidos", ai: true, when: "Lanzado 2 veces · 27 feb." },
-    { t: "Ética del trabajo remoto", type: "Diferencial semántico", phases: 2, cs: "Monitoreo de pantallas", ai: false, when: "Creado 1 feb. · nunca lanzado" },
+    { t: "Privacidad en apps de salud", phases: 3, cs: "Datos de pacientes en la nube", ai: true, when: "Lanzado 2 veces · 28 oct." },
+    { t: "Responsabilidades en el colapso del puente", phases: 2, cs: "El puente del río Claro", ai: false, when: "Creado 25 oct. · nunca lanzado" },
+    { t: "Dilema del examen: ayudar a un compañero", phases: 2, cs: "El examen de Sebastián", ai: true, when: "Lanzado 5 veces · 21 oct." },
+    { t: "Conflicto de interés en consultoría", phases: 3, cs: "La consultora y el municipio", ai: true, when: "Lanzado 1 vez · 2 sep." },
+    { t: "Seguridad frente a plazos en obra", phases: 2, cs: "Andamios en la torre B", ai: true, when: "Lanzado 3 veces · 18 ago." },
+    { t: "Denunciar una falla de software", phases: 2, cs: "El bug del sistema de frenos", ai: false, when: "Lanzado 4 veces · 30 jul." },
+    { t: "IA generativa en la evaluación", phases: 3, cs: "El ensayo de Camila", ai: true, when: "Lanzado 2 veces · 9 jul." },
+    { t: "Datos abiertos municipales", phases: 2, cs: "Mapa de la delincuencia", ai: false, when: "Lanzado 1 vez · 12 jun." },
+    { t: "Accesibilidad en el diseño de software", phases: 2, cs: "El portal de trámites", ai: true, when: "Creado 3 jun. · nunca lanzado" },
+    { t: "Propiedad intelectual en la tesis", phases: 2, cs: "El código del laboratorio", ai: false, when: "Lanzado 2 veces · 20 may." },
+    { t: "Impacto ambiental de la planta", phases: 3, cs: "La planta de celulosa", ai: true, when: "Lanzado 1 vez · 8 may." },
+    { t: "Sesgo en el algoritmo de admisión", phases: 2, cs: "Admisión automatizada", ai: true, when: "Lanzado 3 veces · 14 abr." },
+    { t: "Regalos de proveedores", phases: 2, cs: "La cena de fin de año", ai: false, when: "Lanzado 6 veces · 2 abr." },
+    { t: "Pruebas con animales", phases: 2, cs: "El laboratorio de toxicología", ai: false, when: "Lanzado 1 vez · 3 mar." },
+    { t: "Plagio en el informe final", phases: 2, cs: "Dos informes muy parecidos", ai: true, when: "Lanzado 2 veces · 27 feb." },
+    { t: "Ética del trabajo remoto", phases: 2, cs: "Monitoreo de pantallas", ai: false, when: "Creado 1 feb. · nunca lanzado" },
   ];
   const SELECTED = 0;
   const DESCRIPTION = "Ética Profesional · Sección 3 · 2026-2";
@@ -321,7 +321,7 @@
 
   function row(d, i, { narrow, inline }) {
     const sel = i === SELECTED;
-    const meta = narrow ? `Caso: ${d.cs}` : `${d.type} · ${d.phases} fases · Caso: ${d.cs}`;
+    const meta = narrow ? `Caso: ${d.cs}` : `${d.phases} fases · Caso: ${d.cs}`;
     const ai = d.ai ? '<span class="chip ai">✦ IA</span>' : "";
     const extra = sel && inline
       ? `<div class="inline">${phaseRows()}
@@ -340,14 +340,13 @@
         <div class="listfoot"><span>Mostrando ${rows} de 24 · <span style="color:var(--accent)">Mostrar más</span></span><span>3 diseños con errores no aparecen · <span style="color:var(--accent)">Revisar en Diseños</span></span></div>
       </div>`;
     const tools = `<div class="tools"><span class="search">🔍 Buscar por título, caso o etiqueta</span>
-        <span class="chip on">Todos</span><span class="chip">Diferencial semántico</span><span class="chip">Ranking</span>
         <span class="sub sort">Por último lanzamiento · 24 diseños</span></div>`;
     if (one) return tools + list;
     const d = DESIGNS[SELECTED];
     const preview = `<div class="box preview">
         <div class="sub">Vista previa</div>
         <h4>${d.t}</h4>
-        <div class="kv"><span class="chip">${d.type}</span><span class="chip">${d.phases} fases</span><span class="chip ai">✦ IA</span></div>
+        <div class="kv"><span class="chip">${d.phases} fases</span><span class="chip ai">✦ IA</span></div>
         <div class="case"><span>📖 Caso: <b>${d.cs}</b></span><span style="color:var(--accent)">Ver caso ↗</span></div>
         ${phaseRows()}
         <div class="sub" style="margin:10px 0 12px">Creado el 12 sep. · ${d.when}</div>
@@ -378,7 +377,7 @@
     const one = layout === "one";
     const d = DESIGNS[SELECTED];
     const chosen = `<div class="box card chosen"><span style="min-width:0"><div class="sub">Diseño elegido</div>
-        <div class="lbl" style="font-size:17px">${d.t}</div><div class="sub">${d.type} · ${d.phases} fases · Caso: ${d.cs}</div></span>
+        <div class="lbl" style="font-size:17px">${d.t}</div><div class="sub">${d.phases} fases · Caso: ${d.cs}</div></span>
         <span class="btn link">← Cambiar diseño</span></div>`;
     const desc = `<div class="box card desc">
         <div class="field-label">Descripción de la actividad <span class="req">*</span></div>

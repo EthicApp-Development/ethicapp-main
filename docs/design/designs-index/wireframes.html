@@ -183,7 +183,7 @@
     <li><b>The page says what it is for.</b> "Crea, edita y organiza tus diseños, o importa los que otros docentes comparten." and, next to it, the way out for the other task: "¿Quieres usar uno con tus estudiantes? Lanzar actividad →".</li>
     <li><b>Page actions:</b> "+ Nuevo diseño" (primary) and "Importar diseño compartido", which opens the "Compartidos por otros" tab.</li>
     <li><b>Tabs with counts:</b> "Mis diseños", "Compartidos por otros", "Archivados" (today "Tuyos", "De otros", "Archivadas"). The tab is part of the URL, so links can open one directly.</li>
-    <li><b>Filters for management, not for launching:</b> search over title, case and tags; type; status ("Listos", "Con errores", "En uso", "Compartidos"). The order is stated: "Más recientes primero".</li>
+    <li><b>Filters for management, not for launching:</b> search over title, case and tags; status ("Listos", "Con errores", "En uso", "Compartidos"). The order is stated: "Más recientes primero".</li>
     <li><b>One table row per design</b>, 12 on the first screen against one card today:
       <ul>
         <li><b>Diseño:</b> title, with the case and the number of phases under it. A click on the title opens the design's view, not the editor.</li>
@@ -200,7 +200,7 @@
   <ol class="notes">
     <li><b>The "Con errores" filter is on.</b> This is where the wizard's "3 diseños con errores no aparecen · Revisar en Diseños" lands (<code>#!/designs?status=errors</code>).</li>
     <li>Each row says how many errors it has and offers "Corregir", which opens the editor on the first error.</li>
-    <li>At this width the type moves under the title; the columns are Diseño, Estado, Compartido and the actions.</li>
+    <li>The columns are Diseño, Estado, Compartido and the actions, at this width as at 1920 px. Designs have no type column (see the README's decisions).</li>
   </ol>
 
   <h2>C. 1366 × 768: designs shared by others, after an import</h2>
@@ -208,7 +208,7 @@
   <div id="C"></div>
   <ol class="notes">
     <li><b>What the tab holds, in one line:</b> designs other teachers shared; importing one creates a private, editable copy in Mis diseños, and the original does not change.</li>
-    <li><b>Rows show what matters to decide an import:</b> author, case, license and type. The case is public, since a shared design needs a public case.</li>
+    <li><b>Rows show what matters to decide an import:</b> author, case and license. The case is public, since a shared design needs a public case.</li>
     <li><b>"Importar" is the row's only action.</b> A design already imported shows "Importado · Ver copia" instead, so it is not imported twice by mistake.</li>
     <li><b>A design that can no longer be imported</b> because its case stopped being public says so, with the button disabled.</li>
     <li><b>After importing,</b> a notice names the new copy and offers "Editar copia" and "Ver en Mis diseños". Today the notice says only "Diseño importado en tu colección" and stays for 100 seconds.</li>
@@ -233,42 +233,42 @@
 
 <script>
   const MINE = [
-    { t: "Privacidad en apps de salud", cs: "Datos de pacientes en la nube", type: "Diferencial semántico", ph: 3, st: "use", uses: 2, shared: true },
-    { t: "Responsabilidades en el colapso del puente", cs: "El puente del río Claro", type: "Ranking", ph: 2, st: "ok", shared: false },
-    { t: "Dilema del examen: ayudar a un compañero", cs: "El examen de Sebastián", type: "Diferencial semántico", ph: 2, st: "use", uses: 5, shared: true },
-    { t: "Borrador: ética en la inteligencia artificial", cs: "Sin caso", type: "Diferencial semántico", ph: 1, st: "err", errs: 2, shared: false },
-    { t: "Conflicto de interés en consultoría", cs: "La consultora y el municipio", type: "Diferencial semántico", ph: 3, st: "use", uses: 1, shared: false },
-    { t: "Seguridad frente a plazos en obra", cs: "Andamios en la torre B", type: "Diferencial semántico", ph: 2, st: "use", uses: 3, shared: false },
-    { t: "Denunciar una falla de software", cs: "El bug del sistema de frenos", type: "Diferencial semántico", ph: 2, st: "use", uses: 4, shared: true },
-    { t: "Accesibilidad en el diseño de software", cs: "El portal de trámites", type: "Diferencial semántico", ph: 2, st: "ok", shared: false },
-    { t: "Ranking de prioridades en emergencias", cs: "Sin caso", type: "Ranking", ph: 2, st: "err", errs: 1, shared: false },
-    { t: "IA generativa en la evaluación", cs: "El ensayo de Camila", type: "Diferencial semántico", ph: 3, st: "use", uses: 2, shared: false },
-    { t: "Datos abiertos municipales", cs: "Mapa de la delincuencia", type: "Ranking", ph: 2, st: "use", uses: 1, shared: false },
-    { t: "Propiedad intelectual en la tesis", cs: "El código del laboratorio", type: "Diferencial semántico", ph: 2, st: "use", uses: 2, shared: false },
-    { t: "Impacto ambiental de la planta", cs: "La planta de celulosa", type: "Ranking", ph: 3, st: "use", uses: 1, shared: true },
-    { t: "Sesgo en el algoritmo de admisión", cs: "Admisión automatizada", type: "Diferencial semántico", ph: 2, st: "use", uses: 3, shared: false },
-    { t: "Regalos de proveedores", cs: "La cena de fin de año", type: "Diferencial semántico", ph: 2, st: "use", uses: 6, shared: false },
-    { t: "Pruebas con animales", cs: "El laboratorio de toxicología", type: "Ranking", ph: 2, st: "use", uses: 1, shared: false },
-    { t: "Plagio en el informe final", cs: "Dos informes muy parecidos", type: "Diferencial semántico", ph: 2, st: "use", uses: 2, shared: false },
-    { t: "Ética del trabajo remoto", cs: "Monitoreo de pantallas", type: "Diferencial semántico", ph: 2, st: "ok", shared: false },
-    { t: "Huella de carbono del data center", cs: "El centro de datos del norte", type: "Ranking", ph: 2, st: "use", uses: 1, shared: false },
-    { t: "Consentimiento en estudios con usuarios", cs: "La encuesta de la app", type: "Diferencial semántico", ph: 3, st: "ok", shared: false },
-    { t: "Proveedores y trabajo infantil", cs: "La cadena de suministro", type: "Ranking", ph: 2, st: "use", uses: 2, shared: false },
-    { t: "Responsabilidad en accidentes de vehículos autónomos", cs: "El cruce de la avenida", type: "Diferencial semántico", ph: 3, st: "use", uses: 1, shared: false },
-    { t: "Transparencia en reportes financieros", cs: "El balance del trimestre", type: "Diferencial semántico", ph: 2, st: "ok", shared: false },
-    { t: "Conflictos en el equipo de proyecto", cs: "La entrega atrasada", type: "Diferencial semántico", ph: 2, st: "use", uses: 3, shared: false },
+    { t: "Privacidad en apps de salud", cs: "Datos de pacientes en la nube", ph: 3, st: "use", uses: 2, shared: true },
+    { t: "Responsabilidades en el colapso del puente", cs: "El puente del río Claro", ph: 2, st: "ok", shared: false },
+    { t: "Dilema del examen: ayudar a un compañero", cs: "El examen de Sebastián", ph: 2, st: "use", uses: 5, shared: true },
+    { t: "Borrador: ética en la inteligencia artificial", cs: "Sin caso", ph: 1, st: "err", errs: 2, shared: false },
+    { t: "Conflicto de interés en consultoría", cs: "La consultora y el municipio", ph: 3, st: "use", uses: 1, shared: false },
+    { t: "Seguridad frente a plazos en obra", cs: "Andamios en la torre B", ph: 2, st: "use", uses: 3, shared: false },
+    { t: "Denunciar una falla de software", cs: "El bug del sistema de frenos", ph: 2, st: "use", uses: 4, shared: true },
+    { t: "Accesibilidad en el diseño de software", cs: "El portal de trámites", ph: 2, st: "ok", shared: false },
+    { t: "Prioridades en emergencias", cs: "Sin caso", ph: 2, st: "err", errs: 1, shared: false },
+    { t: "IA generativa en la evaluación", cs: "El ensayo de Camila", ph: 3, st: "use", uses: 2, shared: false },
+    { t: "Datos abiertos municipales", cs: "Mapa de la delincuencia", ph: 2, st: "use", uses: 1, shared: false },
+    { t: "Propiedad intelectual en la tesis", cs: "El código del laboratorio", ph: 2, st: "use", uses: 2, shared: false },
+    { t: "Impacto ambiental de la planta", cs: "La planta de celulosa", ph: 3, st: "use", uses: 1, shared: true },
+    { t: "Sesgo en el algoritmo de admisión", cs: "Admisión automatizada", ph: 2, st: "use", uses: 3, shared: false },
+    { t: "Regalos de proveedores", cs: "La cena de fin de año", ph: 2, st: "use", uses: 6, shared: false },
+    { t: "Pruebas con animales", cs: "El laboratorio de toxicología", ph: 2, st: "use", uses: 1, shared: false },
+    { t: "Plagio en el informe final", cs: "Dos informes muy parecidos", ph: 2, st: "use", uses: 2, shared: false },
+    { t: "Ética del trabajo remoto", cs: "Monitoreo de pantallas", ph: 2, st: "ok", shared: false },
+    { t: "Huella de carbono del data center", cs: "El centro de datos del norte", ph: 2, st: "use", uses: 1, shared: false },
+    { t: "Consentimiento en estudios con usuarios", cs: "La encuesta de la app", ph: 3, st: "ok", shared: false },
+    { t: "Proveedores y trabajo infantil", cs: "La cadena de suministro", ph: 2, st: "use", uses: 2, shared: false },
+    { t: "Responsabilidad en accidentes de vehículos autónomos", cs: "El cruce de la avenida", ph: 3, st: "use", uses: 1, shared: false },
+    { t: "Transparencia en reportes financieros", cs: "El balance del trimestre", ph: 2, st: "ok", shared: false },
+    { t: "Conflictos en el equipo de proyecto", cs: "La entrega atrasada", ph: 2, st: "use", uses: 3, shared: false },
   ];
   const SHARED = [
-    { t: "Dilemas de privacidad en redes sociales", by: "Prof. Andrea Rojas", cs: "La foto viral", lic: "CC BY-SA 4.0", type: "Diferencial semántico", ph: 3, state: "new" },
-    { t: "Ingeniería y comunidades indígenas", by: "Prof. Tomás Pérez", cs: "La represa del valle", lic: "CC BY 4.0", type: "Ranking", ph: 2, state: "imported" },
-    { t: "Algoritmos de contratación", by: "Prof. Lucía Herrera", cs: "El filtro de currículums", lic: "CC BY-SA 4.0", type: "Diferencial semántico", ph: 2, state: "new" },
-    { t: "Seguridad informática y divulgación", by: "Prof. Diego Soto", cs: "La vulnerabilidad del banco", lic: "CC BY-NC 4.0", type: "Diferencial semántico", ph: 3, state: "new" },
-    { t: "Ética en la minería", by: "Prof. Carla Muñoz", cs: "El relave", lic: "CC BY-SA 4.0", type: "Ranking", ph: 2, state: "blocked" },
-    { t: "Deberes del ingeniero en obra pública", by: "Prof. Andrea Rojas", cs: "El paso nivel", lic: "CC BY-SA 4.0", type: "Diferencial semántico", ph: 2, state: "new" },
-    { t: "Telemedicina en zonas rurales", by: "Prof. Iván Castro", cs: "La consulta remota", lic: "CC BY 4.0", type: "Diferencial semántico", ph: 3, state: "new" },
-    { t: "Datos genéticos y seguros", by: "Prof. Lucía Herrera", cs: "El examen de ADN", lic: "CC BY-SA 4.0", type: "Diferencial semántico", ph: 2, state: "new" },
-    { t: "Obsolescencia programada", by: "Prof. Diego Soto", cs: "La impresora", lic: "CC BY-SA 4.0", type: "Ranking", ph: 2, state: "new" },
-    { t: "Drones y vigilancia", by: "Prof. Tomás Pérez", cs: "El barrio vigilado", lic: "CC BY 4.0", type: "Diferencial semántico", ph: 2, state: "new" },
+    { t: "Dilemas de privacidad en redes sociales", by: "Prof. Andrea Rojas", cs: "La foto viral", lic: "CC BY-SA 4.0", ph: 3, state: "new" },
+    { t: "Ingeniería y comunidades indígenas", by: "Prof. Tomás Pérez", cs: "La represa del valle", lic: "CC BY 4.0", ph: 2, state: "imported" },
+    { t: "Algoritmos de contratación", by: "Prof. Lucía Herrera", cs: "El filtro de currículums", lic: "CC BY-SA 4.0", ph: 2, state: "new" },
+    { t: "Seguridad informática y divulgación", by: "Prof. Diego Soto", cs: "La vulnerabilidad del banco", lic: "CC BY-NC 4.0", ph: 3, state: "new" },
+    { t: "Ética en la minería", by: "Prof. Carla Muñoz", cs: "El relave", lic: "CC BY-SA 4.0", ph: 2, state: "blocked" },
+    { t: "Deberes del ingeniero en obra pública", by: "Prof. Andrea Rojas", cs: "El paso nivel", lic: "CC BY-SA 4.0", ph: 2, state: "new" },
+    { t: "Telemedicina en zonas rurales", by: "Prof. Iván Castro", cs: "La consulta remota", lic: "CC BY 4.0", ph: 3, state: "new" },
+    { t: "Datos genéticos y seguros", by: "Prof. Lucía Herrera", cs: "El examen de ADN", lic: "CC BY-SA 4.0", ph: 2, state: "new" },
+    { t: "Obsolescencia programada", by: "Prof. Diego Soto", cs: "La impresora", lic: "CC BY-SA 4.0", ph: 2, state: "new" },
+    { t: "Drones y vigilancia", by: "Prof. Tomás Pérez", cs: "El barrio vigilado", lic: "CC BY 4.0", ph: 2, state: "new" },
   ];
 
   const status = (d) => d.st === "ok" ? '<span class="st ok">● Listo</span>'
@@ -280,20 +280,17 @@
     : '<span class="btn sm">⧉ Duplicar para editar</span>';
 
   function mineTable(rows, { narrow, menuRow }) {
-    const head = narrow
-      ? "<tr><th>Diseño</th><th>Estado</th><th>Compartido</th><th></th></tr>"
-      : "<tr><th>Diseño</th><th>Tipo</th><th>Estado</th><th>Compartido</th><th></th></tr>";
+    const head = "<tr><th>Diseño</th><th>Estado</th><th>Compartido</th><th></th></tr>";
     const body = rows.map((d, i) => {
-      const meta = narrow ? `${d.type} · ${d.ph} ${d.ph === 1 ? "fase" : "fases"} · Caso: ${d.cs}` : `${d.ph} ${d.ph === 1 ? "fase" : "fases"} · Caso: ${d.cs}`;
+      const meta = `${d.ph} ${d.ph === 1 ? "fase" : "fases"} · Caso: ${d.cs}`;
       return `<tr${i === menuRow ? ' class="hl"' : ""}><td class="t"><div class="title">${d.t}</div><div class="meta">${meta}</div></td>`
-        + (narrow ? "" : `<td class="sub">${d.type}</td>`)
         + `<td>${status(d)}</td><td>${share(d)}</td><td class="acts">${mainAction(d)}<span class="kebab"${i === menuRow ? ' data-menu="1"' : ""}>⋯</span></td></tr>`;
     }).join("");
     return `<table class="dt" data-role="designs"><thead>${head}</thead><tbody>${body}</tbody></table>`;
   }
 
   function mineList(rows) {
-    return `<div class="cards" data-role="designs">${rows.map((d) => `<div class="box card"><div class="row1"><span style="min-width:0"><div class="lbl">${d.t}</div><div class="sub">${d.type} · ${d.ph} ${d.ph === 1 ? "fase" : "fases"} · Caso: ${d.cs}</div></span></div>
+    return `<div class="cards" data-role="designs">${rows.map((d) => `<div class="box card"><div class="row1"><span style="min-width:0"><div class="lbl">${d.t}</div><div class="sub">${d.ph} ${d.ph === 1 ? "fase" : "fases"} · Caso: ${d.cs}</div></span></div>
       <div class="row2">${status(d)}<span class="sub">Compartido ${share(d)}</span><span style="flex:1"></span>${mainAction(d)}<span class="kebab">⋯</span></div></div>`).join("")}</div>`;
   }
 
@@ -301,7 +298,7 @@
     const act = (d) => d.state === "imported" ? '<span class="st ok">✓ Importado</span> <span class="btn sm ghost">Ver copia</span>'
       : d.state === "blocked" ? '<span class="btn sm disabled">Importar</span><div class="sub" style="font-size:12px">Su caso dejó de ser público</div>'
       : '<span class="btn sm">⤓ Importar</span>';
-    const body = SHARED.map((d) => `<tr><td class="t"><div class="title">${d.t}</div><div class="meta">${d.type} · ${d.ph} ${d.ph === 1 ? "fase" : "fases"} · Caso: ${d.cs}</div></td>
+    const body = SHARED.map((d) => `<tr><td class="t"><div class="title">${d.t}</div><div class="meta">${d.ph} ${d.ph === 1 ? "fase" : "fases"} · Caso: ${d.cs}</div></td>
       <td class="sub">${d.by}</td><td class="sub">${d.lic}</td><td class="acts" style="text-align:right">${act(d)}</td></tr>`).join("");
     return `<table class="dt" data-role="designs"><thead><tr><th>Diseño</th><th>Autor</th><th>Licencia</th><th></th></tr></thead><tbody>${body}</tbody></table>`;
   }
@@ -316,12 +313,11 @@
     if (tab === "shared") {
       return head + tabs
         + '<div class="banner lib">Diseños que otros docentes compartieron. Al importar uno se crea una <b>copia privada y editable</b> en Mis diseños; el original no cambia.</div>'
-        + '<div class="tools"><span class="search">🔍 Buscar por título, autor, caso o etiqueta</span><span class="chip on">Todos</span><span class="chip">Diferencial semántico</span><span class="chip">Ranking</span><span class="sub sort">Más recientes primero ▾</span></div>'
+        + '<div class="tools"><span class="search">🔍 Buscar por título, autor, caso o etiqueta</span><span class="sub sort">Más recientes primero ▾</span></div>'
         + sharedTable();
     }
     const st = (k, label) => `<span class="chip${filter === k ? " on" : ""}" data-k="${k}">${label}</span>`;
     const tools = `<div class="tools"><span class="search">🔍 Buscar por título, caso o etiqueta</span>
-      <span class="chip on">Todos los tipos ▾</span><span class="sep"></span>
       ${st("all", "Todos")}${st("ok", "Listos")}${st("errors", "Con errores · 2")}${st("use", "En uso")}${st("shared", "Compartidos")}
       <span class="sub sort">Más recientes primero ▾</span></div>`;
     const list = filter === "errors" ? MINE.filter((d) => d.st === "err") : MINE.slice(0, rows);
