@@ -732,8 +732,11 @@ It returns this service's `external_service_results` for the report's session
 only; filters cannot widen that scope, and unknown or malformed filters reject
 with a `TypeError`. `hookName` is the hook of the job a result answers (for
 example `student-response-submitted`), or `null` for a result without a job.
-Unconsumed (`pending`) results are left out. `source`, the response or chat
-message the job processed, is `null` until #946 records it.
+Unconsumed (`pending`) results are left out. `source` is the response or chat
+message the result's job processed (#946), as `{ kind: "response" |
+"chat_message", id }` with a numeric `id` (see "Jobs and `callback(result)`").
+It is `null` for a result without a job and for a job that recorded none,
+such as jobs of other hooks and jobs created before migration V38.
 
 **Contribution contract.** The handler resolves to `undefined`/`null` (nothing
 to add) or to:
