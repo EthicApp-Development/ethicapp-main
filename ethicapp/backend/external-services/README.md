@@ -1878,6 +1878,43 @@ activity, not inside one activity:
 
 Assigning modes to groups of students inside one activity is out of scope.
 
+### The tutor's report columns
+
+The tutor adapter subscribes to `report-building` (#948, see "Report
+building") and adds `ats_` columns to the responses report
+(`adapters/ats-feedback.report.js`); it adds nothing to the chat transcript.
+It reads only its stored `student-response-submitted` results, whose
+`raw_payload` is the tutor's callback payload, and never calls the tutor.
+
+| Column | Holds |
+| --- | --- |
+| `ats_mode` | `analysis` or `comparison` |
+| `ats_tutor_mode` | `enhanced` or `basic`, the mode the tutor reported |
+| `ats_requested_mode` | `enhanced` or `basic`, the mode the phase requested |
+| `ats_feedback_title`, `ats_feedback_summary` | The feedback's title and summary |
+| `ats_feedback_bullets` | The feedback's points, one per line |
+| `ats_claim`, `ats_evidence`, `ats_warrant`, `ats_qualifier` | The criterion scores: the claim's position (-1, 0 or 1), the others 0 to 3 |
+| `ats_claim_type` | The claim type the tutor matched (`AF#`) |
+| `ats_unsupported_claims` | How many unsupported claims the tutor found |
+| `ats_feedback_count` | How many results reached the row |
+| `ats_feedback_time` | When the shown result was received (ISO 8601) |
+
+- Only `completed` and `callback-received` results count; `failed` ones were
+  refused or not processed.
+- A result goes to the row of the response its job recorded as its source
+  (#946). It is ignored when that response is not in the report or belongs to
+  another user. A result without a source, from a job created before V38,
+  goes to the row with the same phase, question and user, only when exactly
+  one row has them.
+- When several results reach a row (a first analysis, then comparisons), the
+  row shows the latest by `receivedAt`, whole, and `ats_feedback_count` says
+  how many there were. A comparison reports no claim type, tutor mode or
+  unsupported claims, so those fields are empty when the latest is one.
+- The student's argument (`argumentPreview`, the `comparison` texts) and the
+  claim type's rationale are not exported; the report's `comment` column
+  already holds the response. A field the result does not report is empty.
+- Results of a forgotten user are redacted as stored (V31) and appear so.
+
 ### Recording results from an adapter
 
 `register()` receives `designAnalyses`, bound to the adapter's own service, with

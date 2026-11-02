@@ -70,10 +70,12 @@
         "student-response-submitted",
         "phase-ended",
         "callback-received",
-        "user-forgotten"
+        "user-forgotten",
+        "report-building"
       ],
       "globalHooks": ["user-forgotten"],
       "scopes": ["response"],
+      "report": { "columnPrefix": "ats_" },
       "consumes": [
         { "documentSchema": "claim-typology/v1", "unit": "question" }
       ],
