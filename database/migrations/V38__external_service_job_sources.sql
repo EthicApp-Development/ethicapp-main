@@ -20,7 +20,9 @@
 -- The activity's design type says which table a source_id belongs to, so
 -- there is no foreign key: the reference is polymorphic, and a job keeps its
 -- record after the response or message it points to is removed. Both columns
--- are null, or both are set.
+-- are null, or both are set. The second branch of the check names
+-- source_kind IS NOT NULL: without it, a null kind with an id would make the
+-- IN test unknown, and a check accepts unknown.
 --
 -- Jobs of other hooks, room jobs and every existing job keep both columns
 -- null; there is no backfill.
@@ -38,7 +40,11 @@ ALTER TABLE external_service_jobs
 ADD CONSTRAINT external_service_jobs_source_check
 CHECK (
     (source_kind IS NULL AND source_id IS NULL)
-    OR (source_kind IN ('response', 'chat_message') AND source_id IS NOT NULL)
+    OR (
+        source_kind IS NOT NULL
+        AND source_kind IN ('response', 'chat_message')
+        AND source_id IS NOT NULL
+    )
 );
 
 -- The jobs, and through them the results, of one response or chat message.
