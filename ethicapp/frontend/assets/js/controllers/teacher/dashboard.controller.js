@@ -7,6 +7,7 @@ import {
 import { connectedStudentCount } from "../../helpers/activity-bar.js";
 import {
     DEFAULT_DASHBOARD_TAB,
+    aiServicesTurnedOff,
     dashboardTab,
     defaultPhaseContextExpanded,
     defaultSelectedPhaseId,
@@ -237,6 +238,12 @@ export function DashboardController($scope, $routeParams, $http,
 
     vm.selectedPhaseHasServices = function() {
         return vm.selectedPhaseServiceCount() > 0;
+    };
+
+    // Launched with its AI services turned off (#970): the "AI services"
+    // card says so instead of describing the phase's services.
+    vm.aiServicesTurnedOff = function() {
+        return aiServicesTurnedOff(vm.activityState?.descriptor);
     };
 
     // The text of each question of a started phase, for the response table's

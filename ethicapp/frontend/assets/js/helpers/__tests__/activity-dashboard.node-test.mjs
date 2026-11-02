@@ -5,6 +5,7 @@ import {
     DASHBOARD_TABS,
     DEFAULT_DASHBOARD_TAB,
     TWO_COLUMN_MEDIA_QUERY,
+    aiServicesTurnedOff,
     dashboardTab,
     defaultPhaseContextExpanded,
     defaultSelectedPhaseId,
@@ -424,5 +425,15 @@ describe("participant search", () => {
         assert.equal(participantMatchCount({ state: GROUP_ROWS }, "grupo"), 0);
         assert.equal(participantMatchCount({ state: GROUP_ROWS }, ""), 3);
         assert.equal(participantMatchCount(null, "a"), 0);
+    });
+});
+
+describe("aiServicesTurnedOff", () => {
+    it("is true only when the descriptor says the AI services were turned off (#970)", () => {
+        assert.equal(aiServicesTurnedOff({ aiServicesEnabled: false }), true);
+        assert.equal(aiServicesTurnedOff({ aiServicesEnabled: true }), false);
+        assert.equal(aiServicesTurnedOff({}), false);
+        assert.equal(aiServicesTurnedOff(null), false);
+        assert.equal(aiServicesTurnedOff(undefined), false);
     });
 });

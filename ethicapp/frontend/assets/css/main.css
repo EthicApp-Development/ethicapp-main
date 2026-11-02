@@ -3228,6 +3228,10 @@ h2{
     padding: 8px 10px;
 }
 
+.dashboard-ai-services-off {
+    margin: 0;
+}
+
 .dashboard-ai-services .tutor-mode-warnings,
 .dashboard-ai-services .tutor-mode-basic-selected {
     margin: 8px 0 0;
