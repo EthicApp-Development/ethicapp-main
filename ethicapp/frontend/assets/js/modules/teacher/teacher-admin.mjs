@@ -7,6 +7,7 @@ import { DesignCatalogService } from "../../services/design-catalog.service.js";
 import { DesignPublicationService } from "../../services/design-publication.service.js";
 import { CaseVideoPickerService } from "../../services/case-video-picker.service.js";
 import { CasePublicationNoticeService } from "../../services/case-publication-notice.service.js";
+import { DesignDeleteConfirmService } from "../../services/design-delete-confirm.service.js";
 import { CasesCatalogService } from "../../services/cases-catalog.service.js";
 import { CaseAnalysesService } from "../../services/case-analyses.service.js";
 import { DesignAnalysesService } from "../../services/design-analyses.service.js";
@@ -43,6 +44,7 @@ app.factory("ActivityStateService", ["$http", "TeacherSocketService", ActivitySt
     .factory("DesignPublicationService", ["$uibModal", "DesignCatalogService", "CasesCatalogService", DesignPublicationService])
     .factory("CaseVideoPickerService", ["$uibModal", CaseVideoPickerService])
     .factory("CasePublicationNoticeService", ["$uibModal", CasePublicationNoticeService])
+    .factory("DesignDeleteConfirmService", ["$uibModal", DesignDeleteConfirmService])
     .factory("DesignStateService", ["$rootScope", "$http", DesignStateService])
     .factory("ExternalServicesCatalogService",
         ["$http", "LanguageCatalogService", ExternalServicesCatalogService])
@@ -66,7 +68,8 @@ app.component("sessionExpiredNotice", sessionExpiredNoticeComponent);
 import { LocalesController } from "../../controllers/common/locales.controller.js";
 import { ActivityController } from "../../controllers/teacher/activity.controller.js";
 import { ActivityReportsController } from "../../controllers/teacher/activity-reports.controller.js";
-import { BrowseDesignsController } from "../../controllers/teacher/browse-designs.controller.js";
+// The Designs page (#975, epic #966).
+import { DesignsPageController } from "../../controllers/teacher/designs-page.controller.js";
 // The "Launch an activity" wizard (#971, epic #965).
 import { LaunchActivityWizardController }
     from "../../controllers/teacher/launch-activity-wizard.controller.js";
@@ -149,13 +152,13 @@ app.run(["$translate", "UserProfileService", "LanguageCatalogService", function(
 app.controller("LocalesController", 
     ["$translate", "$scope", "$rootScope", LocalesController]); 
 app.controller("ActivityController", 
-    ["$scope", "$http", "ActivityCatalogService", "$window", ActivityController]);
+    ["$scope", "ActivityCatalogService", "$window", ActivityController]);
 app.controller("ActivityReportsController",
     ["$scope", "$routeParams", "$window", ActivityReportsController]);
-app.controller("BrowseDesignsController", 
-    ["$scope", "$routeParams", "toast", "$translate", "ActivityStateService", "DesignCatalogService",
-        "DesignPublicationService", "$timeout", "$window",
-        BrowseDesignsController]); 
+app.controller("DesignsPageController",
+    ["$scope", "$location", "$translate", "toast", "DesignCatalogService",
+        "DesignPublicationService", "ActivityCatalogService",
+        "DesignDeleteConfirmService", "$timeout", DesignsPageController]);
 app.controller("LaunchActivityWizardController",
     ["$scope", "$rootScope", "$routeParams", "$location", "$timeout", "$window",
         "DesignCatalogService", "ActivityCatalogService", "ExternalServicesCatalogService",

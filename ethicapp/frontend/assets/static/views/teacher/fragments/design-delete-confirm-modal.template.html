@@ -1,0 +1,22 @@
+<!-- Asks before deleting a design (#978). "Cancel" has the initial focus;
+     Escape and the backdrop cancel too. -->
+<div class="modal-header">
+    <button type="button" class="close" ng-click="$ctrl.cancel()" aria-label="{{ 'cancel' | translate }}">
+        <span aria-hidden="true">&times;</span>
+    </button>
+    <h4 id="designDeleteConfirmTitle" class="modal-title"
+        ng-bind-html="(($ctrl.title ? 'designs_delete_dialog_title' : 'designs_delete_dialog_title_untitled') | translate:{ title: $ctrl.title })"></h4>
+</div>
+<div id="designDeleteConfirmBody" class="modal-body">
+    <p class="design-delete-confirm-text">{{ 'designs_delete_dialog_body' | translate }}</p>
+    <p class="design-delete-confirm-hint" ng-if="$ctrl.canArchive">{{ 'designs_delete_dialog_archive_hint' | translate }}</p>
+</div>
+<div class="modal-footer">
+    <button type="button" class="btn btn-default design-delete-confirm-archive"
+        ng-if="$ctrl.canArchive"
+        ng-click="$ctrl.archiveInstead()">{{ 'designs_delete_dialog_archive' | translate }}</button>
+    <button type="button" class="btn btn-default design-delete-confirm-cancel" autofocus
+        ng-click="$ctrl.cancel()">{{ 'cancel' | translate }}</button>
+    <button type="button" class="btn btn-danger design-delete-confirm-delete"
+        ng-click="$ctrl.confirmDelete()">{{ 'designs_delete_dialog_confirm' | translate }}</button>
+</div>

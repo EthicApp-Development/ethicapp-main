@@ -1326,21 +1326,17 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
 
 @media (max-width: 991px){
     .w-home {width: 65rem;}
-    .designContext { width: 493px;}
 }
 
 @media (min-width: 992px){
     .container{width: 896px;}
-    .designContext {width: 652px;}
 }
 
 @media (min-width: 1360px){
     .container {width: 1170px;}
-    .designContext {width: 1170px;}
 }
 @media (min-width: 1200px){
     .container {width: 1050px;}
-    .designContext {width: 1050px;}
 }
 
 @media (max-width: 1111px) {
@@ -1467,10 +1463,6 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
 
 .mt-1medio{
     margin-top: 1.5rem;
-}
-
-.designContext{
-    margin-bottom: 2rem;
 }
 
 .createDesignBtn{
@@ -3902,22 +3894,6 @@ h2{
     margin-bottom: 10px;
 }
 
-.design-item-panel .design-item-warning {
-    max-width: 320px;
-}
-
-.design-item-panel .design-item-warning p {
-    margin: 0;
-}
-
-.design-item-panel.design-item-selection-layout .panel-body {
-    padding: 15px;
-}
-
-.design-item-panel.design-item-selection-layout p {
-    max-width: 780px;
-}
-
 .activity-item-panel .btn, 
 .design-item-panel .btn {
     margin-left: 0;
@@ -5879,4 +5855,609 @@ button.launch-wizard-step-body:focus-visible .launch-wizard-step-name {
     .launch-design-preview-inline {
         margin-left: 12px;
     }
+}
+
+/* The Designs page (#975, epic #966): a head with the page's actions, tabs
+   with counts, and the "My designs" and "Archived" tables. From 1200 px each
+   design is a table row; below, the same rows become compact rows: the title
+   and its details, then the status, sharing and actions on a second line. */
+.designs-page {
+    --designs-accent: var(--teacher-link-color, #2649ec);
+    --designs-line: #d9dde8;
+    --designs-muted: #5f6577;
+    --designs-ready: #2f7d32;
+    --designs-errors: #c62828;
+    --designs-in-use: #8a6100;
+
+    padding: 8px 12px 48px;
+}
+
+.designs-page-head {
+    align-items: flex-start;
+    display: flex;
+    gap: 12px 24px;
+    justify-content: space-between;
+    margin-bottom: 14px;
+}
+
+.designs-page-intro {
+    min-width: 0;
+}
+
+.designs-page-title {
+    color: var(--designs-accent);
+    margin: 0 0 6px;
+}
+
+.designs-page-role {
+    color: var(--designs-muted);
+    margin: 0;
+    max-width: 900px;
+}
+
+.designs-page-launch-link {
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.designs-page-actions {
+    display: flex;
+    flex: 0 0 auto;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.designs-page-tabs {
+    margin-bottom: 12px;
+}
+
+.designs-tab-count {
+    color: var(--designs-muted);
+    font-size: 12px;
+    margin-left: 2px;
+}
+
+.designs-table-tools {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    justify-content: flex-end;
+    margin-bottom: 6px;
+}
+
+.designs-table-order {
+    color: var(--designs-muted);
+    font-size: 13px;
+    margin: 0;
+}
+
+.designs-table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+.designs-table .designs-head-cell {
+    border-bottom: 2px solid var(--designs-line);
+    font-weight: 700;
+    padding: 6px 12px;
+    text-align: left;
+}
+
+.designs-table .designs-cell {
+    border-bottom: 1px solid var(--designs-line);
+    padding: 8px 12px;
+    vertical-align: middle;
+}
+
+.designs-row {
+    background: #fff;
+}
+
+.designs-row:hover {
+    background: #f3f5fc;
+}
+
+.designs-col-design {
+    width: 45%;
+}
+
+.designs-col-status {
+    width: 22%;
+}
+
+.designs-col-sharing {
+    width: 10%;
+}
+
+.designs-cell-design {
+    max-width: 0;
+}
+
+.designs-row-title {
+    color: inherit;
+    display: block;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.designs-row-title:hover,
+.designs-row-title:focus {
+    color: var(--designs-accent);
+}
+
+.designs-row-meta {
+    color: var(--designs-muted);
+    display: block;
+    font-size: 13px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.designs-status {
+    white-space: nowrap;
+}
+
+.designs-status .fa-circle {
+    font-size: 9px;
+    vertical-align: 1px;
+}
+
+.designs-status-ready {
+    color: var(--designs-ready);
+}
+
+.designs-status-errors {
+    color: var(--designs-errors);
+}
+
+.designs-status-in-use {
+    color: var(--designs-in-use);
+}
+
+/* Shown beside the switch only in the compact rows. */
+.designs-sharing-label {
+    color: var(--designs-muted);
+    display: none;
+    font-size: 13px;
+    margin-right: 6px;
+}
+
+.designs-switch-wrapper {
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.designs-switch {
+    background: #c3c7d1;
+    border: 0;
+    border-radius: 999px;
+    display: inline-block;
+    height: 22px;
+    padding: 0;
+    position: relative;
+    transition: background-color 0.15s ease;
+    vertical-align: middle;
+    width: 40px;
+}
+
+.designs-switch-knob {
+    background: #fff;
+    border-radius: 50%;
+    box-shadow: 0 1px 2px rgb(0 0 0 / 30%);
+    height: 18px;
+    left: 2px;
+    position: absolute;
+    top: 2px;
+    transition: left 0.15s ease;
+    width: 18px;
+}
+
+.designs-switch.is-on {
+    background: var(--designs-ready);
+}
+
+.designs-switch.is-on .designs-switch-knob {
+    left: 20px;
+}
+
+.designs-switch:focus-visible {
+    outline: 2px solid var(--designs-accent);
+    outline-offset: 2px;
+}
+
+.designs-switch[disabled] {
+    cursor: not-allowed;
+    opacity: 0.4;
+}
+
+.designs-cell-actions {
+    text-align: right;
+    white-space: nowrap;
+}
+
+.designs-row-primary {
+    margin-right: 6px;
+}
+
+.designs-row-menu {
+    vertical-align: middle;
+}
+
+.designs-menu {
+    min-width: 240px;
+}
+
+.designs-menu .designs-menu-link {
+    align-items: baseline;
+    display: flex;
+    gap: 8px;
+    padding: 6px 14px;
+}
+
+.designs-menu .designs-menu-label {
+    flex: 1 1 auto;
+}
+
+.designs-menu .designs-menu-reason {
+    color: var(--designs-muted);
+    font-size: 12px;
+}
+
+.designs-menu > li.designs-menu-danger {
+    border-top: 1px solid var(--designs-line);
+    margin-top: 4px;
+    padding-top: 4px;
+}
+
+.designs-menu .designs-menu-link-danger,
+.designs-menu .designs-menu-link-danger:hover,
+.designs-menu .designs-menu-link-danger:focus {
+    color: var(--designs-errors);
+}
+
+.designs-table-footer {
+    color: var(--designs-muted);
+    display: flex;
+    flex-wrap: wrap;
+    font-size: 13px;
+    gap: 6px 12px;
+    justify-content: space-between;
+    padding: 10px 4px 4px;
+}
+
+.designs-show-more {
+    font-size: inherit;
+    padding: 0;
+    vertical-align: baseline;
+}
+
+.designs-shared-search {
+    margin-bottom: 12px;
+}
+
+@media (width < 1200px) {
+    .designs-table thead {
+        display: none;
+    }
+
+    .designs-table,
+    .designs-table tbody {
+        display: block;
+    }
+
+    .designs-row {
+        border: 1px solid var(--designs-line);
+        border-radius: 6px;
+        display: grid;
+        gap: 6px 12px;
+        grid-template-areas:
+            "design design design"
+            "status sharing actions";
+        grid-template-columns: auto auto minmax(0, 1fr);
+        margin-bottom: 8px;
+        padding: 10px 14px;
+    }
+
+    .designs-table .designs-cell {
+        border: 0;
+        display: block;
+        padding: 0;
+    }
+
+    .designs-cell-design {
+        grid-area: design;
+        max-width: none;
+        min-width: 0;
+    }
+
+    .designs-cell-status {
+        align-self: center;
+        grid-area: status;
+    }
+
+    .designs-cell-sharing {
+        align-self: center;
+        grid-area: sharing;
+    }
+
+    .designs-cell-actions {
+        grid-area: actions;
+    }
+
+    .designs-sharing-label {
+        display: inline;
+    }
+}
+
+@media (width < 768px) {
+    .designs-page {
+        padding-left: 0;
+        padding-right: 0;
+    }
+
+    .designs-page-head {
+        flex-direction: column;
+    }
+
+    .designs-page-actions {
+        justify-content: flex-start;
+    }
+
+    .designs-row {
+        grid-template-areas:
+            "design design"
+            "status sharing"
+            "actions actions";
+        grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    .designs-cell-actions {
+        text-align: left;
+    }
+}
+
+/* Designs page, action feedback (#978, epic #966): the notice after a row
+   action, fixed at the bottom so it does not move the table, and the delete
+   confirmation dialog. */
+.designs-notice-region {
+    bottom: 24px;
+    left: 50%;
+    max-width: calc(100% - 32px);
+    position: fixed;
+    transform: translateX(-50%);
+    width: 560px;
+    z-index: 1040;
+}
+
+.designs-notice {
+    align-items: center;
+    box-shadow: 0 6px 18px rgb(0 0 0 / 18%);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    margin: 0;
+    padding: 10px 12px 10px 16px;
+}
+
+.designs-notice-message {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.designs-notice-links {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.designs-notice .designs-notice-link {
+    color: inherit;
+    font-weight: 600;
+    padding: 2px 6px;
+    text-decoration: underline;
+}
+
+.designs-notice .designs-notice-dismiss {
+    float: none;
+    margin-left: auto;
+    opacity: 0.6;
+}
+
+.design-delete-confirm .modal-title {
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.design-delete-confirm .design-delete-confirm-hint {
+    color: #6b6b6b;
+    font-size: 0.9em;
+    margin-bottom: 0;
+}
+
+.design-delete-confirm .modal-footer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.design-delete-confirm .modal-footer .btn + .btn {
+    margin-left: 0;
+}
+
+/* "Shared by others" on the Designs page (#977, epic #966): a one-line
+   banner, the search beside the order, and the shared designs' table with
+   their author, license and one import action. Below 1200 px each row
+   becomes a compact row like the other tabs'. The notice after an import
+   sits at the bottom right of the window. */
+.designs-shared-banner {
+    background: #fff;
+    border: 1px solid var(--designs-line);
+    border-radius: 6px;
+    margin: 0 0 12px;
+    padding: 10px 14px;
+}
+
+.designs-shared-tools {
+    justify-content: space-between;
+}
+
+.designs-shared-tools .designs-shared-search {
+    flex: 0 1 380px;
+    margin-bottom: 0;
+    min-width: 220px;
+}
+
+.designs-shared-col-design {
+    width: 42%;
+}
+
+.designs-shared-col-author {
+    width: 22%;
+}
+
+.designs-shared-col-license {
+    width: 16%;
+}
+
+.designs-shared-unknown {
+    color: var(--designs-muted);
+}
+
+/* Shown before the author and the license only in the compact rows. */
+.designs-shared-label {
+    color: var(--designs-muted);
+    display: none;
+    font-size: 13px;
+    margin-right: 4px;
+}
+
+.designs-imported {
+    align-items: baseline;
+    display: inline-flex;
+    gap: 12px;
+}
+
+.designs-imported-label {
+    color: var(--designs-ready);
+}
+
+.designs-not-importable {
+    display: inline-flex;
+    flex-direction: column;
+    gap: 2px;
+    text-align: right;
+}
+
+.designs-not-importable .designs-import-button {
+    align-self: flex-end;
+}
+
+.designs-import-reason {
+    color: var(--designs-muted);
+    font-size: 12px;
+    white-space: normal;
+}
+
+@media (width < 1200px) {
+    .designs-shared-row {
+        grid-template-areas:
+            "design design design"
+            "author license actions";
+    }
+
+    .designs-shared-cell-author {
+        align-self: center;
+        grid-area: author;
+    }
+
+    .designs-shared-cell-license {
+        align-self: center;
+        grid-area: license;
+    }
+
+    .designs-shared-label {
+        display: inline;
+    }
+}
+
+@media (width < 768px) {
+    .designs-shared-row {
+        grid-template-areas:
+            "design design"
+            "author license"
+            "actions actions";
+    }
+
+    .designs-not-importable {
+        text-align: left;
+    }
+
+    .designs-not-importable .designs-import-button {
+        align-self: flex-start;
+    }
+}
+
+/* Designs page: search and status filters of "My designs" (#976, epic #966). */
+
+.designs-page .designs-filters {
+    align-items: center;
+    display: flex;
+    flex: 1 1 auto;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    min-width: 0;
+}
+
+.designs-page .designs-search {
+    flex: 0 1 340px;
+    min-width: 220px;
+}
+
+.designs-filter-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.designs-filter-chip {
+    background: #fff;
+    border: 1px solid var(--designs-line);
+    border-radius: 999px;
+    color: inherit;
+    font-size: 13px;
+    line-height: 1.4;
+    padding: 3px 11px;
+}
+
+.designs-filter-chip:hover {
+    border-color: var(--designs-muted);
+}
+
+.designs-filter-chip:focus-visible {
+    outline: 2px solid var(--designs-accent);
+    outline-offset: 2px;
+}
+
+.designs-filter-chip.is-active {
+    border-color: var(--designs-accent);
+    color: var(--designs-accent);
+    font-weight: 600;
+}
+
+.designs-no-matches {
+    align-items: center;
+    border: 1px dashed var(--designs-line);
+    border-radius: 6px;
+    color: var(--designs-muted);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    padding: 14px 16px;
 }

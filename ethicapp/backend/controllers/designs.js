@@ -22,6 +22,7 @@ import {
 } from "../helpers/case-documents.js";
 import { copyReadyDesignAnalyses } from "../helpers/design-analyses-helper.js";
 import { checkDesignCase } from "../helpers/design-case-association.js";
+import { isCaseCopyableBy, isListedDesignImportableBy } from "../helpers/design-import.js";
 import { designCreatedAt, designUsesAiServices } from "../helpers/design-list-fields.js";
 import { scheduleDesignAnalyses } from "../helpers/design-analyses-lifecycle-helper.js";
 import { DESIGN_HOOK_TRIGGERS } from "../helpers/design-analysis-hooks.js";
@@ -57,6 +58,7 @@ import {
 const router = express.Router();
 const uploadsRoot = path.resolve(process.cwd(), uploadsPath);
 const MAX_SEMANTIC_TAGS = 5;
+const DESIGN_IN_USE_CODE = "DESIGN_IN_USE";
 
 function sameId(left, right) {
     return Number(left) === Number(right);
@@ -336,14 +338,8 @@ async function copyCaseForUser(client, sourceCaseId, userId, visibility = PRIVAT
         LIMIT 1;
     `, [sourceCaseId, userId]);
     const sourceCase = sourceResult.rows[0];
-    if (!sourceCase) {
-        return null;
-    }
-
-    if (
-        !sameId(sourceCase.creator, userId) &&
-        (!isPublicVisibility(sourceCase.visibility) || sourceCase.archived === true)
-    ) {
+    // GET /designs flags `importable` with this same rule (#974).
+    if (!isCaseCopyableBy(sourceCase, userId)) {
         return null;
     }
 
@@ -444,6 +440,15 @@ const READABLE_DESIGN_CONDITION = "(creator = $2 OR visibility = 'public')";
 // see or act on, so it does not reveal that the design exists (#929).
 function designNotFoundResponse(res) {
     return res.status(404).json({ status: "err", message: "Design not found" });
+}
+
+// The answer for deleting a design an activity uses (#963).
+function designInUseResponse(res) {
+    return res.status(409).json({
+        status:  "err",
+        code:    DESIGN_IN_USE_CODE,
+        message: "This design is used by an activity and cannot be deleted.",
+    });
 }
 
 // After a design copy is committed (#848): its case is rendered when it has no
@@ -784,6 +789,8 @@ router.get("/designs", async (req, res) => {
                        d.is_editable_copy,
                        d.case_id,
                        d.created_at,
+                       c.id IS NOT NULL AS case_found,
+                       c.creator AS case_creator,
                        c.title AS case_title,
                        c.author_firstname AS case_author_firstname,
                        c.author_lastname AS case_author_lastname,
@@ -844,8 +851,17 @@ router.get("/designs", async (req, res) => {
             sqlParams: [sessionUid], // Pass session user ID as the parameter
         });
 
-        // Process the rows to map to the desired structure
-        const designs = rows.map(normalizeDesignRow);
+        // Process the rows to map to the desired structure. Another teacher's
+        // design says whether importing it would pass the case check of
+        // POST /designs/:id/duplicate (#974); the teacher's own designs carry
+        // no `importable`.
+        const designs = rows.map((row) => {
+            const design = normalizeDesignRow(row);
+            if (!row.user_owned) {
+                design.importable = isListedDesignImportableBy(row, sessionUid);
+            }
+            return design;
+        });
 
         // Respond with the processed designs
         return res.json({ status: "ok", result: designs });
@@ -1241,11 +1257,14 @@ router.delete("/designs/:id", async (req, res) => {
             return res.status(400).json({ status: "err", message: "Design ID is required" });
         }
 
-        // Fetch the design
+        // Fetch the design, and whether an activity uses it
         const design = await rpg2.singleSQL({
             dbcon: config.dbconnString,
             sql: `
-                SELECT id, creator
+                SELECT id, creator,
+                       EXISTS (
+                           SELECT 1 FROM activity a WHERE a.design = designs.id
+                       ) AS in_use
                 FROM designs
                 WHERE id = $1
             `,
@@ -1258,15 +1277,28 @@ router.delete("/designs/:id", async (req, res) => {
             return designNotFoundResponse(res);
         }
 
-        // Delete the design
-        await rpg2.singleSQL({
+        // An activity's design must not disappear (activity_design_fkey).
+        if (design.in_use === true) {
+            return designInUseResponse(res);
+        }
+
+        // Delete the design. The NOT EXISTS repeats the check inside the
+        // DELETE, so a design launched after the check is kept; no returned
+        // row means it is now in use. Its copies stay, and lose only their
+        // link to it (#963).
+        const deleted = await rpg2.singleSQL({
             dbcon: config.dbconnString,
             sql: `
                 DELETE FROM designs
                 WHERE id = $1
+                  AND NOT EXISTS (SELECT 1 FROM activity a WHERE a.design = $1)
+                RETURNING id
             `,
             sqlParams: [rpg2.param("plain", designId)],
         });
+        if (!deleted?.id) {
+            return designInUseResponse(res);
+        }
 
         // Return success response
         return res.json({ status: "ok", message: "Design deleted successfully" });

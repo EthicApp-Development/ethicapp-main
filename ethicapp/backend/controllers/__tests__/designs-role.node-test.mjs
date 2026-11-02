@@ -24,8 +24,11 @@ function rowsFor(sql) {
     if (/^\s*SELECT design\s+FROM designs\s+WHERE id = \$1/u.test(sql)) {
         return [{ design: OWNED_DESIGN.design }];
     }
-    if (/^\s*SELECT id, creator\s+FROM designs\s+WHERE id = \$1/u.test(sql)) {
+    if (/^\s*SELECT id, creator\b[\s\S]*?\bFROM designs\s+WHERE id = \$1/u.test(sql)) {
         return [{ id: DESIGN_ID, creator: TEACHER_ID }];
+    }
+    if (/^\s*DELETE FROM designs\b/u.test(sql)) {
+        return [{ id: DESIGN_ID }];
     }
     if (/^\s*UPDATE designs\s+SET archived = \$1/u.test(sql)) {
         return [{ id: DESIGN_ID, archived: true }];

@@ -46,31 +46,6 @@ let DesignCatalogService = ($rootScope, $http) => {
             return service.designs;
         },
 
-        async getUserDesigns(reload = false) {
-            if (reload || !service.hasLoadedDesigns) {
-                await service.loadDesigns();
-            }
-            const result = service.designs.filter(design => design.userOwned === true && design.archived !== true);
-            return result;
-        },
-
-        async getArchivedDesigns(reload = false) {
-            if (reload || !service.hasLoadedDesigns) {
-                await service.loadDesigns();
-            }
-            const result = service.designs.filter(design => design.userOwned === true && design.archived === true);
-            return result;
-        },
-
-        async getPublicDesigns(reload = false) {
-            if (reload || !service.hasLoadedDesigns) {
-                await service.loadDesigns();
-            }
-            const result = service.designs.filter(design => design.visibility === "public" &&
-                design.valid === true && design.userOwned === false && design.archived !== true);
-            return result;
-        },
-
         async getDesignById(id, reload = false) {
             if (reload || !service.hasLoadedDesigns) {
                 await service.loadDesigns();
@@ -184,6 +159,8 @@ let DesignCatalogService = ($rootScope, $http) => {
                     await service.getDesigns(true);
                     service.notifyListeners("onDesignCatalogUpdated", {
                         response: null });
+                    // The copy's id, so the Designs page can open it (#975).
+                    return response.data.id;
                 } else {
                     console.error("Error: Unexpected response format during design import", response.data);
                     throw new Error("Unexpected response format during design import");
@@ -195,8 +172,9 @@ let DesignCatalogService = ($rootScope, $http) => {
         },
 
         async duplicateDesign(id) {
-            // Implementation of duplication is exactly the same as importing
-            await service.importDesign(id);
+            // Implementation of duplication is exactly the same as importing;
+            // it resolves with the copy's id.
+            return service.importDesign(id);
         },
 
         async deleteDesign(id) {
@@ -214,11 +192,15 @@ let DesignCatalogService = ($rootScope, $http) => {
                     await service.getDesigns(true);
                     service.notifyListeners("onDesignCatalogUpdated", {
                         response: null });
-                } else {
-                    console.error("Error deleting design: Unexpected response status", data);
+                    return true;
                 }
+                throw new Error("Failed to delete design");
             } catch (error) {
+                // Callers tell the teacher why the delete failed (#963), so the
+                // rejection, with its status and error code (DESIGN_IN_USE),
+                // reaches them.
                 console.error(`Error deleting design with id '${id}':`, error);
+                throw error;
             }
         },
 
