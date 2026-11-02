@@ -6,6 +6,11 @@
 // so what sticks under it (the response table's header, the rail, the
 // response detail panel) follows a taller bar.
 //
+// The name is followed by the activity's description (#973), cut first when
+// the row runs short: the title's two parts are cut on their own on the
+// single row, and wrap together over the two lines of a stacked bar. Below,
+// "the name" is the whole title, its heading.
+//
 // The decision is always measured on the single row. The bar drops its
 // stacked class, reads how wide the row leaves the name and how wide the whole
 // name is on one line, and sets the class again only if the name needs its
@@ -49,14 +54,37 @@ export function isTextTruncated(element) {
             || element.scrollHeight > element.clientHeight + 1);
 }
 
-// The bar's parts inside the `<activity-bar>` host, once its template is in.
+// The bar's parts inside the `<activity-bar>` host, once its template is in:
+// the heading (`name`) and, inside it, the name's text and the description,
+// which is missing for an activity without one.
 function barParts(host) {
     const bar = host?.querySelector?.(".activity-bar");
     const name = bar?.querySelector(".activity-bar-name");
     if (!bar || !name) {
         return null;
     }
-    return { bar, name, controls: bar.querySelector(".activity-bar-controls") };
+    return {
+        bar,
+        name,
+        nameText:    bar.querySelector(".activity-bar-name-text"),
+        description: bar.querySelector(".activity-bar-description"),
+        controls:    bar.querySelector(".activity-bar-controls"),
+    };
+}
+
+// The title's parts that cut their own text on the single row.
+function titlePieces(parts) {
+    return [parts.nameText, parts.description].filter(Boolean);
+}
+
+// How wide the whole title is on one line. On the single row each part cuts
+// its own text, so the heading does not overflow and the parts are added up.
+function naturalTitleWidth(parts) {
+    const pieces = titlePieces(parts);
+    if (pieces.length === 0) {
+        return parts.name.scrollWidth;
+    }
+    return pieces.reduce((width, piece) => width + piece.scrollWidth, 0);
 }
 
 // Lays the bar out for its current width and content: the stacked class, the
@@ -72,10 +100,11 @@ export function layOutActivityBar(host) {
 
     const { bar, name } = parts;
     bar.classList.remove(STACKED_CLASS);
-    const stacked = shouldStackActivityBar(name.clientWidth, name.scrollWidth);
+    const stacked = shouldStackActivityBar(name.clientWidth, naturalTitleWidth(parts));
     bar.classList.toggle(STACKED_CLASS, stacked);
 
-    const truncated = isTextTruncated(name);
+    // Stacked, the heading clamps its lines; on one row, a part cuts itself.
+    const truncated = isTextTruncated(name) || titlePieces(parts).some(isTextTruncated);
     bar.classList.toggle(NAME_TRUNCATED_CLASS, truncated);
     if (truncated) {
         name.setAttribute("tabindex", "0");

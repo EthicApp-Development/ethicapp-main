@@ -4,12 +4,15 @@
 
 const CACHE_TTL_SECONDS = 3600;
 
+import { sessionAiServicesEnabled } from "./session-ai-services.js";
+
 // A finished activity has no current phase (current_stage is NULL), so the
 // current phase is a left join: its descriptor is still returned, with
 // currentphaseid and currentphasenumber NULL.
 export const STUDENT_ACTIVITY_DESCRIPTOR_SQL = `
     SELECT
         s.descr AS description,
+        s.ai_services_enabled,
         d.design AS design,
         st.number AS currentphasenumber,
         st.id AS currentphaseid
@@ -24,6 +27,28 @@ export const STUDENT_ACTIVITY_DESCRIPTOR_SQL = `
     WHERE
         s.id = $1;
 `;
+
+/**
+ * The services the student app is given for an activity: only the effective
+ * services of its session (its pinned AI service policy version, #815), and
+ * none when the activity was launched with its AI services turned off (#970).
+ * The student app waits for the response processing of the services it is
+ * given, so with none it never shows "processing your response".
+ * @param {{ ai_services_enabled?: boolean }} row the descriptor row
+ * @param {number|string} sessionId
+ * @param {{ initialize: Function, listUsableServices: Function,
+ *          getSessionPolicyVersion: Function }} registry
+ * @returns {Promise<object[]>}
+ */
+export async function studentUsableServices(row, sessionId, registry) {
+    if (!sessionAiServicesEnabled(row)) {
+        return [];
+    }
+    await registry.initialize();
+    return registry.listUsableServices({
+        policyVersion: await registry.getSessionPolicyVersion(sessionId),
+    });
+}
 
 export function studentActivityDescriptorCacheKey(sessionId) {
     return `descriptor:${Number(sessionId)}:v2`;

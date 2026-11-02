@@ -67,6 +67,9 @@ import { LocalesController } from "../../controllers/common/locales.controller.j
 import { ActivityController } from "../../controllers/teacher/activity.controller.js";
 import { ActivityReportsController } from "../../controllers/teacher/activity-reports.controller.js";
 import { BrowseDesignsController } from "../../controllers/teacher/browse-designs.controller.js";
+// The "Launch an activity" wizard (#971, epic #965).
+import { LaunchActivityWizardController }
+    from "../../controllers/teacher/launch-activity-wizard.controller.js";
 import { CreateDesignController } from "../../controllers/teacher/create_design.controller.js";
 import { DashboardController } from "../../controllers/teacher/dashboard.controller.js";
 import { ErrorController } from "../../controllers/teacher/error.controller.js";
@@ -146,13 +149,17 @@ app.run(["$translate", "UserProfileService", "LanguageCatalogService", function(
 app.controller("LocalesController", 
     ["$translate", "$scope", "$rootScope", LocalesController]); 
 app.controller("ActivityController", 
-    ["$scope", "$http", "ActivityCatalogService", "DesignCatalogService", "$window", ActivityController]);
+    ["$scope", "$http", "ActivityCatalogService", "$window", ActivityController]);
 app.controller("ActivityReportsController",
     ["$scope", "$routeParams", "$window", ActivityReportsController]);
 app.controller("BrowseDesignsController", 
     ["$scope", "$routeParams", "toast", "$translate", "ActivityStateService", "DesignCatalogService",
         "DesignPublicationService", "$timeout", "$window",
         BrowseDesignsController]); 
+app.controller("LaunchActivityWizardController",
+    ["$scope", "$rootScope", "$routeParams", "$location", "$timeout", "$window",
+        "DesignCatalogService", "ActivityCatalogService", "ExternalServicesCatalogService",
+        "LanguageCatalogService", LaunchActivityWizardController]);
 app.controller("CreateDesignController", 
     ["$scope", "$window", "DesignCatalogService", "UserProfileService",
         "LanguageCatalogService", CreateDesignController]);
@@ -248,6 +255,10 @@ import itemDuplicatorComponent from "../../components/item-duplicator.component.
 import designErrorSummaryComponent from "../../components/design-error-summary.component.js";
 import itemMoverComponent from '../../components/item-mover.component.js';
 import designItemComponent from '../../components/design-item.component.js';
+// The design preview of the launch wizard's first step (#971).
+import launchDesignPreviewComponent from "../../components/launch-design-preview.component.js";
+// The launch wizard's second step: identify and launch (#972).
+import launchActivityStepComponent from "../../components/launch-activity-step.component.js";
 import caseSearchSelectorComponent from "../../components/case-search-selector.component.js";
 import caseCardComponent from "../../components/case-card.component.js";
 import caseDocumentViewerComponent from "../../components/case-document-viewer.component.js";
@@ -302,6 +313,8 @@ app.component('designErrorSummary', designErrorSummaryComponent);
 app.component('rankingItemEditor', rankingItemEditorComponent);
 app.component('sdItemEditor', sdItemEditorComponent);
 app.component('designItem', designItemComponent);
+app.component("launchDesignPreview", launchDesignPreviewComponent);
+app.component("launchActivityStep", launchActivityStepComponent);
 app.component("caseSearchSelector", caseSearchSelectorComponent);
 app.component("caseCard", caseCardComponent);
 app.component("caseDocumentViewer", caseDocumentViewerComponent);

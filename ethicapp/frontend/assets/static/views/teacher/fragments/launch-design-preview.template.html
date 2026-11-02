@@ -1,0 +1,65 @@
+<div class="launch-design-preview" ng-class="{ 'launch-design-preview-inline': $ctrl.inline }">
+    <div ng-if="!$ctrl.inline">
+        <p class="launch-design-preview-label">{{ 'launch_wizard_preview' | translate }}</p>
+        <h3 class="launch-design-preview-title">{{ $ctrl.preview.title }}</h3>
+        <ul class="launch-design-chips">
+            <li class="launch-design-chip">{{ $ctrl.preview.phaseCountKey | translate:{ count: $ctrl.preview.phaseCount } }}</li>
+            <li class="launch-design-chip launch-design-chip-ai" ng-if="$ctrl.preview.usesAiServices"
+                title="{{ 'launch_wizard_ai_badge_title' | translate }}">
+                <span aria-hidden="true">{{ 'launch_wizard_ai_badge' | translate }}</span>
+                <span class="sr-only">{{ 'launch_wizard_ai_badge_title' | translate }}</span>
+            </li>
+        </ul>
+        <div class="launch-design-preview-case">
+            <span ng-if="$ctrl.preview.associatedCase">
+                <i class="fa fa-book" aria-hidden="true"></i>
+                {{ 'launch_wizard_case_label' | translate }} <strong>{{ $ctrl.preview.associatedCase.title }}</strong>
+            </span>
+            <span ng-if="!$ctrl.preview.associatedCase" class="text-muted">
+                {{ 'design_no_case_associated' | translate }}
+            </span>
+            <a ng-if="$ctrl.preview.associatedCase" class="launch-design-preview-case-link"
+                ng-href="#!/cases/{{ $ctrl.preview.associatedCase.id }}"
+                target="_blank" rel="noopener">
+                {{ 'launch_wizard_view_case' | translate }} <span aria-hidden="true">&#8599;</span>
+                <span class="sr-only">{{ 'launch_wizard_opens_new_tab' | translate }}</span>
+            </a>
+        </div>
+    </div>
+
+    <ol class="launch-design-phases" aria-label="{{ 'launch_wizard_phases_label' | translate }}">
+        <li class="launch-design-phase" ng-repeat="phase in $ctrl.preview.phases track by phase.number">
+            <strong class="launch-design-phase-name">{{ 'launch_wizard_phase_label' | translate:{ number: phase.number } }}</strong>
+            <span>
+                <span ng-if="!phase.isTeam">{{ 'activity_bar_phase_mode_individual' | translate }}</span>
+                <span ng-if="phase.isTeam && phase.groupSize">{{ 'launch_wizard_phase_team_size' | translate:{ size: phase.groupSize } }}</span>
+                <span ng-if="phase.isTeam && !phase.groupSize">{{ 'activity_bar_phase_mode_team' | translate }}</span>
+                <span ng-if="phase.chat"> &middot; {{ 'launch_wizard_phase_chat' | translate }}</span>
+                &middot; {{ phase.questionCountKey | translate:{ count: phase.questionCount } }}
+                <span class="launch-design-phase-service" ng-repeat="service in phase.services track by service.id">
+                    <span aria-hidden="true">&#10022;</span>
+                    {{ service.name || ('service_summary_unnamed_service' | translate) }}
+                </span>
+            </span>
+        </li>
+    </ol>
+
+    <p class="launch-design-preview-dates">
+        <span ng-if="$ctrl.preview.createdDate">{{ 'launch_wizard_created_on' | translate:{ date: $ctrl.preview.createdDate } }}</span>
+        <span ng-if="$ctrl.preview.createdDate && $ctrl.preview.launch"> &middot; </span>
+        <span ng-if="$ctrl.preview.launch">{{ $ctrl.preview.launch.key | translate:$ctrl.preview.launch.params }}</span>
+        <span ng-if="!$ctrl.preview.launch && $ctrl.preview.createdDate"> &middot; {{ 'launch_wizard_never_launched_short' | translate }}</span>
+        <span ng-if="!$ctrl.preview.launch && !$ctrl.preview.createdDate">{{ 'launch_wizard_never_launched' | translate }}</span>
+        <a ng-if="$ctrl.inline" class="launch-design-preview-inline-link"
+            ng-href="#!/designs/{{ $ctrl.preview.id }}" target="_blank" rel="noopener">
+            &middot; {{ 'launch_wizard_view_design' | translate }} <span aria-hidden="true">&#8599;</span>
+            <span class="sr-only">{{ 'launch_wizard_opens_new_tab' | translate }}</span>
+        </a>
+    </p>
+
+    <a ng-if="!$ctrl.inline" class="btn btn-default btn-sm"
+        ng-href="#!/designs/{{ $ctrl.preview.id }}" target="_blank" rel="noopener">
+        {{ 'launch_wizard_view_design' | translate }} <span aria-hidden="true">&#8599;</span>
+        <span class="sr-only">{{ 'launch_wizard_opens_new_tab' | translate }}</span>
+    </a>
+</div>

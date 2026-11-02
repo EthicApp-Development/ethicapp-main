@@ -3,13 +3,10 @@ import { statusCodes } from  "../../../../../common/modules/session-status.js";
 
 /*eslint func-style: ["error", "expression"]*/
 export function ActivityController($scope, $http,
-    ActivityCatalogService, DesignCatalogService, $window) {
+    ActivityCatalogService, $window) {
     
     const vm = this;
 
-    vm.error = false;
-    vm.showSpinner = false;
-    vm.activityDescription = "";
     vm.dsgnMode = 0;
     vm.userSearch = "";
     vm.currentPage = 1;
@@ -46,38 +43,6 @@ export function ActivityController($scope, $http,
         }
 
         $scope.navigateTo("/");
-    };
-
-    vm.createSession = async function (designId) {
-        vm.showSpinner = true;
-    
-        try {
-            // Ensure the design is valid
-            const result = await DesignCatalogService.isDesignValid(designId);
-            vm.error = !result;
-
-            if (!result) {
-                console.error(
-                    `Cannot create session based on design ${designId} because it is invalid`);
-                return;
-            }    
-            
-            const design = await DesignCatalogService.getDesignById(designId);
-            
-            // Create the activity with the design that is required.
-            const sessionId = await ActivityCatalogService.createActivity(design, 
-                vm.activityDescription);
-
-            // The design is locked remotely. We need to lock it locally too.
-            await DesignCatalogService.lockDesign(designId, true);
-
-            // Switch to the page of the activity
-            $scope.navigateTo(`/activities/${sessionId}`);
-        } catch (error) {
-            console.error("Error creating session:", error);
-        } finally {
-            vm.showSpinner = false;
-        }
     };
 
     vm.updateActivities = function() {

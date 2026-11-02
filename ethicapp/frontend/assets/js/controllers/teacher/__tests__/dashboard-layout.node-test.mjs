@@ -122,4 +122,15 @@ describe("DashboardController layout", () => {
         assert.equal(vm.selectedPhaseServiceCount(), 0);
         assert.equal(vm.selectedPhaseHasServices(), false);
     });
+
+    it("tells whether the activity's AI services were turned off at launch (#970)", () => {
+        const { vm } = createDashboard({ innerWidth: 1920 });
+        assert.equal(vm.aiServicesTurnedOff(), false);
+
+        vm.activityState = { descriptor: { aiServicesEnabled: true } };
+        assert.equal(vm.aiServicesTurnedOff(), false);
+
+        vm.activityState = { descriptor: { aiServicesEnabled: false } };
+        assert.equal(vm.aiServicesTurnedOff(), true);
+    });
 });

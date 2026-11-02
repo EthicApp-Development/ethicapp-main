@@ -394,6 +394,16 @@ It also drops the services the AI service policy gate does not let through
 connection), so a design that selects one reaches nothing for it and creates no
 job.
 
+An activity launched with its AI services turned off (`aiServices: false` on
+`POST /activities`, stored in `sessions.ai_services_enabled`, #970) enables no
+service in any phase: `getPhaseExternalServices()` and
+`getEnabledExternalServiceIdsBySessionId()` (`helpers/designs-helper.js`)
+return none for its session, whatever the design selects. No session hook
+reaches a service and no job is created, a callback without a job is refused,
+and the student app is given no usable services. `phase-ended` and
+`activity-finished` still reach the registry, which closes the session's room
+jobs. The design is not changed.
+
 Each handler also receives `context.serviceConfiguration` (#734): the settings
 the phase stores for that service in
 `externalServices.configurations[serviceId]` (see "Design Schema"), or `{}`

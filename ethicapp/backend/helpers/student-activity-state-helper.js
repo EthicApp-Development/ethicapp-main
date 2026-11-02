@@ -13,6 +13,7 @@ import {
     STUDENT_ACTIVITY_DESCRIPTOR_SQL,
     getCachedStudentActivityDescriptorWith,
     invalidateStudentActivityDescriptorWith,
+    studentUsableServices,
 } from "./student-activity-descriptor.js";
 
 export const buildInitialPhaseState = async function (phaseId) {
@@ -96,20 +97,17 @@ export async function getStudentActivityDescriptor(sessionId) {
             currentphasenumber: currentPhaseNumber,
             currentphaseid: currentPhaseId
          } = descriptorResult[0];
-        await externalServicesRegistry.initialize();
 
         return {
             descriptor: {
                 description,
                 design,
                 externalServices: {
-                    // Only the effective services of this session (its pinned
-                    // AI service policy version, #815): the student app waits
-                    // for the response processing of the services it is given.
-                    services: await externalServicesRegistry.listUsableServices({
-                        policyVersion: await externalServicesRegistry
-                            .getSessionPolicyVersion(sessionId),
-                    }),
+                    services: await studentUsableServices(
+                        descriptorResult[0],
+                        sessionId,
+                        externalServicesRegistry
+                    ),
                 },
                 currentPhaseNumber,
                 currentPhaseId

@@ -1,12 +1,14 @@
 <section class="activity-bar" aria-label="{{ 'activity_bar_region_label' | translate }}">
-  <!-- A cut name takes a tab stop, and its tooltip shows it whole on hover
-       and keyboard focus (#951); Escape hides it while it is hovered or
-       focused, until both the pointer and the focus leave (#956). Screen
-       readers read the heading, which holds the whole name, so the tooltip
-       is hidden from them. -->
+  <!-- The title is the name followed by the description, which is cut
+       first (#973). A cut title takes a tab stop, and its tooltip shows it
+       whole on hover and keyboard focus (#951); Escape hides it while it is
+       hovered or focused, until both the pointer and the focus leave (#956).
+       Screen readers read the heading, which holds the whole title, so the
+       tooltip is hidden from them. No white space between the parts: the
+       separator's margins space them. -->
   <div class="activity-bar-title" dismissible-tip="activity-bar-title-tip-dismissed">
-    <h2 class="activity-bar-name">{{ $ctrl.activity.name }}</h2>
-    <span class="activity-bar-name-tip" aria-hidden="true"><span class="activity-bar-name-tip-body">{{ $ctrl.activity.name }}</span></span>
+    <h2 class="activity-bar-name"><span class="activity-bar-name-line"><span class="activity-bar-name-text">{{ $ctrl.title.name }}</span><span class="activity-bar-description" ng-if="$ctrl.title.description"><span class="activity-bar-separator">·</span>{{ $ctrl.title.description }}</span></span></h2>
+    <span class="activity-bar-name-tip" aria-hidden="true"><span class="activity-bar-name-tip-body">{{ $ctrl.title.text }}</span></span>
   </div>
 
   <span class="activity-bar-chip activity-bar-status"

@@ -38,7 +38,8 @@
 
 <!-- AI services: the phase's external services, the tutor-mode warnings and
      the "services not running" notice, which stays at the top of the section
-     while it is collapsed -->
+     while it is collapsed. When the activity was launched with its AI
+     services turned off (#970), a note says so instead. -->
 <section class="dashboard-card dashboard-ai-services"
     ng-if="dc.servicesNotRunning.length > 0 || dc.selectedPhaseHasServices()"
     aria-labelledby="dashboard-ai-services-title">
@@ -49,7 +50,9 @@
             aria-expanded="{{ dc.servicesSectionOpen ? 'true' : 'false' }}"
             aria-controls="dashboard-ai-services-body">
             <span>{{ 'dashboard_ai_services_title' | translate }}</span>
-            <span class="dashboard-card-summary"><span ng-if="!dc.servicesSectionOpen && dc.selectedPhaseServiceCount() > 0">
+            <span class="dashboard-card-summary"><span ng-if="!dc.servicesSectionOpen && dc.aiServicesTurnedOff()">
+                {{ 'dashboard_ai_services_summary_off' | translate }}
+            </span><span ng-if="!dc.servicesSectionOpen && !dc.aiServicesTurnedOff() && dc.selectedPhaseServiceCount() > 0">
                 {{ (dc.selectedPhaseServiceCount() === 1 ? 'dashboard_ai_services_summary_one' : 'dashboard_ai_services_summary_other') | translate:{ count: dc.selectedPhaseServiceCount() } }}
             </span></span>
             <i class="fa-solid" ng-class="dc.servicesSectionOpen ? 'fa-chevron-up' : 'fa-chevron-down'" aria-hidden="true"></i>
@@ -69,8 +72,12 @@
     </div>
     <div id="dashboard-ai-services-body" class="dashboard-card-body"
         ng-if="!dc.isOneColumn || dc.servicesSectionOpen">
+        <p class="text-muted dashboard-ai-services-off" ng-if="dc.aiServicesTurnedOff()">
+            <i class="fa-solid fa-power-off" aria-hidden="true"></i>
+            {{ 'dashboard_ai_services_turned_off' | translate }}
+        </p>
         <div ng-repeat="phase in dc.dashboardPhaseData track by phase.descriptor.id"
-            ng-if="dc.isPhaseTabSelected(phase)">
+            ng-if="!dc.aiServicesTurnedOff() && dc.isPhaseTabSelected(phase)">
             <phase-external-services-summary
                 phase="dc.getDesignPhaseForDescriptor(phase.descriptor)"
                 compact="true"></phase-external-services-summary>

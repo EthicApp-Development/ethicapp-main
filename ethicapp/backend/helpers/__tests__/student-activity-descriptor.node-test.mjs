@@ -6,6 +6,7 @@ import {
     invalidateStudentActivityDescriptorWith,
     isCacheableStudentActivityDescriptor,
     studentActivityDescriptorCacheKey,
+    studentUsableServices,
 } from "../student-activity-descriptor.js";
 
 function fakeRedis(entries = {}) {
@@ -108,4 +109,50 @@ test("invalidateStudentActivityDescriptorWith: deletes the v2 key", async () => 
     const redis = cachedOne("descriptor:12:v2", DESCRIPTOR);
     await invalidateStudentActivityDescriptorWith(redis, "12");
     assert.equal(redis.store.has("descriptor:12:v2"), false);
+});
+
+// The student app's services (#970): with the AI services turned off at
+// launch it gets none, so it never waits for a response processing.
+function fakeServiceRegistry() {
+    const calls = [];
+    return {
+        calls,
+        async initialize() {
+            calls.push(["initialize"]);
+        },
+        async getSessionPolicyVersion(sessionId) {
+            calls.push(["getSessionPolicyVersion", sessionId]);
+            return { id: 4 };
+        },
+        async listUsableServices(options) {
+            calls.push(["listUsableServices", options]);
+            return [{ id: "reviewer", scopes: ["response"] }];
+        },
+    };
+}
+
+test("STUDENT_ACTIVITY_DESCRIPTOR_SQL: reads the session's AI services switch (#970)", () => {
+    assert.match(STUDENT_ACTIVITY_DESCRIPTOR_SQL, /s\.ai_services_enabled/);
+});
+
+test("studentUsableServices: the session's usable services when its AI services are on", async () => {
+    for (const row of [{ ai_services_enabled: true }, {}]) {
+        const registry = fakeServiceRegistry();
+
+        const services = await studentUsableServices(row, 12, registry);
+
+        assert.deepEqual(services, [{ id: "reviewer", scopes: ["response"] }]);
+        assert.deepEqual(registry.calls, [
+            ["initialize"],
+            ["getSessionPolicyVersion", 12],
+            ["listUsableServices", { policyVersion: { id: 4 } }],
+        ]);
+    }
+});
+
+test("studentUsableServices: none, unread, when the AI services were turned off (#970)", async () => {
+    const registry = fakeServiceRegistry();
+
+    assert.deepEqual(await studentUsableServices({ ai_services_enabled: false }, 12, registry), []);
+    assert.deepEqual(registry.calls, []);
 });

@@ -67,6 +67,27 @@ describe("activity bar", () => {
         assert.equal(vm.statusName, "finished");
     });
 
+    it("titles the activity by its name and description (#973)", () => {
+        const vm = createBar({ activity: { ...RUNNING, description: " Sección 3 · 2026-2 " }, users: [] });
+        assert.deepEqual(vm.title, {
+            name:        "Ética en la práctica",
+            description: "Sección 3 · 2026-2",
+            text:        "Ética en la práctica · Sección 3 · 2026-2",
+        });
+
+        const title = vm.title;
+        vm.$doCheck();
+        assert.equal(vm.title, title, "the same title while nothing changed");
+    });
+
+    it("titles an activity without a description by its name alone", () => {
+        for (const description of ["", null, undefined]) {
+            const vm = createBar({ activity: { ...RUNNING, description }, users: [] });
+            assert.deepEqual(vm.title, { name: "Ética en la práctica", description: "", text: "Ética en la práctica" });
+        }
+        assert.deepEqual(createBar({ activity: undefined, users: [] }).title, { name: "", description: "", text: "" });
+    });
+
     it("says no phase started once the design is loaded", () => {
         const waiting = { ...RUNNING, status: "initiated", phases: [], currentPhase: null };
 
@@ -149,11 +170,29 @@ describe("activity bar layout", () => {
         vm.$onDestroy();
     });
 
-    it("gives screen readers the name once, in the heading", () => {
+    it("lays the bar out again when the description arrives or changes (#973)", () => {
+        const { vm, win } = mountBar({ width: 1256, nameWidth: 0, othersWidth: 600 });
+        vm.activity = { ...RUNNING };
+        vm.$doCheck();
+        win.frame();
+
+        vm.activity = { ...RUNNING, description: "Sección 3" };
+        vm.$doCheck();
+        assert.equal(win.frames.length, 1);
+    });
+
+    it("gives screen readers the title once, in the heading", () => {
         const template = readAsset("../../../static/views/teacher/fragments/activity-bar.template.html");
-        assert.match(template, /<h2 class="activity-bar-name"[^>]*>\{\{ \$ctrl\.activity\.name \}\}<\/h2>/);
-        assert.match(template, /<span class="activity-bar-name-tip" aria-hidden="true">/);
-        assert.doesNotMatch(template, /title="\{\{ \$ctrl\.activity\.name \}\}"/, "no native tooltip on top of ours");
+        const heading = template.match(/<h2 class="activity-bar-name"[^>]*>(.*)<\/h2>/)?.[1];
+        assert.ok(heading, "one heading on one line");
+        assert.match(heading, /<span class="activity-bar-name-text">\{\{ \$ctrl\.title\.name \}\}<\/span>/);
+        assert.match(heading,
+            /<span class="activity-bar-description" ng-if="\$ctrl\.title\.description">.*\{\{ \$ctrl\.title\.description \}\}<\/span>/);
+        assert.doesNotMatch(heading, /aria-hidden/);
+        assert.doesNotMatch(heading, />\s+</, "no white space between the title's parts");
+        assert.match(template,
+            /<span class="activity-bar-name-tip" aria-hidden="true"><span class="activity-bar-name-tip-body">\{\{ \$ctrl\.title\.text \}\}<\/span>/);
+        assert.doesNotMatch(template, /title="\{\{/, "no native tooltip on top of ours");
     });
 });
 

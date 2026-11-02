@@ -1,8 +1,9 @@
 // A fake activity bar and window for the bar's layout tests (#951). The bar
-// lays itself out as a browser would: on one row the name gets what the
-// chips and the controls leave, cut with an ellipsis; stacked, it gets the
-// whole bar and wraps to two lines at most. The window runs animation frames
-// and resize observers when the test says so.
+// lays itself out as a browser would: on one row the title gets what the
+// chips and the controls leave, the description cut before the name, each
+// with an ellipsis; stacked, it gets the whole bar and wraps to two lines at
+// most. The window runs animation frames and resize observers when the test
+// says so.
 
 const LINE_HEIGHT = 26;
 const ONE_ROW_HEIGHT = 56;
@@ -35,20 +36,25 @@ function fakeStyle() {
 }
 
 // `width`: the bar's content width; `nameWidth`: the whole name on one line;
-// `othersWidth`: the chips, the controls and the gaps between them and the
-// name, on one row.
-export function fakeActivityBar({ width, nameWidth, othersWidth }) {
-    const state = { width, nameWidth, othersWidth };
+// `descriptionWidth`: the description with its separator on one line, 0
+// without a description (#973); `othersWidth`: the chips, the controls and
+// the gaps between them and the title, on one row. On one row the heading
+// (`name`) gets what the row leaves the title, and the description gives it
+// up before the name; stacked, both wrap together in the heading.
+export function fakeActivityBar({ width, nameWidth, descriptionWidth = 0, othersWidth }) {
+    const state = { width, nameWidth, descriptionWidth, othersWidth };
     const attributes = new Map();
     const stacked = () => bar.classList.contains("activity-bar-stacked");
-    const nameLines = () => Math.max(1, Math.ceil(state.nameWidth / state.width));
+    const titleWidth = () => state.nameWidth + state.descriptionWidth;
+    const nameLines = () => Math.max(1, Math.ceil(titleWidth() / state.width));
+    const rowWidth = () => Math.min(titleWidth(), Math.max(0, state.width - state.othersWidth));
 
     const name = {
         get clientWidth() {
-            return stacked() ? state.width : Math.min(state.nameWidth, Math.max(0, state.width - state.othersWidth));
+            return stacked() ? state.width : rowWidth();
         },
         get scrollWidth() {
-            return stacked() ? state.width : state.nameWidth;
+            return stacked() ? state.width : rowWidth();
         },
         get clientHeight() {
             return stacked() ? Math.min(nameLines(), 2) * LINE_HEIGHT : LINE_HEIGHT;
@@ -60,11 +66,37 @@ export function fakeActivityBar({ width, nameWidth, othersWidth }) {
         removeAttribute: key => attributes.delete(key),
         getAttribute:    key => (attributes.has(key) ? attributes.get(key) : null),
     };
+    // Inline on a stacked bar, where they measure nothing.
+    const nameText = {
+        get clientWidth() {
+            return stacked() ? 0 : Math.min(state.nameWidth, rowWidth());
+        },
+        get scrollWidth() {
+            return stacked() ? 0 : state.nameWidth;
+        },
+        clientHeight: 0,
+        scrollHeight: 0,
+    };
+    const description = {
+        get clientWidth() {
+            return stacked() ? 0 : Math.max(0, Math.min(state.descriptionWidth, rowWidth() - state.nameWidth));
+        },
+        get scrollWidth() {
+            return stacked() ? 0 : state.descriptionWidth;
+        },
+        clientHeight: 0,
+        scrollHeight: 0,
+    };
     const controls = {};
     const bar = {
         classList: fakeClassList(),
         querySelector(selector) {
-            return { ".activity-bar-name": name, ".activity-bar-controls": controls }[selector] || null;
+            return {
+                ".activity-bar-name":        name,
+                ".activity-bar-name-text":   nameText,
+                ".activity-bar-description": state.descriptionWidth > 0 ? description : null,
+                ".activity-bar-controls":    controls,
+            }[selector] || null;
         },
         getBoundingClientRect() {
             const height = stacked()
@@ -83,6 +115,8 @@ export function fakeActivityBar({ width, nameWidth, othersWidth }) {
         host,
         bar,
         name,
+        nameText,
+        description,
         controls,
         state,
         isStacked:    stacked,

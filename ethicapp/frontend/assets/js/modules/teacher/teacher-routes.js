@@ -18,11 +18,16 @@ function TeacherRouter($routeProvider) {
         .when('/activities', {
             templateUrl: 'static/views/teacher/activity.index.html',
         })
+        // The launch wizard keeps its state when its step changes in the
+        // URL (`?step=2`, #971): a search change is a route update, not a
+        // reload.
         .when('/activities/new', {
-            templateUrl: 'static/views/teacher/activity.new.html',
-        })        
+            templateUrl:    'static/views/teacher/activity.new.html',
+            reloadOnSearch: false,
+        })
         .when('/activities/new/:designId', {
-            templateUrl: 'static/views/teacher/activity.new.html',
+            templateUrl:    'static/views/teacher/activity.new.html',
+            reloadOnSearch: false,
         })
         .when('/activities/:session_id/reports', {
             templateUrl: 'static/views/teacher/activity.reports.html',

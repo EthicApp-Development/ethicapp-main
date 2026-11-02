@@ -296,6 +296,19 @@ let DesignCatalogService = ($rootScope, $http) => {
             }
         },
 
+        // The AI services the design enables, by phase, and whether each can
+        // run in an activity launched now (#969): an array of
+        // { phaseNumber, serviceId, canRun }, empty for a design with none.
+        // Names come from ExternalServicesCatalogService. Rejects with the
+        // HTTP error (404 for a design the teacher may not launch).
+        async getDesignAiServices(designId) {
+            const response = await $http.get(`/designs/${designId}/ai-services`);
+            if (response.data?.status !== "ok" || !Array.isArray(response.data.services)) {
+                throw new Error("Unexpected response format");
+            }
+            return response.data.services;
+        },
+
         registerListener: (eventName, callback) => {
             if (!service.listeners[eventName]) {
                 service.listeners[eventName] = [];

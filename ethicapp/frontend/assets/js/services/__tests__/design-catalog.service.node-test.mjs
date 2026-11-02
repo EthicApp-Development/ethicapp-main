@@ -108,3 +108,40 @@ describe("DesignCatalogService.createDesign", () => {
         await quietly(() => assert.rejects(service.createDesign({}), /Failed to create design/u));
     });
 });
+
+describe("DesignCatalogService.getDesignAiServices", () => {
+    function createGetService(getOutcome) {
+        const gets = [];
+        const $http = async () => ({ data: { status: "ok" } });
+        $http.get = async (url) => {
+            gets.push(url);
+            return getOutcome();
+        };
+        const $rootScope = { $broadcast() {}, $emit() {}, $applyAsync(fn) { fn?.(); } };
+
+        return { service: DesignCatalogService($rootScope, $http), gets };
+    }
+
+    it("resolves the design's services by phase (#969)", async () => {
+        const services = [{ phaseNumber: 1, serviceId: "polyadic-bridge", canRun: false }];
+        const { service, gets } = createGetService(async () => ({
+            data: { status: "ok", services },
+        }));
+
+        assert.deepEqual(await service.getDesignAiServices(5), services);
+        assert.deepEqual(gets, ["/designs/5/ai-services"]);
+    });
+
+    it("rejects with the HTTP error when the design cannot be launched", async () => {
+        const rejection = { status: 404, data: { error: "Design not found." } };
+        const { service } = createGetService(async () => { throw rejection; });
+
+        await assert.rejects(service.getDesignAiServices(5), (error) => error === rejection);
+    });
+
+    it("rejects when the API answers without a list", async () => {
+        const { service } = createGetService(async () => ({ data: { status: "ok" } }));
+
+        await assert.rejects(service.getDesignAiServices(5), /Unexpected response format/u);
+    });
+});
