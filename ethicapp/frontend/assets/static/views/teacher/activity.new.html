@@ -1,143 +1,210 @@
-<div class="container" ng-controller="BrowseDesignsController as bdc">
-    <div class="row">
-        <div class="col-md-12">
-            <h2><i class="fa-brands fa-space-awesome"></i> {{'launch_activity_title' | translate}}</h2>
-            <button type="button" class="btn btn-default btn-sm" ng-click="bdc.goBack()">
-                <i class="fa fa-arrow-left" aria-hidden="true"></i> {{ 'go_back' | translate }}
+<div class="launch-wizard" ng-controller="LaunchActivityWizardController as lw">
+    <header class="launch-wizard-head">
+        <h2 class="launch-wizard-title">
+            <i class="fa-brands fa-space-awesome" aria-hidden="true"></i> {{ 'launch_activity_title' | translate }}
+        </h2>
+        <nav class="launch-wizard-stepper" aria-label="{{ 'launch_wizard_steps_label' | translate }}">
+            <ol class="launch-wizard-steps">
+                <li class="launch-wizard-step"
+                    ng-class="{ 'is-current': lw.step === 1, 'is-done': lw.step === 2 }"
+                    ng-attr-aria-current="{{ lw.step === 1 ? 'step' : undefined }}">
+                    <button type="button" class="launch-wizard-step-body" ng-if="lw.step === 2" ng-click="lw.goToChooseStep()">
+                        <span class="launch-wizard-step-number" aria-hidden="true"><i class="fa fa-check"></i></span>
+                        <span class="launch-wizard-step-text">
+                            <span class="launch-wizard-step-name">{{ 'launch_wizard_step_choose' | translate }}</span>
+                            <span class="launch-wizard-step-hint">{{ lw.selectedRow.title }}</span>
+                        </span>
+                    </button>
+                    <span class="launch-wizard-step-body" ng-if="lw.step === 1">
+                        <span class="launch-wizard-step-number" aria-hidden="true">1</span>
+                        <span class="launch-wizard-step-text">
+                            <span class="launch-wizard-step-name">{{ 'launch_wizard_step_choose' | translate }}</span>
+                            <span class="launch-wizard-step-hint">{{ 'launch_wizard_step_choose_hint' | translate }}</span>
+                        </span>
+                    </span>
+                </li>
+                <li class="launch-wizard-step-line" aria-hidden="true"></li>
+                <li class="launch-wizard-step"
+                    ng-class="{ 'is-current': lw.step === 2 }"
+                    ng-attr-aria-current="{{ lw.step === 2 ? 'step' : undefined }}">
+                    <span class="launch-wizard-step-body">
+                        <span class="launch-wizard-step-number" aria-hidden="true">2</span>
+                        <span class="launch-wizard-step-text">
+                            <span class="launch-wizard-step-name">{{ 'launch_wizard_step_identify' | translate }}</span>
+                            <span class="launch-wizard-step-hint">{{ 'launch_wizard_step_identify_hint' | translate }}</span>
+                        </span>
+                    </span>
+                </li>
+            </ol>
+        </nav>
+    </header>
+
+    <!-- Step 1: choose a design. Hidden, not removed, in step 2, so the
+         search, the selection and the rows shown stay as they were. -->
+    <section class="launch-wizard-choose-step" ng-show="lw.step === 1">
+        <p class="text-muted" ng-if="!lw.loaded">{{ 'loading' | translate }}</p>
+
+        <div ng-if="lw.loaded && lw.total === 0">
+            <div class="alert alert-info">
+                <span>{{ 'empty_launch_designs_message' | translate }}</span>
+                <a href="" ng-click="navigateTo('/designs/new')">{{ 'empty_launch_designs_link' | translate }}</a>.
+                <span>{{ 'empty_launch_designs_then_return' | translate }}</span>
+            </div>
+            <p class="launch-design-list-errors" ng-if="lw.designsWithErrors > 0">
+                {{ (lw.designsWithErrors === 1 ? 'launch_wizard_errors_one' : 'launch_wizard_errors_other') | translate:{ count: lw.designsWithErrors } }}
+                &middot; <a href="#!/designs">{{ 'launch_wizard_review_in_designs' | translate }}</a>
+            </p>
+        </div>
+
+        <div class="launch-wizard-columns" ng-if="lw.loaded && lw.total > 0">
+            <div class="launch-wizard-list-column">
+                <div class="launch-wizard-tools">
+                    <div class="search-field-wrapper launch-wizard-search">
+                        <label for="launch-design-search" class="sr-only">{{ 'search_designs' | translate }}</label>
+                        <input
+                            id="launch-design-search"
+                            class="form-control search-decorated-input"
+                            type="search"
+                            autocomplete="off"
+                            placeholder="{{ 'launch_wizard_search_placeholder' | translate }}"
+                            ng-model="lw.search"
+                            ng-model-options="{ debounce: 150 }"
+                            ng-change="lw.handleSearchChange()">
+                        <i class="fa-solid fa-magnifying-glass search-field-icon" aria-hidden="true"></i>
+                    </div>
+                    <p class="launch-wizard-order" role="status">
+                        {{ (lw.rows.length === 1 ? 'launch_wizard_order_one' : 'launch_wizard_order_other') | translate:{ count: lw.rows.length } }}
+                    </p>
+                </div>
+
+                <div class="launch-design-list">
+                    <div role="radiogroup" aria-label="{{ 'launch_wizard_designs_label' | translate }}">
+                        <div class="launch-design-row"
+                            id="launch-design-{{ row.id }}"
+                            ng-repeat="row in lw.getVisibleRows() track by row.id"
+                            ng-class="{ 'is-selected': row.id === lw.selectedDesignId }">
+                            <label class="launch-design-row-main" ng-dblclick="lw.chooseAndContinue(row.id)">
+                                <input type="radio" name="launch-design" class="launch-design-radio"
+                                    ng-value="row.id"
+                                    ng-model="lw.selectedDesignId"
+                                    ng-change="lw.selectDesign(row.id)">
+                                <span class="launch-design-row-text">
+                                    <span class="launch-design-row-title">{{ row.title }}</span>
+                                    <span class="launch-design-row-meta">
+                                        <span class="launch-design-row-phases">{{ row.phaseCountKey | translate:{ count: row.phaseCount } }} &middot; </span><span
+                                            ng-if="row.caseTitle">{{ 'launch_wizard_case_label' | translate }} {{ row.caseTitle }}</span><span
+                                            ng-if="!row.caseTitle">{{ 'design_no_case_associated' | translate }}</span>
+                                    </span>
+                                </span>
+                                <span class="launch-design-row-side">
+                                    <span class="launch-design-chip launch-design-chip-ai" ng-if="row.usesAiServices"
+                                        title="{{ 'launch_wizard_ai_badge_title' | translate }}">
+                                        <span aria-hidden="true">{{ 'launch_wizard_ai_badge' | translate }}</span>
+                                        <span class="sr-only">{{ 'launch_wizard_ai_badge_title' | translate }}</span>
+                                    </span>
+                                    <span class="launch-design-row-when">{{ row.summary.key | translate:row.summary.params }}</span>
+                                </span>
+                            </label>
+                            <launch-design-preview
+                                class="launch-design-inline-preview"
+                                ng-if="row.id === lw.selectedDesignId && lw.preview"
+                                preview="lw.preview"
+                                inline="true">
+                            </launch-design-preview>
+                        </div>
+                    </div>
+
+                    <p class="launch-design-list-empty" ng-if="lw.rows.length === 0">
+                        {{ 'empty_launch_designs_search_message' | translate }}
+                    </p>
+
+                    <div class="launch-design-list-footer">
+                        <span ng-if="lw.rows.length > 0">
+                            {{ 'launch_wizard_showing' | translate:{ shown: lw.getVisibleRows().length, total: lw.rows.length } }}
+                            <span ng-if="lw.hasMoreRows()">&middot;
+                                <button type="button" class="btn btn-link launch-design-show-more" ng-click="lw.showMore()">
+                                    {{ 'launch_wizard_show_more' | translate }}
+                                </button>
+                            </span>
+                        </span>
+                        <span class="launch-design-list-errors" ng-if="lw.designsWithErrors > 0">
+                            {{ (lw.designsWithErrors === 1 ? 'launch_wizard_errors_one' : 'launch_wizard_errors_other') | translate:{ count: lw.designsWithErrors } }}
+                            &middot; <a href="#!/designs">{{ 'launch_wizard_review_in_designs' | translate }}</a>
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <aside class="launch-wizard-preview-column" aria-label="{{ 'launch_wizard_preview' | translate }}">
+                <launch-design-preview ng-if="lw.preview" preview="lw.preview"></launch-design-preview>
+                <p class="launch-design-preview-empty" ng-if="!lw.preview">
+                    {{ 'launch_wizard_preview_empty' | translate }}
+                </p>
+            </aside>
+        </div>
+
+        <div class="launch-wizard-actions">
+            <button type="button" class="btn btn-default launch-wizard-action" ng-click="lw.cancel()">{{ 'cancel' | translate }}</button>
+            <p class="launch-wizard-actions-summary">
+                <span ng-if="lw.selectedRow">{{ 'launch_wizard_chosen' | translate }} <strong>{{ lw.selectedRow.title }}</strong></span>
+                <span ng-if="!lw.selectedRow">{{ 'launch_wizard_nothing_chosen' | translate }}</span>
+            </p>
+            <button type="button" class="btn btn-primary launch-wizard-action" ng-disabled="!lw.hasSelection()" ng-click="lw.goToLaunchStep()">
+                {{ 'launch_wizard_next' | translate }} <i class="fa fa-arrow-right" aria-hidden="true"></i>
             </button>
         </div>
-    </div>
+    </section>
 
-    <div class="row">
-        <div class="col-md-12">
-            <div class="fieldset-heading-section">
-                <h3 class="fieldset-heading">{{ 'activity_new_indications_heading' | translate }}</h3>
-                <ul>
-                    <li>{{ 'activity_new_indication_choose_design' | translate }}</li>
-                    <li>{{ 'activity_new_indication_contextual_data' | translate }}</li>
-                </ul>
-            </div>
-        </div>
-    </div>
-
-    <div class="row">
-        <div class="col-md-12">
-            <div class="panel panel-default">
-                <div class="panel-heading">
-                    <label>{{'step_1_prepare_activity' | translate}}</label>
+    <!-- Step 2: today's description and launch form, until the wizard's own
+         step 2 replaces it (#972). -->
+    <section class="launch-wizard-launch-step" ng-if="lw.step === 2" ng-controller="ActivityController as ac">
+        <form name="launchActivityForm" ng-submit="ac.createSession(lw.selectedDesignId, lw.description)" novalidate>
+            <div class="launch-wizard-card launch-wizard-chosen">
+                <div class="launch-wizard-chosen-text">
+                    <p class="launch-wizard-card-label">{{ 'launch_wizard_chosen_design' | translate }}</p>
+                    <p class="launch-wizard-chosen-title">{{ lw.preview.title }}</p>
+                    <p class="launch-wizard-chosen-meta">
+                        {{ lw.preview.phaseCountKey | translate:{ count: lw.preview.phaseCount } }}
+                        <span ng-if="lw.preview.associatedCase">&middot; {{ 'launch_wizard_case_label' | translate }} {{ lw.preview.associatedCase.title }}</span>
+                    </p>
                 </div>
-                <div class="panel-body">
-                    <div class="row" ng-init="bdc.getDesigns()" style="display: none;"></div>
-                    <div class="row">
-                        <div class="col-md-12" ng-if="bdc.hasFetchedUserDesigns && bdc.getLaunchableUserDesigns().length === 0">
-                            <div class="alert alert-info">
-                                <span>{{'empty_launch_designs_message' | translate}}</span>
-                                <a href="" ng-click="navigateTo('/designs/new')">{{'empty_launch_designs_link' | translate}}</a>.
-                                <span>{{'empty_launch_designs_then_return' | translate}}</span>
-                            </div>
-                        </div>
-                        <div class="col-md-12" ng-if="bdc.getLaunchableUserDesigns().length > 0">
-                            <p>{{'choose_design_for_new_activity' | translate}}</p>
-                            <div class="search-field-wrapper launch-activity-search-wrapper">
-                                <input
-                                    class="form-control launch-activity-search search-decorated-input"
-                                    type="text"
-                                    placeholder="{{'search_designs_placeholder'|translate}}"
-                                    ng-model="bdc.designSearchQuery"
-                                    ng-change="bdc.handleDesignSearchChange()"
-                                    uib-typeahead="design as bdc.formatDesignLabel(design) for design in bdc.searchLaunchableUserDesigns($viewValue)"
-                                    typeahead-on-select="bdc.selectDesignFromSearch($item)"
-                                    typeahead-input-formatter="bdc.formatDesignLabel($model)"
-                                    typeahead-min-length="1">
-                                <i class="fa-solid fa-magnifying-glass search-field-icon" aria-hidden="true"></i>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row" ng-if="bdc.getLaunchableUserDesigns().length > 0">
-                        <div class="col-md-12">
-                            <p>{{'available_designs_colon' | translate}}</p>
-                            <div class="panel panel-default">
-                                <div class="panel-body">
-                                    <design-item
-                                        ng-repeat="design in bdc.getPaginatedLaunchableUserDesigns() track by design.id"
-                                        design="design"
-                                        selected-design-id="bdc.selectedDesignId"
-                                        on-view="bdc.handleView"
-                                        is-owner="true"
-                                        selection-layout="true"
-                                        on-select="bdc.handleSelectDesign">
-                                    </design-item>
-                                    <div class="resource-pagination-controls" ng-if="bdc.getLaunchableTotalPages() > 1">
-                                        <button class="btn btn-default btn-sm" ng-click="bdc.previousLaunchablePage()" ng-disabled="bdc.currentPage === 1">
-                                            <i class="fa fa-chevron-left" aria-hidden="true"></i> {{ 'pagination_previous' | translate }}
-                                        </button>
-                                        <span class="resource-pagination-status">
-                                            {{ 'pagination_page' | translate }} {{ bdc.currentPage }} / {{ bdc.getLaunchableTotalPages() }}
-                                        </span>
-                                        <button class="btn btn-default btn-sm" ng-click="bdc.nextLaunchablePage()" ng-disabled="bdc.currentPage === bdc.getLaunchableTotalPages()">
-                                            {{ 'pagination_next' | translate }} <i class="fa fa-chevron-right" aria-hidden="true"></i>
-                                        </button>
-                                    </div>
-                                    <div class="alert alert-info" ng-if="bdc.getFilteredLaunchableUserDesigns().length === 0">
-                                        <span>{{ 'empty_launch_designs_search_message' | translate }}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                <button type="button" class="btn btn-link" ng-click="lw.goToChooseStep()">
+                    <i class="fa fa-arrow-left" aria-hidden="true"></i> {{ 'launch_wizard_change_design' | translate }}
+                </button>
+            </div>
+
+            <div class="launch-wizard-card">
+                <div class="form-group">
+                    <label for="activity-description-input">
+                        {{ 'launch_activity_description_label' | translate }} <span class="launch-wizard-required" aria-hidden="true">*</span>
+                    </label>
+                    <input
+                        id="activity-description-input"
+                        type="text"
+                        class="form-control"
+                        required
+                        aria-describedby="activity-description-help"
+                        placeholder="{{ 'launch_activity_description_placeholder' | translate }}"
+                        ng-model="lw.description" />
+                    <p id="activity-description-help" class="help-block">
+                        {{ 'launch_activity_description_help' | translate }}
+                    </p>
                 </div>
             </div>
 
-            <div id="activity-launch-step"
-                ng-controller="ActivityController as ac"
-                class="panel panel-default"
-                ng-show="bdc.selectedDesignId != 0 && bdc.selectedDesignId != NaN">
-                <div class="panel-heading">
-                    <label>{{'step_2_prepare_activity' | translate}}</label>
-                </div>
-                <div class="panel-body">
-                    <form ng-submit="ac.createSession(bdc.selectedDesignId)">
-                        <div class="form-group">
-                            <label for="activity-description-input">
-                                {{'launch_activity_description_label' | translate}}
-                            </label>
-                            <input
-                                id="activity-description-input"
-                                type="text"
-                                class="form-control launch-activity-description"
-                                required
-                                aria-describedby="activity-description-help"
-                                placeholder="{{'launch_activity_description_placeholder' | translate}}"
-                                ng-model="ac.activityDescription" />
-                            <p id="activity-description-help" class="help-block">
-                                {{'launch_activity_description_help' | translate}}
-                            </p>
-                        </div>
-                        <div class="row">
-                            <div class="col-lg-6">
-                                <button class="btn btn-primary" ng-disabled="(bdc.selectedDesignId == 0 && bdc.selectedDesignId != NaN) || !ac.hasDescription()">
-                                    {{'launch_the_activity' | translate}}
-                                </button>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-lg-6 loading-container" ng-show="showSpinner">
-                                <i class="fa fa-spinner fa-spin"></i>
-                                <p>{{ 'preparing_dashboard' | translate }}</p>
-                            </div>
-                        </div>
-                        <div class="row" ng-show="error">
-                            <div class="col-lg-6">
-                                <h4 style="color:red; text-align: center; ">
-                                    <strong>
-                                        {{ 'faulty_design' | translate }}
-                                    </strong>
-                                </h4>
-                            </div>
-                        </div>
-                    </form>
-                </div>
+            <div class="launch-wizard-actions">
+                <button type="button" class="btn btn-default launch-wizard-action" ng-click="lw.goToChooseStep()">
+                    <i class="fa fa-arrow-left" aria-hidden="true"></i> {{ 'launch_wizard_back' | translate }}
+                </button>
+                <p class="launch-wizard-actions-summary">
+                    <span class="text-danger" role="alert" ng-if="ac.error">{{ 'faulty_design' | translate }}</span>
+                    <span ng-if="!ac.error">{{ 'launch_wizard_chosen' | translate }} <strong>{{ lw.preview.title }}</strong></span>
+                </p>
+                <button type="submit" class="btn btn-primary launch-wizard-action" ng-disabled="ac.showSpinner || !ac.hasDescription(lw.description)">
+                    <span ng-if="!ac.showSpinner"><i class="fa fa-rocket" aria-hidden="true"></i> {{ 'launch_wizard_launch' | translate }}</span>
+                    <span ng-if="ac.showSpinner"><i class="fa fa-spinner fa-spin" aria-hidden="true"></i> {{ 'preparing_dashboard' | translate }}</span>
+                </button>
             </div>
-        </div>
-    </div>
+        </form>
+    </section>
 </div>

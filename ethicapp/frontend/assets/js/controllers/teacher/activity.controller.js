@@ -53,12 +53,13 @@ export function ActivityController($scope, $http,
     };
 
     // A launch requires a description (#968); the server enforces it too.
-    vm.hasDescription = function() {
-        return isActivityDescriptionValid(vm.activityDescription);
+    // The launch wizard keeps the description itself and passes it (#971).
+    vm.hasDescription = function(description = vm.activityDescription) {
+        return isActivityDescriptionValid(description);
     };
 
-    vm.createSession = async function (designId) {
-        if (!vm.hasDescription()) {
+    vm.createSession = async function (designId, description = vm.activityDescription) {
+        if (!vm.hasDescription(description)) {
             return;
         }
 
@@ -79,7 +80,7 @@ export function ActivityController($scope, $http,
             
             // Create the activity with the design that is required.
             const sessionId = await ActivityCatalogService.createActivity(design, 
-                normalizeActivityDescription(vm.activityDescription));
+                normalizeActivityDescription(description));
 
             // The design is locked remotely. We need to lock it locally too.
             await DesignCatalogService.lockDesign(designId, true);
@@ -90,6 +91,7 @@ export function ActivityController($scope, $http,
             console.error("Error creating session:", error);
         } finally {
             vm.showSpinner = false;
+            $scope.$applyAsync();
         }
     };
 
