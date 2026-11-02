@@ -1,5 +1,9 @@
 import { newestActivitiesFirst } from "../../helpers/activity-order.js";
 import { statusCodes } from  "../../../../../common/modules/session-status.js";
+import {
+    isActivityDescriptionValid,
+    normalizeActivityDescription,
+} from "../../../../../common/modules/activity-description.js";
 
 /*eslint func-style: ["error", "expression"]*/
 export function ActivityController($scope, $http,
@@ -48,7 +52,16 @@ export function ActivityController($scope, $http,
         $scope.navigateTo("/");
     };
 
+    // A launch requires a description (#968); the server enforces it too.
+    vm.hasDescription = function() {
+        return isActivityDescriptionValid(vm.activityDescription);
+    };
+
     vm.createSession = async function (designId) {
+        if (!vm.hasDescription()) {
+            return;
+        }
+
         vm.showSpinner = true;
     
         try {
@@ -66,7 +79,7 @@ export function ActivityController($scope, $http,
             
             // Create the activity with the design that is required.
             const sessionId = await ActivityCatalogService.createActivity(design, 
-                vm.activityDescription);
+                normalizeActivityDescription(vm.activityDescription));
 
             // The design is locked remotely. We need to lock it locally too.
             await DesignCatalogService.lockDesign(designId, true);

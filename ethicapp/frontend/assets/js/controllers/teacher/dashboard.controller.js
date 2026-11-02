@@ -5,6 +5,7 @@ import {
     serviceDisplayName,
 } from "../../helpers/service-configuration-summary.js";
 import { connectedStudentCount } from "../../helpers/activity-bar.js";
+import { activityDocumentTitleKeeper } from "../../helpers/activity-title.js";
 import {
     DEFAULT_DASHBOARD_TAB,
     aiServicesTurnedOff,
@@ -99,6 +100,9 @@ export function DashboardController($scope, $routeParams, $http,
     // Services the design enables that will not run in this activity, shown
     // once right after launch (#815).
     vm.servicesNotRunning = [];
+
+    // Titles the browser tab by the activity once the dashboard knows it.
+    let documentTitle = null;
 
     // A service's name in the UI language, or its id without one.
     vm.serviceNotRunningName = function(service) {
@@ -502,6 +506,11 @@ export function DashboardController($scope, $routeParams, $http,
 
         vm.servicesNotRunning = ActivityCatalogService.takeLaunchNotice(vm.sessionId);
 
+        // The browser tab shows the activity's name and description while
+        // the dashboard is open (#973), and its own title again after.
+        documentTitle = activityDocumentTitleKeeper($window.document);
+        $scope.$on("$destroy", () => documentTitle.restore());
+
         // Keep the activity state service subscribed to state updates from the backend.
         const unsubscribeHandler = ActivityStateService.subscribeToActivityEvents(vm.sessionId);
 
@@ -576,6 +585,7 @@ export function DashboardController($scope, $routeParams, $http,
             // Load the entire activity state
             vm.activityState = await ActivityStateService.loadActivityState(vm.sessionId);
             vm.userList = vm.activityState?.users ?? [];
+            documentTitle?.show(vm.activityState?.descriptor);
                     
             // Get the design of the activity
             vm.designObj = await DesignCatalogService.getDesignById(vm.activityState.descriptor.designId)

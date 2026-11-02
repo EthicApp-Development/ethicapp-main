@@ -14,6 +14,7 @@ import {
 import { getDesignTypeBySessionId } from "./activities-common.js";
 import activityFinisher from "../../helpers/activity-finish-helper.js";
 import { CREATE_SESSION_SQL } from "../../helpers/teacher-activity-writes.js";
+import { normalizeActivityDescription } from "../../../common/modules/activity-description.js";
 import {
     requireLaunchableDesign,
     requirePhaseOwner,
@@ -34,6 +35,16 @@ router.post("/sessions", async (req, res) => {
         return res.status(400).json({ status: "err", message: "Missing required session fields." });
     }
 
+    // Activities launched from the same design differ only by their description.
+    const activityDescription = normalizeActivityDescription(description);
+    if (!activityDescription) {
+        return res.status(400).json({
+            status:  "err",
+            message: "The activity needs a description.",
+            code:    "ACTIVITY_DESCRIPTION_REQUIRED",
+        });
+    }
+
     try {
         // Nothing is created for an account that was forgotten meanwhile.
         const session = await rpg2.singleSQL({
@@ -41,7 +52,7 @@ router.post("/sessions", async (req, res) => {
             sql:       CREATE_SESSION_SQL,
             sqlParams: [
                 rpg2.param("plain", name),
-                rpg2.param("plain", description || ""),
+                rpg2.param("plain", activityDescription),
                 rpg2.param("plain", teacherId),
                 rpg2.param("plain", type),
             ],
