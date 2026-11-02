@@ -494,6 +494,16 @@ Chat message hook context includes:
 - `savedMessage`
 - `notificationPayload`
 - `designType`
+- `source`: `{ kind: "chat_message", id }`, the saved message's id
+  (`differential_chat`, or `chat` for ranking), or `null` when the insert
+  returned no row
+
+The student response hook's context likewise carries `source:
+{ kind: "response", id }`, the stored `differential_selection` row (or
+`actor_selection` for ranking). The registry writes a hook's `source` to the
+`source_kind` and `source_id` columns of each job it creates (#946), and the
+handler of a callback correlated with that job reads it back as
+`context.job.source`. Jobs of other hooks keep both columns `NULL`.
 
 Groups are ephemeral in EthicApp and are scoped to a phase. Chat-oriented
 adapters should therefore key any accumulated conversation state by at least

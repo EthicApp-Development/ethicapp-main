@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
     ExternalServiceJobsService,
+    JOB_SOURCE_KIND,
     JOB_STATUS,
+    normalizeJobSource,
     RESULT_STATUS,
 } from "../external-service-jobs.service.js";
 
@@ -63,6 +65,59 @@ test("createJob: inserts the caller's id, or lets the database generate one", as
     assert.ok(db.calls[0].sql.includes("COALESCE($10::uuid, gen_random_uuid())"));
     assert.equal(db.calls[0].params[9], JOB_UUID);
     assert.equal(db.calls[1].params[9], null);
+});
+
+test("createJob: records the response or chat message the job processed (#946)", async () => {
+    const db  = makeDbQueue([{ id: JOB_UUID }], [{ id: JOB_UUID }]);
+    const svc = new ExternalServiceJobsService({ dbQuery: db });
+
+    await svc.createJob({
+        serviceId: "svc",
+        hookName:  "student-response-submitted",
+        source:    { kind: JOB_SOURCE_KIND.RESPONSE, id: 41 },
+    });
+    await svc.createJob({
+        serviceId: "svc",
+        hookName:  "chat-message-received",
+        source:    { kind: JOB_SOURCE_KIND.CHAT_MESSAGE, id: "42" },
+    });
+
+    assert.match(db.calls[0].sql, /outbound_payload, source_kind, source_id\)/u);
+    assert.deepEqual(db.calls[0].params.slice(10), ["response", 41]);
+    assert.deepEqual(db.calls[1].params.slice(10), ["chat_message", 42]);
+});
+
+test("createJob: records no source for other hooks or an invalid one (#946)", async () => {
+    const invalidSources = [
+        undefined,
+        null,
+        { kind: "response" },
+        { kind: "response", id: 0 },
+        { kind: "response", id: -3 },
+        { kind: "response", id: 1.5 },
+        { kind: "response", id: "abc" },
+        { kind: "case", id: 4 },
+        { id: 4 },
+    ];
+    const db  = makeDbQueue(...invalidSources.map(() => [{ id: JOB_UUID }]));
+    const svc = new ExternalServiceJobsService({ dbQuery: db });
+
+    for (const source of invalidSources) {
+        await svc.createJob({ serviceId: "svc", hookName: "phase-started", source });
+    }
+
+    assert.equal(db.calls.length, invalidSources.length);
+    for (const { params } of db.calls) {
+        assert.deepEqual(params.slice(10), [null, null]);
+    }
+});
+
+test("normalizeJobSource: keeps a known kind with a positive integer id", () => {
+    assert.deepEqual(normalizeJobSource({ kind: "response", id: 5 }), { kind: "response", id: 5 });
+    assert.deepEqual(normalizeJobSource({ kind: "chat_message", id: "6" }),
+        { kind: "chat_message", id: 6 });
+    assert.equal(normalizeJobSource({ kind: "chat_message", id: null }), null);
+    assert.equal(normalizeJobSource({ kind: "other", id: 6 }), null);
 });
 
 test("createJob: returns null when db returns empty rows", async () => {
@@ -193,7 +248,33 @@ test("createResult: returns the matched job's context as the trusted destination
     assert.deepEqual({ ...result.job }, {
         id:         JOB_UUID, sessionId:  1, phaseId:    2, questionId: 3, groupId:    4, userId:     5,
         kind:       "hook", status:     JOB_STATUS.DISPATCHED,
+        source:     null,
     });
+});
+
+test("createResult: the job context carries the source the job processed (#946)", async () => {
+    const jobRow = {
+        id:          JOB_UUID,
+        status:      JOB_STATUS.DISPATCHED,
+        session_id:  1,
+        phase_id:    2,
+        question_id: 3,
+        group_id:    4,
+        user_id:     5,
+        source_kind: "chat_message",
+        source_id:   "77",
+    };
+    const db  = makeDbQueue([jobRow], [{ id: RESULT_UUID, job_id: JOB_UUID }], []);
+    const svc = new ExternalServiceJobsService({ dbQuery: db });
+
+    const result = await svc.createResult({
+        correlationId: JOB_UUID,
+        serviceId:     "polyadic-devils-advocate",
+        rawPayload:    {},
+    });
+
+    assert.match(db.calls[0].sql, /source_kind, source_id/u);
+    assert.deepEqual(result.job.source, { kind: JOB_SOURCE_KIND.CHAT_MESSAGE, id: 77 });
 });
 
 test("createResult: no job context without a matching job", async () => {

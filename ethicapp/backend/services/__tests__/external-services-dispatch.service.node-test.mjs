@@ -96,6 +96,34 @@ test("dispatchHook: creates job with context fields", async () => {
     assert.equal(calls[0].phaseId, 2);
 });
 
+test("dispatchHook: writes the context's source to the job it creates (#946)", async () => {
+    const calls = [];
+    const { registry } = makeRegistry({
+        createJob: async (args) => {
+            calls.push(args);
+            return { id: JOB_UUID };
+        },
+    });
+    let capturedContext = null;
+    registry.hookSubscribers.set("student-response-submitted", [
+        { serviceId: "svc-a", handler: async (ctx) => { capturedContext = ctx; } },
+    ]);
+    registry.hookSubscribers.set("phase-started", [
+        { serviceId: "svc-a", handler: async () => {} },
+    ]);
+
+    const source = { kind: "response", id: 41 };
+    await registry.dispatchHook("student-response-submitted",
+        { sessionId: 1, phaseId: 2, questionId: 3, userId: 5, source },
+        { enabledServiceIds: ["svc-a"] });
+    await registry.dispatchHook("phase-started", { sessionId: 1, phaseId: 2 },
+        { enabledServiceIds: ["svc-a"] });
+
+    assert.deepEqual(calls[0].source, source);
+    assert.deepEqual(capturedContext.source, source, "the handler still sees it");
+    assert.equal(calls[1].source, null, "a hook without a source records none");
+});
+
 test("dispatchHook: marks job dispatched before calling handler", async () => {
     const statusCalls = [];
     let handlerCalledAfterDispatch = false;
