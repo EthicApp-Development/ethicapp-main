@@ -69,6 +69,9 @@ function rowsFor(sql, params = []) {
         const design = designs.get(Number(params[2]));
         return design && !design.locked ? [{ id: design.id }] : [];
     }
+    if (/^\s*DELETE FROM designs\b/u.test(sql)) {
+        return designRows(params[0]).map(design => ({ id: design.id }));
+    }
     if (/^\s*INSERT INTO designs\s*\(/u.test(sql)) {
         return [{ id: COPY_ID }];
     }

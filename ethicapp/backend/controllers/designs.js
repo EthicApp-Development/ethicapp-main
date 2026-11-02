@@ -57,6 +57,7 @@ import {
 const router = express.Router();
 const uploadsRoot = path.resolve(process.cwd(), uploadsPath);
 const MAX_SEMANTIC_TAGS = 5;
+const DESIGN_IN_USE_CODE = "DESIGN_IN_USE";
 
 function sameId(left, right) {
     return Number(left) === Number(right);
@@ -444,6 +445,15 @@ const READABLE_DESIGN_CONDITION = "(creator = $2 OR visibility = 'public')";
 // see or act on, so it does not reveal that the design exists (#929).
 function designNotFoundResponse(res) {
     return res.status(404).json({ status: "err", message: "Design not found" });
+}
+
+// The answer for deleting a design an activity uses (#963).
+function designInUseResponse(res) {
+    return res.status(409).json({
+        status:  "err",
+        code:    DESIGN_IN_USE_CODE,
+        message: "This design is used by an activity and cannot be deleted.",
+    });
 }
 
 // After a design copy is committed (#848): its case is rendered when it has no
@@ -1241,11 +1251,14 @@ router.delete("/designs/:id", async (req, res) => {
             return res.status(400).json({ status: "err", message: "Design ID is required" });
         }
 
-        // Fetch the design
+        // Fetch the design, and whether an activity uses it
         const design = await rpg2.singleSQL({
             dbcon: config.dbconnString,
             sql: `
-                SELECT id, creator
+                SELECT id, creator,
+                       EXISTS (
+                           SELECT 1 FROM activity a WHERE a.design = designs.id
+                       ) AS in_use
                 FROM designs
                 WHERE id = $1
             `,
@@ -1258,15 +1271,28 @@ router.delete("/designs/:id", async (req, res) => {
             return designNotFoundResponse(res);
         }
 
-        // Delete the design
-        await rpg2.singleSQL({
+        // An activity's design must not disappear (activity_design_fkey).
+        if (design.in_use === true) {
+            return designInUseResponse(res);
+        }
+
+        // Delete the design. The NOT EXISTS repeats the check inside the
+        // DELETE, so a design launched after the check is kept; no returned
+        // row means it is now in use. Its copies stay, and lose only their
+        // link to it (#963).
+        const deleted = await rpg2.singleSQL({
             dbcon: config.dbconnString,
             sql: `
                 DELETE FROM designs
                 WHERE id = $1
+                  AND NOT EXISTS (SELECT 1 FROM activity a WHERE a.design = $1)
+                RETURNING id
             `,
             sqlParams: [rpg2.param("plain", designId)],
         });
+        if (!deleted?.id) {
+            return designInUseResponse(res);
+        }
 
         // Return success response
         return res.json({ status: "ok", message: "Design deleted successfully" });
