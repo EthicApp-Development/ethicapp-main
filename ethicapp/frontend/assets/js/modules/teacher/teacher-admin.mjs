@@ -7,6 +7,7 @@ import { DesignCatalogService } from "../../services/design-catalog.service.js";
 import { DesignPublicationService } from "../../services/design-publication.service.js";
 import { CaseVideoPickerService } from "../../services/case-video-picker.service.js";
 import { CasePublicationNoticeService } from "../../services/case-publication-notice.service.js";
+import { DesignDeleteConfirmService } from "../../services/design-delete-confirm.service.js";
 import { CasesCatalogService } from "../../services/cases-catalog.service.js";
 import { CaseAnalysesService } from "../../services/case-analyses.service.js";
 import { DesignAnalysesService } from "../../services/design-analyses.service.js";
@@ -43,6 +44,7 @@ app.factory("ActivityStateService", ["$http", "TeacherSocketService", ActivitySt
     .factory("DesignPublicationService", ["$uibModal", "DesignCatalogService", "CasesCatalogService", DesignPublicationService])
     .factory("CaseVideoPickerService", ["$uibModal", CaseVideoPickerService])
     .factory("CasePublicationNoticeService", ["$uibModal", CasePublicationNoticeService])
+    .factory("DesignDeleteConfirmService", ["$uibModal", DesignDeleteConfirmService])
     .factory("DesignStateService", ["$rootScope", "$http", DesignStateService])
     .factory("ExternalServicesCatalogService",
         ["$http", "LanguageCatalogService", ExternalServicesCatalogService])
@@ -160,7 +162,8 @@ app.controller("BrowseDesignsController",
         BrowseDesignsController]); 
 app.controller("DesignsPageController",
     ["$scope", "$location", "$translate", "toast", "DesignCatalogService",
-        "DesignPublicationService", "ActivityCatalogService", DesignsPageController]);
+        "DesignPublicationService", "ActivityCatalogService",
+        "DesignDeleteConfirmService", "$timeout", DesignsPageController]);
 app.controller("LaunchActivityWizardController",
     ["$scope", "$rootScope", "$routeParams", "$location", "$timeout", "$window",
         "DesignCatalogService", "ActivityCatalogService", "ExternalServicesCatalogService",

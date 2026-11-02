@@ -8,6 +8,9 @@ import { DesignsPageController } from "../designs-page.controller.js";
 
 const template = readFileSync(new URL(
     "../../../../static/views/teacher/design.index.html", import.meta.url), "utf8");
+const noticeTemplate = readFileSync(new URL(
+    "../../../../static/views/teacher/fragments/designs-action-notice.template.html",
+    import.meta.url), "utf8");
 
 const theirs = (id, title) =>
     ({ id, userOwned: false, valid: true, visibility: "public", metainfo: { title } });
@@ -25,11 +28,12 @@ function makeDesigns() {
     ];
 }
 
-function createPage({ search = {}, catalog = {}, publication = {} } = {}) {
+function createPage({ search = {}, catalog = {}, publication = {}, deleteChoice = "delete" } = {}) {
     const scopeHandlers = {};
     const calls = {
         navigated:  [], toasts:     [], pushes:     [], replaces:   [],
         duplicated: [], archived:   [], deleted:    [], toggled:    [],
+        dialogs:    [], timers:     [], cancelled:  [],
         imported:   [], reloads:    [],
     };
     let current = { ...search };
@@ -86,6 +90,7 @@ function createPage({ search = {}, catalog = {}, publication = {} } = {}) {
         applyPrivateVisibilityToDesigns() {},
         duplicateDesign:  async (id) => {
             calls.duplicated.push(id);
+            designs.push({ id: 99, userOwned: true, valid: true, metainfo: { title: "Copy" } });
             return 99;
         },
         updateDesignArchived: async (id, archived) => {
@@ -105,9 +110,24 @@ function createPage({ search = {}, catalog = {}, publication = {} } = {}) {
     };
     const ActivityCatalogService = { loadActivities: async () => [{ designId: 3 }] };
 
+    const DesignDeleteConfirmService = {
+        confirm: async (dialog) => {
+            calls.dialogs.push(dialog);
+            return deleteChoice;
+        },
+    };
+    // Timers run only when the test says so.
+    const $timeout = (fn, delay) => {
+        const timer = { fn, delay };
+        calls.timers.push(timer);
+        return timer;
+    };
+    $timeout.cancel = timer => calls.cancelled.push(timer);
+
     const vm = {};
     DesignsPageController.call(vm, $scope, $location, $translate, toast,
-        DesignCatalogService, DesignPublicationService, ActivityCatalogService);
+        DesignCatalogService, DesignPublicationService, ActivityCatalogService,
+        DesignDeleteConfirmService, $timeout);
 
     return {
         vm,
@@ -210,7 +230,8 @@ describe("designs page, row actions", () => {
             await vm.runAction(rowOf(vm, 3), rowOf(vm, 3).primary);
             await settle();
             assert.deepEqual(calls.navigated, []);
-            assert.deepEqual(calls.toasts, ["designs_duplicate_failed"]);
+            assert.equal(vm.notice.messageKey, "designs_duplicate_failed");
+            assert.equal(vm.notice.tone, "danger");
         } finally {
             console.error = originalError;
         }
@@ -224,6 +245,8 @@ describe("designs page, row actions", () => {
         const archived = rowOf(vm, 4, "archived");
         await vm.runAction(archived, archived.primary);
         assert.deepEqual(calls.archived, [[1, true], [4, false]]);
+        assert.equal(vm.notice.messageKey, "designs_notice_restored");
+        assert.deepEqual(vm.notice.params, { title: "Gone" });
     });
 
     it("views a design from the menu", async () => {
@@ -234,7 +257,7 @@ describe("designs page, row actions", () => {
     });
 
     it("does not delete a design in use, and explains a refused delete", async () => {
-        const { vm, calls, settle } = createPage({
+        const { vm, calls } = createPage({
             catalog: {
                 deleteDesign: async (id) => {
                     calls.deleted.push(id);
@@ -247,9 +270,122 @@ describe("designs page, row actions", () => {
         assert.deepEqual(calls.deleted, [], "disabled for a design in use");
 
         await vm.runAction(rowOf(vm, 1), rowOf(vm, 1).menu.at(-1));
-        await settle();
         assert.deepEqual(calls.deleted, [1]);
-        assert.deepEqual(calls.toasts, ["design_delete_in_use"]);
+        assert.equal(vm.notice.messageKey, "design_delete_in_use");
+        assert.equal(vm.notice.tone, "danger");
+    });
+});
+
+describe("designs page, action feedback", () => {
+    const deleteEntry = row => row.menu.find(entry => entry.id === "delete");
+
+    it("asks before deleting, offering to archive instead", async () => {
+        const { vm, calls } = createPage();
+        await vm.ready;
+        await vm.runAction(rowOf(vm, 1), deleteEntry(rowOf(vm, 1)));
+        assert.deepEqual(calls.dialogs, [{ title: "Ready", canArchive: true }]);
+        assert.deepEqual(calls.deleted, [1]);
+        assert.equal(vm.notice.messageKey, "designs_notice_deleted");
+        assert.deepEqual(vm.notice.params, { title: "Ready" });
+    });
+
+    it("does not offer to archive an archived design", async () => {
+        const { vm, calls } = createPage({ search: { tab: "archived" } });
+        await vm.ready;
+        const row = rowOf(vm, 4, "archived");
+        await vm.runAction(row, deleteEntry(row));
+        assert.deepEqual(calls.dialogs, [{ title: "Gone", canArchive: false }]);
+    });
+
+    it("deletes nothing when the teacher cancels", async () => {
+        const { vm, calls } = createPage({ deleteChoice: "cancel" });
+        await vm.ready;
+        await vm.runAction(rowOf(vm, 1), deleteEntry(rowOf(vm, 1)));
+        assert.deepEqual(calls.deleted, []);
+        assert.deepEqual(calls.archived, []);
+        assert.equal(vm.notice, null);
+        assert.deepEqual(vm.busy, {});
+    });
+
+    it("archives instead of deleting, and Undo restores the design", async () => {
+        const { vm, calls } = createPage({ deleteChoice: "archive" });
+        await vm.ready;
+        await vm.runAction(rowOf(vm, 1), deleteEntry(rowOf(vm, 1)));
+        assert.deepEqual(calls.deleted, []);
+        assert.deepEqual(calls.archived, [[1, true]]);
+        assert.equal(vm.notice.messageKey, "designs_notice_archived");
+        assert.deepEqual(vm.notice.params, { title: "Ready" });
+
+        await vm.runNoticeAction(vm.notice.actions[0]);
+        assert.deepEqual(calls.archived, [[1, true], [1, false]]);
+        assert.equal(vm.notice.messageKey, "designs_notice_restored");
+    });
+
+    it("says a generic failure when a delete fails for another reason", async () => {
+        const { vm } = createPage({
+            catalog: { deleteDesign: async () => { throw { status: 500 }; } },
+        });
+        await vm.ready;
+        await vm.runAction(rowOf(vm, 1), deleteEntry(rowOf(vm, 1)));
+        assert.equal(vm.notice.messageKey, "design_delete_failed");
+    });
+
+    it("names the copy after Duplicate, and Edit copy opens it", async () => {
+        const { vm, calls } = createPage();
+        await vm.ready;
+        const duplicate = rowOf(vm, 1).menu.find(entry => entry.id === "duplicate");
+        await vm.runAction(rowOf(vm, 1), duplicate);
+        assert.deepEqual(calls.navigated, [], "Duplicate stays on the page");
+        assert.equal(vm.notice.messageKey, "designs_notice_duplicated");
+        assert.deepEqual(vm.notice.params, { title: "Copy" });
+
+        await vm.runNoticeAction(vm.notice.actions[0]);
+        assert.deepEqual(calls.navigated, ["/designs/99/edit"]);
+        assert.equal(vm.notice, null);
+    });
+
+    it("says when an archive fails", async () => {
+        const originalError = console.error;
+        console.error = () => {};
+        try {
+            const { vm } = createPage({
+                catalog: { updateDesignArchived: async () => { throw new Error("nope"); } },
+            });
+            await vm.ready;
+            const archive = rowOf(vm, 1).menu.find(entry => entry.id === "archive");
+            await vm.runAction(rowOf(vm, 1), archive);
+            assert.equal(vm.notice.messageKey, "design_archive_error");
+        } finally {
+            console.error = originalError;
+        }
+    });
+
+    it("hides a notice after a few seconds, and on dismiss", async () => {
+        const { vm, calls } = createPage();
+        await vm.ready;
+        const archive = rowOf(vm, 1).menu.find(entry => entry.id === "archive");
+        await vm.runAction(rowOf(vm, 1), archive);
+        const [timer] = calls.timers;
+        assert.ok(timer.delay >= 3000 && timer.delay <= 10000);
+        timer.fn();
+        assert.equal(vm.notice, null);
+
+        const restore = rowOf(vm, 4, "archived").primary;
+        await vm.runAction(rowOf(vm, 4, "archived"), restore);
+        assert.notEqual(vm.notice, null);
+        vm.dismissNotice();
+        assert.equal(vm.notice, null);
+        assert.deepEqual(calls.cancelled, [calls.timers[1]]);
+    });
+
+    it("keeps a newer notice when an older one's time runs out", async () => {
+        const { vm, calls } = createPage();
+        await vm.ready;
+        const archive = rowOf(vm, 1).menu.find(entry => entry.id === "archive");
+        await vm.runAction(rowOf(vm, 1), archive);
+        await vm.runAction(rowOf(vm, 4, "archived"), rowOf(vm, 4, "archived").primary);
+        calls.timers[0].fn();
+        assert.equal(vm.notice.messageKey, "designs_notice_restored");
     });
 });
 
@@ -483,6 +619,15 @@ describe("designs page template", () => {
         assert.match(template, /aria-checked=/u);
         assert.match(template, /uib-dropdown keyboard-nav/u);
         assert.match(template, /role="menuitem"/u);
+    });
+
+    it("shows the action notice as a dismissible live region with its links", () => {
+        assert.match(template, /fragments\/designs-action-notice\.template\.html/u);
+        assert.match(noticeTemplate, /role="status" aria-live="polite"/u);
+        assert.match(noticeTemplate, /ng-click="dp\.runNoticeAction\(action\)"/u);
+        assert.match(noticeTemplate, /ng-click="dp\.dismissNotice\(\)"/u);
+        assert.match(noticeTemplate,
+            /ng-bind-html="dp\.notice\.messageKey \| translate:dp\.notice\.params"/u);
     });
 
     it("lists shared designs in a table, not in design-item cards", () => {

@@ -40,6 +40,21 @@ import {
 } from "../../helpers/designs-shared-table.js";
 import { designMatchesLaunchSearch } from "../../helpers/launch-design-list.js";
 import {
+    DELETE_CHOICE_ARCHIVE,
+    DELETE_CHOICE_DELETE,
+    NOTICE_ACTION_EDIT_COPY,
+    NOTICE_ACTION_UNDO_ARCHIVE,
+    NOTICE_TIMEOUT_MS,
+    archiveFailureNotice,
+    archiveNotice,
+    deleteFailureNotice,
+    deleteNotice,
+    duplicateFailureNotice,
+    duplicateNotice,
+    findDesignTitle,
+    restoreNotice,
+} from "../../helpers/design-action-feedback.js";
+import {
     filterDesignRows,
     queryFromSearch,
     querySearchValue,
@@ -60,7 +75,8 @@ function initialVisibleCounts() {
 }
 
 export function DesignsPageController($scope, $location, $translate, toast,
-    DesignCatalogService, DesignPublicationService, ActivityCatalogService) {
+    DesignCatalogService, DesignPublicationService, ActivityCatalogService,
+    DesignDeleteConfirmService, $timeout) {
 
     const vm = this;
 
@@ -276,44 +292,123 @@ export function DesignsPageController($scope, $location, $translate, toast,
         }
     };
 
+    // Notices after row actions (#978): one at a time, for a few seconds,
+    // and dismissible. Built by `helpers/design-action-feedback.js`.
+
+    vm.notice = null;
+    let noticeTimer = null;
+
+    function cancelNoticeTimer() {
+        if (noticeTimer) {
+            $timeout.cancel(noticeTimer);
+            noticeTimer = null;
+        }
+    }
+
+    vm.showNotice = function(notice) {
+        cancelNoticeTimer();
+        vm.notice = notice;
+        noticeTimer = $timeout(() => {
+            noticeTimer = null;
+            if (vm.notice === notice) {
+                vm.notice = null;
+            }
+        }, NOTICE_TIMEOUT_MS);
+        $scope.$applyAsync();
+    };
+
+    vm.dismissNotice = function() {
+        cancelNoticeTimer();
+        vm.notice = null;
+    };
+
+    vm.runNoticeAction = async function(action) {
+        vm.dismissNotice();
+        if (action?.id === NOTICE_ACTION_EDIT_COPY) {
+            $scope.navigateTo(`/designs/${action.designId}/edit`);
+        } else if (action?.id === NOTICE_ACTION_UNDO_ARCHIVE) {
+            await withBusy(action.designId, () => setArchived(action.designId, false));
+        }
+    };
+
     // Row actions
 
-    async function duplicate(id) {
+    async function withBusy(id, run) {
+        if (vm.busy[id]) {
+            return;
+        }
+        vm.busy[id] = true;
+        try {
+            await run();
+        } finally {
+            delete vm.busy[id];
+            $scope.$applyAsync();
+        }
+    }
+
+    async function titleOf(id) {
+        return findDesignTitle(await DesignCatalogService.getDesigns(), id);
+    }
+
+    async function copyDesign(id) {
         try {
             return await DesignCatalogService.duplicateDesign(id);
         } catch (error) {
             console.error("[DesignsPageController] Error duplicating design.", error);
-            vm.showDesignToast("designs_duplicate_failed", "alert-danger");
+            vm.showNotice(duplicateFailureNotice());
             return null;
         }
     }
 
+    // "Duplicate" stays on the page and names the copy, with "Edit copy".
+    async function duplicate(id) {
+        const copyId = await copyDesign(id);
+        if (copyId !== null) {
+            vm.showNotice(duplicateNotice(copyId, await titleOf(copyId)));
+        }
+    }
+
     async function duplicateToEdit(id) {
-        const copyId = await duplicate(id);
+        const copyId = await copyDesign(id);
         if (copyId !== null && copyId !== undefined) {
             $scope.navigateTo(`/designs/${copyId}/edit`);
         }
     }
 
     async function setArchived(id, archived) {
+        const title = await titleOf(id);
         try {
             await DesignCatalogService.updateDesignArchived(id, archived);
-            vm.showDesignToast(archived ? "design_archive_success" : "design_unarchive_success");
+            vm.showNotice(archived ? archiveNotice(id, title) : restoreNotice(title));
         } catch (error) {
             console.error("[DesignsPageController] Error updating archived status.", error);
-            vm.showDesignToast("design_archive_error", "alert-danger");
+            vm.showNotice(archiveFailureNotice());
         }
     }
 
-    // Deleting keeps the previous page's behavior until it asks first (#978).
+    // Deleting asks first, and offers to archive instead unless the design is
+    // archived already. A design with copies can be deleted; the copies keep
+    // their source's title, author and license (#963).
     async function deleteDesign(id) {
+        const designs = await DesignCatalogService.getDesigns();
+        const design = designs.find(item => item?.id === id);
+        const title = findDesignTitle(designs, id);
+        const choice = await DesignDeleteConfirmService.confirm({
+            title,
+            canArchive: design?.archived !== true,
+        });
+        if (choice === DELETE_CHOICE_ARCHIVE) {
+            await setArchived(id, true);
+            return;
+        }
+        if (choice !== DELETE_CHOICE_DELETE) {
+            return;
+        }
         try {
             await DesignCatalogService.deleteDesign(id);
+            vm.showNotice(deleteNotice(title));
         } catch (error) {
-            const messageKey = error?.data?.code === "DESIGN_IN_USE"
-                ? "design_delete_in_use"
-                : "design_delete_failed";
-            vm.showDesignToast(messageKey, "alert-danger");
+            vm.showNotice(deleteFailureNotice(error));
         }
     }
 
@@ -329,16 +424,10 @@ export function DesignsPageController($scope, $location, $translate, toast,
     };
 
     vm.runAction = async function(row, action) {
-        if (!action || action.disabled || vm.busy[row.id] || !ACTIONS[action.id]) {
+        if (!action || action.disabled || !ACTIONS[action.id]) {
             return;
         }
-        vm.busy[row.id] = true;
-        try {
-            await ACTIONS[action.id](row.id);
-        } finally {
-            delete vm.busy[row.id];
-            $scope.$applyAsync();
-        }
+        await withBusy(row.id, () => ACTIONS[action.id](row.id));
     };
 
     // Importing (#977): a row whose design can be imported creates a private,
@@ -422,6 +511,7 @@ export function DesignsPageController($scope, $location, $translate, toast,
         DesignCatalogService.registerListener("onDesignCatalogUpdated", onCatalogUpdated);
         $scope.$on("$destroy", () => {
             DesignCatalogService.unregisterListener("onDesignCatalogUpdated", onCatalogUpdated);
+            cancelNoticeTimer();
         });
         $scope.$on("$destroy", clearImportNoticeTimer);
         $scope.$on("caseVisibilityUpdatedDesigns", (_event, data) => {
