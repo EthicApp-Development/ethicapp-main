@@ -181,3 +181,15 @@ describe("DesignCatalogService.deleteDesign", () => {
         await quietly(() => assert.rejects(service.deleteDesign(5), /Failed to delete design/u));
     });
 });
+
+describe("DesignCatalogService.duplicateDesign", () => {
+    it("resolves with the copy's id, so the Designs page can open it (#975)", async () => {
+        const { service, requests } = createService(async () => ({ data: { status: "ok", id: 42 } }));
+
+        const copyId = await service.duplicateDesign(7);
+
+        assert.equal(copyId, 42);
+        assert.equal(requests[0].url, "/designs/7/duplicate");
+        assert.equal(requests[0].method, "POST");
+    });
+});

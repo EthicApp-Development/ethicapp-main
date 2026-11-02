@@ -3,8 +3,11 @@ function TeacherRouter($routeProvider) {
         .when('/', {
             templateUrl: 'static/views/teacher/home.html',
         })
+        // The Designs page keeps its state when its tab changes in the URL
+        // (`?tab=archived`, #975): a search change is a route update.
         .when('/designs', {
-            templateUrl: 'static/views/teacher/design.index.html',
+            templateUrl:    'static/views/teacher/design.index.html',
+            reloadOnSearch: false,
         })
         .when('/designs/new', {
             templateUrl: 'static/views/teacher/design.new.html',

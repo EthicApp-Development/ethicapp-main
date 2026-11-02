@@ -184,6 +184,8 @@ let DesignCatalogService = ($rootScope, $http) => {
                     await service.getDesigns(true);
                     service.notifyListeners("onDesignCatalogUpdated", {
                         response: null });
+                    // The copy's id, so the Designs page can open it (#975).
+                    return response.data.id;
                 } else {
                     console.error("Error: Unexpected response format during design import", response.data);
                     throw new Error("Unexpected response format during design import");
@@ -195,8 +197,9 @@ let DesignCatalogService = ($rootScope, $http) => {
         },
 
         async duplicateDesign(id) {
-            // Implementation of duplication is exactly the same as importing
-            await service.importDesign(id);
+            // Implementation of duplication is exactly the same as importing;
+            // it resolves with the copy's id.
+            return service.importDesign(id);
         },
 
         async deleteDesign(id) {
