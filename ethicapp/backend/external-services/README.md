@@ -698,8 +698,13 @@ which ignores it. The report generator calls
 | `timed_out` | The handler did not settle within the timeout; what it returns later is ignored. |
 | `invalid` | The contribution broke the contract; `problems` lists why. |
 
-Every outcome but `completed` carries a short `reason` and is logged with the
-service id, never with payload text: problems name paths and column ids only.
+Every outcome but `completed` carries a short `reason` and is logged as one
+`[external-services] Left out a report contribution.` line holding
+`serviceId`, `reportType`, `sessionId` and `status`, plus `errorName` and
+`errorCode` (when they look like identifiers, otherwise `null`) for `failed`,
+`timeoutMs` for `timed_out` and `problems` for `invalid`. An adapter's error
+message, its stack and its contributed values are never logged: they can quote
+a student's text. Problems name paths and column ids only.
 `collectReportContributions` rejects only for an unknown report type, a context
 without a positive integer `sessionId` or without `rows`, or when the session's
 services cannot be read.

@@ -1,5 +1,4 @@
 import { REPORT_BUILDING_HOOK } from "../external-services/catalog.js";
-import { describeError } from "../helpers/log-safety.js";
 import { createReportResultsReader } from "./external-service-report-results.service.js";
 
 /**
@@ -349,16 +348,39 @@ async function runHandler(handler, handlerArgs, timeoutMs, controller) {
     }
 }
 
+// An error's name and code, when they look like identifiers. Its message and
+// stack are never kept: an adapter's error can quote a stored result, and
+// with it a student's text.
+const ERROR_IDENTIFIER_PATTERN = /^[A-Za-z][A-Za-z0-9_.-]{0,63}$/u;
+
+function errorClassification(error) {
+    const name = error?.name;
+    const code = typeof error?.code === "number" ? String(error.code) : error?.code;
+    return {
+        errorName: typeof name === "string" && ERROR_IDENTIFIER_PATTERN.test(name) ? name : null,
+        errorCode: typeof code === "string" && ERROR_IDENTIFIER_PATTERN.test(code) ? code : null,
+    };
+}
+
+// Every contribution left out is logged as one line of identifiers and a
+// classification, never with text from the handler or its data.
+function logLeftOut({ serviceId, reportType, sessionId, status, ...details }) {
+    console.warn(
+        "[external-services] Left out a report contribution.",
+        JSON.stringify({ serviceId, reportType, sessionId, status, ...details })
+    );
+}
+
 async function collectOne({
     reportType, context, serviceId, service, handler, resultsStore, timeoutMs, rowKeys,
     reservedColumnIds,
 }) {
     const columnPrefix = service.report?.columnPrefix ?? null;
-    const describe = `${serviceId} for the ${reportType} report of session ${context.sessionId}`;
+    const ids = { serviceId, reportType, sessionId: context.sessionId };
 
     if (!columnPrefix) {
         const reason = "the service declares no report.columnPrefix";
-        console.warn(`[external-services] Left out the report contribution of ${describe}: ${reason}.`);
+        logLeftOut({ ...ids, status: CONTRIBUTION_STATUS.INVALID, problems: [reason] });
         return { serviceId, status: CONTRIBUTION_STATUS.INVALID, reason, problems: [reason] };
     }
 
@@ -373,16 +395,13 @@ async function collectOne({
             },
         ], timeoutMs, controller);
     } catch (error) {
-        console.warn(
-            `[external-services] Left out the report contribution of ${describe}: the handler failed.`,
-            JSON.stringify(describeError(error))
-        );
+        logLeftOut({ ...ids, status: CONTRIBUTION_STATUS.FAILED, ...errorClassification(error) });
         return { serviceId, status: CONTRIBUTION_STATUS.FAILED, reason: "the handler failed" };
     }
 
     if (returned === TIMED_OUT) {
         const reason = `timed out after ${timeoutMs} ms`;
-        console.warn(`[external-services] Left out the report contribution of ${describe}: ${reason}.`);
+        logLeftOut({ ...ids, status: CONTRIBUTION_STATUS.TIMED_OUT, timeoutMs });
         return { serviceId, status: CONTRIBUTION_STATUS.TIMED_OUT, reason };
     }
 
@@ -390,10 +409,8 @@ async function collectOne({
         reportType, rowKeys, columnPrefix, reservedColumnIds,
     });
     if (!valid) {
-        console.warn(
-            `[external-services] Left out the report contribution of ${describe}: it is invalid.`,
-            JSON.stringify({ problems })
-        );
+        // Problems name paths and column ids only (see validateColumns()).
+        logLeftOut({ ...ids, status: CONTRIBUTION_STATUS.INVALID, problems });
         return { serviceId, status: CONTRIBUTION_STATUS.INVALID, reason: "the contribution is invalid", problems };
     }
 

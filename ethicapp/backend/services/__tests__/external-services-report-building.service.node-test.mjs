@@ -19,6 +19,26 @@ import { captureWarnings } from "./capture-warnings.mjs";
 
 const SESSION_ID = 12;
 
+// Student text that may appear in an adapter's error or data, and must never
+// reach a log.
+const PRIVATE_MARKER = "private student justification 620";
+
+// Runs fn and returns its result with every console line it wrote, on any
+// channel, as "<channel> <text>".
+async function captureConsole(fn) {
+    const channels = ["log", "info", "warn", "error", "debug"];
+    const originals = Object.fromEntries(channels.map(channel => [channel, console[channel]]));
+    const output = [];
+    for (const channel of channels) {
+        console[channel] = (...args) => { output.push(`${channel} ${args.join(" ")}`); };
+    }
+    try {
+        return { result: await fn(), output };
+    } finally {
+        Object.assign(console, originals);
+    }
+}
+
 const RESPONSE_ROWS = [
     { responseId: 101, phaseId: 1, questionId: 7, userId: 31, groupId: null },
     { responseId: 102, phaseId: 1, questionId: 7, userId: 32, groupId: null },
@@ -222,20 +242,28 @@ test("a failing, slow or invalid handler yields its own outcome and the others a
         values:  [{ rowKey: 101, values: { valid_score: 3 } }],
     }));
     registry.subscribe("throws", REPORT_BUILDING_HOOK, () => {
-        throw new Error("Private student text in an error");
+        throw Object.assign(new TypeError(`Cannot parse ${PRIVATE_MARKER}`), { code: "ERR_PARSE" });
     });
     registry.subscribe("slow", REPORT_BUILDING_HOOK, (context, { signal }) => {
         slowSignal = signal;
-        return new Promise(resolve => setTimeout(() => resolve(null), 200));
+        // It rejects after its timeout, once aborted, quoting student text.
+        return new Promise((resolve, reject) => signal.addEventListener("abort", () => setTimeout(
+            () => reject(new Error(`Aborted while reading ${PRIVATE_MARKER}`)), 5
+        )));
     });
     registry.subscribe("invalid", REPORT_BUILDING_HOOK, async () => ({
         columns: [{ id: "invalid_note" }],
-        values:  [{ rowKey: 999, values: { invalid_note: "Private student text" } }],
+        values:  [{ rowKey: 999, values: { invalid_note: PRIVATE_MARKER } }],
     }));
 
-    const { result: outcomes, warnings } = await captureWarnings(() => registry.collectReportContributions(
-        "responses", { sessionId: SESSION_ID, rows: RESPONSE_ROWS }
-    ));
+    const { result: outcomes, output } = await captureConsole(async () => {
+        const collected = await registry.collectReportContributions(
+            "responses", { sessionId: SESSION_ID, rows: RESPONSE_ROWS }
+        );
+        // Let the timed-out handler settle while the console is captured.
+        await new Promise(resolve => setTimeout(resolve, 30));
+        return collected;
+    });
 
     assert.deepEqual(outcomes, [
         {
@@ -258,12 +286,39 @@ test("a failing, slow or invalid handler yields its own outcome and the others a
     ]);
     assert.equal(slowSignal.aborted, true, "a timed-out handler's signal is aborted");
 
-    assert.equal(warnings.length, 3);
-    for (const serviceId of ["throws", "slow", "invalid"]) {
-        assert.ok(warnings.some(warning => warning.includes(`contribution of ${serviceId} for the responses report`)));
-    }
-    assert.ok(!warnings.find(warning => warning.includes("contribution of invalid")).includes("Private student text"),
-        "an invalid contribution is logged without its values");
+    const leftOut = "[external-services] Left out a report contribution.";
+    assert.deepEqual(output, [
+        `warn ${leftOut} {"serviceId":"throws","reportType":"responses","sessionId":12,`
+            + "\"status\":\"failed\",\"errorName\":\"TypeError\",\"errorCode\":\"ERR_PARSE\"}",
+        `warn ${leftOut} {"serviceId":"invalid","reportType":"responses","sessionId":12,`
+            + "\"status\":\"invalid\",\"problems\":[\"values[0].rowKey is not a row of the report\"]}",
+        `warn ${leftOut} {"serviceId":"slow","reportType":"responses","sessionId":12,`
+            + "\"status\":\"timed_out\",\"timeoutMs\":20}",
+    ]);
+    assert.ok(output.every(line => !line.includes(PRIVATE_MARKER)),
+        "no log line carries text from a handler, its error or its contribution");
+});
+
+test("an error's name and code are logged only when they look like identifiers", async () => {
+    const registry = makeRegistry({
+        services:     [serviceEntry("tutor")],
+        resultsStore: fakeResultsStore({ sessionServiceIds: ["tutor"] }),
+    });
+    registry.subscribe("tutor", REPORT_BUILDING_HOOK, () => {
+        // Not an Error, with a name and code that quote student text.
+        throw { name: `Bad ${PRIVATE_MARKER}`, code: PRIVATE_MARKER, message: PRIVATE_MARKER };
+    });
+
+    const { result, output } = await captureConsole(() => registry.collectReportContributions(
+        "responses", { sessionId: SESSION_ID, rows: RESPONSE_ROWS }
+    ));
+
+    assert.equal(result[0].status, CONTRIBUTION_STATUS.FAILED);
+    assert.deepEqual(output, [
+        "warn [external-services] Left out a report contribution. {\"serviceId\":\"tutor\","
+            + "\"reportType\":\"responses\",\"sessionId\":12,\"status\":\"failed\","
+            + "\"errorName\":null,\"errorCode\":null}",
+    ]);
 });
 
 test("the default timeout is five seconds", () => {
