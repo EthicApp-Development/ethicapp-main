@@ -328,6 +328,8 @@
 	"design_archive_success": "Diseño archivado",
 	"design_unarchive_success": "Diseño restaurado",
 	"design_archive_error": "No se pudo actualizar el estado de archivo del diseño.",
+	"design_delete_in_use": "No se puede eliminar este diseño porque una actividad lo usa. Puedes archivarlo.",
+	"design_delete_failed": "No se pudo eliminar el diseño. Inténtalo nuevamente en unos minutos.",
 	"save_design_failure": "Hubo un error al guardar el diseño. Inténtalo nuevamente en unos minutos.",	
 	"save_design_locked": "Este diseño ya se usó en una actividad y no se puede editar. Duplícalo para hacer cambios.",
 	"save_design_invalid_service_settings": "Algunas opciones de los servicios de IA de este diseño no son válidas. Revísalas e inténtalo nuevamente.",
