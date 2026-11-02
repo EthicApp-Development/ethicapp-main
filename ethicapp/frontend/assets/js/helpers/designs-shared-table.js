@@ -3,7 +3,7 @@
 // it (its phases, case, author and license) and its one action, chosen by its
 // import state: "Import", "Imported · View copy" when the teacher already has
 // a copy, or "Import" disabled with the reason when its case stopped being
-// public. Also the notice shown after an import.
+// public. Also the title that names the copy after an import.
 //
 // Plain functions over the payload of GET /designs, so the page's controller
 // only wires them to the template. Designs are not told apart by type (epic
@@ -19,9 +19,6 @@ import {
 import { normalizeSearchText, phaseCountKey } from "./launch-design-list.js";
 
 export { IMPORT_STATE_IMPORTABLE, IMPORT_STATE_IMPORTED, IMPORT_STATE_NOT_IMPORTABLE };
-
-// How long the notice after an import stays, unless the teacher closes it.
-export const IMPORT_NOTICE_TIMEOUT_MS = 10 * 1000;
 
 function knownText(value) {
     const text = String(value ?? "").trim();
@@ -86,13 +83,11 @@ export function sharedRowMatchesSearch(row, query) {
 }
 
 /**
- * The notice after an import: the new copy's id and title, from the reloaded
- * designs. Without the copy in the list, it is named by the shared design's
- * title.
- * @returns {{ copyId: number, title: string }}
+ * The title that names the copy after an import, from the reloaded designs.
+ * Without the copy in the list, it is the shared design's title.
  */
-export function importNotice(copyId, designs, sharedTitle = "") {
+export function importedCopyTitle(copyId, designs, sharedTitle = "") {
     const copy = (Array.isArray(designs) ? designs : [])
         .find(design => String(design?.id) === String(copyId));
-    return { copyId, title: copy?.metainfo?.title || sharedTitle || "" };
+    return copy?.metainfo?.title || sharedTitle || "";
 }

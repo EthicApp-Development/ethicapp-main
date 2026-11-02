@@ -6,7 +6,7 @@ import { describe, it } from "node:test";
 import {
     buildSharedRow,
     buildSharedRows,
-    importNotice,
+    importedCopyTitle,
     sharedDesignAuthor,
     sharedRowMatchesSearch,
 } from "../designs-shared-table.js";
@@ -88,14 +88,13 @@ describe("shared designs table, search", () => {
     });
 });
 
-describe("shared designs table, the notice after an import", () => {
+describe("shared designs table, the copy's title after an import", () => {
     it("names the copy by its own title", () => {
         const designs = [{ id: 99, metainfo: { title: "Shared 5 (copia)" } }];
-        assert.deepEqual(importNotice(99, designs, "Shared 5"),
-            { copyId: 99, title: "Shared 5 (copia)" });
+        assert.equal(importedCopyTitle(99, designs, "Shared 5"), "Shared 5 (copia)");
     });
 
     it("falls back to the shared design's title when the copy is not listed", () => {
-        assert.deepEqual(importNotice(99, [], "Shared 5"), { copyId: 99, title: "Shared 5" });
+        assert.equal(importedCopyTitle(99, [], "Shared 5"), "Shared 5");
     });
 });

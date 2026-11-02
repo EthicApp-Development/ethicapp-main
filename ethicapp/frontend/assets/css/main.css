@@ -1326,21 +1326,17 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
 
 @media (max-width: 991px){
     .w-home {width: 65rem;}
-    .designContext { width: 493px;}
 }
 
 @media (min-width: 992px){
     .container{width: 896px;}
-    .designContext {width: 652px;}
 }
 
 @media (min-width: 1360px){
     .container {width: 1170px;}
-    .designContext {width: 1170px;}
 }
 @media (min-width: 1200px){
     .container {width: 1050px;}
-    .designContext {width: 1050px;}
 }
 
 @media (max-width: 1111px) {
@@ -1467,10 +1463,6 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
 
 .mt-1medio{
     margin-top: 1.5rem;
-}
-
-.designContext{
-    margin-bottom: 2rem;
 }
 
 .createDesignBtn{
@@ -3900,22 +3892,6 @@ h2{
 .design-item-panel .design-item-share-control {
     flex: 0 0 auto;
     margin-bottom: 10px;
-}
-
-.design-item-panel .design-item-warning {
-    max-width: 320px;
-}
-
-.design-item-panel .design-item-warning p {
-    margin: 0;
-}
-
-.design-item-panel.design-item-selection-layout .panel-body {
-    padding: 15px;
-}
-
-.design-item-panel.design-item-selection-layout p {
-    max-width: 780px;
 }
 
 .activity-item-panel .btn, 
@@ -6387,59 +6363,6 @@ button.launch-wizard-step-body:focus-visible .launch-wizard-step-name {
     color: var(--designs-muted);
     font-size: 12px;
     white-space: normal;
-}
-
-.designs-import-notice {
-    bottom: 24px;
-    max-width: calc(100vw - 32px);
-    position: fixed;
-    right: 24px;
-    width: 460px;
-    z-index: 1050;
-}
-
-.designs-import-notice-body {
-    background: #2b2f38;
-    border-radius: 8px;
-    box-shadow: 0 6px 20px rgb(0 0 0 / 25%);
-    color: #fff;
-    padding: 12px 40px 12px 16px;
-    position: relative;
-}
-
-.designs-import-notice-text,
-.designs-import-notice-links {
-    margin: 0;
-}
-
-.designs-import-notice-links {
-    margin-top: 6px;
-}
-
-.designs-import-notice-link,
-.designs-import-notice-link:visited {
-    color: #9ec1ff;
-    font-weight: 600;
-}
-
-.designs-import-notice-link:hover,
-.designs-import-notice-link:focus {
-    color: #fff;
-}
-
-.designs-import-notice .designs-import-notice-close {
-    color: #fff;
-    opacity: 0.8;
-    position: absolute;
-    right: 12px;
-    text-shadow: none;
-    top: 8px;
-}
-
-.designs-import-notice .designs-import-notice-close:hover,
-.designs-import-notice .designs-import-notice-close:focus {
-    color: #fff;
-    opacity: 1;
 }
 
 @media (width < 1200px) {
