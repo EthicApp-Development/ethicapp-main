@@ -103,6 +103,47 @@ describe("layOutActivityBar", () => {
         }
     });
 
+    // The name followed by its description (#973): about 600 px for the
+    // description with its separator.
+    const DESCRIPTION_WIDTH = 600;
+
+    it("cuts the description before the name", () => {
+        const fake = fakeActivityBar({
+            width: 1256, nameWidth: 400, descriptionWidth: DESCRIPTION_WIDTH, othersWidth: 600,
+        });
+        assert.deepEqual(layOutActivityBar(fake.host), { stacked: false, truncated: true, height: 56 });
+        assert.equal(fake.nameText.clientWidth, 400, "the name shows whole");
+        assert.equal(fake.description.clientWidth, 256);
+        assert.equal(fake.nameTabIndex(), "0", "the cut title takes a tab stop for its tooltip");
+    });
+
+    it("cuts the name only once the description has no room left", () => {
+        const fake = fakeActivityBar({
+            width: 1256, nameWidth: LONG_NAME_WIDTH, descriptionWidth: DESCRIPTION_WIDTH, othersWidth: 720,
+        });
+        assert.deepEqual(layOutActivityBar(fake.host), { stacked: false, truncated: true, height: 56 });
+        assert.equal(fake.description.clientWidth, 0);
+        assert.equal(fake.nameText.clientWidth, 536);
+    });
+
+    it("keeps the whole title on one row without a tab stop when it fits", () => {
+        const fake = fakeActivityBar({
+            width: 1656, nameWidth: 400, descriptionWidth: DESCRIPTION_WIDTH, othersWidth: 600,
+        });
+        assert.deepEqual(layOutActivityBar(fake.host), { stacked: false, truncated: false, height: 56 });
+        assert.equal(fake.nameTabIndex(), null);
+    });
+
+    it("stacks a title that would show less than the minimum, its name short or not", () => {
+        const fake = fakeActivityBar({
+            width: 876, nameWidth: SHORT_NAME_WIDTH, descriptionWidth: DESCRIPTION_WIDTH, othersWidth: 720,
+        });
+        const layout = layOutActivityBar(fake.host);
+        assert.equal(layout.stacked, true, "876 - 720 leaves the title under 280 px");
+        assert.equal(layout.truncated, false, "the whole title on two lines");
+        assert.equal(fake.nameTabIndex(), null);
+    });
+
     it("waits for the template", () => {
         assert.equal(layOutActivityBar({ querySelector: () => null }), null);
         assert.equal(layOutActivityBar(undefined), null);
