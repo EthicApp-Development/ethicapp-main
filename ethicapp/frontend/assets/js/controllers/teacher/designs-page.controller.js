@@ -6,8 +6,12 @@
 //
 // "My designs" and "Archived" are tables built by `helpers/designs-table.js`:
 // one row per design with its status, its sharing switch, one visible action
-// and a "⋯" menu. "Shared by others" keeps the cards of the previous page
-// until it is rebuilt (#977).
+// and a "⋯" menu. "Shared by others" is a table built by
+// `helpers/designs-shared-table.js` (#977): one row per design another
+// teacher shares, with its one import action.
+//
+// "My designs" has a search and status filters (#976), also in the URL
+// (`?status=errors&q=...`, `helpers/designs-filters.js`).
 
 import {
     DESIGNS_PAGE_SIZE,
@@ -27,6 +31,13 @@ import {
     tabFromSearch,
     tabSearchValue,
 } from "../../helpers/designs-table.js";
+import {
+    IMPORT_NOTICE_TIMEOUT_MS,
+    IMPORT_STATE_IMPORTABLE,
+    buildSharedRows,
+    importNotice,
+    sharedRowMatchesSearch,
+} from "../../helpers/designs-shared-table.js";
 import { designMatchesLaunchSearch } from "../../helpers/launch-design-list.js";
 import {
     DELETE_CHOICE_ARCHIVE,
@@ -43,6 +54,17 @@ import {
     findDesignTitle,
     restoreNotice,
 } from "../../helpers/design-action-feedback.js";
+import {
+    filterDesignRows,
+    queryFromSearch,
+    querySearchValue,
+    statusFilterChips,
+    statusFilterFromSearch,
+    statusFilterSearchValue,
+} from "../../helpers/designs-filters.js";
+
+// The page's own URL search keys, which are not carried to the next page.
+const PAGE_SEARCH_KEYS = ["tab", "status", "q"];
 
 function initialVisibleCounts() {
     return {
@@ -64,6 +86,12 @@ export function DesignsPageController($scope, $location, $translate, toast,
     vm.tables = { mine: [], archived: [], shared: [] };
     vm.visibleCounts = initialVisibleCounts();
     vm.sharedSearch = "";
+    // The rows of "Shared by others", with each design's import state.
+    vm.sharedRows = [];
+    // The notice after an import: `{ copyId, title }`, or null.
+    vm.importNotice = null;
+    vm.statusFilter = statusFilterFromSearch($location.search());
+    vm.search = queryFromSearch($location.search());
     // Design id → true while an action on it is pending, so a second click
     // does not repeat it.
     vm.busy = {};
@@ -89,6 +117,7 @@ export function DesignsPageController($scope, $location, $translate, toast,
 
     vm.refresh = function() {
         vm.tables = buildDesignTables(designs, activities);
+        vm.sharedRows = buildSharedRows(vm.tables.shared, designs);
     };
 
     // The lists after a change in the catalog: the service keeps its designs
@@ -136,6 +165,7 @@ export function DesignsPageController($scope, $location, $translate, toast,
 
     vm.$onRouteUpdate = function() {
         vm.tab = tabFromSearch($location.search());
+        vm.syncFiltersFromUrl();
     };
 
     vm.openSharedTab = function() {
@@ -145,9 +175,11 @@ export function DesignsPageController($scope, $location, $translate, toast,
     // "Show more"
 
     vm.getRows = function(tab) {
+        if (tab === DESIGNS_TAB_MINE) {
+            return filteredMine().rows;
+        }
         if (tab === DESIGNS_TAB_SHARED) {
-            return vm.tables.shared
-                .filter(design => designMatchesLaunchSearch(design, vm.sharedSearch));
+            return vm.sharedRows.filter(row => sharedRowMatchesSearch(row, vm.sharedSearch));
         }
         return vm.tables[tab] || [];
     };
@@ -166,6 +198,71 @@ export function DesignsPageController($scope, $location, $translate, toast,
 
     vm.handleSharedSearchChange = function() {
         vm.visibleCounts[DESIGNS_TAB_SHARED] = DESIGNS_PAGE_SIZE;
+    };
+
+    // Search and status filters of "My designs"
+
+    // The filtered rows and the chips, computed again only when the table,
+    // the filter or the search change, not on every digest.
+    let filterCache = null;
+    function filteredMine() {
+        const mine = vm.tables.mine || [];
+        if (!filterCache || filterCache.mine !== mine ||
+            filterCache.status !== vm.statusFilter || filterCache.query !== vm.search) {
+            filterCache = {
+                mine,
+                status: vm.statusFilter,
+                query:  vm.search,
+                rows:   filterDesignRows(mine, { status: vm.statusFilter, query: vm.search }),
+                chips:  statusFilterChips(mine, vm.statusFilter),
+            };
+        }
+        return filterCache;
+    }
+
+    vm.getFilterChips = function() {
+        return filteredMine().chips;
+    };
+
+    // A chip adds a history entry, as a tab does, so Back returns to the
+    // previous filter.
+    vm.selectStatusFilter = function(filter) {
+        if (filter === vm.statusFilter) {
+            return;
+        }
+        vm.statusFilter = filter;
+        vm.visibleCounts[DESIGNS_TAB_MINE] = DESIGNS_PAGE_SIZE;
+        $location.search("status", statusFilterSearchValue(filter));
+    };
+
+    // Typing replaces the history entry instead of adding one per word.
+    vm.handleSearchChange = function() {
+        vm.visibleCounts[DESIGNS_TAB_MINE] = DESIGNS_PAGE_SIZE;
+        $location.search("q", querySearchValue(vm.search)).replace();
+    };
+
+    vm.clearFilters = function() {
+        vm.statusFilter = statusFilterFromSearch({});
+        vm.search = "";
+        vm.visibleCounts[DESIGNS_TAB_MINE] = DESIGNS_PAGE_SIZE;
+        $location.search("status", null);
+        $location.search("q", null);
+    };
+
+    vm.syncFiltersFromUrl = function() {
+        const search = $location.search();
+        const status = statusFilterFromSearch(search);
+        const query = queryFromSearch(search);
+        if (status !== vm.statusFilter) {
+            vm.statusFilter = status;
+            vm.visibleCounts[DESIGNS_TAB_MINE] = DESIGNS_PAGE_SIZE;
+        }
+        // The field keeps what is being typed (a trailing space) while it
+        // matches the URL's search.
+        if (query !== (querySearchValue(vm.search) ?? "")) {
+            vm.search = query;
+            vm.visibleCounts[DESIGNS_TAB_MINE] = DESIGNS_PAGE_SIZE;
+        }
     };
 
     // Sharing
@@ -333,27 +430,77 @@ export function DesignsPageController($scope, $location, $translate, toast,
         await withBusy(row.id, () => ACTIONS[action.id](row.id));
     };
 
-    // Importing keeps the previous page's behavior until #977.
-    vm.importDesign = async function(id) {
-        try {
-            await DesignCatalogService.importDesign(id);
+    // Importing (#977): a row whose design can be imported creates a private,
+    // editable copy in "My designs", and a notice names the copy. The notices
+    // of the other actions are #978's.
+
+    let importNoticeTimer = null;
+
+    function clearImportNoticeTimer() {
+        if (importNoticeTimer !== null) {
+            clearTimeout(importNoticeTimer);
+            importNoticeTimer = null;
+        }
+    }
+
+    vm.dismissImportNotice = function() {
+        clearImportNoticeTimer();
+        vm.importNotice = null;
+    };
+
+    function showImportNotice(notice) {
+        clearImportNoticeTimer();
+        vm.importNotice = notice;
+        importNoticeTimer = setTimeout(() => {
+            importNoticeTimer = null;
             $scope.$applyAsync(() => {
-                $translate("design_imported_text").then((result) => {
-                    toast.create({
-                        timeout:           100 * 1000,
-                        message:           result,
-                        containerClass:    "designs-toast-container",
-                        dismissible:       false,
-                        defaultToastClass: "toast",
-                        insertFromTop:     true,
-                    });
-                });
+                vm.importNotice = null;
             });
+        }, IMPORT_NOTICE_TIMEOUT_MS);
+    }
+
+    vm.editImportedCopy = function() {
+        const copyId = vm.importNotice?.copyId;
+        vm.dismissImportNotice();
+        if (copyId !== null && copyId !== undefined) {
+            $scope.navigateTo(`/designs/${copyId}/edit`);
+        }
+    };
+
+    vm.showImportedCopyInMyDesigns = function() {
+        vm.dismissImportNotice();
+        vm.selectTab(DESIGNS_TAB_MINE);
+    };
+
+    vm.importDesign = async function(row) {
+        if (!row || row.importState !== IMPORT_STATE_IMPORTABLE || vm.busy[row.id]) {
+            return;
+        }
+        vm.busy[row.id] = true;
+        try {
+            const copyId = await DesignCatalogService.importDesign(row.id);
+            // The catalog reloaded its designs, so the row turns "Imported".
+            designs = await DesignCatalogService.getDesigns();
+            vm.refresh();
+            showImportNotice(importNotice(copyId, designs, row.title));
         } catch (error) {
-            const messageKey = error?.data?.code === "DESIGN_CASE_NOT_IMPORTABLE"
-                ? "design_import_blocked_by_case"
-                : "design_import_error";
-            vm.showDesignToast(messageKey, "alert-danger");
+            if (error?.data?.code === "DESIGN_CASE_NOT_IMPORTABLE") {
+                vm.showDesignToast("design_import_blocked_by_case", "alert-danger");
+                // The list was stale: reload it, so the row says why it
+                // cannot be imported.
+                try {
+                    designs = await DesignCatalogService.getDesigns(true);
+                    vm.refresh();
+                } catch (reloadError) {
+                    console.warn("[DesignsPageController] Could not reload designs.", reloadError);
+                }
+            } else {
+                console.error("[DesignsPageController] Error importing design.", error);
+                vm.showDesignToast("design_import_error", "alert-danger");
+            }
+        } finally {
+            delete vm.busy[row.id];
+            $scope.$applyAsync();
         }
     };
 
@@ -366,6 +513,7 @@ export function DesignsPageController($scope, $location, $translate, toast,
             DesignCatalogService.unregisterListener("onDesignCatalogUpdated", onCatalogUpdated);
             cancelNoticeTimer();
         });
+        $scope.$on("$destroy", clearImportNoticeTimer);
         $scope.$on("caseVisibilityUpdatedDesigns", (_event, data) => {
             DesignCatalogService.applyPrivateVisibilityToDesigns(data?.affectedDesignIds || []);
         });
@@ -374,11 +522,15 @@ export function DesignsPageController($scope, $location, $translate, toast,
         // Forward reach the page as a route update.
         $scope.$on("$routeUpdate", vm.$onRouteUpdate);
         // Leaving the page with `navigateTo`, which keeps the search, does not
-        // carry `?tab=` to the next page; the page's own history entry keeps
-        // it, so Back returns to the same tab.
+        // carry `?tab=`, `?status=` or `?q=` to the next page; the page's own
+        // history entry keeps them, so Back returns to the same tab, filter and
+        // search.
         $scope.$on("$routeChangeStart", () => {
-            if ($location.search().tab !== undefined) {
-                $location.search("tab", null).replace();
+            const search = $location.search();
+            for (const key of PAGE_SEARCH_KEYS) {
+                if (search[key] !== undefined) {
+                    $location.search(key, null).replace();
+                }
             }
         });
 

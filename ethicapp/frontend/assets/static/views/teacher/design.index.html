@@ -53,7 +53,29 @@
     <!-- "My designs" and "Archived": one table, a row per design. Below
          1200 px the rows become compact rows. -->
     <section class="designs-table-section" ng-if="dp.loaded && !dp.loadFailed && dp.tab !== 'shared'">
-        <div class="designs-table-tools" ng-if="dp.getRows(dp.tab).length > 0">
+        <div class="designs-table-tools" ng-if="dp.count(dp.tab) > 0">
+            <!-- "My designs": search and status filters, kept in the URL
+                 (`?q=`, `?status=`) (#976). -->
+            <div class="designs-filters" ng-if="dp.tab === 'mine'">
+                <div class="search-field-wrapper designs-search">
+                    <label for="designs-mine-search" class="sr-only">{{ 'designs_search_label' | translate }}</label>
+                    <input id="designs-mine-search" class="form-control search-input search-decorated-input" type="search"
+                        autocomplete="off"
+                        placeholder="{{ 'designs_search_placeholder' | translate }}"
+                        ng-model="dp.search"
+                        ng-model-options="{ debounce: 250 }"
+                        ng-change="dp.handleSearchChange()">
+                    <i class="fa-solid fa-magnifying-glass search-field-icon" aria-hidden="true"></i>
+                </div>
+                <div class="designs-filter-chips" role="group" aria-label="{{ 'designs_filters_label' | translate }}">
+                    <button type="button" class="designs-filter-chip"
+                        ng-repeat="chip in dp.getFilterChips() track by chip.id"
+                        ng-class="{ 'is-active': chip.active }"
+                        aria-pressed="{{ chip.active ? 'true' : 'false' }}"
+                        ng-click="dp.selectStatusFilter(chip.id)">{{ chip.key | translate }}<span
+                        class="designs-filter-chip-count" ng-if="chip.count !== null"> &middot; {{ chip.count }}</span></button>
+                </div>
+            </div>
             <p class="designs-table-order">{{ 'designs_order_newest' | translate }}</p>
         </div>
 
@@ -144,7 +166,12 @@
             <span ng-if="dp.tab === 'mine'">{{ 'designs_archive_hint' | translate }}</span>
         </div>
 
-        <div class="alert alert-info" ng-if="dp.tab === 'mine' && dp.getRows('mine').length === 0">
+        <div class="designs-no-matches" role="status"
+            ng-if="dp.tab === 'mine' && dp.count('mine') > 0 && dp.getRows('mine').length === 0">
+            <span>{{ 'designs_no_matches' | translate }}</span>
+            <button type="button" class="btn btn-default btn-sm" ng-click="dp.clearFilters()">{{ 'designs_clear_filters' | translate }}</button>
+        </div>
+        <div class="alert alert-info" ng-if="dp.tab === 'mine' && dp.count('mine') === 0">
             <span>{{ 'empty_designs_message' | translate }}</span>
             <a href="" ng-click="navigateTo('/designs/new')">{{ 'empty_designs_link' | translate }}</a>.
         </div>
@@ -153,28 +180,79 @@
         </div>
     </section>
 
-    <!-- "Shared by others" keeps the previous page's cards until it is
-         rebuilt (#977). -->
+    <!-- "Shared by others" (#977): a banner saying what importing does, a
+         search, and one row per design with its one import action. -->
     <section class="designs-shared-section" ng-if="dp.loaded && !dp.loadFailed && dp.tab === 'shared'">
-        <p class="designContext">{{ 'designContext' | translate }}</p>
-        <div class="teacher-index-search designs-shared-search">
-            <div class="search-field-wrapper">
-                <label for="designs-shared-search" class="sr-only">{{ 'search_designs' | translate }}</label>
-                <input id="designs-shared-search" class="form-control search-input search-decorated-input" type="search"
-                    autocomplete="off"
-                    placeholder="{{ 'search_designs_placeholder' | translate }}"
-                    ng-model="dp.sharedSearch"
-                    ng-model-options="{ debounce: 150 }"
-                    ng-change="dp.handleSharedSearchChange()">
-                <i class="fa-solid fa-magnifying-glass search-field-icon" aria-hidden="true"></i>
+        <p class="designs-shared-banner">
+            {{ 'designs_shared_banner_before' | translate }}<strong>{{ 'designs_shared_banner_copy' | translate }}</strong>{{ 'designs_shared_banner_after' | translate }}
+        </p>
+
+        <div class="designs-table-tools designs-shared-tools" ng-if="dp.count('shared') > 0">
+            <div class="teacher-index-search designs-shared-search">
+                <div class="search-field-wrapper">
+                    <label for="designs-shared-search" class="sr-only">{{ 'designs_shared_search_label' | translate }}</label>
+                    <input id="designs-shared-search" class="form-control search-input search-decorated-input" type="search"
+                        autocomplete="off"
+                        placeholder="{{ 'designs_shared_search_placeholder' | translate }}"
+                        ng-model="dp.sharedSearch"
+                        ng-model-options="{ debounce: 150 }"
+                        ng-change="dp.handleSharedSearchChange()">
+                    <i class="fa-solid fa-magnifying-glass search-field-icon" aria-hidden="true"></i>
+                </div>
             </div>
+            <p class="designs-table-order">{{ 'designs_order_newest' | translate }}</p>
         </div>
 
-        <design-item ng-repeat="design in dp.getVisibleRows('shared') track by design.id"
-            design="design"
-            is-owner="false"
-            on-import="dp.importDesign">
-        </design-item>
+        <table class="designs-table designs-shared-table" ng-if="dp.getRows('shared').length > 0">
+            <caption class="sr-only">{{ 'designs_tab_shared' | translate }}</caption>
+            <thead>
+                <tr>
+                    <th scope="col" class="designs-head-cell designs-shared-col-design">{{ 'designs_col_design' | translate }}</th>
+                    <th scope="col" class="designs-head-cell designs-shared-col-author">{{ 'designs_col_author' | translate }}</th>
+                    <th scope="col" class="designs-head-cell designs-shared-col-license">{{ 'designs_col_license' | translate }}</th>
+                    <th scope="col" class="designs-head-cell designs-shared-col-actions"><span class="sr-only">{{ 'designs_col_actions' | translate }}</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="designs-row designs-shared-row" ng-repeat="row in dp.getVisibleRows('shared') track by row.id">
+                    <td class="designs-cell designs-cell-design">
+                        <a class="designs-row-title" ng-href="#!/designs/{{ row.id }}">{{ row.title }}</a>
+                        <span class="designs-row-meta">{{ row.phaseCountKey | translate:{ count: row.phaseCount } }} &middot; <span
+                            ng-if="row.caseTitle">{{ 'launch_wizard_case_label' | translate }} {{ row.caseTitle }}</span><span
+                            ng-if="!row.caseTitle">{{ 'designs_no_case' | translate }}</span></span>
+                    </td>
+                    <td class="designs-cell designs-shared-cell-author">
+                        <span class="designs-shared-label" aria-hidden="true">{{ 'designs_col_author' | translate }}:</span>
+                        <span ng-if="row.author">{{ row.author }}</span><span ng-if="!row.author" class="designs-shared-unknown">{{ 'designs_author_unknown' | translate }}</span>
+                    </td>
+                    <td class="designs-cell designs-shared-cell-license">
+                        <span class="designs-shared-label" aria-hidden="true">{{ 'designs_col_license' | translate }}:</span>
+                        {{ row.licenseCode }}
+                    </td>
+                    <td class="designs-cell designs-cell-actions designs-shared-cell-actions">
+                        <button type="button" class="btn btn-default btn-sm designs-import-button"
+                            ng-if="row.importState === 'importable'"
+                            ng-disabled="dp.busy[row.id]"
+                            aria-label="{{ 'designs_action_import' | translate }}: {{ row.title }}"
+                            ng-click="dp.importDesign(row)">
+                            <i class="fa-solid fa-download" aria-hidden="true"></i> {{ 'designs_action_import' | translate }}
+                        </button>
+                        <span class="designs-imported" ng-if="row.importState === 'imported'">
+                            <span class="designs-imported-label"><i class="fa-solid fa-check" aria-hidden="true"></i> {{ 'designs_imported' | translate }}</span>
+                            <a class="designs-imported-link" ng-href="#!/designs/{{ row.copyId }}"
+                                aria-label="{{ 'designs_view_copy' | translate }}: {{ row.title }}">{{ 'designs_view_copy' | translate }}</a>
+                        </span>
+                        <span class="designs-not-importable" ng-if="row.importState === 'not-importable'">
+                            <button type="button" class="btn btn-default btn-sm designs-import-button" disabled
+                                aria-describedby="designs-import-reason-{{ row.id }}">
+                                <i class="fa-solid fa-download" aria-hidden="true"></i> {{ 'designs_action_import' | translate }}
+                            </button>
+                            <span class="designs-import-reason" id="designs-import-reason-{{ row.id }}">{{ 'designs_import_case_not_public' | translate }}</span>
+                        </span>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
 
         <div class="designs-table-footer" ng-if="dp.getRows('shared').length > 0">
             <span>
@@ -187,8 +265,32 @@
             </span>
         </div>
 
-        <div class="alert alert-info" ng-if="dp.getRows('shared').length === 0">
+        <div class="alert alert-info" ng-if="dp.count('shared') > 0 && dp.getRows('shared').length === 0">
             <span>{{ 'empty_shared_designs_message' | translate }}</span>
+        </div>
+        <div class="alert alert-info" ng-if="dp.count('shared') === 0">
+            <span>{{ 'designs_shared_empty' | translate }}</span>
+        </div>
+
+        <!-- The notice after an import names the copy and links to it. It
+             goes away by itself after a few seconds, or with its close button. -->
+        <div class="designs-import-notice" role="status" aria-live="polite">
+            <div class="designs-import-notice-body" ng-if="dp.importNotice">
+                <button type="button" class="close designs-import-notice-close"
+                    aria-label="{{ 'designs_notice_close' | translate }}"
+                    ng-click="dp.dismissImportNotice()">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+                <p class="designs-import-notice-text">
+                    <i class="fa-solid fa-check" aria-hidden="true"></i>
+                    {{ 'designs_import_notice_before' | translate }}<strong>&ldquo;{{ dp.importNotice.title }}&rdquo;</strong>{{ 'designs_import_notice_after' | translate }}
+                </p>
+                <p class="designs-import-notice-links">
+                    <a href="" class="designs-import-notice-link" ng-click="dp.editImportedCopy()">{{ 'designs_edit_copy' | translate }}</a>
+                    &middot;
+                    <a href="" class="designs-import-notice-link" ng-click="dp.showImportedCopyInMyDesigns()">{{ 'designs_show_in_mine' | translate }}</a>
+                </p>
+            </div>
         </div>
     </section>
 </div>

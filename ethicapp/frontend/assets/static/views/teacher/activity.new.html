@@ -52,7 +52,7 @@
             </div>
             <p class="launch-design-list-errors" ng-if="lw.designsWithErrors > 0">
                 {{ (lw.designsWithErrors === 1 ? 'launch_wizard_errors_one' : 'launch_wizard_errors_other') | translate:{ count: lw.designsWithErrors } }}
-                &middot; <a href="#!/designs">{{ 'launch_wizard_review_in_designs' | translate }}</a>
+                &middot; <a href="#!/designs?status=errors">{{ 'launch_wizard_review_in_designs' | translate }}</a>
             </p>
         </div>
 
@@ -129,7 +129,7 @@
                         </span>
                         <span class="launch-design-list-errors" ng-if="lw.designsWithErrors > 0">
                             {{ (lw.designsWithErrors === 1 ? 'launch_wizard_errors_one' : 'launch_wizard_errors_other') | translate:{ count: lw.designsWithErrors } }}
-                            &middot; <a href="#!/designs">{{ 'launch_wizard_review_in_designs' | translate }}</a>
+                            &middot; <a href="#!/designs?status=errors">{{ 'launch_wizard_review_in_designs' | translate }}</a>
                         </span>
                     </div>
                 </div>
