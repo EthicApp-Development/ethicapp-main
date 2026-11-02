@@ -6244,3 +6244,73 @@ button.launch-wizard-step-body:focus-visible .launch-wizard-step-name {
         text-align: left;
     }
 }
+
+/* Designs page, action feedback (#978, epic #966): the notice after a row
+   action, fixed at the bottom so it does not move the table, and the delete
+   confirmation dialog. */
+.designs-notice-region {
+    bottom: 24px;
+    left: 50%;
+    max-width: calc(100% - 32px);
+    position: fixed;
+    transform: translateX(-50%);
+    width: 560px;
+    z-index: 1040;
+}
+
+.designs-notice {
+    align-items: center;
+    box-shadow: 0 6px 18px rgb(0 0 0 / 18%);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    margin: 0;
+    padding: 10px 12px 10px 16px;
+}
+
+.designs-notice-message {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.designs-notice-links {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.designs-notice .designs-notice-link {
+    color: inherit;
+    font-weight: 600;
+    padding: 2px 6px;
+    text-decoration: underline;
+}
+
+.designs-notice .designs-notice-dismiss {
+    float: none;
+    margin-left: auto;
+    opacity: 0.6;
+}
+
+.design-delete-confirm .modal-title {
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.design-delete-confirm .design-delete-confirm-hint {
+    color: #6b6b6b;
+    font-size: 0.9em;
+    margin-bottom: 0;
+}
+
+.design-delete-confirm .modal-footer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.design-delete-confirm .modal-footer .btn + .btn {
+    margin-left: 0;
+}
