@@ -13,7 +13,10 @@ import {
     failDesignAnalysis,
     markDesignAnalysisProcessing,
 } from "../helpers/design-analyses-helper.js";
-import { saveChatMessage } from "../helpers/chat-helper.js";
+import {
+    normalizeExternalServiceResultId,
+    saveChatMessage,
+} from "../helpers/chat-helper.js";
 import { describeError, summarizeCallbackResult } from "../helpers/log-safety.js";
 import { studentNotifications, teacherNotifications } from "../config/socket.config.js";
 import aiAdditionsClient from "./ai-additions-client.service.js";
@@ -485,6 +488,7 @@ export class ExternalServicesRegistry {
         callbackDestinationLookups = {},
         notifyServiceInstantiated = (sessionId, payload) =>
             teacherNotifications?.serviceInstantiated?.(sessionId, payload),
+        saveChatMessage: saveMessage = saveChatMessage,
     } = {}) {
         this.initialized      = false;
         this.services         = new Map();
@@ -536,6 +540,8 @@ export class ExternalServicesRegistry {
         // Tells the session's teachers that a service reported an
         // instantiation (#865), so their activity view can read it again.
         this._notifyServiceInstantiated = notifyServiceInstantiated;
+        // Stores the chat messages adapters publish; replaced in tests.
+        this._saveChatMessage = saveMessage;
 
         this._capabilityDescriptors = capabilityDescriptors ?? new CapabilityDescriptorsClient({
             getDescriptorLink: serviceId => this.getServiceDescriptor(serviceId),
@@ -1740,10 +1746,17 @@ export class ExternalServicesRegistry {
         const questionId = Number(payload?.questionId);
         const groupId = Number(payload?.groupId);
         const parentId = payload?.parentId == null ? null : Number(payload.parentId);
+        // The callback result the message comes from (#947): the adapter
+        // passes `context.resultId` of its callback-received handler.
+        const resultId = normalizeExternalServiceResultId(payload?.resultId);
 
         if (!content || !phaseId || !questionId || !groupId) {
             console.warn(`[external-services] Cannot publish chat message with incomplete payload from ${serviceId}.`);
             return null;
+        }
+
+        if (payload?.resultId != null && !resultId) {
+            console.warn(`[external-services] Ignoring an invalid result id in a chat message from ${serviceId}.`);
         }
 
         const agent = await this.getOrCreateExternalAgent({
@@ -1756,9 +1769,10 @@ export class ExternalServicesRegistry {
             return null;
         }
 
-        const savedMessage = await saveChatMessage({
-            userId:          null,
-            externalAgentId: agent.id,
+        const savedMessage = await this._saveChatMessage({
+            userId:                  null,
+            externalAgentId:         agent.id,
+            externalServiceResultId: resultId,
             phaseId,
             questionId,
             groupId,

@@ -919,6 +919,22 @@ The registry provides two helper publishers to adapters:
   `{ savedMessage, notificationPayload }` or `null` when the payload is
   incomplete or the message could not be saved.
 
+  A handler of `callback-received` that publishes a message passes
+  `resultId: context.resultId` (#947). The message row (`chat` or
+  `differential_chat`) then stores it in `external_service_result_id`
+  (`database/migrations/V39__chat_external_service_result_link.sql`), so the
+  activity reports can read from that callback's result what the message row
+  does not keep: which agent wrote it and which job the callback answered.
+  `external_service_agents` holds one row per service, and its
+  `display_name` is overwritten with the latest agent name, so the result is
+  where the name of each message's agent survives. The Polyadic bridge also
+  lists the messages it published, `publishedMessages: [{ messageId,
+  agentName }]`, in its callback payload, which is stored in the result's
+  `adapter_result`. A message published outside a callback, or with a
+  `resultId` that is not a uuid, is saved with no link (the invalid id is
+  logged). Students' and teachers' messages never carry one. Deleting a
+  result sets the link to `NULL` and keeps the message.
+
 ## Case Analyses
 
 Case-scoped services analyse case documents. Their results live in

@@ -685,6 +685,15 @@ the adapter service id and stores the chat message with `external_agent_id`.
 Transcript queries then return `author_role: "external_service"` and the agent
 display name, so students can distinguish agent messages from professor messages.
 
+The agent row is shared by every agent of a service, and its display name is
+the latest one published. A message published while a `callback-received`
+handler runs is linked to that callback's `external_service_results` row
+instead: the handler passes `resultId: context.resultId` to
+`publishGroupChatMessage(...)`, and the message stores it in
+`external_service_result_id` (#947). The activity reports read the agent of
+each message, and the job the callback answered, from the linked result. See
+`ethicapp/backend/external-services/README.md` ("Available Hook Publishers").
+
 The `mock-chat-agent` adapter uses the external mock service to produce messages
 like:
 

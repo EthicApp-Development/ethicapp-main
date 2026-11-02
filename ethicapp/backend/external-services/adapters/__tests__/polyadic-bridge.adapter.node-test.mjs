@@ -225,8 +225,10 @@ test("ethicapp_correlation_id defaults to null when correlationId absent from ch
 test("callback-received publishes ConversationGuide and legacy Orientador responses to group chat", async () => {
     const harness = createHarness();
     await harness.initialize();
+    const resultId = "0f8fad5b-d9cb-469f-a165-70867728950e";
 
     await harness.dispatch("callback-received", {
+        resultId,
         requestPayload: {
             room:        "ethicapp-s11-p22-g301",
             evaluations: [
@@ -245,6 +247,7 @@ test("callback-received publishes ConversationGuide and legacy Orientador respon
         groupId:          301,
         agentDisplayName: "ConversationGuide",
         content:          "Which tradeoff matters most here?",
+        resultId,
     });
     assert.deepEqual(harness.publishedMessages[1], {
         sessionId:        11,
@@ -253,8 +256,28 @@ test("callback-received publishes ConversationGuide and legacy Orientador respon
         groupId:          301,
         agentDisplayName: "Orientador",
         content:          "What assumption is your group making?",
+        resultId,
     });
     assert.equal(harness.callbacks.at(-1).payload.messagesPublished, 2);
+    assert.deepEqual(harness.callbacks.at(-1).payload.publishedMessages, [
+        { messageId: 1, agentName: "ConversationGuide" },
+        { messageId: 2, agentName: "Orientador" },
+    ]);
+});
+
+test("callback-received without a result id publishes messages with no result link", async () => {
+    const harness = createHarness();
+    await harness.initialize();
+
+    await harness.dispatch("callback-received", {
+        requestPayload: {
+            room:        "ethicapp-s11-p22-g301",
+            evaluations: [{ agente: "ConversationGuide", respuesta: "Why?" }],
+        },
+    });
+
+    assert.equal(harness.publishedMessages.length, 1);
+    assert.equal(harness.publishedMessages[0].resultId, undefined);
 });
 
 test("phase-ended closes rooms created for that phase", async () => {
