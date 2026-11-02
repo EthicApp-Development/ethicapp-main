@@ -960,6 +960,8 @@
 	"dashboard_this_phase_summary": "features, instructions, questions",
 	"dashboard_ai_services_summary_one": "1 service",
 	"dashboard_ai_services_summary_other": "{{count}} services",
+	"dashboard_ai_services_summary_off": "turned off",
+	"dashboard_ai_services_turned_off": "The AI services were turned off when this activity was launched. Its phases run without them; the design keeps them for other activities.",
 	"response_detail_previous": "Previous",
 	"response_detail_next": "Next",
 	"response_detail_close": "Close",

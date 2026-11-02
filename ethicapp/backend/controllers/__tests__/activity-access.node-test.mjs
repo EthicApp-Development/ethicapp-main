@@ -281,11 +281,11 @@ function ownerOnlyCases(send, { notFound, otherId }) {
 // --- Teacher endpoints of an activity --------------------------------------
 
 describe("POST /activities", () => {
-    function launch(session, { sessionId = SESSION_ID, designId = DESIGN_ID } = {}) {
+    function launch(session, { sessionId = SESSION_ID, designId = DESIGN_ID, ...extra } = {}) {
         return requestRouter(activitiesTeacherRouter, {
             method: "POST",
             path:   "/activities",
-            body:   { sessionId, designId },
+            body:   { sessionId, designId, ...extra },
             session,
         });
     }
@@ -318,6 +318,28 @@ describe("POST /activities", () => {
         assert.equal(body.status, "ok");
         const insert = writes().find(({ sql }) => /INSERT INTO activity/u.test(sql));
         assert.deepEqual(insert.params.map(Number), [DESIGN_ID, SESSION_ID]);
+    });
+
+    // The AI services switch (#970): only `aiServices: false` turns them off.
+    const storedSwitch = () => writes()
+        .find(({ sql }) => /SET ai_services_enabled = \$1/u.test(sql))?.params;
+
+    it("stores the AI services on when the launch does not turn them off", async () => {
+        for (const extra of [{}, { aiServices: true }, { aiServices: "false" }, { aiServices: null }]) {
+            db.reset();
+            const { status } = await launch(OWNER, extra);
+
+            assert.equal(status, 200);
+            assert.deepEqual(storedSwitch(), [true, SESSION_ID]);
+        }
+    });
+
+    it("stores the AI services off for aiServices: false", async () => {
+        const { status, body } = await launch(OWNER, { aiServices: false });
+
+        assert.equal(status, 200);
+        assert.equal(body.status, "ok");
+        assert.deepEqual(storedSwitch(), [false, SESSION_ID]);
     });
 });
 

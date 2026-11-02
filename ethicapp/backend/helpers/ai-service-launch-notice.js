@@ -81,3 +81,29 @@ export async function checkDesignServicesBeforeLaunch(
         canRun:      !notRunningIds.has(serviceId),
     })));
 }
+
+/**
+ * The launch notice of `POST /activities`: the services that will not run
+ * (listServicesNotRunning), or none when the activity was launched with its AI
+ * services turned off (#970), since then no service runs by the teacher's
+ * choice. A failure here never fails the launch: the notice is then empty.
+ *
+ * @param {{ design: object|string|null, policyVersionId: number|null,
+ *          aiServicesEnabled: boolean }} launch
+ * @param {{ list?: typeof listServicesNotRunning, logger?: { error: Function } }} [dependencies]
+ * @returns {Promise<Array<{ id: string, ui: { translations: object|null } }>>}
+ */
+export async function servicesNotRunningAtLaunch(
+    { design, policyVersionId, aiServicesEnabled },
+    { list = listServicesNotRunning, logger = console } = {}
+) {
+    if (aiServicesEnabled === false) {
+        return [];
+    }
+    try {
+        return await list({ design, policyVersionId });
+    } catch (error) {
+        logger.error("[external-services] Could not list the services that will not run.", error);
+        return [];
+    }
+}

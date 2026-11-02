@@ -1,6 +1,27 @@
 import * as config from "../config/database.config.js";
 import * as rpg2 from "../db/rest-pg-2.js";
 import { phaseExternalServices, unionEnabledServiceIds } from "./phase-external-services.js";
+import { noPhaseExternalServices, sessionAiServicesEnabled } from "./session-ai-services.js";
+
+// The design of a session's activity and the session's AI services switch
+// (#970).
+export const SESSION_ACTIVITY_DESIGN_SQL = `
+    SELECT a.design, s.ai_services_enabled
+    FROM activity AS a
+    INNER JOIN sessions AS s
+        ON s.id = a.session
+    WHERE a.session = $1
+`;
+
+// The AI services switch of the session a phase belongs to (#970). An unknown
+// phase answers no row, and the design read that follows reports it.
+export const PHASE_SESSION_AI_SERVICES_SQL = `
+    SELECT s.ai_services_enabled
+    FROM stages AS st
+    INNER JOIN sessions AS s
+        ON s.id = st.sesid
+    WHERE st.id = $1
+`;
 
 /**
  * Fetches a design from the "designs" table by its ID.
@@ -181,21 +202,21 @@ export async function getPhaseDesignByPhaseId(phaseId) {
  * Design shape per canonical-schemas/ethicapp-v1.schema.json:
  * `design.phases[].externalServices.enabledServiceIds`.
  *
+ * A session launched with its AI services turned off (#970) enables none.
+ *
  * @param {number} sessionId - The session whose activity design is inspected.
  * @returns {Promise<string[]>} De-duplicated enabled service ids (empty if none).
  */
 export async function getEnabledExternalServiceIdsBySessionId(sessionId) {
     const activityResult = await rpg2.singleSQL({
-        dbcon: config.dbconnString,
-        sql: `
-            SELECT design
-            FROM activity
-            WHERE session = $1
-        `,
-        sqlParams: [rpg2.param('plain', sessionId)],
+        dbcon:     config.dbconnString,
+        sql:       SESSION_ACTIVITY_DESIGN_SQL,
+        sqlParams: [rpg2.param("plain", sessionId)],
     });
 
-    if (!activityResult) {
+    // Turned off at launch (#970): no service is in the audience, and
+    // activity-finished only closes the session's room jobs.
+    if (!activityResult || !sessionAiServicesEnabled(activityResult)) {
         return [];
     }
 
@@ -215,10 +236,21 @@ export async function getEnabledExternalServiceIdsBySessionId(sessionId) {
 
 /**
  * The external services enabled for a phase and their stored configurations,
- * read from the activity's design when the hook is dispatched (#734).
+ * read from the activity's design when the hook is dispatched (#734). None
+ * when the phase's session was launched with its AI services turned off
+ * (#970): this is the gate of every phase hook dispatch and of the
+ * destination check of a callback without a job.
  * @param {number} phaseId
  * @returns {Promise<{ enabledServiceIds: string[], configurations: Object<string, object> }>}
  */
 export async function getPhaseExternalServices(phaseId) {
+    const session = await rpg2.singleSQL({
+        dbcon:     config.dbconnString,
+        sql:       PHASE_SESSION_AI_SERVICES_SQL,
+        sqlParams: [rpg2.param("plain", phaseId)],
+    });
+    if (!sessionAiServicesEnabled(session)) {
+        return noPhaseExternalServices();
+    }
     return phaseExternalServices(await getPhaseDesignByPhaseId(phaseId));
 }

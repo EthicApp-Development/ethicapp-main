@@ -36,6 +36,13 @@ export function dashboardTab(tab) {
     return DASHBOARD_TABS.includes(tab) ? tab : DEFAULT_DASHBOARD_TAB;
 }
 
+// Whether the activity was launched with its AI services turned off (#970):
+// only an explicit false in its descriptor, so an older descriptor without the
+// flag keeps them on.
+export function aiServicesTurnedOff(descriptor) {
+    return descriptor?.aiServicesEnabled === false;
+}
+
 // Whether the "This phase" card starts open at this viewport width.
 export function defaultPhaseContextExpanded(viewportWidth) {
     return Number(viewportWidth) >= WIDE_RAIL_MIN_WIDTH;

@@ -960,6 +960,8 @@
 	"dashboard_this_phase_summary": "características, instrucciones, preguntas",
 	"dashboard_ai_services_summary_one": "1 servicio",
 	"dashboard_ai_services_summary_other": "{{count}} servicios",
+	"dashboard_ai_services_summary_off": "desactivados",
+	"dashboard_ai_services_turned_off": "Los servicios de IA se desactivaron al lanzar esta actividad. Sus fases se ejecutan sin ellos; el diseño los conserva para otras actividades.",
 	"response_detail_previous": "Anterior",
 	"response_detail_next": "Siguiente",
 	"response_detail_close": "Cerrar",

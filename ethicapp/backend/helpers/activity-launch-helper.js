@@ -10,12 +10,16 @@ async function defaultConnect() {
 /**
  * Launches an activity in one transaction: pins the session to the current AI
  * service policy version, assigns the session code (only if it has none yet),
- * creates the `activity` row and locks the design. Any failure rolls back all
- * of it.
+ * stores the AI services switch (#970), creates the `activity` row and locks
+ * the design. Any failure rolls back all of it.
  *
  * The pin runs first because it only moves while the session has no activity.
+ * The switch follows the same rule: a relaunch keeps the stored one.
  *
- * @param {{ sessionId: number|string, designId: number|string, sessionCode: string }} launch
+ * @param {{ sessionId: number|string, designId: number|string, sessionCode: string,
+ *          aiServicesEnabled?: boolean }} launch
+ *        `aiServicesEnabled` false launches the activity with the design's AI
+ *        services turned off; it defaults to true.
  * @param {Object} [dependencies]
  * @param {() => Promise<{ query: Function, release: Function }>} [dependencies.connect]
  *        Checks out a `pg` client.
@@ -25,7 +29,7 @@ async function defaultConnect() {
  *          pinned to.
  */
 export async function launchActivity(
-    { sessionId, designId, sessionCode },
+    { sessionId, designId, sessionCode, aiServicesEnabled = true },
     { connect = defaultConnect, pinSessionPolicy = defaultPinSessionPolicy } = {}
 ) {
     const client = await connect();
@@ -41,6 +45,17 @@ export async function launchActivity(
             WHERE id = $2
               AND code IS NULL;
         `, [sessionCode, sessionId]);
+
+        await client.query(`
+            UPDATE sessions
+            SET ai_services_enabled = $1
+            WHERE id = $2
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM activity
+                  WHERE activity.session = sessions.id
+              );
+        `, [aiServicesEnabled !== false, sessionId]);
 
         await client.query(`
             INSERT INTO activity (design, session)
