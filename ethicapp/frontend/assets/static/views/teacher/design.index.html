@@ -51,7 +51,29 @@
     <!-- "My designs" and "Archived": one table, a row per design. Below
          1200 px the rows become compact rows. -->
     <section class="designs-table-section" ng-if="dp.loaded && !dp.loadFailed && dp.tab !== 'shared'">
-        <div class="designs-table-tools" ng-if="dp.getRows(dp.tab).length > 0">
+        <div class="designs-table-tools" ng-if="dp.count(dp.tab) > 0">
+            <!-- "My designs": search and status filters, kept in the URL
+                 (`?q=`, `?status=`) (#976). -->
+            <div class="designs-filters" ng-if="dp.tab === 'mine'">
+                <div class="search-field-wrapper designs-search">
+                    <label for="designs-mine-search" class="sr-only">{{ 'designs_search_label' | translate }}</label>
+                    <input id="designs-mine-search" class="form-control search-input search-decorated-input" type="search"
+                        autocomplete="off"
+                        placeholder="{{ 'designs_search_placeholder' | translate }}"
+                        ng-model="dp.search"
+                        ng-model-options="{ debounce: 250 }"
+                        ng-change="dp.handleSearchChange()">
+                    <i class="fa-solid fa-magnifying-glass search-field-icon" aria-hidden="true"></i>
+                </div>
+                <div class="designs-filter-chips" role="group" aria-label="{{ 'designs_filters_label' | translate }}">
+                    <button type="button" class="designs-filter-chip"
+                        ng-repeat="chip in dp.getFilterChips() track by chip.id"
+                        ng-class="{ 'is-active': chip.active }"
+                        aria-pressed="{{ chip.active ? 'true' : 'false' }}"
+                        ng-click="dp.selectStatusFilter(chip.id)">{{ chip.key | translate }}<span
+                        class="designs-filter-chip-count" ng-if="chip.count !== null"> &middot; {{ chip.count }}</span></button>
+                </div>
+            </div>
             <p class="designs-table-order">{{ 'designs_order_newest' | translate }}</p>
         </div>
 
@@ -142,7 +164,12 @@
             <span ng-if="dp.tab === 'mine'">{{ 'designs_archive_hint' | translate }}</span>
         </div>
 
-        <div class="alert alert-info" ng-if="dp.tab === 'mine' && dp.getRows('mine').length === 0">
+        <div class="designs-no-matches" role="status"
+            ng-if="dp.tab === 'mine' && dp.count('mine') > 0 && dp.getRows('mine').length === 0">
+            <span>{{ 'designs_no_matches' | translate }}</span>
+            <button type="button" class="btn btn-default btn-sm" ng-click="dp.clearFilters()">{{ 'designs_clear_filters' | translate }}</button>
+        </div>
+        <div class="alert alert-info" ng-if="dp.tab === 'mine' && dp.count('mine') === 0">
             <span>{{ 'empty_designs_message' | translate }}</span>
             <a href="" ng-click="navigateTo('/designs/new')">{{ 'empty_designs_link' | translate }}</a>.
         </div>

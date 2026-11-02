@@ -282,8 +282,8 @@ describe("launch wizard template", () => {
         assert.doesNotMatch(template, /ActivityController/);
     });
 
-    it("links the designs with errors to Diseños", () => {
-        assert.match(template, /<a href="#!\/designs">\{\{ 'launch_wizard_review_in_designs' \| translate \}\}<\/a>/);
+    it("links the designs with errors to Diseños, filtered on them", () => {
+        assert.match(template, /<a href="#!\/designs\?status=errors">\{\{ 'launch_wizard_review_in_designs' \| translate \}\}<\/a>/);
     });
 
     it("shows no design type", () => {
