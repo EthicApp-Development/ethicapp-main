@@ -5,8 +5,12 @@ import * as config from "../../config/database.config.js";
 import * as rpg2 from "../../db/rest-pg-2.js";
 import * as ActivitiesHelper from "../../helpers/activities-helper.js";
 import { launchActivity } from "../../helpers/activity-launch-helper.js";
-import { listServicesNotRunning } from "../../helpers/ai-service-launch-notice.js";
+import { servicesNotRunningAtLaunch } from "../../helpers/ai-service-launch-notice.js";
 import { requireRole } from "../../helpers/auth-helper.js";
+import {
+    launchAiServicesEnabled,
+    sessionAiServicesEnabled,
+} from "../../helpers/session-ai-services.js";
 import { getDesignTypeBySessionId } from "./activities-common.js";
 import activityFinisher from "../../helpers/activity-finish-helper.js";
 import { CREATE_SESSION_SQL } from "../../helpers/teacher-activity-writes.js";
@@ -175,6 +179,9 @@ router.post("/activities", async (req, res) => {
     }
     const sessionId = req.body.sessionId;
     const designId = req.body.designId;
+    // `aiServices: false` launches the activity with the design's AI
+    // services turned off (#970); anything else keeps them on.
+    const aiServicesEnabled = launchAiServicesEnabled(req.body.aiServices);
 
     try {
         if (!sessionId || !designId) {
@@ -190,7 +197,9 @@ router.post("/activities", async (req, res) => {
 
         const sessionCode = ActivitiesHelper.generateSessionCode(sessionId);
 
-        const { policyVersionId } = await launchActivity({ sessionId, designId, sessionCode });
+        const { policyVersionId } = await launchActivity({
+            sessionId, designId, sessionCode, aiServicesEnabled,
+        });
 
         const activity = await rpg2.singleSQL({
             dbcon: config.dbconnString,
@@ -207,6 +216,7 @@ router.post("/activities", async (req, res) => {
                     designs.design,
                     sessions.status,
                     sessions.type,
+                    sessions.ai_services_enabled,
                     designs.id as designId
                 FROM activity
                 INNER JOIN sessions
@@ -223,25 +233,18 @@ router.post("/activities", async (req, res) => {
         return res.status(200).json({
             status:             "ok",
             activity,
-            servicesNotRunning: await servicesNotRunningAtLaunch(activity?.design, policyVersionId),
+            servicesNotRunning: await servicesNotRunningAtLaunch({
+                design:            activity?.design,
+                policyVersionId,
+                // The stored switch: a relaunch keeps the first launch's.
+                aiServicesEnabled: sessionAiServicesEnabled(activity),
+            }),
         });
     } catch (error) {
         console.error("Error in POST /activities endpoint:", error);
         return res.status(500).json({ status: "err", message: "Error processing activity addition" });
     }
 });
-
-// The services the design enables that will not run under the version the
-// session was pinned to (#815), for the launch notice. A failure here never
-// fails the launch: the notice is then empty.
-async function servicesNotRunningAtLaunch(design, policyVersionId) {
-    try {
-        return await listServicesNotRunning({ design, policyVersionId });
-    } catch (error) {
-        console.error("[external-services] Could not list the services that will not run.", error);
-        return [];
-    }
-}
 
 router.get("/activities/:session_id/responses", async (req, res) => {
     if (!requireRole(req, res, "P")) {

@@ -7,6 +7,7 @@ import * as DesignTypes from "../../../common/modules/design-types.js";
 import * as StatusCodes from "../../../common/modules/session-status.js";
 import { requireRole } from "../../helpers/auth-helper.js";
 import { requireSessionOwnerOrParticipant } from "../../helpers/activity-owner-helper.js";
+import { sessionAiServicesEnabled } from "../../helpers/session-ai-services.js";
 
 const router = express.Router();
 
@@ -45,6 +46,7 @@ router.get("/activities/:session_id/descriptor", async (req, res) => {
                 sessions.archived,
                 sessions.status,
                 sessions.type,
+                sessions.ai_services_enabled,
                 designs.id AS designId,
                 designs.design
             FROM activity
@@ -83,6 +85,10 @@ router.get("/activities/:session_id/descriptor", async (req, res) => {
             design: activityResult.design,
             phases: phases || [],
             currentPhase: phases && phases.length > 0 ? phases[phases.length - 1] : null,
+
+            // False when the activity was launched with its AI services
+            // turned off (#970).
+            aiServicesEnabled: sessionAiServicesEnabled(activityResult),
         };
 
         console.info(`Successfully retrieved activity descriptor for session_id: ${session_id}.`);
