@@ -3,6 +3,10 @@ import * as config from "../../config/database.config.js";
 import defaultAiAdditionsClient from "../../services/ai-additions-client.service.js";
 import { plainTextOf } from "../../helpers/rich-text-helper.js";
 import { describeError } from "../../helpers/log-safety.js";
+import { JOB_SOURCE_KIND } from "../../services/external-service-jobs.service.js";
+import {
+    MAX_CONTRIBUTION_STRING_LENGTH,
+} from "../../services/external-service-report-contributions.js";
 
 // The Polyadic Agents API under the AI Additions connection's base URL (#814).
 export const POLYADIC_API_BASE_PATH = "/polyadic-agent/api";
@@ -495,6 +499,245 @@ async function forwardChatMessage(roomName, username, content, correlationId, pa
     return true;
 }
 
+// The chat transcript columns this adapter adds (report-building, epic #620,
+// #949), under the catalog's `report.columnPrefix`, `polyadic_`.
+export const REPORT_COLUMNS = Object.freeze({
+    AGENT_NAME:          "polyadic_agent_name",
+    TRIGGER:             "polyadic_agent_trigger",
+    IN_REPLY_TO:         "polyadic_agent_in_reply_to",
+    VISIBLE_TO_STUDENTS: "polyadic_agent_visible_to_students",
+});
+
+const REPORT_COLUMN_DECLARATIONS = Object.freeze([
+    { id: REPORT_COLUMNS.AGENT_NAME,          label: "Polyadic agent" },
+    { id: REPORT_COLUMNS.TRIGGER,             label: "Polyadic agent trigger" },
+    { id: REPORT_COLUMNS.IN_REPLY_TO,         label: "Student message answered" },
+    { id: REPORT_COLUMNS.VISIBLE_TO_STUDENTS, label: "Visible to students" },
+]);
+
+// What made an agent speak, as far as EthicApp can tell. Polyadic's callback
+// does not say. A reactive reply carries the correlation id of the student
+// message it answers, the id of that message's chat-message-received job,
+// whose `source` names the message (#946). Every other callback is `unknown`:
+// on the room job's correlation id (#833) Polyadic sends its proactive
+// interventions (welcome, time milestones, inactivity), but also the replies
+// of its window events, which answer the room's recent messages; and a
+// callback without a job (before #833) may be either too.
+export const AGENT_TRIGGER = Object.freeze({
+    REACTIVE: "reactive",
+    UNKNOWN:  "unknown",
+});
+
+function positiveIdOf(value) {
+    const id = Number(value);
+    return Number.isSafeInteger(id) && id > 0 ? id : null;
+}
+
+// A contributed string longer than the contract's limit would make the whole
+// contribution invalid; it is cut instead.
+function reportText(value) {
+    return normalizeText(value).slice(0, MAX_CONTRIBUTION_STRING_LENGTH) || null;
+}
+
+// The trigger and the answered message of one callback result.
+function triggerOf(result) {
+    const source = result.source;
+    if (source?.kind === JOB_SOURCE_KIND.CHAT_MESSAGE && positiveIdOf(source.id)) {
+        return { trigger: AGENT_TRIGGER.REACTIVE, inReplyTo: positiveIdOf(source.id) };
+    }
+    return { trigger: AGENT_TRIGGER.UNKNOWN, inReplyTo: null };
+}
+
+// A callback the `callback-received` handler completed, with the evaluations
+// it received and the messages it published (#947), or null. Results stored
+// before #947 list no published messages: their evaluations cannot be told
+// apart from the messages already in the transcript, so they add nothing.
+function handledCallbackOf(result) {
+    const adapterResult = result?.adapterResult;
+    const publishedMessages = adapterResult?.payload?.publishedMessages;
+    const evaluations = result?.rawPayload?.evaluations;
+    if (adapterResult?.hook !== "callback-received" || adapterResult?.status !== "completed"
+        || !Array.isArray(publishedMessages) || !Array.isArray(evaluations)) {
+        return null;
+    }
+    return { result, evaluations, publishedMessages };
+}
+
+function isEvaluationIndex(value, evaluations) {
+    return Number.isInteger(value) && value >= 0 && value < evaluations.length;
+}
+
+// For published messages stored without `evaluationIndex` (before #949),
+// only what can be told without guessing. A chat agent with no published
+// message had none of its evaluations published. A chat agent with at least
+// one published message adds nothing: with as many published messages as
+// evaluations all were published, and with fewer, which of its evaluations
+// failed cannot be told, and a guess could repeat a message already in the
+// transcript.
+function unpublishedByAgent(candidates, publishedMessages) {
+    const publishedAgents = new Set(publishedMessages.map(entry => normalizeText(entry?.agentName)));
+    return candidates.filter(({ agentName, publishable }) => !publishable
+        || !publishedAgents.has(agentName));
+}
+
+// The evaluations of a callback that the handler did not publish, each once:
+// those of agents that do not speak in the chat, and those of chat agents
+// whose publication failed. Evaluations without text are skipped, as the
+// handler skips them. Each published message names the evaluation it came
+// from (`evaluationIndex`); when any entry of the result lacks it, the
+// evaluations are matched by agent instead (unpublishedByAgent()).
+export function unpublishedEvaluations(evaluations, publishedMessages) {
+    const candidates = [];
+    evaluations.forEach((evaluation, index) => {
+        const agentName = normalizeText(evaluation?.agente);
+        const content = normalizeText(evaluation?.respuesta);
+        if (content) {
+            candidates.push({ index, agentName, content, publishable: isPublishableChatAgent(agentName) });
+        }
+    });
+
+    const indexed = publishedMessages
+        .every(entry => isEvaluationIndex(entry?.evaluationIndex, evaluations));
+    const unpublished = indexed
+        ? candidates.filter(({ index }) => !publishedMessages.some(entry => entry.evaluationIndex === index))
+        : unpublishedByAgent(candidates, publishedMessages);
+
+    return unpublished.map(({ agentName, content }) => ({ agentName, content }));
+}
+
+// Where a callback's unpublished evaluations go: beside the messages the same
+// callback published, else at the destination of its job, else in the room
+// its payload names, only when that room is in the report's session. Null
+// when no phase or group can be found.
+function placementOf({ result, ownRows, sessionId }) {
+    const published = ownRows.find(row => positiveIdOf(row.phaseId) && positiveIdOf(row.groupId));
+    if (published) {
+        return {
+            phaseId:    positiveIdOf(published.phaseId),
+            groupId:    positiveIdOf(published.groupId),
+            questionId: positiveIdOf(published.questionId),
+        };
+    }
+
+    const room = parseRoomName(result.rawPayload?.room);
+    if (room && room.sessionId !== sessionId) {
+        return null;
+    }
+    const phaseId = positiveIdOf(result.phaseId) ?? room?.phaseId ?? null;
+    const groupId = positiveIdOf(result.groupId) ?? room?.groupId ?? null;
+    if (!phaseId || !groupId) {
+        return null;
+    }
+    return { phaseId, groupId, questionId: positiveIdOf(result.questionId) };
+}
+
+/**
+ * The bridge's contribution to a chat transcript (#949), from the report's
+ * row keys and the service's stored results for the session.
+ *
+ * - Each agent message the bridge published from a callback (linked by
+ *   `externalServiceResultId`, #947) gets the agent that wrote it, the
+ *   trigger, the student message it answered when known, and
+ *   `visible_to_students = true`. Messages published before #947 have no
+ *   link and get no values.
+ * - Each evaluation a handled callback received but did not publish becomes
+ *   a row at the result's `receivedAt`, with the same columns and
+ *   `visible_to_students = false`. Published evaluations are already rows of
+ *   the transcript and are never added again.
+ *
+ * `mensajes_evaluados` is not exported: it repeats the students' messages
+ * under their display names.
+ */
+export function buildChatTranscriptContribution(context, storedResults) {
+    const serviceId = context.serviceId;
+    const callbacks = new Map();
+    for (const result of storedResults) {
+        const handled = handledCallbackOf(result);
+        if (handled) {
+            callbacks.set(String(result.id), handled);
+        }
+    }
+
+    const ownRowsByResult = new Map();
+    for (const row of context.rows) {
+        if (row.externalServiceId !== serviceId || row.externalServiceResultId === null
+            || row.externalServiceResultId === undefined) {
+            continue;
+        }
+        const key = String(row.externalServiceResultId);
+        ownRowsByResult.set(key, [...(ownRowsByResult.get(key) || []), row]);
+    }
+
+    const values = [];
+    for (const [resultKey, ownRows] of ownRowsByResult) {
+        const handled = callbacks.get(resultKey);
+        if (!handled) {
+            continue;
+        }
+        const { trigger, inReplyTo } = triggerOf(handled.result);
+        for (const row of ownRows) {
+            const published = handled.publishedMessages
+                .find(entry => entry?.messageId !== null && entry?.messageId !== undefined
+                    && String(entry.messageId) === String(row.messageId));
+            values.push({
+                rowKey: row.messageId,
+                values: {
+                    [REPORT_COLUMNS.AGENT_NAME]:          reportText(published?.agentName),
+                    [REPORT_COLUMNS.TRIGGER]:             trigger,
+                    [REPORT_COLUMNS.IN_REPLY_TO]:         inReplyTo,
+                    [REPORT_COLUMNS.VISIBLE_TO_STUDENTS]: true,
+                },
+            });
+        }
+    }
+
+    const rows = [];
+    for (const [resultKey, { result, evaluations, publishedMessages }] of callbacks) {
+        const unpublished = unpublishedEvaluations(evaluations, publishedMessages);
+        const time = result.receivedAt ? new Date(result.receivedAt) : null;
+        if (unpublished.length === 0 || !time || Number.isNaN(time.getTime())) {
+            continue;
+        }
+        const placement = placementOf({
+            result,
+            ownRows:   ownRowsByResult.get(resultKey) || [],
+            sessionId: context.sessionId,
+        });
+        if (!placement) {
+            continue;
+        }
+        const { trigger, inReplyTo } = triggerOf(result);
+        for (const { agentName, content } of unpublished) {
+            rows.push({
+                ...placement,
+                time:    time.toISOString(),
+                message: reportText(content),
+                values:  {
+                    [REPORT_COLUMNS.AGENT_NAME]:          reportText(agentName),
+                    [REPORT_COLUMNS.TRIGGER]:             trigger,
+                    [REPORT_COLUMNS.IN_REPLY_TO]:         inReplyTo,
+                    [REPORT_COLUMNS.VISIBLE_TO_STUDENTS]: false,
+                },
+            });
+        }
+    }
+
+    return {
+        columns: REPORT_COLUMN_DECLARATIONS.map(column => ({ ...column })),
+        values,
+        rows,
+    };
+}
+
+// The `report-building` handler: the chat transcript only, from the results
+// reader the collecting dispatch hands it. It reads EthicApp's database only.
+export async function contributeToReport(context, { results }) {
+    if (context.reportType !== "chat_transcript") {
+        return null;
+    }
+    return buildChatTranscriptContribution(context, await results.list());
+}
+
 // Without room jobs (a registry that provides none), rooms are created without
 // a room correlation id, as before #833.
 const NO_ROOM_JOBS = Object.freeze({
@@ -667,6 +910,8 @@ export async function register({
         });
     }
 
+    subscribe("report-building", contributeToReport);
+
     subscribe("phase-started", async (context, { callback, reportInstantiation }) => {
         const { sessionId, phaseId, serviceConfiguration } = context;
         // Without an AI Additions connection the job fails with `not_configured`
@@ -835,7 +1080,7 @@ export async function register({
             }
         }
 
-        for (const evaluation of evaluations) {
+        for (const [evaluationIndex, evaluation] of evaluations.entries()) {
             const agentName = normalizeText(evaluation?.agente);
             const content = normalizeText(evaluation?.respuesta);
 
@@ -855,7 +1100,7 @@ export async function register({
             });
 
             if (published?.savedMessage) {
-                savedMessages.push({ message: published.savedMessage, agentName });
+                savedMessages.push({ message: published.savedMessage, agentName, evaluationIndex });
             }
         }
 
@@ -869,10 +1114,14 @@ export async function register({
                 messagesPublished:   savedMessages.length,
                 // Which agent wrote each published message (#947): the
                 // shared external_service_agents row keeps only the latest
-                // name. Stored in the result's adapter_result.
-                publishedMessages:   savedMessages.map(({ message, agentName }) => ({
+                // name. `evaluationIndex` is the message's position in the
+                // payload's evaluations, so the report can tell which ones
+                // were not published (#949). Stored in the result's
+                // adapter_result.
+                publishedMessages:   savedMessages.map(({ message, agentName, evaluationIndex }) => ({
                     messageId: message.id ?? null,
                     agentName,
+                    evaluationIndex,
                 })),
             },
         });

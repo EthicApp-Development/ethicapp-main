@@ -532,6 +532,23 @@ its values. Without contributions the CSV is unchanged byte for byte. The dev
 mock adapters `mock-ai-response-review` and `mock-chat-agent` contribute, for
 local verification.
 
+The Polyadic bridge contributes to the chat transcript (#949). Each agent
+message it published from a callback (#947) gets `polyadic_agent_name`, the
+agent that wrote it, `polyadic_agent_trigger`, `polyadic_agent_in_reply_to`
+and `polyadic_agent_visible_to_students = true`. Each evaluation a callback
+carried but the bridge did not publish becomes a row at the callback's receipt
+time, with the same columns and `polyadic_agent_visible_to_students = false`.
+The callback handler records, for each message it publishes, the index of the
+evaluation it came from (`publishedMessages[n].evaluationIndex`), so each
+unpublished evaluation is added exactly once. For callbacks stored without
+that index, a chat agent's evaluations are added only when none of its
+evaluations was published; when some were, which ones failed cannot be told,
+and none is added. The trigger is `reactive` only when the callback correlates with the
+`chat-message-received` job of a student message, whose id is then
+`polyadic_agent_in_reply_to`; it is `unknown` otherwise, since Polyadic sends
+both its proactive interventions and its window-event replies on the room's
+correlation id (#833). Messages published before #947 get no values.
+
 The contract, the reader and the catalog's `report.columnPrefix` are described
 in `ethicapp/backend/external-services/README.md`, "Report building".
 
