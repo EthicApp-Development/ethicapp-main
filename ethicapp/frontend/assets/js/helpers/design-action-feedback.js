@@ -1,10 +1,10 @@
-// Feedback for the Designs page's row actions (#978, epic #966): the choices
-// of the delete confirmation and the notices that follow a duplicate, an
-// archive, a restore or a delete, or say why one failed.
+// Feedback for the Designs page's actions (#978, epic #966): the choices of
+// the delete confirmation and the notices that follow a duplicate, an
+// archive, a restore, a delete or an import (#979), or say why one failed.
 //
 // A notice is plain data: a message key with its parameters, a tone, and the
-// links it offers ("Edit copy", "Undo"). The page shows one notice at a time,
-// for a few seconds, and the teacher can dismiss it.
+// links it offers ("Edit copy", "Undo", "View in My designs"). The page shows
+// one notice at a time, for a few seconds, and the teacher can dismiss it.
 
 /** The delete dialog's answers. */
 export const DELETE_CHOICE_DELETE = "delete";
@@ -14,6 +14,7 @@ export const DELETE_CHOICE_CANCEL = "cancel";
 /** Links a notice offers. */
 export const NOTICE_ACTION_EDIT_COPY = "edit-copy";
 export const NOTICE_ACTION_UNDO_ARCHIVE = "undo-archive";
+export const NOTICE_ACTION_SHOW_IN_MINE = "show-in-mine";
 
 export const NOTICE_TONE_SUCCESS = "success";
 export const NOTICE_TONE_DANGER = "danger";
@@ -63,6 +64,20 @@ export function duplicateNotice(copyId, copyTitle) {
     return titledNotice("designs_notice_duplicated", copyTitle, { actions });
 }
 
+/**
+ * After an import: "Created "<copy>" in My designs", with "Edit copy" and
+ * "View in My designs".
+ */
+export function importNotice(copyId, copyTitle) {
+    const actions = copyId === null || copyId === undefined
+        ? []
+        : [
+            { id: NOTICE_ACTION_EDIT_COPY, key: "designs_notice_edit_copy", designId: copyId },
+            { id: NOTICE_ACTION_SHOW_IN_MINE, key: "designs_show_in_mine", designId: copyId },
+        ];
+    return titledNotice("designs_notice_imported", copyTitle, { actions });
+}
+
 /** "Archived "<title>"", with "Undo". */
 export function archiveNotice(designId, title) {
     return titledNotice("designs_notice_archived", title, {
@@ -96,4 +111,14 @@ export function duplicateFailureNotice() {
 
 export function archiveFailureNotice() {
     return failureNotice("design_archive_error");
+}
+
+/**
+ * Why an import failed: the design's case is no longer public
+ * (`DESIGN_CASE_NOT_IMPORTABLE`), or a generic failure.
+ */
+export function importFailureNotice(error) {
+    return failureNotice(error?.data?.code === "DESIGN_CASE_NOT_IMPORTABLE"
+        ? "design_import_blocked_by_case"
+        : "design_import_error");
 }

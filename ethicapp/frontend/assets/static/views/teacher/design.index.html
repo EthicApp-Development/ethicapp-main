@@ -271,26 +271,5 @@
         <div class="alert alert-info" ng-if="dp.count('shared') === 0">
             <span>{{ 'designs_shared_empty' | translate }}</span>
         </div>
-
-        <!-- The notice after an import names the copy and links to it. It
-             goes away by itself after a few seconds, or with its close button. -->
-        <div class="designs-import-notice" role="status" aria-live="polite">
-            <div class="designs-import-notice-body" ng-if="dp.importNotice">
-                <button type="button" class="close designs-import-notice-close"
-                    aria-label="{{ 'designs_notice_close' | translate }}"
-                    ng-click="dp.dismissImportNotice()">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-                <p class="designs-import-notice-text">
-                    <i class="fa-solid fa-check" aria-hidden="true"></i>
-                    {{ 'designs_import_notice_before' | translate }}<strong>&ldquo;{{ dp.importNotice.title }}&rdquo;</strong>{{ 'designs_import_notice_after' | translate }}
-                </p>
-                <p class="designs-import-notice-links">
-                    <a href="" class="designs-import-notice-link" ng-click="dp.editImportedCopy()">{{ 'designs_edit_copy' | translate }}</a>
-                    &middot;
-                    <a href="" class="designs-import-notice-link" ng-click="dp.showImportedCopyInMyDesigns()">{{ 'designs_show_in_mine' | translate }}</a>
-                </p>
-            </div>
-        </div>
     </section>
 </div>

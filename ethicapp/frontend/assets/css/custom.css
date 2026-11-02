@@ -950,15 +950,6 @@ table {
     height: 28px;
 }
 
-.design-item-warning {
-    flex-basis: 100%;
-    text-align: right;
-}
-
-.design-item-warning p {
-    margin: 4px 0 0;
-}
-
 @media (max-width: 767px) {
     .case-card-panel .panel-body,
     .design-item-panel .panel-body,
@@ -1009,10 +1000,6 @@ table {
     .teacher-card-actions-footer .locked-svg {
         justify-self: center;
         align-self: center;
-    }
-
-    .design-item-warning {
-        text-align: left;
     }
 }
 

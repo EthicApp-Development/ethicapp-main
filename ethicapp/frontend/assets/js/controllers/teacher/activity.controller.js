@@ -2,8 +2,7 @@ import { newestActivitiesFirst } from "../../helpers/activity-order.js";
 import { statusCodes } from  "../../../../../common/modules/session-status.js";
 
 /*eslint func-style: ["error", "expression"]*/
-export function ActivityController($scope, $http,
-    ActivityCatalogService, $window) {
+export function ActivityController($scope, ActivityCatalogService, $window) {
     
     const vm = this;
 
@@ -142,25 +141,6 @@ export function ActivityController($scope, $http,
 
     vm.nextPage = function() {
         vm.setPage(vm.currentPage + 1);
-    };
-
-    vm.checkContentAnalysisAvailability = function() {
-        $http.post("/content-analysis-availability")
-            .then(function(response) {
-                if (response.status === 200) {
-                    vm.isContentAnalysisEnabled = true;
-                } else {
-                    vm.isContentAnalysisEnabled = false;
-                }
-            })
-            .catch(function(error) {
-                vm.isContentAnalysisEnabled = false;
-            });
-    };
-
-    vm.handleSelect = function(activity) {
-        // Switch to the page of the activity
-        $scope.navigateTo(`/activities/${activity.sessionId}`);
     };
 
     vm.handleView = function(activity) {

@@ -2,7 +2,7 @@
 // their actions through the catalog, and the page offers no launch action.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { describe, it, mock } from "node:test";
+import { describe, it } from "node:test";
 
 import { DesignsPageController } from "../designs-page.controller.js";
 
@@ -436,22 +436,21 @@ describe("designs page, Shared by others", () => {
     });
 
     it("imports a design, turns its row Imported and names the copy in a notice", async () => {
-        mock.timers.enable({ apis: ["setTimeout"] });
-        try {
-            const { vm, calls } = createPage({ search: { tab: "shared" } });
-            await vm.ready;
-            await vm.importDesign(sharedRow(vm, 5));
-            assert.deepEqual(calls.imported, [5]);
-            assert.equal(sharedRow(vm, 5).importState, "imported");
-            assert.equal(sharedRow(vm, 5).copyId, 99);
-            assert.deepEqual(vm.importNotice, { copyId: 99, title: "Theirs (copy)" });
-            assert.equal(vm.count("mine"), 4);
-            assert.deepEqual(calls.toasts, []);
-            mock.timers.tick(10 * 1000);
-            assert.equal(vm.importNotice, null);
-        } finally {
-            mock.timers.reset();
-        }
+        const { vm, calls } = createPage({ search: { tab: "shared" } });
+        await vm.ready;
+        await vm.importDesign(sharedRow(vm, 5));
+        assert.deepEqual(calls.imported, [5]);
+        assert.equal(sharedRow(vm, 5).importState, "imported");
+        assert.equal(sharedRow(vm, 5).copyId, 99);
+        assert.equal(vm.notice.messageKey, "designs_notice_imported");
+        assert.deepEqual(vm.notice.params, { title: "Theirs (copy)" });
+        assert.deepEqual(vm.notice.actions.map(action => action.id),
+            ["edit-copy", "show-in-mine"]);
+        assert.equal(vm.count("mine"), 4);
+        assert.deepEqual(calls.toasts, []);
+        // It goes away as the other notices do.
+        calls.timers.at(-1).fn();
+        assert.equal(vm.notice, null);
     });
 
     it("does not import a design already imported or one that cannot be", async () => {
@@ -461,22 +460,20 @@ describe("designs page, Shared by others", () => {
         await vm.importDesign(sharedRow(vm, 5));
         await vm.importDesign(sharedRow(vm, 5));
         assert.deepEqual(calls.imported, [5]);
-        vm.dismissImportNotice();
     });
 
     it("opens the copy in the editor or in My designs from the notice", async () => {
         const { vm, calls } = createPage({ search: { tab: "shared" } });
         await vm.ready;
         await vm.importDesign(sharedRow(vm, 5));
-        vm.editImportedCopy();
+        const [editCopy, showInMine] = vm.notice.actions;
+        await vm.runNoticeAction(editCopy);
         assert.deepEqual(calls.navigated, ["/designs/99/edit"]);
-        assert.equal(vm.importNotice, null);
+        assert.equal(vm.notice, null);
 
-        vm.importNotice = { copyId: 99, title: "Theirs (copy)" };
-        vm.showImportedCopyInMyDesigns();
+        await vm.runNoticeAction(showInMine);
         assert.equal(vm.tab, "mine");
-        assert.equal(vm.importNotice, null);
-        vm.dismissImportNotice();
+        assert.equal(vm.notice, null);
     });
 
     it("explains a refused import and reloads the list", async () => {
@@ -489,20 +486,21 @@ describe("designs page, Shared by others", () => {
         await vm.ready;
         calls.reloads.length = 0;
         await vm.importDesign(sharedRow(vm, 5));
-        assert.deepEqual(calls.toasts, ["design_import_blocked_by_case"]);
+        assert.equal(vm.notice.messageKey, "design_import_blocked_by_case");
+        assert.equal(vm.notice.tone, "danger");
         assert.deepEqual(calls.reloads, [true]);
-        assert.equal(vm.importNotice, null);
         assert.equal(vm.busy[5], undefined);
     });
 
     it("says when an import fails", async () => {
-        const { vm, calls } = createPage({
+        const { vm } = createPage({
             search:  { tab: "shared" },
             catalog: { importDesign: async () => { throw new Error("boom"); } },
         });
         await vm.ready;
         await vm.importDesign(sharedRow(vm, 5));
-        assert.deepEqual(calls.toasts, ["design_import_error"]);
+        assert.equal(vm.notice.messageKey, "design_import_error");
+        assert.equal(vm.notice.tone, "danger");
     });
 });
 
@@ -600,7 +598,6 @@ describe("designs page, search and status filters", () => {
 describe("designs page template", () => {
     it("uses its own controller and offers no launch action", () => {
         assert.match(template, /ng-controller="DesignsPageController as dp"/u);
-        assert.doesNotMatch(template, /BrowseDesignsController/u);
         assert.doesNotMatch(template, /on-launch|handleLaunch|launch_activity_button_text/u);
     });
 
@@ -636,7 +633,7 @@ describe("designs page template", () => {
         assert.match(template, /ng-click="dp\.importDesign\(row\)"/u);
         assert.match(template, /ng-href="#!\/designs\/\{\{ row\.copyId \}\}"/u);
         assert.match(template, /disabled\s+aria-describedby="designs-import-reason-/u);
-        assert.match(template, /class="designs-import-notice" role="status"/u);
+        assert.doesNotMatch(template, /designs-import-notice/u);
     });
 
     it("draws the search and the status chips in My designs, and a state for no matches", () => {

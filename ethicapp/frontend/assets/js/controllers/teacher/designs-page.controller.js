@@ -32,10 +32,9 @@ import {
     tabSearchValue,
 } from "../../helpers/designs-table.js";
 import {
-    IMPORT_NOTICE_TIMEOUT_MS,
     IMPORT_STATE_IMPORTABLE,
     buildSharedRows,
-    importNotice,
+    importedCopyTitle,
     sharedRowMatchesSearch,
 } from "../../helpers/designs-shared-table.js";
 import { designMatchesLaunchSearch } from "../../helpers/launch-design-list.js";
@@ -43,6 +42,7 @@ import {
     DELETE_CHOICE_ARCHIVE,
     DELETE_CHOICE_DELETE,
     NOTICE_ACTION_EDIT_COPY,
+    NOTICE_ACTION_SHOW_IN_MINE,
     NOTICE_ACTION_UNDO_ARCHIVE,
     NOTICE_TIMEOUT_MS,
     archiveFailureNotice,
@@ -52,6 +52,8 @@ import {
     duplicateFailureNotice,
     duplicateNotice,
     findDesignTitle,
+    importFailureNotice,
+    importNotice,
     restoreNotice,
 } from "../../helpers/design-action-feedback.js";
 import {
@@ -88,8 +90,6 @@ export function DesignsPageController($scope, $location, $translate, toast,
     vm.sharedSearch = "";
     // The rows of "Shared by others", with each design's import state.
     vm.sharedRows = [];
-    // The notice after an import: `{ copyId, title }`, or null.
-    vm.importNotice = null;
     vm.statusFilter = statusFilterFromSearch($location.search());
     vm.search = queryFromSearch($location.search());
     // Design id → true while an action on it is pending, so a second click
@@ -292,8 +292,8 @@ export function DesignsPageController($scope, $location, $translate, toast,
         }
     };
 
-    // Notices after row actions (#978): one at a time, for a few seconds,
-    // and dismissible. Built by `helpers/design-action-feedback.js`.
+    // Notices after row actions (#978) and imports (#979): one at a time, for
+    // a few seconds, and dismissible. Built by `helpers/design-action-feedback.js`.
 
     vm.notice = null;
     let noticeTimer = null;
@@ -326,6 +326,8 @@ export function DesignsPageController($scope, $location, $translate, toast,
         vm.dismissNotice();
         if (action?.id === NOTICE_ACTION_EDIT_COPY) {
             $scope.navigateTo(`/designs/${action.designId}/edit`);
+        } else if (action?.id === NOTICE_ACTION_SHOW_IN_MINE) {
+            vm.selectTab(DESIGNS_TAB_MINE);
         } else if (action?.id === NOTICE_ACTION_UNDO_ARCHIVE) {
             await withBusy(action.designId, () => setArchived(action.designId, false));
         }
@@ -431,46 +433,7 @@ export function DesignsPageController($scope, $location, $translate, toast,
     };
 
     // Importing (#977): a row whose design can be imported creates a private,
-    // editable copy in "My designs", and a notice names the copy. The notices
-    // of the other actions are #978's.
-
-    let importNoticeTimer = null;
-
-    function clearImportNoticeTimer() {
-        if (importNoticeTimer !== null) {
-            clearTimeout(importNoticeTimer);
-            importNoticeTimer = null;
-        }
-    }
-
-    vm.dismissImportNotice = function() {
-        clearImportNoticeTimer();
-        vm.importNotice = null;
-    };
-
-    function showImportNotice(notice) {
-        clearImportNoticeTimer();
-        vm.importNotice = notice;
-        importNoticeTimer = setTimeout(() => {
-            importNoticeTimer = null;
-            $scope.$applyAsync(() => {
-                vm.importNotice = null;
-            });
-        }, IMPORT_NOTICE_TIMEOUT_MS);
-    }
-
-    vm.editImportedCopy = function() {
-        const copyId = vm.importNotice?.copyId;
-        vm.dismissImportNotice();
-        if (copyId !== null && copyId !== undefined) {
-            $scope.navigateTo(`/designs/${copyId}/edit`);
-        }
-    };
-
-    vm.showImportedCopyInMyDesigns = function() {
-        vm.dismissImportNotice();
-        vm.selectTab(DESIGNS_TAB_MINE);
-    };
+    // editable copy in "My designs", and a notice names the copy.
 
     vm.importDesign = async function(row) {
         if (!row || row.importState !== IMPORT_STATE_IMPORTABLE || vm.busy[row.id]) {
@@ -482,10 +445,10 @@ export function DesignsPageController($scope, $location, $translate, toast,
             // The catalog reloaded its designs, so the row turns "Imported".
             designs = await DesignCatalogService.getDesigns();
             vm.refresh();
-            showImportNotice(importNotice(copyId, designs, row.title));
+            vm.showNotice(importNotice(copyId, importedCopyTitle(copyId, designs, row.title)));
         } catch (error) {
+            vm.showNotice(importFailureNotice(error));
             if (error?.data?.code === "DESIGN_CASE_NOT_IMPORTABLE") {
-                vm.showDesignToast("design_import_blocked_by_case", "alert-danger");
                 // The list was stale: reload it, so the row says why it
                 // cannot be imported.
                 try {
@@ -496,7 +459,6 @@ export function DesignsPageController($scope, $location, $translate, toast,
                 }
             } else {
                 console.error("[DesignsPageController] Error importing design.", error);
-                vm.showDesignToast("design_import_error", "alert-danger");
             }
         } finally {
             delete vm.busy[row.id];
@@ -513,7 +475,6 @@ export function DesignsPageController($scope, $location, $translate, toast,
             DesignCatalogService.unregisterListener("onDesignCatalogUpdated", onCatalogUpdated);
             cancelNoticeTimer();
         });
-        $scope.$on("$destroy", clearImportNoticeTimer);
         $scope.$on("caseVisibilityUpdatedDesigns", (_event, data) => {
             DesignCatalogService.applyPrivateVisibilityToDesigns(data?.affectedDesignIds || []);
         });

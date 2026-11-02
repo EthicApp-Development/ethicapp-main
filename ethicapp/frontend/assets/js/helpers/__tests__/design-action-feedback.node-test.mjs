@@ -1,5 +1,6 @@
-// Feedback for the Designs page's row actions (#978): the delete dialog's
-// answers and the notices after duplicating, archiving, restoring and deleting.
+// Feedback for the Designs page's actions (#978): the delete dialog's answers
+// and the notices after duplicating, archiving, restoring, deleting and
+// importing (#979).
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
@@ -8,6 +9,7 @@ import {
     DELETE_CHOICE_CANCEL,
     DELETE_CHOICE_DELETE,
     NOTICE_ACTION_EDIT_COPY,
+    NOTICE_ACTION_SHOW_IN_MINE,
     NOTICE_ACTION_UNDO_ARCHIVE,
     archiveFailureNotice,
     archiveNotice,
@@ -17,6 +19,8 @@ import {
     duplicateFailureNotice,
     duplicateNotice,
     findDesignTitle,
+    importFailureNotice,
+    importNotice,
     restoreNotice,
 } from "../design-action-feedback.js";
 
@@ -95,6 +99,27 @@ describe("notices", () => {
         assert.equal(deleteFailureNotice({ status: 500 }).messageKey, "design_delete_failed");
         assert.equal(deleteFailureNotice(undefined).messageKey, "design_delete_failed");
         assert.equal(deleteFailureNotice(undefined).tone, "danger");
+    });
+
+    it("names an imported copy, with links to its editor and to My designs", () => {
+        assert.deepEqual(importNotice(99, "Theirs (copy)"), {
+            messageKey: "designs_notice_imported",
+            params:     { title: "Theirs (copy)" },
+            tone:       "success",
+            actions:    [
+                { id: NOTICE_ACTION_EDIT_COPY, key: "designs_notice_edit_copy", designId: 99 },
+                { id: NOTICE_ACTION_SHOW_IN_MINE, key: "designs_show_in_mine", designId: 99 },
+            ],
+        });
+        assert.equal(importNotice(99, "").messageKey, "designs_notice_imported_untitled");
+        assert.deepEqual(importNotice(null, "X").actions, []);
+    });
+
+    it("says why an import failed: the case is not public, or a generic failure", () => {
+        const refusal = { data: { code: "DESIGN_CASE_NOT_IMPORTABLE" } };
+        assert.equal(importFailureNotice(refusal).messageKey, "design_import_blocked_by_case");
+        assert.equal(importFailureNotice(new Error("boom")).messageKey, "design_import_error");
+        assert.equal(importFailureNotice(undefined).tone, "danger");
     });
 
     it("says when a duplicate or an archive failed", () => {

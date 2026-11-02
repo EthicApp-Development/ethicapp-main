@@ -46,31 +46,6 @@ let DesignCatalogService = ($rootScope, $http) => {
             return service.designs;
         },
 
-        async getUserDesigns(reload = false) {
-            if (reload || !service.hasLoadedDesigns) {
-                await service.loadDesigns();
-            }
-            const result = service.designs.filter(design => design.userOwned === true && design.archived !== true);
-            return result;
-        },
-
-        async getArchivedDesigns(reload = false) {
-            if (reload || !service.hasLoadedDesigns) {
-                await service.loadDesigns();
-            }
-            const result = service.designs.filter(design => design.userOwned === true && design.archived === true);
-            return result;
-        },
-
-        async getPublicDesigns(reload = false) {
-            if (reload || !service.hasLoadedDesigns) {
-                await service.loadDesigns();
-            }
-            const result = service.designs.filter(design => design.visibility === "public" &&
-                design.valid === true && design.userOwned === false && design.archived !== true);
-            return result;
-        },
-
         async getDesignById(id, reload = false) {
             if (reload || !service.hasLoadedDesigns) {
                 await service.loadDesigns();

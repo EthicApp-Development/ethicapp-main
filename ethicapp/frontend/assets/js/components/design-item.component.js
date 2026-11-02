@@ -12,7 +12,6 @@ const DesignItemController = function() {
     };
 
     this.isFunction = function(variable) {
-        // console.log("[DesignItemController::isFunction]", variable, typeof variable === 'function');
         return typeof variable === 'function';
     };
 
@@ -47,19 +46,6 @@ const DesignItemController = function() {
         return Boolean(this.design?.originalDesignId || this.design?.sourceDesignTitle || this.design?.sourceDesignAuthor);
     };
 
-    this.canImportDesign = function() {
-        if (!this.isFunction(this.onImport) || this.isOwner) {
-            return false;
-        }
-
-        const associatedCase = this.getAssociatedCase();
-        return !associatedCase || (associatedCase.visibility === "public" && associatedCase.archived !== true);
-    };
-
-    this.isImportBlockedByCase = function() {
-        return !this.isOwner && this.isFunction(this.onImport) && !this.canImportDesign();
-    };
-
     this.formatCaseLabel = function(caseItem) {
         if (!caseItem) {
             return "";
@@ -72,6 +58,10 @@ const DesignItemController = function() {
     };
 }
 
+// The design's summary card, shown by the design view (with its launch, edit
+// and sharing actions) and by the activity dashboard's Design tab (read-only).
+// The Designs page and the launch wizard have their own rows (epics #965 and
+// #966).
 const designItemComponent = {
     bindings: {
         design: '<',
@@ -79,15 +69,7 @@ const designItemComponent = {
         isOwner: '<',
         onLaunch: '<?',
         onEdit: '<?',
-        onView: '<?',
-        onSelect: '<?',
-        onDelete: '<?',
-        onDuplicate: '<?',
-        onArchive: '<?',
-        onTogglePublic: '<?',
-        onImport: '<?',
-        selectionLayout: '<?',
-        selectedDesignId: '<'
+        onTogglePublic: '<?'
     },
     controller: DesignItemController,
     templateUrl: "/assets/static/views/teacher/fragments/design-item.template.html"
