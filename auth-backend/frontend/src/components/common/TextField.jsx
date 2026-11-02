@@ -4,14 +4,14 @@ function TextField({
   id,
   name,
   label,
-  type,
+  type = 'text',
   value,
   onChange,
-  error,
-  placeholder,
-  autoComplete,
-  autoFocus,
-  required
+  error = '',
+  placeholder = '',
+  autoComplete = 'off',
+  autoFocus = false,
+  required = false
 }) {
   return (
     <div className="mb-3">
@@ -49,15 +49,6 @@ TextField.propTypes = {
   autoComplete: PropTypes.string,
   autoFocus: PropTypes.bool,
   required: PropTypes.bool
-};
-
-TextField.defaultProps = {
-  type: 'text',
-  error: '',
-  placeholder: '',
-  autoComplete: 'off',
-  autoFocus: false,
-  required: false
 };
 
 export default TextField;

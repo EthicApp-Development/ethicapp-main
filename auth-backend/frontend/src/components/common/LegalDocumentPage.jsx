@@ -116,8 +116,4 @@ LegalDocumentPage.propTypes = {
   markdownVariables: PropTypes.object
 };
 
-LegalDocumentPage.defaultProps = {
-  markdownVariables: {}
-};
-
 export default LegalDocumentPage;

@@ -5,15 +5,15 @@ import { useI18n } from '../../app/i18n-context';
 function PasswordField({
   id,
   name,
-  label,
-  showLabel,
+  label = '',
+  showLabel = true,
   value,
   onChange,
-  error,
-  autoComplete,
-  helpText,
-  required,
-  children
+  error = '',
+  autoComplete = 'current-password',
+  helpText = '',
+  required = false,
+  children = null
 }) {
   const [isVisible, setIsVisible] = useState(false);
   const { t } = useI18n();
@@ -72,16 +72,6 @@ PasswordField.propTypes = {
   helpText: PropTypes.string,
   required: PropTypes.bool,
   children: PropTypes.node
-};
-
-PasswordField.defaultProps = {
-  label: '',
-  showLabel: true,
-  error: '',
-  autoComplete: 'current-password',
-  helpText: '',
-  required: false,
-  children: null
 };
 
 export default PasswordField;
