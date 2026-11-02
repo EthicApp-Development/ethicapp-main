@@ -2,12 +2,15 @@
 // their actions through the catalog, and the page offers no launch action.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { describe, it } from "node:test";
+import { describe, it, mock } from "node:test";
 
 import { DesignsPageController } from "../designs-page.controller.js";
 
 const template = readFileSync(new URL(
     "../../../../static/views/teacher/design.index.html", import.meta.url), "utf8");
+
+const theirs = (id, title) =>
+    ({ id, userOwned: false, valid: true, visibility: "public", metainfo: { title } });
 
 function makeDesigns() {
     const own = (id, title, fields) =>
@@ -17,7 +20,8 @@ function makeDesigns() {
         own(2, "Broken", { valid: false, createdAt: "2026-09-01T00:00:00Z" }),
         own(3, "Used", { visibility: "public", createdAt: "2026-08-01T00:00:00Z" }),
         own(4, "Gone", { archived: true }),
-        { id: 5, userOwned: false, valid: true, visibility: "public", metainfo: { title: "Theirs" } },
+        theirs(5, "Theirs"),
+        { ...theirs(6, "Closed case"), importable: false },
     ];
 }
 
@@ -26,6 +30,7 @@ function createPage({ search = {}, catalog = {}, publication = {} } = {}) {
     const calls = {
         navigated:  [], toasts:     [], pushes:     [], replaces:   [],
         duplicated: [], archived:   [], deleted:    [], toggled:    [],
+        imported:   [], reloads:    [],
     };
     let current = { ...search };
     const designs = makeDesigns();
@@ -66,7 +71,16 @@ function createPage({ search = {}, catalog = {}, publication = {} } = {}) {
     const toast = { create: options => calls.toasts.push(options.message) };
     const listeners = [];
     const DesignCatalogService = {
-        getDesigns:       async () => designs,
+        getDesigns: async (force) => {
+            calls.reloads.push(force === true);
+            return designs;
+        },
+        importDesign: async (id) => {
+            calls.imported.push(id);
+            const copy = { ...theirs(99, "Theirs (copy)"), userOwned: true };
+            designs.push({ ...copy, importedFromDesignId: id });
+            return 99;
+        },
         registerListener: (_name, fn) => listeners.push(fn),
         unregisterListener() {},
         applyPrivateVisibilityToDesigns() {},
@@ -119,7 +133,7 @@ describe("designs page, tabs", () => {
         assert.equal(vm.tab, "mine");
         assert.deepEqual(vm.getRows("mine").map(row => row.id), [1, 2, 3]);
         assert.equal(vm.count("mine"), 3);
-        assert.equal(vm.count("shared"), 1);
+        assert.equal(vm.count("shared"), 2);
         assert.equal(vm.count("archived"), 1);
     });
 
@@ -266,6 +280,96 @@ describe("designs page, sharing", () => {
     });
 });
 
+describe("designs page, Shared by others", () => {
+    const sharedRow = (vm, id) => vm.getRows("shared").find(row => row.id === id);
+
+    it("gives each shared design its import state", async () => {
+        const { vm } = createPage({ search: { tab: "shared" } });
+        await vm.ready;
+        assert.deepEqual(vm.getRows("shared").map(row => [row.id, row.importState]),
+            [[6, "not-importable"], [5, "importable"]]);
+    });
+
+    it("searches over the title, author, case and tags", async () => {
+        const { vm } = createPage({ search: { tab: "shared" } });
+        await vm.ready;
+        vm.sharedSearch = "closed";
+        vm.handleSharedSearchChange();
+        assert.deepEqual(vm.getRows("shared").map(row => row.id), [6]);
+        assert.equal(vm.count("shared"), 2);
+    });
+
+    it("imports a design, turns its row Imported and names the copy in a notice", async () => {
+        mock.timers.enable({ apis: ["setTimeout"] });
+        try {
+            const { vm, calls } = createPage({ search: { tab: "shared" } });
+            await vm.ready;
+            await vm.importDesign(sharedRow(vm, 5));
+            assert.deepEqual(calls.imported, [5]);
+            assert.equal(sharedRow(vm, 5).importState, "imported");
+            assert.equal(sharedRow(vm, 5).copyId, 99);
+            assert.deepEqual(vm.importNotice, { copyId: 99, title: "Theirs (copy)" });
+            assert.equal(vm.count("mine"), 4);
+            assert.deepEqual(calls.toasts, []);
+            mock.timers.tick(10 * 1000);
+            assert.equal(vm.importNotice, null);
+        } finally {
+            mock.timers.reset();
+        }
+    });
+
+    it("does not import a design already imported or one that cannot be", async () => {
+        const { vm, calls } = createPage({ search: { tab: "shared" } });
+        await vm.ready;
+        await vm.importDesign(sharedRow(vm, 6));
+        await vm.importDesign(sharedRow(vm, 5));
+        await vm.importDesign(sharedRow(vm, 5));
+        assert.deepEqual(calls.imported, [5]);
+        vm.dismissImportNotice();
+    });
+
+    it("opens the copy in the editor or in My designs from the notice", async () => {
+        const { vm, calls } = createPage({ search: { tab: "shared" } });
+        await vm.ready;
+        await vm.importDesign(sharedRow(vm, 5));
+        vm.editImportedCopy();
+        assert.deepEqual(calls.navigated, ["/designs/99/edit"]);
+        assert.equal(vm.importNotice, null);
+
+        vm.importNotice = { copyId: 99, title: "Theirs (copy)" };
+        vm.showImportedCopyInMyDesigns();
+        assert.equal(vm.tab, "mine");
+        assert.equal(vm.importNotice, null);
+        vm.dismissImportNotice();
+    });
+
+    it("explains a refused import and reloads the list", async () => {
+        const refusal = Object.assign(new Error("refused"),
+            { data: { code: "DESIGN_CASE_NOT_IMPORTABLE" } });
+        const { vm, calls } = createPage({
+            search:  { tab: "shared" },
+            catalog: { importDesign: async () => { throw refusal; } },
+        });
+        await vm.ready;
+        calls.reloads.length = 0;
+        await vm.importDesign(sharedRow(vm, 5));
+        assert.deepEqual(calls.toasts, ["design_import_blocked_by_case"]);
+        assert.deepEqual(calls.reloads, [true]);
+        assert.equal(vm.importNotice, null);
+        assert.equal(vm.busy[5], undefined);
+    });
+
+    it("says when an import fails", async () => {
+        const { vm, calls } = createPage({
+            search:  { tab: "shared" },
+            catalog: { importDesign: async () => { throw new Error("boom"); } },
+        });
+        await vm.ready;
+        await vm.importDesign(sharedRow(vm, 5));
+        assert.deepEqual(calls.toasts, ["design_import_error"]);
+    });
+});
+
 describe("designs page template", () => {
     it("uses its own controller and offers no launch action", () => {
         assert.match(template, /ng-controller="DesignsPageController as dp"/u);
@@ -288,6 +392,15 @@ describe("designs page template", () => {
         assert.match(template, /aria-checked=/u);
         assert.match(template, /uib-dropdown keyboard-nav/u);
         assert.match(template, /role="menuitem"/u);
+    });
+
+    it("lists shared designs in a table, not in design-item cards", () => {
+        assert.doesNotMatch(template, /<design-item/u);
+        assert.match(template, /class="designs-table designs-shared-table"/u);
+        assert.match(template, /ng-click="dp\.importDesign\(row\)"/u);
+        assert.match(template, /ng-href="#!\/designs\/\{\{ row\.copyId \}\}"/u);
+        assert.match(template, /disabled\s+aria-describedby="designs-import-reason-/u);
+        assert.match(template, /class="designs-import-notice" role="status"/u);
     });
 
     it("shows no design type", () => {

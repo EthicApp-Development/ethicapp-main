@@ -6244,3 +6244,169 @@ button.launch-wizard-step-body:focus-visible .launch-wizard-step-name {
         text-align: left;
     }
 }
+
+/* "Shared by others" on the Designs page (#977, epic #966): a one-line
+   banner, the search beside the order, and the shared designs' table with
+   their author, license and one import action. Below 1200 px each row
+   becomes a compact row like the other tabs'. The notice after an import
+   sits at the bottom right of the window. */
+.designs-shared-banner {
+    background: #fff;
+    border: 1px solid var(--designs-line);
+    border-radius: 6px;
+    margin: 0 0 12px;
+    padding: 10px 14px;
+}
+
+.designs-shared-tools {
+    justify-content: space-between;
+}
+
+.designs-shared-tools .designs-shared-search {
+    flex: 0 1 380px;
+    margin-bottom: 0;
+    min-width: 220px;
+}
+
+.designs-shared-col-design {
+    width: 42%;
+}
+
+.designs-shared-col-author {
+    width: 22%;
+}
+
+.designs-shared-col-license {
+    width: 16%;
+}
+
+.designs-shared-unknown {
+    color: var(--designs-muted);
+}
+
+/* Shown before the author and the license only in the compact rows. */
+.designs-shared-label {
+    color: var(--designs-muted);
+    display: none;
+    font-size: 13px;
+    margin-right: 4px;
+}
+
+.designs-imported {
+    align-items: baseline;
+    display: inline-flex;
+    gap: 12px;
+}
+
+.designs-imported-label {
+    color: var(--designs-ready);
+}
+
+.designs-not-importable {
+    display: inline-flex;
+    flex-direction: column;
+    gap: 2px;
+    text-align: right;
+}
+
+.designs-not-importable .designs-import-button {
+    align-self: flex-end;
+}
+
+.designs-import-reason {
+    color: var(--designs-muted);
+    font-size: 12px;
+    white-space: normal;
+}
+
+.designs-import-notice {
+    bottom: 24px;
+    max-width: calc(100vw - 32px);
+    position: fixed;
+    right: 24px;
+    width: 460px;
+    z-index: 1050;
+}
+
+.designs-import-notice-body {
+    background: #2b2f38;
+    border-radius: 8px;
+    box-shadow: 0 6px 20px rgb(0 0 0 / 25%);
+    color: #fff;
+    padding: 12px 40px 12px 16px;
+    position: relative;
+}
+
+.designs-import-notice-text,
+.designs-import-notice-links {
+    margin: 0;
+}
+
+.designs-import-notice-links {
+    margin-top: 6px;
+}
+
+.designs-import-notice-link,
+.designs-import-notice-link:visited {
+    color: #9ec1ff;
+    font-weight: 600;
+}
+
+.designs-import-notice-link:hover,
+.designs-import-notice-link:focus {
+    color: #fff;
+}
+
+.designs-import-notice .designs-import-notice-close {
+    color: #fff;
+    opacity: 0.8;
+    position: absolute;
+    right: 12px;
+    text-shadow: none;
+    top: 8px;
+}
+
+.designs-import-notice .designs-import-notice-close:hover,
+.designs-import-notice .designs-import-notice-close:focus {
+    color: #fff;
+    opacity: 1;
+}
+
+@media (width < 1200px) {
+    .designs-shared-row {
+        grid-template-areas:
+            "design design design"
+            "author license actions";
+    }
+
+    .designs-shared-cell-author {
+        align-self: center;
+        grid-area: author;
+    }
+
+    .designs-shared-cell-license {
+        align-self: center;
+        grid-area: license;
+    }
+
+    .designs-shared-label {
+        display: inline;
+    }
+}
+
+@media (width < 768px) {
+    .designs-shared-row {
+        grid-template-areas:
+            "design design"
+            "author license"
+            "actions actions";
+    }
+
+    .designs-not-importable {
+        text-align: left;
+    }
+
+    .designs-not-importable .designs-import-button {
+        align-self: flex-start;
+    }
+}

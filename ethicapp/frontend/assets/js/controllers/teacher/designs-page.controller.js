@@ -6,8 +6,9 @@
 //
 // "My designs" and "Archived" are tables built by `helpers/designs-table.js`:
 // one row per design with its status, its sharing switch, one visible action
-// and a "⋯" menu. "Shared by others" keeps the cards of the previous page
-// until it is rebuilt (#977).
+// and a "⋯" menu. "Shared by others" is a table built by
+// `helpers/designs-shared-table.js` (#977): one row per design another
+// teacher shares, with its one import action.
 
 import {
     DESIGNS_PAGE_SIZE,
@@ -27,7 +28,13 @@ import {
     tabFromSearch,
     tabSearchValue,
 } from "../../helpers/designs-table.js";
-import { designMatchesLaunchSearch } from "../../helpers/launch-design-list.js";
+import {
+    IMPORT_NOTICE_TIMEOUT_MS,
+    IMPORT_STATE_IMPORTABLE,
+    buildSharedRows,
+    importNotice,
+    sharedRowMatchesSearch,
+} from "../../helpers/designs-shared-table.js";
 
 function initialVisibleCounts() {
     return {
@@ -48,6 +55,10 @@ export function DesignsPageController($scope, $location, $translate, toast,
     vm.tables = { mine: [], archived: [], shared: [] };
     vm.visibleCounts = initialVisibleCounts();
     vm.sharedSearch = "";
+    // The rows of "Shared by others", with each design's import state.
+    vm.sharedRows = [];
+    // The notice after an import: `{ copyId, title }`, or null.
+    vm.importNotice = null;
     // Design id → true while an action on it is pending, so a second click
     // does not repeat it.
     vm.busy = {};
@@ -73,6 +84,7 @@ export function DesignsPageController($scope, $location, $translate, toast,
 
     vm.refresh = function() {
         vm.tables = buildDesignTables(designs, activities);
+        vm.sharedRows = buildSharedRows(vm.tables.shared, designs);
     };
 
     // The lists after a change in the catalog: the service keeps its designs
@@ -130,8 +142,7 @@ export function DesignsPageController($scope, $location, $translate, toast,
 
     vm.getRows = function(tab) {
         if (tab === DESIGNS_TAB_SHARED) {
-            return vm.tables.shared
-                .filter(design => designMatchesLaunchSearch(design, vm.sharedSearch));
+            return vm.sharedRows.filter(row => sharedRowMatchesSearch(row, vm.sharedSearch));
         }
         return vm.tables[tab] || [];
     };
@@ -244,27 +255,77 @@ export function DesignsPageController($scope, $location, $translate, toast,
         }
     };
 
-    // Importing keeps the previous page's behavior until #977.
-    vm.importDesign = async function(id) {
-        try {
-            await DesignCatalogService.importDesign(id);
+    // Importing (#977): a row whose design can be imported creates a private,
+    // editable copy in "My designs", and a notice names the copy. The notices
+    // of the other actions are #978's.
+
+    let importNoticeTimer = null;
+
+    function clearImportNoticeTimer() {
+        if (importNoticeTimer !== null) {
+            clearTimeout(importNoticeTimer);
+            importNoticeTimer = null;
+        }
+    }
+
+    vm.dismissImportNotice = function() {
+        clearImportNoticeTimer();
+        vm.importNotice = null;
+    };
+
+    function showImportNotice(notice) {
+        clearImportNoticeTimer();
+        vm.importNotice = notice;
+        importNoticeTimer = setTimeout(() => {
+            importNoticeTimer = null;
             $scope.$applyAsync(() => {
-                $translate("design_imported_text").then((result) => {
-                    toast.create({
-                        timeout:           100 * 1000,
-                        message:           result,
-                        containerClass:    "designs-toast-container",
-                        dismissible:       false,
-                        defaultToastClass: "toast",
-                        insertFromTop:     true,
-                    });
-                });
+                vm.importNotice = null;
             });
+        }, IMPORT_NOTICE_TIMEOUT_MS);
+    }
+
+    vm.editImportedCopy = function() {
+        const copyId = vm.importNotice?.copyId;
+        vm.dismissImportNotice();
+        if (copyId !== null && copyId !== undefined) {
+            $scope.navigateTo(`/designs/${copyId}/edit`);
+        }
+    };
+
+    vm.showImportedCopyInMyDesigns = function() {
+        vm.dismissImportNotice();
+        vm.selectTab(DESIGNS_TAB_MINE);
+    };
+
+    vm.importDesign = async function(row) {
+        if (!row || row.importState !== IMPORT_STATE_IMPORTABLE || vm.busy[row.id]) {
+            return;
+        }
+        vm.busy[row.id] = true;
+        try {
+            const copyId = await DesignCatalogService.importDesign(row.id);
+            // The catalog reloaded its designs, so the row turns "Imported".
+            designs = await DesignCatalogService.getDesigns();
+            vm.refresh();
+            showImportNotice(importNotice(copyId, designs, row.title));
         } catch (error) {
-            const messageKey = error?.data?.code === "DESIGN_CASE_NOT_IMPORTABLE"
-                ? "design_import_blocked_by_case"
-                : "design_import_error";
-            vm.showDesignToast(messageKey, "alert-danger");
+            if (error?.data?.code === "DESIGN_CASE_NOT_IMPORTABLE") {
+                vm.showDesignToast("design_import_blocked_by_case", "alert-danger");
+                // The list was stale: reload it, so the row says why it
+                // cannot be imported.
+                try {
+                    designs = await DesignCatalogService.getDesigns(true);
+                    vm.refresh();
+                } catch (reloadError) {
+                    console.warn("[DesignsPageController] Could not reload designs.", reloadError);
+                }
+            } else {
+                console.error("[DesignsPageController] Error importing design.", error);
+                vm.showDesignToast("design_import_error", "alert-danger");
+            }
+        } finally {
+            delete vm.busy[row.id];
+            $scope.$applyAsync();
         }
     };
 
@@ -276,6 +337,7 @@ export function DesignsPageController($scope, $location, $translate, toast,
         $scope.$on("$destroy", () => {
             DesignCatalogService.unregisterListener("onDesignCatalogUpdated", onCatalogUpdated);
         });
+        $scope.$on("$destroy", clearImportNoticeTimer);
         $scope.$on("caseVisibilityUpdatedDesigns", (_event, data) => {
             DesignCatalogService.applyPrivateVisibilityToDesigns(data?.affectedDesignIds || []);
         });
