@@ -10,6 +10,7 @@ import { teacherNotifications } from "../../config/socket.config.js";
 import { evaluateStudentResponse } from "../../helpers/student-response-policy.js";
 import { dispatchPhaseHook } from "../../helpers/external-service-dispatch.js";
 import { describeError } from "../../helpers/log-safety.js";
+import { JOB_SOURCE_KIND } from "../../services/external-service-jobs.service.js";
 
 const router = express.Router();
 
@@ -197,7 +198,7 @@ router.post("/activities/:id/response", async (req, res) => {
             return res.status(400).json({ error: `Unsupported design type: ${designType}` });
         }
 
-        const notificationData = await handler({
+        const { responseId, notification: notificationData } = await handler({
             userId,
             phaseId,
             taskId,
@@ -214,6 +215,8 @@ router.post("/activities/:id/response", async (req, res) => {
             designType,
             requestPayload:  req.body,
             responsePayload: notificationData,
+            // The stored response row, recorded on each hook job (#946).
+            source:          responseId ? { kind: JOB_SOURCE_KIND.RESPONSE, id: responseId } : null,
         });
 
         return res.status(201).json({
@@ -250,6 +253,10 @@ async function dispatchStudentResponseHook(context) {
     }
 }
 
+// Each response handler stores the response and returns `responseId`, the
+// stored row's id, with `notification`, the payload sent to the teacher and
+// passed to the hook as `responsePayload`.
+
 // `task` is the phase's question that the response policy found.
 async function submitSemanticDifferentialResponse({ userId, taskId: questionId, task, payload }) {
     const value = Number(payload.value);
@@ -267,7 +274,7 @@ async function submitSemanticDifferentialResponse({ userId, taskId: questionId, 
         minWordCount:          task.min_word_count,
     });
 
-    await rpg2.execSQL({
+    const rows = await rpg2.execSQL({
         dbcon: config.dbconnString,
         sql:   `
             WITH updated AS (
@@ -278,13 +285,21 @@ async function submitSemanticDifferentialResponse({ userId, taskId: questionId, 
                 WHERE did = $3
                     AND uid = $4
                     AND iteration = 0
-                RETURNING 1
+                RETURNING id
+            ),
+            inserted AS (
+                INSERT INTO differential_selection (uid, did, sel, comment, iteration, stime)
+                SELECT $5, $6, $7, $8, 0, now()
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM updated
+                )
+                RETURNING id
             )
-            INSERT INTO differential_selection (uid, did, sel, comment, iteration, stime)
-            SELECT $5, $6, $7, $8, 0, now()
-            WHERE NOT EXISTS (
-                SELECT 1 FROM updated
-            );
+            SELECT id FROM updated
+            UNION ALL
+            SELECT id FROM inserted
+            ORDER BY id DESC
+            LIMIT 1;
         `,
         sqlParams: [
             rpg2.param("plain", value),
@@ -299,11 +314,14 @@ async function submitSemanticDifferentialResponse({ userId, taskId: questionId, 
     });
 
     return {
-        type:    "semantic_differential",
-        uid:     userId,
-        did:     questionId,
-        sel:     value,
-        comment: justification,
+        responseId:   storedResponseId(rows),
+        notification: {
+            type:    "semantic_differential",
+            uid:     userId,
+            did:     questionId,
+            sel:     value,
+            comment: justification,
+        },
     };
 }
 
@@ -323,7 +341,7 @@ async function submitRankingResponse({ phaseId, userId, taskId: itemId, task, pa
         minWordCount:          task.min_word_count,
     });
 
-    await rpg2.execSQL({
+    const rows = await rpg2.execSQL({
         dbcon: config.dbconnString,
         sql:   `
             WITH updated AS (
@@ -334,13 +352,21 @@ async function submitRankingResponse({ phaseId, userId, taskId: itemId, task, pa
                 WHERE actorid = $3
                     AND uid = $4
                     AND stageid = $5
-                RETURNING 1
+                RETURNING id
+            ),
+            inserted AS (
+                INSERT INTO actor_selection (uid, actorid, orden, description, stageid, stime)
+                SELECT $6, $7, $8, $9, $10, now()
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM updated
+                )
+                RETURNING id
             )
-            INSERT INTO actor_selection (uid, actorid, orden, description, stageid, stime)
-            SELECT $6, $7, $8, $9, $10, now()
-            WHERE NOT EXISTS (
-                SELECT 1 FROM updated
-            );
+            SELECT id FROM updated
+            UNION ALL
+            SELECT id FROM inserted
+            ORDER BY id DESC
+            LIMIT 1;
         `,
         sqlParams: [
             rpg2.param("plain", order),
@@ -357,16 +383,25 @@ async function submitRankingResponse({ phaseId, userId, taskId: itemId, task, pa
     });
 
     return {
-        type:  "ranking",
-        uid:   userId,
-        items: [
-            {
-                actorid:     itemId,
-                orden:       order,
-                description: justification,
-            },
-        ],
+        responseId:   storedResponseId(rows),
+        notification: {
+            type:  "ranking",
+            uid:   userId,
+            items: [
+                {
+                    actorid:     itemId,
+                    orden:       order,
+                    description: justification,
+                },
+            ],
+        },
     };
+}
+
+// The id of the response row a submission updated or inserted, or null.
+function storedResponseId(rows) {
+    const id = Number(rows?.[0]?.id);
+    return Number.isSafeInteger(id) && id > 0 ? id : null;
 }
 
 function emitResponseSubmittedNotification(sessionId, phaseId, responsePayload) {

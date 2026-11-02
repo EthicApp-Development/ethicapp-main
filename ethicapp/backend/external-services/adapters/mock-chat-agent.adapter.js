@@ -76,7 +76,56 @@ async function buildExternalAgentReply(context, transcript) {
     }
 }
 
+// The report-building contribution (#945), for verifying the merge locally:
+// a column that marks the agent's own messages as shown to students, and,
+// for each group the agent spoke in, a summary row it never showed them,
+// placed a second after its last message there. It reads the transcript's
+// rows only: this mock keeps no results of its own.
+export const REPORT_SHOWN_COLUMN = "mockchat_shown_to_students";
+export const REPORT_SUMMARY_OFFSET_MS = 1000;
+
+export function buildReportContribution(context, serviceId) {
+    if (context.reportType !== "chat_transcript") {
+        return null;
+    }
+
+    const groups = new Map();
+    for (const row of context.rows) {
+        const key = `${row.phaseId}:${row.questionId}:${row.groupId}`;
+        const group = groups.get(key) || { row, total: 0, own: 0, lastOwnTime: null };
+        group.total += 1;
+        if (row.externalServiceId === serviceId) {
+            group.own += 1;
+            const time = new Date(row.time).getTime();
+            group.lastOwnTime = Math.max(group.lastOwnTime ?? time, time);
+        }
+        groups.set(key, group);
+    }
+
+    const ownRows = context.rows.filter(row => row.externalServiceId === serviceId);
+    return {
+        columns: [{ id: REPORT_SHOWN_COLUMN, label: "Shown to students" }],
+        values:  ownRows.map(row => ({
+            rowKey: row.messageId,
+            values: { [REPORT_SHOWN_COLUMN]: true },
+        })),
+        rows: Array.from(groups.values())
+            .filter(group => group.own > 0 && Number.isFinite(group.lastOwnTime))
+            .map(group => ({
+                phaseId:    group.row.phaseId,
+                questionId: group.row.questionId,
+                groupId:    group.row.groupId,
+                time:       new Date(group.lastOwnTime + REPORT_SUMMARY_OFFSET_MS).toISOString(),
+                message:    `Mock chat agent summary: ${group.total} message(s) in this group, `
+                    + `${group.own} from the agent.`,
+                values:     { [REPORT_SHOWN_COLUMN]: false },
+            })),
+    };
+}
+
 export async function register({ service, subscribe, publishGroupChatMessage }) {
+    subscribe("report-building", async context => buildReportContribution(context, service.id));
+
     subscribe("chat-message-received", async (context, { callback }) => {
         const transcript = rememberMessage(context);
         const agentReply = await buildExternalAgentReply(context, transcript);

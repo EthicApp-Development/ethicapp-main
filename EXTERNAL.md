@@ -494,10 +494,63 @@ Chat message hook context includes:
 - `savedMessage`
 - `notificationPayload`
 - `designType`
+- `source`: `{ kind: "chat_message", id }`, the saved message's id
+  (`differential_chat`, or `chat` for ranking), or `null` when the insert
+  returned no row
+
+The student response hook's context likewise carries `source:
+{ kind: "response", id }`, the stored `differential_selection` row (or
+`actor_selection` for ranking). The registry writes a hook's `source` to the
+`source_kind` and `source_id` columns of each job it creates (#946), and the
+handler of a callback correlated with that job reads it back as
+`context.job.source`. Jobs of other hooks keep both columns `NULL`.
 
 Groups are ephemeral in EthicApp and are scoped to a phase. Chat-oriented
 adapters should therefore key any accumulated conversation state by at least
 `phaseId` and `groupId`.
+
+### Report contributions
+
+`report-building` (epic #620, #944) is a hook with its own collecting
+dispatch, `registry.collectReportContributions(reportType, context)`, not
+`dispatchHook()`, which ignores it. While an activity report is built, it asks
+the adapters of the services that are registered, subscribed to the hook and
+have at least one job in the session, whatever the AI service policy says
+today. Each handler is awaited under a 5-second timeout and returns a
+contribution: columns keyed by the report's rows and, for the chat transcript,
+rows of its own. It reads its stored results through a reader limited to its
+own service and the report's session. No job or result row is created and no
+AI service is called. A handler that fails, times out or returns an invalid
+contribution gets its own outcome and is left out; the others are unaffected.
+
+Both semantic-differential reports merge the completed contributions (#945):
+columns after the report's own, by service in subscription order, and, in the
+chat transcript, contributed rows attributed to the service and placed by
+time. Contributed rows must name a phase, question and group of the session.
+The export's audit row records each contribution's outcome and counts, never
+its values. Without contributions the CSV is unchanged byte for byte. The dev
+mock adapters `mock-ai-response-review` and `mock-chat-agent` contribute, for
+local verification.
+
+The Polyadic bridge contributes to the chat transcript (#949). Each agent
+message it published from a callback (#947) gets `polyadic_agent_name`, the
+agent that wrote it, `polyadic_agent_trigger`, `polyadic_agent_in_reply_to`
+and `polyadic_agent_visible_to_students = true`. Each evaluation a callback
+carried but the bridge did not publish becomes a row at the callback's receipt
+time, with the same columns and `polyadic_agent_visible_to_students = false`.
+The callback handler records, for each message it publishes, the index of the
+evaluation it came from (`publishedMessages[n].evaluationIndex`), so each
+unpublished evaluation is added exactly once. For callbacks stored without
+that index, a chat agent's evaluations are added only when none of its
+evaluations was published; when some were, which ones failed cannot be told,
+and none is added. The trigger is `reactive` only when the callback correlates with the
+`chat-message-received` job of a student message, whose id is then
+`polyadic_agent_in_reply_to`; it is `unknown` otherwise, since Polyadic sends
+both its proactive interventions and its window-event replies on the room's
+correlation id (#833). Messages published before #947 get no values.
+
+The contract, the reader and the catalog's `report.columnPrefix` are described
+in `ethicapp/backend/external-services/README.md`, "Report building".
 
 ## External Result Callback
 
@@ -657,6 +710,15 @@ publishes a group chat message, EthicApp creates or updates the agent row using
 the adapter service id and stores the chat message with `external_agent_id`.
 Transcript queries then return `author_role: "external_service"` and the agent
 display name, so students can distinguish agent messages from professor messages.
+
+The agent row is shared by every agent of a service, and its display name is
+the latest one published. A message published while a `callback-received`
+handler runs is linked to that callback's `external_service_results` row
+instead: the handler passes `resultId: context.resultId` to
+`publishGroupChatMessage(...)`, and the message stores it in
+`external_service_result_id` (#947). The activity reports read the agent of
+each message, and the job the callback answered, from the linked result. See
+`ethicapp/backend/external-services/README.md` ("Available Hook Publishers").
 
 The `mock-chat-agent` adapter uses the external mock service to produce messages
 like:

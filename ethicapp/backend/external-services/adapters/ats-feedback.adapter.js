@@ -24,6 +24,7 @@ import {
     questionTextFromPhaseDesign,
     tutorEvaluationFromExternalResult,
 } from "./ats-feedback.utils.js";
+import { buildReportContribution } from "./ats-feedback.report.js";
 
 export {
     buildArgumentClientContext,
@@ -897,6 +898,10 @@ export async function register({
         await callback(result);
         return result;
     });
+
+    // The tutor's feedback columns on the responses report (#948), from the
+    // stored results only: the tutor is not called.
+    subscribe("report-building", buildReportContribution);
 
     subscribe("phase-ended", async (context, { callback }) => {
         try {

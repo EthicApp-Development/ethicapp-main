@@ -288,6 +288,7 @@ Each manifest entry describes one service:
 | `descriptor` | no | `{ path }`: the capability descriptor the service's AI backend publishes (#687). Its id (`service.id` in the descriptor) is the one AI Additions service in `requires`, so an adapter with a descriptor requires exactly one service; `descriptor.serviceId` is no longer accepted (#812). That id may differ from `id`: ids are mapped, not renamed, so stored designs, chat agents and jobs keep the manifest id. `path` is the descriptor route relative to the AI Additions connection's `base_url`, for example `/polyadic-agent/api/capabilities`; it must be an absolute path without host, query or `..` segments. An invalid path is dropped with a warning. `GET /external-services` exposes `descriptor.serviceId` and a summary (see "Listing services"); the route stays internal (`getServiceDescriptor()`). |
 | `capabilities` | — | Removed (#726). Entries that still declare it log a deprecation warning and the key is ignored. A service that processes student responses declares the `response` scope instead; the student app shows the processing state for those services. |
 | `enabled` | — | Removed (#812). An entry that declares it rejects the catalog; usability is decided at dispatch (see "Usability"). |
+| `report` | no | `{ columnPrefix }`: the prefix of every column the adapter adds to activity reports (see "Report building"), lowercase letters and digits ending in `_`, such as `ats_`. Required when `hooks` lists `report-building`; two entries cannot declare the same prefix. A malformed declaration, or `report-building` without one, rejects the catalog. |
 | `callbackAuth` | no | Inbound callback authorization. See below. |
 
 When `callbackAuth` is present, EthicApp verifies that the authenticated Keycloak
@@ -307,7 +308,7 @@ warning and never receive hooks.
 
 ```js
 export async function register({
-    service,                 // normalized manifest entry (id, description, hooks, globalHooks, scopes, ui, descriptor, requires, development, adapter, callbackAuth)
+    service,                 // normalized manifest entry (id, description, hooks, globalHooks, scopes, ui, descriptor, requires, report, development, adapter, callbackAuth)
     subscribe,               // (hookName, handler) => void
     publishStudentResult,    // (payload) => Promise<boolean>
     publishGroupChatMessage, // (payload) => Promise<{ savedMessage, notificationPayload } | null>
@@ -542,7 +543,9 @@ shows the `errors` of a `400` next to their fields.
 
 ### Handler signature
 
-Every hook handler receives `(context, { callback, reportInstantiation })`:
+Every hook handler receives `(context, { callback, reportInstantiation })`,
+except `report-building`, which receives `(context, { results, signal })` (see
+"Report building"):
 
 - `context` is the object built by the dispatch site plus registry-injected
   fields. For hooks dispatched through `dispatchHook()` the registry adds
@@ -583,12 +586,13 @@ failures are isolated from teacher and student requests.
 | `phase-started` | Every phase transition | Services enabled for the started phase | `sessionId`, `phaseId` (= started), `startedPhaseId`, `endedPhaseId` |
 | `phase-ended` | Phase transition, when a different phase was active before | Services enabled for the ended phase | `sessionId`, `phaseId` (= ended), `startedPhaseId`, `endedPhaseId` |
 | `activity-finished` | `POST /activities/:id/finish` | Union of services enabled in any phase of the design | `sessionId`, `phaseId` (= last active), `startedPhaseId: null`, `endedPhaseId` |
-| `student-response-submitted` | Student response endpoints in `controllers/activities/activities-student.js` | Services enabled for the phase | `sessionId`, `phaseId`, `userId`, `questionId`, `designType`, `requestPayload`, `responsePayload` |
-| `chat-message-received` | `controllers/group-messages.js` after a group chat message is saved | Services enabled for the phase | `sessionId`, `phaseId`, `questionId`, `groupId`, `userId`, `parentId`, `content`, `savedMessage`, `notificationPayload`, `designType` |
+| `student-response-submitted` | Student response endpoints in `controllers/activities/activities-student.js` | Services enabled for the phase | `sessionId`, `phaseId`, `userId`, `questionId`, `designType`, `requestPayload`, `responsePayload`, `source` (`{ kind: "response", id }`: the stored `differential_selection` row, or `actor_selection` for ranking) |
+| `chat-message-received` | `controllers/group-messages.js` after a group chat message is saved | Services enabled for the phase | `sessionId`, `phaseId`, `questionId`, `groupId`, `userId`, `parentId`, `content`, `savedMessage`, `notificationPayload`, `designType`, `source` (`{ kind: "chat_message", id }`: the saved `differential_chat` row, or `chat` for ranking) |
 | `case-created` | `POST /cases` after the case, authors, tags, analyses, and render job are persisted, and `POST /cases/:id/analyses/:serviceId/generate` (`helpers/case-lifecycle-helper.js`) | Services chosen for the case when it was created; generate reaches one of them | `caseId`, `caseUuid`, `userId` (creator), `title`, `pdfPath`, `languageCode`, `visibility`, `pdfRenderJobId` |
 | `design-created` | After `POST /designs` answers, and after `POST /designs/:id/duplicate` (duplicate or import) commits the copy (`helpers/design-analyses-lifecycle-helper.js`) | Each design-scoped service whose generation was reserved, one dispatch per service (see "Design Analyses") | `trigger` (`"created"`), `designId`, `userId` (requester), `caseId`, `languageCode` (the case's), `design` (the design document), `analysisInput` and `inputHash` (from the service's `designAnalysisInput()`) |
 | `design-updated` | After `PATCH /designs/:id` answers (`trigger: "updated"`), and from `POST /designs/:id/analyses/:serviceId/generate` with the current design (`trigger: "generate"`) (`helpers/design-analyses-lifecycle-helper.js`) | As for `design-created` | As for `design-created`, with `trigger` `"updated"` or `"generate"` |
 | `callback-received` | `POST /external-services/callbacks` | Only the service named in the callback body | `serviceId`, `eventType`, `correlationId`, `eventId`, `requestPayload`, `rawBody`, `auth` |
+| `report-building` | `registry.collectReportContributions(reportType, context)`, while an activity report is built (#944; the reports call it from #945) | The registered services subscribed to it with at least one job in the session, whatever the policy. Not dispatched through `dispatchHook()` (see "Report building") | `reportType`, `serviceId`, `sessionId`, `designType`, `rows` |
 | `user-forgotten` | The user erasure processor (`services/user-erasure/`), for each pending request in `user_erasure_requests`, of a forgotten student (#876) or teacher (#877) | Global (`globalHooks`), one AI Additions service at a time: the adapters that declare it and require the request's service. An erasure hook: it skips the policy (see "Erasure hooks") | `userId` (the forgotten account), `erasureRequestId` |
 
 ### Hook enablement
@@ -659,6 +663,161 @@ Jobs created by case and global hooks have `session_id`, `phase_id`,
 `GET /external-services/jobs` and `GET /external-services/results` to find
 them.
 
+### Report building
+
+`report-building` (epic #620, #944) lets an adapter add what its service
+produced during an activity to the activity's reports. The report generator
+owns the report: its rows, its identity columns and the CSV; the adapter owns
+the meaning of its stored results and decides how they cross with the report.
+
+An adapter subscribes with the ordinary `subscribe("report-building",
+handler)`. The registry accepts the handler only when the catalog entry lists
+the hook in `hooks` and declares `report.columnPrefix`, and only one handler
+per service.
+
+**Collecting dispatch.** The hook is never dispatched through `dispatchHook()`,
+which ignores it. The report generator calls
+`registry.collectReportContributions(reportType, context, { reservedColumnIds })`
+(`services/external-service-report-contributions.js`), which:
+
+- asks the services that are registered, subscribed to `report-building` and
+  have at least one `external_service_jobs` row (hook or room job) for
+  `context.sessionId`. The AI service policy is not applied: the data was
+  produced while the service was allowed;
+- runs the handlers concurrently and awaits each one under its own timeout,
+  `REPORT_CONTRIBUTION_TIMEOUT_MS` (5 s, no environment variable);
+- creates no job or result row, passes no `callback` and calls no remote
+  service; the adapter must not call its AI service either;
+- resolves to one outcome per asked service, in subscription order. One
+  service's outcome never affects another's:
+
+| `status` | Meaning |
+| --- | --- |
+| `completed` | `contribution` holds the validated, normalized contribution. |
+| `failed` | The handler threw or rejected. |
+| `timed_out` | The handler did not settle within the timeout; what it returns later is ignored. |
+| `invalid` | The contribution broke the contract; `problems` lists why. |
+
+Every outcome but `completed` carries a short `reason` and is logged as one
+`[external-services] Left out a report contribution.` line holding
+`serviceId`, `reportType`, `sessionId` and `status`, plus `errorName` and
+`errorCode` (when they look like identifiers, otherwise `null`) for `failed`,
+`timeoutMs` for `timed_out` and `problems` for `invalid`. An adapter's error
+message, its stack and its contributed values are never logged: they can quote
+a student's text. Problems name paths and column ids only.
+`collectReportContributions` rejects only for an unknown report type, a context
+without a positive integer `sessionId` or without `rows`, or when the session's
+services cannot be read.
+
+**Context.** The handler's `context` is frozen:
+`{ reportType, serviceId, sessionId, designType, rows }`, where `reportType` is
+`responses` or `chat_transcript` and `rows` are the report's row keys:
+
+- responses report: `{ responseId, phaseId, questionId, userId, groupId }`;
+- chat transcript: `{ messageId, phaseId, questionId, groupId, userId,
+  externalServiceId, externalServiceResultId, time }`. `externalServiceResultId`
+  is the `external_service_results` row an agent message was published from
+  (#947), or `null`; `time` is ISO 8601.
+
+`phaseId` is the phase's `stages.id`, `questionId` the question's id
+(`differential.id`) and `groupId` the row's team.
+
+**Results reader.** The second argument is `{ results, signal }`. `signal` is an
+`AbortSignal` aborted when the handler's timeout expires. `results` is the
+only data access the handler gets
+(`services/external-service-report-results.service.js`):
+
+```js
+const stored = await results.list({ hookName, phaseId, questionId, userId, groupId }); // all optional
+// [{ id, jobId, hookName, status, phaseId, questionId, groupId, userId,
+//    source, rawPayload, adapterResult, receivedAt }], oldest first
+```
+
+It returns this service's `external_service_results` for the report's session
+only; filters cannot widen that scope, and unknown or malformed filters reject
+with a `TypeError`. `hookName` is the hook of the job a result answers (for
+example `student-response-submitted`), or `null` for a result without a job.
+Unconsumed (`pending`) results are left out. `source` is the response or chat
+message the result's job processed (#946), as `{ kind: "response" |
+"chat_message", id }` with a numeric `id` (see "Jobs and `callback(result)`").
+It is `null` for a result without a job and for a job that recorded none,
+such as jobs of other hooks and jobs created before migration V38.
+
+**Contribution contract.** The handler resolves to `undefined`/`null` (nothing
+to add) or to:
+
+```js
+{
+    columns: [{ id: "ats_title", label: "Title" }],         // label optional
+    values:  [{ rowKey: 101, values: { ats_title: "..." } }],
+    rows:    [{ phaseId, questionId, groupId, time, message, values }], // chat transcript only
+}
+```
+
+- Each column `id` is snake_case, starts with the service's `columnPrefix`, is
+  not repeated and is not one of the report's own columns (`reservedColumnIds`).
+  A `label` is a string of at most 200 characters.
+- `values` entries name a `rowKey` from `context.rows` (a `responseId` or a
+  `messageId`) once at most, and map declared column ids to scalars: strings of
+  at most 10,000 characters, finite numbers, booleans or `null`.
+- `rows` are accepted by the chat transcript only. `phaseId` is a positive
+  integer, `questionId` and `groupId` positive integers or `null`, `time` a
+  date (normalized to ISO 8601), `message` a string or `null`, and `values` as
+  above. The generator fills the identity columns itself and attributes the row
+  to the service (`author_role = external_service`, #945).
+- Unknown keys, unknown row keys, undeclared columns, non-scalar or over-long
+  values, and rows for the responses report make the whole contribution
+  `invalid`. Long strings are not truncated.
+
+**Merging into the reports** (#945, `controllers/activities/report-contributions.js`).
+Both semantic-differential reports (`GET /activity/:session_id/full_report`
+and `GET /activity/:session_id/chat_transcript`) call the collector after
+reading their rows, with their own columns as `reservedColumnIds`. Ranking
+reports still answer 501.
+
+- Each completed contribution's columns are appended after the report's
+  columns, grouped by service in subscription order (the outcomes' order). The
+  CSV header uses the column ids; labels are not exported. A row without a
+  value for a column has an empty field. A service that adds no column, or
+  whose contribution was left out, adds nothing to the header.
+- Contributed chat rows are checked against the session: `phaseId` must be a
+  phase of the session, `questionId` (when given) a question of that phase and
+  `groupId` (when given) a group of that phase. A row that fails makes its
+  whole contribution `invalid`, logged and audited like the collector's
+  outcomes; if the session cannot be read, the contribution is `failed`.
+- The generator fills a contributed row's transcript columns: `author_role` is
+  `external_service`, `external_service_id` the service id, `name` and
+  `external_agent_id` come from the service's `external_service_agents` row
+  (the service id when it has none), the question columns from `questionId`,
+  `team_id` from `groupId`, and `phase_number` from `phaseId`. `id`, `user_id`,
+  `rut`, `gender` and `reply_to` stay empty.
+- Contributed rows are placed in the transcript's order (phase, question,
+  group, time, NULLs last). The report's own rows keep their order; a
+  contributed row that ties one of them goes after it, and ties between
+  contributed rows keep the service order.
+- Without any contributed column or row, the CSV is byte-identical to the
+  report's own. The report is delivered whatever the outcomes, and its
+  `row_count` counts contributed rows.
+- The export's audit row (`activity_report_exports.metadata`) records
+  `contributions`: one `{ serviceId, status, columns, values, rows }` per
+  service asked, with counts only, plus `reason` for an outcome other than
+  `completed` and `problems` for an `invalid` one. It holds no contributed
+  value. When the collector itself rejects, the report is delivered without
+  contributions and the metadata says `contributionsCollection: "failed"`.
+
+**Development mocks.** With `EXTERNAL_SERVICES_DEVELOPMENT_ADAPTERS=true`, two
+mock adapters contribute, so the merge can be checked on the local stack
+without AI Additions. They read the report's row keys, since their hook
+callbacks store no results:
+
+- `mock-ai-response-review` (`mockreview_`) adds `mockreview_note` to every
+  row of the responses report, with the number of stored results whose job
+  processed that response (zero unless callbacks were posted to it). It adds
+  nothing to the chat transcript.
+- `mock-chat-agent` (`mockchat_`) adds `mockchat_shown_to_students` to the
+  chat transcript: `true` on its own messages and `false` on one summary row
+  per group it spoke in, placed a second after its last message there.
+
 ### Adding a new hook
 
 1. Choose a kebab-case name and add it to the Hook Catalog above with its
@@ -686,6 +845,18 @@ as `jobId` and `correlationId` in the handler context. A caller that reserved
 work under a job id beforehand passes `jobIds` (service id to job id) in the
 dispatch options: the job is created under that id, and the handler receives
 it even when the row cannot be created.
+
+A job also records what its hook processed (#946), from the context's
+`source: { kind, id }`, in `source_kind` and `source_id`:
+`student-response-submitted` names the stored response (`response`), and
+`chat-message-received` the saved message (`chat_message`). The activity's
+design type says which table the id belongs to, so there is no foreign key.
+Other hooks, room jobs and jobs created before migration V38 leave both
+columns `NULL`, as does a `source` that is not a known kind with a positive
+integer id. A callback correlated with the job gets it back as
+`context.job.source` (`null` when there is none), so a result can be tied to
+the exact response or message it came from, for example a reactive reply to
+the student message it answered.
 
 Adapters report outcomes by calling the `callback(result)` function passed to
 the handler. `result.status` drives the job status:
@@ -801,6 +972,22 @@ The registry provides two helper publishers to adapters:
   `external_service_agents` by `serviceId`. Returns
   `{ savedMessage, notificationPayload }` or `null` when the payload is
   incomplete or the message could not be saved.
+
+  A handler of `callback-received` that publishes a message passes
+  `resultId: context.resultId` (#947). The message row (`chat` or
+  `differential_chat`) then stores it in `external_service_result_id`
+  (`database/migrations/V39__chat_external_service_result_link.sql`), so the
+  activity reports can read from that callback's result what the message row
+  does not keep: which agent wrote it and which job the callback answered.
+  `external_service_agents` holds one row per service, and its
+  `display_name` is overwritten with the latest agent name, so the result is
+  where the name of each message's agent survives. The Polyadic bridge also
+  lists the messages it published, `publishedMessages: [{ messageId,
+  agentName }]`, in its callback payload, which is stored in the result's
+  `adapter_result`. A message published outside a callback, or with a
+  `resultId` that is not a uuid, is saved with no link (the invalid id is
+  logged). Students' and teachers' messages never carry one. Deleting a
+  result sets the link to `NULL` and keeps the message.
 
 ## Case Analyses
 
@@ -1690,6 +1877,43 @@ activity, not inside one activity:
    `external_service_results.adapter_result`.
 
 Assigning modes to groups of students inside one activity is out of scope.
+
+### The tutor's report columns
+
+The tutor adapter subscribes to `report-building` (#948, see "Report
+building") and adds `ats_` columns to the responses report
+(`adapters/ats-feedback.report.js`); it adds nothing to the chat transcript.
+It reads only its stored `student-response-submitted` results, whose
+`raw_payload` is the tutor's callback payload, and never calls the tutor.
+
+| Column | Holds |
+| --- | --- |
+| `ats_mode` | `analysis` or `comparison` |
+| `ats_tutor_mode` | `enhanced` or `basic`, the mode the tutor reported |
+| `ats_requested_mode` | `enhanced` or `basic`, the mode the phase requested |
+| `ats_feedback_title`, `ats_feedback_summary` | The feedback's title and summary |
+| `ats_feedback_bullets` | The feedback's points, one per line |
+| `ats_claim`, `ats_evidence`, `ats_warrant`, `ats_qualifier` | The criterion scores: the claim's position (-1, 0 or 1), the others 0 to 3 |
+| `ats_claim_type` | The claim type the tutor matched (`AF#`) |
+| `ats_unsupported_claims` | How many unsupported claims the tutor found |
+| `ats_feedback_count` | How many results reached the row |
+| `ats_feedback_time` | When the shown result was received (ISO 8601) |
+
+- Only `completed` and `callback-received` results count; `failed` ones were
+  refused or not processed.
+- A result goes to the row of the response its job recorded as its source
+  (#946). It is ignored when that response is not in the report or belongs to
+  another user. A result without a source, from a job created before V38,
+  goes to the row with the same phase, question and user, only when exactly
+  one row has them.
+- When several results reach a row (a first analysis, then comparisons), the
+  row shows the latest by `receivedAt`, whole, and `ats_feedback_count` says
+  how many there were. A comparison reports no claim type, tutor mode or
+  unsupported claims, so those fields are empty when the latest is one.
+- The student's argument (`argumentPreview`, the `comparison` texts) and the
+  claim type's rationale are not exported; the report's `comment` column
+  already holds the response. A field the result does not report is empty.
+- Results of a forgotten user are redacted as stored (V31) and appear so.
 
 ### Recording results from an adapter
 

@@ -3,9 +3,25 @@ import * as rpg2 from "../db/rest-pg-2.js";
 import * as Yup from "yup";
 import { getDesignTypeByPhaseId } from "./designs-helper.js";
 
+// Any uuid Postgres accepts, whatever its version: external_service_results
+// ids come from gen_random_uuid() (v4), but the format check stays loose.
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// The external_service_results id an agent chat message links to (#947),
+// lower-cased, or null when the value is missing or not a uuid.
+export function normalizeExternalServiceResultId(value) {
+    if (typeof value !== "string") {
+        return null;
+    }
+    const trimmed = value.trim();
+    return UUID_PATTERN.test(trimmed) ? trimmed.toLowerCase() : null;
+}
+
 const flatChatMessageSchema = Yup.object({
     userId: Yup.number().integer().positive().nullable(),
     externalAgentId: Yup.number().integer().positive().nullable(),
+    // The callback result an agent message was published from (#947).
+    externalServiceResultId: Yup.string().matches(UUID_PATTERN).nullable(),
     phaseId: Yup.number().integer().positive().required(),
     questionId: Yup.number().integer().positive().nullable(),
     groupId: Yup.number().integer().positive().nullable(),
@@ -15,6 +31,10 @@ const flatChatMessageSchema = Yup.object({
     "human-or-external-author",
     "A chat message requires either userId or externalAgentId.",
     value => Boolean(value?.userId || value?.externalAgentId)
+).test(
+    "result-link-for-agent-messages",
+    "Only a message with externalAgentId can link a callback result.",
+    value => !value?.externalServiceResultId || Boolean(value?.externalAgentId)
 );
 const nestedChatMessageSchema = Yup.object({
     header: Yup.object({
@@ -59,6 +79,7 @@ function normalizeChatMessageInput(data) {
     return {
         userId: data?.userId == null ? null : Number(data.userId),
         externalAgentId: data?.externalAgentId == null ? null : Number(data.externalAgentId),
+        externalServiceResultId: data?.externalServiceResultId ?? null,
         phaseId: Number(data?.phaseId),
         questionId: data?.questionId == null ? null : Number(data.questionId),
         groupId: data?.groupId == null ? null : Number(data.groupId),
@@ -81,19 +102,37 @@ export const chatTranscriptHandlers = {
     semantic_differential: semanticDifferentialChatTranscriptByGroup,
 };
 
+// Each handler stores one message and resolves to its row. An agent message
+// published from a callback carries externalServiceResultId (#947); every
+// other message stores NULL. `execSQL` is replaced in tests.
 export const chatInsertHandlers = {
-    ranking: async ({ userId, externalAgentId, phaseId, groupId, content, parentId, dbcon }) => {
-        const result = await rpg2.execSQL({
+    ranking: async ({
+        userId,
+        externalAgentId,
+        externalServiceResultId = null,
+        phaseId,
+        groupId,
+        content,
+        parentId,
+        dbcon,
+        execSQL = rpg2.execSQL
+    }) => {
+        const result = await execSQL({
             sql: `
-                INSERT INTO chat (uid, external_agent_id, stageid, tmid, content, parent_id)
-                VALUES ($1, $2, $3, $4, $5, $6)
-                RETURNING id, uid, external_agent_id, stageid, tmid, content, stime, parent_id
+                INSERT INTO chat (
+                    uid, external_agent_id, stageid, tmid, content, parent_id,
+                    external_service_result_id
+                )
+                VALUES ($1, $2, $3, $4, $5, $6, $7)
+                RETURNING id, uid, external_agent_id, stageid, tmid, content, stime, parent_id,
+                          external_service_result_id
             `,
             dbcon,
             sqlParams: [rpg2.param('plain', userId) || null,
                 rpg2.param('plain', externalAgentId) || null, rpg2.param('plain', phaseId),
                 rpg2.param('plain', groupId) || null, rpg2.param('plain', content),
-                rpg2.param('plain', parentId) || null],
+                rpg2.param('plain', parentId) || null,
+                rpg2.param("plain", externalServiceResultId ?? null)],
         });
 
         return result[0] || null;
@@ -102,31 +141,42 @@ export const chatInsertHandlers = {
     semantic_differential: async ({
         userId,
         externalAgentId,
+        externalServiceResultId = null,
         questionId,
         groupId,
         content,
         parentId,
-        dbcon
+        dbcon,
+        execSQL = rpg2.execSQL
     }) => {
-        const result = await rpg2.execSQL({
+        const result = await execSQL({
             sql: `
-                INSERT INTO differential_chat (uid, external_agent_id, did, tmid, content, parent_id)
-                VALUES ($1, $2, $3, $4, $5, $6)
-                RETURNING id, uid, external_agent_id, did, tmid, content, stime, parent_id
+                INSERT INTO differential_chat (
+                    uid, external_agent_id, did, tmid, content, parent_id,
+                    external_service_result_id
+                )
+                VALUES ($1, $2, $3, $4, $5, $6, $7)
+                RETURNING id, uid, external_agent_id, did, tmid, content, stime, parent_id,
+                          external_service_result_id
             `,
             dbcon,
             sqlParams: [rpg2.param('plain', userId) || null,
                 rpg2.param('plain', externalAgentId) || null, rpg2.param('plain', questionId),
                 rpg2.param('plain', groupId) || null,
                 rpg2.param('plain', content),
-                rpg2.param('plain', parentId) || null],
+                rpg2.param('plain', parentId) || null,
+                rpg2.param("plain", externalServiceResultId ?? null)],
         });
 
         return result[0] || null;
     },
 };
 
-export const saveChatMessage = async function(data) {
+// `resolveDesignType` and `insertHandlers` are replaced in tests.
+export const saveChatMessage = async function(data, {
+    resolveDesignType = getDesignTypeByPhaseId,
+    insertHandlers = chatInsertHandlers,
+} = {}) {
     try {
         if (data?.header && data?.payload) {
             await nestedChatMessageSchema.validate(data, { abortEarly: false, stripUnknown: true });
@@ -138,10 +188,19 @@ export const saveChatMessage = async function(data) {
             stripUnknown: true,
         });
 
-        const { userId, externalAgentId, phaseId, questionId, groupId, parentId, content } = validatedData;
+        const {
+            userId,
+            externalAgentId,
+            externalServiceResultId,
+            phaseId,
+            questionId,
+            groupId,
+            parentId,
+            content
+        } = validatedData;
 
-        const designType = await getDesignTypeByPhaseId(phaseId);
-        const handler = chatInsertHandlers[designType];
+        const designType = await resolveDesignType(phaseId);
+        const handler = insertHandlers[designType];
         if (!handler) {
             throw new Error(`Unsupported design type: ${designType}`);
         }
@@ -149,6 +208,7 @@ export const saveChatMessage = async function(data) {
         const savedMessage = await handler({
             userId,
             externalAgentId,
+            externalServiceResultId: externalServiceResultId ?? null,
             phaseId,
             questionId,
             groupId,
