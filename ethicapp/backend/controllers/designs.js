@@ -20,6 +20,7 @@ import {
 } from "../helpers/case-documents.js";
 import { copyReadyDesignAnalyses } from "../helpers/design-analyses-helper.js";
 import { checkDesignCase } from "../helpers/design-case-association.js";
+import { designCreatedAt, designUsesAiServices } from "../helpers/design-list-fields.js";
 import { scheduleDesignAnalyses } from "../helpers/design-analyses-lifecycle-helper.js";
 import { DESIGN_HOOK_TRIGGERS } from "../helpers/design-analysis-hooks.js";
 import {
@@ -230,6 +231,10 @@ function normalizeDesignRow(row) {
             commercialSource: row.case_commercial_source,
         } : null,
         userOwned: row.user_owned,
+
+        // For the launch wizard's list (#967).
+        createdAt:      designCreatedAt(row.created_at),
+        usesAiServices: designUsesAiServices(row.design),
     };
 
     if (!row.user_owned && creatorName) {
@@ -776,6 +781,7 @@ router.get("/designs", async (req, res) => {
                        d.source_design_title, d.source_design_author, d.source_design_license_code,
                        d.is_editable_copy,
                        d.case_id,
+                       d.created_at,
                        c.title AS case_title,
                        c.author_firstname AS case_author_firstname,
                        c.author_lastname AS case_author_lastname,
