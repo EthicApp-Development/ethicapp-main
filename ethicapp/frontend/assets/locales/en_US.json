@@ -335,6 +335,8 @@
 	"design_archive_success": "Design archived",
 	"design_unarchive_success": "Design restored",
 	"design_archive_error": "Could not update the design archive status.",
+	"design_delete_in_use": "This design cannot be deleted because an activity uses it. You can archive it instead.",
+	"design_delete_failed": "Could not delete the design. Please try again in a few minutes.",
 	"save_design_failure": "Failed to save the design. Please try again in a few minutes.",
 	"save_design_locked": "This design is used by an activity and can no longer be edited. Duplicate it to make changes.",
 	"save_design_invalid_service_settings": "Some AI service settings in this design are not valid. Review them and try again.",

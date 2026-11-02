@@ -214,11 +214,15 @@ let DesignCatalogService = ($rootScope, $http) => {
                     await service.getDesigns(true);
                     service.notifyListeners("onDesignCatalogUpdated", {
                         response: null });
-                } else {
-                    console.error("Error deleting design: Unexpected response status", data);
+                    return true;
                 }
+                throw new Error("Failed to delete design");
             } catch (error) {
+                // Callers tell the teacher why the delete failed (#963), so the
+                // rejection, with its status and error code (DESIGN_IN_USE),
+                // reaches them.
                 console.error(`Error deleting design with id '${id}':`, error);
+                throw error;
             }
         },
 

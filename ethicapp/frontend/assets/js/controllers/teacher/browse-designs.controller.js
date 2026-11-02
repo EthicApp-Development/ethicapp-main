@@ -289,7 +289,14 @@ export function BrowseDesignsController($scope, $routeParams, toast, $translate,
     };
 
     vm.deleteDesign = async function(id) {
-        await DesignCatalogService.deleteDesign(id);
+        try {
+            await DesignCatalogService.deleteDesign(id);
+        } catch (error) {
+            const messageKey = error?.data?.code === "DESIGN_IN_USE"
+                ? "design_delete_in_use"
+                : "design_delete_failed";
+            vm.showDesignToast(messageKey, "alert-danger");
+        }
     };
 
     vm.archiveDesign = async function(id) {

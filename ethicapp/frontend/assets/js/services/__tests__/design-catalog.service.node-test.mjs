@@ -145,3 +145,39 @@ describe("DesignCatalogService.getDesignAiServices", () => {
         await assert.rejects(service.getDesignAiServices(5), /Unexpected response format/u);
     });
 });
+
+describe("DesignCatalogService.deleteDesign", () => {
+    async function quietly(action) {
+        const originalError = console.error;
+        console.error = () => {};
+        try {
+            return await action();
+        } finally {
+            console.error = originalError;
+        }
+    }
+
+    it("sends a DELETE and resolves true when the design is deleted", async () => {
+        const { service, requests } = createService(async () => ({ data: { status: "ok" } }));
+
+        const deleted = await service.deleteDesign(5);
+
+        assert.equal(deleted, true);
+        assert.equal(requests[0].url, "/designs/5");
+        assert.equal(requests[0].method, "DELETE");
+    });
+
+    it("rejects with the HTTP error when an activity uses the design (#963)", async () => {
+        const rejection = { status: 409, data: { status: "err", code: "DESIGN_IN_USE" } };
+        const { service } = createService(async () => { throw rejection; });
+
+        await quietly(() => assert.rejects(service.deleteDesign(5),
+            (error) => error === rejection));
+    });
+
+    it("rejects when the API answers without ok", async () => {
+        const { service } = createService(async () => ({ data: { status: "err" } }));
+
+        await quietly(() => assert.rejects(service.deleteDesign(5), /Failed to delete design/u));
+    });
+});
