@@ -260,8 +260,8 @@ test("callback-received publishes ConversationGuide and legacy Orientador respon
     });
     assert.equal(harness.callbacks.at(-1).payload.messagesPublished, 2);
     assert.deepEqual(harness.callbacks.at(-1).payload.publishedMessages, [
-        { messageId: 1, agentName: "ConversationGuide" },
-        { messageId: 2, agentName: "Orientador" },
+        { messageId: 1, agentName: "ConversationGuide", evaluationIndex: 1 },
+        { messageId: 2, agentName: "Orientador", evaluationIndex: 2 },
     ]);
 });
 

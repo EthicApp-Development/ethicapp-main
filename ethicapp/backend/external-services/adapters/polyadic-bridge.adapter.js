@@ -563,28 +563,46 @@ function handledCallbackOf(result) {
     return { result, evaluations, publishedMessages };
 }
 
-// The evaluations of a callback that the handler did not publish: those of
-// agents that do not speak in the chat, and those of chat agents whose
-// publication failed. The handler published in evaluation order, so the
-// published messages match the chat agents' evaluations in that order.
-// Evaluations without text are skipped, as the handler skips them.
+function isEvaluationIndex(value, evaluations) {
+    return Number.isInteger(value) && value >= 0 && value < evaluations.length;
+}
+
+// For published messages stored without `evaluationIndex` (before #949),
+// only what can be told without guessing. A chat agent with no published
+// message had none of its evaluations published. A chat agent with at least
+// one published message adds nothing: with as many published messages as
+// evaluations all were published, and with fewer, which of its evaluations
+// failed cannot be told, and a guess could repeat a message already in the
+// transcript.
+function unpublishedByAgent(candidates, publishedMessages) {
+    const publishedAgents = new Set(publishedMessages.map(entry => normalizeText(entry?.agentName)));
+    return candidates.filter(({ agentName, publishable }) => !publishable
+        || !publishedAgents.has(agentName));
+}
+
+// The evaluations of a callback that the handler did not publish, each once:
+// those of agents that do not speak in the chat, and those of chat agents
+// whose publication failed. Evaluations without text are skipped, as the
+// handler skips them. Each published message names the evaluation it came
+// from (`evaluationIndex`); when any entry of the result lacks it, the
+// evaluations are matched by agent instead (unpublishedByAgent()).
 export function unpublishedEvaluations(evaluations, publishedMessages) {
-    const publishedAgents = publishedMessages.map(entry => normalizeText(entry?.agentName));
-    let next = 0;
-    const unpublished = [];
-    for (const evaluation of evaluations) {
+    const candidates = [];
+    evaluations.forEach((evaluation, index) => {
         const agentName = normalizeText(evaluation?.agente);
         const content = normalizeText(evaluation?.respuesta);
-        if (!content) {
-            continue;
+        if (content) {
+            candidates.push({ index, agentName, content, publishable: isPublishableChatAgent(agentName) });
         }
-        if (isPublishableChatAgent(agentName) && publishedAgents[next] === agentName) {
-            next += 1;
-            continue;
-        }
-        unpublished.push({ agentName, content });
-    }
-    return unpublished;
+    });
+
+    const indexed = publishedMessages
+        .every(entry => isEvaluationIndex(entry?.evaluationIndex, evaluations));
+    const unpublished = indexed
+        ? candidates.filter(({ index }) => !publishedMessages.some(entry => entry.evaluationIndex === index))
+        : unpublishedByAgent(candidates, publishedMessages);
+
+    return unpublished.map(({ agentName, content }) => ({ agentName, content }));
 }
 
 // Where a callback's unpublished evaluations go: beside the messages the same
@@ -1062,7 +1080,7 @@ export async function register({
             }
         }
 
-        for (const evaluation of evaluations) {
+        for (const [evaluationIndex, evaluation] of evaluations.entries()) {
             const agentName = normalizeText(evaluation?.agente);
             const content = normalizeText(evaluation?.respuesta);
 
@@ -1082,7 +1100,7 @@ export async function register({
             });
 
             if (published?.savedMessage) {
-                savedMessages.push({ message: published.savedMessage, agentName });
+                savedMessages.push({ message: published.savedMessage, agentName, evaluationIndex });
             }
         }
 
@@ -1096,10 +1114,14 @@ export async function register({
                 messagesPublished:   savedMessages.length,
                 // Which agent wrote each published message (#947): the
                 // shared external_service_agents row keeps only the latest
-                // name. Stored in the result's adapter_result.
-                publishedMessages:   savedMessages.map(({ message, agentName }) => ({
+                // name. `evaluationIndex` is the message's position in the
+                // payload's evaluations, so the report can tell which ones
+                // were not published (#949). Stored in the result's
+                // adapter_result.
+                publishedMessages:   savedMessages.map(({ message, agentName, evaluationIndex }) => ({
                     messageId: message.id ?? null,
                     agentName,
+                    evaluationIndex,
                 })),
             },
         });

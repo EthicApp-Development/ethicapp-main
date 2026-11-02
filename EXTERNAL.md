@@ -538,7 +538,12 @@ agent that wrote it, `polyadic_agent_trigger`, `polyadic_agent_in_reply_to`
 and `polyadic_agent_visible_to_students = true`. Each evaluation a callback
 carried but the bridge did not publish becomes a row at the callback's receipt
 time, with the same columns and `polyadic_agent_visible_to_students = false`.
-The trigger is `reactive` only when the callback correlates with the
+The callback handler records, for each message it publishes, the index of the
+evaluation it came from (`publishedMessages[n].evaluationIndex`), so each
+unpublished evaluation is added exactly once. For callbacks stored without
+that index, a chat agent's evaluations are added only when none of its
+evaluations was published; when some were, which ones failed cannot be told,
+and none is added. The trigger is `reactive` only when the callback correlates with the
 `chat-message-received` job of a student message, whose id is then
 `polyadic_agent_in_reply_to`; it is `unknown` otherwise, since Polyadic sends
 both its proactive interventions and its window-event replies on the room's

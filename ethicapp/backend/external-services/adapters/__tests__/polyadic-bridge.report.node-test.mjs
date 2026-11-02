@@ -357,3 +357,107 @@ test("the handler contributes to the chat transcript only, from the scoped reade
     assert.equal(contribution.rows.length, 1);
     assert.deepEqual(listed, [undefined]);
 });
+
+// Runs the real callback-received handler with the given publication
+// outcomes, and returns the result the reader would list for that callback.
+async function handledCallbackResult({ id, requestPayload, publications }) {
+    const handlers = new Map();
+    const outcomes = [...publications];
+    let adapterResult = null;
+    await register({
+        service:                    { id: SERVICE_ID },
+        subscribe:                  (hookName, handler) => handlers.set(hookName, handler),
+        publishGroupChatMessage:    async () => outcomes.shift() ?? null,
+        aiAdditionsClient:          { getEndpoints: async () => ({}), requestJson: async () => ({}) },
+        polyadicBridgeDependencies: { getFirstQuestionIdForPhase: async () => 701 },
+    });
+    await handlers.get("callback-received")({ resultId: id, requestPayload }, {
+        callback: async result => {
+            adapterResult = result;
+            return result;
+        },
+    });
+    return {
+        ...callbackResult({ id, evaluations: [], publishedMessages: [] }),
+        rawPayload: requestPayload,
+        adapterResult,
+    };
+}
+
+const SAME_AGENT_PAYLOAD = Object.freeze({
+    room:        ROOM,
+    evaluations: [
+        { agente: "ConversationGuide", respuesta: "FIRST" },
+        { agente: "ConversationGuide", respuesta: "SECOND" },
+    ],
+});
+
+test("two evaluations of one agent, only the second published: each appears once", async () => {
+    const result = await handledCallbackResult({
+        id:             90,
+        requestPayload: SAME_AGENT_PAYLOAD,
+        publications:   [null, { savedMessage: { id: 602 } }],
+    });
+    assert.deepEqual(result.adapterResult.payload.publishedMessages, [
+        { messageId: 602, agentName: "ConversationGuide", evaluationIndex: 1 },
+    ]);
+
+    const rows = [agentRow(602, 90, "2026-11-02T10:00:01.000Z")];
+    const contribution = buildChatTranscriptContribution(contextOf(rows), [result]);
+
+    assert.deepEqual(
+        contribution.rows.map(row => [row.message, row.values.polyadic_agent_visible_to_students]),
+        [["FIRST", false]]
+    );
+    assert.deepEqual(contribution.values, [{
+        rowKey: 602,
+        values: {
+            polyadic_agent_name:                "ConversationGuide",
+            polyadic_agent_trigger:             AGENT_TRIGGER.UNKNOWN,
+            polyadic_agent_in_reply_to:         null,
+            polyadic_agent_visible_to_students: true,
+        },
+    }]);
+    assert.doesNotMatch(JSON.stringify(contribution.rows), /SECOND/);
+    assert.equal(validate(contribution, rows).valid, true);
+});
+
+test("old metadata without evaluationIndex adds nothing for an ambiguous agent", () => {
+    const rows = [agentRow(602, 90, "2026-11-02T10:00:01.000Z")];
+    const results = [callbackResult({
+        id:          90,
+        evaluations: [
+            ...SAME_AGENT_PAYLOAD.evaluations,
+            { agente: "Orientador", respuesta: "Not published." },
+            { agente: "Analista", respuesta: "Hidden analysis." },
+        ],
+        publishedMessages: [{ messageId: 602, agentName: "ConversationGuide" }],
+    })];
+
+    const contribution = buildChatTranscriptContribution(contextOf(rows), results);
+
+    // ConversationGuide has two evaluations and one published message, and
+    // which one was published is unknown, so neither is added. Orientador
+    // published nothing; Analista is not a chat agent.
+    assert.deepEqual(contribution.rows.map(row => row.message), ["Not published.", "Hidden analysis."]);
+    assert.equal(contribution.values.length, 1);
+    assert.equal(validate(contribution, rows).valid, true);
+});
+
+test("indexed metadata: every evaluation not published is a row exactly once", () => {
+    assert.deepEqual(unpublishedEvaluations(
+        [
+            { agente: "ConversationGuide", respuesta: "A" },
+            { agente: "Analista", respuesta: "B" },
+            { agente: "ConversationGuide", respuesta: "C" },
+            { agente: "ConversationGuide", respuesta: "D" },
+        ],
+        [
+            { messageId: 601, agentName: "ConversationGuide", evaluationIndex: 0 },
+            { messageId: 603, agentName: "ConversationGuide", evaluationIndex: 3 },
+        ]
+    ), [
+        { agentName: "Analista", content: "B" },
+        { agentName: "ConversationGuide", content: "C" },
+    ]);
+});
