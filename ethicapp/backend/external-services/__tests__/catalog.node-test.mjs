@@ -8,6 +8,7 @@ import {
     catalogWarnings,
     DESIGN_ANALYSIS_UNITS,
     developmentAdaptersEnabled,
+    REPORT_BUILDING_HOOK,
     validateCatalog,
     validateCatalogEntry,
 } from "../catalog.js";
@@ -244,6 +245,35 @@ test("validateCatalog: prefixes problems with the entry and rejects duplicate id
     assert.deepEqual(problems.map(problem => problem.split(":")[0]), ["svc-production", "svc-broken"]);
     assert.ok(problems[0].includes("duplicate id"));
     assert.deepEqual(validateCatalog({}), ["`services` must be an array"]);
+});
+
+test("validateCatalogEntry: an adapter that lists report-building declares its column prefix", () => {
+    assert.equal(REPORT_BUILDING_HOOK, "report-building");
+    assert.deepEqual(validateCatalogEntry(productionEntry({
+        hooks:  [REPORT_BUILDING_HOOK],
+        report: { columnPrefix: "ats_" },
+    })), []);
+    assert.deepEqual(validateCatalogEntry(productionEntry({ report: { columnPrefix: "pa2_" } })), []);
+
+    assertProblem(productionEntry({ hooks: [REPORT_BUILDING_HOOK] }), "needs `report.columnPrefix`");
+    assertProblem(productionEntry({ report: "ats_" }), "`report` must be an object");
+    assertProblem(productionEntry({ report: { columnPrefix: "ats_", label: "x" } }), "unknown keys (label)");
+    for (const columnPrefix of ["ats", "Ats_", "_ats_", "ats-", "", 5]) {
+        assertProblem(productionEntry({ report: { columnPrefix } }), "`report.columnPrefix` must be");
+    }
+});
+
+test("validateCatalog: report column prefixes are unique", () => {
+    const problems = validateCatalog({
+        services: [
+            productionEntry({ id: "svc-a", report: { columnPrefix: "ats_" } }),
+            productionEntry({ id: "svc-b", report: { columnPrefix: "ats_" } }),
+            productionEntry({ id: "svc-c", report: { columnPrefix: "pa_" } }),
+            productionEntry({ id: "svc-d", report: { columnPrefix: "pax_" } }),
+        ],
+    });
+
+    assert.deepEqual(problems, ["svc-b: `report.columnPrefix` ats_ is also declared by svc-a"]);
 });
 
 // ─── The registry refuses an invalid catalog ─────────────────────────────────

@@ -24,6 +24,12 @@ const DOCUMENT_SCHEMA_PATTERN = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*\/v[1-9][0-9]*$/u
 
 const DESIGN_ANALYSIS_DECLARATION_KEYS = Object.freeze(["documentSchema", "unit"]);
 
+// The hook through which adapters add their data to activity reports (epic
+// #620, #944). An adapter that declares it declares `report.columnPrefix`: the
+// prefix of every column it adds, lowercase and ending in `_`, such as `ats_`.
+export const REPORT_BUILDING_HOOK = "report-building";
+export const REPORT_COLUMN_PREFIX_PATTERN = /^[a-z][a-z0-9]*_$/u;
+
 // Keys the catalog no longer accepts, with the reason given to whoever adds one.
 const REMOVED_KEYS = Object.freeze({
     enabled: "is removed (#812): adapters are listed, not enabled; usability is decided at dispatch",
@@ -98,6 +104,36 @@ function validateDesignAnalysisDeclaration(declaration, key) {
 }
 
 /**
+ * Validates a `report` declaration: `{ columnPrefix }`, required when `hooks`
+ * lists REPORT_BUILDING_HOOK. Absent is valid otherwise.
+ *
+ * @param {Object} entry
+ * @returns {string[]} Problems, in English.
+ */
+function validateReportDeclaration(entry) {
+    const declaresHook = Array.isArray(entry.hooks) && entry.hooks.includes(REPORT_BUILDING_HOOK);
+    if (entry.report === undefined) {
+        return declaresHook
+            ? [`an adapter that lists \`${REPORT_BUILDING_HOOK}\` needs \`report.columnPrefix\``]
+            : [];
+    }
+    if (!isPlainObject(entry.report)) {
+        return ["`report` must be an object { columnPrefix }"];
+    }
+
+    const problems = [];
+    const unknownKeys = Object.keys(entry.report).filter(name => name !== "columnPrefix");
+    if (unknownKeys.length > 0) {
+        problems.push(`\`report\` has unknown keys (${unknownKeys.join(", ")})`);
+    }
+    if (typeof entry.report.columnPrefix !== "string"
+        || !REPORT_COLUMN_PREFIX_PATTERN.test(entry.report.columnPrefix)) {
+        problems.push("`report.columnPrefix` must be lowercase letters and digits ending in `_`, such as ats_");
+    }
+    return problems;
+}
+
+/**
  * Validates one catalog entry and returns the problems found, or [] when it
  * is valid.
  *
@@ -115,6 +151,10 @@ function validateDesignAnalysisDeclaration(declaration, key) {
  *   the adapter produces or needs, as `{ documentSchema, unit }`. A producer
  *   has the `design` scope. Whether a consumption has a producer is a
  *   catalog-wide question, answered by catalogWarnings().
+ * - `report` (#944), `{ columnPrefix }`, is required by an adapter that lists
+ *   REPORT_BUILDING_HOOK in `hooks`. Prefixes are unique in the catalog
+ *   (validateCatalog()), and end at their only `_`, so the columns of two
+ *   services never collide.
  *
  * @param {Object} entry - One element of `manifest.services`.
  * @returns {string[]} Problems, in English, without the entry id.
@@ -146,6 +186,7 @@ export function validateCatalogEntry(entry) {
 
     problems.push(...validateDesignAnalysisDeclaration(entry.produces, "produces"));
     problems.push(...validateDesignAnalysisDeclaration(entry.consumes, "consumes"));
+    problems.push(...validateReportDeclaration(entry));
     // What an adapter produces is stored as its design analysis.
     const declaresProduction = Array.isArray(entry.produces) && entry.produces.length > 0;
     const hasDesignScope = Array.isArray(entry.scopes) && entry.scopes.includes("design");
@@ -189,7 +230,8 @@ export function validateCatalogEntry(entry) {
 }
 
 /**
- * Validates the whole catalog: every entry, and that ids are unique.
+ * Validates the whole catalog: every entry, and that ids and report column
+ * prefixes are unique.
  *
  * @param {Object} catalog - The parsed `manifest.json`.
  * @returns {string[]} Problems, each prefixed with the entry it concerns.
@@ -201,6 +243,8 @@ export function validateCatalog(catalog) {
 
     const problems = [];
     const seenIds = new Set();
+    // Column prefix -> the entry that declared it first.
+    const seenPrefixes = new Map();
 
     catalog.services.forEach((entry, index) => {
         const label = isNonEmptyString(entry?.id) ? entry.id : `services[${index}]`;
@@ -214,6 +258,16 @@ export function validateCatalog(catalog) {
                 problems.push(`${label}: duplicate id`);
             }
             seenIds.add(entry.id);
+        }
+
+        const prefix = entry?.report?.columnPrefix;
+        if (typeof prefix === "string") {
+            if (seenPrefixes.has(prefix)) {
+                problems.push(`${label}: \`report.columnPrefix\` ${prefix} is also declared by ${
+                    seenPrefixes.get(prefix)}`);
+            } else {
+                seenPrefixes.set(prefix, label);
+            }
         }
     });
 
