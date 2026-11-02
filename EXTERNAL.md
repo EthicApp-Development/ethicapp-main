@@ -509,6 +509,23 @@ Groups are ephemeral in EthicApp and are scoped to a phase. Chat-oriented
 adapters should therefore key any accumulated conversation state by at least
 `phaseId` and `groupId`.
 
+### Report contributions
+
+`report-building` (epic #620, #944) is a hook with its own collecting
+dispatch, `registry.collectReportContributions(reportType, context)`, not
+`dispatchHook()`, which ignores it. While an activity report is built, it asks
+the adapters of the services that are registered, subscribed to the hook and
+have at least one job in the session, whatever the AI service policy says
+today. Each handler is awaited under a 5-second timeout and returns a
+contribution: columns keyed by the report's rows and, for the chat transcript,
+rows of its own. It reads its stored results through a reader limited to its
+own service and the report's session. No job or result row is created and no
+AI service is called. A handler that fails, times out or returns an invalid
+contribution gets its own outcome and is left out; the others are unaffected.
+
+The contract, the reader and the catalog's `report.columnPrefix` are described
+in `ethicapp/backend/external-services/README.md`, "Report building".
+
 ## External Result Callback
 
 External AI services call the unified callback endpoint:
