@@ -6,6 +6,7 @@ import * as rpg2 from "../db/rest-pg-2.js";
 import { getDesignTypeByPhaseId } from "../helpers/designs-helper.js";
 import { dispatchPhaseHook } from "../helpers/external-service-dispatch.js";
 import { describeError } from "../helpers/log-safety.js";
+import { JOB_SOURCE_KIND } from "../services/external-service-jobs.service.js";
 import { getStatusCode } from "../../common/modules/session-status.js";
 import { messageCountHandlers,
     chatTranscriptHandlers,
@@ -198,6 +199,8 @@ router.post("/phases/:id/question/:question_id/chat_messages", async (req, res) 
             savedMessage,
             notificationPayload,
             designType: accessContext.designType,
+            // The saved message, recorded on each hook job (#946).
+            source:     chatMessageSource(savedMessage),
         });
 
         // Respond with success
@@ -211,6 +214,16 @@ router.post("/phases/:id/question/:question_id/chat_messages", async (req, res) 
         res.status(500).json({ error: "Internal server error" });
     }
 });
+
+// The hook's `source` for a saved message: its row in differential_chat, or in
+// chat for ranking. saveChatMessage() answers `true` when the insert returned
+// no row, and then there is no id to record.
+export function chatMessageSource(savedMessage) {
+    const id = Number(savedMessage?.id);
+    return Number.isSafeInteger(id) && id > 0
+        ? { kind: JOB_SOURCE_KIND.CHAT_MESSAGE, id }
+        : null;
+}
 
 async function dispatchIncomingChatMessageHook(context) {
     try {

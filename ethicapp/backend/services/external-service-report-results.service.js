@@ -1,4 +1,4 @@
-import { poolQuery, RESULT_STATUS } from "./external-service-jobs.service.js";
+import { normalizeJobSource, poolQuery, RESULT_STATUS } from "./external-service-jobs.service.js";
 
 /**
  * What the `report-building` hook (epic #620, #944) reads from EthicApp's
@@ -52,6 +52,14 @@ function validFilters(filters) {
     return valid;
 }
 
+// The response or chat message the result's job processed (#946), or null
+// for a job that recorded none (other hooks, jobs older than V38) and for a
+// result with no job.
+function jobSourceFromRow(row) {
+    const source = normalizeJobSource({ kind: row.job_source_kind, id: row.job_source_id });
+    return source ? Object.freeze(source) : null;
+}
+
 function resultFromRow(row) {
     return Object.freeze({
         id:            row.id,
@@ -62,9 +70,7 @@ function resultFromRow(row) {
         questionId:    row.question_id ?? null,
         groupId:       row.group_id ?? null,
         userId:        row.user_id ?? null,
-        // The response or chat message the job processed, recorded by #946.
-        // Until then no job records it.
-        source:        null,
+        source:        jobSourceFromRow(row),
         rawPayload:    row.raw_payload ?? null,
         adapterResult: row.adapter_result ?? null,
         receivedAt:    row.received_at instanceof Date
@@ -110,7 +116,8 @@ export class ExternalServiceReportResultsService {
             `SELECT r.id, r.job_id, r.service_id, r.session_id, r.status,
                     r.phase_id, r.question_id, r.group_id, r.user_id,
                     r.raw_payload, r.adapter_result, r.received_at,
-                    j.hook_name AS job_hook_name
+                    j.hook_name AS job_hook_name,
+                    j.source_kind AS job_source_kind, j.source_id AS job_source_id
              FROM external_service_results r
              LEFT JOIN external_service_jobs j ON j.id = r.job_id
              WHERE ${clauses.join(" AND ")}
@@ -126,8 +133,10 @@ export class ExternalServiceReportResultsService {
  *
  * `list({ hookName?, phaseId?, questionId?, userId?, groupId? })` resolves to
  * frozen `{ id, jobId, hookName, status, phaseId, questionId, groupId, userId,
- * source, rawPayload, adapterResult, receivedAt }`, oldest first. Unknown or
- * malformed filters reject with a TypeError.
+ * source, rawPayload, adapterResult, receivedAt }`, oldest first. `source` is
+ * the `{ kind, id }` the result's job recorded (#946): `kind` is `response` or
+ * `chat_message`, and `id` a Number. It is null when the job recorded none or
+ * the result has no job. Unknown or malformed filters reject with a TypeError.
  */
 export function createReportResultsReader(store, { serviceId, sessionId }) {
     return Object.freeze({

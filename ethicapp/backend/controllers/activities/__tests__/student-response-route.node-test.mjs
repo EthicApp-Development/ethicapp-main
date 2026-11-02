@@ -31,6 +31,8 @@ const TEAM_PHASE = 101;
 const QUESTION = 1;
 const TEAM_QUESTION = 2;
 const RANKING_ITEM = 7;
+const SEMANTIC_DIFFERENTIAL_RESPONSE_ID = 501;
+const RANKING_RESPONSE_ID = 601;
 
 // --- Fake PostgreSQL -------------------------------------------------------
 
@@ -42,6 +44,7 @@ const phases = new Map([
     [TEAM_PHASE, { questions: [TEAM_QUESTION], items: [] }],
 ]);
 const anonymizedUserIds = new Set([FORGOTTEN_STUDENT.uid]);
+let responseWritesReturnIds = true;
 
 function resetSessions(overrides = {}) {
     sessions = new Map([
@@ -98,6 +101,16 @@ function rowsFor(sql, params = []) {
             ? [{ id: second, requires_justification: false, min_word_count: 0 }]
             : [];
     }
+    // The stored response row's id (#946).
+    if (!responseWritesReturnIds) {
+        return [];
+    }
+    if (/INSERT INTO differential_selection/u.test(sql)) {
+        return [{ id: SEMANTIC_DIFFERENTIAL_RESPONSE_ID }];
+    }
+    if (/INSERT INTO actor_selection/u.test(sql)) {
+        return [{ id: RANKING_RESPONSE_ID }];
+    }
     return [];
 }
 
@@ -116,6 +129,7 @@ let dispatchHook;
 beforeEach(() => {
     db.reset();
     resetSessions();
+    responseWritesReturnIds = true;
     notifyTeacher = mock.method(responseSubmissionEffects, "notifyTeacher", () => {});
     dispatchHook = mock.method(responseSubmissionEffects, "dispatchHook", async () => {});
 });
@@ -176,6 +190,26 @@ describe("POST /activities/:id/response: enrolled students", () => {
         assert.equal(context.userId, STUDENT.uid);
         assert.equal(context.designType, "semantic_differential");
         assert.deepEqual(context.responsePayload, expectedResponse);
+        assert.deepEqual(context.source, { kind: "response", id: SEMANTIC_DIFFERENTIAL_RESPONSE_ID });
+    });
+
+    it("reads back the id of the row it updated or inserted (#946)", async () => {
+        await submit(STUDENT);
+
+        const [write] = responseWrites();
+        assert.match(write.sql, /UPDATE differential_selection[\s\S]*RETURNING id/u);
+        assert.match(write.sql, /INSERT INTO differential_selection[\s\S]*RETURNING id/u);
+        assert.match(write.sql, /SELECT id FROM updated\s+UNION ALL\s+SELECT id FROM inserted/u);
+    });
+
+    it("dispatches the hook with no source when no row id comes back (#946)", async () => {
+        responseWritesReturnIds = false;
+
+        const { status } = await submit(STUDENT);
+
+        assert.equal(status, 201);
+        const [context] = dispatchHook.mock.calls[0].arguments;
+        assert.equal(context.source, null);
     });
 
     for (const student of [STUDENT, GROUPLESS_STUDENT]) {
@@ -216,6 +250,9 @@ describe("POST /activities/:id/response: enrolled students", () => {
             [1, null, RANKING_ITEM, STUDENT.uid, INDIVIDUAL_PHASE]);
         assert.equal(notifyTeacher.mock.callCount(), 1);
         assert.equal(dispatchHook.mock.callCount(), 1);
+        const [context] = dispatchHook.mock.calls[0].arguments;
+        assert.deepEqual(context.source, { kind: "response", id: RANKING_RESPONSE_ID });
+        assert.equal(context.responsePayload.type, "ranking");
     });
 });
 

@@ -586,8 +586,8 @@ failures are isolated from teacher and student requests.
 | `phase-started` | Every phase transition | Services enabled for the started phase | `sessionId`, `phaseId` (= started), `startedPhaseId`, `endedPhaseId` |
 | `phase-ended` | Phase transition, when a different phase was active before | Services enabled for the ended phase | `sessionId`, `phaseId` (= ended), `startedPhaseId`, `endedPhaseId` |
 | `activity-finished` | `POST /activities/:id/finish` | Union of services enabled in any phase of the design | `sessionId`, `phaseId` (= last active), `startedPhaseId: null`, `endedPhaseId` |
-| `student-response-submitted` | Student response endpoints in `controllers/activities/activities-student.js` | Services enabled for the phase | `sessionId`, `phaseId`, `userId`, `questionId`, `designType`, `requestPayload`, `responsePayload` |
-| `chat-message-received` | `controllers/group-messages.js` after a group chat message is saved | Services enabled for the phase | `sessionId`, `phaseId`, `questionId`, `groupId`, `userId`, `parentId`, `content`, `savedMessage`, `notificationPayload`, `designType` |
+| `student-response-submitted` | Student response endpoints in `controllers/activities/activities-student.js` | Services enabled for the phase | `sessionId`, `phaseId`, `userId`, `questionId`, `designType`, `requestPayload`, `responsePayload`, `source` (`{ kind: "response", id }`: the stored `differential_selection` row, or `actor_selection` for ranking) |
+| `chat-message-received` | `controllers/group-messages.js` after a group chat message is saved | Services enabled for the phase | `sessionId`, `phaseId`, `questionId`, `groupId`, `userId`, `parentId`, `content`, `savedMessage`, `notificationPayload`, `designType`, `source` (`{ kind: "chat_message", id }`: the saved `differential_chat` row, or `chat` for ranking) |
 | `case-created` | `POST /cases` after the case, authors, tags, analyses, and render job are persisted, and `POST /cases/:id/analyses/:serviceId/generate` (`helpers/case-lifecycle-helper.js`) | Services chosen for the case when it was created; generate reaches one of them | `caseId`, `caseUuid`, `userId` (creator), `title`, `pdfPath`, `languageCode`, `visibility`, `pdfRenderJobId` |
 | `design-created` | After `POST /designs` answers, and after `POST /designs/:id/duplicate` (duplicate or import) commits the copy (`helpers/design-analyses-lifecycle-helper.js`) | Each design-scoped service whose generation was reserved, one dispatch per service (see "Design Analyses") | `trigger` (`"created"`), `designId`, `userId` (requester), `caseId`, `languageCode` (the case's), `design` (the design document), `analysisInput` and `inputHash` (from the service's `designAnalysisInput()`) |
 | `design-updated` | After `PATCH /designs/:id` answers (`trigger: "updated"`), and from `POST /designs/:id/analyses/:serviceId/generate` with the current design (`trigger: "generate"`) (`helpers/design-analyses-lifecycle-helper.js`) | As for `design-created` | As for `design-created`, with `trigger` `"updated"` or `"generate"` |
@@ -732,8 +732,11 @@ It returns this service's `external_service_results` for the report's session
 only; filters cannot widen that scope, and unknown or malformed filters reject
 with a `TypeError`. `hookName` is the hook of the job a result answers (for
 example `student-response-submitted`), or `null` for a result without a job.
-Unconsumed (`pending`) results are left out. `source`, the response or chat
-message the job processed, is `null` until #946 records it.
+Unconsumed (`pending`) results are left out. `source` is the response or chat
+message the result's job processed (#946), as `{ kind: "response" |
+"chat_message", id }` with a numeric `id` (see "Jobs and `callback(result)`").
+It is `null` for a result without a job and for a job that recorded none,
+such as jobs of other hooks and jobs created before migration V38.
 
 **Contribution contract.** The handler resolves to `undefined`/`null` (nothing
 to add) or to:
@@ -788,6 +791,18 @@ as `jobId` and `correlationId` in the handler context. A caller that reserved
 work under a job id beforehand passes `jobIds` (service id to job id) in the
 dispatch options: the job is created under that id, and the handler receives
 it even when the row cannot be created.
+
+A job also records what its hook processed (#946), from the context's
+`source: { kind, id }`, in `source_kind` and `source_id`:
+`student-response-submitted` names the stored response (`response`), and
+`chat-message-received` the saved message (`chat_message`). The activity's
+design type says which table the id belongs to, so there is no foreign key.
+Other hooks, room jobs and jobs created before migration V38 leave both
+columns `NULL`, as does a `source` that is not a known kind with a positive
+integer id. A callback correlated with the job gets it back as
+`context.job.source` (`null` when there is none), so a result can be tied to
+the exact response or message it came from, for example a reactive reply to
+the student message it answered.
 
 Adapters report outcomes by calling the `callback(result)` function passed to
 the handler. `result.status` drives the job status:

@@ -411,6 +411,27 @@ test("the reader handed to a handler is bound to its service and the report's se
     }]);
 });
 
+test("the reader returns the source each result's job processed, or null (#946)", async () => {
+    const row = { service_id: "tutor", session_id: SESSION_ID, status: "completed" };
+    const reader = createReportResultsReader(fakeResultsStore({
+        results: [
+            // pg returns bigint as a string.
+            { ...row, id: "r1", job_id: "j1", job_source_kind: "response", job_source_id: "41" },
+            // A historical job, created before V38 or by another hook.
+            { ...row, id: "r2", job_id: "j2", job_source_kind: null, job_source_id: null },
+            // A result with no job: the LEFT JOIN leaves the job columns null.
+            { ...row, id: "r3", job_id: null },
+        ],
+    }), { serviceId: "tutor", sessionId: SESSION_ID });
+
+    const [sourced, historical, jobless] = await reader.list();
+
+    assert.deepEqual(sourced.source, { kind: "response", id: 41 });
+    assert.ok(Object.isFrozen(sourced.source));
+    assert.equal(historical.source, null);
+    assert.equal(jobless.source, null);
+});
+
 test("the reader rejects unknown or malformed filters, including attempts to change its scope", async () => {
     const reader = createReportResultsReader(fakeResultsStore(), { serviceId: "tutor", sessionId: SESSION_ID });
 
@@ -437,6 +458,7 @@ test("listResults binds the service, the session and the filters, and leaves out
     const [{ sql, params }, sessionQuery] = queries;
     assert.match(sql, /WHERE r\.service_id = \$1 AND r\.session_id = \$2 AND r\.status <> \$3 AND j\.hook_name = \$4 AND r\.user_id = \$5/u);
     assert.match(sql, /ORDER BY r\.received_at ASC, r\.id ASC/u);
+    assert.match(sql, /j\.source_kind AS job_source_kind, j\.source_id AS job_source_id/u);
     assert.deepEqual(params, ["tutor", SESSION_ID, "pending", "phase-ended", 31]);
     assert.match(sessionQuery.sql, /SELECT DISTINCT service_id\s+FROM external_service_jobs\s+WHERE session_id = \$1/u);
     assert.deepEqual(sessionQuery.params, [SESSION_ID]);

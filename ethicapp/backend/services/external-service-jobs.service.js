@@ -49,6 +49,34 @@ const TERMINAL_JOB_STATUSES = new Set([
     JOB_STATUS.CLOSED,
 ]);
 
+// What a hook job processed (#946): the student response of
+// student-response-submitted, or the chat message of chat-message-received.
+// The dispatch context names it as `source: { kind, id }`.
+export const JOB_SOURCE_KIND = Object.freeze({
+    RESPONSE:     "response",
+    CHAT_MESSAGE: "chat_message",
+});
+
+const JOB_SOURCE_KINDS = new Set(Object.values(JOB_SOURCE_KIND));
+
+/**
+ * The `{ kind, id }` a job records for `source`, or null when it names no
+ * known kind and positive integer id: a job records a whole source or none.
+ */
+export function normalizeJobSource(source) {
+    const kind = source?.kind;
+    const id = Number(source?.id);
+    if (!JOB_SOURCE_KINDS.has(kind) || !Number.isSafeInteger(id) || id <= 0) {
+        return null;
+    }
+    return { kind, id };
+}
+
+// The source of a job row, or null.
+function jobSourceOfRow(row) {
+    return normalizeJobSource({ kind: row?.source_kind, id: row?.source_id });
+}
+
 export function isRoomJob(job) {
     return job?.kind === JOB_KIND.ROOM;
 }
@@ -83,22 +111,25 @@ export class ExternalServiceJobsService {
         questionId      = null,
         groupId         = null,
         userId          = null,
+        source          = null,
         outboundPayload = null,
     }) {
+        const jobSource = normalizeJobSource(source);
         const rows = await this._db(
             `INSERT INTO external_service_jobs
                  (id, service_id, hook_name, status,
                   session_id, phase_id, question_id, group_id, user_id,
-                  outbound_payload)
+                  outbound_payload, source_kind, source_id)
              VALUES (COALESCE($10::uuid, gen_random_uuid()),
-                     $1, $2, $3, $4, $5, $6, $7, $8, $9)
+                     $1, $2, $3, $4, $5, $6, $7, $8, $9, $11, $12)
              RETURNING id, service_id, hook_name, status,
                        session_id, phase_id, question_id, group_id, user_id,
-                       created_at`,
+                       source_kind, source_id, created_at`,
             [
                 serviceId, hookName, JOB_STATUS.PENDING,
                 sessionId, phaseId, questionId, groupId, userId,
                 outboundPayload, id,
+                jobSource?.kind ?? null, jobSource?.id ?? null,
             ]
         );
         return rows[0] || null;
@@ -164,7 +195,8 @@ export class ExternalServiceJobsService {
 
         if (correlationId) {
             const matchRows = await this._db(
-                `SELECT id, status, session_id, phase_id, question_id, group_id, user_id, kind
+                `SELECT id, status, session_id, phase_id, question_id, group_id, user_id, kind,
+                        source_kind, source_id
                  FROM external_service_jobs
                  WHERE id::text = $1 AND service_id = $2`,
                 [correlationId, serviceId]
@@ -195,6 +227,8 @@ export class ExternalServiceJobsService {
                     userId:     job.user_id     ?? null,
                     kind:       job.kind        ?? JOB_KIND.HOOK,
                     status:     job.status,
+                    // What the job processed (#946), or null.
+                    source:     jobSourceOfRow(job),
                 });
                 // Propagate job context to result when caller did not provide it.
                 sessionId    = sessionId  ?? job.session_id;

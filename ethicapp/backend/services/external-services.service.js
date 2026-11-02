@@ -1179,6 +1179,8 @@ export class ExternalServicesRegistry {
             questionId: context.questionId ?? null,
             groupId:    context.groupId    ?? null,
             userId:     context.userId     ?? null,
+            // The response or chat message the hook processed (#946).
+            source:     context.source     ?? null,
         }).catch(() => null);
 
         // A preset id keeps identifying the work even when its job row could
