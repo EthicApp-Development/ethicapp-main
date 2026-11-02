@@ -370,6 +370,97 @@ describe("designs page, Shared by others", () => {
     });
 });
 
+describe("designs page, search and status filters", () => {
+    it("lists every design of My designs under All, with the errors counted", async () => {
+        const { vm } = createPage();
+        await vm.ready;
+        assert.equal(vm.statusFilter, "all");
+        assert.equal(vm.search, "");
+        const errors = vm.getFilterChips().find(chip => chip.id === "errors");
+        assert.equal(errors.count, 1);
+    });
+
+    it("opens the URL's filter and search, as from the launch wizard or a reload", async () => {
+        const { vm } = createPage({ search: { status: "errors" } });
+        await vm.ready;
+        assert.equal(vm.statusFilter, "errors");
+        assert.deepEqual(vm.getRows("mine").map(row => row.id), [2]);
+        assert.equal(vm.count("mine"), 3, "the tab still counts every design");
+
+        const searched = createPage({ search: { q: "used" } });
+        await searched.vm.ready;
+        assert.equal(searched.vm.search, "used");
+        assert.deepEqual(searched.vm.getRows("mine").map(row => row.id), [3]);
+    });
+
+    it("applies the filters to My designs only", async () => {
+        const { vm } = createPage({ search: { status: "errors", q: "zzz" } });
+        await vm.ready;
+        assert.deepEqual(vm.getRows("archived").map(row => row.id), [4]);
+    });
+
+    it("adds a history entry for a chip and replaces it while typing", async () => {
+        const { vm, calls } = createPage();
+        await vm.ready;
+        vm.selectStatusFilter("in-use");
+        assert.deepEqual(vm.getRows("mine").map(row => row.id), [3]);
+        assert.deepEqual(calls.pushes, [{ status: "in-use" }]);
+
+        vm.search = "  used ";
+        vm.handleSearchChange();
+        assert.deepEqual(calls.replaces, [{ status: "in-use", q: "used" }]);
+
+        vm.search = " ";
+        vm.handleSearchChange();
+        assert.deepEqual(calls.replaces.at(-1), { status: "in-use" });
+    });
+
+    it("follows the URL on Back and Forward, keeping what is being typed", async () => {
+        const { vm, visit } = createPage({ search: { status: "errors" } });
+        await vm.ready;
+        visit({ status: "shared", q: "used" });
+        assert.equal(vm.statusFilter, "shared");
+        assert.equal(vm.search, "used");
+        assert.deepEqual(vm.getRows("mine").map(row => row.id), [3]);
+
+        vm.search = "used ";
+        visit({ status: "shared", q: "used" });
+        assert.equal(vm.search, "used ", "the trailing space survives the URL update");
+
+        visit({});
+        assert.equal(vm.statusFilter, "all");
+        assert.equal(vm.search, "");
+    });
+
+    it("starts again from the first rows when the filter changes", async () => {
+        const { vm } = createPage();
+        await vm.ready;
+        vm.showMore("mine");
+        vm.selectStatusFilter("ready");
+        assert.equal(vm.visibleCounts.mine, 20);
+    });
+
+    it("clears the filter and the search", async () => {
+        const { vm, calls } = createPage({ search: { status: "errors", q: "zzz" } });
+        await vm.ready;
+        assert.deepEqual(vm.getRows("mine"), []);
+        vm.clearFilters();
+        assert.equal(vm.statusFilter, "all");
+        assert.equal(vm.search, "");
+        assert.deepEqual(calls.pushes.at(-1), {});
+        assert.equal(vm.getRows("mine").length, 3);
+    });
+
+    it("does not carry the filter and the search to the next page", async () => {
+        const { vm, calls, leave } = createPage({
+            search: { tab: "mine", status: "errors", q: "x" },
+        });
+        await vm.ready;
+        leave();
+        assert.deepEqual(calls.replaces.at(-1), {});
+    });
+});
+
 describe("designs page template", () => {
     it("uses its own controller and offers no launch action", () => {
         assert.match(template, /ng-controller="DesignsPageController as dp"/u);
@@ -401,6 +492,14 @@ describe("designs page template", () => {
         assert.match(template, /ng-href="#!\/designs\/\{\{ row\.copyId \}\}"/u);
         assert.match(template, /disabled\s+aria-describedby="designs-import-reason-/u);
         assert.match(template, /class="designs-import-notice" role="status"/u);
+    });
+
+    it("draws the search and the status chips in My designs, and a state for no matches", () => {
+        assert.match(template, /ng-model="dp\.search"/u);
+        assert.match(template, /ng-change="dp\.handleSearchChange\(\)"/u);
+        assert.match(template, /ng-repeat="chip in dp\.getFilterChips\(\) track by chip\.id"/u);
+        assert.match(template, /aria-pressed=/u);
+        assert.match(template, /ng-click="dp\.clearFilters\(\)"/u);
     });
 
     it("shows no design type", () => {
