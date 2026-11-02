@@ -2,8 +2,13 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+    SEMANTIC_DIFFERENTIAL_CHAT_COLUMNS,
+    SEMANTIC_DIFFERENTIAL_RESPONSE_COLUMNS,
+    buildExternalServiceAgentsSql,
     buildSemanticDifferentialChatTranscriptSql,
     buildSemanticDifferentialResponsesReportSql,
+    buildSemanticDifferentialSessionQuestionsSql,
+    buildSessionGroupsSql,
 } from "../report-query-builders.js";
 import { withPlainQuestionText } from "../report-rows.js";
 import { buildCsv } from "../csv-builder.js";
@@ -71,4 +76,27 @@ test("questions without a Markdown content type export byte for byte as before",
     const columns = ["id", "question_text"];
 
     assert.equal(buildCsv(columns, withPlainQuestionText(legacy)), buildCsv(columns, legacy));
+});
+
+// ─── Row keys for report-building (#945) ────────────────────────────────────
+
+test("both reports select the row keys the report-building hook needs", () => {
+    assert.match(buildSemanticDifferentialResponsesReportSql(),
+        /st\.id AS phase_id,\s+d\.id AS question_id\s+FROM differential_selection/);
+    assert.match(buildSemanticDifferentialChatTranscriptSql(),
+        /st\.id AS phase_id,\s+d\.id AS question_id,\s+dc\.external_service_result_id\s+FROM/);
+});
+
+test("the row keys add no CSV column", () => {
+    const keys = ["phase_id", "question_id", "external_service_result_id"];
+    for (const columns of [SEMANTIC_DIFFERENTIAL_RESPONSE_COLUMNS, SEMANTIC_DIFFERENTIAL_CHAT_COLUMNS]) {
+        assert.deepEqual(keys.filter(key => columns.includes(key)), []);
+    }
+});
+
+test("contributed chat rows are checked against the session's phases, questions and groups", () => {
+    assert.match(buildSemanticDifferentialSessionQuestionsSql(),
+        /FROM stages AS st\s+LEFT JOIN differential AS d\s+ON d\.stageid = st\.id\s+WHERE st\.sesid = \$1/);
+    assert.match(buildSessionGroupsSql(), /FROM teams AS t\s+WHERE t\.sesid = \$1/);
+    assert.match(buildExternalServiceAgentsSql(), /WHERE esa\.service_id = ANY\(\$1::text\[\]\)/);
 });

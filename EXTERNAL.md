@@ -523,6 +523,15 @@ own service and the report's session. No job or result row is created and no
 AI service is called. A handler that fails, times out or returns an invalid
 contribution gets its own outcome and is left out; the others are unaffected.
 
+Both semantic-differential reports merge the completed contributions (#945):
+columns after the report's own, by service in subscription order, and, in the
+chat transcript, contributed rows attributed to the service and placed by
+time. Contributed rows must name a phase, question and group of the session.
+The export's audit row records each contribution's outcome and counts, never
+its values. Without contributions the CSV is unchanged byte for byte. The dev
+mock adapters `mock-ai-response-review` and `mock-chat-agent` contribute, for
+local verification.
+
 The contract, the reader and the catalog's `report.columnPrefix` are described
 in `ethicapp/backend/external-services/README.md`, "Report building".
 

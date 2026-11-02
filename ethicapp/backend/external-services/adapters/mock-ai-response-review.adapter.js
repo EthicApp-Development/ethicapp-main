@@ -120,7 +120,41 @@ function summarizeChatMessage(context) {
     };
 }
 
+// The report-building contribution (#945): one column on the responses
+// report, for verifying the merge locally. This mock keeps no result of its
+// own for a response (its hook callbacks only advance the job), so the column
+// fills every row and counts the stored results whose job processed that
+// response, which are those of callbacks posted to it.
+export const REPORT_NOTE_COLUMN = "mockreview_note";
+
+export async function buildReportContribution(context, { results }) {
+    if (context.reportType !== "responses") {
+        return null;
+    }
+
+    const stored = await results.list({ hookName: "student-response-submitted" });
+    const countByResponse = new Map();
+    for (const result of stored) {
+        if (result.source?.kind === "response") {
+            countByResponse.set(result.source.id, (countByResponse.get(result.source.id) || 0) + 1);
+        }
+    }
+
+    return {
+        columns: [{ id: REPORT_NOTE_COLUMN, label: "Mock review" }],
+        values:  context.rows.map(row => ({
+            rowKey: row.responseId,
+            values: {
+                [REPORT_NOTE_COLUMN]: `Mock review of response ${row.responseId}: `
+                    + `${countByResponse.get(row.responseId) || 0} stored result(s).`,
+            },
+        })),
+    };
+}
+
 export async function register({ service, subscribe, publishStudentResult }) {
+    subscribe("report-building", buildReportContribution);
+
     subscribe("student-response-submitted", async (context, { callback }) => {
         const responseText = extractResponseText(context);
         const wordCount = responseText ? responseText.split(/\s+/u).length : 0;
