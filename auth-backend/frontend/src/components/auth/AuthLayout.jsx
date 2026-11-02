@@ -4,7 +4,7 @@ import { useInstitutionMetadata } from '../../hooks/useInstitutionMetadata';
 
 const ETHICAPP_LOGO_SRC = '/images/logos/ethicapp-logo.svg';
 
-function AuthLayout({ title, subtitle, children, footer }) {
+function AuthLayout({ title, subtitle = '', children, footer = null }) {
   const { name: institutionName } = useInstitutionMetadata();
 
   return (
@@ -52,11 +52,6 @@ AuthLayout.propTypes = {
   subtitle: PropTypes.string,
   children: PropTypes.node.isRequired,
   footer: PropTypes.node
-};
-
-AuthLayout.defaultProps = {
-  subtitle: '',
-  footer: null
 };
 
 export default AuthLayout;

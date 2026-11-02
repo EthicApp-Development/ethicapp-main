@@ -6,10 +6,10 @@ function SelectField({
   label,
   value,
   onChange,
-  error,
+  error = '',
   options,
-  placeholder,
-  required
+  placeholder = '',
+  required = false
 }) {
   return (
     <div className="mb-3">
@@ -53,12 +53,6 @@ SelectField.propTypes = {
   ).isRequired,
   placeholder: PropTypes.string,
   required: PropTypes.bool
-};
-
-SelectField.defaultProps = {
-  error: '',
-  placeholder: 'Selecciona una opción',
-  required: false
 };
 
 export default SelectField;

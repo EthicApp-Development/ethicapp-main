@@ -24,6 +24,14 @@ export default defineConfig([
     },
     rules: {
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+      // React 19 ignores defaultProps on function components (#997).
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "AssignmentExpression > MemberExpression.left[property.name='defaultProps']",
+          message: 'React 19 ignores defaultProps on function components; use default parameters instead.',
+        },
+      ],
     },
   },
 ])
