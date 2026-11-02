@@ -67,6 +67,8 @@ import { LocalesController } from "../../controllers/common/locales.controller.j
 import { ActivityController } from "../../controllers/teacher/activity.controller.js";
 import { ActivityReportsController } from "../../controllers/teacher/activity-reports.controller.js";
 import { BrowseDesignsController } from "../../controllers/teacher/browse-designs.controller.js";
+// The Designs page (#975, epic #966).
+import { DesignsPageController } from "../../controllers/teacher/designs-page.controller.js";
 // The "Launch an activity" wizard (#971, epic #965).
 import { LaunchActivityWizardController }
     from "../../controllers/teacher/launch-activity-wizard.controller.js";
@@ -156,6 +158,9 @@ app.controller("BrowseDesignsController",
     ["$scope", "$routeParams", "toast", "$translate", "ActivityStateService", "DesignCatalogService",
         "DesignPublicationService", "$timeout", "$window",
         BrowseDesignsController]); 
+app.controller("DesignsPageController",
+    ["$scope", "$location", "$translate", "toast", "DesignCatalogService",
+        "DesignPublicationService", "ActivityCatalogService", DesignsPageController]);
 app.controller("LaunchActivityWizardController",
     ["$scope", "$rootScope", "$routeParams", "$location", "$timeout", "$window",
         "DesignCatalogService", "ActivityCatalogService", "ExternalServicesCatalogService",

@@ -1,102 +1,192 @@
-<div class="container" ng-controller="BrowseDesignsController as vm">
-    <div class="row">
-        <div class="col-md-12">
-            <h2><i class="fa fa-paint-brush"></i> {{'activity_designs' | translate}}</h2>
-            <button type="button" class="btn btn-default btn-sm mb-2" ng-click="vm.goBack()">
-                <i class="fa fa-arrow-left" aria-hidden="true"></i> {{ 'go_back' | translate }}
-            </button>
-            <br>
-            <button class="btn btn-primary" ng-click="navigateTo('/designs/new')" 
-                style="margin-bottom: 2rem; margin-top: 1rem;">
-                <i class="fa fa-plus" aria-hidden="true"></i> {{'create_design' | translate}}
-            </button>
-            <p class="designContext">{{'designContext' | translate}}</p>
-            <div class="teacher-index-search">
-                <div class="search-field-wrapper">
-                    <input class="form-control search-input search-decorated-input" type="text"
-                        placeholder="{{'search_designs_placeholder' | translate}}" ng-model="vm.userSearch" ng-change="vm.setPage(1)">
-                    <i class="fa-solid fa-magnifying-glass search-field-icon" aria-hidden="true"></i>
-                </div>
-            </div>
+<div class="designs-page" ng-controller="DesignsPageController as dp">
+    <header class="designs-page-head">
+        <div class="designs-page-intro">
+            <h2 class="designs-page-title">
+                <i class="fa fa-paint-brush" aria-hidden="true"></i> {{ 'designs_page_title' | translate }}
+            </h2>
+            <p class="designs-page-role">
+                {{ 'designs_page_role' | translate }}
+                <a href="#!/activities/new" class="designs-page-launch-link">{{ 'designs_page_launch_link' | translate }}&nbsp;<span aria-hidden="true">&rarr;</span></a>
+            </p>
         </div>
-    </div>
-    <div class="row">
-        <div class="col-md-12 teacher-index-tabs">
-            <ul class="nav nav-tabs">
-                <li ng-class="{'active': vm.dsgnMode === 0}">
-                    <a href="" ng-click="vm.setDesignMode(0); vm.getUserDesigns()">{{'yours' | translate}}</a>
-                </li>
-                <li ng-class="{'active': vm.dsgnMode === 1}">
-                    <a href="" ng-click="vm.setDesignMode(1); vm.getPublicDesigns()">{{'byOthers' | translate}}</a>
-                </li>
-                <li ng-class="{'active': vm.dsgnMode === 2}">
-                    <a href="" ng-click="vm.setDesignMode(2); vm.getDesigns()">{{'archived' | translate}}</a>
-                </li>
-            </ul>
+        <div class="designs-page-actions">
+            <button type="button" class="btn btn-default" ng-click="dp.openSharedTab()">
+                <i class="fa-solid fa-download" aria-hidden="true"></i> {{ 'designs_import_shared' | translate }}
+            </button>
+            <button type="button" class="btn btn-primary" ng-click="navigateTo('/designs/new')">
+                <i class="fa fa-plus" aria-hidden="true"></i> {{ 'designs_new' | translate }}
+            </button>
         </div>
+    </header>
+
+    <!-- The tabs are links: the tab lives in the URL (`?tab=`), so a reload and
+         the browser's Back keep it. -->
+    <nav class="designs-page-tabs" aria-label="{{ 'designs_tabs_label' | translate }}">
+        <ul class="nav nav-tabs">
+            <li ng-class="{ 'active': dp.tab === 'mine' }">
+                <a href="#!/designs" ng-attr-aria-current="{{ dp.tab === 'mine' ? 'page' : undefined }}">
+                    {{ 'designs_tab_mine' | translate }} <span class="designs-tab-count" ng-if="dp.loaded">{{ dp.count('mine') }}</span>
+                </a>
+            </li>
+            <li ng-class="{ 'active': dp.tab === 'shared' }">
+                <a href="#!/designs?tab=shared" ng-attr-aria-current="{{ dp.tab === 'shared' ? 'page' : undefined }}">
+                    {{ 'designs_tab_shared' | translate }} <span class="designs-tab-count" ng-if="dp.loaded">{{ dp.count('shared') }}</span>
+                </a>
+            </li>
+            <li ng-class="{ 'active': dp.tab === 'archived' }">
+                <a href="#!/designs?tab=archived" ng-attr-aria-current="{{ dp.tab === 'archived' ? 'page' : undefined }}">
+                    {{ 'designs_tab_archived' | translate }} <span class="designs-tab-count" ng-if="dp.loaded">{{ dp.count('archived') }}</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+
+    <div class="designs-toast-container teacher-index-toast-container">
+        <toast></toast>
     </div>
-    <div class="row teacher-index-content">
-        <div class="col-md-12">
-            <div class="designs-toast-container teacher-index-toast-container">
-                <toast></toast>
-            </div>
-            <design-item ng-repeat="design in vm.getPaginatedDesigns() track by design.id"
-                ng-if="vm.dsgnMode === 0"
-                design="design"
-                is-owner="true"
-                on-launch="vm.handleLaunch"
-                on-edit="vm.handleEdit"
-                on-view="vm.handleView"
-                on-delete="vm.deleteDesign"
-                on-duplicate="vm.duplicateDesign"
-                on-archive="vm.archiveDesign"
-                on-toggle-public="vm.designPublic">
-            </design-item>
 
-            <!-- Public Designs -->
-            <design-item ng-repeat="design in vm.getPaginatedDesigns() track by design.id"
-                ng-if="vm.dsgnMode === 1"
-                design="design"
-                is-owner="false"
-                on-import="vm.importDesign">
-            </design-item>
+    <p class="text-muted" ng-if="!dp.loaded">{{ 'loading' | translate }}</p>
+    <div class="alert alert-danger" ng-if="dp.loaded && dp.loadFailed">{{ 'designs_load_failed' | translate }}</div>
 
-            <design-item ng-repeat="design in vm.getPaginatedDesigns() track by design.id"
-                ng-if="vm.dsgnMode === 2"
-                design="design"
-                is-owner="true"
-                on-view="vm.handleView"
-                on-duplicate="vm.duplicateDesign"
-                on-archive="vm.archiveDesign">
-            </design-item>
+    <!-- "My designs" and "Archived": one table, a row per design. Below
+         1200 px the rows become compact rows. -->
+    <section class="designs-table-section" ng-if="dp.loaded && !dp.loadFailed && dp.tab !== 'shared'">
+        <div class="designs-table-tools" ng-if="dp.getRows(dp.tab).length > 0">
+            <p class="designs-table-order">{{ 'designs_order_newest' | translate }}</p>
+        </div>
 
-            <div class="resource-pagination-controls" ng-if="vm.getTotalPages() > 1">
-                <button class="btn btn-default btn-sm" ng-click="vm.previousPage()" ng-disabled="vm.currentPage === 1">
-                    <i class="fa fa-chevron-left" aria-hidden="true"></i> {{ 'pagination_previous' | translate }}
-                </button>
-                <span class="resource-pagination-status">
-                    {{ 'pagination_page' | translate }} {{ vm.currentPage }} / {{ vm.getTotalPages() }}
+        <table class="designs-table" ng-if="dp.getRows(dp.tab).length > 0">
+            <caption class="sr-only">{{ (dp.tab === 'archived' ? 'designs_tab_archived' : 'designs_tab_mine') | translate }}</caption>
+            <thead>
+                <tr>
+                    <th scope="col" class="designs-head-cell designs-col-design">{{ 'designs_col_design' | translate }}</th>
+                    <th scope="col" class="designs-head-cell designs-col-status">{{ 'designs_col_status' | translate }}</th>
+                    <th scope="col" class="designs-head-cell designs-col-sharing">{{ 'designs_col_shared' | translate }}</th>
+                    <th scope="col" class="designs-head-cell designs-col-actions"><span class="sr-only">{{ 'designs_col_actions' | translate }}</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="designs-row" ng-repeat="row in dp.getVisibleRows(dp.tab) track by row.id">
+                    <td class="designs-cell designs-cell-design">
+                        <a class="designs-row-title" ng-href="#!/designs/{{ row.id }}">{{ row.title }}</a>
+                        <span class="designs-row-meta">{{ row.phaseCountKey | translate:{ count: row.phaseCount } }} &middot; <span
+                            ng-if="row.caseTitle">{{ 'launch_wizard_case_label' | translate }} {{ row.caseTitle }}</span><span
+                            ng-if="!row.caseTitle">{{ 'designs_no_case' | translate }}</span></span>
+                    </td>
+                    <td class="designs-cell designs-cell-status">
+                        <span class="designs-status" ng-class="{
+                            'designs-status-ready': row.status.tone === 'ready',
+                            'designs-status-errors': row.status.tone === 'errors',
+                            'designs-status-in-use': row.status.tone === 'in-use' }">
+                            <i class="fa-solid fa-circle" aria-hidden="true" ng-if="row.status.tone === 'ready'"></i>
+                            <i class="fa-solid fa-triangle-exclamation" aria-hidden="true" ng-if="row.status.tone === 'errors'"></i>
+                            <i class="fa-solid fa-lock" aria-hidden="true" ng-if="row.status.tone === 'in-use'"></i>
+                            {{ row.status.key | translate:row.status.params }}
+                        </span>
+                    </td>
+                    <td class="designs-cell designs-cell-sharing">
+                        <span class="designs-sharing-label" aria-hidden="true">{{ 'designs_col_shared' | translate }}</span>
+                        <span class="designs-switch-wrapper" title="{{ row.sharing.reasonKey ? (row.sharing.reasonKey | translate) : '' }}">
+                            <button type="button" role="switch" class="designs-switch"
+                                ng-class="{ 'is-on': dp.isShared(row) }"
+                                aria-checked="{{ dp.isShared(row) ? 'true' : 'false' }}"
+                                aria-label="{{ 'designs_share_switch_label' | translate }}: {{ row.title }}"
+                                ng-attr-aria-describedby="{{ row.sharing.reasonKey ? 'designs-sharing-reason-' + row.id : undefined }}"
+                                ng-disabled="row.sharing.disabled || dp.busy[row.id]"
+                                ng-click="dp.toggleSharing(row)">
+                                <span class="designs-switch-knob" aria-hidden="true"></span>
+                            </button>
+                            <span class="sr-only" id="designs-sharing-reason-{{ row.id }}" ng-if="row.sharing.reasonKey">{{ row.sharing.reasonKey | translate }}</span>
+                        </span>
+                    </td>
+                    <td class="designs-cell designs-cell-actions">
+                        <button type="button" class="btn btn-default btn-sm designs-row-primary"
+                            ng-disabled="dp.busy[row.id]"
+                            ng-click="dp.runAction(row, row.primary)">
+                            <i ng-class="row.primary.icon" aria-hidden="true"></i> {{ row.primary.key | translate }}
+                        </button>
+                        <div class="btn-group designs-row-menu" uib-dropdown keyboard-nav>
+                            <button type="button" class="btn btn-default btn-sm designs-row-menu-toggle" uib-dropdown-toggle
+                                ng-disabled="dp.busy[row.id]"
+                                aria-label="{{ 'designs_more_actions' | translate }}: {{ row.title }}">
+                                <i class="fa-solid fa-ellipsis" aria-hidden="true"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-right designs-menu" uib-dropdown-menu role="menu">
+                                <li role="none" ng-repeat="entry in row.menu track by entry.id"
+                                    ng-class="{ 'disabled': entry.disabled, 'designs-menu-danger': entry.danger }">
+                                    <a href="" role="menuitem" class="designs-menu-link"
+                                        ng-class="{ 'designs-menu-link-danger': entry.danger && !entry.disabled }"
+                                        ng-attr-aria-disabled="{{ entry.disabled ? 'true' : undefined }}"
+                                        ng-click="dp.runAction(row, entry)">
+                                        <i ng-class="entry.icon" aria-hidden="true"></i>
+                                        <span class="designs-menu-label">{{ entry.key | translate }}</span>
+                                        <span class="designs-menu-reason" ng-if="entry.reason">{{ entry.reason.key | translate:entry.reason.params }}</span>
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="designs-table-footer" ng-if="dp.getRows(dp.tab).length > 0">
+            <span>
+                {{ 'designs_showing' | translate:{ shown: dp.getVisibleRows(dp.tab).length, total: dp.getRows(dp.tab).length } }}
+                <span ng-if="dp.hasMoreRows(dp.tab)">&middot;
+                    <button type="button" class="btn btn-link designs-show-more" ng-click="dp.showMore(dp.tab)">
+                        {{ 'designs_show_more' | translate }}
+                    </button>
                 </span>
-                <button class="btn btn-default btn-sm" ng-click="vm.nextPage()" ng-disabled="vm.currentPage === vm.getTotalPages()">
-                    {{ 'pagination_next' | translate }} <i class="fa fa-chevron-right" aria-hidden="true"></i>
-                </button>
-            </div>
+            </span>
+            <span ng-if="dp.tab === 'mine'">{{ 'designs_archive_hint' | translate }}</span>
+        </div>
 
-            <div class="alert alert-info"
-                ng-if="vm.dsgnMode === 0 && vm.getFilteredDesigns().length === 0">
-                <span>{{'empty_designs_message' | translate}}</span>
-                <a href="" ng-click="navigateTo('/designs/new')">{{'empty_designs_link' | translate}}</a>.
-            </div>
+        <div class="alert alert-info" ng-if="dp.tab === 'mine' && dp.getRows('mine').length === 0">
+            <span>{{ 'empty_designs_message' | translate }}</span>
+            <a href="" ng-click="navigateTo('/designs/new')">{{ 'empty_designs_link' | translate }}</a>.
+        </div>
+        <div class="alert alert-info" ng-if="dp.tab === 'archived' && dp.getRows('archived').length === 0">
+            <span>{{ 'empty_archived_designs_message' | translate }}</span>
+        </div>
+    </section>
 
-            <div class="alert alert-info"
-                ng-if="vm.dsgnMode === 1 && vm.getFilteredDesigns().length === 0">
-                <span>{{'empty_shared_designs_message' | translate}}</span>
-            </div>
-
-            <div class="alert alert-info"
-                ng-if="vm.dsgnMode === 2 && vm.getFilteredDesigns().length === 0">
-                <span>{{'empty_archived_designs_message' | translate}}</span>
+    <!-- "Shared by others" keeps the previous page's cards until it is
+         rebuilt (#977). -->
+    <section class="designs-shared-section" ng-if="dp.loaded && !dp.loadFailed && dp.tab === 'shared'">
+        <p class="designContext">{{ 'designContext' | translate }}</p>
+        <div class="teacher-index-search designs-shared-search">
+            <div class="search-field-wrapper">
+                <label for="designs-shared-search" class="sr-only">{{ 'search_designs' | translate }}</label>
+                <input id="designs-shared-search" class="form-control search-input search-decorated-input" type="search"
+                    autocomplete="off"
+                    placeholder="{{ 'search_designs_placeholder' | translate }}"
+                    ng-model="dp.sharedSearch"
+                    ng-model-options="{ debounce: 150 }"
+                    ng-change="dp.handleSharedSearchChange()">
+                <i class="fa-solid fa-magnifying-glass search-field-icon" aria-hidden="true"></i>
             </div>
         </div>
-    </div>
+
+        <design-item ng-repeat="design in dp.getVisibleRows('shared') track by design.id"
+            design="design"
+            is-owner="false"
+            on-import="dp.importDesign">
+        </design-item>
+
+        <div class="designs-table-footer" ng-if="dp.getRows('shared').length > 0">
+            <span>
+                {{ 'designs_showing' | translate:{ shown: dp.getVisibleRows('shared').length, total: dp.getRows('shared').length } }}
+                <span ng-if="dp.hasMoreRows('shared')">&middot;
+                    <button type="button" class="btn btn-link designs-show-more" ng-click="dp.showMore('shared')">
+                        {{ 'designs_show_more' | translate }}
+                    </button>
+                </span>
+            </span>
+        </div>
+
+        <div class="alert alert-info" ng-if="dp.getRows('shared').length === 0">
+            <span>{{ 'empty_shared_designs_message' | translate }}</span>
+        </div>
+    </section>
 </div>
