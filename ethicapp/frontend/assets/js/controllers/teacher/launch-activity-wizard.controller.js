@@ -1,13 +1,14 @@
 // The "Launch an activity" wizard (#971, epic #965): its shell and step 1,
 // choosing a design. It owns the wizard's state (step, search, selection and
 // description) for both routes, `#!/activities/new` and
-// `#!/activities/new/:designId`, which preselects that design.
+// `#!/activities/new/:designId`, which preselects that design and opens on
+// step 2 (the design view's "Launch activity"). Step 2, identifying and
+// launching the activity, is the `launch-activity-step` component (#972).
 //
-// The step is mirrored in the URL (`?step=2`), so the browser's Back and
-// Forward move between steps; the routes do not reload on a search change, so
-// returning to step 1 keeps the search, the selection and the scroll position.
-// Step 2 is still today's description and launch form (ActivityController)
-// until the wizard's own step 2 lands (#972).
+// The step is mirrored in the URL (`?step=2`; `?step=1` on the design's
+// route, whose default is step 2), so the browser's Back and Forward move
+// between steps; the routes do not reload on a search change, so returning to
+// step 1 keeps the search, the selection and the scroll position.
 
 import {
     LAUNCH_LIST_PAGE_SIZE,
@@ -23,8 +24,14 @@ import { serviceDisplayName } from "../../helpers/service-configuration-summary.
 export const CHOOSE_STEP = 1;
 export const LAUNCH_STEP = 2;
 
-function stepFromSearch(search) {
-    return Number(search?.step) === LAUNCH_STEP ? LAUNCH_STEP : CHOOSE_STEP;
+// The step the URL asks for: `?step=` when it names one, else step 2 on the
+// design's route and step 1 on the plain one.
+export function stepFromSearch(search, hasRouteDesign = false) {
+    const step = Number(search?.step);
+    if (step === LAUNCH_STEP || step === CHOOSE_STEP) {
+        return step;
+    }
+    return hasRouteDesign ? LAUNCH_STEP : CHOOSE_STEP;
 }
 
 export function LaunchActivityWizardController($scope, $rootScope, $routeParams, $location,
@@ -46,6 +53,8 @@ export function LaunchActivityWizardController($scope, $rootScope, $routeParams,
     vm.rows = [];
     vm.selectedRow = null;
     vm.preview = null;
+    // The route named a design that cannot be launched.
+    vm.routeDesignUnavailable = false;
 
     let designs = [];
     let activities = [];
@@ -56,6 +65,10 @@ export function LaunchActivityWizardController($scope, $rootScope, $routeParams,
     // go back in the history instead of adding an entry.
     let cameFromChooseStep = false;
     let chooseStepScrollY = 0;
+    // Whether step 1 has been shown: opened on step 2 from the design view,
+    // step 1 first shows with the selected row in view.
+    let chooseStepShown = false;
+    const hasRouteDesign = $routeParams.designId !== undefined;
 
     function uiLanguage() {
         return LanguageCatalogService.getCurrentUiLanguageCode();
@@ -164,31 +177,55 @@ export function LaunchActivityWizardController($scope, $rootScope, $routeParams,
         vm.goToLaunchStep();
     };
 
-    // Step 2 opens at the top, with the description field focused.
-    function openLaunchStep() {
+    // `?step=` for step 1: none on the plain route, `1` on the design's.
+    function chooseStepParam() {
+        return hasRouteDesign ? CHOOSE_STEP : null;
+    }
+
+    function scrollSelectedRowIntoView() {
         $timeout(() => {
-            $window.scrollTo(0, 0);
-            $window.document.getElementById("activity-description-input")
-                ?.focus?.({ preventScroll: true });
+            $window.document.getElementById(`launch-design-${vm.selectedDesignId}`)
+                ?.scrollIntoView?.({ block: "nearest" });
         }, 0, false);
+    }
+
+    // Step 1 shows where the teacher left it; the first time, with the
+    // selected row in view.
+    function openChooseStep() {
+        if (chooseStepShown) {
+            $timeout(() => $window.scrollTo(0, chooseStepScrollY), 0, false);
+        } else if (vm.hasSelection()) {
+            scrollSelectedRowIntoView();
+        }
+        chooseStepShown = true;
+    }
+
+    // Step 2 opens at the top; the step focuses its description field.
+    function openLaunchStep() {
+        $timeout(() => $window.scrollTo(0, 0), 0, false);
     }
 
     function showStep(step) {
         if (step === vm.step) {
+            if (step === CHOOSE_STEP && !chooseStepShown) {
+                openChooseStep();
+            }
             return;
         }
         if (step === LAUNCH_STEP && !vm.hasSelection()) {
-            // Step 2 needs a design: a reload of `?step=2` without one starts over.
-            $location.search("step", null).replace();
+            // Step 2 needs a design: a reload of `?step=2` without one, or the
+            // route of a design that cannot be launched, starts over.
+            $location.search("step", chooseStepParam()).replace();
+            showStep(CHOOSE_STEP);
             return;
         }
 
-        if (vm.step === CHOOSE_STEP) {
+        if (vm.step === CHOOSE_STEP && chooseStepShown) {
             chooseStepScrollY = $window.scrollY || 0;
         }
         vm.step = step;
         if (step === CHOOSE_STEP) {
-            $timeout(() => $window.scrollTo(0, chooseStepScrollY), 0, false);
+            openChooseStep();
         } else {
             openLaunchStep();
         }
@@ -210,7 +247,13 @@ export function LaunchActivityWizardController($scope, $rootScope, $routeParams,
             $window.history.back();
             return;
         }
-        $location.search("step", null).replace();
+        if (hasRouteDesign) {
+            // Opened on step 2 from the design view: step 1 is a new entry,
+            // so Back returns to step 2.
+            $location.search("step", CHOOSE_STEP);
+        } else {
+            $location.search("step", null).replace();
+        }
         showStep(CHOOSE_STEP);
     };
 
@@ -227,6 +270,7 @@ export function LaunchActivityWizardController($scope, $rootScope, $routeParams,
         const designId = Number($routeParams.designId);
         const design = Number.isInteger(designId) ? findDesign(designId) : null;
         if (!isLaunchableDesign(design)) {
+            vm.routeDesignUnavailable = hasRouteDesign && !vm.loadFailed;
             return;
         }
 
@@ -236,10 +280,6 @@ export function LaunchActivityWizardController($scope, $rootScope, $routeParams,
             const pages = Math.ceil((index + 1) / LAUNCH_LIST_PAGE_SIZE);
             vm.visibleCount = pages * LAUNCH_LIST_PAGE_SIZE;
         }
-        $timeout(() => {
-            $window.document.getElementById(`launch-design-${designId}`)
-                ?.scrollIntoView?.({ block: "nearest" });
-        }, 0, false);
     }
 
     vm.load = async function() {
@@ -257,13 +297,13 @@ export function LaunchActivityWizardController($scope, $rootScope, $routeParams,
         preselectFromRoute();
         vm.refreshPreview();
         vm.loaded = true;
-        showStep(stepFromSearch($location.search()));
+        showStep(stepFromSearch($location.search(), hasRouteDesign));
         $scope.$applyAsync();
     };
 
     vm.$onRouteUpdate = function() {
         if (vm.loaded) {
-            showStep(stepFromSearch($location.search()));
+            showStep(stepFromSearch($location.search(), hasRouteDesign));
         }
     };
 

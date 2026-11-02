@@ -1,0 +1,150 @@
+<!-- The launch wizard's second step (#972): the form on the left, the
+     activity card preview on the right from 1200 px and under the form below
+     that, and the action bar fixed to the bottom of the viewport. -->
+<form name="launchActivityForm" class="launch-step" ng-submit="$ctrl.launch()" novalidate>
+    <div class="launch-step-main">
+        <div class="launch-wizard-card launch-wizard-chosen">
+            <div class="launch-wizard-chosen-text">
+                <p class="launch-wizard-card-label">{{ 'launch_wizard_chosen_design' | translate }}</p>
+                <p class="launch-wizard-chosen-title">{{ $ctrl.preview.title }}</p>
+                <p class="launch-wizard-chosen-meta">
+                    {{ $ctrl.preview.phaseCountKey | translate:{ count: $ctrl.preview.phaseCount } }}
+                    <span ng-if="$ctrl.preview.associatedCase">&middot; {{ 'launch_wizard_case_label' | translate }} {{ $ctrl.preview.associatedCase.title }}</span>
+                </p>
+            </div>
+            <button type="button" class="btn btn-link launch-step-change" ng-click="$ctrl.back()" ng-disabled="$ctrl.launching">
+                <i class="fa fa-arrow-left" aria-hidden="true"></i> {{ 'launch_wizard_change_design' | translate }}
+            </button>
+        </div>
+
+        <div class="launch-wizard-card">
+            <div class="form-group">
+                <label for="{{ $ctrl.descriptionInputId }}">
+                    {{ 'launch_activity_description_label' | translate }} <span class="launch-wizard-required" aria-hidden="true">*</span>
+                </label>
+                <input
+                    id="{{ $ctrl.descriptionInputId }}"
+                    type="text"
+                    class="form-control"
+                    required
+                    autocomplete="off"
+                    aria-describedby="activity-description-help"
+                    placeholder="{{ 'launch_activity_description_placeholder' | translate }}"
+                    ng-model="$ctrl.description" />
+                <p id="activity-description-help" class="help-block">
+                    {{ 'launch_activity_description_help' | translate }}
+                </p>
+                <div class="launch-step-previous" ng-if="$ctrl.previousDescriptions.length > 0">
+                    <span class="launch-step-previous-label" id="launch-step-previous-label">{{ 'launch_wizard_used_before' | translate }}</span>
+                    <ul class="launch-step-previous-list" aria-labelledby="launch-step-previous-label">
+                        <li ng-repeat="text in $ctrl.previousDescriptions track by $index">
+                            <button type="button" class="launch-step-chip"
+                                ng-class="{ 'is-current': $ctrl.isCurrentDescription(text) }"
+                                ng-click="$ctrl.useDescription(text)"
+                                ng-disabled="$ctrl.launching">{{ text }}</button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <section class="launch-wizard-card launch-step-ai" aria-labelledby="launch-step-ai-title" ng-if="$ctrl.showsAiServices()">
+            <!-- With services that can run: the switch. -->
+            <div class="launch-step-switch-row" ng-if="$ctrl.aiServices.hasSwitch">
+                <input type="checkbox" role="switch" class="launch-step-switch"
+                    id="launch-step-ai-switch"
+                    aria-describedby="launch-step-ai-switch-help"
+                    ng-model="$ctrl.aiServicesEnabled"
+                    ng-change="$ctrl.refreshAiServices()"
+                    ng-disabled="$ctrl.launching">
+                <span>
+                    <label for="launch-step-ai-switch" class="launch-step-ai-title" id="launch-step-ai-title">{{ 'launch_wizard_ai_switch' | translate }}</label>
+                    <span class="launch-step-ai-help" id="launch-step-ai-switch-help">
+                        {{ ($ctrl.aiServicesEnabled ? 'launch_wizard_ai_switch_on_help' : 'launch_wizard_ai_switch_off_help') | translate }}
+                    </span>
+                </span>
+            </div>
+            <!-- Without a switch: a title. -->
+            <h3 class="launch-step-ai-title" id="launch-step-ai-title" ng-if="!$ctrl.aiServices.hasSwitch">
+                {{ 'launch_wizard_ai_title' | translate }}
+            </h3>
+
+            <p class="launch-step-ai-line" ng-if="$ctrl.aiServices.state === $ctrl.states.LOADING">
+                <i class="fa fa-spinner fa-spin" aria-hidden="true"></i> {{ 'launch_wizard_ai_checking' | translate }}
+            </p>
+            <p class="launch-step-ai-line" ng-if="$ctrl.aiServices.state === $ctrl.states.FAILED">
+                {{ 'launch_wizard_ai_check_failed' | translate }}
+            </p>
+            <p class="launch-step-ai-line" ng-if="$ctrl.aiServices.state === $ctrl.states.NONE">
+                {{ 'launch_wizard_ai_none' | translate }}
+            </p>
+
+            <ul class="launch-step-services" ng-if="$ctrl.aiServices.runnable.length > 0"
+                ng-class="{ 'is-off': $ctrl.aiServices.state === $ctrl.states.OFF }">
+                <li class="launch-step-service" ng-repeat="service in $ctrl.aiServices.runnable track by $index">
+                    <strong class="launch-step-service-phase">{{ 'launch_wizard_phase_label' | translate:{ number: service.phaseNumber } }}</strong>
+                    <span class="launch-step-service-name">
+                        <span aria-hidden="true">&#10022;</span>
+                        <span ng-if="$ctrl.aiServices.state === $ctrl.states.OFF" class="sr-only">{{ 'launch_wizard_ai_turned_off' | translate }}:</span>
+                        {{ service.name || ('service_summary_unnamed_service' | translate) }}
+                    </span>
+                    <span class="launch-step-service-state is-available" ng-if="$ctrl.aiServices.state !== $ctrl.states.OFF">
+                        <span aria-hidden="true">&#9679;</span> {{ 'launch_wizard_ai_available' | translate }}
+                    </span>
+                </li>
+            </ul>
+            <p class="alert alert-warning launch-step-ai-note" ng-if="$ctrl.aiServices.state === $ctrl.states.OFF">
+                {{ 'launch_wizard_ai_off_note' | translate }}
+            </p>
+
+            <!-- Services that cannot run: today's "not available" notice. -->
+            <div ng-if="$ctrl.aiServices.blocked.length > 0">
+                <div class="alert alert-warning launch-step-ai-note" role="status">
+                    <p class="launch-step-ai-note-text"><i class="fa fa-exclamation-triangle" aria-hidden="true"></i> {{ 'activity_services_not_running_text' | translate }}</p>
+                    <p class="launch-step-ai-note-text">{{ 'launch_wizard_ai_unavailable_contact' | translate }}</p>
+                </div>
+                <ul class="launch-step-services is-unavailable">
+                    <li class="launch-step-service" ng-repeat="service in $ctrl.aiServices.blocked track by $index">
+                        <strong class="launch-step-service-phase">{{ 'launch_wizard_phase_label' | translate:{ number: service.phaseNumber } }}</strong>
+                        <span class="launch-step-service-name">
+                            <span aria-hidden="true">&#10022;</span>
+                            {{ service.name || ('service_summary_unnamed_service' | translate) }}
+                        </span>
+                        <span class="launch-step-service-state is-unavailable">
+                            <span aria-hidden="true">&#9675;</span> {{ 'launch_wizard_ai_unavailable' | translate }}
+                        </span>
+                    </li>
+                </ul>
+            </div>
+        </section>
+    </div>
+
+    <aside class="launch-wizard-card launch-step-look" aria-labelledby="launch-step-look-title">
+        <h3 class="launch-step-look-title" id="launch-step-look-title">{{ 'launch_wizard_card_preview_title' | translate }}</h3>
+        <div class="launch-step-activity-card">
+            <div class="launch-step-activity-card-heading activity-item-heading"><span class="activity-item-name">{{ $ctrl.cardTitle().name }}</span><span class="activity-item-description" ng-if="$ctrl.cardTitle().description"><span ng-if="$ctrl.cardTitle().name"> · </span>{{ $ctrl.cardTitle().description }}</span><span class="launch-step-activity-card-placeholder" ng-if="!$ctrl.cardTitle().description"> · {{ 'launch_wizard_card_preview_no_description' | translate }}</span></div>
+            <div class="launch-step-activity-card-body">
+                <span aria-hidden="true">&#9679;</span> {{ 'initiated' | translate }} &middot; {{ 'launch_wizard_card_preview_today' | translate }}
+            </div>
+        </div>
+        <p class="launch-step-lock">
+            <i class="fa fa-lock" aria-hidden="true"></i> {{ 'launch_wizard_lock_note' | translate }}
+        </p>
+    </aside>
+
+    <div class="launch-wizard-actions">
+        <button type="button" class="btn btn-default launch-wizard-action" ng-click="$ctrl.back()" ng-disabled="$ctrl.launching">
+            <i class="fa fa-arrow-left" aria-hidden="true"></i> {{ 'launch_wizard_back' | translate }}
+        </button>
+        <p class="launch-wizard-actions-summary" aria-live="polite">
+            <span class="launch-wizard-actions-error" role="alert" ng-if="$ctrl.error">
+                <i class="fa fa-exclamation-circle" aria-hidden="true"></i> {{ $ctrl.error | translate }}
+            </span>
+            <span ng-if="!$ctrl.error"><span ng-if="$ctrl.showsAiServices()">{{ $ctrl.aiServices.summary.key | translate:$ctrl.aiServices.summary.params }} &middot; </span><strong>{{ $ctrl.preview.title }}</strong></span>
+        </p>
+        <button type="submit" class="btn btn-primary launch-wizard-action" ng-disabled="!$ctrl.canLaunch()">
+            <span ng-if="!$ctrl.launching"><i class="fa fa-rocket" aria-hidden="true"></i> {{ 'launch_wizard_launch' | translate }}</span>
+            <span ng-if="$ctrl.launching"><i class="fa fa-spinner fa-spin" aria-hidden="true"></i> {{ 'preparing_dashboard' | translate }}</span>
+        </button>
+    </div>
+</form>

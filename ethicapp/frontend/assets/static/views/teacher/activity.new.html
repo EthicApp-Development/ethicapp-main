@@ -31,7 +31,7 @@
                         <span class="launch-wizard-step-number" aria-hidden="true">2</span>
                         <span class="launch-wizard-step-text">
                             <span class="launch-wizard-step-name">{{ 'launch_wizard_step_identify' | translate }}</span>
-                            <span class="launch-wizard-step-hint">{{ 'launch_wizard_step_identify_hint' | translate }}</span>
+                            <span class="launch-wizard-step-hint">{{ (lw.preview.usesAiServices ? 'launch_wizard_step_identify_hint' : 'launch_wizard_step_identify_hint_no_ai') | translate }}</span>
                         </span>
                     </span>
                 </li>
@@ -147,7 +147,10 @@
             <button type="button" class="btn btn-default launch-wizard-action" ng-click="lw.cancel()">{{ 'cancel' | translate }}</button>
             <p class="launch-wizard-actions-summary">
                 <span ng-if="lw.selectedRow">{{ 'launch_wizard_chosen' | translate }} <strong>{{ lw.selectedRow.title }}</strong></span>
-                <span ng-if="!lw.selectedRow">{{ 'launch_wizard_nothing_chosen' | translate }}</span>
+                <span class="launch-wizard-actions-error" role="alert" ng-if="!lw.selectedRow && lw.routeDesignUnavailable">
+                    <i class="fa fa-exclamation-circle" aria-hidden="true"></i> {{ 'launch_wizard_error_route_design' | translate }}
+                </span>
+                <span ng-if="!lw.selectedRow && !lw.routeDesignUnavailable">{{ 'launch_wizard_nothing_chosen' | translate }}</span>
             </p>
             <button type="button" class="btn btn-primary launch-wizard-action" ng-disabled="!lw.hasSelection()" ng-click="lw.goToLaunchStep()">
                 {{ 'launch_wizard_next' | translate }} <i class="fa fa-arrow-right" aria-hidden="true"></i>
@@ -155,56 +158,14 @@
         </div>
     </section>
 
-    <!-- Step 2: today's description and launch form, until the wizard's own
-         step 2 replaces it (#972). -->
-    <section class="launch-wizard-launch-step" ng-if="lw.step === 2" ng-controller="ActivityController as ac">
-        <form name="launchActivityForm" ng-submit="ac.createSession(lw.selectedDesignId, lw.description)" novalidate>
-            <div class="launch-wizard-card launch-wizard-chosen">
-                <div class="launch-wizard-chosen-text">
-                    <p class="launch-wizard-card-label">{{ 'launch_wizard_chosen_design' | translate }}</p>
-                    <p class="launch-wizard-chosen-title">{{ lw.preview.title }}</p>
-                    <p class="launch-wizard-chosen-meta">
-                        {{ lw.preview.phaseCountKey | translate:{ count: lw.preview.phaseCount } }}
-                        <span ng-if="lw.preview.associatedCase">&middot; {{ 'launch_wizard_case_label' | translate }} {{ lw.preview.associatedCase.title }}</span>
-                    </p>
-                </div>
-                <button type="button" class="btn btn-link" ng-click="lw.goToChooseStep()">
-                    <i class="fa fa-arrow-left" aria-hidden="true"></i> {{ 'launch_wizard_change_design' | translate }}
-                </button>
-            </div>
-
-            <div class="launch-wizard-card">
-                <div class="form-group">
-                    <label for="activity-description-input">
-                        {{ 'launch_activity_description_label' | translate }} <span class="launch-wizard-required" aria-hidden="true">*</span>
-                    </label>
-                    <input
-                        id="activity-description-input"
-                        type="text"
-                        class="form-control"
-                        required
-                        aria-describedby="activity-description-help"
-                        placeholder="{{ 'launch_activity_description_placeholder' | translate }}"
-                        ng-model="lw.description" />
-                    <p id="activity-description-help" class="help-block">
-                        {{ 'launch_activity_description_help' | translate }}
-                    </p>
-                </div>
-            </div>
-
-            <div class="launch-wizard-actions">
-                <button type="button" class="btn btn-default launch-wizard-action" ng-click="lw.goToChooseStep()">
-                    <i class="fa fa-arrow-left" aria-hidden="true"></i> {{ 'launch_wizard_back' | translate }}
-                </button>
-                <p class="launch-wizard-actions-summary">
-                    <span class="text-danger" role="alert" ng-if="ac.error">{{ 'faulty_design' | translate }}</span>
-                    <span ng-if="!ac.error">{{ 'launch_wizard_chosen' | translate }} <strong>{{ lw.preview.title }}</strong></span>
-                </p>
-                <button type="submit" class="btn btn-primary launch-wizard-action" ng-disabled="ac.showSpinner || !ac.hasDescription(lw.description)">
-                    <span ng-if="!ac.showSpinner"><i class="fa fa-rocket" aria-hidden="true"></i> {{ 'launch_wizard_launch' | translate }}</span>
-                    <span ng-if="ac.showSpinner"><i class="fa fa-spinner fa-spin" aria-hidden="true"></i> {{ 'preparing_dashboard' | translate }}</span>
-                </button>
-            </div>
-        </form>
+    <!-- Step 2: identify and launch (#972). The wizard keeps the selection
+         and the description, so "Change design" and Back keep them. -->
+    <section class="launch-wizard-launch-step" ng-if="lw.step === 2">
+        <launch-activity-step
+            design-id="lw.selectedDesignId"
+            preview="lw.preview"
+            description="lw.description"
+            on-back="lw.goToChooseStep()">
+        </launch-activity-step>
     </section>
 </div>
