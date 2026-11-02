@@ -1,5 +1,5 @@
 import externalServicesRegistry from "../services/external-services.service.js";
-import { unionEnabledServiceIds } from "./phase-external-services.js";
+import { phaseExternalServices, unionEnabledServiceIds } from "./phase-external-services.js";
 
 /**
  * The external services a design enables that will not run in an activity
@@ -37,4 +37,47 @@ export async function listServicesNotRunning(
             id: serviceId,
             ui: { translations: await registry.getServiceUiTranslations(serviceId) },
         })));
+}
+
+/**
+ * The AI services a design enables, phase by phase, and whether each can run
+ * in an activity launched now (#969): it applies listServicesNotRunning's
+ * rules under the version a launch would pin at this moment, the current one
+ * (the highest id, as `current_ai_service_policy_version_id()` in the launch
+ * transaction). The launch wizard checks them before the launch; it is not a
+ * live health probe of the remote service (#642).
+ *
+ * A service enabled in several phases is listed once per phase. Only ids are
+ * returned: the client names services from GET /external-services.
+ *
+ * @param {object|string|null} design the design document (`designs.design`).
+ * @param {{ registry?: object }} [dependencies]
+ * @returns {Promise<Array<{ phaseNumber: number, serviceId: string, canRun: boolean }>>}
+ *          in phase order, then in the phase's order; empty when the design
+ *          enables no service. Phase numbers start at 1, as `stages.number`.
+ */
+export async function checkDesignServicesBeforeLaunch(
+    design,
+    { registry = externalServicesRegistry } = {}
+) {
+    const parsed = typeof design === "string" ? JSON.parse(design) : design;
+    const phases = Array.isArray(parsed?.phases) ? parsed.phases : [];
+    const enabledByPhase = phases.map(phase => phaseExternalServices(phase).enabledServiceIds);
+    if (enabledByPhase.every(serviceIds => serviceIds.length === 0)) {
+        return [];
+    }
+
+    await registry.initialize();
+    const currentVersion = await registry.getCurrentPolicyVersion();
+    const notRunning = await listServicesNotRunning({
+        design:          parsed,
+        policyVersionId: currentVersion?.id ?? null,
+    }, { registry });
+    const notRunningIds = new Set(notRunning.map(({ id }) => id));
+
+    return enabledByPhase.flatMap((serviceIds, index) => serviceIds.map(serviceId => ({
+        phaseNumber: index + 1,
+        serviceId,
+        canRun:      !notRunningIds.has(serviceId),
+    })));
 }

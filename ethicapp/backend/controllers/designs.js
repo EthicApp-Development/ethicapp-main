@@ -6,6 +6,8 @@ import path from "path";
 import * as config from "../config/database.config.js";
 import { uploadsPath } from "../config/uploads.config.js";
 import * as rpg2 from "../db/rest-pg-2.js";
+import { requireLaunchableDesign } from "../helpers/activity-owner-helper.js";
+import { checkDesignServicesBeforeLaunch } from "../helpers/ai-service-launch-notice.js";
 import { requireRole } from "../helpers/auth-helper.js";
 import { buildDesignCopyDocument } from "../helpers/design-copy.js";
 import {
@@ -1318,6 +1320,40 @@ router.get('/designs/:id/valid', async (req, res) => {
     } catch (err) {
         console.error('Error in GET /designs/:id/valid:', err);
         return res.status(500).json({ status: 'err', message: 'Internal Server Error' });
+    }
+});
+
+// The AI services the design enables, by phase, and whether each can run in an
+// activity launched now (#969), for the launch wizard's step 2. It answers only
+// for a design the teacher may launch, under POST /activities' rule
+// (requireLaunchableDesign: their own design); any other design gets the same
+// 404 as a missing one (#923, #929). Validity is not required: an invalid
+// design of the teacher's still exists for them, GET /designs/:id/valid
+// reports it, and the launch checks it first.
+router.get("/designs/:id/ai-services", async (req, res) => {
+    try {
+        const launchable = await requireLaunchableDesign(req, res, req.params.id);
+        if (!launchable) {
+            return;
+        }
+
+        const result = await rpg2.singleSQL({
+            dbcon: config.dbconnString,
+            sql:   `
+                SELECT design
+                FROM designs
+                WHERE id = $1
+            `,
+            sqlParams: [rpg2.param("plain", launchable.designId)],
+        });
+
+        return res.json({
+            status:   "ok",
+            services: await checkDesignServicesBeforeLaunch(result?.design ?? null),
+        });
+    } catch (err) {
+        console.error("Error in GET /designs/:id/ai-services:", err);
+        return res.status(500).json({ status: "err", message: "Internal Server Error" });
     }
 });
 
