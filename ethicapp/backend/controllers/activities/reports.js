@@ -10,53 +10,26 @@ import {
     markActivityReportExportCompleted,
     markActivityReportExportFailed,
 } from "../../helpers/activity-report-audit-helper.js";
+import externalServicesRegistry from "../../services/external-services.service.js";
 import { getDesignTypeBySessionId } from "./activities-common.js";
 import {
+    SEMANTIC_DIFFERENTIAL_CHAT_COLUMNS,
+    SEMANTIC_DIFFERENTIAL_RESPONSE_COLUMNS,
+    buildExternalServiceAgentsSql,
     buildSemanticDifferentialChatTranscriptSql,
     buildSemanticDifferentialResponsesReportSql,
+    buildSemanticDifferentialSessionQuestionsSql,
+    buildSessionGroupsSql,
 } from "./report-query-builders.js";
 import { buildCsv } from "./csv-builder.js";
-import { withPlainQuestionText } from "./report-rows.js";
+import {
+    buildReportWithContributions,
+    buildSessionChatScope,
+    CONTRIBUTION_REPORT_TYPES,
+} from "./report-contributions.js";
 
 const router = express.Router();
 const REPORT_NOT_IMPLEMENTED = "REPORT_NOT_IMPLEMENTED";
-const SEMANTIC_DIFFERENTIAL_RESPONSE_COLUMNS = [
-    "id",
-    "user_id",
-    "team_id",
-    "name",
-    "rut",
-    "gender",
-    "question_number",
-    "question_text",
-    "left_pole",
-    "right_pole",
-    "max_scale_range",
-    "selected_value",
-    "comment",
-    "phase_number",
-    "time",
-];
-const SEMANTIC_DIFFERENTIAL_CHAT_COLUMNS = [
-    "id",
-    "user_id",
-    "external_agent_id",
-    "team_id",
-    "author_role",
-    "name",
-    "rut",
-    "gender",
-    "external_service_id",
-    "question_number",
-    "question_text",
-    "left_pole",
-    "right_pole",
-    "message",
-    "phase_number",
-    "time",
-    "reply_to",
-];
-
 function parseSessionId(rawSessionId) {
     const sessionId = Number(rawSessionId);
     return Number.isInteger(sessionId) && sessionId > 0 ? sessionId : null;
@@ -65,7 +38,7 @@ function parseSessionId(rawSessionId) {
 async function getTeacherActivityContext(sessionId, teacherId) {
     const rows = await rpg2.execSQL({
         dbcon: config.dbconnString,
-        sql: `
+        sql:   `
             SELECT
                 activity.id AS activity_id,
                 activity.session AS session_id,
@@ -113,7 +86,7 @@ async function loadReportContext(req, res) {
 
 const fullReportHandlers = {
     semantic_differential: buildSemanticDifferentialResponsesReport,
-    ranking: async () => {
+    ranking:               async () => {
         const error = new Error("Ranking full report export is not implemented yet.");
         error.code = REPORT_NOT_IMPLEMENTED;
         throw error;
@@ -122,7 +95,7 @@ const fullReportHandlers = {
 
 const chatTranscriptHandlers = {
     semantic_differential: buildSemanticDifferentialChatTranscript,
-    ranking: async () => {
+    ranking:               async () => {
         const error = new Error("Ranking chat transcript export is not implemented yet.");
         error.code = REPORT_NOT_IMPLEMENTED;
         throw error;
@@ -149,51 +122,90 @@ function hashContent(content) {
     return crypto.createHash("sha256").update(content, "utf8").digest("hex");
 }
 
-async function buildSemanticDifferentialResponsesReport(context) {
-    const rows = await rpg2.execSQL({
-        dbcon: config.dbconnString,
-        sql: buildSemanticDifferentialResponsesReportSql(),
-        sqlParams: [rpg2.param("plain", context.sessionId)],
+async function querySession(sql, sessionId) {
+    return rpg2.execSQL({
+        dbcon:     config.dbconnString,
+        sql,
+        sqlParams: [rpg2.param("plain", sessionId)],
+    });
+}
+
+async function loadSessionChatScope(sessionId) {
+    const [questionRows, groupRows] = await Promise.all([
+        querySession(buildSemanticDifferentialSessionQuestionsSql(), sessionId),
+        querySession(buildSessionGroupsSql(), sessionId),
+    ]);
+    return buildSessionChatScope(questionRows, groupRows);
+}
+
+async function loadServiceAgents(serviceIds) {
+    return rpg2.execSQL({
+        dbcon:     config.dbconnString,
+        sql:       buildExternalServiceAgentsSql(),
+        sqlParams: [serviceIds],
+    });
+}
+
+// Builds a report's CSV with the contributions of the services that worked in
+// its session (report-building, #945). Without contributions, the CSV is the
+// report's own, byte for byte.
+async function buildSemanticDifferentialReport(context, {
+    reportType, sql, columns, filenamePrefix,
+}) {
+    const sqlRows = await querySession(sql, context.sessionId);
+
+    const report = await buildReportWithContributions({
+        reportType:       CONTRIBUTION_REPORT_TYPES[reportType],
+        sessionId:        context.sessionId,
+        designType:       context.designType,
+        columns,
+        rows:             sqlRows,
+        collect:          (...args) => externalServicesRegistry.collectReportContributions(...args),
+        loadSessionScope: loadSessionChatScope,
+        loadServiceAgents,
     });
 
-    const content = buildCsv(SEMANTIC_DIFFERENTIAL_RESPONSE_COLUMNS, withPlainQuestionText(rows));
-    const filename = `responses_${context.sessionId}-${buildTimestampForFilename()}.csv`;
+    const content = buildCsv(report.columns, report.rows);
+    const filename = `${filenamePrefix}_${context.sessionId}-${buildTimestampForFilename()}.csv`;
 
     return {
         content,
         filename,
-        rowCount: rows.length,
-        byteCount: Buffer.byteLength(content, "utf8"),
+        rowCount:      report.rows.length,
+        byteCount:     Buffer.byteLength(content, "utf8"),
         contentSha256: hashContent(content),
+        metadata:      {
+            contributions: report.contributions,
+            ...(report.collectionFailed ? { contributionsCollection: "failed" } : {}),
+        },
     };
 }
 
-async function buildSemanticDifferentialChatTranscript(context) {
-    const rows = await rpg2.execSQL({
-        dbcon: config.dbconnString,
-        sql: buildSemanticDifferentialChatTranscriptSql(),
-        sqlParams: [rpg2.param("plain", context.sessionId)],
+async function buildSemanticDifferentialResponsesReport(context) {
+    return buildSemanticDifferentialReport(context, {
+        reportType:     "full_report",
+        sql:            buildSemanticDifferentialResponsesReportSql(),
+        columns:        SEMANTIC_DIFFERENTIAL_RESPONSE_COLUMNS,
+        filenamePrefix: "responses",
     });
+}
 
-    const content = buildCsv(SEMANTIC_DIFFERENTIAL_CHAT_COLUMNS, withPlainQuestionText(rows));
-    const filename = `chat_${context.sessionId}-${buildTimestampForFilename()}.csv`;
-
-    return {
-        content,
-        filename,
-        rowCount: rows.length,
-        byteCount: Buffer.byteLength(content, "utf8"),
-        contentSha256: hashContent(content),
-    };
+async function buildSemanticDifferentialChatTranscript(context) {
+    return buildSemanticDifferentialReport(context, {
+        reportType:     "chat_transcript",
+        sql:            buildSemanticDifferentialChatTranscriptSql(),
+        columns:        SEMANTIC_DIFFERENTIAL_CHAT_COLUMNS,
+        filenamePrefix: "chat",
+    });
 }
 
 function notImplementedResponse(res, reportType, context, exportLog = null) {
     return res.status(501).json({
-        status: "err",
-        error: "Report export is not implemented yet.",
+        status:      "err",
+        error:       "Report export is not implemented yet.",
         reportType,
-        designType: context.designType,
-        sessionId: context.sessionId,
+        designType:  context.designType,
+        sessionId:   context.sessionId,
         exportLogId: exportLog?.id || null,
     });
 }
@@ -206,12 +218,12 @@ async function processReportRequest(req, res, { reportType, handlers }) {
 
     const exportLog = await createActivityReportExportLog({
         req,
-        activity: context.activity,
-        designType: context.designType,
+        activity:     context.activity,
+        designType:   context.designType,
         reportType,
         exportFormat: "csv",
-        metadata: {
-            route: req.originalUrl,
+        metadata:     {
+            route:        req.originalUrl,
             activityName: context.activity.name,
         },
     });
@@ -220,13 +232,13 @@ async function processReportRequest(req, res, { reportType, handlers }) {
     if (!handler) {
         await markActivityReportExportFailed(exportLog.id, {
             errorMessage: `Unsupported design type: ${context.designType}`,
-            metadata: {
+            metadata:     {
                 failureCode: "UNSUPPORTED_DESIGN_TYPE",
             },
         });
         return res.status(400).json({
-            status: "err",
-            error: `Unsupported design type: ${context.designType}`,
+            status:      "err",
+            error:       `Unsupported design type: ${context.designType}`,
             exportLogId: exportLog.id,
         });
     }
@@ -237,7 +249,7 @@ async function processReportRequest(req, res, { reportType, handlers }) {
     } catch (error) {
         await markActivityReportExportFailed(exportLog.id, {
             errorMessage: error.message,
-            metadata: {
+            metadata:     {
                 failureCode: error.code || "REPORT_EXPORT_FAILED",
             },
         });
@@ -250,9 +262,10 @@ async function processReportRequest(req, res, { reportType, handlers }) {
     }
 
     const report = await markActivityReportExportCompleted(exportLog.id, {
-        rowCount: reportResult.rowCount,
-        byteCount: reportResult.byteCount,
+        rowCount:      reportResult.rowCount,
+        byteCount:     reportResult.byteCount,
         contentSha256: reportResult.contentSha256,
+        metadata:      reportResult.metadata,
     });
 
     res.setHeader("Content-Type", "text/csv; charset=utf-8");
@@ -265,7 +278,7 @@ router.get("/activity/:session_id/full_report", async (req, res) => {
     try {
         return await processReportRequest(req, res, {
             reportType: "full_report",
-            handlers: fullReportHandlers,
+            handlers:   fullReportHandlers,
         });
     } catch (error) {
         console.error("Error in GET /activity/:session_id/full_report:", error);
@@ -277,7 +290,7 @@ router.get("/activity/:session_id/chat_transcript", async (req, res) => {
     try {
         return await processReportRequest(req, res, {
             reportType: "chat_transcript",
-            handlers: chatTranscriptHandlers,
+            handlers:   chatTranscriptHandlers,
         });
     } catch (error) {
         console.error("Error in GET /activity/:session_id/chat_transcript:", error);

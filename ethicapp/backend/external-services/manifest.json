@@ -11,9 +11,11 @@
         "phase-started",
         "phase-ended",
         "chat-message-received",
-        "callback-received"
+        "callback-received",
+        "report-building"
       ],
       "scopes": ["response", "chat"],
+      "report": { "columnPrefix": "mockreview_" },
       "callbackAuth": {
         "allowedClientIds": ["ethicapp-external-mock"],
         "requiredRoles": []
@@ -26,9 +28,11 @@
       "development": true,
       "requires": [],
       "hooks": [
-        "chat-message-received"
+        "chat-message-received",
+        "report-building"
       ],
       "scopes": ["chat"],
+      "report": { "columnPrefix": "mockchat_" },
       "callbackAuth": {
         "allowedClientIds": ["ethicapp-external-mock"],
         "requiredRoles": []

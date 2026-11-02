@@ -715,7 +715,12 @@ services cannot be read.
 
 - responses report: `{ responseId, phaseId, questionId, userId, groupId }`;
 - chat transcript: `{ messageId, phaseId, questionId, groupId, userId,
-  externalServiceId, time }`.
+  externalServiceId, externalServiceResultId, time }`. `externalServiceResultId`
+  is the `external_service_results` row an agent message was published from
+  (#947), or `null`; `time` is ISO 8601.
+
+`phaseId` is the phase's `stages.id`, `questionId` the question's id
+(`differential.id`) and `groupId` the row's team.
 
 **Results reader.** The second argument is `{ results, signal }`. `signal` is an
 `AbortSignal` aborted when the handler's timeout expires. `results` is the
@@ -763,6 +768,55 @@ to add) or to:
 - Unknown keys, unknown row keys, undeclared columns, non-scalar or over-long
   values, and rows for the responses report make the whole contribution
   `invalid`. Long strings are not truncated.
+
+**Merging into the reports** (#945, `controllers/activities/report-contributions.js`).
+Both semantic-differential reports (`GET /activity/:session_id/full_report`
+and `GET /activity/:session_id/chat_transcript`) call the collector after
+reading their rows, with their own columns as `reservedColumnIds`. Ranking
+reports still answer 501.
+
+- Each completed contribution's columns are appended after the report's
+  columns, grouped by service in subscription order (the outcomes' order). The
+  CSV header uses the column ids; labels are not exported. A row without a
+  value for a column has an empty field. A service that adds no column, or
+  whose contribution was left out, adds nothing to the header.
+- Contributed chat rows are checked against the session: `phaseId` must be a
+  phase of the session, `questionId` (when given) a question of that phase and
+  `groupId` (when given) a group of that phase. A row that fails makes its
+  whole contribution `invalid`, logged and audited like the collector's
+  outcomes; if the session cannot be read, the contribution is `failed`.
+- The generator fills a contributed row's transcript columns: `author_role` is
+  `external_service`, `external_service_id` the service id, `name` and
+  `external_agent_id` come from the service's `external_service_agents` row
+  (the service id when it has none), the question columns from `questionId`,
+  `team_id` from `groupId`, and `phase_number` from `phaseId`. `id`, `user_id`,
+  `rut`, `gender` and `reply_to` stay empty.
+- Contributed rows are placed in the transcript's order (phase, question,
+  group, time, NULLs last). The report's own rows keep their order; a
+  contributed row that ties one of them goes after it, and ties between
+  contributed rows keep the service order.
+- Without any contributed column or row, the CSV is byte-identical to the
+  report's own. The report is delivered whatever the outcomes, and its
+  `row_count` counts contributed rows.
+- The export's audit row (`activity_report_exports.metadata`) records
+  `contributions`: one `{ serviceId, status, columns, values, rows }` per
+  service asked, with counts only, plus `reason` for an outcome other than
+  `completed` and `problems` for an `invalid` one. It holds no contributed
+  value. When the collector itself rejects, the report is delivered without
+  contributions and the metadata says `contributionsCollection: "failed"`.
+
+**Development mocks.** With `EXTERNAL_SERVICES_DEVELOPMENT_ADAPTERS=true`, two
+mock adapters contribute, so the merge can be checked on the local stack
+without AI Additions. They read the report's row keys, since their hook
+callbacks store no results:
+
+- `mock-ai-response-review` (`mockreview_`) adds `mockreview_note` to every
+  row of the responses report, with the number of stored results whose job
+  processed that response (zero unless callbacks were posted to it). It adds
+  nothing to the chat transcript.
+- `mock-chat-agent` (`mockchat_`) adds `mockchat_shown_to_students` to the
+  chat transcript: `true` on its own messages and `false` on one summary row
+  per group it spoke in, placed a second after its last message there.
 
 ### Adding a new hook
 
