@@ -22,6 +22,7 @@ import {
 } from "../helpers/case-documents.js";
 import { copyReadyDesignAnalyses } from "../helpers/design-analyses-helper.js";
 import { checkDesignCase } from "../helpers/design-case-association.js";
+import { isCaseCopyableBy, isListedDesignImportableBy } from "../helpers/design-import.js";
 import { designCreatedAt, designUsesAiServices } from "../helpers/design-list-fields.js";
 import { scheduleDesignAnalyses } from "../helpers/design-analyses-lifecycle-helper.js";
 import { DESIGN_HOOK_TRIGGERS } from "../helpers/design-analysis-hooks.js";
@@ -336,14 +337,8 @@ async function copyCaseForUser(client, sourceCaseId, userId, visibility = PRIVAT
         LIMIT 1;
     `, [sourceCaseId, userId]);
     const sourceCase = sourceResult.rows[0];
-    if (!sourceCase) {
-        return null;
-    }
-
-    if (
-        !sameId(sourceCase.creator, userId) &&
-        (!isPublicVisibility(sourceCase.visibility) || sourceCase.archived === true)
-    ) {
+    // GET /designs flags `importable` with this same rule (#974).
+    if (!isCaseCopyableBy(sourceCase, userId)) {
         return null;
     }
 
@@ -784,6 +779,8 @@ router.get("/designs", async (req, res) => {
                        d.is_editable_copy,
                        d.case_id,
                        d.created_at,
+                       c.id IS NOT NULL AS case_found,
+                       c.creator AS case_creator,
                        c.title AS case_title,
                        c.author_firstname AS case_author_firstname,
                        c.author_lastname AS case_author_lastname,
@@ -844,8 +841,17 @@ router.get("/designs", async (req, res) => {
             sqlParams: [sessionUid], // Pass session user ID as the parameter
         });
 
-        // Process the rows to map to the desired structure
-        const designs = rows.map(normalizeDesignRow);
+        // Process the rows to map to the desired structure. Another teacher's
+        // design says whether importing it would pass the case check of
+        // POST /designs/:id/duplicate (#974); the teacher's own designs carry
+        // no `importable`.
+        const designs = rows.map((row) => {
+            const design = normalizeDesignRow(row);
+            if (!row.user_owned) {
+                design.importable = isListedDesignImportableBy(row, sessionUid);
+            }
+            return design;
+        });
 
         // Respond with the processed designs
         return res.json({ status: "ok", result: designs });
