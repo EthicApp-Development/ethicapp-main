@@ -850,10 +850,12 @@ export async function register({
                 groupId:          storedContext.groupId,
                 agentDisplayName: agentName,
                 content,
+                // Links the message to this callback's result (#947).
+                resultId:         context.resultId,
             });
 
             if (published?.savedMessage) {
-                savedMessages.push(published.savedMessage);
+                savedMessages.push({ message: published.savedMessage, agentName });
             }
         }
 
@@ -865,6 +867,13 @@ export async function register({
                 room:                roomName,
                 evaluationsReceived: evaluations.length,
                 messagesPublished:   savedMessages.length,
+                // Which agent wrote each published message (#947): the
+                // shared external_service_agents row keeps only the latest
+                // name. Stored in the result's adapter_result.
+                publishedMessages:   savedMessages.map(({ message, agentName }) => ({
+                    messageId: message.id ?? null,
+                    agentName,
+                })),
             },
         });
     });
