@@ -1,3 +1,16 @@
+// A failed launch (#972): which request failed (`stage`, "session" or
+// "activity"), its HTTP `status` (null without a response) and the server's
+// error `code`, if any.
+export class LaunchActivityError extends Error {
+    constructor(stage, cause) {
+        super(`Failed to launch the activity (${stage}).`, { cause });
+        this.name = "LaunchActivityError";
+        this.stage = stage;
+        this.status = Number.isInteger(cause?.status) && cause.status > 0 ? cause.status : null;
+        this.code = typeof cause?.data?.code === "string" ? cause.data.code : null;
+    }
+}
+
 let ActivityCatalogService = ($http) => {
     const service = {
         activities: [],
@@ -44,10 +57,17 @@ let ActivityCatalogService = ($http) => {
             return activity || null;
         },
 
-        async createActivity(design, description) {
+        // Launches an activity from `design`: POST /sessions with the
+        // design's title and `description`, then POST /activities. With
+        // `aiServices: false` the activity runs without the design's AI
+        // services (#970); otherwise the field is left out and they stay on.
+        // Resolves with the session id. A failure rejects with a
+        // LaunchActivityError naming the request that failed (`stage`:
+        // "session" or "activity"), its HTTP `status` and the server's `code`,
+        // so the launch wizard can say what went wrong (#972).
+        async createActivity(design, description, { aiServices } = {}) {
+            let stage = "session";
             try {
-                // console.debug(`[createActivity] ${JSON.stringify(design)})`);
-
                 // Create the session for the activity
                 const sessionResponse = await $http({
                     url:    "/sessions",
@@ -64,13 +84,15 @@ let ActivityCatalogService = ($http) => {
                 const designId = design.id;
                 
                 // Create the activity bound to the session
+                stage = "activity";
+                const activityRequest = { sessionId, designId };
+                if (aiServices === false) {
+                    activityRequest.aiServices = false;
+                }
                 const response = await $http({
-                    url: "/activities",
+                    url:    "/activities",
                     method: "POST",
-                    data: { 
-                        sessionId, 
-                        designId
-                    }
+                    data:   activityRequest,
                 });
         
                 // Check the response status
@@ -95,7 +117,7 @@ let ActivityCatalogService = ($http) => {
                 }
             } catch (error) {
                 console.error("[ActivityCatalogService::createActivity] Error creating activity:", error);
-                throw new Error("[ActivityCatalogService::createActivity] Failed to create activity.");
+                throw new LaunchActivityError(stage, error);
             }
         },
         

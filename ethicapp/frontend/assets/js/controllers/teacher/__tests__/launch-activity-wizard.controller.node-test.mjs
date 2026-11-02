@@ -1,11 +1,14 @@
 // The launch wizard's shell and step 1 (#971, epic #965): the step lives in
 // the URL, going back keeps the search and the selection, and the route's
-// design is preselected.
+// design is preselected and opens on step 2 (#972).
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 
-import { LaunchActivityWizardController } from "../launch-activity-wizard.controller.js";
+import {
+    LaunchActivityWizardController,
+    stepFromSearch,
+} from "../launch-activity-wizard.controller.js";
 
 const template = readFileSync(new URL(
     "../../../../static/views/teacher/activity.new.html", import.meta.url), "utf8");
@@ -140,10 +143,13 @@ describe("launch wizard, step 1", () => {
         assert.equal(vm.preview.launch.key, "launch_wizard_launched_one");
     });
 
-    it("does not preselect a design that cannot be launched", async () => {
-        const { vm } = createWizard({ routeParams: { designId: "3" } });
+    it("does not preselect a design that cannot be launched, and says so", async () => {
+        const { vm, calls } = createWizard({ routeParams: { designId: "3" } });
         await vm.ready;
         assert.equal(vm.hasSelection(), false);
+        assert.equal(vm.step, 1);
+        assert.equal(vm.routeDesignUnavailable, true);
+        assert.deepEqual(calls.replaces, [{ step: "1" }]);
     });
 
     it("shows 20 rows, then more on request", async () => {
@@ -193,15 +199,40 @@ describe("launch wizard, steps in the URL", () => {
         assert.equal(vm.step, 1);
     });
 
-    it("opens step 2 from the URL with the route's design, and leaves it without going back", async () => {
-        const { vm, calls } = createWizard({ routeParams: { designId: "2" }, search: { step: "2" } });
+    it("opens the design's route on step 2, and changing the design adds step 1 to the history", async () => {
+        const { vm, calls, settle, browserBack } = createWizard({ routeParams: { designId: "2" } });
         await vm.ready;
         assert.equal(vm.step, 2);
+        assert.equal(vm.selectedDesignId, 2);
+        assert.equal(vm.routeDesignUnavailable, false);
 
         vm.goToChooseStep();
+        await settle();
         assert.equal(calls.historyBack, 0);
-        assert.deepEqual(calls.replaces, [{}]);
+        assert.deepEqual(calls.pushes, [{ step: "1" }]);
         assert.equal(vm.step, 1);
+        assert.equal(vm.selectedDesignId, 2, "the design stays selected");
+
+        browserBack();
+        assert.equal(vm.step, 2, "Back returns to step 2");
+    });
+
+    it("keeps step 1 on the design's route when the URL asks for it", async () => {
+        const { vm } = createWizard({ routeParams: { designId: "2" }, search: { step: "1" } });
+        await vm.ready;
+        assert.equal(vm.step, 1);
+        assert.equal(vm.selectedDesignId, 2);
+    });
+
+    it("keeps the description across steps", async () => {
+        const { vm, settle } = createWizard({ routeParams: { designId: "2" } });
+        await vm.ready;
+        vm.description = "Sección 3";
+        vm.goToChooseStep();
+        await settle();
+        vm.goToLaunchStep();
+        assert.equal(vm.step, 2);
+        assert.equal(vm.description, "Sección 3");
     });
 
     it("starts over at step 1 when the URL asks for step 2 without a design", async () => {
@@ -220,6 +251,16 @@ describe("launch wizard, steps in the URL", () => {
     });
 });
 
+describe("stepFromSearch", () => {
+    it("takes the URL's step, else step 2 on the design's route and step 1 otherwise", () => {
+        assert.equal(stepFromSearch({ step: "2" }), 2);
+        assert.equal(stepFromSearch({ step: "1" }, true), 1);
+        assert.equal(stepFromSearch({}, true), 2);
+        assert.equal(stepFromSearch({}), 1);
+        assert.equal(stepFromSearch({ step: "9" }), 1);
+    });
+});
+
 describe("launch wizard template", () => {
     it("marks the current step for assistive technology", () => {
         assert.match(template, /<nav class="launch-wizard-stepper" aria-label=/);
@@ -232,10 +273,13 @@ describe("launch wizard template", () => {
         assert.match(template, /ng-dblclick="lw\.chooseAndContinue\(row\.id\)"/);
     });
 
-    it("disables Next until a design is chosen, and launches with the wizard's description", () => {
+    it("disables Next until a design is chosen", () => {
         assert.match(template, /ng-disabled="!lw\.hasSelection\(\)" ng-click="lw\.goToLaunchStep\(\)"/);
-        assert.match(template, /ng-submit="ac\.createSession\(lw\.selectedDesignId, lw\.description\)"/);
-        assert.match(template, /ng-disabled="ac\.showSpinner \|\| !ac\.hasDescription\(lw\.description\)"/);
+    });
+
+    it("hands step 2 the wizard's design, preview and description", () => {
+        assert.match(template, /<launch-activity-step\s+design-id="lw\.selectedDesignId"\s+preview="lw\.preview"\s+description="lw\.description"\s+on-back="lw\.goToChooseStep\(\)">/);
+        assert.doesNotMatch(template, /ActivityController/);
     });
 
     it("links the designs with errors to Diseños", () => {
