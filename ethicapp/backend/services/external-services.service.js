@@ -46,6 +46,12 @@ import {
     createRoomJobsAccess,
     externalServiceRoomJobsService,
 } from "./external-service-room-jobs.service.js";
+import {
+    collectReportContributions,
+    REPORT_BUILDING_HOOK,
+    REPORT_CONTRIBUTION_TIMEOUT_MS,
+} from "./external-service-report-contributions.js";
+import { externalServiceReportResultsService } from "./external-service-report-results.service.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -464,6 +470,8 @@ export class ExternalServicesRegistry {
     constructor({
         jobsService,
         roomJobsService,
+        reportResultsStore,
+        reportContributionTimeoutMs = REPORT_CONTRIBUTION_TIMEOUT_MS,
         caseAnalysesStore = DEFAULT_CASE_ANALYSES_STORE,
         designAnalysesStore = DEFAULT_DESIGN_ANALYSES_STORE,
         now = () => Date.now(),
@@ -484,6 +492,10 @@ export class ExternalServicesRegistry {
         this._jobsService     = jobsService ?? externalServiceJobsService;
         // Room-scoped jobs (#833), handed to adapters as `roomJobs`.
         this._roomJobsService = roomJobsService ?? externalServiceRoomJobsService;
+        // What the report-building hook reads (#944), and how long each
+        // adapter is given to contribute.
+        this._reportResultsStore          = reportResultsStore ?? externalServiceReportResultsService;
+        this._reportContributionTimeoutMs = reportContributionTimeoutMs;
 
         // Whether development adapters are registered (and usable). Read from
         // EXTERNAL_SERVICES_DEVELOPMENT_ADAPTERS unless a test injects it.
@@ -608,6 +620,9 @@ export class ExternalServicesRegistry {
             // `{ documentSchema, unit }`. See getDesignAnalysisConsumerIds().
             produces:     designAnalysisDeclaration(service.produces),
             consumes:     designAnalysisDeclaration(service.consumes),
+            // `{ columnPrefix }`: the prefix of the columns the adapter adds
+            // to reports (report-building, #944), or null.
+            report:       service.report?.columnPrefix ? { columnPrefix: service.report.columnPrefix } : null,
             development,
             adapter:      service.adapter,
             callbackAuth: service.callbackAuth && typeof service.callbackAuth === "object"
@@ -718,11 +733,37 @@ export class ExternalServicesRegistry {
             return;
         }
 
+        if (hookName === REPORT_BUILDING_HOOK && !this._acceptsReportBuildingHandler(serviceId)) {
+            return;
+        }
+
         if (!this.hookSubscribers.has(hookName)) {
             this.hookSubscribers.set(hookName, []);
         }
 
         this.hookSubscribers.get(hookName).push({ serviceId, handler });
+    }
+
+    // A report-building handler (#944) is accepted only from a service whose
+    // catalog entry lists the hook and declares its report column prefix, and
+    // only once per service.
+    _acceptsReportBuildingHandler(serviceId) {
+        const service = this.services.get(serviceId);
+        if (!service?.hooks.includes(REPORT_BUILDING_HOOK) || !service.report) {
+            console.warn(
+                `[external-services] Ignoring the ${REPORT_BUILDING_HOOK} handler of ${serviceId}: `
+                + "its catalog entry must list the hook and declare report.columnPrefix."
+            );
+            return false;
+        }
+        const subscribers = this.hookSubscribers.get(REPORT_BUILDING_HOOK) || [];
+        if (subscribers.some(subscriber => subscriber.serviceId === serviceId)) {
+            console.warn(
+                `[external-services] Ignoring a second ${REPORT_BUILDING_HOOK} handler of ${serviceId}.`
+            );
+            return false;
+        }
+        return true;
     }
 
     listServices() {
@@ -1224,6 +1265,13 @@ export class ExternalServicesRegistry {
     // phase-ended and activity-finished first close the room jobs they end
     // (closeRoomJobsForHook), before and regardless of the gate.
     async dispatchHook(hookName, context, options = {}) {
+        // report-building has its own collecting dispatch
+        // (collectReportContributions), which creates no jobs.
+        if (hookName === REPORT_BUILDING_HOOK) {
+            console.warn(`[external-services] ${REPORT_BUILDING_HOOK} is not dispatched through dispatchHook().`);
+            return [];
+        }
+
         if (!this.initialized) {
             await this.initialize();
         }
@@ -1344,6 +1392,37 @@ export class ExternalServicesRegistry {
             .filter(service => Array.isArray(service.globalHooks)
                 && service.globalHooks.includes(hookName))
             .map(service => service.id);
+    }
+
+    /**
+     * Collects the contributions of the services that worked in a session to
+     * one of its reports (report-building, #944): those registered, subscribed
+     * to the hook and with at least one job in the session, whatever the AI
+     * service policy says today. Each handler is awaited under a timeout and
+     * receives `(context, { results, signal })`; no job or result row is
+     * created and no `callback` is passed. See
+     * external-service-report-contributions.js.
+     *
+     * @param {"responses"|"chat_transcript"} reportType
+     * @param {{ sessionId: number, designType?: string, rows: Object[] }} context
+     * @param {{ reservedColumnIds?: Iterable<string> }} [options] - The
+     *     report's own column ids, which contributions may not reuse.
+     * @returns {Promise<Object[]>} One outcome per asked service.
+     */
+    async collectReportContributions(reportType, context, { reservedColumnIds = [] } = {}) {
+        if (!this.initialized) {
+            await this.initialize();
+        }
+
+        return collectReportContributions({
+            reportType,
+            context,
+            services:     this.services,
+            subscribers:  this.hookSubscribers.get(REPORT_BUILDING_HOOK) || [],
+            resultsStore: this._reportResultsStore,
+            timeoutMs:    this._reportContributionTimeoutMs,
+            reservedColumnIds,
+        });
     }
 
     // Delivers an inbound callback to its adapter (#815). The destination is
