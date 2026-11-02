@@ -2544,6 +2544,16 @@ h2{
     margin: 0; /* Remove default margins */
 }
 
+/* An activity card's heading: the name, then the description in a lighter
+   text (#973). */
+.activity-item-heading {
+    overflow-wrap: anywhere;
+}
+
+.activity-item-description {
+    color: #4b5563;
+}
+
 .activity-item-panel .col-md-8, 
 .design-item-panel .col-md-8,
 .activity-item-panel .col-md-4, 
@@ -2653,10 +2663,11 @@ h2{
     padding: 8px 12px;
 }
 
-/* The name holds one line with an ellipsis while the bar has one row. The
-   component measures it on that row (activity-bar-layout.js) and, when it
-   cannot show at least 280 px, stacks the bar (#951): the name on its own
-   row, two lines at most, and the chips and the controls below, wrapping. */
+/* The title, the name followed by the activity's description (#973), holds
+   one line while the bar has one row. The component measures it on that row
+   (activity-bar-layout.js) and, when it cannot show at least 280 px, stacks
+   the bar (#951): the title on its own row, two lines at most, and the chips
+   and the controls below, wrapping. */
 .activity-bar-title {
     flex: 0 1 auto;
     min-width: 0;
@@ -2672,6 +2683,38 @@ h2{
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+/* On one row, each part of the title cuts itself with an ellipsis. The
+   description's shrink factor is so much larger than the name's that the
+   name gives up width only once the description has none left. */
+.activity-bar-name-line {
+    align-items: baseline;
+    display: flex;
+    min-width: 0;
+}
+
+.activity-bar-name-text,
+.activity-bar-description {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.activity-bar-name-text {
+    flex: 0 1 auto;
+}
+
+.activity-bar-description {
+    color: #555;
+    flex: 0 100000 auto;
+    font-size: 0.8em;
+    font-weight: 400;
+}
+
+.activity-bar-separator {
+    margin: 0 0.4em;
 }
 
 .activity-bar-name:focus-visible {
@@ -2694,6 +2737,17 @@ h2{
     -webkit-line-clamp: 2;
     line-clamp: 2;
     overflow-wrap: anywhere;
+    white-space: normal;
+}
+
+/* Stacked, the name and the description wrap together as one text. */
+.activity-bar-stacked .activity-bar-name-line {
+    display: block;
+}
+
+.activity-bar-stacked .activity-bar-name-text,
+.activity-bar-stacked .activity-bar-description {
+    display: inline;
     white-space: normal;
 }
 

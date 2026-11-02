@@ -1,9 +1,10 @@
 <div class="panel panel-default activity-item-panel">
-  <div class="panel-heading" ng-if="$ctrl.activity.name">{{$ctrl.activity.name}}</div>
+  <!-- The heading is the activity's title, the description after the name
+       (#973). -->
+  <div class="panel-heading activity-item-heading" ng-if="$ctrl.title.name || $ctrl.title.description"><span class="activity-item-name">{{ $ctrl.title.name }}</span><span class="activity-item-description" ng-if="$ctrl.title.description"><span ng-if="$ctrl.title.name"> · </span>{{ $ctrl.title.description }}</span></div>
   <div class="panel-body">
     <div class="row">
       <div class="col-sm-12">
-        <p><b><i class="fa-solid fa-asterisk"></i> {{ 'activity_description_colon' | translate }}</b> <a ng-href="#!/activities/{{$ctrl.activity.id}}" ng-if="$ctrl.enableLink">{{ $ctrl.activity.description === '' ? ('no_description' | translate) : $ctrl.activity.description }}</a><span ng-if="!$ctrl.enableLink">{{ $ctrl.activity.description === '' ? ('no_description' | translate) : $ctrl.activity.description }}</span></p>
         <p ng-if="$ctrl.showStatusAndCode"><b><i class="fa-solid fa-chart-gantt"></i> {{ 'current_status_colon' | translate }}</b> <span ng-class="['finished', 'initiated'].includes($ctrl.getReadableStatus($ctrl.activity.status)) ? 'text' : 'text-success'">{{ $ctrl.getReadableStatus($ctrl.activity.status) | translate }}</span></p>
         <p><b><i class="fa-solid fa-paint-brush" aria-hidden="true"></i> {{ 'design_used_colon' | translate }}</b> <a ng-href="#!/designs/{{$ctrl.activity.designId}}" ng-if="$ctrl.enableLink">{{ $ctrl.activity.design.metainfo.title }}</a><span ng-if="!$ctrl.enableLink">{{ $ctrl.activity.design.metainfo.title }}</span><span class="small"> ({{$ctrl.activity.type === "R" ? ('ranking_activity' | translate) : ('semantic_differential' | translate)}})</span></p>
         <p ng-if="$ctrl.getAssociatedCase()"><b><i class="fa-solid fa-book" aria-hidden="true"></i> {{ 'design_associated_case_label' | translate }}:</b> <a ng-href="#!/cases/{{$ctrl.getAssociatedCase().id}}">{{$ctrl.formatCaseLabel($ctrl.getAssociatedCase())}}</a></p>
