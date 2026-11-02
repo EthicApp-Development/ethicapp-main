@@ -112,6 +112,19 @@ describe("launch step, AI services", () => {
         assert.equal(vm.aiServices.summary.key, "launch_wizard_ai_summary_none");
     });
 
+    it("shows nothing about AI services for a design without them", async () => {
+        const { vm } = createStep({ services: [] });
+        await vm.ready;
+        assert.equal(vm.showsAiServices(), false);
+
+        vm.preview = { ...vm.preview, usesAiServices: true };
+        assert.equal(vm.showsAiServices(), true);
+
+        assert.match(template, /class="launch-wizard-card launch-step-ai"[^>]*ng-if="\$ctrl\.showsAiServices\(\)"/u);
+        assert.match(template,
+            /<span ng-if="\$ctrl\.showsAiServices\(\)">\{\{ \$ctrl\.aiServices\.summary\.key/u);
+    });
+
     it("reports a failed check and lets the teacher launch", async () => {
         const { vm } = createStep({ servicesError: httpError(500), description: "Sección 1" });
         await vm.ready;
@@ -206,7 +219,7 @@ describe("launch step, launch", () => {
 
     it("shows a server error in the bar and lets the teacher try again", async () => {
         const { vm, calls } = createStep({
-            description: "Sección 3",
+            description:    "Sección 3",
             createActivity: async () => {
                 throw new LaunchActivityError("activity", httpError(500));
             },

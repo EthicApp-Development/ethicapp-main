@@ -130,6 +130,7 @@
 	"launch_wizard_step_choose_hint": "Busca y selecciona",
 	"launch_wizard_step_identify": "Identificar y lanzar",
 	"launch_wizard_step_identify_hint": "Descripción y servicios de IA",
+	"launch_wizard_step_identify_hint_no_ai": "Descripción",
 	"launch_wizard_search_placeholder": "Buscar por título, caso o etiqueta",
 	"launch_wizard_order_one": "Por último lanzamiento · 1 diseño",
 	"launch_wizard_order_other": "Por último lanzamiento · {{count}} diseños",

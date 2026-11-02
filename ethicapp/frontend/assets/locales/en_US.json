@@ -117,6 +117,7 @@
 	"launch_wizard_step_choose_hint": "Search and select",
 	"launch_wizard_step_identify": "Identify and launch",
 	"launch_wizard_step_identify_hint": "Description and AI services",
+	"launch_wizard_step_identify_hint_no_ai": "Description",
 	"launch_wizard_search_placeholder": "Search by title, case or tag",
 	"launch_wizard_order_one": "By last launch · 1 design",
 	"launch_wizard_order_other": "By last launch · {{count}} designs",

@@ -31,7 +31,7 @@
                         <span class="launch-wizard-step-number" aria-hidden="true">2</span>
                         <span class="launch-wizard-step-text">
                             <span class="launch-wizard-step-name">{{ 'launch_wizard_step_identify' | translate }}</span>
-                            <span class="launch-wizard-step-hint">{{ 'launch_wizard_step_identify_hint' | translate }}</span>
+                            <span class="launch-wizard-step-hint">{{ (lw.preview.usesAiServices ? 'launch_wizard_step_identify_hint' : 'launch_wizard_step_identify_hint_no_ai') | translate }}</span>
                         </span>
                     </span>
                 </li>

@@ -48,7 +48,7 @@
             </div>
         </div>
 
-        <section class="launch-wizard-card launch-step-ai" aria-labelledby="launch-step-ai-title">
+        <section class="launch-wizard-card launch-step-ai" aria-labelledby="launch-step-ai-title" ng-if="$ctrl.showsAiServices()">
             <!-- With services that can run: the switch. -->
             <div class="launch-step-switch-row" ng-if="$ctrl.aiServices.hasSwitch">
                 <input type="checkbox" role="switch" class="launch-step-switch"
@@ -140,7 +140,7 @@
             <span class="launch-wizard-actions-error" role="alert" ng-if="$ctrl.error">
                 <i class="fa fa-exclamation-circle" aria-hidden="true"></i> {{ $ctrl.error | translate }}
             </span>
-            <span ng-if="!$ctrl.error">{{ $ctrl.aiServices.summary.key | translate:$ctrl.aiServices.summary.params }} &middot; <strong>{{ $ctrl.preview.title }}</strong></span>
+            <span ng-if="!$ctrl.error"><span ng-if="$ctrl.showsAiServices()">{{ $ctrl.aiServices.summary.key | translate:$ctrl.aiServices.summary.params }} &middot; </span><strong>{{ $ctrl.preview.title }}</strong></span>
         </p>
         <button type="submit" class="btn btn-primary launch-wizard-action" ng-disabled="!$ctrl.canLaunch()">
             <span ng-if="!$ctrl.launching"><i class="fa fa-rocket" aria-hidden="true"></i> {{ 'launch_wizard_launch' | translate }}</span>

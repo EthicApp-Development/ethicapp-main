@@ -153,6 +153,12 @@ function LaunchActivityStepController($scope, $rootScope, $timeout, $window,
         return activityTitleParts({ name: vm.preview?.title, description: vm.description });
     };
 
+    // A design without AI services shows nothing about them: no card and no
+    // summary in the action bar.
+    vm.showsAiServices = function() {
+        return vm.preview?.usesAiServices === true;
+    };
+
     vm.canLaunch = function() {
         return !vm.launching
             && vm.hasDescription()
