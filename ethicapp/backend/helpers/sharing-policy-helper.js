@@ -101,3 +101,69 @@ export function buildAttributionText({ title, author, licenseCode }) {
         licenseCode ? `licensed ${licenseCode}` : null,
     ].filter(Boolean).join(", ");
 }
+
+const caseSharingBodyKeys = [
+    "visibility",
+    "license_code", "licenseCode",
+    "attribution_text", "attributionText",
+    "rights_status", "rightsStatus",
+    "license_notes", "licenseNotes",
+    "permission_statement", "permissionStatement",
+    "commercial_source", "commercialSource",
+];
+
+/**
+ * Whether a JSON body can carry case sharing fields: an object whose sharing
+ * fields, when present, are strings or null. A multipart form only sends
+ * strings; a JSON body could send numbers, lists or objects.
+ * @param {*} body
+ * @returns {boolean}
+ */
+export function hasValidCaseSharingFieldTypes(body) {
+    if (!body || typeof body !== "object" || Array.isArray(body)) {
+        return false;
+    }
+    return caseSharingBodyKeys.every((key) => {
+        const value = body[key];
+        return value === undefined || value === null || typeof value === "string";
+    });
+}
+
+/**
+ * The sharing fields of a case save, by the case form (`PATCH /cases/:id`) or
+ * the sharing settings (`PATCH /cases/:id/sharing`): its visibility, license
+ * and rights. Each field is read in snake or camel case. A field the request
+ * leaves out keeps the case's current value, and so does a visibility,
+ * license or rights status that is not valid.
+ * @param {object} body - The request body.
+ * @param {object} existingCase - The case's row, with visibility,
+ *     license_code, attribution_text, rights_status, license_notes,
+ *     permission_statement and commercial_source.
+ * @returns {{visibility: string, licenseCode: string,
+ *     attributionText: ?string, rightsStatus: string, licenseNotes: ?string,
+ *     permissionStatement: ?string, commercialSource: ?string}}
+ */
+export function normalizeCaseSharingFields(body, existingCase) {
+    return {
+        visibility: normalizeVisibility(
+            body.visibility,
+            existingCase.visibility || PRIVATE_VISIBILITY
+        ),
+        licenseCode: normalizeLicenseCode(
+            body.license_code ?? body.licenseCode,
+            existingCase.license_code || CASE_DEFAULT_LICENSE
+        ),
+        attributionText: body.attribution_text ?? body.attributionText
+            ?? existingCase.attribution_text ?? null,
+        rightsStatus: normalizeRightsStatus(
+            body.rights_status ?? body.rightsStatus,
+            existingCase.rights_status
+        ),
+        licenseNotes: body.license_notes ?? body.licenseNotes
+            ?? existingCase.license_notes ?? null,
+        permissionStatement: body.permission_statement ?? body.permissionStatement
+            ?? existingCase.permission_statement ?? null,
+        commercialSource: body.commercial_source ?? body.commercialSource
+            ?? existingCase.commercial_source ?? null,
+    };
+}

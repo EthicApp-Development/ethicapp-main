@@ -48,9 +48,10 @@ const CaseCardController = function() {
         return this.getTags().length > 0;
     };
 
+    // A case a launched activity uses keeps its sharing editable: the lock
+    // covers only its content and its deletion (#1014).
     this.canToggleVisibility = function() {
         return this.isFunction(this.onTogglePublic)
-            && this.caseItem?.hasLaunchedDesignActivity !== true
             && this.caseItem?.archived !== true;
     };
 

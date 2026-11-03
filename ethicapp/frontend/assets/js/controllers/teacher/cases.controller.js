@@ -600,10 +600,7 @@ export function CasesController($scope, $routeParams, $window, $interval, $trans
             caseItem.visibility = previousVisibility;
             caseItem.public = previousVisibility === "public";
             console.error("[CasesController::toggleCaseVisibility] Error updating case visibility.", error);
-            const messageKey = error?.data?.code === "CASE_USED_BY_LAUNCHED_ACTIVITY"
-                ? "case_cannot_delete_used_by_activity"
-                : "ethical_cases_save_error";
-            vm.showErrorToast(vm.translate(messageKey));
+            vm.showErrorToast(vm.translate("ethical_cases_save_error"));
         } finally {
             $scope.$applyAsync();
         }
