@@ -46,6 +46,38 @@ export async function insertRequestedCaseAnalyses(
     `, [caseId, serviceIds, userId], query);
 }
 
+/**
+ * Copies the ready analyses of a case to a copy of it (duplicate or import,
+ * and the case copied with a design; #1038), as copyReadyDesignAnalyses does
+ * for designs: the service, the document, its schema and the request and
+ * generation times, plus the error of a latest generation that failed while
+ * keeping the document. Review fields, job ids and requesters are not copied.
+ * Analyses that are not ready (in flight or failed) are left out: the copy
+ * requests them after it is committed (requestCaseCopyAnalyses). Rows the copy
+ * already has are kept. Returns the copied service ids as rows.
+ *
+ * `query` runs the statement inside the transaction that creates the copy.
+ */
+export async function copyReadyCaseAnalyses(
+    { sourceCaseId, targetCaseId },
+    query = rpg2.execSQL
+) {
+    return queryRows(`
+        INSERT INTO case_analyses
+            (case_id, service_id, status, document_schema, document,
+             error_code, error_message, requested_at, generated_at)
+        SELECT $2, source.service_id, 'ready', source.document_schema,
+               source.document, source.error_code, source.error_message,
+               source.requested_at, source.generated_at
+        FROM case_analyses AS source
+        WHERE source.case_id = $1
+          AND source.status = 'ready'
+          AND source.document IS NOT NULL
+        ON CONFLICT (case_id, service_id) DO NOTHING
+        RETURNING service_id;
+    `, [sourceCaseId, targetCaseId], query);
+}
+
 // Lists the analyses of a case without their documents.
 export async function listCaseAnalyses(caseId, query = rpg2.execSQL) {
     return store.list(caseId, query);

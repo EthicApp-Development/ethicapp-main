@@ -20,6 +20,12 @@ import externalServicesRegistry from "../services/external-services.service.js";
  * Only the case creator can read or change them: they are review material for
  * the teacher and must not be exposed to students or to other teachers browsing
  * public cases. Students get 403 from requireRole and other teachers get 404.
+ *
+ * A copy of a case (duplicate, import, or the case copied with a design)
+ * inherits the source's ready analyses and requests the other services the
+ * source chose (#1038). The copy belongs to the teacher who made it, so an
+ * importing teacher reads the analyses the source's author generated; browsing
+ * a public case without copying it still shows none.
  */
 
 function parseCaseId(id) {
