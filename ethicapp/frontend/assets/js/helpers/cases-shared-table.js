@@ -2,7 +2,8 @@
 // per case another teacher shares, with what matters for deciding to import
 // it (its pages and language, its author, its license and rights status) and
 // its one action, chosen by its import state: "Import", or "Imported · View
-// copy" when the teacher already has a copy. Also the tab's search, over the
+// copy" when the teacher already has a copy, and beside it the secondary
+// "New design with this case" (#1019). Also the tab's search, over the
 // title, the authors and the tags.
 //
 // Plain functions over the payloads of GET /cases, so the page's controller
@@ -12,6 +13,7 @@
 import { findImportedCopy, importedCopiesBySource } from "./case-status.js";
 import { caseMetaParts } from "./cases-table.js";
 import { normalizeSearchText } from "./launch-design-list.js";
+import { newDesignFromCaseHref } from "./new-design-from-case.js";
 
 export const CASE_IMPORT_STATE_IMPORTABLE = "importable";
 export const CASE_IMPORT_STATE_IMPORTED = "imported";
@@ -106,6 +108,10 @@ export function buildSharedCaseRow(caseItem, copies, languageNames = new Map()) 
         rightsKey:   rightsStatusKey(caseItem),
         importState: copy ? CASE_IMPORT_STATE_IMPORTED : CASE_IMPORT_STATE_IMPORTABLE,
         copyId:      copy ? copy.id : null,
+
+        // A shared case can be used in a design without importing it, so
+        // the row also links to a new design with the case (#1019).
+        newDesignHref: newDesignFromCaseHref(caseItem.id),
     };
 }
 

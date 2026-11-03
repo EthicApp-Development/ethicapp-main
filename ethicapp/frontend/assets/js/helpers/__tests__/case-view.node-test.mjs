@@ -11,6 +11,7 @@ import {
     caseMaterialCount,
     caseViewActions,
     caseViewChips,
+    caseViewNewDesignAction,
     caseViewRights,
     caseViewStatus,
     caseViewStatusLabel,
@@ -148,6 +149,47 @@ describe("caseViewActions", () => {
         assert.equal(isCaseImportable(shared, { isAuthor: true }), false);
         assert.equal(isCaseImportable({ ...shared, archived: true }), false);
         assert.equal(isCaseImportable(caseItem()), false);
+    });
+});
+
+describe("caseViewNewDesignAction (#1019)", () => {
+    const href = "#!/designs/new?caseId=7";
+
+    it("links the author's case to a new design, shared or not, in use or not", () => {
+        for (const fields of [{}, { visibility: "public" }, { hasLaunchedDesignActivity: true }]) {
+            const entry = caseViewNewDesignAction(caseItem(fields), { isAuthor: true });
+            assert.equal(entry.id, "new-design");
+            assert.equal(entry.key, "cases_new_design_action");
+            assert.equal(entry.href, href);
+        }
+    });
+
+    it("links another teacher's shared case, without importing it", () => {
+        assert.equal(caseViewNewDesignAction(caseItem({ visibility: "public" })).href, href);
+    });
+
+    it("offers nothing for an archived case or another teacher's private case", () => {
+        assert.equal(
+            caseViewNewDesignAction(caseItem({ archived: true }), { isAuthor: true }), null);
+        assert.equal(caseViewNewDesignAction(
+            caseItem({ visibility: "public", archived: true })), null);
+        assert.equal(caseViewNewDesignAction(caseItem()), null);
+        assert.equal(caseViewNewDesignAction(null, { isAuthor: true }), null);
+    });
+
+    it("is part of the view, beside the primary action", () => {
+        const own = buildCaseView({ caseItem: caseItem(), uses: AUTHOR_USES, isAuthor: true });
+        assert.equal(own.newDesign.href, href);
+        assert.equal(own.primary.id, "edit");
+
+        const shared = buildCaseView({ caseItem: caseItem({ visibility: "public", creator: 9 }) });
+        assert.equal(shared.newDesign.href, href);
+        assert.equal(shared.primary.id, CASE_VIEW_ACTION_IMPORT);
+
+        const archived = buildCaseView({
+            caseItem: caseItem({ archived: true }), uses: AUTHOR_USES, isAuthor: true,
+        });
+        assert.equal(archived.newDesign, null);
     });
 });
 

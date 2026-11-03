@@ -1,5 +1,6 @@
 <!-- "Shared by others" (#1016): a banner saying the two ways to use a shared
-     case, a search, and one row per case with its one import action. Below
+     case, a search, and one row per case with its one import action and a
+     link to a new design with the case (#1019). Below
      1200 px the rows become compact rows. -->
 <section class="cases-table-section cases-shared-tab">
     <p class="cases-shared-banner">
@@ -62,6 +63,14 @@
                         <a class="cases-shared-view-copy" data-action="view-copy" ng-href="#!/cases/{{ row.copyId }}"
                             aria-label="{{ 'cases_shared_view_copy' | translate }}: {{ row.title }}">{{ 'cases_shared_view_copy' | translate }}</a>
                     </span>
+                    <!-- Secondary, under the import action (#1019): the case
+                         is used directly, without importing it. -->
+                    <a class="btn btn-link btn-sm cases-shared-new-design" data-action="new-design"
+                        ng-if="row.newDesignHref"
+                        ng-href="{{ row.newDesignHref }}"
+                        aria-label="{{ 'cases_new_design_action' | translate }}: {{ row.title }}">
+                        <i class="fa-solid fa-plus" aria-hidden="true"></i> {{ 'cases_new_design_action' | translate }}
+                    </a>
                 </td>
             </tr>
         </tbody>

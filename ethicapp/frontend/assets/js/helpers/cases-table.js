@@ -27,6 +27,8 @@ export const ROW_ACTION_REPLACE_PDF = "replace-pdf";
 export const ROW_ACTION_DUPLICATE_TO_EDIT = "duplicate-to-edit";
 export const ROW_ACTION_RESTORE = "restore";
 export const ROW_ACTION_VIEW = "view";
+// "New design with this case" (#1019): opens the design form with the case.
+export const ROW_ACTION_NEW_DESIGN = "new-design";
 export const ROW_ACTION_DUPLICATE = "duplicate";
 export const ROW_ACTION_ARCHIVE = "archive";
 export const ROW_ACTION_DELETE = "delete";
@@ -213,15 +215,17 @@ export function deleteBlockReason(statusInfo, usage) {
 }
 
 /**
- * The entries of the row's "⋯" menu: View, Duplicate and, outside the
- * Archived tab, Archive; then Delete, last and in red, disabled with its
- * reason when the case cannot be deleted.
+ * The entries of the row's "⋯" menu: View, then, outside the Archived tab,
+ * "New design with this case" (#1019), since a design cannot use an archived
+ * case; Duplicate and, outside the Archived tab, Archive; then Delete, last
+ * and in red, disabled with its reason when the case cannot be deleted.
  */
 export function rowMenuEntries(statusInfo, usage, { archived = false } = {}) {
-    const entries = [
-        action(ROW_ACTION_VIEW, "cases_action_view", "fa-regular fa-eye"),
-        action(ROW_ACTION_DUPLICATE, "cases_action_duplicate", "fa-regular fa-clone"),
-    ];
+    const entries = [action(ROW_ACTION_VIEW, "cases_action_view", "fa-regular fa-eye")];
+    if (!archived) {
+        entries.push(action(ROW_ACTION_NEW_DESIGN, "cases_new_design_action", "fa-solid fa-plus"));
+    }
+    entries.push(action(ROW_ACTION_DUPLICATE, "cases_action_duplicate", "fa-regular fa-clone"));
     if (!archived) {
         entries.push(action(ROW_ACTION_ARCHIVE, "cases_action_archive", "fa-solid fa-box-archive"));
     }

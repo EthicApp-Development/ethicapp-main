@@ -23,7 +23,14 @@
             </div>
             <div class="case-view-actions">
                 <!-- "New design with this case" (#1019) goes first, before the
-                     primary action. -->
+                     primary action: for the author's case and another
+                     teacher's shared case, when it is not archived. -->
+                <a class="btn btn-default case-view-new-design"
+                    ng-if="cv.view.newDesign"
+                    data-action="{{ cv.view.newDesign.id }}"
+                    ng-href="{{ cv.view.newDesign.href }}">
+                    <i ng-class="cv.view.newDesign.icon" aria-hidden="true"></i> {{ cv.view.newDesign.key | translate }}
+                </a>
                 <a class="btn btn-default case-view-primary case-view-view-copy"
                     ng-if="cv.view.primary.href"
                     data-action="{{ cv.view.primary.id }}"

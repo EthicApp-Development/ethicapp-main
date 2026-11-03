@@ -7330,3 +7330,12 @@ button.launch-wizard-step-body:focus-visible .launch-wizard-step-name {
         grid-template-columns: auto minmax(0, 1fr);
     }
 }
+
+/* "New design with this case" in "Shared by others" (#1019, epic #1008): a
+   secondary link on its own line under the row's import action, aligned
+   as the actions cell aligns it. */
+.cases-shared-new-design {
+    display: block;
+    padding: 4px 0 0;
+    text-align: inherit;
+}

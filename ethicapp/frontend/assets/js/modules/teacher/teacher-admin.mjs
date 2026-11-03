@@ -176,7 +176,7 @@ app.controller("LaunchActivityWizardController",
         "LanguageCatalogService", LaunchActivityWizardController]);
 app.controller("CreateDesignController", 
     ["$scope", "$window", "DesignCatalogService", "UserProfileService",
-        "LanguageCatalogService", CreateDesignController]);
+        "LanguageCatalogService", "$location", "CasesCatalogService", CreateDesignController]);
 app.controller("DashboardController", 
     ["$scope", "$routeParams", "$http", "$translate", "$timeout",
         "ActivityStateService", "ActivityCatalogService", "DesignCatalogService",

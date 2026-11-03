@@ -9,8 +9,11 @@ function TeacherRouter($routeProvider) {
             templateUrl:    'static/views/teacher/design.index.html',
             reloadOnSearch: false,
         })
+        // The form reads the case to preselect (`?caseId=`, #1019) and then
+        // removes it from the URL, which must not reload the form.
         .when('/designs/new', {
-            templateUrl: 'static/views/teacher/design.new.html',
+            templateUrl:    'static/views/teacher/design.new.html',
+            reloadOnSearch: false,
         })
         .when('/designs/:id', {
             templateUrl: 'static/views/teacher/design.view.html',

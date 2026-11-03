@@ -17,6 +17,7 @@ import {
     ROW_ACTION_ARCHIVE,
     ROW_ACTION_DELETE,
     ROW_ACTION_DUPLICATE,
+    ROW_ACTION_NEW_DESIGN,
     ROW_ACTION_RESTORE,
     caseMetaParts,
     deleteBlockReason,
@@ -24,6 +25,7 @@ import {
     primaryRowAction,
     statusLabel,
 } from "./cases-table.js";
+import { newDesignFromCaseHref } from "./new-design-from-case.js";
 
 export const CASE_VIEW_ACTION_IMPORT = "import";
 export const CASE_VIEW_ACTION_VIEW_COPY = "view-copy";
@@ -114,6 +116,23 @@ export function isCaseImportable(caseItem, { isAuthor = false } = {}) {
 
 function action(id, key, icon, fields = {}) {
     return { id, key, icon, danger: false, disabled: false, reason: null, ...fields };
+}
+
+/**
+ * "New design with this case" (#1019), a link to the design form with the
+ * case, or null: offered for the author's case and for another teacher's
+ * shared case, when the case is not archived, as the design form's rule
+ * (`associableCaseSql`). Another teacher's private case, read through a
+ * design, cannot be chosen.
+ */
+export function caseViewNewDesignAction(caseItem, { isAuthor = false } = {}) {
+    if (!caseItem || caseItem.archived === true || !(isAuthor || isCaseShared(caseItem))) {
+        return null;
+    }
+    const href = newDesignFromCaseHref(caseItem.id);
+    return href === null
+        ? null
+        : action(ROW_ACTION_NEW_DESIGN, "cases_new_design_action", "fa-solid fa-plus", { href });
 }
 
 /**
@@ -457,6 +476,7 @@ export function buildCaseView({
         createdOn:     formatCaseDate(caseItem?.createdAt, uiLanguage),
         isAuthor,
         statusInfo,
+        newDesign:     caseViewNewDesignAction(caseItem, { isAuthor }),
         primary:       actions.primary,
         menu:          actions.menu,
         chips:         caseViewChips(caseItem, statusInfo, languageNames),

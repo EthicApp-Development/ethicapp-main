@@ -104,11 +104,23 @@ describe("cases table, the visible action", () => {
 });
 
 describe("cases table, the row menu", () => {
-    it("holds View, Duplicate, Archive and then Delete in My cases, whatever the status", () => {
+    it("holds View, New design, Duplicate, Archive and Delete in My cases, by any status", () => {
         for (const status of ALL_STATUSES) {
             assert.deepEqual(ids(rowMenuEntries(status, NO_USE)),
-                ["view", "duplicate", "archive", "delete"]);
+                ["view", "new-design", "duplicate", "archive", "delete"]);
         }
+    });
+
+    it("offers a new design with the case right after View, enabled (#1019)", () => {
+        const entry = rowMenuEntries(IN_USE, NO_USE)[1];
+        assert.deepEqual(entry, {
+            id:       "new-design",
+            key:      "cases_new_design_action",
+            icon:     "fa-solid fa-plus",
+            danger:   false,
+            disabled: false,
+            reason:   null,
+        });
     });
 
     it("holds View, Duplicate and Delete in Archived, whatever the status", () => {
@@ -265,6 +277,9 @@ describe("cases table, rows", () => {
             ["in-use", "duplicate-to-edit"],
         ]);
         assert.equal(deleteOf(rows.inUse.menu).disabled, true);
+        for (const row of Object.values(rows)) {
+            assert.equal(row.menu.some(entry => entry.id === "new-design"), true);
+        }
     });
 
     it("builds an archived row with Restore, keeping its status", () => {
