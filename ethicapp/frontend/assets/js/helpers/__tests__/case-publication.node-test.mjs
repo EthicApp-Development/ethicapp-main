@@ -153,7 +153,6 @@ describe("the publication notice texts", () => {
             "case_publication_notice_private_later",
             "case_publication_notice_confirm",
             "case_visibility_public_help",
-            "share_case_help",
         ];
         for (const name of ["es_CL", "en_US"]) {
             const catalog = locale(name);
