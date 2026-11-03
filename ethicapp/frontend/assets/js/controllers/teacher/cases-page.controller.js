@@ -86,7 +86,6 @@ const PAGE_SEARCH_KEYS = ["tab", "status", "q"];
 // The filters' URL search keys.
 const FILTER_SEARCH_KEYS = ["status", "q"];
 
-const TOAST_INFO_TIMEOUT_MS = 4 * 1000;
 const TOAST_ERROR_TIMEOUT_MS = 6 * 1000;
 // Long enough to read what changed for the designs that use the case.
 const TOAST_VISIBILITY_TIMEOUT_MS = 12 * 1000;
@@ -124,9 +123,10 @@ export function CasesPageController($scope, $location, $translate, $interval, to
     let languageNames = new Map();
     let documentProcessingPoll = null;
 
-    // Toasts
+    // Toasts, only for the sharing switch: row actions and imports end with a
+    // notice instead (#1017).
 
-    function showToast(message, { className, timeout = TOAST_INFO_TIMEOUT_MS } = {}) {
+    function showToast(message, { className, timeout }) {
         toast.create({
             timeout,
             message,
@@ -137,10 +137,6 @@ export function CasesPageController($scope, $location, $translate, $interval, to
             insertFromTop:     true,
         });
     }
-
-    vm.showInfoToast = function(key) {
-        showToast($translate.instant(key));
-    };
 
     vm.showErrorToast = function(key) {
         showToast($translate.instant(key),
