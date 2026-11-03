@@ -1,14 +1,21 @@
 // The case form's AI analysis options (#650, epic #647): pure helpers for the
 // teacher case creation form. The teacher turns analysis on and picks the
 // case-scoped services (`GET /external-services?scope=case`) that analyse the
-// case. The choice is made only when the case is created; editing a case
-// never offers it.
+// case. Editing a case never offers the choice; the case view's "Add
+// analysis" dialog (#1039) offers the same options, without the switch, for
+// the services the case has not chosen.
 //
 // The form model keeps `analysisEnabled` (the switch) and
 // `analysisSelection`, a map of service id to a boolean.
 
 /** The scope of the services the case form offers. */
 export const CASE_ANALYSIS_SCOPE = "case";
+
+/**
+ * The options' mode for the "Add analysis" dialog: no switch, the services
+ * are listed at once and choosing none blocks the confirmation.
+ */
+export const CASE_ANALYSIS_OPTIONS_MODE_ADD = "add";
 
 const SAVE_ERROR_KEYS = Object.freeze({
     CASE_ANALYSIS_SERVICE_INVALID: "case_analysis_save_invalid",
@@ -92,4 +99,21 @@ export function caseAnalysisServiceUsesLlm(service) {
 export function caseAnalysisSaveErrorKey(error) {
     const code = error?.data?.code;
     return Object.hasOwn(SAVE_ERROR_KEYS, code ?? "") ? SAVE_ERROR_KEYS[code] : null;
+}
+
+/**
+ * The services the "Add analysis" dialog offers (#1039): the usable
+ * case-scoped `services`, in their order, without those already chosen for
+ * the case (`chosenServiceIds`, the service ids of GET /cases/:id/analyses).
+ */
+export function caseAnalysisServicesToAdd(services, chosenServiceIds) {
+    const chosenIds = new Set(Array.isArray(chosenServiceIds) ? chosenServiceIds : []);
+
+    return (Array.isArray(services) ? services : [])
+        .filter(service => typeof service?.id === "string" && !chosenIds.has(service.id));
+}
+
+/** The translation key of a failed "Add analysis" request. */
+export function caseAnalysisAddErrorKey(error) {
+    return caseAnalysisSaveErrorKey(error) ?? "case_analysis_add_failed";
 }

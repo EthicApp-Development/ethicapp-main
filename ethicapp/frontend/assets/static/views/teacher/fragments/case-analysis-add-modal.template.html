@@ -1,0 +1,39 @@
+<!-- The case view's "Add analysis" dialog (#1039): the creation form's
+     options, without the switch, for the services the case has not chosen.
+     "Add" waits while the services load and while the request runs. -->
+<div class="modal-header">
+    <button type="button" class="close" ng-click="$ctrl.cancel()" ng-disabled="$ctrl.submitting" aria-label="{{ 'cancel' | translate }}">
+        <span aria-hidden="true">&times;</span>
+    </button>
+    <h4 id="caseAnalysisAddTitle" class="modal-title">{{ 'case_analysis_add_title' | translate }}</h4>
+</div>
+<div id="caseAnalysisAddBody" class="modal-body" aria-busy="{{ $ctrl.loading || $ctrl.submitting ? 'true' : 'false' }}">
+    <p class="case-analysis-add-intro" ng-if="!$ctrl.loading && $ctrl.hasServices()">{{ 'case_analysis_add_intro' | translate }}</p>
+    <p class="case-analysis-add-loading text-muted" ng-if="$ctrl.loading">
+        <i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i> {{ 'loading' | translate }}
+    </p>
+    <p class="case-analysis-add-none text-muted" ng-if="!$ctrl.loading && !$ctrl.hasServices()">{{ 'case_analysis_add_none' | translate }}</p>
+
+    <case-analysis-options
+        mode="add"
+        form-model="$ctrl.formModel"
+        has-attempted-submit="$ctrl.hasAttemptedSubmit"
+        excluded-service-ids="$ctrl.excludedServiceIds"
+        on-services-loaded="$ctrl.handleServicesLoaded(services)">
+    </case-analysis-options>
+
+    <div class="alert alert-danger case-analysis-add-error" ng-if="$ctrl.errorKey" role="alert">
+        {{ $ctrl.errorKey | translate }}
+    </div>
+</div>
+<div class="modal-footer">
+    <button type="button" class="btn btn-default case-analysis-add-cancel"
+        ng-disabled="$ctrl.submitting"
+        ng-click="$ctrl.cancel()">{{ 'cancel' | translate }}</button>
+    <button type="button" class="btn btn-primary case-analysis-add-confirm"
+        ng-disabled="!$ctrl.canConfirm()"
+        ng-click="$ctrl.confirm()">
+        <i class="fa-solid fa-spinner fa-spin" aria-hidden="true" ng-if="$ctrl.submitting"></i>
+        {{ ($ctrl.submitting ? 'case_analysis_add_submitting' : 'case_analysis_add_confirm') | translate }}
+    </button>
+</div>

@@ -34,6 +34,21 @@ export function CaseAnalysesService($http) {
             }
         },
 
+        /**
+         * Adds services to the case's choice (#1039). Resolves with the case's
+         * analyses, as listAnalyses() gives them, the new ones reserved for
+         * their first generation. Rejects with the HTTP response on failure,
+         * for example 400 `CASE_ANALYSIS_SERVICE_INVALID` when a service is
+         * no longer allowed.
+         */
+        async addAnalyses(caseId, serviceIds) {
+            const result = resultOf(
+                await $http.post(analysesUrl(caseId), { serviceIds }),
+                "case analyses"
+            );
+            return Array.isArray(result) ? result : [];
+        },
+
         // One analysis with its document.
         async getAnalysis(caseId, serviceId) {
             return resultOf(await $http.get(analysisUrl(caseId, serviceId)), "case analysis");

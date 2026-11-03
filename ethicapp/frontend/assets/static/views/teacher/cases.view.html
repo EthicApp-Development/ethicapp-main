@@ -110,7 +110,9 @@
             </p>
         </section>
 
-        <case-view-tabs case-item="cv.caseItem" material-count="cv.view.materialCount" show-rights="true">
+        <!-- The case's creator can add analyses (#1039) from the tab bar. -->
+        <case-view-tabs case-item="cv.caseItem" material-count="cv.view.materialCount" show-rights="true"
+            can-add-analyses="cv.view.isAuthor">
             <case-document-viewer case-item="cv.caseItem"></case-document-viewer>
             <case-view-material>
                 <case-material case-item="cv.caseItem"></case-material>
