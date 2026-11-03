@@ -116,12 +116,18 @@ async function processCaseCreated({ context, callback, caseAnalyses, waitForCase
             return;
         }
 
-        await caseAnalyses.complete({
+        // Nothing is stored when the generation was superseded or the teacher
+        // removed the analysis (#1040) during the wait.
+        const stored = await caseAnalyses.complete({
             jobId:          analysis.jobId,
             documentSchema: MOCK_CASE_ANALYSIS_SCHEMA,
             document:       buildMockCaseAnalysis(outcome.text),
         });
-        await callback({ hook: CASE_CREATED_HOOK, status: "completed", caseId: context.caseId });
+        await callback({
+            hook:   CASE_CREATED_HOOK,
+            status: stored ? "completed" : "skipped",
+            caseId: context.caseId,
+        });
     } catch (error) {
         // The generation started, so it is failed here rather than left
         // 'processing' until it is stale. register() reports the error.

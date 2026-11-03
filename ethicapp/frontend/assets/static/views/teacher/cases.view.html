@@ -110,9 +110,11 @@
             </p>
         </section>
 
-        <!-- The case's creator can add analyses (#1039) from the tab bar. -->
+        <!-- The case's creator can add analyses (#1039) from the tab bar and
+             remove them (#1040) from their tabs. -->
         <case-view-tabs case-item="cv.caseItem" material-count="cv.view.materialCount" show-rights="true"
-            can-add-analyses="cv.view.isAuthor">
+            can-add-analyses="cv.view.isAuthor"
+            on-analysis-removed="cv.handleAnalysisRemoved(title)">
             <case-document-viewer case-item="cv.caseItem"></case-document-viewer>
             <case-view-material>
                 <case-material case-item="cv.caseItem"></case-material>

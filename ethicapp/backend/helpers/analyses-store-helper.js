@@ -195,6 +195,20 @@ export function createAnalysesStore({ table, ownerColumn, extraSummaryColumns = 
     `, [serviceId, jobId, errorCode ?? null, errorMessage ?? null], query),
 
         /**
+         * Deletes the analysis of a service for the owner, with its document
+         * and any edits (#1040), also while a generation is in flight: the
+         * late result of that generation then matches no row, so complete(),
+         * fail() and markProcessing() store nothing and return null. Returns
+         * the deleted row's service id, or null when there was no row.
+         */
+        remove: ({ ownerId, serviceId }, query = rpg2.execSQL) => queryOne(`
+        DELETE FROM ${table}
+        WHERE ${ownerColumn} = $1
+          AND service_id = $2
+        RETURNING service_id;
+    `, [ownerId, serviceId], query),
+
+        /**
          * Stores a document edited by the teacher. Returns null while a
          * generation is in flight, from its reservation until its result
          * (unless it is stale), so an accepted generation cannot replace the

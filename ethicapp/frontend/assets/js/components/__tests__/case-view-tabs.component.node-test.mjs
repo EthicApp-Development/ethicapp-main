@@ -55,8 +55,15 @@ function analysis(overrides = {}) {
 // `listResults` are returned in order (the last one repeats); a deferred()
 // entry keeps its request pending until the test resolves it.
 // `caseServices` are the usable case services the catalog lists; `dialog`
-// answers the "Add analysis" dialog (#1039), or is a deferred() entry.
-function createTabs(listResults, { generate, caseServices = [], dialog = null } = {}) {
+// answers the "Add analysis" dialog (#1039), or is a deferred() entry;
+// `removeDialog` answers the "Remove analysis" dialog (#1040) likewise, or
+// is an Error it rejects with.
+function createTabs(listResults, {
+    generate,
+    caseServices = [],
+    dialog = null,
+    removeDialog = false,
+} = {}) {
     const results = [...listResults];
     const calls = [];
     const generateCalls = [];
@@ -94,9 +101,20 @@ function createTabs(listResults, { generate, caseServices = [], dialog = null } 
         },
     };
 
+    const removeCalls = [];
+    const removeDialogService = {
+        open: async (options) => {
+            removeCalls.push(options);
+            if (removeDialog instanceof Error) {
+                throw removeDialog;
+            }
+            return removeDialog?.promise ?? removeDialog;
+        },
+    };
+
     const vm = new CaseViewTabsController($scope, $element, $timeout, service, languageCatalog,
-        servicesCatalog, addDialog);
-    return { vm, calls, generateCalls, timers, fire, serviceRequests, dialogCalls };
+        servicesCatalog, addDialog, removeDialogService);
+    return { vm, calls, generateCalls, timers, fire, serviceRequests, dialogCalls, removeCalls };
 }
 
 function openCase(vm, caseId = 7) {
@@ -478,6 +496,129 @@ describe("caseViewTabs: Add analysis (#1039)", () => {
     });
 });
 
+describe("caseViewTabs: Remove analysis (#1040)", () => {
+    const SERVICES = [{ id: "mock-case-analysis" }, { id: "case-evaluation" }];
+    const EVALUATION = analysis({ serviceId: "case-evaluation" });
+
+    async function openAsCreator(vm, { canAddAnalyses = true } = {}) {
+        vm.caseItem = { id: 7 };
+        vm.canAddAnalyses = canAddAnalyses;
+        vm.$onChanges({
+            caseItem:       { currentValue: vm.caseItem },
+            canAddAnalyses: { currentValue: canAddAnalyses },
+        });
+        await flush();
+    }
+
+    it("removes the tab once confirmed, opens the case text and offers it again", async () => {
+        const { vm, removeCalls } = createTabs([[analysis(), EVALUATION]], {
+            caseServices: SERVICES,
+            removeDialog: true,
+        });
+        const removedNotices = [];
+        vm.onAnalysisRemoved = notice => removedNotices.push(notice);
+        await openAsCreator(vm);
+        vm.selectTab("case-evaluation");
+        assert.equal(vm.canRemoveAnalyses(), true);
+        assert.equal(vm.canAddAnalysis(), false, "both services are chosen");
+
+        assert.equal(await vm.removeAnalysis("case-evaluation"), true);
+
+        assert.deepEqual(removeCalls, [{
+            caseId:    7,
+            serviceId: "case-evaluation",
+            title:     "case-evaluation",
+            inFlight:  false,
+        }]);
+        assert.deepEqual(vm.analyses.map(entry => entry.serviceId), ["mock-case-analysis"]);
+        assert.equal(vm.isActive(null), true);
+        assert.deepEqual(removedNotices, [
+            { serviceId: "case-evaluation", title: "case-evaluation" },
+        ]);
+        assert.equal(vm.canAddAnalysis(), true, "the removed service is offered again");
+        assert.equal(vm.removing, false);
+    });
+
+    it("says when a generation is in flight, and stops polling once none is left", async () => {
+        const { vm, removeCalls, timers } = createTabs([[analysis({ status: "processing" })]], {
+            removeDialog: true,
+        });
+        await openAsCreator(vm);
+        assert.equal(timers.size, 1);
+
+        await vm.removeAnalysis("mock-case-analysis");
+
+        assert.equal(removeCalls[0].inFlight, true);
+        assert.equal(vm.hasAnalysisTabs(), false);
+        assert.equal(timers.size, 0);
+    });
+
+    it("keeps the tab when the dialog is cancelled", async () => {
+        const { vm, removeCalls } = createTabs([[analysis()]], { removeDialog: false });
+        const removedNotices = [];
+        vm.onAnalysisRemoved = notice => removedNotices.push(notice);
+        await openAsCreator(vm);
+        vm.selectTab("mock-case-analysis");
+
+        assert.equal(await vm.removeAnalysis("mock-case-analysis"), false);
+
+        assert.equal(removeCalls.length, 1);
+        assert.equal(vm.analyses.length, 1);
+        assert.equal(vm.isActive("mock-case-analysis"), true);
+        assert.deepEqual(removedNotices, []);
+    });
+
+    it("keeps the tab when the dialog fails", async () => {
+        const { vm } = createTabs([[analysis()]], { removeDialog: new Error("broken") });
+        await openAsCreator(vm);
+        vm.selectTab("mock-case-analysis");
+        const originalError = console.error;
+        console.error = () => {};
+        try {
+            assert.equal(await vm.removeAnalysis("mock-case-analysis"), false);
+        } finally {
+            console.error = originalError;
+        }
+
+        assert.equal(vm.analyses.length, 1);
+        assert.equal(vm.isActive("mock-case-analysis"), true);
+        assert.equal(vm.removing, false);
+    });
+
+    it("is not offered to other teachers, and opens one dialog for two quick clicks", async () => {
+        const other = createTabs([[analysis()]], { removeDialog: true });
+        await openAsCreator(other.vm, { canAddAnalyses: false });
+        assert.equal(other.vm.canRemoveAnalyses(), false);
+        assert.equal(await other.vm.removeAnalysis("mock-case-analysis"), false);
+        assert.deepEqual(other.removeCalls, []);
+
+        const pending = deferred();
+        const { vm, removeCalls } = createTabs([[analysis()]], { removeDialog: pending });
+        await openAsCreator(vm);
+        const first = vm.removeAnalysis("mock-case-analysis");
+        const second = vm.removeAnalysis("mock-case-analysis");
+        pending.resolve(false);
+        await Promise.all([first, second]);
+        assert.equal(removeCalls.length, 1);
+        assert.equal(await vm.removeAnalysis("unknown-service"), false);
+        assert.equal(removeCalls.length, 1);
+    });
+
+    it("ignores a list loaded before the analysis was removed", async () => {
+        const slow = deferred();
+        const { vm, calls } = createTabs([[analysis()], slow, []], { removeDialog: true });
+        await openAsCreator(vm);
+
+        const refresh = vm.refresh();
+        await vm.removeAnalysis("mock-case-analysis");
+        slow.resolve([analysis()]);
+        await refresh;
+
+        assert.deepEqual(vm.analyses, []);
+        assert.equal(calls.length, 3, "the stale list is asked for again");
+    });
+});
+
 function createPanel({ detail, generate } = {}) {
     const calls = { get: 0, generate: [] };
     const service = {
@@ -576,6 +717,59 @@ describe("caseAnalysisPanel", () => {
         }
     });
 
+    it("offers Remove analysis to the creator and leaves it to the tabs", async () => {
+        const { vm } = createPanel();
+        vm.summary = analysis();
+        assert.equal(vm.canRemove(), false, "without on-remove");
+        vm.removable = false;
+        vm.onRemove = async () => true;
+        assert.equal(vm.canRemove(), false, "not the creator");
+
+        const requests = [];
+        const removal = deferred();
+        vm.removable = true;
+        vm.onRemove = ({ serviceId }) => {
+            requests.push(serviceId);
+            return removal.promise;
+        };
+        vm.confirmingGenerate = true;
+        assert.equal(vm.canRemove(), true);
+
+        const asked = vm.askToRemove();
+        assert.equal(vm.removing, true);
+        assert.equal(vm.confirmingGenerate, false);
+        await vm.askToRemove();
+        removal.resolve(false);
+        await asked;
+
+        assert.deepEqual(requests, ["mock-case-analysis"], "one dialog at a time");
+        assert.equal(vm.removing, false);
+    });
+
+    it("mentions the previous result only when the document predates the generation", async () => {
+        const firstRun = analysis({ status: "processing", generatedAt: null });
+        // A fast adapter: the detail already holds the first result.
+        const fast = createPanel({
+            detail: {
+                ...firstRun,
+                status:      "ready",
+                generatedAt: "2026-10-27T10:05:00.000Z",
+                document:    { wordCount: 3 },
+            },
+        });
+        setSummary(fast.vm, firstRun);
+        await flush();
+        assert.equal(fast.vm.state(), "pending");
+        assert.equal(fast.vm.hasDocument(), true);
+        assert.equal(fast.vm.showsPreviousResult(), false);
+
+        const rerun = analysis({ status: "processing", generatedAt: "2026-10-27T10:00:00.000Z" });
+        const again = createPanel({ detail: { ...rerun, document: { wordCount: 3 } } });
+        setSummary(again.vm, rerun);
+        await flush();
+        assert.equal(again.vm.showsPreviousResult(), true);
+    });
+
     it("reports a failed request", async () => {
         const { vm } = createPanel({ generate: new Error("network") });
         vm.summary = analysis({ status: "failed" });
@@ -592,10 +786,12 @@ describe("caseAnalysisPanel", () => {
     });
 });
 
-// The panel wired to the tabs as the template does (on-generate).
+// The panel wired to the tabs as the template does (on-generate, on-remove).
 function openPanel(tabs) {
     const { vm } = createPanel();
     vm.onGenerate = ({ serviceId }) => tabs.generateAnalysis(serviceId);
+    vm.removable = tabs.canRemoveAnalyses();
+    vm.onRemove = ({ serviceId }) => tabs.removeAnalysis(serviceId);
     vm.onAnalysisChanged = ({ analysis: changed }) => tabs.handleAnalysisChanged(changed);
     setSummary(vm, tabs.analyses[0]);
     return vm;
@@ -633,6 +829,23 @@ describe("caseViewTabs with caseAnalysisPanel", () => {
         const reopened = openPanel(tabs);
         assert.equal(reopened.state(), "pending");
         assert.equal(reopened.canGenerate(), false);
+    });
+
+    it("removes the analysis from its panel and closes the tab", async () => {
+        const { vm: tabs, removeCalls } = createTabs([[analysis()]], { removeDialog: true });
+        tabs.caseItem = { id: 7 };
+        tabs.canAddAnalyses = true;
+        tabs.$onChanges({ caseItem: { currentValue: tabs.caseItem } });
+        await flush();
+        tabs.selectTab("mock-case-analysis");
+
+        const panel = openPanel(tabs);
+        assert.equal(panel.canRemove(), true);
+        await panel.askToRemove();
+
+        assert.equal(removeCalls.length, 1);
+        assert.equal(tabs.hasAnalysisTabs(), false);
+        assert.equal(tabs.isActive(null), true);
     });
 
     it("refreshes the list when the service answers busy", async () => {

@@ -15,6 +15,7 @@ import {
 } from "../../helpers/case-documents-form.js";
 import { caseAnalysisSaveErrorKey } from "../../helpers/case-analysis-options.js";
 import { caseVisibilityResultMessages } from "../../helpers/case-visibility-result.js";
+import { translatePlainText } from "../../helpers/plain-text-translation.js";
 import { confirmCasePublication } from "../../helpers/case-publication.js";
 
 export function CasesController($scope, $routeParams, $window, $translate, toast,
@@ -65,7 +66,8 @@ export function CasesController($scope, $routeParams, $window, $translate, toast
         const messages = caseVisibilityResultMessages(result, previousVisibility);
         if (messages.length > 0) {
             vm.showInfoToast(
-                messages.map(message => $translate.instant(message.key, message.values)).join(" "),
+                messages.map(message => translatePlainText($translate, message.key, message.values))
+                    .join(" "),
                 TOAST_VISIBILITY_TIMEOUT_MS
             );
         }

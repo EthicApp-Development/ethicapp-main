@@ -120,6 +120,22 @@ test("case-created: skips generations that are no longer reserved, without waiti
     assert.equal(results[0].status, "skipped");
 });
 
+test("case-created: a result for an analysis removed during the wait stores nothing", async () => {
+    // complete() finds no row for the job once the teacher removed the analysis (#1040).
+    const { caseAnalyses, calls } = makeCaseAnalyses({
+        complete: async () => null,
+    });
+    const { handler } = await registerAdapter({
+        caseAnalyses,
+        renderOutcome: { status: "ready", text: "Text." },
+    });
+
+    const results = await runCaseCreated(handler);
+
+    assert.deepEqual(calls.map(({ name }) => name), ["markProcessing"]);
+    assert.deepEqual(results, [{ hook: "case-created", status: "skipped", caseId: 7 }]);
+});
+
 test("case-created: fails the started generation when its result cannot be stored", async () => {
     const { caseAnalyses, calls } = makeCaseAnalyses({
         complete: async () => { throw new Error("database unavailable"); },

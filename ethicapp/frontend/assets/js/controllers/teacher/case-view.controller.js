@@ -34,6 +34,7 @@ import {
     deleteNotice,
     isCodedDeleteRefusal,
 } from "../../helpers/case-action-feedback.js";
+import { translatePlainText } from "../../helpers/plain-text-translation.js";
 
 const TOAST_INFO_TIMEOUT_MS = 4 * 1000;
 const TOAST_ERROR_TIMEOUT_MS = 6 * 1000;
@@ -71,12 +72,13 @@ export function CaseViewController($scope, $routeParams, $interval, $translate, 
     let licenses = [];
     let documentProcessingPoll = null;
 
-    // Toasts
+    // Toasts. The toast renders its message as text, so the parameters (a
+    // case title, an analysis name) are translated as plain text.
 
     function showToast(key, { className, timeout = TOAST_INFO_TIMEOUT_MS, params } = {}) {
         toast.create({
             timeout,
-            message:           $translate.instant(key, params),
+            message:           translatePlainText($translate, key, params),
             className,
             containerClass:    "cases-toast-container",
             dismissible:       false,
@@ -91,6 +93,11 @@ export function CaseViewController($scope, $routeParams, $interval, $translate, 
 
     vm.showErrorToast = function(key) {
         showToast(key, { className: "alert-danger", timeout: TOAST_ERROR_TIMEOUT_MS });
+    };
+
+    // The tabs removed an analysis (#1040).
+    vm.handleAnalysisRemoved = function(title) {
+        showToast("case_analysis_remove_notice", { params: { title } });
     };
 
     // Loading

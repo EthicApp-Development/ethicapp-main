@@ -11,11 +11,17 @@
 // tab bar (#1039) offers the usable case-scoped services the case has not
 // chosen, in a dialog, and shows only when there is one. The services it adds
 // appear as tabs in their processing state, polled as after creation.
+//
+// Each analysis tab also offers the creator "Remove analysis" (#1040), from
+// its panel (`on-remove`). Once the dialog removed it, the tab goes away, the
+// case text opens, `onAnalysisRemoved` lets the view confirm it, and "Add
+// analysis" offers the service again.
 
 import {
     CASE_ANALYSES_POLL_INTERVAL_MS,
     caseAnalysisIndicator,
     caseAnalysisTabTitle,
+    hasCaseAnalysisGenerationRunning,
     isCaseAnalysisInFlight,
     mergeCaseAnalysis,
 } from "../helpers/case-analyses.js";
@@ -37,7 +43,8 @@ const FIXED_TAB_DOM_IDS = {
 let instanceCount = 0;
 
 function CaseViewTabsController($scope, $element, $timeout, CaseAnalysesService,
-    LanguageCatalogService, ExternalServicesCatalogService, CaseAnalysisAddDialogService) {
+    LanguageCatalogService, ExternalServicesCatalogService, CaseAnalysisAddDialogService,
+    CaseAnalysisRemoveDialogService) {
     const vm = this;
     instanceCount += 1;
     const idPrefix = `case-view-tabs-${instanceCount}`;
@@ -62,6 +69,8 @@ function CaseViewTabsController($scope, $element, $timeout, CaseAnalysesService,
     vm.caseServices = [];
     // True while the "Add analysis" dialog is open.
     vm.adding = false;
+    // True while the "Remove analysis" dialog is open.
+    vm.removing = false;
     vm.materialTab = CASE_VIEW_TAB_MATERIAL;
     vm.rightsTab = CASE_VIEW_TAB_RIGHTS;
 
@@ -322,6 +331,51 @@ function CaseViewTabsController($scope, $element, $timeout, CaseAnalysesService,
         }
     };
 
+    // "Remove analysis": for the creator, as "Add analysis" is.
+    vm.canRemoveAnalyses = function() {
+        return vm.canAddAnalyses === true;
+    };
+
+    /**
+     * Asks to remove an analysis (#1040), once at a time; the dialog sends
+     * the request. Once it is removed, its tab goes away, the case text
+     * opens and `onAnalysisRemoved({ serviceId, title })` is called. Resolves
+     * with whether it was removed.
+     */
+    vm.removeAnalysis = async function(serviceId) {
+        const analysis = vm.analyses.find(entry => entry.serviceId === serviceId);
+        if (vm.removing || !vm.canRemoveAnalyses() || !analysis) {
+            return false;
+        }
+        const caseId = loadedCaseId;
+        const title = vm.tabTitle(analysis);
+        vm.removing = true;
+        try {
+            const removed = await CaseAnalysisRemoveDialogService.open({
+                caseId,
+                serviceId,
+                title,
+                inFlight: hasCaseAnalysisGenerationRunning(analysis),
+            });
+            if (!removed || destroyed || caseId !== loadedCaseId) {
+                return removed === true;
+            }
+            // A list requested before the removal must not bring the tab back.
+            localRevision += 1;
+            vm.analyses = vm.analyses.filter(entry => entry.serviceId !== serviceId);
+            vm.selectTab(null);
+            schedulePoll();
+            vm.onAnalysisRemoved?.({ serviceId, title });
+            return true;
+        } catch (error) {
+            console.error("[caseViewTabs] Could not remove the case analysis.", error);
+            return false;
+        } finally {
+            vm.removing = false;
+            $scope.$applyAsync();
+        }
+    };
+
     vm.handleAnalysisChanged = function(analysis) {
         localRevision += 1;
         vm.analyses = mergeCaseAnalysis(vm.analyses, analysis);
@@ -355,13 +409,16 @@ function CaseViewTabsController($scope, $element, $timeout, CaseAnalysesService,
 
 export default {
     bindings: {
-        caseItem:       "<",
+        caseItem:          "<",
         // The number of videos and documents; the "Material" tab shows when
         // there is any.
-        materialCount:  "<?",
-        showRights:     "<?",
-        // Whether the teacher is the case's creator, who can add analyses.
-        canAddAnalyses: "<?",
+        materialCount:     "<?",
+        showRights:        "<?",
+        // Whether the teacher is the case's creator, who can add and remove
+        // analyses.
+        canAddAnalyses:    "<?",
+        // Called with `serviceId` and `title` once an analysis was removed.
+        onAnalysisRemoved: "&?",
     },
     transclude: {
         material: "?caseViewMaterial",
@@ -369,7 +426,8 @@ export default {
     },
     controller: [
         "$scope", "$element", "$timeout", "CaseAnalysesService", "LanguageCatalogService",
-        "ExternalServicesCatalogService", "CaseAnalysisAddDialogService", CaseViewTabsController,
+        "ExternalServicesCatalogService", "CaseAnalysisAddDialogService",
+        "CaseAnalysisRemoveDialogService", CaseViewTabsController,
     ],
     templateUrl: "/assets/static/views/teacher/fragments/case-view-tabs.template.html",
 };

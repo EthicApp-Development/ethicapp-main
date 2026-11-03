@@ -4,6 +4,7 @@ import test from "node:test";
 import {
     completeCaseAnalysis,
     copyReadyCaseAnalyses,
+    deleteCaseAnalysis,
     failCaseAnalysis,
     getCaseAnalysis,
     insertRequestedCaseAnalyses,
@@ -232,4 +233,72 @@ test("saveReviewedCaseAnalysis: refused during a generation, drops the job", asy
     assert.ok(calls[0].sql.includes(NO_GENERATION_IN_FLIGHT));
     assert.match(calls[0].sql, /job_id = NULL/);
     assert.match(calls[0].sql, /reviewed_at = now\(\), reviewed_by = \$5/);
+});
+
+// ─── removal (#1040) ─────────────────────────────────────────────────────────
+
+test("deleteCaseAnalysis: deletes the row of the service, whatever its status", async () => {
+    const found = makeQuery([{ service_id: "svc-a" }]);
+    const missing = makeQuery([]);
+
+    assert.deepEqual(
+        await deleteCaseAnalysis({ caseId: 7, serviceId: "svc-a" }, found.query),
+        { service_id: "svc-a" }
+    );
+    assert.equal(await deleteCaseAnalysis({ caseId: 7, serviceId: "svc-x" }, missing.query), null);
+    assert.deepEqual(found.calls[0].sqlParams, [7, "svc-a"]);
+    assert.equal(
+        found.calls[0].sql,
+        "DELETE FROM case_analyses WHERE case_id = $1 AND service_id = $2 RETURNING service_id;"
+    );
+});
+
+/**
+ * One case_analyses row behind the helpers' statements: the DELETE removes it,
+ * and the adapter updates, conditional on the job id, apply only while it is
+ * there. It stands for the table after deleteCaseAnalysis; the integration
+ * test runs the same sequence against PostgreSQL.
+ */
+function makeOneRowTable(row) {
+    let current = { ...row };
+    const query = async ({ sql, sqlParams }) => {
+        const statement = sql.replace(/\s+/g, " ").trim();
+        if (statement.startsWith("DELETE FROM case_analyses")) {
+            const deleted = current;
+            current = null;
+            return deleted ? [{ service_id: deleted.service_id }] : [];
+        }
+        if (statement.startsWith("UPDATE case_analyses")) {
+            const [serviceId, jobId] = statement.includes("WHERE case_id = $1")
+                ? sqlParams.slice(1, 3)
+                : sqlParams.slice(0, 2);
+            if (!current || current.service_id !== serviceId || current.job_id !== jobId) {
+                return [];
+            }
+            return [{ ...current }];
+        }
+        throw new Error(`Unexpected statement: ${statement}`);
+    };
+    return { query, current: () => current };
+}
+
+test("a late complete or fail after the removal stores nothing and returns null", async () => {
+    const table = makeOneRowTable({ service_id: "svc-a", job_id: JOB_ID, status: "processing" });
+
+    assert.ok(await deleteCaseAnalysis({ caseId: 7, serviceId: "svc-a" }, table.query));
+
+    assert.equal(await completeCaseAnalysis(
+        { serviceId: "svc-a", jobId: JOB_ID, documentSchema: "mock/v1", document: DOCUMENT },
+        table.query
+    ), null);
+    assert.equal(await failCaseAnalysis(
+        { serviceId: "svc-a", jobId: JOB_ID, errorCode: "timeout", errorMessage: "Too slow." },
+        table.query
+    ), null);
+    assert.equal(await markCaseAnalysisProcessing(
+        { caseId: 7, serviceId: "svc-a", jobId: JOB_ID },
+        table.query
+    ), null);
+    assert.equal(table.current(), null, "no row is created again");
+    assert.equal(await deleteCaseAnalysis({ caseId: 7, serviceId: "svc-a" }, table.query), null);
 });

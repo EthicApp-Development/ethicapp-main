@@ -4,7 +4,9 @@
 // the reservation of the services the copy did not inherit, and a new
 // generation of an inherited analysis, which changes the copy only. Also the
 // services added to an existing case (#1039): only those it lacks are
-// reserved, and two concurrent requests for a service reserve it once.
+// reserved, and two concurrent requests for a service reserve it once. And
+// the removal of an analysis (#1040): a late result of its generation stores
+// nothing, adding the service again starts afresh, and a copy keeps its own.
 //
 // Run with `npm run test:integration`, setting ETHICAPP_INTEGRATION_DATABASE_URL
 // to a disposable database.
@@ -17,6 +19,7 @@ import pg from "pg";
 import {
     completeCaseAnalysis,
     copyReadyCaseAnalyses,
+    deleteCaseAnalysis,
     failCaseAnalysis,
     getCaseAnalysis,
     insertRequestedCaseAnalyses,
@@ -351,4 +354,85 @@ test("case analyses: concurrent requests for a service create one analysis and o
     assert.deepEqual(rows.map(row => row.service_id), [serviceId]);
     const row = await getCaseAnalysis({ caseId: ethicalCase.id, serviceId }, query);
     assert.equal(row.job_id, reserved[0].job_id);
+});
+
+// ─── removing a service (#1040) ──────────────────────────────────────────────
+
+test("case analyses: removing an analysis during its generation drops the late result", { skip: SKIP_REASON }, async () => {
+    const teacherId = await createTeacher();
+    const ethicalCase = await createCase(teacherId);
+    const prefix = `svc-remove-${randomUUID()}`;
+    const processing = `${prefix}-processing`;
+    const requested = `${prefix}-requested`;
+    const kept = `${prefix}-kept`;
+    const ids = serviceId => ({ caseId: ethicalCase.id, serviceId, userId: teacherId });
+
+    await generate(ids(kept), { version: 1 });
+    // A regeneration its adapter started, over the document of a previous one.
+    await generate(ids(processing), { version: 1 });
+    const regeneration = await reserveCaseAnalysisGeneration(ids(processing), query);
+    await markCaseAnalysisProcessing({ ...ids(processing), jobId: regeneration.job_id }, query);
+    // A first generation its adapter has not started.
+    const [reservation] = await insertRequestedCaseAnalyses(
+        { caseId: ethicalCase.id, serviceIds: [requested], userId: teacherId },
+        query
+    );
+
+    assert.deepEqual(await deleteCaseAnalysis(ids(processing), query), { service_id: processing });
+    assert.deepEqual(await deleteCaseAnalysis(ids(requested), query), { service_id: requested });
+    assert.equal(await deleteCaseAnalysis(ids(processing), query), null, "already removed");
+
+    // The adapters' late calls store nothing and create no row.
+    assert.equal(await completeCaseAnalysis({
+        serviceId:      processing,
+        jobId:          regeneration.job_id,
+        documentSchema: "evidence-inventory/v1",
+        document:       { version: 2 },
+    }, query), null);
+    assert.equal(await failCaseAnalysis({
+        serviceId: processing,
+        jobId:     regeneration.job_id,
+        errorCode: "timeout",
+    }, query), null);
+    assert.equal(await markCaseAnalysisProcessing(
+        { ...ids(requested), jobId: reservation.job_id },
+        query
+    ), null);
+    assert.deepEqual(
+        (await listCaseAnalyses(ethicalCase.id, query)).map(row => row.service_id),
+        [kept]
+    );
+    assert.deepEqual((await getCaseAnalysis(ids(kept), query)).document, { version: 1 });
+
+    // Adding the service again is a new choice: the old job still stores nothing.
+    const [again] = await insertRequestedCaseAnalyses(
+        { caseId: ethicalCase.id, serviceIds: [processing], userId: teacherId },
+        query
+    );
+    assert.notEqual(again.job_id, regeneration.job_id);
+    await markCaseAnalysisProcessing({ ...ids(processing), jobId: again.job_id }, query);
+    assert.equal(await completeCaseAnalysis({
+        serviceId:      processing,
+        jobId:          regeneration.job_id,
+        documentSchema: "evidence-inventory/v1",
+        document:       { version: 2 },
+    }, query), null);
+    const readded = await getCaseAnalysis(ids(processing), query);
+    assert.equal(readded.status, "processing");
+    assert.equal(readded.document, null);
+    assert.equal(readded.generated_at, null);
+});
+
+test("case analyses: removing a source's analysis leaves its copy's", { skip: SKIP_REASON }, async () => {
+    const { source, services } = await createSourceWithAnalyses();
+    const copierId = await createTeacher();
+    const copy = await createCase(copierId);
+    await copyReadyCaseAnalyses({ sourceCaseId: source.id, targetCaseId: copy.id }, query);
+
+    await deleteCaseAnalysis({ caseId: source.id, serviceId: services.ready }, query);
+
+    const ids = caseId => ({ caseId, serviceId: services.ready });
+    assert.equal(await getCaseAnalysis(ids(source.id), query), null);
+    const copyRow = await getCaseAnalysis({ caseId: copy.id, serviceId: services.ready }, query);
+    assert.deepEqual(copyRow.document, { version: 1 });
 });

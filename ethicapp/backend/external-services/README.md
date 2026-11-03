@@ -1021,6 +1021,16 @@ one generation. It is accepted for a case in use or archived, like the other
 analysis endpoints: an analysis changes neither the case nor what activities
 showed (epic #1008, decision of 2026-11-02).
 
+For the same reason the creator can remove a service from the choice (#1040):
+`DELETE /cases/:id/analyses/:serviceId` deletes its row, with the document and
+the teacher's edits. Nothing else reads `case_analyses` (students, designs and
+activities do not), and copies of the case have their own rows (#1038), so
+neither is affected. Adding the service again creates a new choice and a new
+generation. A removal does not wait for a generation in flight and does not
+cancel the external request: the adapter may still finish its work, but its
+`markProcessing`, `complete` or `fail` finds no row for its job, stores
+nothing and returns `null` (see "Recording results from an adapter").
+
 Two decisions bound each analysis. The installation decides which services may
 be offered at all: only services its manifest enables are valid, and the
 default manifest enables none (#811). Within that, the case author decides, per
@@ -1078,7 +1088,8 @@ right away instead of after 15 minutes.
 - `fail({ jobId, errorCode, errorMessage })` records a failed generation.
 
 `complete` and `fail` only apply to a generation started with `markProcessing`;
-results of superseded jobs are ignored and return `null`. An adapter that hits
+results of superseded jobs, and of analyses the teacher removed meanwhile, are
+ignored and return `null`. The adapter then reports its callback as skipped. An adapter that hits
 an unexpected error after starting a generation calls `fail`, as the mock does,
 so the analysis does not stay `processing` until it is stale.
 
@@ -1150,6 +1161,7 @@ teachers `404 CASE_NOT_FOUND`. Services not chosen for the case answer
 | `POST /cases/:id/analyses` | Body `{ serviceIds }`. Reserves and dispatches the services the case has not chosen yet (see "Choosing services") and answers `202` with the case's analyses, as `GET /cases/:id/analyses` lists them. Answers `400 CASE_ANALYSIS_SERVICE_INVALID` for an empty list, a value that is not a list, or an id that is not a usable case-scoped service. |
 | `GET /cases/:id/analyses/:serviceId` | One analysis with its document. |
 | `PUT /cases/:id/analyses/:serviceId` | Body `{ document }`, validated by the adapter. Answers `405 CASE_ANALYSIS_NOT_EDITABLE` without a validator, `400 CASE_ANALYSIS_DOCUMENT_INVALID` with `details`, and `409 CASE_ANALYSIS_PROCESSING` while a generation is in flight. Records `reviewed_at` and `reviewed_by`. |
+| `DELETE /cases/:id/analyses/:serviceId` | Removes the service from the case's choice (#1040): deletes its analysis, with the document and the teacher's edits, and answers `204` without a body. Accepted for a case in use or archived and while a generation is in flight, whose late result is then dropped. |
 | `POST /cases/:id/analyses/:serviceId/generate` | Reserves a new generation, replays `case-created` for that service only, and answers `202` with the reserved analysis. Answers `409 CASE_ANALYSIS_PROCESSING` while a generation is in flight and `503 CASE_ANALYSIS_SERVICE_DISABLED` when the service is disabled. It also recovers stale generations. |
 
 `mock-case-analysis` (`adapters/mock-case-analysis.adapter.js`) is the reference
@@ -1178,7 +1190,18 @@ an allowlist from `ui.component` to registered components
 A service whose component is missing or not in the allowlist gets the generic
 panel, which shows the document's fields read-only. Either way the tab shows
 the status, the latest error and "Generate again" (with a confirmation), which
-is offered only when the service is `usable`.
+is offered only when the service is `usable`. While a generation is in flight,
+the tab says that a previous result is shown below only when there is one: the
+document the tab shows predates the generation, by its `generatedAt` (or
+`reviewedAt`) against the listing's.
+
+For the case's creator, each analysis tab also offers "Remove analysis"
+(#1040). Its dialog says that the result and the teacher's changes are deleted
+and that the analysis can be added again; while a generation is in flight it
+adds that the service may finish its work but its result is discarded. Once
+`DELETE /cases/:id/analyses/:serviceId` answers, the tab goes away, the view
+opens the case text, a toast confirms, and "Add analysis" offers the service
+again.
 
 To add a view for a new service:
 

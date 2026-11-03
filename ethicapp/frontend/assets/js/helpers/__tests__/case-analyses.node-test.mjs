@@ -10,10 +10,12 @@ import {
     caseAnalysisState,
     caseAnalysisTabTitle,
     genericCaseAnalysisFields,
+    hasCaseAnalysisGenerationRunning,
     hasLatestGenerationFailed,
     isCaseAnalysisInFlight,
     mergeCaseAnalysis,
     resolveCaseAnalysisComponent,
+    showsPreviousCaseAnalysisResult,
 } from "../case-analyses.js";
 
 const TRANSLATIONS = {
@@ -203,6 +205,78 @@ describe("caseAnalysisChanged", () => {
         assert.equal(caseAnalysisChanged(summary, { ...summary, updatedAt: "earlier" }), true);
         assert.equal(caseAnalysisChanged(summary, { ...summary, stale: true }), true);
         assert.equal(caseAnalysisChanged(null, null), false);
+    });
+});
+
+describe("showsPreviousCaseAnalysisResult (#1040)", () => {
+    const GENERATED = "2026-10-27T10:00:00.000Z";
+    const LATER = "2026-10-27T10:05:00.000Z";
+    const DOCUMENT = { wordCount: 3 };
+
+    it("shows the note while a new generation runs over a previous result", () => {
+        const summary = analysis({ status: "processing", generatedAt: GENERATED });
+        // The detail read while the generation runs, and the one read before it.
+        assert.equal(showsPreviousCaseAnalysisResult(summary, {
+            ...summary, document: DOCUMENT,
+        }), true);
+        assert.equal(showsPreviousCaseAnalysisResult(summary, {
+            ...summary, status: "ready", document: DOCUMENT,
+        }), true);
+        assert.equal(showsPreviousCaseAnalysisResult(
+            { ...summary, status: "requested" },
+            { ...summary, document: DOCUMENT }
+        ), true);
+    });
+
+    it("counts a teacher edit after the generation as the previous result", () => {
+        const summary = analysis({ status: "requested", generatedAt: null, reviewedAt: GENERATED });
+        assert.equal(showsPreviousCaseAnalysisResult(summary, {
+            ...summary, document: DOCUMENT,
+        }), true);
+    });
+
+    it("hides it on a first generation, even when the new result was already read", () => {
+        const summary = analysis({ status: "processing", generatedAt: null, reviewedAt: null });
+        assert.equal(showsPreviousCaseAnalysisResult(summary, {
+            ...summary, document: null,
+        }), false);
+        // A fast adapter stored the result before the listing's next poll.
+        assert.equal(showsPreviousCaseAnalysisResult(summary, {
+            ...summary, status: "ready", generatedAt: LATER, document: DOCUMENT,
+        }), false);
+    });
+
+    it("hides it when the document read is newer than the listing's result", () => {
+        const summary = analysis({ status: "processing", generatedAt: GENERATED });
+        assert.equal(showsPreviousCaseAnalysisResult(summary, {
+            ...summary, status: "ready", generatedAt: LATER, document: DOCUMENT,
+        }), false);
+    });
+
+    it("hides it when nothing is being generated or no document is shown", () => {
+        const ready = analysis({ generatedAt: GENERATED });
+        assert.equal(showsPreviousCaseAnalysisResult(ready, {
+            ...ready, document: DOCUMENT,
+        }), false);
+        const stale = analysis({ status: "processing", stale: true, generatedAt: GENERATED });
+        assert.equal(showsPreviousCaseAnalysisResult(stale, {
+            ...stale, document: DOCUMENT,
+        }), false);
+        const pending = analysis({ status: "processing", generatedAt: GENERATED });
+        assert.equal(showsPreviousCaseAnalysisResult(pending, null), false);
+        assert.equal(showsPreviousCaseAnalysisResult(null, { document: DOCUMENT }), false);
+    });
+});
+
+describe("hasCaseAnalysisGenerationRunning", () => {
+    it("is true for requested and processing generations, also stale ones", () => {
+        assert.equal(hasCaseAnalysisGenerationRunning(analysis({ status: "requested" })), true);
+        assert.equal(hasCaseAnalysisGenerationRunning(
+            analysis({ status: "processing", stale: true })
+        ), true);
+        assert.equal(hasCaseAnalysisGenerationRunning(analysis()), false);
+        assert.equal(hasCaseAnalysisGenerationRunning(analysis({ status: "failed" })), false);
+        assert.equal(hasCaseAnalysisGenerationRunning(null), false);
     });
 });
 

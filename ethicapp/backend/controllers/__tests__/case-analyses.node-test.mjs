@@ -14,6 +14,7 @@ import caseAnalysesRouter, {
     generateCaseAnalysisForOwner,
     getCaseAnalysisForOwner,
     listCaseAnalysesForOwner,
+    removeCaseAnalysisForOwner,
     saveCaseAnalysisForOwner,
 } from "../case-analyses.js";
 
@@ -446,7 +447,9 @@ async function serve(router, { role }) {
                 headers: { "Content-Type": "application/json" },
                 body:    body === undefined ? undefined : JSON.stringify(body),
             });
-            return { status: response.status, body: await response.json() };
+            // 204 has no body.
+            const text = await response.text();
+            return { status: response.status, body: text ? JSON.parse(text) : null };
         },
         close: () => new Promise(resolve => server.close(resolve)),
     };
@@ -459,6 +462,7 @@ test("routes: students get 403 and invalid case ids 400, before any lookup", asy
         ["GET", "/cases/7/analyses/svc-ready"],
         ["PUT", "/cases/7/analyses/svc-ready", { document: {} }],
         ["POST", "/cases/7/analyses/svc-ready/generate"],
+        ["DELETE", "/cases/7/analyses/svc-ready"],
     ];
 
     const student = await serve(caseAnalysesRouter, { role: "A" });
@@ -470,6 +474,8 @@ test("routes: students get 403 and invalid case ids 400, before any lookup", asy
         }
 
         assert.equal((await teacher.request("GET", "/cases/abc/analyses")).status, 400);
+        const invalidDelete = await teacher.request("DELETE", "/cases/abc/analyses/svc-ready");
+        assert.equal(invalidDelete.status, 400);
     } finally {
         await student.close();
         await teacher.close();
@@ -527,6 +533,16 @@ function makeAnalysisTable(initialRows) {
             row => row.job_id === jobId && row.status === "processing",
             () => ({ status: "ready", document, reviewed_by: null })
         ),
+        fail: ({ serviceId, jobId, errorCode }) => update(
+            serviceId,
+            row => row.job_id === jobId && row.status === "processing",
+            () => ({ status: "failed", error_code: errorCode })
+        ),
+        // DELETE ... RETURNING service_id, whatever the row's status.
+        async deleteAnalysis({ serviceId }) {
+            await roundTrip();
+            return rows.delete(serviceId) ? { service_id: serviceId } : null;
+        },
     };
 }
 
@@ -538,6 +554,7 @@ async function serveOverTable(table) {
         getAnalysis:        table.getAnalysis,
         reserveGeneration:  table.reserveGeneration,
         saveReviewed:       table.saveReviewed,
+        deleteAnalysis:     table.deleteAnalysis,
         getValidator:       async () => async document => ({ document }),
         dispatchGeneration: (caseRow, reservation) => { dispatched.push(reservation); },
     });
@@ -588,6 +605,135 @@ test("routes: an edit is refused once a generation is accepted, and kept after i
         assert.equal(await table.complete({ ...generation, document: { words: 20 } }), null);
         assert.deepEqual(table.rows.get("svc-ready").document, { words: 99 });
         assert.equal(table.rows.get("svc-ready").reviewed_by, OWNER_ID);
+    } finally {
+        await app.close();
+    }
+});
+
+// ─── removing a service (#1040) ──────────────────────────────────────────────
+
+test("removeCaseAnalysisForOwner: deletes the creator's analysis and answers 204", async () => {
+    const deleted = [];
+    const { dependencies } = makeDependencies({
+        deleteAnalysis: async (args) => {
+            deleted.push(args);
+            return { service_id: args.serviceId };
+        },
+    });
+
+    const result = await removeCaseAnalysisForOwner({
+        caseId:    7,
+        serviceId: "svc-ready",
+        userId:    OWNER_ID,
+        dependencies,
+    });
+
+    assert.deepEqual(result, { status: 204 });
+    assert.deepEqual(deleted, [{ caseId: 7, serviceId: "svc-ready" }]);
+});
+
+test("removeCaseAnalysisForOwner: 404 for another teacher's case, without deleting", async () => {
+    const deleted = [];
+    const { dependencies } = makeDependencies({
+        deleteAnalysis: async (args) => {
+            deleted.push(args);
+            return { service_id: args.serviceId };
+        },
+    });
+
+    const { status, body } = await removeCaseAnalysisForOwner({
+        caseId:    7,
+        serviceId: "svc-ready",
+        userId:    OTHER_TEACHER_ID,
+        dependencies,
+    });
+
+    assert.equal(status, 404);
+    assert.equal(body.code, "CASE_NOT_FOUND");
+    assert.deepEqual(deleted, []);
+});
+
+test("removeCaseAnalysisForOwner: 404 when the service was not chosen for the case", async () => {
+    const { dependencies } = makeDependencies({ deleteAnalysis: async () => null });
+
+    const { status, body } = await removeCaseAnalysisForOwner({
+        caseId:    7,
+        serviceId: "svc-unknown",
+        userId:    OWNER_ID,
+        dependencies,
+    });
+
+    assert.equal(status, 404);
+    assert.equal(body.code, "CASE_ANALYSIS_NOT_FOUND");
+});
+
+test("routes: DELETE answers 204, then 404 for that service and for other cases", async () => {
+    const table = makeAnalysisTable([READY_ROW, BUSY_ROW]);
+    const { app } = await serveOverTable(table);
+
+    try {
+        const removed = await app.request("DELETE", "/cases/7/analyses/svc-ready");
+        assert.equal(removed.status, 204);
+        assert.equal(removed.body, null, "no body");
+        assert.equal(table.rows.has("svc-ready"), false);
+        assert.equal(table.rows.has("svc-busy"), true, "other services are kept");
+
+        const again = await app.request("DELETE", "/cases/7/analyses/svc-ready");
+        assert.equal(again.status, 404);
+        assert.equal(again.body.code, "CASE_ANALYSIS_NOT_FOUND");
+
+        const read = await app.request("GET", "/cases/7/analyses/svc-ready");
+        assert.equal(read.status, 404);
+        assert.equal(read.body.code, "CASE_ANALYSIS_NOT_FOUND");
+    } finally {
+        await app.close();
+    }
+
+    // Another teacher, as the session of the served app.
+    const { dependencies } = makeDependencies({
+        getOwnedCase:   async () => null,
+        deleteAnalysis: async () => assert.fail("nothing is deleted"),
+    });
+    const other = await serve(createCaseAnalysesRouter(dependencies), { role: "P" });
+    try {
+        const refused = await other.request("DELETE", "/cases/7/analyses/svc-busy");
+        assert.equal(refused.status, 404);
+        assert.equal(refused.body.code, "CASE_NOT_FOUND");
+    } finally {
+        await other.close();
+    }
+});
+
+test("routes: removing during a generation drops its late result", async () => {
+    const table = makeAnalysisTable([READY_ROW]);
+    const { app, dispatched } = await serveOverTable(table);
+    const path = "/cases/7/analyses/svc-ready";
+
+    try {
+        assert.equal((await app.request("POST", `${path}/generate`)).status, 202);
+        const generation = { serviceId: "svc-ready", jobId: dispatched[0].job_id };
+        assert.ok(await table.markProcessing(generation), "the adapter started");
+
+        assert.equal((await app.request("DELETE", path)).status, 204);
+
+        // The adapter's result arrives after the analysis was removed.
+        assert.equal(await table.complete({ ...generation, document: { words: 20 } }), null);
+        assert.equal(await table.fail({ ...generation, errorCode: "timeout" }), null);
+        assert.equal(table.rows.has("svc-ready"), false, "nothing is stored");
+
+        // Requested but not started yet: the adapter's start finds nothing.
+        const requested = makeAnalysisTable([READY_ROW]);
+        const second = await serveOverTable(requested);
+        try {
+            assert.equal((await second.app.request("POST", `${path}/generate`)).status, 202);
+            assert.equal((await second.app.request("DELETE", path)).status, 204);
+            assert.equal(await requested.markProcessing({
+                serviceId: "svc-ready",
+                jobId:     second.dispatched[0].job_id,
+            }), null);
+        } finally {
+            await second.app.close();
+        }
     } finally {
         await app.close();
     }
@@ -849,6 +995,32 @@ test("routes: POST /cases/:id/analyses answers 202, 400 and 404 over JSON", asyn
             serviceIds: ["svc-added"],
         });
         assert.equal(invalidId.status, 400);
+    } finally {
+        await app.close();
+    }
+});
+
+test("routes: a removed service is offered again and added as a new choice", async () => {
+    const { dependencies, calls, table } = makeAddDependencies();
+    dependencies.deleteAnalysis = async ({ serviceId }) => (
+        table.delete(serviceId) ? { service_id: serviceId } : null
+    );
+    const app = await serve(createCaseAnalysesRouter(dependencies), { role: "P" });
+
+    try {
+        assert.equal((await app.request("DELETE", "/cases/7/analyses/svc-ready")).status, 204);
+        assert.deepEqual((await app.request("GET", "/cases/7/analyses")).body.result, []);
+
+        const added = await app.request("POST", "/cases/7/analyses", { serviceIds: ["svc-ready"] });
+        await settle();
+
+        assert.equal(added.status, 202);
+        assert.deepEqual(
+            added.body.result.map(analysis => [analysis.serviceId, analysis.status]),
+            [["svc-ready", "requested"]]
+        );
+        assert.equal(calls.dispatched.length, 1, "a new generation is dispatched");
+        assert.equal(table.get("svc-ready").document, null, "the removed document is gone");
     } finally {
         await app.close();
     }

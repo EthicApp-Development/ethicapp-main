@@ -17,7 +17,12 @@ function createService(handlers = {}) {
         }
         return handler(url, body);
     };
-    const $http = { get: respond("get"), post: respond("post"), put: respond("put") };
+    const $http = {
+        get:    respond("get"),
+        post:   respond("post"),
+        put:    respond("put"),
+        delete: respond("delete"),
+    };
 
     return { service: CaseAnalysesService($http), requests };
 }
@@ -91,6 +96,32 @@ describe("CaseAnalysesService.addAnalyses (#1039)", () => {
         const { service } = createService({ post: async () => ({ data: { status: "err" } }) });
 
         await assert.rejects(service.addAnalyses(7, ["svc"]), /Unexpected case analyses response/);
+    });
+});
+
+describe("CaseAnalysesService.removeAnalysis (#1040)", () => {
+    it("deletes the analysis of the service", async () => {
+        const { service, requests } = createService({ delete: async () => ({ status: 204 }) });
+
+        assert.equal(await service.removeAnalysis(7, "svc/a"), undefined);
+        assert.deepEqual(requests.map(({ method, url }) => [method, url]), [
+            ["delete", "/cases/7/analyses/svc%2Fa"],
+        ]);
+    });
+
+    it("resolves when the analysis was removed already", async () => {
+        const gone = { status: 404, data: { status: "err", code: "CASE_ANALYSIS_NOT_FOUND" } };
+        const { service } = createService({ delete: async () => { throw gone; } });
+
+        assert.equal(await service.removeAnalysis(7, "svc"), undefined);
+    });
+
+    it("rejects with the response on other failures, also a missing case", async () => {
+        const missingCase = { status: 404, data: { status: "err", code: "CASE_NOT_FOUND" } };
+        for (const error of [missingCase, httpError(403), httpError(500)]) {
+            const { service } = createService({ delete: async () => { throw error; } });
+            await assert.rejects(service.removeAnalysis(7, "svc"), rejected => rejected === error);
+        }
     });
 });
 

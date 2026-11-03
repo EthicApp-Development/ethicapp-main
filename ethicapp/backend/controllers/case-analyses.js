@@ -3,6 +3,7 @@ import * as config from "../config/database.config.js";
 import * as rpg2 from "../db/rest-pg-2.js";
 import { requireRole } from "../helpers/auth-helper.js";
 import {
+    deleteCaseAnalysis,
     getCaseAnalysis,
     listCaseAnalyses,
     reserveCaseAnalysisGeneration,
@@ -26,6 +27,11 @@ import externalServicesRegistry from "../services/external-services.service.js";
  * The author chooses the services when creating the case (POST /cases) and can
  * add others later (POST /cases/:id/analyses, #1039), also to a case in use or
  * archived: an analysis changes neither the case nor what activities showed.
+ * For the same reason the author can remove one
+ * (DELETE /cases/:id/analyses/:serviceId, #1040), with its document and edits,
+ * and add it again later as a new choice. Removing does not wait for a
+ * generation in flight: the service may finish its work, but its result finds
+ * no analysis to update and is dropped.
  *
  * A copy of a case (duplicate, import, or the case copied with a design)
  * inherits the source's ready analyses and requests the other services the
@@ -111,6 +117,7 @@ const defaultDependencies = {
     listAnalyses:      listCaseAnalyses,
     getAnalysis:       getCaseAnalysis,
     saveReviewed:      saveReviewedCaseAnalysis,
+    deleteAnalysis:    deleteCaseAnalysis,
     reserveGeneration: reserveCaseAnalysisGeneration,
     getValidator,
     isServiceUsable,
@@ -338,6 +345,30 @@ export async function saveCaseAnalysisForOwner({
 }
 
 /**
+ * Removes a service from the case's choice (#1040): its analysis is deleted,
+ * with the document and the teacher's edits, and the service can be added
+ * again (POST /cases/:id/analyses) as a new choice. It is accepted for a case
+ * in use or archived, and while a generation is in flight, whose late result
+ * is then dropped. Answers 204 without a body.
+ */
+export async function removeCaseAnalysisForOwner({
+    caseId,
+    serviceId,
+    userId,
+    dependencies = defaultDependencies,
+}) {
+    if (!await dependencies.getOwnedCase(caseId, userId)) {
+        return caseNotFound();
+    }
+
+    if (!await dependencies.deleteAnalysis({ caseId, serviceId })) {
+        return analysisNotFound();
+    }
+
+    return { status: 204 };
+}
+
+/**
  * Requests a new generation from one chosen service. It also recovers stale
  * generations, for example ones lost while waiting for the PDF render.
  */
@@ -381,7 +412,7 @@ export async function generateCaseAnalysisForOwner({
 async function sendResult(res, resultPromise, errorMessage) {
     try {
         const { status, body } = await resultPromise;
-        return res.status(status).json(body);
+        return body === undefined ? res.status(status).end() : res.status(status).json(body);
     } catch (error) {
         console.error(`${errorMessage}:`, error);
         return res.status(500).json({ status: "err", message: `${errorMessage}.` });
@@ -442,6 +473,16 @@ export function createCaseAnalysesRouter(dependencies = defaultDependencies) {
             dependencies,
         }),
         "Failed to save the case analysis"
+    ));
+
+    router.delete("/cases/:id/analyses/:serviceId", teacherCaseRoute(
+        ({ req, caseId, userId }) => removeCaseAnalysisForOwner({
+            caseId,
+            serviceId: req.params.serviceId,
+            userId,
+            dependencies,
+        }),
+        "Failed to remove the case analysis"
     ));
 
     router.post("/cases/:id/analyses/:serviceId/generate", teacherCaseRoute(

@@ -112,6 +112,43 @@ export function caseAnalysisState(analysis) {
     }
 }
 
+// When the latest result was stored: its generation or a later teacher edit.
+// A new generation clears `reviewedAt`, so the latest of both is the result's.
+function latestResultTime(analysis) {
+    const times = [analysis?.generatedAt, analysis?.reviewedAt]
+        .map(value => (value ? new Date(value).getTime() : Number.NaN))
+        .filter(Number.isFinite);
+    return times.length > 0 ? Math.max(...times) : null;
+}
+
+/**
+ * Whether the tab of an analysis being generated shows the result of a
+ * previous generation under its "being generated" notice. `summary` is the
+ * listing's entry, the source of truth for the status; `detail` is the
+ * analysis read with its document. The listing must know of a result from
+ * before the current generation, and the document shown must not be newer
+ * than that one: a first generation has none, and a fast adapter may have
+ * stored the new result before the next poll of the listing.
+ */
+export function showsPreviousCaseAnalysisResult(summary, detail) {
+    if (caseAnalysisState(summary) !== "pending") {
+        return false;
+    }
+    if (detail?.document === null || detail?.document === undefined) {
+        return false;
+    }
+
+    const previous = latestResultTime(summary);
+    const shown = latestResultTime(detail);
+    return previous !== null && shown !== null && shown <= previous;
+}
+
+// Whether a generation was started and has not ended, even a stale one: its
+// service may still be working on it.
+export function hasCaseAnalysisGenerationRunning(analysis) {
+    return ["requested", "processing"].includes(analysis?.status);
+}
+
 // A ready analysis whose latest generation failed keeps its previous document.
 export function hasLatestGenerationFailed(analysis) {
     return analysis?.status === "ready" && Boolean(analysis.errorCode);

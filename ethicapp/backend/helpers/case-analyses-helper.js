@@ -148,6 +148,16 @@ export async function failCaseAnalysis(
 }
 
 /**
+ * Removes a service from the case's choice (#1040): deletes its analysis, with
+ * the document and the teacher's edits. A generation in flight is not
+ * stopped, but its late result matches no row and is dropped (see remove in
+ * analyses-store-helper.js). Returns null when the service was not chosen.
+ */
+export async function deleteCaseAnalysis({ caseId, serviceId }, query = rpg2.execSQL) {
+    return store.remove({ ownerId: caseId, serviceId }, query);
+}
+
+/**
  * Stores a document edited by the teacher. Returns null while a generation is
  * in flight, from its reservation until its result (unless it is stale), so an
  * accepted generation cannot replace the edits; also when the service was not
