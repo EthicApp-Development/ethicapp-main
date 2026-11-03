@@ -198,7 +198,8 @@ app.run(["$rootScope", "$location", "CasesListLocationService", trackCasesListLo
 app.controller("CaseViewController",
     ["$scope", "$routeParams", "$interval", "$translate", "toast",
         "CasesCatalogService", "LanguageCatalogService", "UserProfileService",
-        "CasesListLocationService", CaseViewController]);
+        "CasesListLocationService", "$location", "CaseDeleteConfirmService",
+        CaseViewController]);
 app.controller("ErrorController", 
     ["$scope", "$window", "$routeParams",
         ErrorController]);

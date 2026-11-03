@@ -248,6 +248,7 @@
 	"case_view_license_commercial": "Commercial license",
 	"case_view_license_used_with_permission": "Used with permission",
 	"case_view_license_custom": "Custom license",
+	"case_view_delete_in_use": "in use by activities",
 	"case_view_uses_label": "Where it is used",
 	"case_view_uses_failed": "The designs that use this case could not be loaded.",
 	"case_view_uses_none": "No design uses this case yet.",

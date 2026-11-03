@@ -15,9 +15,11 @@
 import { CASE_STATUS_IN_USE, deriveCaseStatus } from "./case-status.js";
 import {
     ROW_ACTION_ARCHIVE,
+    ROW_ACTION_DELETE,
     ROW_ACTION_DUPLICATE,
     ROW_ACTION_RESTORE,
     caseMetaParts,
+    deleteBlockReason,
     isCaseShared,
     primaryRowAction,
     statusLabel,
@@ -115,18 +117,34 @@ function action(id, key, icon, fields = {}) {
 }
 
 /**
+ * Why the case cannot be deleted, as the row menu says it, or null. A case
+ * in use whose count is unknown (the uses answer failed) says "in use".
+ */
+export function caseViewDeleteBlockReason(statusInfo, usage) {
+    if (statusInfo?.status === CASE_STATUS_IN_USE && countOf(statusInfo.activityCount) === 0) {
+        return { key: "case_view_delete_in_use", params: {} };
+    }
+    return deleteBlockReason(statusInfo, {
+        otherDesignCount:  countOf(usage?.otherDesignCount),
+        otherTeacherCount: countOf(usage?.otherTeacherCount),
+    });
+}
+
+/**
  * The view's actions.
  *
  * - The author: the row's visible action ("Duplicate to edit" for a case in
  *   use, "Replace PDF" for a failed PDF, else "Edit"), and a "⋯" menu with
- *   Duplicate and Archive, or Restore for an archived case.
+ *   Duplicate and Archive, or Restore for an archived case, then Delete,
+ *   last and in red, disabled with the row menu's reason when the case
+ *   cannot be deleted (`usage` is the uses answer's counts).
  * - Another teacher: "Import", or "Imported · View copy" once they have a
  *   copy; no menu. A case that is not shared any more cannot be imported.
  *
  * @returns {{ primary: object|null, menu: object[] }}
  */
 export function caseViewActions(statusInfo, {
-    isAuthor = false, importable = false, importedCopy = null,
+    isAuthor = false, importable = false, importedCopy = null, usage = null,
 } = {}) {
     if (!isAuthor) {
         const copyId = idOf(importedCopy?.id);
@@ -151,9 +169,13 @@ export function caseViewActions(statusInfo, {
         archived
             ? action(ROW_ACTION_RESTORE, "cases_action_restore", "fa-solid fa-rotate-left")
             : action(ROW_ACTION_ARCHIVE, "cases_action_archive", "fa-solid fa-box-archive"),
-        // Delete goes last, after a divider and in red, with the delete
-        // dialog of #1017 (`danger: true`; disabled with its reason).
     ];
+    const reason = caseViewDeleteBlockReason(statusInfo, usage);
+    menu.push(action(ROW_ACTION_DELETE, "cases_action_delete", "fa-solid fa-trash", {
+        danger:   true,
+        disabled: reason !== null,
+        reason,
+    }));
     const { id, key, icon } = primaryRowAction(statusInfo);
     return { primary: action(id, key, icon), menu };
 }
@@ -426,6 +448,7 @@ export function buildCaseView({
         isAuthor,
         importable: isCaseImportable(caseItem, { isAuthor }),
         importedCopy,
+        usage:      uses,
     });
     return {
         id:            idOf(caseItem?.id),

@@ -6,10 +6,13 @@
 // What it shows comes from `helpers/case-view.js`, over GET /cases/:id and
 // GET /cases/:id/uses. "← Cases" returns to the list as the teacher left it,
 // from `CasesListLocationService`. The actions' notices are the list's
-// previous toasts.
+// previous toasts. Deleting asks first, with the list's dialog
+// (`CaseDeleteConfirmService`, #1017), then returns to the list, whose toast
+// container shows the notice.
 
 import {
     ROW_ACTION_ARCHIVE,
+    ROW_ACTION_DELETE,
     ROW_ACTION_DUPLICATE,
     ROW_ACTION_DUPLICATE_TO_EDIT,
     ROW_ACTION_EDIT,
@@ -23,6 +26,14 @@ import {
     buildCaseView,
     isCaseAuthor,
 } from "../../helpers/case-view.js";
+import {
+    DELETE_CHOICE_ARCHIVE,
+    DELETE_CHOICE_DELETE,
+    caseTitle,
+    deleteFailureNotice,
+    deleteNotice,
+    isCodedDeleteRefusal,
+} from "../../helpers/case-action-feedback.js";
 
 const TOAST_INFO_TIMEOUT_MS = 4 * 1000;
 const TOAST_ERROR_TIMEOUT_MS = 6 * 1000;
@@ -37,7 +48,8 @@ function caseIdOf(value) {
 }
 
 export function CaseViewController($scope, $routeParams, $interval, $translate, toast,
-    CasesCatalogService, LanguageCatalogService, UserProfileService, CasesListLocationService) {
+    CasesCatalogService, LanguageCatalogService, UserProfileService, CasesListLocationService,
+    $location, CaseDeleteConfirmService) {
 
     const vm = this;
 
@@ -61,10 +73,10 @@ export function CaseViewController($scope, $routeParams, $interval, $translate, 
 
     // Toasts
 
-    function showToast(key, { className, timeout = TOAST_INFO_TIMEOUT_MS } = {}) {
+    function showToast(key, { className, timeout = TOAST_INFO_TIMEOUT_MS, params } = {}) {
         toast.create({
             timeout,
-            message:           $translate.instant(key),
+            message:           $translate.instant(key, params),
             className,
             containerClass:    "cases-toast-container",
             dismissible:       false,
@@ -86,6 +98,7 @@ export function CaseViewController($scope, $routeParams, $interval, $translate, 
     vm.refresh = function() {
         if (!vm.caseItem) {
             vm.view = null;
+            stopDocumentProcessingPolling();
             return;
         }
         vm.view = buildCaseView({
@@ -127,10 +140,13 @@ export function CaseViewController($scope, $routeParams, $interval, $translate, 
             return;
         }
 
+        vm.loadErrorKey = null;
         try {
             vm.caseItem = await CasesCatalogService.getCaseById(vm.caseId);
         } catch (error) {
             console.error("[CaseViewController] Could not load the case.", error);
+            vm.caseItem = null;
+            vm.refresh();
             vm.loadErrorKey = error?.status === 404
                 ? "case_view_not_found"
                 : "case_view_load_failed";
@@ -250,6 +266,45 @@ export function CaseViewController($scope, $routeParams, $interval, $translate, 
         }
     }
 
+    // Deleting asks first; the dialog can offer to archive instead. A deleted
+    // case returns to the list as the teacher left it. A refused delete (the
+    // case is gone, or in use since it was loaded) says why and loads the
+    // case again, so its menu shows the reason.
+    async function deleteCase() {
+        const title = caseTitle(vm.caseItem);
+        const choice = await CaseDeleteConfirmService.confirm({
+            caseId:   vm.caseId,
+            title,
+            archived: vm.caseItem?.archived === true,
+        });
+        if (choice === DELETE_CHOICE_ARCHIVE) {
+            await setArchived(true);
+            return;
+        }
+        if (choice !== DELETE_CHOICE_DELETE) {
+            return;
+        }
+        try {
+            await CasesCatalogService.deleteCase(vm.caseId);
+        } catch (error) {
+            console.error("[CaseViewController] Error deleting the case.", error);
+            const notice = deleteFailureNotice(error);
+            showToast(notice.messageKey, {
+                params: notice.params, className: "alert-danger", timeout: TOAST_ERROR_TIMEOUT_MS,
+            });
+            if (isCodedDeleteRefusal(error)) {
+                await vm.load();
+            }
+            return;
+        }
+        const notice = deleteNotice(title);
+        showToast(notice.messageKey, { params: notice.params });
+        stopDocumentProcessingPolling();
+        $scope.$applyAsync(() => {
+            $location.url(CasesListLocationService.lastUrl());
+        });
+    }
+
     const ACTIONS = {
         [ROW_ACTION_EDIT]:              () => $scope.navigateTo(`/cases/${vm.caseId}/edit`),
         [ROW_ACTION_REPLACE_PDF]:       () => $scope.navigateTo(`/cases/${vm.caseId}/edit`),
@@ -258,6 +313,7 @@ export function CaseViewController($scope, $routeParams, $interval, $translate, 
         [ROW_ACTION_ARCHIVE]:           () => setArchived(true),
         [ROW_ACTION_RESTORE]:           () => setArchived(false),
         [CASE_VIEW_ACTION_IMPORT]:      importCase,
+        [ROW_ACTION_DELETE]:            deleteCase,
     };
 
     // Runs one action at a time, so a second click does not repeat it.

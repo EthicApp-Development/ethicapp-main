@@ -37,9 +37,10 @@
                     ng-click="cv.runAction(cv.view.primary)">
                     <i ng-class="cv.view.primary.icon" aria-hidden="true"></i> {{ cv.view.primary.key | translate }}
                 </button>
-                <!-- The "⋯" menu: Duplicate, then Archive or Restore. Delete
-                     (#1017) goes last, after a divider and in red, with the
-                     delete dialog. -->
+                <!-- The "⋯" menu: Duplicate, then Archive or Restore, then
+                     Delete, last, after a divider and in red, disabled with
+                     its reason when the case cannot be deleted. Delete asks
+                     first (#1017). -->
                 <div class="btn-group case-view-menu" uib-dropdown keyboard-nav ng-if="cv.view.menu.length > 0">
                     <button type="button" class="btn btn-default case-view-menu-toggle" uib-dropdown-toggle
                         ng-disabled="cv.busy"

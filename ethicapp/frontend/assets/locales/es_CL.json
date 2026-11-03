@@ -261,6 +261,7 @@
 	"case_view_license_commercial": "Licencia comercial",
 	"case_view_license_used_with_permission": "Usado con permiso",
 	"case_view_license_custom": "Licencia personalizada",
+	"case_view_delete_in_use": "en uso por actividades",
 	"case_view_uses_label": "Dónde se usa",
 	"case_view_uses_failed": "No se pudo cargar qué diseños usan este caso.",
 	"case_view_uses_none": "Ningún diseño usa este caso todavía.",

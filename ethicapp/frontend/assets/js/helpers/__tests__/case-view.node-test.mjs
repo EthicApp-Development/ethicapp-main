@@ -93,7 +93,7 @@ describe("caseViewActions", () => {
     it("follows the row's rule for the author", () => {
         const ready = caseViewActions({ status: "ready" }, { isAuthor: true });
         assert.equal(ready.primary.id, "edit");
-        assert.deepEqual(ready.menu.map(entry => entry.id), ["duplicate", "archive"]);
+        assert.deepEqual(ready.menu.map(entry => entry.id), ["duplicate", "archive", "delete"]);
 
         assert.equal(caseViewActions({ status: "in-use", activityCount: 2 }, { isAuthor: true })
             .primary.id, "duplicate-to-edit");
@@ -101,10 +101,33 @@ describe("caseViewActions", () => {
             .primary.id, "replace-pdf");
     });
 
+    it("ends the author's menu with Delete, disabled with its reason", () => {
+        const open = caseViewActions({ status: "ready" }, { isAuthor: true }).menu.at(-1);
+        assert.equal(open.id, "delete");
+        assert.equal(open.danger, true);
+        assert.equal(open.disabled, false);
+        assert.equal(open.reason, null);
+
+        const inUse = caseViewActions({ status: "in-use", activityCount: 2 }, { isAuthor: true })
+            .menu.at(-1);
+        assert.deepEqual(inUse.reason, { key: "cases_delete_in_use_other", params: { count: 2 } });
+
+        const kept = caseViewActions({ status: "ready" }, {
+            isAuthor: true, usage: { otherDesignCount: 1, otherTeacherCount: 1 },
+        }).menu.at(-1);
+        assert.equal(kept.disabled, true);
+        assert.equal(kept.reason.key, "cases_delete_used_by_others_one");
+
+        // The uses answer failed: in use, count unknown.
+        const unknown = caseViewActions({ status: "in-use", activityCount: 0 }, { isAuthor: true })
+            .menu.at(-1);
+        assert.deepEqual(unknown.reason, { key: "case_view_delete_in_use", params: {} });
+    });
+
     it("offers Restore instead of Archive for an archived case", () => {
         const archived = caseViewActions({ status: "ready", archived: true }, { isAuthor: true });
         assert.equal(archived.primary.id, "edit");
-        assert.deepEqual(archived.menu.map(entry => entry.id), ["duplicate", "restore"]);
+        assert.deepEqual(archived.menu.map(entry => entry.id), ["duplicate", "restore", "delete"]);
     });
 
     it("offers another teacher Import, or their copy", () => {

@@ -44,12 +44,13 @@ function authorUses(fields = {}) {
 
 function createView({
     routeId = "7", item = caseItem(), uses = authorUses(), profile = { id: TEACHER_ID },
-    own = [], archived = [], catalog = {},
+    own = [], archived = [], catalog = {}, deleteChoice = "delete",
 } = {}) {
     const scopeHandlers = {};
     const calls = {
         navigated:  [], toasts:     [], duplicated: [], archived:   [], imported:   [],
         listed:     [], intervals:  [], cancelled:  [], loadedCase: 0,
+        confirms:   [], deleted:    [], urls:       [],
     };
 
     const $scope = {
@@ -105,6 +106,9 @@ function createView({
             return { id: 98, importedFromCaseId: id };
         },
         getCaseDocumentProcessing: async () => ({ documentProcessing: { status: "completed" } }),
+        deleteCase:                async (id) => {
+            calls.deleted.push(id);
+        },
         ...catalog,
     };
     const LanguageCatalogService = {
@@ -112,11 +116,22 @@ function createView({
         getCurrentUiLanguageCode: () => "es_CL",
     };
     const UserProfileService = { getProfile: async () => profile };
-    const CasesListLocationService = { lastHref: () => "#!/cases?tab=archived&q=salud" };
+    const CasesListLocationService = {
+        lastHref: () => "#!/cases?tab=archived&q=salud",
+        lastUrl:  () => "/cases?tab=archived&q=salud",
+    };
+    const $location = { url: url => calls.urls.push(url) };
+    const CaseDeleteConfirmService = {
+        confirm: async (dialog) => {
+            calls.confirms.push(dialog);
+            return deleteChoice;
+        },
+    };
 
     const vm = {};
     CaseViewController.call(vm, $scope, { id: routeId }, $interval, $translate, toast,
-        CasesCatalogService, LanguageCatalogService, UserProfileService, CasesListLocationService);
+        CasesCatalogService, LanguageCatalogService, UserProfileService, CasesListLocationService,
+        $location, CaseDeleteConfirmService);
 
     return { vm, calls, scopeHandlers };
 }
@@ -146,7 +161,7 @@ describe("CaseViewController", () => {
         assert.equal(vm.loaded, true);
         assert.equal(vm.view.isAuthor, true);
         assert.equal(vm.view.primary.id, "edit");
-        assert.deepEqual(vm.view.menu.map(entry => entry.id), ["duplicate", "archive"]);
+        assert.deepEqual(vm.view.menu.map(entry => entry.id), ["duplicate", "archive", "delete"]);
         assert.equal(vm.view.chips[0].tone, "ready");
         assert.deepEqual(vm.view.uses.summary,
             { key: "case_view_uses_total_other", params: { count: 2 } });
@@ -183,7 +198,7 @@ describe("CaseViewController", () => {
         assert.deepEqual(calls.archived, [[7, true]]);
         assert.equal(vm.caseItem.archived, true);
         assert.ok(vm.view.chips.some(chip => chip.kind === "archived"));
-        assert.deepEqual(vm.view.menu.map(entry => entry.id), ["duplicate", "restore"]);
+        assert.deepEqual(vm.view.menu.map(entry => entry.id), ["duplicate", "restore", "delete"]);
         assert.equal(calls.toasts.at(-1).message, "ethical_cases_archive_success");
 
         await vm.runAction(vm.view.menu.find(entry => entry.id === "restore"));
@@ -197,7 +212,7 @@ describe("CaseViewController", () => {
         await vm.ready;
 
         assert.equal(vm.view.primary.id, "edit");
-        assert.deepEqual(vm.view.menu.map(entry => entry.id), ["duplicate", "restore"]);
+        assert.deepEqual(vm.view.menu.map(entry => entry.id), ["duplicate", "restore", "delete"]);
     });
 
     it("lets another teacher import a shared case, then offers the copy", async () => {
@@ -288,6 +303,111 @@ describe("CaseViewController", () => {
 
         scopeHandlers.$destroy.forEach(handler => handler());
         assert.deepEqual(calls.cancelled, [calls.intervals[0]]);
+    });
+
+    it("deletes after the dialog and returns to the list as the teacher left it", async () => {
+        const { vm, calls } = createView();
+        await vm.ready;
+        const entry = vm.view.menu.at(-1);
+        assert.equal(entry.id, "delete");
+        assert.equal(entry.danger, true);
+        assert.equal(entry.disabled, false);
+
+        await vm.runAction(entry);
+
+        assert.deepEqual(calls.confirms,
+            [{ caseId: 7, title: "Patient data in the cloud", archived: false }]);
+        assert.deepEqual(calls.deleted, [7]);
+        assert.deepEqual(calls.urls, ["/cases?tab=archived&q=salud"]);
+        assert.equal(calls.toasts.at(-1).message, "cases_notice_deleted");
+        assert.equal(calls.toasts.at(-1).className, undefined);
+    });
+
+    it("archives instead when the dialog says so", async () => {
+        const { vm, calls } = createView({ deleteChoice: "archive" });
+        await vm.ready;
+
+        await vm.runAction(vm.view.menu.at(-1));
+
+        assert.deepEqual(calls.deleted, []);
+        assert.deepEqual(calls.archived, [[7, true]]);
+        assert.equal(vm.caseItem.archived, true);
+        assert.deepEqual(calls.urls, []);
+        assert.equal(calls.toasts.at(-1).message, "ethical_cases_archive_success");
+    });
+
+    it("does nothing when the dialog is cancelled", async () => {
+        const { vm, calls } = createView({ deleteChoice: "cancel" });
+        await vm.ready;
+
+        await vm.runAction(vm.view.menu.at(-1));
+
+        assert.equal(calls.confirms.length, 1);
+        assert.deepEqual(calls.deleted, []);
+        assert.deepEqual(calls.archived, []);
+        assert.deepEqual(calls.urls, []);
+        assert.deepEqual(calls.toasts, []);
+    });
+
+    it("says why a delete was refused and loads the case again", async () => {
+        let usesNow = authorUses();
+        const { vm, calls } = createView({
+            catalog: {
+                getCaseUses: async () => usesNow,
+                deleteCase:  async () => Promise.reject({
+                    status: 409, data: { code: "CASE_USED_BY_LAUNCHED_ACTIVITY" },
+                }),
+            },
+        });
+        await vm.ready;
+        // An activity was launched since the view was loaded.
+        usesNow = authorUses({ activityCount: 1 });
+
+        await quietly(() => vm.runAction(vm.view.menu.at(-1)));
+
+        assert.deepEqual(calls.urls, []);
+        assert.equal(calls.toasts.at(-1).message, "cases_notice_delete_used_by_activity");
+        assert.equal(calls.toasts.at(-1).className, "alert-danger");
+        assert.equal(calls.loadedCase, 2);
+        const entry = vm.view.menu.at(-1);
+        assert.equal(entry.disabled, true);
+        assert.deepEqual(entry.reason, { key: "cases_delete_in_use_one", params: { count: 1 } });
+    });
+
+    it("shows a case that is gone as not found after a refused delete", async () => {
+        let gone = false;
+        const { vm, calls } = createView({
+            catalog: {
+                getCaseById: async () => (gone ? Promise.reject({ status: 404 }) : caseItem()),
+                deleteCase:  async () => {
+                    gone = true;
+                    return Promise.reject({ status: 404, data: { code: "CASE_NOT_FOUND" } });
+                },
+            },
+        });
+        await vm.ready;
+
+        await quietly(() => vm.runAction(vm.view.menu.at(-1)));
+
+        assert.equal(calls.toasts.at(-1).message, "cases_notice_delete_not_found");
+        assert.equal(vm.loadErrorKey, "case_view_not_found");
+        assert.equal(vm.view, null);
+    });
+
+    it("disables Delete with the row menu's reason", async () => {
+        const { vm } = createView({
+            uses: authorUses({
+                otherDesignCount: 3, otherTeacherCount: 2, designsKeepingAccess: 3,
+            }),
+        });
+        await vm.ready;
+
+        const entry = vm.view.menu.at(-1);
+        assert.equal(entry.disabled, true);
+        assert.deepEqual(entry.reason,
+            { key: "cases_delete_used_by_others_other", params: { count: 3, teachers: 2 } });
+
+        await vm.runAction(entry);
     });
 
     it("runs one action at a time", async () => {
