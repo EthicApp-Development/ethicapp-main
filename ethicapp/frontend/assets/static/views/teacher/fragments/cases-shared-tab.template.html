@@ -1,26 +1,86 @@
-<!-- "Shared by others": the previous page's case cards, with their import
-     action, until this tab gets its own table and import flow (#1016). -->
-<section class="cases-shared-tab">
-    <div ng-if="cp.getRows('shared').length > 0">
-        <case-card
-            ng-repeat="caseItem in cp.getVisibleRows('shared') track by caseItem.id"
-            case-item="caseItem"
-            on-view="cp.viewCase"
-            on-import="cp.importCase">
-        </case-card>
+<!-- "Shared by others" (#1016): a banner saying the two ways to use a shared
+     case, a search, and one row per case with its one import action. Below
+     1200 px the rows become compact rows. -->
+<section class="cases-table-section cases-shared-tab">
+    <p class="cases-shared-banner">
+        {{ 'cases_shared_banner_before' | translate }}<strong>{{ 'cases_shared_banner_choose' | translate }}</strong>{{ 'cases_shared_banner_middle' | translate }}<strong>{{ 'cases_shared_banner_copy' | translate }}</strong>{{ 'cases_shared_banner_after' | translate }}
+    </p>
 
-        <div class="cases-table-footer">
-            <span>
-                {{ 'cases_showing' | translate:{ shown: cp.getVisibleRows('shared').length, total: cp.getRows('shared').length } }}
-                <span ng-if="cp.hasMoreRows('shared')">&middot;
-                    <button type="button" class="btn btn-link cases-show-more" ng-click="cp.showMore('shared')">
-                        {{ 'cases_show_more' | translate }}
-                    </button>
-                </span>
-            </span>
+    <div class="cases-table-tools cases-shared-tools" ng-if="cp.count('shared') > 0">
+        <div class="teacher-index-search cases-shared-search">
+            <div class="search-field-wrapper">
+                <label for="cases-shared-search" class="sr-only">{{ 'cases_shared_search_label' | translate }}</label>
+                <input id="cases-shared-search" class="form-control search-input search-decorated-input" type="search"
+                    autocomplete="off"
+                    placeholder="{{ 'cases_shared_search_placeholder' | translate }}"
+                    ng-model="cp.sharedSearch"
+                    ng-model-options="{ debounce: 150 }"
+                    ng-change="cp.handleSharedSearchChange()">
+                <i class="fa-solid fa-magnifying-glass search-field-icon" aria-hidden="true"></i>
+            </div>
         </div>
+        <p class="cases-table-order">{{ 'cases_order_newest' | translate }}</p>
     </div>
 
+    <table class="cases-table cases-shared-table" ng-if="cp.getSharedRows().length > 0">
+        <caption class="sr-only">{{ 'cases_tab_shared' | translate }}</caption>
+        <thead>
+            <tr>
+                <th scope="col" class="cases-head-cell cases-shared-col-case">{{ 'cases_col_case' | translate }}</th>
+                <th scope="col" class="cases-head-cell cases-shared-col-author">{{ 'cases_shared_col_author' | translate }}</th>
+                <th scope="col" class="cases-head-cell cases-shared-col-license">{{ 'cases_shared_col_license' | translate }}</th>
+                <th scope="col" class="cases-head-cell cases-col-actions"><span class="sr-only">{{ 'cases_col_actions' | translate }}</span></th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr class="cases-row cases-shared-row" ng-repeat="row in cp.getVisibleSharedRows() track by row.id" data-case-id="{{ row.id }}">
+                <td class="cases-cell cases-cell-case">
+                    <a class="cases-row-title" ng-href="#!/cases/{{ row.id }}">{{ row.title }}</a>
+                    <span class="cases-row-meta"><span ng-repeat="part in row.meta">{{ part.key ? (part.key | translate:part.params) : part.text }}<span
+                        ng-if="!$last"> &middot; </span></span></span>
+                </td>
+                <td class="cases-cell cases-shared-cell-author">
+                    <span class="cases-shared-label" aria-hidden="true">{{ 'cases_shared_col_author' | translate }}:</span>
+                    <span ng-if="row.author">{{ row.author }}</span><span ng-if="!row.author" class="cases-shared-unknown">{{ 'cases_shared_author_unknown' | translate }}</span>
+                </td>
+                <td class="cases-cell cases-shared-cell-license">
+                    <span class="cases-shared-label" aria-hidden="true">{{ 'cases_shared_col_license' | translate }}:</span>
+                    <span class="cases-shared-license">{{ row.license.key ? (row.license.key | translate) : row.license.text }}</span>
+                    <span class="cases-shared-rights">{{ row.rightsKey | translate }}</span>
+                </td>
+                <td class="cases-cell cases-cell-actions cases-shared-cell-actions">
+                    <button type="button" class="btn btn-default btn-sm cases-shared-import"
+                        data-action="import"
+                        ng-if="row.importState === 'importable'"
+                        ng-disabled="cp.busy[row.id]"
+                        aria-label="{{ 'cases_shared_action_import' | translate }}: {{ row.title }}"
+                        ng-click="cp.importCase(row)">
+                        <i class="fa-solid fa-download" aria-hidden="true"></i> {{ 'cases_shared_action_import' | translate }}
+                    </button>
+                    <span class="cases-shared-imported" ng-if="row.importState === 'imported'">
+                        <span class="cases-shared-imported-label"><i class="fa-solid fa-check" aria-hidden="true"></i> {{ 'cases_shared_imported' | translate }}</span>
+                        <a class="cases-shared-view-copy" data-action="view-copy" ng-href="#!/cases/{{ row.copyId }}"
+                            aria-label="{{ 'cases_shared_view_copy' | translate }}: {{ row.title }}">{{ 'cases_shared_view_copy' | translate }}</a>
+                    </span>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="cases-table-footer" ng-if="cp.getSharedRows().length > 0">
+        <span>
+            {{ 'cases_showing' | translate:{ shown: cp.getVisibleSharedRows().length, total: cp.getSharedRows().length } }}
+            <span ng-if="cp.hasMoreSharedRows()">&middot;
+                <button type="button" class="btn btn-link cases-show-more" ng-click="cp.showMore('shared')">
+                    {{ 'cases_show_more' | translate }}
+                </button>
+            </span>
+        </span>
+    </div>
+
+    <div class="alert alert-info" ng-if="cp.count('shared') > 0 && cp.getSharedRows().length === 0">
+        <span>{{ 'cases_shared_no_matches' | translate }}</span>
+    </div>
     <div class="alert alert-info" ng-if="cp.count('shared') === 0">
         <span>{{ 'cases_shared_empty' | translate }}</span>
     </div>

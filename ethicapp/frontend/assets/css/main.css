@@ -6993,3 +6993,103 @@ button.launch-wizard-step-body:focus-visible .launch-wizard-step-name {
         text-align: left;
     }
 }
+
+/* "Shared by others" on the Cases page (#1016, epic #1008): a one-line
+   banner, the search beside the order, and the shared cases' table with
+   their author, license and rights status, and one import action. Below
+   1200 px each row becomes a compact row like the other tabs'. */
+.cases-shared-banner {
+    background: #fff;
+    border: 1px solid var(--cases-line);
+    border-radius: 6px;
+    margin: 0 0 12px;
+    padding: 10px 14px;
+}
+
+.cases-shared-tools {
+    justify-content: space-between;
+}
+
+.cases-shared-tools .cases-shared-search {
+    flex: 0 1 380px;
+    margin: 0;
+    min-width: 220px;
+}
+
+.cases-shared-col-case {
+    width: 42%;
+}
+
+.cases-shared-col-author {
+    width: 24%;
+}
+
+.cases-shared-col-license {
+    width: 18%;
+}
+
+.cases-shared-unknown,
+.cases-shared-rights {
+    color: var(--cases-muted);
+}
+
+.cases-shared-rights {
+    display: block;
+    font-size: 13px;
+}
+
+/* Shown before the author and the license only in the compact rows. */
+.cases-shared-label {
+    color: var(--cases-muted);
+    display: none;
+    font-size: 13px;
+    margin-right: 4px;
+}
+
+.cases-shared-imported {
+    align-items: baseline;
+    display: inline-flex;
+    gap: 12px;
+}
+
+.cases-shared-imported-label {
+    color: var(--cases-ready);
+}
+
+@media (width < 1200px) {
+    .cases-shared-row {
+        grid-template-areas:
+            "case case case"
+            "author license actions";
+        grid-template-columns: auto auto minmax(0, 1fr);
+    }
+
+    .cases-shared-cell-author {
+        align-self: center;
+        grid-area: author;
+    }
+
+    .cases-shared-cell-license {
+        align-self: center;
+        grid-area: license;
+    }
+
+    .cases-shared-label,
+    .cases-shared-rights {
+        display: inline;
+    }
+
+    .cases-shared-rights::before {
+        content: "· ";
+    }
+}
+
+@media (width < 768px) {
+    .cases-shared-row {
+        grid-template-areas:
+            "case case"
+            "author license"
+            "actions actions";
+        grid-template-columns: auto minmax(0, 1fr);
+    }
+}

@@ -164,3 +164,13 @@ export function archiveFailureNotice() {
 export function restoreFailureNotice() {
     return failureNotice("cases_notice_restore_failed");
 }
+
+/**
+ * Why an import failed: the case stopped being shared (403
+ * `CASE_NOT_IMPORTABLE`), or a generic failure.
+ */
+export function importFailureNotice(error) {
+    return failureNotice(error?.data?.code === "CASE_NOT_IMPORTABLE"
+        ? "cases_notice_import_not_importable"
+        : "cases_notice_import_failed");
+}

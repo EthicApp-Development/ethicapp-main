@@ -6,8 +6,9 @@
 //
 // "My cases" and "Archived" are tables built by `helpers/cases-table.js`: one
 // row per case with its status, the designs that use it, its sharing switch,
-// one visible action and a "⋯" menu. "Shared by others" keeps the previous
-// page's case cards until its own table (#1016).
+// one visible action and a "⋯" menu. "Shared by others" is a table built by
+// `helpers/cases-shared-table.js` (#1016): one row per case another teacher
+// shares, with its one import action.
 //
 // "My cases" has a search and status filters (#1015), also in the URL
 // (`?status=in-use&q=...`, `helpers/cases-filters.js`). Switching tabs clears
@@ -39,6 +40,11 @@ import {
 } from "../../helpers/cases-table.js";
 import { CASE_STATUS_PROCESSING } from "../../helpers/case-status.js";
 import {
+    CASE_IMPORT_STATE_IMPORTABLE,
+    buildSharedCaseRows,
+    sharedCaseMatchesSearch,
+} from "../../helpers/cases-shared-table.js";
+import {
     SHARE_SWITCH_FAILED,
     SHARE_SWITCH_SAVED,
     toggleCaseShareSwitch,
@@ -67,6 +73,8 @@ import {
     duplicateFailureNotice,
     duplicateNotice,
     findCaseTitle,
+    importFailureNotice,
+    importNotice,
     isCodedDeleteRefusal,
     restoreFailureNotice,
     restoreNotice,
@@ -143,6 +151,8 @@ export function CasesPageController($scope, $location, $translate, $interval, to
 
     vm.refresh = function() {
         vm.tables = buildCaseTables(cases, languageNames);
+        vm.tables.shared = buildSharedCaseRows(vm.tables.shared,
+            [...cases.own, ...cases.archived], languageNames);
         syncDocumentProcessingPolling();
     };
 
@@ -562,25 +572,62 @@ export function CasesPageController($scope, $location, $translate, $interval, to
         await withBusy(row.id, () => ACTIONS[action.id](row.id));
     };
 
-    // "Shared by others": the previous page's case cards, until #1016.
+    // "Shared by others" (#1016): the search, and importing. A row whose case
+    // the teacher has not imported creates a private, editable copy in "My
+    // cases"; the page stays on the tab, the row turns "Imported · View copy"
+    // and a notice names the copy, with "Edit copy" and "View in My cases".
 
-    vm.viewCase = function(caseItem) {
-        $scope.navigateTo(`/cases/${caseItem.id}`);
+    vm.sharedSearch = "";
+
+    vm.getSharedRows = function() {
+        return vm.tables.shared.filter(row => sharedCaseMatchesSearch(row, vm.sharedSearch));
     };
 
-    vm.importCase = async function(caseItem) {
-        await withBusy(caseItem.id, async () => {
+    vm.getVisibleSharedRows = function() {
+        return vm.getSharedRows().slice(0, vm.visibleCounts[CASES_TAB_SHARED]);
+    };
+
+    vm.hasMoreSharedRows = function() {
+        return vm.getSharedRows().length > vm.visibleCounts[CASES_TAB_SHARED];
+    };
+
+    vm.handleSharedSearchChange = function() {
+        vm.visibleCounts[CASES_TAB_SHARED] = CASES_PAGE_SIZE;
+    };
+
+    vm.importCase = async function(row) {
+        if (row?.importState !== CASE_IMPORT_STATE_IMPORTABLE) {
+            return;
+        }
+        await withBusy(row.id, async () => {
             try {
-                await CasesCatalogService.importCase(caseItem.id);
+                const copy = await CasesCatalogService.importCase(row.id);
+                // The catalog reloaded its lists: the copy is in "My cases"
+                // and the row turns "Imported".
                 await vm.reloadFromCatalog();
-                vm.showInfoToast("ethical_cases_import_success");
-                vm.selectTab(CASES_TAB_MINE);
+                vm.showNotice(importNotice(copy?.id,
+                    caseTitle(copy) || findCaseTitle(cases.own, copy?.id)));
             } catch (error) {
-                console.error("[CasesPageController] Error importing case.", error);
-                vm.showErrorToast("ethical_cases_import_error");
+                vm.showNotice(importFailureNotice(error));
+                if (error?.data?.code === "CASE_NOT_IMPORTABLE") {
+                    // The case stopped being shared: reload the list, so its
+                    // row goes away.
+                    await reloadAfterRefusedImport();
+                } else {
+                    console.error("[CasesPageController] Error importing case.", error);
+                }
             }
         });
     };
+
+    async function reloadAfterRefusedImport() {
+        try {
+            await CasesCatalogService.getPublicCases(true);
+            await vm.reloadFromCatalog();
+        } catch (error) {
+            console.warn("[CasesPageController] Could not reload the shared cases.", error);
+        }
+    }
 
     vm.init = function() {
         // The route does not reload on a search change (`?tab=`, `?status=`,
