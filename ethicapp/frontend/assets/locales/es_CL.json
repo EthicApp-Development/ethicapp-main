@@ -693,6 +693,7 @@
 	"empty_activities_launch_link": "lanzar una actividad aquí",
 	"empty_finished_activities_message": "Aún no hay actividades terminadas.",
 	"empty_archived_activities_message": "Aún no hay actividades archivadas.",
+	"activities_status_not_started": "Sin iniciar",
 	"spanish": "Español",
 	"english": "Inglés",
 	"file": "Archivar",

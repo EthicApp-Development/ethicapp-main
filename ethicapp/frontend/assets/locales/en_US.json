@@ -646,6 +646,7 @@
 	"empty_activities_launch_link": "launch an activity here",
 	"empty_finished_activities_message": "There are no finished activities yet.",
 	"empty_archived_activities_message": "There are no archived activities yet.",
+	"activities_status_not_started": "Not started",
 	"register": "Register",
 	"report": "Report",
 	"results": "Results",
