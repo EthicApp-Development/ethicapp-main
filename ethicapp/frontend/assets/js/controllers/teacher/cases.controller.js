@@ -14,6 +14,11 @@ import {
 import { caseAnalysisSaveErrorKey } from "../../helpers/case-analysis-options.js";
 import { caseVisibilityResultMessages } from "../../helpers/case-visibility-result.js";
 import { confirmCasePublication } from "../../helpers/case-publication.js";
+import {
+    SHARE_SWITCH_FAILED,
+    SHARE_SWITCH_SAVED,
+    toggleCaseShareSwitch,
+} from "../../helpers/case-share-switch.js";
 
 export function CasesController($scope, $routeParams, $window, $interval, $translate, toast,
     CasesCatalogService, LanguageCatalogService, UserProfileService,
@@ -575,35 +580,21 @@ export function CasesController($scope, $routeParams, $window, $interval, $trans
         }
     };
 
+    // Cancelling the publication puts the switch back, which its click has
+    // already turned on (#939).
     vm.toggleCaseVisibility = async function(caseItem) {
-        const previousVisibility = caseItem.visibility || "private";
-        const nextVisibility = previousVisibility === "public" ? "private" : "public";
-
-        // Cancelling the publication puts the switch back, which its click
-        // has already turned on (#939).
-        if (!(await vm.confirmPublication(previousVisibility, nextVisibility))) {
-            caseItem.visibility = previousVisibility;
-            caseItem.public = previousVisibility === "public";
-            $scope.$applyAsync();
-            return;
-        }
-
-        caseItem.visibility = nextVisibility;
-        caseItem.public = nextVisibility === "public";
-
-        try {
-            const result = await CasesCatalogService.updateCaseVisibility(caseItem.id, nextVisibility);
-            caseItem.visibility = result.visibility;
-            caseItem.public = result.public;
+        const { outcome, previousVisibility, result, error } = await toggleCaseShareSwitch(caseItem, {
+            confirm:          () => CasePublicationNoticeService.confirm(),
+            updateVisibility: (caseId, visibility) =>
+                CasesCatalogService.updateCaseVisibility(caseId, visibility),
+        });
+        if (outcome === SHARE_SWITCH_SAVED) {
             vm.showCaseVisibilityResult(result, previousVisibility);
-        } catch (error) {
-            caseItem.visibility = previousVisibility;
-            caseItem.public = previousVisibility === "public";
+        } else if (outcome === SHARE_SWITCH_FAILED) {
             console.error("[CasesController::toggleCaseVisibility] Error updating case visibility.", error);
             vm.showErrorToast(vm.translate("ethical_cases_save_error"));
-        } finally {
-            $scope.$applyAsync();
         }
+        $scope.$applyAsync();
     };
 
     $scope.$on("$destroy", () => {
