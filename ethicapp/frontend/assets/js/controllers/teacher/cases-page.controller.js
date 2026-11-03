@@ -51,6 +51,7 @@ import {
     toggleCaseShareSwitch,
 } from "../../helpers/case-share-switch.js";
 import { caseVisibilityResultMessages } from "../../helpers/case-visibility-result.js";
+import { translatePlainText } from "../../helpers/plain-text-translation.js";
 import {
     filterCaseRows,
     queryFromSearch,
@@ -367,7 +368,8 @@ export function CasesPageController($scope, $location, $translate, $interval, to
         const messages = caseVisibilityResultMessages(result, previousVisibility);
         if (messages.length > 0) {
             showToast(
-                messages.map(message => $translate.instant(message.key, message.values)).join(" "),
+                messages.map(message => translatePlainText($translate, message.key, message.values))
+                    .join(" "),
                 { timeout: TOAST_VISIBILITY_TIMEOUT_MS }
             );
         }

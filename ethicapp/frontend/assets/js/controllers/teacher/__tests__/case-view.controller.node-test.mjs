@@ -10,6 +10,8 @@ import { CaseViewController } from "../case-view.controller.js";
 
 const template = readFileSync(new URL(
     "../../../../static/views/teacher/cases.view.html", import.meta.url), "utf8");
+const toastComponent = readFileSync(new URL(
+    "../../../components/teacher-toast.component.js", import.meta.url), "utf8");
 
 const TEACHER_ID = 650;
 
@@ -45,6 +47,7 @@ function authorUses(fields = {}) {
 function createView({
     routeId = "7", item = caseItem(), uses = authorUses(), profile = { id: TEACHER_ID },
     own = [], archived = [], catalog = {}, deleteChoice = "delete",
+    translate = { instant: key => key },
 } = {}) {
     const scopeHandlers = {};
     const calls = {
@@ -64,7 +67,7 @@ function createView({
             calls.navigated.push(path);
         },
     };
-    const $translate = { instant: key => key };
+    const $translate = translate;
     const $interval = (fn, delay) => {
         const timer = { fn, delay };
         calls.intervals.push(timer);
@@ -134,6 +137,30 @@ function createView({
         $location, CaseDeleteConfirmService);
 
     return { vm, calls, scopeHandlers };
+}
+
+/**
+ * `$translate` as angular-translate 2.19 behaves under the teacher app's
+ * `sanitizeParameters` strategy: the parameters are HTML-encoded, as
+ * `$sanitize` does (non-ASCII characters become numeric entities and markup
+ * is dropped), unless the call's fifth argument, the sanitize strategy, is
+ * `null`, which leaves them as given.
+ */
+function sanitizingTranslate(catalog) {
+    const sanitize = value => String(value)
+        .replace(/<[^>]*>/gu, "")
+        .replace(/[^\x20-\x7e]|[&"<>]/gu, char => `&#${char.codePointAt(0)};`);
+
+    return {
+        instant(key, params = {}, interpolationId, forceLanguage, sanitizeStrategy) {
+            const values = sanitizeStrategy === null
+                ? params
+                : Object.fromEntries(Object.entries(params ?? {})
+                    .map(([name, value]) => [name, sanitize(value)]));
+            return (catalog[key] ?? key)
+                .replace(/\{\{(\w+)\}\}/gu, (match, name) => String(values?.[name] ?? ""));
+        },
+    };
 }
 
 function quietly(run) {
@@ -237,6 +264,33 @@ describe("CaseViewController", () => {
         assert.equal(vm.view.primary.id, "view-copy");
         assert.equal(vm.view.primary.href, "#!/cases/98");
         assert.equal(calls.toasts.at(-1).message, "ethical_cases_import_success");
+    });
+
+    it("puts titles in its toasts as plain text, accents and markup alike", async () => {
+        const translate = sanitizingTranslate({
+            case_analysis_remove_notice: "Se quitó el análisis \"{{title}}\"",
+            cases_notice_deleted:        "Se eliminó \"{{title}}\"",
+        });
+        const { vm, calls } = createView({
+            item: caseItem({ title: "Ética <img src=x onerror=alert(1)>" }),
+            translate,
+        });
+        await vm.ready;
+
+        vm.handleAnalysisRemoved("Análisis de prueba");
+        assert.equal(calls.toasts.at(-1).message, "Se quitó el análisis \"Análisis de prueba\"");
+
+        vm.handleAnalysisRemoved("<img src=x onerror=alert(1)>");
+        assert.equal(calls.toasts.at(-1).message,
+            "Se quitó el análisis \"<img src=x onerror=alert(1)>\"");
+
+        await vm.runAction(vm.view.menu.at(-1));
+        assert.equal(calls.toasts.at(-1).message,
+            "Se eliminó \"Ética <img src=x onerror=alert(1)>\"");
+
+        // The toast binds its message as text, so markup in it stays text.
+        assert.match(toastComponent, /<span ng-bind="\$ctrl\.currentToast\.message"><\/span>/u);
+        assert.doesNotMatch(toastComponent, /ng-bind-html/u);
     });
 
     it("confirms a removed analysis with a toast (#1040)", async () => {
