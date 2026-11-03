@@ -88,7 +88,6 @@ function rowsFor(sql, params = []) {
             return [];
         }
         return [{
-            phase_id:   Number(params[0]),
             session_id: phase.sessionId,
             owned:      owns(phase.sessionId, Number(params[1])),
         }];

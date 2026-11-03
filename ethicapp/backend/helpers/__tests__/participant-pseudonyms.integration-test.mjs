@@ -279,7 +279,7 @@ test("only the owner, with an account not anonymized, owns a phase", {
     );
 
     assert.deepEqual(await ownership(teacherId), [
-        { phase_id: phaseId, session_id: sessionId, owned: true },
+        { session_id: sessionId, owned: true },
     ]);
     assert.equal((await ownership(otherTeacherId))[0].owned, false);
     assert.deepEqual(await ownership(teacherId, 2147483000), []);
