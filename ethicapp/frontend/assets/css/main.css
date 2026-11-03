@@ -6539,6 +6539,63 @@ button.launch-wizard-step-body:focus-visible .launch-wizard-step-name {
     margin: 0;
 }
 
+/* The search and status filters of "My cases" (#1015), as in Designs. */
+.cases-page .cases-filters {
+    align-items: center;
+    display: flex;
+    flex: 1 1 auto;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    min-width: 0;
+}
+
+.cases-page .cases-search {
+    flex: 0 1 340px;
+    min-width: 220px;
+}
+
+.cases-filter-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.cases-filter-chip {
+    background: #fff;
+    border: 1px solid var(--cases-line);
+    border-radius: 999px;
+    color: inherit;
+    font-size: 13px;
+    line-height: 1.4;
+    padding: 3px 11px;
+}
+
+.cases-filter-chip:hover {
+    border-color: var(--cases-muted);
+}
+
+.cases-filter-chip:focus-visible {
+    outline: 2px solid var(--cases-accent);
+    outline-offset: 2px;
+}
+
+.cases-filter-chip.is-active {
+    border-color: var(--cases-accent);
+    color: var(--cases-accent);
+    font-weight: 600;
+}
+
+.cases-no-matches {
+    align-items: center;
+    border: 1px dashed var(--cases-line);
+    border-radius: 6px;
+    color: var(--cases-muted);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    padding: 14px 16px;
+}
+
 .cases-table {
     border-collapse: collapse;
     width: 100%;

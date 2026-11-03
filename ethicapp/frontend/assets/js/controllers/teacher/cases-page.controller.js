@@ -9,6 +9,10 @@
 // one visible action and a "⋯" menu. "Shared by others" keeps the previous
 // page's case cards until its own table (#1016).
 //
+// "My cases" has a search and status filters (#1015), also in the URL
+// (`?status=in-use&q=...`, `helpers/cases-filters.js`). Switching tabs clears
+// them, as the tabs' links do.
+//
 // The view and the case forms keep `CasesController`.
 
 import {
@@ -37,9 +41,20 @@ import {
     toggleCaseShareSwitch,
 } from "../../helpers/case-share-switch.js";
 import { caseVisibilityResultMessages } from "../../helpers/case-visibility-result.js";
+import {
+    filterCaseRows,
+    queryFromSearch,
+    querySearchValue,
+    statusFilterChips,
+    statusFilterFromSearch,
+    statusFilterSearchValue,
+} from "../../helpers/cases-filters.js";
 
 // The page's own URL search keys, which are not carried to the next page.
-const PAGE_SEARCH_KEYS = ["tab"];
+const PAGE_SEARCH_KEYS = ["tab", "status", "q"];
+
+// The filters' URL search keys.
+const FILTER_SEARCH_KEYS = ["status", "q"];
 
 const TOAST_INFO_TIMEOUT_MS = 4 * 1000;
 const TOAST_ERROR_TIMEOUT_MS = 6 * 1000;
@@ -73,6 +88,9 @@ export function CasesPageController($scope, $location, $translate, $interval, to
     vm.loadFailed = false;
     vm.tables = { mine: [], archived: [], shared: [] };
     vm.visibleCounts = initialVisibleCounts();
+    // The search and status filter of "My cases".
+    vm.statusFilter = statusFilterFromSearch($location.search());
+    vm.search = queryFromSearch($location.search());
     // Case id → true while an action on it is pending, so a second click
     // does not repeat it.
     vm.busy = {};
@@ -196,16 +214,19 @@ export function CasesPageController($scope, $location, $translate, $interval, to
         return vm.tables[tab]?.length || 0;
     };
 
+    // A tab clears the filters of "My cases", as the tabs' links do.
     vm.selectTab = function(tab) {
         if (tab === vm.tab) {
             return;
         }
         vm.tab = tab;
         $location.search("tab", tabSearchValue(tab));
+        resetFilters();
     };
 
     vm.$onRouteUpdate = function() {
         vm.tab = tabFromSearch($location.search());
+        vm.syncFiltersFromUrl();
     };
 
     vm.openSharedTab = function() {
@@ -215,6 +236,9 @@ export function CasesPageController($scope, $location, $translate, $interval, to
     // "Show more"
 
     vm.getRows = function(tab) {
+        if (tab === CASES_TAB_MINE) {
+            return filteredMine().rows;
+        }
         return vm.tables[tab] || [];
     };
 
@@ -228,6 +252,82 @@ export function CasesPageController($scope, $location, $translate, $interval, to
 
     vm.showMore = function(tab) {
         vm.visibleCounts[tab] += CASES_PAGE_SIZE;
+    };
+
+    // Search and status filters of "My cases"
+
+    // The filtered rows and the chips, computed again only when the table,
+    // the filter or the search change, not on every digest.
+    let filterCache = null;
+    function filteredMine() {
+        const mine = vm.tables.mine || [];
+        if (!filterCache || filterCache.mine !== mine ||
+            filterCache.status !== vm.statusFilter || filterCache.query !== vm.search) {
+            filterCache = {
+                mine,
+                status: vm.statusFilter,
+                query:  vm.search,
+                rows:   filterCaseRows(mine, { status: vm.statusFilter, query: vm.search }),
+                chips:  statusFilterChips(mine, vm.statusFilter),
+            };
+        }
+        return filterCache;
+    }
+
+    function resetMineRows() {
+        vm.visibleCounts[CASES_TAB_MINE] = CASES_PAGE_SIZE;
+    }
+
+    // The filters back to "All" and no search, and out of the URL.
+    function resetFilters() {
+        vm.statusFilter = statusFilterFromSearch({});
+        vm.search = "";
+        resetMineRows();
+        const search = $location.search();
+        for (const key of FILTER_SEARCH_KEYS) {
+            if (search[key] !== undefined) {
+                $location.search(key, null);
+            }
+        }
+    }
+
+    vm.getFilterChips = function() {
+        return filteredMine().chips;
+    };
+
+    // A chip adds a history entry, as a tab does, so Back returns to the
+    // previous filter.
+    vm.selectStatusFilter = function(filter) {
+        if (filter === vm.statusFilter) {
+            return;
+        }
+        vm.statusFilter = filter;
+        resetMineRows();
+        $location.search("status", statusFilterSearchValue(filter));
+    };
+
+    // Typing replaces the history entry instead of adding one per word.
+    vm.handleSearchChange = function() {
+        resetMineRows();
+        $location.search("q", querySearchValue(vm.search)).replace();
+    };
+
+    vm.clearFilters = resetFilters;
+
+    vm.syncFiltersFromUrl = function() {
+        const search = $location.search();
+        const status = statusFilterFromSearch(search);
+        const query = queryFromSearch(search);
+        if (status !== vm.statusFilter) {
+            vm.statusFilter = status;
+            resetMineRows();
+        }
+        // The field keeps what is being typed (a trailing space) while it
+        // matches the URL's search.
+        if (query !== (querySearchValue(vm.search) ?? "")) {
+            vm.search = query;
+            resetMineRows();
+        }
     };
 
     // Sharing: the switch keeps the previous page's behavior, with the
@@ -379,12 +479,13 @@ export function CasesPageController($scope, $location, $translate, $interval, to
     };
 
     vm.init = function() {
-        // The route does not reload on a search change (`?tab=`), so Back and
-        // Forward reach the page as a route update.
+        // The route does not reload on a search change (`?tab=`, `?status=`,
+        // `?q=`), so Back and Forward reach the page as a route update.
         $scope.$on("$routeUpdate", vm.$onRouteUpdate);
         // Leaving the page with `navigateTo`, which keeps the search, does not
-        // carry `?tab=` to the next page; the page's own history entry keeps
-        // it, so Back returns to the same tab.
+        // carry the tab and the filters to the next page; the page's own
+        // history entry keeps them, so Back returns to the same tab and
+        // filters.
         $scope.$on("$routeChangeStart", () => {
             const search = $location.search();
             for (const key of PAGE_SEARCH_KEYS) {
