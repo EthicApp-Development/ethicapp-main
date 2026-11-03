@@ -13,11 +13,26 @@
             </a>
         </p>
 
-        <case-card
-            case-item="$ctrl.caseItem"
-            show-actions="false"
-            show-extended-info="true">
-        </case-card>
+        <div class="case-publication-summary">
+            <h5 class="case-publication-summary-title">{{ $ctrl.summary.title }}</h5>
+            <ul class="list-unstyled case-publication-summary-facts">
+                <li class="case-publication-summary-authors" ng-if="$ctrl.summary.authors">
+                    {{ 'author' | translate }}: {{ $ctrl.summary.authors }}
+                </li>
+                <li class="case-publication-summary-language" ng-if="$ctrl.summary.languageCode">
+                    {{ 'language' | translate }}: {{ $ctrl.summary.languageCode }}
+                </li>
+                <li class="case-publication-summary-visibility">
+                    {{ 'visibility' | translate }}: {{ $ctrl.summary.visibilityKey | translate }}
+                </li>
+                <li class="case-publication-summary-tags" ng-if="$ctrl.summary.tags.length > 0">
+                    {{ 'semantic_tags' | translate }}:
+                    <span class="label label-default resource-tag-chip"
+                        ng-repeat="tag in $ctrl.summary.tags track by tag.id"
+                        title="{{ tag.categoryLabel || tag.categoryCode }}">{{ tag.label }}</span>
+                </li>
+            </ul>
+        </div>
 
         <hr>
 

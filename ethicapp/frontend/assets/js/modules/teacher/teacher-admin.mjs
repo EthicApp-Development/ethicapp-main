@@ -186,7 +186,7 @@ app.controller("DesignViewerController",
     ["$scope", "$routeParams", "$window", "DesignCatalogService", "CasesCatalogService",
         "DesignPublicationService", DesignViewerController]);
 app.controller("CasesController",
-    ["$scope", "$routeParams", "$window", "$interval", "$translate", "toast",
+    ["$scope", "$routeParams", "$window", "$translate", "toast",
         "CasesCatalogService", "LanguageCatalogService", "UserProfileService",
         "CasePublicationNoticeService", CasesController]);
 app.controller("CasesPageController",
@@ -285,7 +285,6 @@ import launchDesignPreviewComponent from "../../components/launch-design-preview
 // The launch wizard's second step: identify and launch (#972).
 import launchActivityStepComponent from "../../components/launch-activity-step.component.js";
 import caseSearchSelectorComponent from "../../components/case-search-selector.component.js";
-import caseCardComponent from "../../components/case-card.component.js";
 import caseDocumentViewerComponent from "../../components/case-document-viewer.component.js";
 import caseMaterialComponent from "../../components/case-material.component.js";
 import caseViewTabsComponent from "../../components/case-view-tabs.component.js";
@@ -341,7 +340,6 @@ app.component('designItem', designItemComponent);
 app.component("launchDesignPreview", launchDesignPreviewComponent);
 app.component("launchActivityStep", launchActivityStepComponent);
 app.component("caseSearchSelector", caseSearchSelectorComponent);
-app.component("caseCard", caseCardComponent);
 app.component("caseDocumentViewer", caseDocumentViewerComponent);
 app.component("caseMaterial", caseMaterialComponent);
 app.component("caseViewTabs", caseViewTabsComponent);

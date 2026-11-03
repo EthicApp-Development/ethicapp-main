@@ -1,7 +1,10 @@
+import { casePublicationSummary } from "../helpers/case-publication.js";
+
 function CasePublicationSettingsModalController($uibModalInstance, caseItem, licenses) {
     const vm = this;
 
     vm.caseItem = caseItem;
+    vm.summary = casePublicationSummary(caseItem);
     vm.licenses = licenses;
     vm.hasAttemptedSubmit = false;
     vm.publicSharingError = false;

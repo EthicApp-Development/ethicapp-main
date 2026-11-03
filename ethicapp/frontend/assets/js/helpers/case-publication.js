@@ -4,6 +4,8 @@
 // and the edit page, and the share switch ask the author to confirm before a
 // case becomes public.
 
+import { caseAuthorsLine } from "./case-view.js";
+
 const PUBLIC_VISIBILITY = "public";
 
 /**
@@ -37,4 +39,29 @@ export async function confirmCasePublication(previousVisibility, nextVisibility,
         console.error("[confirmCasePublication] The confirmation dialog failed.", error);
         return false;
     }
+}
+
+/**
+ * What the case publication modal of Diseños shows of the case above its
+ * sharing fields: enough to tell which case is being published. The fields
+ * below the summary show its license and rights.
+ * @param {object|null|undefined} caseItem - A case of GET /cases/:id.
+ * @returns {{
+ *   title: string,
+ *   authors: string,
+ *   languageCode: string,
+ *   visibilityKey: "visibility_public"|"visibility_private",
+ *   tags: Array<{ id: number, label: string }>,
+ * }}
+ */
+export function casePublicationSummary(caseItem) {
+    return {
+        title:         caseItem?.title || "",
+        authors:       caseAuthorsLine(caseItem),
+        languageCode:  caseItem?.languageCode || "",
+        visibilityKey: caseItem?.visibility === PUBLIC_VISIBILITY
+            ? "visibility_public"
+            : "visibility_private",
+        tags: Array.isArray(caseItem?.tags) ? caseItem.tags : [],
+    };
 }

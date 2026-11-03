@@ -124,11 +124,10 @@ describe("deriveCaseStatus (#1011)", () => {
 
     it("describes only the document of a case without usage, as shared cases come", () => {
         const shared = caseItem(1, {
-            visibility:                "public",
-            public:                    true,
-            hasLaunchedDesignActivity: true,
-            documentProcessing:        renderJob("failed"),
-            usage:                     undefined,
+            visibility:         "public",
+            public:             true,
+            documentProcessing: renderJob("failed"),
+            usage:              undefined,
         });
 
         assert.deepEqual(deriveCaseStatus(shared), {

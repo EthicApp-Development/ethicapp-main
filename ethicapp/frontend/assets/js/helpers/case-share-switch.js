@@ -1,8 +1,8 @@
 // The share switch of a case (#939, #1013): it asks the author to confirm a
 // publication, then saves the new visibility (`PATCH /cases/:id/visibility`).
 // The switch shows the new visibility while the save runs, and the previous
-// one when the author cancels or the save fails. Shared by the case cards and
-// the rows of the Cases page; a case in use keeps its sharing editable (#1014).
+// one when the author cancels or the save fails. Used by the rows of the Cases
+// page; a case in use keeps its sharing editable (#1014).
 
 import { confirmCasePublication } from "./case-publication.js";
 

@@ -1,8 +1,8 @@
-// The case pages ask the author to confirm before a case becomes public, and
+// The case forms ask the author to confirm before a case becomes public, and
 // tell the author, once a public case is private again, how many designs of
 // other teachers keep it (#939, epic #923). Cancelling changes nothing: the
-// new case is not created, the edited case is not saved, and the share switch
-// goes back. AngularJS services are fakes.
+// new case is not created and the edited case is not saved. The edit form
+// locks the content of a case in use. AngularJS services are fakes.
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
@@ -10,11 +10,11 @@ import { CasesController } from "../cases.controller.js";
 
 const CASE_ID = 41;
 
-function createController({ confirmAnswer = true, saved = {} } = {}) {
+function createController({ confirmAnswer = true, saved = {}, loaded = {} } = {}) {
     const navigations = [];
     const toasts = [];
     const confirmations = [];
-    const calls = { createCase: [], updateCase: [], updateCaseVisibility: [] };
+    const calls = { createCase: [], updateCase: [] };
 
     const $scope = {
         $applyAsync(fn) {
@@ -25,8 +25,6 @@ function createController({ confirmAnswer = true, saved = {} } = {}) {
             navigations.push(path);
         },
     };
-    const $interval = () => 1;
-    $interval.cancel = () => {};
     const $translate = {
         instant(key, values) {
             return values ? `${key}(${values.count})` : key;
@@ -46,13 +44,23 @@ function createController({ confirmAnswer = true, saved = {} } = {}) {
             calls.updateCase.push({ caseId, visibility: form.visibility });
             return { id: caseId, visibility: form.visibility, ...saved };
         },
-        async updateCaseVisibility(caseId, visibility) {
-            calls.updateCaseVisibility.push({ caseId, visibility });
-            return { id: caseId, visibility, public: visibility === "public", ...saved };
+        async getCaseById(caseId) {
+            return { id: caseId, title: "Datos de pacientes", visibility: "private", ...loaded };
+        },
+        async getLicenses() {
+            return [];
         },
     };
     const LanguageCatalogService = {
         getDefaultLanguageCode: (languages, fallback) => fallback,
+        async getLanguages() {
+            return [];
+        },
+    };
+    const UserProfileService = {
+        async getProfile() {
+            return { email: "teacher@example.org" };
+        },
     };
     const CasePublicationNoticeService = {
         async confirm() {
@@ -63,7 +71,7 @@ function createController({ confirmAnswer = true, saved = {} } = {}) {
 
     const vm = {};
     CasesController.call(vm, $scope, { id: String(CASE_ID) }, { history: { length: 1 } },
-        $interval, $translate, toast, CasesCatalogService, LanguageCatalogService, {},
+        $translate, toast, CasesCatalogService, LanguageCatalogService, UserProfileService,
         CasePublicationNoticeService);
     return { vm, navigations, toasts, confirmations, calls };
 }
@@ -197,45 +205,21 @@ describe("CasesController.updateCase (#939)", () => {
     });
 });
 
-describe("CasesController.toggleCaseVisibility (#939)", () => {
-    it("shares a private case once the author confirms", async () => {
-        const { vm, calls, confirmations } = createController({ confirmAnswer: true });
-        // The switch's click has already turned its model on.
-        const caseItem = { id: CASE_ID, visibility: "private", public: true };
+describe("CasesController.loadCase", () => {
+    it("locks the form of a case in use, as GET /cases/:id says", async () => {
+        const { vm } = createController({ loaded: { hasLaunchedDesignActivity: true } });
 
-        await vm.toggleCaseVisibility(caseItem);
+        await vm.loadCase();
 
-        assert.equal(confirmations.length, 1);
-        assert.deepEqual(calls.updateCaseVisibility, [{ caseId: CASE_ID, visibility: "public" }]);
-        assert.equal(caseItem.visibility, "public");
-        assert.equal(caseItem.public, true);
+        assert.equal(vm.form.title, "Datos de pacientes");
+        assert.equal(vm.form.hasLaunchedDesignActivity, true);
     });
 
-    it("puts the switch back and changes nothing when the author cancels", async () => {
-        const { vm, calls, confirmations, toasts } = createController({ confirmAnswer: false });
-        const caseItem = { id: CASE_ID, visibility: "private", public: true };
+    it("leaves the form of a case not in use editable", async () => {
+        const { vm } = createController();
 
-        await vm.toggleCaseVisibility(caseItem);
+        await vm.loadCase();
 
-        assert.equal(confirmations.length, 1);
-        assert.deepEqual(calls.updateCaseVisibility, []);
-        assert.equal(caseItem.visibility, "private");
-        assert.equal(caseItem.public, false);
-        assert.deepEqual(toasts, []);
-    });
-
-    it("stops sharing without asking, and tells how many designs keep the case", async () => {
-        const { vm, calls, confirmations, toasts } = createController({
-            confirmAnswer: false,
-            saved:         { affectedDesignIds: [], designsKeepingAccess: 1 },
-        });
-        const caseItem = { id: CASE_ID, visibility: "public", public: false };
-
-        await vm.toggleCaseVisibility(caseItem);
-
-        assert.equal(confirmations.length, 0);
-        assert.deepEqual(calls.updateCaseVisibility, [{ caseId: CASE_ID, visibility: "private" }]);
-        assert.equal(caseItem.public, false);
-        assert.deepEqual(toastMessages(toasts), ["ethical_cases_designs_keeping_access_one(1)"]);
+        assert.equal(vm.form.hasLaunchedDesignActivity, false);
     });
 });
