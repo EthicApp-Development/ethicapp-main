@@ -34,8 +34,9 @@ import {
 } from "../helpers/case-lifecycle-helper.js";
 import { insertRequestedCaseAnalyses } from "../helpers/case-analyses-helper.js";
 import { associableCaseSql } from "../helpers/design-case-association.js";
-import { applyCaseVisibility } from "../helpers/case-visibility.js";
+import { applyCaseVisibility, countDesignsKeepingCaseAccess } from "../helpers/case-visibility.js";
 import { caseUsageJsonSql, normalizeCaseUsage } from "../helpers/case-usage.js";
+import { removeCaseUploadDirectory } from "../helpers/case-upload-directory.js";
 import {
     caseVideoSummariesFromIds,
     caseVideosJsonSql,
@@ -1573,6 +1574,59 @@ router.patch("/cases/:id/archive", async (req, res) => {
     }
 });
 
+// The answer for deleting a case that a design of another teacher uses,
+// archived or not: associations are never detached (#1010, epic #923).
+function caseUsedByOtherTeachersResponse(res) {
+    return res.status(409).json({
+        status:  "err",
+        message: "This case cannot be deleted because designs of other teachers use it.",
+        code:    "CASE_USED_BY_OTHER_TEACHERS",
+    });
+}
+
+// Locks the owner's case and the designs that use it, then answers why the
+// case cannot be deleted, or null when it can. The case's row lock keeps a
+// design from taking the case meanwhile, and the designs' locks keep an
+// activity from being launched from one. The checks are separate statements
+// after the locks, so they see what the transactions they waited for
+// committed (#1010).
+async function caseDeletionRefusal(client, caseId, ownerId) {
+    const ownedResult = await client.query(
+        `
+            SELECT id
+            FROM ethical_cases
+            WHERE id = $1
+              AND creator = $2
+            FOR UPDATE;
+        `,
+        [caseId, ownerId]
+    );
+    if (!ownedResult.rows[0]?.id) {
+        return caseNotFoundResponse;
+    }
+
+    await client.query(
+        `
+            SELECT id
+            FROM designs
+            WHERE case_id = $1
+            FOR UPDATE;
+        `,
+        [caseId]
+    );
+
+    const launchedResult = await client.query(launchedActivityByCaseSql, [caseId]);
+    if (launchedResult.rows[0]?.id) {
+        return lockedCaseResponse;
+    }
+
+    if (await countDesignsKeepingCaseAccess(client, caseId, ownerId) > 0) {
+        return caseUsedByOtherTeachersResponse;
+    }
+
+    return null;
+}
+
 router.delete("/cases/:id", async (req, res) => {
     if (!requireRole(req, res, "P")) {
         return;
@@ -1583,50 +1637,43 @@ router.delete("/cases/:id", async (req, res) => {
         return res.status(400).json({ status: "err", message: "Invalid case id." });
     }
 
+    const db = await rpg2.getDBInstance(config.dbconnString);
+    const client = await db.connect();
+
     try {
-        const ownedCase = await rpg2.singleSQL({
-            dbcon: config.dbconnString,
-            sql: `
-                SELECT id
-                FROM ethical_cases
-                WHERE id = $1 AND creator = $2;
-            `,
-            sqlParams: [
-                rpg2.param("plain", caseId),
-                rpg2.param("plain", req.session.uid),
-            ],
-        });
+        await client.query("BEGIN");
 
-        if (!ownedCase?.id) {
-            return res.status(404).json({ status: "err", message: "Case not found." });
+        const refusal = await caseDeletionRefusal(client, caseId, req.session.uid);
+        if (refusal) {
+            await client.query("ROLLBACK");
+            return refusal(res);
         }
 
-        if (await hasLaunchedDesignActivity(caseId)) {
-            return lockedCaseResponse(res);
-        }
-
-        const deleted = await rpg2.singleSQL({
-            dbcon: config.dbconnString,
-            sql: `
+        // Its copies stay and lose only their link to it (V40); the owner's
+        // designs that use it lose their case (designs_case_id_fkey).
+        await client.query(
+            `
                 DELETE FROM ethical_cases
-                WHERE id = $1 AND creator = $2
-                RETURNING id;
+                WHERE id = $1
+                  AND creator = $2;
             `,
-            sqlParams: [
-                rpg2.param("plain", caseId),
-                rpg2.param("plain", req.session.uid),
-            ],
-        });
+            [caseId, req.session.uid]
+        );
 
-        if (!deleted || !deleted.id) {
-            return res.status(404).json({ status: "err", message: "Case not found." });
-        }
-
-        return res.status(200).json({ status: "ok", message: "Case deleted." });
+        await client.query("COMMIT");
     } catch (error) {
+        await client.query("ROLLBACK");
         console.error("Error deleting case:", error);
         return res.status(500).json({ status: "err", message: "Failed to delete case." });
+    } finally {
+        client.release();
     }
+
+    // Its PDF, rendered pages and manifest. A failure is logged and does not
+    // change the answer: the case is already gone.
+    await removeCaseUploadDirectory(caseId);
+
+    return res.status(200).json({ status: "ok", message: "Case deleted." });
 });
 
 export default router;
