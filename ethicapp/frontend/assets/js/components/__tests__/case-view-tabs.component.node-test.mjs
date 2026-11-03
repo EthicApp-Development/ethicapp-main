@@ -271,6 +271,65 @@ describe("caseViewTabs", () => {
     });
 });
 
+describe("caseViewTabs with material and rights (#1018)", () => {
+    function openWithFixedTabs(vm, { materialCount = 2, showRights = true } = {}) {
+        vm.materialCount = materialCount;
+        vm.showRights = showRights;
+        openCase(vm);
+    }
+
+    it("orders the case text, the material, the analyses and the rights", async () => {
+        const { vm } = createTabs([[analysis()]]);
+        openWithFixedTabs(vm);
+        await flush();
+
+        assert.equal(vm.hasTabBar(), true);
+        const key = name => ({ key: name, preventDefault: () => {} });
+        vm.onTabKeydown(key("ArrowRight"), null);
+        assert.equal(vm.isActive(vm.materialTab), true);
+        vm.onTabKeydown(key("ArrowRight"), vm.materialTab);
+        assert.equal(vm.isActive("mock-case-analysis"), true);
+        vm.onTabKeydown(key("End"), "mock-case-analysis");
+        assert.equal(vm.isActive(vm.rightsTab), true);
+        vm.onTabKeydown(key("ArrowRight"), vm.rightsTab);
+        assert.equal(vm.isActive(null), true);
+    });
+
+    it("shows the tab bar for the rights alone, and no material tab without material", async () => {
+        const { vm } = createTabs([[]]);
+        openWithFixedTabs(vm, { materialCount: 0 });
+        await flush();
+
+        assert.equal(vm.hasAnalysisTabs(), false);
+        assert.equal(vm.hasMaterialTab(), false);
+        assert.equal(vm.hasTabBar(), true);
+        const key = name => ({ key: name, preventDefault: () => {} });
+        vm.onTabKeydown(key("ArrowRight"), null);
+        assert.equal(vm.isActive(vm.rightsTab), true);
+    });
+
+    it("keeps a fixed tab open when the analyses reload, and leaves it when it goes", async () => {
+        const { vm } = createTabs([[analysis()]]);
+        openWithFixedTabs(vm);
+        await flush();
+
+        vm.selectTab(vm.materialTab);
+        await vm.refresh();
+        assert.equal(vm.isActive(vm.materialTab), true);
+
+        vm.materialCount = 0;
+        vm.$onChanges({ materialCount: { currentValue: 0 } });
+        assert.equal(vm.isActive(null), true);
+    });
+
+    it("builds DOM ids for the fixed tabs apart from the analyses'", () => {
+        const { vm } = createTabs([[]]);
+        assert.match(vm.tabId(vm.materialTab), /-tab-material$/);
+        assert.match(vm.panelId(vm.rightsTab), /-panel-rights$/);
+        assert.notEqual(vm.tabId(vm.rightsTab), vm.tabId("rights"));
+    });
+});
+
 function createPanel({ detail, generate } = {}) {
     const calls = { get: 0, generate: [] };
     const service = {

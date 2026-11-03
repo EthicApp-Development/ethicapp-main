@@ -1,9 +1,11 @@
 // Tabs of the teacher case view (#651, epic #647): the case text first and by
-// default (the transcluded content), then one tab per analysis chosen for the
-// case. A case without analyses shows no tab bar, as before. Analysis tabs
-// render their panel only while open, so opening a case loads the case text
-// and the analysis list (statuses, without documents) only. The list is polled
-// while a generation is in flight.
+// default (the transcluded content), then the case's material when it has
+// any (the `case-view-material` slot, #1018), one tab per analysis chosen for
+// the case, and its rights (the `case-view-rights` slot, #1018). A case
+// without analyses, material or rights tab shows no tab bar, as before.
+// Analysis tabs render their panel only while open, so opening a case loads
+// the case text and the analysis list (statuses, without documents) only. The
+// list is polled while a generation is in flight.
 
 import {
     CASE_ANALYSES_POLL_INTERVAL_MS,
@@ -12,6 +14,16 @@ import {
     isCaseAnalysisInFlight,
     mergeCaseAnalysis,
 } from "../helpers/case-analyses.js";
+
+// The keys of the fixed tabs. Analysis tabs are keyed by their service id,
+// which is kebab-case (`ai-services-catalog.service.js`), so these cannot
+// collide with one.
+export const CASE_VIEW_TAB_MATERIAL = "@material";
+export const CASE_VIEW_TAB_RIGHTS = "@rights";
+const FIXED_TAB_DOM_IDS = {
+    [CASE_VIEW_TAB_MATERIAL]: "material",
+    [CASE_VIEW_TAB_RIGHTS]:   "rights",
+};
 
 let instanceCount = 0;
 
@@ -35,8 +47,14 @@ function CaseViewTabsController($scope, $element, $timeout, CaseAnalysesService,
     vm.analyses = [];
     vm.activeServiceId = null;
     vm.listFailed = false;
+    vm.materialTab = CASE_VIEW_TAB_MATERIAL;
+    vm.rightsTab = CASE_VIEW_TAB_RIGHTS;
 
     vm.$onChanges = function(changes) {
+        // A fixed tab that goes away while open gives way to the case text.
+        if (!tabKeys().includes(vm.activeServiceId)) {
+            vm.activeServiceId = null;
+        }
         if (!changes.caseItem) {
             return;
         }
@@ -98,7 +116,7 @@ function CaseViewTabsController($scope, $element, $timeout, CaseAnalysesService,
             }
             vm.analyses = analyses;
             vm.listFailed = false;
-            if (vm.activeServiceId && !analyses.some(a => a.serviceId === vm.activeServiceId)) {
+            if (!tabKeys().includes(vm.activeServiceId)) {
                 vm.activeServiceId = null;
             }
         } catch (error) {
@@ -138,9 +156,26 @@ function CaseViewTabsController($scope, $element, $timeout, CaseAnalysesService,
         return vm.analyses.length > 0;
     };
 
+    vm.hasMaterialTab = function() {
+        return Number(vm.materialCount) > 0;
+    };
+
+    vm.hasRightsTab = function() {
+        return vm.showRights === true;
+    };
+
+    vm.hasTabBar = function() {
+        return vm.hasAnalysisTabs() || vm.hasMaterialTab() || vm.hasRightsTab();
+    };
+
     // Tabs in display order: null stands for the case text.
     function tabKeys() {
-        return [null, ...vm.analyses.map(analysis => analysis.serviceId)];
+        return [
+            null,
+            ...(vm.hasMaterialTab() ? [CASE_VIEW_TAB_MATERIAL] : []),
+            ...vm.analyses.map(analysis => analysis.serviceId),
+            ...(vm.hasRightsTab() ? [CASE_VIEW_TAB_RIGHTS] : []),
+        ];
     }
 
     vm.isActive = function(serviceId) {
@@ -154,6 +189,9 @@ function CaseViewTabsController($scope, $element, $timeout, CaseAnalysesService,
     function domIdPart(serviceId) {
         if (!serviceId) {
             return "case-text";
+        }
+        if (FIXED_TAB_DOM_IDS[serviceId]) {
+            return FIXED_TAB_DOM_IDS[serviceId];
         }
         return `analysis-${String(serviceId).replace(/[^A-Za-z0-9_-]/g, "_")}`;
     }
@@ -233,9 +271,16 @@ function CaseViewTabsController($scope, $element, $timeout, CaseAnalysesService,
 
 export default {
     bindings: {
-        caseItem: "<",
+        caseItem:      "<",
+        // The number of videos and documents; the "Material" tab shows when
+        // there is any.
+        materialCount: "<?",
+        showRights:    "<?",
     },
-    transclude: true,
+    transclude: {
+        material: "?caseViewMaterial",
+        rights:   "?caseViewRights",
+    },
     controller: [
         "$scope", "$element", "$timeout", "CaseAnalysesService", "LanguageCatalogService",
         CaseViewTabsController,

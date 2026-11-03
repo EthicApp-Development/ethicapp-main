@@ -85,6 +85,12 @@ import { DesignViewerController } from "../../controllers/teacher/design-viewer.
 import { CasesController } from "../../controllers/teacher/cases.controller.js";
 // The Cases page (#1013, epic #1008).
 import { CasesPageController } from "../../controllers/teacher/cases-page.controller.js";
+// The case view (#1018, epic #1008), and the list URL its "← Cases" returns to.
+import { CaseViewController } from "../../controllers/teacher/case-view.controller.js";
+import {
+    CasesListLocationService,
+    trackCasesListLocation,
+} from "../../services/cases-list-location.service.js";
 import { ProfileController } from "../../controllers/teacher/profile.controller.js";
 
 import { TeacherRouter } from "./teacher-routes.js";
@@ -187,6 +193,13 @@ app.controller("CasesPageController",
     ["$scope", "$location", "$translate", "$interval", "toast",
         "CasesCatalogService", "LanguageCatalogService", "CasePublicationNoticeService",
         "$timeout", "CaseDeleteConfirmService", CasesPageController]);
+app.factory("CasesListLocationService", [CasesListLocationService]);
+app.run(["$rootScope", "$location", "CasesListLocationService", trackCasesListLocation]);
+app.controller("CaseViewController",
+    ["$scope", "$routeParams", "$interval", "$translate", "toast",
+        "CasesCatalogService", "LanguageCatalogService", "UserProfileService",
+        "CasesListLocationService", "$location", "CaseDeleteConfirmService",
+        CaseViewController]);
 app.controller("ErrorController", 
     ["$scope", "$window", "$routeParams",
         ErrorController]);

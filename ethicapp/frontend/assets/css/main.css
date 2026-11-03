@@ -6462,6 +6462,243 @@ button.launch-wizard-step-body:focus-visible .launch-wizard-step-name {
     padding: 14px 16px;
 }
 
+/* The case view (#1018, epic #1008), frame D: "← Cases", a head with the
+   case's title and actions, its facts as one line of chips, the designs that
+   use it, then the tabs. The head stays short so the document starts on the
+   first screen at 1366 × 768. The "⋯" menu reuses the Cases page's menu
+   rules, and so its colors. */
+.case-view {
+    --cases-accent: var(--teacher-link-color, #2649ec);
+    --cases-line: #d9dde8;
+    --cases-muted: #5f6577;
+    --cases-ready: #2f7d32;
+    --cases-error: #c62828;
+    --cases-in-use: #8a6100;
+
+    padding: 4px 12px 48px;
+}
+
+.case-view-back {
+    display: inline-block;
+    font-size: 13px;
+    margin-bottom: 4px;
+}
+
+.case-view-head {
+    align-items: flex-start;
+    display: flex;
+    gap: 8px 24px;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.case-view-heading {
+    min-width: 0;
+}
+
+.case-view .case-view-title {
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1.25;
+    margin: 0 0 2px;
+    overflow-wrap: anywhere;
+}
+
+.case-view-byline {
+    color: var(--cases-muted);
+    font-size: 13px;
+    margin: 0;
+}
+
+.case-view-actions {
+    align-items: center;
+    display: flex;
+    flex: 0 0 auto;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.case-view-facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    list-style: none;
+    margin: 0 0 10px;
+    padding: 0;
+}
+
+.case-view-chip {
+    background: #fff;
+    border: 1px solid var(--cases-line);
+    border-radius: 999px;
+    font-size: 13px;
+    line-height: 1.4;
+    padding: 2px 10px;
+    white-space: nowrap;
+}
+
+.case-view-chip .fa-circle {
+    font-size: 8px;
+    vertical-align: 1px;
+}
+
+.case-view-chip-tone-ready {
+    color: var(--cases-ready);
+}
+
+.case-view-chip-tone-processing {
+    color: var(--cases-muted);
+}
+
+.case-view-chip-tone-pdf-error {
+    border-color: var(--cases-error);
+    color: var(--cases-error);
+}
+
+.case-view-chip-tone-in-use {
+    background: #fdf6e3;
+    border-color: #e8d49c;
+    color: var(--cases-in-use);
+}
+
+.case-view-chip-archived,
+.case-view-chip-tone-private {
+    color: var(--cases-muted);
+}
+
+.case-view-chip-tag {
+    background: #f3f5fc;
+}
+
+.case-view-uses {
+    background: #fff;
+    border: 1px solid var(--cases-line);
+    border-radius: 6px;
+    margin-bottom: 12px;
+    padding: 8px 14px;
+}
+
+.case-view-uses-line,
+.case-view-uses-failed {
+    margin: 0;
+}
+
+.case-view-uses-breakdown {
+    color: var(--cases-muted);
+}
+
+.case-view-uses-designs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 16px;
+    list-style: none;
+    margin: 2px 0 0;
+    padding: 0;
+}
+
+.case-view-uses-archived {
+    background: #eef0f5;
+    border-radius: 3px;
+    color: var(--cases-muted);
+    font-size: 12px;
+    margin-left: 4px;
+    padding: 0 5px;
+}
+
+.case-view-uses-others {
+    color: var(--cases-muted);
+}
+
+.case-view-uses-kept {
+    color: var(--cases-in-use);
+    font-size: 13px;
+    margin: 4px 0 0;
+}
+
+.case-view-tab-count {
+    color: var(--cases-muted);
+    font-size: 12px;
+    margin-left: 2px;
+}
+
+.case-document-viewer-actions {
+    align-items: center;
+    display: inline-flex;
+    gap: 6px;
+}
+
+/* The tab's name already says what the material is. */
+.case-view-tab-panel-material .case-material {
+    margin-top: 0;
+}
+
+.case-view-tab-panel-material .case-material-heading {
+    clip-path: inset(50%);
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    position: absolute;
+    width: 1px;
+}
+
+.case-view-rights {
+    display: grid;
+    gap: 8px 24px;
+    grid-template-columns: minmax(160px, max-content) minmax(0, 1fr);
+    margin: 0 0 12px;
+    max-width: 960px;
+}
+
+.case-view-rights dt {
+    color: var(--cases-muted);
+    font-weight: 600;
+}
+
+.case-view-rights dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+.case-view-rights-text {
+    white-space: pre-line;
+}
+
+.case-view-rights-author {
+    display: block;
+}
+
+.case-view-rights-email {
+    margin-left: 8px;
+}
+
+@media (width < 768px) {
+    .case-view {
+        padding-left: 0;
+        padding-right: 0;
+    }
+
+    .case-view-head {
+        flex-direction: column;
+    }
+
+    .case-view-actions {
+        justify-content: flex-start;
+    }
+
+    .case-view-chip {
+        white-space: normal;
+    }
+
+    .case-view-rights {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .case-view-rights dd + dt {
+        margin-top: 4px;
+    }
+}
+
 /* The Cases page (#1013, epic #1008): a head with the page's actions, tabs
    with counts, and the "My cases" and "Archived" tables, after the Designs
    page. From 1200 px each case is a table row; below, the same rows become

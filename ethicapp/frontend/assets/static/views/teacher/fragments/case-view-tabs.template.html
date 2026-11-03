@@ -7,7 +7,7 @@
         </button>
     </div>
 
-    <div class="teacher-index-tabs case-view-tabs-bar" ng-if="$ctrl.hasAnalysisTabs()">
+    <div class="teacher-index-tabs case-view-tabs-bar" ng-if="$ctrl.hasTabBar()">
         <ul class="nav nav-tabs" role="tablist" aria-label="{{ 'case_analysis_tabs_label' | translate }}">
             <li role="presentation" ng-class="{ 'active': $ctrl.isActive(null) }">
                 <a
@@ -21,6 +21,20 @@
                     ng-keydown="$ctrl.onTabKeydown($event, null)">
                     <i class="fa-solid fa-book" aria-hidden="true"></i>
                     {{ 'case_analysis_tab_case_text' | translate }}
+                </a>
+            </li>
+            <li role="presentation" class="case-view-tab-material" ng-if="$ctrl.hasMaterialTab()" ng-class="{ 'active': $ctrl.isActive($ctrl.materialTab) }">
+                <a
+                    href=""
+                    role="tab"
+                    id="{{ $ctrl.tabId($ctrl.materialTab) }}"
+                    aria-controls="{{ $ctrl.panelId($ctrl.materialTab) }}"
+                    aria-selected="{{ $ctrl.isActive($ctrl.materialTab) }}"
+                    tabindex="{{ $ctrl.isActive($ctrl.materialTab) ? 0 : -1 }}"
+                    ng-click="$ctrl.selectTab($ctrl.materialTab)"
+                    ng-keydown="$ctrl.onTabKeydown($event, $ctrl.materialTab)">
+                    {{ 'case_view_tab_material' | translate }}
+                    <span class="case-view-tab-count">{{ $ctrl.materialCount }}</span>
                 </a>
             </li>
             <li
@@ -44,6 +58,19 @@
                     <span class="sr-only">({{ $ctrl.indicator(analysis).statusKey | translate }})</span>
                 </a>
             </li>
+            <li role="presentation" class="case-view-tab-rights" ng-if="$ctrl.hasRightsTab()" ng-class="{ 'active': $ctrl.isActive($ctrl.rightsTab) }">
+                <a
+                    href=""
+                    role="tab"
+                    id="{{ $ctrl.tabId($ctrl.rightsTab) }}"
+                    aria-controls="{{ $ctrl.panelId($ctrl.rightsTab) }}"
+                    aria-selected="{{ $ctrl.isActive($ctrl.rightsTab) }}"
+                    tabindex="{{ $ctrl.isActive($ctrl.rightsTab) ? 0 : -1 }}"
+                    ng-click="$ctrl.selectTab($ctrl.rightsTab)"
+                    ng-keydown="$ctrl.onTabKeydown($event, $ctrl.rightsTab)">
+                    {{ 'case_view_tab_rights' | translate }}
+                </a>
+            </li>
         </ul>
     </div>
 
@@ -52,10 +79,19 @@
     <div
         id="{{ $ctrl.panelId(null) }}"
         class="case-view-tab-panel"
-        ng-attr-role="{{ $ctrl.hasAnalysisTabs() ? 'tabpanel' : undefined }}"
-        ng-attr-aria-labelledby="{{ $ctrl.hasAnalysisTabs() ? $ctrl.tabId(null) : undefined }}"
+        ng-attr-role="{{ $ctrl.hasTabBar() ? 'tabpanel' : undefined }}"
+        ng-attr-aria-labelledby="{{ $ctrl.hasTabBar() ? $ctrl.tabId(null) : undefined }}"
         ng-show="$ctrl.isActive(null)">
         <ng-transclude></ng-transclude>
+    </div>
+
+    <div
+        ng-if="$ctrl.hasMaterialTab() && $ctrl.isActive($ctrl.materialTab)"
+        id="{{ $ctrl.panelId($ctrl.materialTab) }}"
+        class="case-view-tab-panel case-view-tab-panel-material"
+        role="tabpanel"
+        aria-labelledby="{{ $ctrl.tabId($ctrl.materialTab) }}"
+        ng-transclude="material">
     </div>
 
     <div
@@ -71,5 +107,14 @@
             on-analysis-changed="$ctrl.handleAnalysisChanged(analysis)"
             on-generate="$ctrl.generateAnalysis(serviceId)">
         </case-analysis-panel>
+    </div>
+
+    <div
+        ng-if="$ctrl.hasRightsTab() && $ctrl.isActive($ctrl.rightsTab)"
+        id="{{ $ctrl.panelId($ctrl.rightsTab) }}"
+        class="case-view-tab-panel case-view-tab-panel-rights"
+        role="tabpanel"
+        aria-labelledby="{{ $ctrl.tabId($ctrl.rightsTab) }}"
+        ng-transclude="rights">
     </div>
 </div>
