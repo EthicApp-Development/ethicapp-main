@@ -38,7 +38,7 @@
         <div class="col-md-12">
             <activity-description on-view="ac.handleView" ng-if="ac.dsgnMode === 0" ng-repeat="act in ac.getPaginatedActivities() track by act.sessionId" activity="act"></activity-description>
             <activity-description on-view="ac.handleView" on-archive="ac.handleArchive" ng-if="ac.dsgnMode === 1" ng-repeat="act in ac.getPaginatedActivities() track by act.sessionId" activity="act"></activity-description>
-            <activity-description on-view="ac.handleView" on-unarchive="ac.handleArchive" ng-if="ac.dsgnMode === 2" ng-repeat="act in ac.getPaginatedActivities() track by act.sessionId" activity="act"></activity-description>
+            <activity-description on-view="ac.handleView" on-unarchive="ac.handleUnarchive" ng-if="ac.dsgnMode === 2" ng-repeat="act in ac.getPaginatedActivities() track by act.sessionId" activity="act"></activity-description>
 
             <div class="resource-pagination-controls" ng-if="ac.getTotalPages() > 1">
                 <button class="btn btn-default btn-sm" ng-click="ac.previousPage()" ng-disabled="ac.currentPage === 1">

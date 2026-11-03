@@ -20,6 +20,7 @@ import {
     requirePhaseOwner,
     requireSessionOwner,
 } from "../../helpers/activity-owner-helper.js";
+import { getStatusCode } from "../../../common/modules/session-status.js";
 
 const router = express.Router();
 
@@ -426,35 +427,84 @@ router.get("/activities/:session_id/phases", async (req, res) => {
     }
 });
 
-router.patch("/activities/:session_id/toggle_archived", async (req, res) => {
+// Sets session $1's archived flag to $2. Archiving ($2 true) needs status $3
+// (finished) in the same statement, so a status changed concurrently cannot
+// leave an unfinished session archived; restoring has no condition. The outer
+// SELECT reads the session as it was before the update, so a session that
+// exists but is not finished comes back with `updated` false (#1048).
+export const SET_SESSION_ARCHIVED_SQL = `
+    WITH updated AS (
+        UPDATE sessions
+        SET archived = $2::boolean
+        WHERE id = $1
+          AND (NOT $2::boolean OR status = $3)
+        RETURNING id, archived
+    )
+    SELECT s.id AS session_id,
+           updated.id IS NOT NULL AS updated,
+           updated.archived
+    FROM sessions AS s
+    LEFT JOIN updated
+        ON updated.id = s.id
+    WHERE s.id = $1
+`;
+
+const FINISHED_STATUS = getStatusCode("finished");
+
+// Archives (`{ archived: true }`) or restores (`{ archived: false }`) the
+// owner's activity. Only a finished activity can be archived (409
+// ACTIVITY_NOT_FINISHED); restoring is always allowed, and the same request
+// twice leaves the flag as asked. Answers `{ status: "ok", result: { id,
+// archived } }`, as PATCH /cases/:id/archive and PATCH /designs/:id/archive.
+router.patch("/activities/:session_id/archive", async (req, res) => {
     if (!requireRole(req, res, "P")) {
         return;
     }
+
+    const archived = req.body?.archived;
+    if (typeof archived !== "boolean") {
+        return res.status(400).json({ status: "err", message: "archived must be a boolean." });
+    }
+
     try {
-        const sessionId = req.params.session_id;
-
-        if (!sessionId) {
-            return res.status(400).json({ status: "err", message: "Session ID is required" });
-        }
-
         // Only the activity's teacher archives it (#910).
-        if (!await requireSessionOwner(req, res, sessionId)) {
+        const owner = await requireSessionOwner(req, res, req.params.session_id);
+        if (!owner) {
             return;
         }
 
-        await rpg2.execSQL({
-            dbcon: config.dbconnString,
-            sql: `
-                UPDATE sessions
-                SET archived = NOT archived
-                WHERE id = $1;
-            `,
-            sqlParams: [rpg2.param('plain', sessionId)],
+        const row = await rpg2.singleSQL({
+            dbcon:     config.dbconnString,
+            sql:       SET_SESSION_ARCHIVED_SQL,
+            sqlParams: [
+                rpg2.param("plain", owner.sessionId),
+                rpg2.param("plain", archived),
+                rpg2.param("plain", FINISHED_STATUS),
+            ],
         });
 
-        return res.json({ status: "ok", message: "Session archived status toggled successfully" });
+        // singleSQL returns {} when no row matches: the session is gone.
+        if (!row?.session_id) {
+            return res.status(404).json({ error: "Session not found." });
+        }
+
+        if (row.updated !== true) {
+            return res.status(409).json({
+                status:  "err",
+                message: "Only a finished activity can be archived.",
+                code:    "ACTIVITY_NOT_FINISHED",
+            });
+        }
+
+        return res.status(200).json({
+            status: "ok",
+            result: {
+                id:       Number(row.session_id),
+                archived: row.archived === true,
+            },
+        });
     } catch (err) {
-        console.error("Error in /activities/:session_id/toggle_archived:", err);
+        console.error("Error in PATCH /activities/:session_id/archive:", err);
         return res.status(500).json({ status: "err", message: "Internal Server Error" });
     }
 });

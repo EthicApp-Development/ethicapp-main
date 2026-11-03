@@ -440,6 +440,49 @@ author, take a backup first, and run the statement the endpoints run, for one
 case at a time:
 `UPDATE designs SET visibility = 'private', public = false WHERE case_id = ... AND visibility = 'public'`.
 
+## Archived Activities
+
+From this release on, only a finished activity can be archived:
+`PATCH /activities/:session_id/archive` answers `409 ACTIVITY_NOT_FINISHED`
+for any other, and restoring is always allowed (#1048). It replaces
+`PATCH /activities/:session_id/toggle_archived`, which flipped the flag of any
+activity, so earlier releases may have archived activities that were not
+started or still in progress.
+
+Before deploying, run this read-only query against the production database and
+keep its output. Status `3` is `finished` (`ethicapp/common/modules/session-status.js`):
+
+```sql
+SELECT s.id AS session_id,
+       s.creator,
+       s.name,
+       s.status,
+       s.time AS launched_at,
+       s.current_stage,
+       EXISTS (
+           SELECT 1
+           FROM activity_finalizations AS f
+           WHERE f.session_id = s.id
+       ) AS finalization_pending
+FROM sessions AS s
+WHERE s.archived = true
+  AND s.status IS DISTINCT FROM 3
+ORDER BY s.creator, s.id;
+```
+
+The query changes no data. Each row is an archived activity that is not
+finished, a state the new rule no longer allows and the new activities page
+does not expect. Settle each one with its teacher before the release:
+
+- If the activity is over, the teacher opens it from "Archivadas" and finishes
+  it from its dashboard. Finishing runs the whole finalization (students told,
+  AI services closing their rooms), so do not set `status` by hand.
+- Otherwise restore it, which puts it back in "En curso" and changes nothing
+  else: `UPDATE sessions SET archived = false WHERE id = ...`.
+
+Rows left after the release can still be restored by their teacher, since the
+new route always allows `archived: false`.
+
 ## Health Diagnostics Targets
 
 `MNG_HEALTH_CHECK_TARGETS` is the allowlist used by the management-console
