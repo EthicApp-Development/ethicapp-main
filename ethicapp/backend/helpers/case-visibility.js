@@ -17,10 +17,13 @@
  * case private only stops new uses, and the author is told how many designs
  * of other teachers keep it (#939).
  *
- * Both endpoints that can make a case private, the case form
- * (`PATCH /cases/:id`) and the visibility switch (`PATCH /cases/:id/visibility`),
- * call `applyCaseVisibility` inside the transaction that writes the case's
- * visibility, so the case and its designs change together or not at all.
+ * The endpoints that can make a case private, the case form
+ * (`PATCH /cases/:id`), the visibility switch (`PATCH /cases/:id/visibility`)
+ * and the sharing settings (`PATCH /cases/:id/sharing`), call
+ * `applyCaseVisibility` inside the transaction that writes the case's
+ * visibility, so the case and its designs change together or not at all. The
+ * last two accept a case a launched activity uses: the lock covers only its
+ * content and its deletion (#1014).
  */
 import { PRIVATE_VISIBILITY, normalizeVisibility } from "./sharing-policy-helper.js";
 
@@ -83,7 +86,7 @@ export async function countDesignsKeepingCaseAccess(client, caseId, ownerId) {
 }
 
 /**
- * The step both case endpoints run after writing a case's visibility, inside
+ * The step the case endpoints run after writing a case's visibility, inside
  * their transaction: the public designs of a private case become private,
  * then the designs of other teachers that keep the case are counted.
  *

@@ -15,6 +15,8 @@ import {
     buildAttributionText,
     buildLocalizedCopyTitle,
     getCaseAuthorName,
+    hasValidCaseSharingFieldTypes,
+    normalizeCaseSharingFields,
     normalizeLicenseCode,
     normalizeLanguageCode,
     normalizeRightsStatus,
@@ -985,19 +987,6 @@ router.patch("/cases/:id", pdfUpload, async (req, res) => {
 
     const {
         title,
-        visibility,
-        license_code: licenseCode,
-        licenseCode: licenseCodeCamel,
-        attribution_text: attributionText,
-        attributionText: attributionTextCamel,
-        rights_status: rightsStatus,
-        rightsStatus: rightsStatusCamel,
-        license_notes: licenseNotes,
-        licenseNotes: licenseNotesCamel,
-        permission_statement: permissionStatement,
-        permissionStatement: permissionStatementCamel,
-        commercial_source: commercialSource,
-        commercialSource: commercialSourceCamel,
         language_code: languageCode,
         languageCode: languageCodeCamel,
     } = req.body;
@@ -1045,7 +1034,8 @@ router.patch("/cases/:id", pdfUpload, async (req, res) => {
         }
 
         // A case a launched activity uses is locked: the form refuses every
-        // change, its visibility included, as the visibility switch does.
+        // change, its sharing fields included. Its sharing alone can still
+        // change through PATCH /cases/:id/sharing and the visibility switch.
         if (await hasLaunchedDesignActivity(caseId)) {
             await removeUploadedFile(req.file);
             return lockedCaseResponse(res);
@@ -1076,9 +1066,7 @@ router.patch("/cases/:id", pdfUpload, async (req, res) => {
 
         const hasPdf = req.file && req.file.mimetype === "application/pdf";
         const pdfPath = hasPdf ? `/uploads/cases/${caseId}/case.pdf` : existingCase.pdf_path;
-        const normalizedLicenseCode = normalizeLicenseCode(licenseCode ?? licenseCodeCamel, existingCase.license_code || CASE_DEFAULT_LICENSE);
-        const normalizedRightsStatus = normalizeRightsStatus(rightsStatus ?? rightsStatusCamel, existingCase.rights_status);
-        const normalizedVisibility = normalizeVisibility(visibility, existingCase.visibility || PRIVATE_VISIBILITY);
+        const sharing = normalizeCaseSharingFields(req.body, existingCase);
 
         const saved = await updateCaseRecord([
             title,
@@ -1088,13 +1076,13 @@ router.patch("/cases/:id", pdfUpload, async (req, res) => {
             pdfPath,
             caseId,
             req.session.uid,
-            normalizedVisibility,
-            normalizedLicenseCode,
-            attributionText ?? attributionTextCamel ?? existingCase.attribution_text ?? null,
-            normalizedRightsStatus,
-            licenseNotes ?? licenseNotesCamel ?? existingCase.license_notes ?? null,
-            permissionStatement ?? permissionStatementCamel ?? existingCase.permission_statement ?? null,
-            commercialSource ?? commercialSourceCamel ?? existingCase.commercial_source ?? null,
+            sharing.visibility,
+            sharing.licenseCode,
+            sharing.attributionText,
+            sharing.rightsStatus,
+            sharing.licenseNotes,
+            sharing.permissionStatement,
+            sharing.commercialSource,
             normalizeLanguageCode(languageCode ?? languageCodeCamel, existingCase.language_code || DEFAULT_LANGUAGE_CODE),
         ]);
         if (!saved) {
@@ -1449,9 +1437,10 @@ router.patch("/cases/:id/visibility", async (req, res) => {
     try {
         await client.query("BEGIN");
 
-        // Ownership comes before the in-use check, so a teacher who does not
-        // own the case gets the same 404 as for a missing case, whether or
-        // not a launched activity uses it (#929).
+        // A teacher who does not own the case gets the same 404 as for a
+        // missing case (#929). A case a launched activity uses keeps its
+        // visibility editable in both directions: the lock covers only its
+        // content and its deletion (#1014).
         const ownedResult = await client.query(
             `
                 SELECT id
@@ -1466,11 +1455,6 @@ router.patch("/cases/:id/visibility", async (req, res) => {
         if (!ownedResult.rows[0]?.id) {
             await client.query("ROLLBACK");
             return caseNotFoundResponse(res);
-        }
-
-        if (await hasLaunchedDesignActivity(caseId)) {
-            await client.query("ROLLBACK");
-            return lockedCaseResponse(res);
         }
 
         const updatedResult = await client.query(
@@ -1517,6 +1501,119 @@ router.patch("/cases/:id/visibility", async (req, res) => {
         return res.status(500).json({ status: "err", message: "Failed to update case visibility." });
     } finally {
         client.release();
+    }
+});
+
+const sharingSettingsColumnsSql = `
+    id, visibility, license_code, attribution_text, rights_status,
+    license_notes, permission_statement, commercial_source
+`;
+
+// $1 visibility, $2 license, $3 attribution, $4 rights status,
+// $5 license notes, $6 permission statement, $7 commercial source,
+// $8 case id, $9 user id.
+const updateCaseSharingSql = `
+    UPDATE ethical_cases
+    SET visibility = $1,
+        license_code = $2,
+        attribution_text = $3,
+        rights_status = $4,
+        license_notes = $5,
+        permission_statement = $6,
+        commercial_source = $7,
+        updated_at = NOW()
+    WHERE id = $8
+      AND creator = $9
+    RETURNING ${sharingSettingsColumnsSql};
+`;
+
+// The sharing settings of Diseños' case publication modal: only the case's
+// visibility, license and rights, validated as the case form validates them.
+// A case a launched activity uses keeps its sharing editable, since the lock
+// covers only its content and its deletion (#1014). Answers like the
+// visibility switch, with the sharing fields it wrote.
+router.patch("/cases/:id/sharing", async (req, res) => {
+    if (!requireRole(req, res, "P")) {
+        return;
+    }
+
+    const caseId = parseCaseId(req.params.id);
+    if (!caseId) {
+        return res.status(400).json({ status: "err", message: "Invalid case id." });
+    }
+
+    const body = req.body ?? {};
+    if (!hasValidCaseSharingFieldTypes(body)) {
+        return res.status(400).json({
+            status:  "err",
+            message: "Invalid sharing fields.",
+            code:    "CASE_VALIDATION_FAILED",
+        });
+    }
+
+    try {
+        const saved = await inTransaction(async (client) => {
+            const ownedResult = await client.query(`
+                SELECT ${sharingSettingsColumnsSql}
+                FROM ethical_cases
+                WHERE id = $1
+                  AND creator = $2
+                FOR UPDATE;
+            `, [caseId, req.session.uid]);
+            const existingCase = ownedResult.rows[0];
+            if (!existingCase?.id) {
+                return null;
+            }
+
+            const sharing = normalizeCaseSharingFields(body, existingCase);
+            const updatedResult = await client.query(updateCaseSharingSql, [
+                sharing.visibility,
+                sharing.licenseCode,
+                sharing.attributionText,
+                sharing.rightsStatus,
+                sharing.licenseNotes,
+                sharing.permissionStatement,
+                sharing.commercialSource,
+                caseId,
+                req.session.uid,
+            ]);
+            const updated = updatedResult.rows[0];
+            if (!updated?.id) {
+                return null;
+            }
+
+            const visibilityEffects = await applyCaseVisibility(client, {
+                caseId,
+                ownerId:    req.session.uid,
+                visibility: updated.visibility,
+            });
+            return { updated, ...visibilityEffects };
+        });
+
+        if (!saved) {
+            return caseNotFoundResponse(res);
+        }
+
+        const { updated, affectedDesignIds, designsKeepingAccess } = saved;
+        return res.status(200).json({
+            status: "ok",
+            result: {
+                id:                  updated.id,
+                visibility:          updated.visibility,
+                public:              updated.visibility === PUBLIC_VISIBILITY,
+                licenseCode:         updated.license_code,
+                attributionText:     updated.attribution_text,
+                rightsStatus:        updated.rights_status,
+                licenseNotes:        updated.license_notes,
+                permissionStatement: updated.permission_statement,
+                commercialSource:    updated.commercial_source,
+                affectedDesignIds,
+                designsKeepingAccess,
+            },
+        });
+    } catch (error) {
+        console.error("Error updating case sharing:", error);
+        return res.status(500).json({ status: "err", message: "Failed to update case sharing." });
     }
 });
 

@@ -1,10 +1,11 @@
-// PATCH /cases/:id/visibility checks ownership before whether a launched
-// activity uses the case, so a teacher who does not own the case gets the
-// same 404 as for a missing one, in use or not, and the owner keeps the
-// in-use 409 (#929, epic #923). Making the case private turns the public
-// designs that use it private in the same transaction, through the step the
-// case form shares (#934). PostgreSQL is a fake pg pool that answers by
-// matching the SQL, so nothing here needs a database.
+// PATCH /cases/:id/visibility answers a teacher who does not own the case
+// with the same 404 as for a missing one, in use or not (#929, epic #923).
+// The owner changes the visibility of a case a launched activity uses in both
+// directions: the lock covers only its content and its deletion (#1014).
+// Making the case private turns the public designs that use it private in the
+// same transaction, through the step the case form shares (#934). PostgreSQL
+// is a fake pg pool that answers by matching the SQL, so nothing here needs a
+// database.
 import assert from "node:assert/strict";
 import { after, beforeEach, describe, it } from "node:test";
 import pg from "pg";
@@ -136,22 +137,36 @@ describe("PATCH /cases/:id/visibility", () => {
         assert.equal(body.result.id, CASE_ID);
         assert.equal(body.result.visibility, "private");
         assert.deepEqual(body.result.affectedDesignIds, [12]);
-        assert.ok(ranLaunchedCheck());
+        assert.equal(ranLaunchedCheck(), false);
         assert.ok(ranCaseUpdate());
         assert.equal(statements()[0], "BEGIN");
         assert.deepEqual(transactionEnd(), ["COMMIT"]);
         assert.equal(connections.released, connections.taken);
     });
 
-    it("answers the owner of a case in use with the in-use 409", async () => {
+    it("lets the owner make a case in use public (#1014)", async () => {
         state.inUse = true;
 
-        const { status, body } = await changeVisibility();
+        const { status, body } = await changeVisibility({ visibility: "public" });
 
-        assert.equal(status, 409);
-        assert.equal(body.code, "CASE_USED_BY_LAUNCHED_ACTIVITY");
-        assert.equal(ranCaseUpdate(), false);
-        assert.deepEqual(transactionEnd(), ["ROLLBACK"]);
+        assert.equal(status, 200);
+        assert.equal(body.result.visibility, "public");
+        assert.equal(body.result.public, true);
+        assert.ok(ranCaseUpdate());
+        assert.deepEqual(transactionEnd(), ["COMMIT"]);
+        assert.equal(connections.released, connections.taken);
+    });
+
+    it("lets the owner make a case in use private (#1014)", async () => {
+        state.inUse = true;
+
+        const { status, body } = await changeVisibility({ visibility: "private" });
+
+        assert.equal(status, 200);
+        assert.equal(body.result.visibility, "private");
+        assert.equal(body.result.public, false);
+        assert.ok(ranCaseUpdate());
+        assert.deepEqual(transactionEnd(), ["COMMIT"]);
         assert.equal(connections.released, connections.taken);
     });
 
@@ -197,8 +212,7 @@ describe("PATCH /cases/:id/visibility", () => {
         const ownershipIndex = sqls.findIndex(sql => /FOR UPDATE;?$/u.test(sql));
         assert.ok(ownershipIndex > sqls.indexOf("BEGIN"));
         assert.deepEqual(db.queries[ownershipIndex].params, [CASE_ID, OWNER_ID]);
-        const launchedIndex = sqls.findIndex(sql => /INNER JOIN activity a/u.test(sql));
-        assert.ok(ownershipIndex < launchedIndex);
+        assert.ok(ownershipIndex < sqls.findIndex(sql => /^UPDATE ethical_cases\b/u.test(sql)));
     });
 });
 
@@ -254,13 +268,18 @@ describe("PATCH /cases/:id/visibility and the designs that use the case (#934)",
         assert.equal(connections.released, connections.taken);
     });
 
-    it("refuses a case in use before touching its designs", async () => {
+    it("turns the public designs of a case in use made private private (#1014)", async () => {
         state.inUse = true;
+        state.publicDesignIds = [12, 13];
 
-        const { status } = await changeVisibility({ visibility: "private" });
+        const { status, body } = await changeVisibility({ visibility: "private" });
 
-        assert.equal(status, 409);
-        assert.equal(designsUpdateIndex(), -1);
+        assert.equal(status, 200);
+        assert.deepEqual(body.result.affectedDesignIds, [12, 13]);
+        const designsIndex = designsUpdateIndex();
+        const sqls = statements();
+        assert.ok(sqls.indexOf("BEGIN") < designsIndex);
+        assert.ok(designsIndex < sqls.indexOf("COMMIT"));
     });
 });
 
@@ -334,11 +353,15 @@ describe("PATCH /cases/:id/visibility and the designs that keep the case (#939)"
         const notOwned = await changeVisibility({ uid: OTHER_TEACHER_ID, visibility: "private" });
         assert.equal(notOwned.status, 404);
         assert.equal(countIndex(), -1);
+    });
 
-        db.reset();
+    it("counts other teachers' designs for a case in use too (#1014)", async () => {
         state.inUse = true;
-        const inUse = await changeVisibility({ visibility: "private" });
-        assert.equal(inUse.status, 409);
-        assert.equal(countIndex(), -1);
+        state.designCreators = [DESIGN_TEACHER_ID];
+
+        const { status, body } = await changeVisibility({ visibility: "private" });
+
+        assert.equal(status, 200);
+        assert.equal(body.result.designsKeepingAccess, 1);
     });
 });
