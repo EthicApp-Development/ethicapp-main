@@ -37,7 +37,12 @@ import {
 import { insertRequestedCaseAnalyses } from "../helpers/case-analyses-helper.js";
 import { associableCaseSql } from "../helpers/design-case-association.js";
 import { applyCaseVisibility, countDesignsKeepingCaseAccess } from "../helpers/case-visibility.js";
-import { caseUsageJsonSql, normalizeCaseUsage } from "../helpers/case-usage.js";
+import {
+    caseOwnDesignsJsonSql,
+    caseUsageJsonSql,
+    normalizeCaseUsage,
+    normalizeCaseUses,
+} from "../helpers/case-usage.js";
 import { removeCaseUploadDirectory } from "../helpers/case-upload-directory.js";
 import {
     caseVideoSummariesFromIds,
@@ -784,6 +789,62 @@ router.get("/cases/:id/document-processing", async (req, res) => {
             status:  "err",
             message: "Failed to load case document processing status.",
         });
+    }
+});
+
+// The designs that use a case, for the case view and the delete dialog
+// (#1012, epic #1008): the teacher's own designs, and for the case's author
+// only, the counts of other teachers' designs (#923). Teachers only, for a
+// case they can read; any other case answers like a missing one.
+router.get("/cases/:id/uses", async (req, res) => {
+    if (!requireRole(req, res, "P")) {
+        return;
+    }
+
+    const caseId = parseCaseId(req.params.id);
+    if (!caseId) {
+        return res.status(400).json({ status: "err", message: "Invalid case id." });
+    }
+
+    try {
+        const teacherId = req.session.uid;
+        const caseObj = await getReadableCaseWithDocumentProcessing(caseId, teacherId);
+        if (!caseObj || !caseObj.id) {
+            return caseNotFoundResponse(res);
+        }
+
+        const usesRow = await rpg2.singleSQL({
+            dbcon: config.dbconnString,
+            sql:   `
+                SELECT ${caseOwnDesignsJsonSql("c", "$2")} AS own_designs,
+                       ${caseUsageJsonSql("c", "$2")} AS case_usage
+                FROM ethical_cases c
+                WHERE c.id = $1;
+            `,
+            sqlParams: [
+                rpg2.param("plain", caseId),
+                rpg2.param("plain", teacherId),
+            ],
+        });
+
+        const isAuthor = Number(caseObj.creator) === Number(teacherId);
+        const designsKeepingAccess = isAuthor
+            ? await countDesignsKeepingCaseAccess(
+                await rpg2.getDBInstance(config.dbconnString), caseId, teacherId)
+            : 0;
+
+        return res.status(200).json({
+            status: "ok",
+            result: normalizeCaseUses({
+                ownDesigns: usesRow?.own_designs,
+                usage:      usesRow?.case_usage,
+                isAuthor,
+                designsKeepingAccess,
+            }),
+        });
+    } catch (error) {
+        console.error("Error retrieving case uses:", error);
+        return res.status(500).json({ status: "err", message: "Failed to load case uses." });
     }
 });
 
