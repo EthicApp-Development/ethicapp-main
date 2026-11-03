@@ -2542,44 +2542,21 @@ h2{
     margin-bottom: 5px; /* Reduce spacing */
 }
 
-.case-card-panel .panel-body .row {
-    align-items: center;
-    display: flex;
+/* The case summary of the case publication modal of Diseños (#1020). */
+.case-publication-summary {
+    margin-top: 12px;
 }
 
-.case-card-actions {
-    align-items: center;
-    display: flex;
-    flex-wrap: wrap;
-    column-gap: 12px;
-    justify-content: flex-end;
-    row-gap: 12px;
-    width: 100%;
+.case-publication-summary-title {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0 0 6px;
+    overflow-wrap: anywhere;
 }
 
-.case-card-button-group {
-    align-items: center;
-    display: flex;
-    flex-wrap: wrap;
-    column-gap: 8px;
-    justify-content: flex-end;
-    row-gap: 10px;
-}
-
-.case-card-button-group > .btn,
-.case-card-button-group > .locked-svg {
-    margin-bottom: 10px;
-}
-
-.case-card-share-control {
-    flex: 0 0 auto;
-    margin-bottom: 10px;
-}
-
-/* What sharing a case means for the teachers who use it (#939). */
-.case-card-share-help {
-    margin: 4px auto 0;
-    max-width: 200px;
+.case-publication-summary-facts {
+    line-height: 1.6;
+    margin-bottom: 0;
 }
 
 .resource-pagination-controls {

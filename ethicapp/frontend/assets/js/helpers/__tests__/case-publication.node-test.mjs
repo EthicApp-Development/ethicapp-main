@@ -4,7 +4,11 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 
-import { confirmCasePublication, isCasePublication } from "../case-publication.js";
+import {
+    casePublicationSummary,
+    confirmCasePublication,
+    isCasePublication,
+} from "../case-publication.js";
 
 function locale(name) {
     const url = new URL(`../../../locales/${name}.json`, import.meta.url);
@@ -78,6 +82,66 @@ describe("confirmCasePublication", () => {
         assert.equal(await confirmCasePublication("private", "private", confirm), true);
         assert.equal(await confirmCasePublication("public", "public", confirm), true);
         assert.equal(calls.count, 0);
+    });
+});
+
+describe("casePublicationSummary", () => {
+    it("names the case, its authors, language, visibility and tags", () => {
+        const tags = [{ id: 3, label: "Privacidad" }];
+        const authors = [
+            { authorFirstname: "Ana", authorLastname: "Rojas" },
+            { authorFirstname: "Luis", authorLastname: "Soto" },
+        ];
+        const summary = casePublicationSummary({
+            title:        "Datos de pacientes",
+            authors,
+            languageCode: "es_CL",
+            visibility:   "private",
+            tags,
+        });
+
+        assert.deepEqual(summary, {
+            title:         "Datos de pacientes",
+            authors:       "Ana Rojas; Luis Soto",
+            languageCode:  "es_CL",
+            visibilityKey: "visibility_private",
+            tags,
+        });
+    });
+
+    it("falls back on the case's own author fields, and says when it is public", () => {
+        const summary = casePublicationSummary({
+            title:           "Caso",
+            authorFirstname: "Ana",
+            authorLastname:  "Rojas",
+            visibility:      "public",
+        });
+
+        assert.equal(summary.authors, "Ana Rojas");
+        assert.equal(summary.visibilityKey, "visibility_public");
+        assert.deepEqual(summary.tags, []);
+    });
+
+    it("is empty for a missing case", () => {
+        assert.deepEqual(casePublicationSummary(null), {
+            title:         "",
+            authors:       "",
+            languageCode:  "",
+            visibilityKey: "visibility_private",
+            tags:          [],
+        });
+    });
+});
+
+describe("the case publication modal", () => {
+    it("shows its own case summary, not the retired case card (#1020)", () => {
+        const url = new URL(
+            "../../../static/views/teacher/fragments/case-publication-settings-modal.template.html",
+            import.meta.url);
+        const template = readFileSync(url, "utf8");
+
+        assert.match(template, /class="case-publication-summary"/u);
+        assert.doesNotMatch(template, /<case-card/u);
     });
 });
 
