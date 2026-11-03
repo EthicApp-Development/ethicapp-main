@@ -209,3 +209,54 @@ describe("CasesCatalogService.updateCaseSharing (#1014)", () => {
         }]);
     });
 });
+
+describe("CasesCatalogService.getCaseUses (#1012)", () => {
+    function createUsesService(answer) {
+        const gets = [];
+        const $http = {
+            async get(url, config) {
+                gets.push({ url, config });
+                return answer();
+            },
+        };
+        return { service: CasesCatalogService({ $broadcast() {} }, $http), gets };
+    }
+
+    it("reads the case's uses and hands back the answer's result", async () => {
+        const uses = {
+            ownDesigns:           [{ id: 12, title: "Mine", archived: false }],
+            activityCount:        3,
+            otherDesignCount:     2,
+            otherTeacherCount:    1,
+            designsKeepingAccess: 2,
+        };
+        const { service, gets } = createUsesService(() => ({
+            data: { status: "ok", result: uses },
+        }));
+
+        const result = await service.getCaseUses(41);
+
+        assert.deepEqual(gets, [{ url: "/cases/41/uses", config: undefined }]);
+        assert.deepEqual(result, uses);
+    });
+
+    it("leaves the cached lists alone", async () => {
+        const { service, gets } = createUsesService(() => ({
+            data: { status: "ok", result: { ownDesigns: [], activityCount: 0 } },
+        }));
+
+        await service.getCaseUses(41);
+
+        assert.equal(gets.length, 1);
+        assert.deepEqual(service.cases, []);
+    });
+
+    it("rejects with the answer of a case the teacher cannot read", async () => {
+        const notFound = { status: 404, data: { status: "err", code: "CASE_NOT_FOUND" } };
+        const { service } = createUsesService(() => {
+            throw notFound;
+        });
+
+        await assert.rejects(service.getCaseUses(999), error => error === notFound);
+    });
+});

@@ -107,6 +107,16 @@ let CasesCatalogService = ($rootScope, $http) => {
             return response.data.result;
         },
 
+        // The designs that use a case (#1012): `{ ownDesigns, activityCount }`,
+        // the teacher's own designs as `{ id, title, archived }`, and for the
+        // case's author also `otherDesignCount`, `otherTeacherCount` and
+        // `designsKeepingAccess`. Rejects with the 404 of a case the teacher
+        // cannot read.
+        async getCaseUses(caseId) {
+            const response = await $http.get(`/cases/${caseId}/uses`);
+            return response.data.result;
+        },
+
         async getCaseByDesignId(designId) {
             const response = await $http.get(`/designs/${designId}/case`);
             const associatedCase = response.data.result;
