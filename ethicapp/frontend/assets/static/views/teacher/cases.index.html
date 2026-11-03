@@ -1,107 +1,57 @@
-<div class="container" ng-controller="CasesController as vm" ng-init="vm.loadCases()">
-    <div class="row">
-        <div class="col-md-12">
-            <h2><i class="fa fa-book"></i> {{ 'ethical_cases_title' | translate }}</h2>
-            <button type="button" class="btn btn-default btn-sm mb-2" ng-click="vm.goBack()">
-                <i class="fa fa-arrow-left" aria-hidden="true"></i> {{ 'go_back' | translate }}
-            </button>
-            <br>
-            <button class="btn btn-primary" ng-click="navigateTo('/cases/new')" style="margin-top: 1rem; margin-bottom: 1rem;">
-                <i class="fa fa-plus" aria-hidden="true"></i> {{ 'ethical_cases_create' | translate }}
-            </button>
-            <div class="teacher-index-search">
-                <div class="search-field-wrapper">
-                    <input
-                        class="form-control search-input search-decorated-input"
-                        type="text"
-                        placeholder="{{ 'search_cases_placeholder' | translate }}"
-                        ng-model="vm.caseSearch"
-                        ng-change="vm.setPage(1)">
-                    <i class="fa-solid fa-magnifying-glass search-field-icon" aria-hidden="true"></i>
-                </div>
-            </div>
+<div class="cases-page" ng-controller="CasesPageController as cp">
+    <header class="cases-page-head">
+        <div class="cases-page-intro">
+            <h2 class="cases-page-title">
+                <i class="fa fa-book" aria-hidden="true"></i> {{ 'cases_page_title' | translate }}
+            </h2>
+            <p class="cases-page-role">
+                {{ 'cases_page_role' | translate }}
+                <a href="#!/designs/new" class="cases-page-design-link">{{ 'cases_page_design_link' | translate }}&nbsp;<span aria-hidden="true">&rarr;</span></a>
+            </p>
         </div>
+        <div class="cases-page-actions">
+            <button type="button" class="btn btn-default cases-import-shared" ng-click="cp.openSharedTab()">
+                <i class="fa-solid fa-download" aria-hidden="true"></i> {{ 'cases_import_shared' | translate }}
+            </button>
+            <button type="button" class="btn btn-primary cases-new" ng-click="navigateTo('/cases/new')">
+                <i class="fa fa-plus" aria-hidden="true"></i> {{ 'cases_new' | translate }}
+            </button>
+        </div>
+    </header>
+
+    <!-- The tabs are links: the tab lives in the URL (`?tab=`), so a reload and
+         the browser's Back keep it. -->
+    <nav class="cases-page-tabs" aria-label="{{ 'cases_tabs_label' | translate }}">
+        <ul class="nav nav-tabs">
+            <li class="cases-tab cases-tab-mine" ng-class="{ 'active': cp.tab === 'mine' }">
+                <a href="#!/cases" ng-attr-aria-current="{{ cp.tab === 'mine' ? 'page' : undefined }}">
+                    {{ 'cases_tab_mine' | translate }} <span class="cases-tab-count" ng-if="cp.loaded">{{ cp.count('mine') }}</span>
+                </a>
+            </li>
+            <li class="cases-tab cases-tab-shared" ng-class="{ 'active': cp.tab === 'shared' }">
+                <a href="#!/cases?tab=shared" ng-attr-aria-current="{{ cp.tab === 'shared' ? 'page' : undefined }}">
+                    {{ 'cases_tab_shared' | translate }} <span class="cases-tab-count" ng-if="cp.loaded">{{ cp.count('shared') }}</span>
+                </a>
+            </li>
+            <li class="cases-tab cases-tab-archived" ng-class="{ 'active': cp.tab === 'archived' }">
+                <a href="#!/cases?tab=archived" ng-attr-aria-current="{{ cp.tab === 'archived' ? 'page' : undefined }}">
+                    {{ 'cases_tab_archived' | translate }} <span class="cases-tab-count" ng-if="cp.loaded">{{ cp.count('archived') }}</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+
+    <div class="cases-toast-container teacher-index-toast-container">
+        <toast></toast>
     </div>
 
-    <div class="row">
-        <div class="col-md-12 teacher-index-tabs">
-            <ul class="nav nav-tabs">
-                <li ng-class="{'active': vm.caseMode === 0}">
-                    <a href="" ng-click="vm.setCaseMode(0)">{{ 'yours' | translate }}</a>
-                </li>
-                <li ng-class="{'active': vm.caseMode === 1}">
-                    <a href="" ng-click="vm.setCaseMode(1)">{{ 'byOthers' | translate }}</a>
-                </li>
-                <li ng-class="{'active': vm.caseMode === 2}">
-                    <a href="" ng-click="vm.setCaseMode(2)">{{ 'archived' | translate }}</a>
-                </li>
-            </ul>
-        </div>
-    </div>
+    <p class="text-muted" ng-if="!cp.loaded">{{ 'loading' | translate }}</p>
+    <div class="alert alert-danger" ng-if="cp.loaded && cp.loadFailed">{{ 'cases_load_failed' | translate }}</div>
 
-    <div class="row teacher-index-content">
-        <div class="col-md-12">
-            <div class="cases-toast-container teacher-index-toast-container">
-                <toast></toast>
-            </div>
-            <div ng-if="vm.getFilteredCases().length > 0">
-                <div ng-if="vm.caseMode === 0">
-                    <case-card
-                        ng-repeat="caseItem in vm.getPaginatedCases() track by caseItem.id"
-                        case-item="caseItem"
-                        on-view="vm.viewCase"
-                        on-edit="vm.editCase"
-                        on-delete="vm.deleteCaseFromCard"
-                        on-duplicate="vm.duplicateCase"
-                        on-archive="vm.archiveCase"
-                        on-toggle-public="vm.toggleCaseVisibility">
-                    </case-card>
-                </div>
-
-                <div ng-if="vm.caseMode === 1">
-                    <case-card
-                        ng-repeat="caseItem in vm.getPaginatedCases() track by caseItem.id"
-                        case-item="caseItem"
-                        on-view="vm.viewCase"
-                        on-import="vm.importCase">
-                    </case-card>
-                </div>
-
-                <div ng-if="vm.caseMode === 2">
-                    <case-card
-                        ng-repeat="caseItem in vm.getPaginatedCases() track by caseItem.id"
-                        case-item="caseItem"
-                        on-view="vm.viewCase"
-                        on-duplicate="vm.duplicateCase"
-                        on-archive="vm.archiveCase">
-                    </case-card>
-                </div>
-
-                <div class="resource-pagination-controls" ng-if="vm.getTotalPages() > 1">
-                    <button class="btn btn-default btn-sm" ng-click="vm.previousPage()" ng-disabled="vm.currentPage === 1">
-                        <i class="fa fa-chevron-left" aria-hidden="true"></i> {{ 'pagination_previous' | translate }}
-                    </button>
-                    <span class="resource-pagination-status">
-                        {{ 'pagination_page' | translate }} {{ vm.currentPage }} / {{ vm.getTotalPages() }}
-                    </span>
-                    <button class="btn btn-default btn-sm" ng-click="vm.nextPage()" ng-disabled="vm.currentPage === vm.getTotalPages()">
-                        {{ 'pagination_next' | translate }} <i class="fa fa-chevron-right" aria-hidden="true"></i>
-                    </button>
-                </div>
-            </div>
-
-            <div class="alert alert-info" ng-if="vm.caseMode === 0 && vm.getFilteredCases().length === 0">
-                <span>{{ 'empty_cases_message' | translate }}</span>
-                <a href="" ng-click="navigateTo('/cases/new')">{{ 'empty_cases_link' | translate }}</a>.
-            </div>
-
-            <div class="alert alert-info" ng-if="vm.caseMode === 1 && vm.getFilteredCases().length === 0">
-                <span>{{ 'empty_shared_cases_message' | translate }}</span>
-            </div>
-
-            <div class="alert alert-info" ng-if="vm.caseMode === 2 && vm.getFilteredCases().length === 0">
-                <span>{{ 'empty_archived_cases_message' | translate }}</span>
-            </div>
-        </div>
+    <!-- One fragment per tab, so each tab's changes stay in its own file. -->
+    <div ng-if="cp.loaded && !cp.loadFailed">
+        <div ng-if="cp.tab === 'mine'" ng-include="'/assets/static/views/teacher/fragments/cases-own-tab.template.html'"></div>
+        <div ng-if="cp.tab === 'shared'" ng-include="'/assets/static/views/teacher/fragments/cases-shared-tab.template.html'"></div>
+        <div ng-if="cp.tab === 'archived'" ng-include="'/assets/static/views/teacher/fragments/cases-archived-tab.template.html'"></div>
     </div>
 </div>

@@ -80,6 +80,8 @@ import { VoidController } from "../../controllers/common/void.controller.js";
 import { DesignEditorController } from "../../controllers/teacher/design-editor.controller.js";
 import { DesignViewerController } from "../../controllers/teacher/design-viewer.controller.js";
 import { CasesController } from "../../controllers/teacher/cases.controller.js";
+// The Cases page (#1013, epic #1008).
+import { CasesPageController } from "../../controllers/teacher/cases-page.controller.js";
 import { ProfileController } from "../../controllers/teacher/profile.controller.js";
 
 import { TeacherRouter } from "./teacher-routes.js";
@@ -178,6 +180,10 @@ app.controller("CasesController",
     ["$scope", "$routeParams", "$window", "$interval", "$translate", "toast",
         "CasesCatalogService", "LanguageCatalogService", "UserProfileService",
         "CasePublicationNoticeService", CasesController]);
+app.controller("CasesPageController",
+    ["$scope", "$location", "$translate", "$interval", "toast",
+        "CasesCatalogService", "LanguageCatalogService", "CasePublicationNoticeService",
+        CasesPageController]);
 app.controller("ErrorController", 
     ["$scope", "$window", "$routeParams",
         ErrorController]);

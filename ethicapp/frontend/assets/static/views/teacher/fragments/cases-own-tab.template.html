@@ -1,0 +1,27 @@
+<!-- "My cases" (#1013): the teacher's cases, newest first, in the cases
+     table. The search and status filters go in its tools (#1015). -->
+<section class="cases-table-section cases-own-tab">
+    <div class="cases-table-tools" ng-if="cp.count('mine') > 0">
+        <p class="cases-table-order">{{ 'cases_order_newest' | translate }}</p>
+    </div>
+
+    <div ng-if="cp.getRows('mine').length > 0"
+        ng-include="'/assets/static/views/teacher/fragments/cases-table.template.html'"></div>
+
+    <div class="cases-table-footer" ng-if="cp.getRows('mine').length > 0">
+        <span>
+            {{ 'cases_showing' | translate:{ shown: cp.getVisibleRows('mine').length, total: cp.getRows('mine').length } }}
+            <span ng-if="cp.hasMoreRows('mine')">&middot;
+                <button type="button" class="btn btn-link cases-show-more" ng-click="cp.showMore('mine')">
+                    {{ 'cases_show_more' | translate }}
+                </button>
+            </span>
+        </span>
+        <span class="cases-archive-hint">{{ 'cases_archive_hint' | translate }}</span>
+    </div>
+
+    <div class="alert alert-info" ng-if="cp.count('mine') === 0">
+        <span>{{ 'empty_cases_message' | translate }}</span>
+        <a href="" ng-click="navigateTo('/cases/new')">{{ 'empty_cases_link' | translate }}</a>.
+    </div>
+</section>

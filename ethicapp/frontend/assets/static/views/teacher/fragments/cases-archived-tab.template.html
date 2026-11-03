@@ -1,0 +1,25 @@
+<!-- "Archived" (#1013): the teacher's archived cases, in the cases table,
+     with "Restore" as each row's visible action. -->
+<section class="cases-table-section cases-archived-tab">
+    <div class="cases-table-tools" ng-if="cp.count('archived') > 0">
+        <p class="cases-table-order">{{ 'cases_order_newest' | translate }}</p>
+    </div>
+
+    <div ng-if="cp.getRows('archived').length > 0"
+        ng-include="'/assets/static/views/teacher/fragments/cases-table.template.html'"></div>
+
+    <div class="cases-table-footer" ng-if="cp.getRows('archived').length > 0">
+        <span>
+            {{ 'cases_showing' | translate:{ shown: cp.getVisibleRows('archived').length, total: cp.getRows('archived').length } }}
+            <span ng-if="cp.hasMoreRows('archived')">&middot;
+                <button type="button" class="btn btn-link cases-show-more" ng-click="cp.showMore('archived')">
+                    {{ 'cases_show_more' | translate }}
+                </button>
+            </span>
+        </span>
+    </div>
+
+    <div class="alert alert-info" ng-if="cp.count('archived') === 0">
+        <span>{{ 'empty_archived_cases_message' | translate }}</span>
+    </div>
+</section>
