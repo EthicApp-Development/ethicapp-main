@@ -2,7 +2,9 @@
 // a real PostgreSQL database with migrations V1-V21 or later applied: the copy
 // of ready analyses (which rows, which columns, the rows a copy already has),
 // the reservation of the services the copy did not inherit, and a new
-// generation of an inherited analysis, which changes the copy only.
+// generation of an inherited analysis, which changes the copy only. Also the
+// services added to an existing case (#1039): only those it lacks are
+// reserved, and two concurrent requests for a service reserve it once.
 //
 // Run with `npm run test:integration`, setting ETHICAPP_INTEGRATION_DATABASE_URL
 // to a disposable database.
@@ -23,7 +25,7 @@ import {
     reserveCaseAnalysisGeneration,
     saveReviewedCaseAnalysis,
 } from "../case-analyses-helper.js";
-import { requestCaseCopyAnalyses } from "../case-lifecycle-helper.js";
+import { requestCaseAnalyses, requestCaseCopyAnalyses } from "../case-lifecycle-helper.js";
 
 const DATABASE_URL = process.env.ETHICAPP_INTEGRATION_DATABASE_URL;
 const SKIP_REASON = DATABASE_URL
@@ -274,4 +276,79 @@ test("case analyses: generating an inherited analysis again changes the copy, ne
     await dbQuery("DELETE FROM ethical_cases WHERE id = $1;", [copy.id]);
     assert.deepEqual(await listCaseAnalyses(copy.id, query), []);
     assert.equal((await listCaseAnalyses(source.id, query)).length, Object.keys(services).length);
+});
+
+// ─── services added to an existing case (#1039) ──────────────────────────────
+
+// requestCaseAnalyses over the integration pool; dispatches are only recorded.
+function requestOverPool(dispatched) {
+    return request => requestCaseAnalyses(request, {
+        registry:        {},
+        insertRequested: args => insertRequestedCaseAnalyses(args, query),
+        dispatch:        async (context, { reservations }) => {
+            dispatched.push({ context, reservations });
+            return [];
+        },
+    });
+}
+
+test("case analyses: adding services reserves only those the case lacks and keeps the others", { skip: SKIP_REASON }, async () => {
+    const teacherId = await createTeacher();
+    const ethicalCase = await createCase(teacherId);
+    const prefix = `svc-add-${randomUUID()}`;
+    const chosen = `${prefix}-chosen`;
+    const added = `${prefix}-added`;
+    const chosenIds = { caseId: ethicalCase.id, serviceId: chosen, userId: teacherId };
+    await generate(chosenIds, { version: 1 });
+    const before = await getCaseAnalysis({ caseId: ethicalCase.id, serviceId: chosen }, query);
+
+    const dispatched = [];
+    const { reservations, dispatched: settled } = await requestOverPool(dispatched)({
+        caseRow:        ethicalCase,
+        serviceIds:     [chosen, added],
+        userId:         teacherId,
+        pdfRenderJobId: null,
+    });
+    await settled;
+
+    assert.deepEqual(reservations.map(row => row.service_id), [added]);
+    assert.equal(dispatched.length, 1);
+    assert.equal(dispatched[0].context.caseId, ethicalCase.id);
+    assert.deepEqual(dispatched[0].reservations, reservations);
+
+    const addedRow = await getCaseAnalysis({ caseId: ethicalCase.id, serviceId: added }, query);
+    assert.equal(addedRow.status, "requested");
+    assert.equal(addedRow.job_id, reservations[0].job_id);
+    assert.equal(addedRow.requested_by, teacherId);
+
+    // The service already chosen is not regenerated.
+    assert.deepEqual(
+        await getCaseAnalysis({ caseId: ethicalCase.id, serviceId: chosen }, query),
+        before
+    );
+});
+
+test("case analyses: concurrent requests for a service create one analysis and one generation", { skip: SKIP_REASON }, async () => {
+    const teacherId = await createTeacher();
+    const ethicalCase = await createCase(teacherId);
+    const serviceId = `svc-add-${randomUUID()}`;
+    const dispatched = [];
+    const request = requestOverPool(dispatched);
+
+    const results = await Promise.all([1, 2, 3].map(() => request({
+        caseRow:    ethicalCase,
+        serviceIds: [serviceId],
+        userId:     teacherId,
+    })));
+    await Promise.all(results.map(result => result.dispatched));
+
+    const reserved = results.flatMap(result => result.reservations);
+    assert.equal(reserved.length, 1, "one request reserves the service");
+    assert.equal(dispatched.length, 1, "one generation is dispatched");
+    assert.equal(dispatched[0].reservations[0].job_id, reserved[0].job_id);
+
+    const rows = await listCaseAnalyses(ethicalCase.id, query);
+    assert.deepEqual(rows.map(row => row.service_id), [serviceId]);
+    const row = await getCaseAnalysis({ caseId: ethicalCase.id, serviceId }, query);
+    assert.equal(row.job_id, reserved[0].job_id);
 });

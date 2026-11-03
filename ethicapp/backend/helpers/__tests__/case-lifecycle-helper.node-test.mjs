@@ -4,6 +4,7 @@ import {
     CASE_CREATED_HOOK,
     buildCaseCreatedContext,
     dispatchCaseCreatedHook,
+    requestCaseAnalyses,
     requestCaseCopyAnalyses,
     resolveCaseAnalysisServiceIds,
 } from "../case-lifecycle-helper.js";
@@ -270,6 +271,121 @@ test("resolveCaseAnalysisServiceIds: rejects values that are not a JSON list of 
 
         assert.equal(choice.valid, false, value);
     }
+});
+
+// ─── services requested for an existing case (#1039) ─────────────────────────
+
+/**
+ * Fakes for requestCaseAnalyses: an insert that reserves the services the case
+ * has not chosen (`chosen`), as ON CONFLICT DO NOTHING does, and a dispatch
+ * that records its calls, or fails with `dispatchError`.
+ */
+function makeRequestDependencies({ chosen = [], dispatchError = null } = {}) {
+    const calls = { inserted: [], dispatched: [] };
+    const registry = makeCaseRegistry([]);
+
+    return {
+        calls,
+        registry,
+        dependencies: {
+            registry,
+            insertRequested: async (args) => {
+                calls.inserted.push(args);
+                return args.serviceIds
+                    .filter(serviceId => !chosen.includes(serviceId))
+                    .map(serviceId => ({
+                        case_id:    args.caseId,
+                        service_id: serviceId,
+                        job_id:     `job-${serviceId}`,
+                        status:     "requested",
+                    }));
+            },
+            dispatch: async (context, options) => {
+                calls.dispatched.push({ context, options });
+                if (dispatchError) {
+                    throw dispatchError;
+                }
+                return [{ status: "fulfilled", value: undefined }];
+            },
+        },
+    };
+}
+
+const caseAnalysesRequest = (overrides = {}) => ({
+    caseRow:        CREATED_CASE,
+    serviceIds:     ["svc-chosen", "svc-new"],
+    userId:         5,
+    pdfRenderJobId: 77,
+    ...overrides,
+});
+
+test("requestCaseAnalyses: reserves the services the case lacks and dispatches only them", async () => {
+    const { calls, registry, dependencies } = makeRequestDependencies({ chosen: ["svc-chosen"] });
+
+    const { reservations, dispatched } = await requestCaseAnalyses(
+        caseAnalysesRequest(),
+        dependencies
+    );
+
+    assert.deepEqual(calls.inserted, [{
+        caseId:     42,
+        serviceIds: ["svc-chosen", "svc-new"],
+        userId:     5,
+    }]);
+    assert.deepEqual(reservations.map(row => row.service_id), ["svc-new"]);
+    assert.equal((await dispatched).length, 1);
+    assert.equal(calls.dispatched.length, 1);
+    const [{ context, options }] = calls.dispatched;
+    assert.deepEqual(
+        context,
+        buildCaseCreatedContext(CREATED_CASE, { userId: 5, pdfRenderJobId: 77 })
+    );
+    assert.deepEqual(options.reservations, reservations);
+    assert.equal(options.registry, registry);
+});
+
+test("requestCaseAnalyses: dispatches nothing when every service is already chosen", async () => {
+    const { calls, dependencies } = makeRequestDependencies({ chosen: ["svc-chosen", "svc-new"] });
+
+    const { reservations, dispatched } = await requestCaseAnalyses(
+        caseAnalysesRequest(),
+        dependencies
+    );
+
+    assert.deepEqual(reservations, []);
+    assert.deepEqual(await dispatched, []);
+    assert.equal(calls.dispatched.length, 0);
+});
+
+test("requestCaseAnalyses: a failed dispatch is logged and never rejects", async () => {
+    const { dependencies } = makeRequestDependencies({
+        dispatchError: new Error("dispatch failed"),
+    });
+
+    let outcomes;
+    const logged = await withCapturedErrors(async () => {
+        const { reservations, dispatched } = await requestCaseAnalyses(
+            caseAnalysesRequest(),
+            dependencies
+        );
+        assert.equal(reservations.length, 2);
+        outcomes = await dispatched;
+    });
+
+    assert.deepEqual(outcomes, []);
+    assert.equal(logged.length, 1);
+    assert.equal(logged[0][1].caseId, 42);
+    assert.equal(logged[0][1].error.message, "dispatch failed");
+});
+
+test("requestCaseAnalyses: rejects when the insert fails, before any dispatch", async () => {
+    const { calls, dependencies } = makeRequestDependencies();
+    dependencies.insertRequested = async () => {
+        throw new Error("insert failed");
+    };
+
+    await assert.rejects(requestCaseAnalyses(caseAnalysesRequest(), dependencies), /insert failed/);
+    assert.equal(calls.dispatched.length, 0);
 });
 
 // ─── copies of a case (#1038) ────────────────────────────────────────────────

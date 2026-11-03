@@ -11,6 +11,8 @@ import {
 import {
     buildCaseCreatedContext,
     dispatchCaseCreatedHook,
+    requestCaseAnalyses,
+    resolveCaseAnalysisServiceIds,
 } from "../helpers/case-lifecycle-helper.js";
 import externalServicesRegistry from "../services/external-services.service.js";
 
@@ -20,6 +22,10 @@ import externalServicesRegistry from "../services/external-services.service.js";
  * Only the case creator can read or change them: they are review material for
  * the teacher and must not be exposed to students or to other teachers browsing
  * public cases. Students get 403 from requireRole and other teachers get 404.
+ *
+ * The author chooses the services when creating the case (POST /cases) and can
+ * add others later (POST /cases/:id/analyses, #1039), also to a case in use or
+ * archived: an analysis changes neither the case nor what activities showed.
  *
  * A copy of a case (duplicate, import, or the case copied with a design)
  * inherits the source's ready analyses and requests the other services the
@@ -111,6 +117,8 @@ const defaultDependencies = {
     getCaseText,
     dispatchGeneration,
     describeServices:  serviceIds => describeServices(serviceIds),
+    resolveServiceIds: resolveCaseAnalysisServiceIds,
+    requestAnalyses:   requestCaseAnalyses,
 };
 
 function errorResponse(status, message, code, extra = {}) {
@@ -123,6 +131,12 @@ const analysisNotFound = () => errorResponse(
     404,
     "The service was not chosen for this case.",
     "CASE_ANALYSIS_NOT_FOUND"
+);
+
+const serviceInvalid = () => errorResponse(
+    400,
+    "Each analysis service must be an enabled case-scoped service.",
+    "CASE_ANALYSIS_SERVICE_INVALID"
 );
 
 const analysisProcessing = () => errorResponse(
@@ -172,6 +186,20 @@ async function describeServicesSafely(serviceIds, dependencies) {
     }
 }
 
+// The case's analyses as GET /cases/:id/analyses lists them.
+async function describedAnalyses(caseId, dependencies) {
+    const rows = await dependencies.listAnalyses(caseId);
+    const descriptions = await describeServicesSafely(
+        rows.map(row => row.service_id),
+        dependencies
+    );
+
+    return rows.map(row => {
+        const { ui, usable } = descriptions.get(row.service_id) ?? UNDESCRIBED_SERVICE;
+        return { ...serializeCaseAnalysis(row), ui, usable };
+    });
+}
+
 /**
  * Lists the services chosen for the case with their status, without
  * documents. Each entry also carries `ui: { component, translations }` and
@@ -186,16 +214,48 @@ export async function listCaseAnalysesForOwner({
         return caseNotFound();
     }
 
-    const rows = await dependencies.listAnalyses(caseId);
-    const descriptions = await describeServicesSafely(
-        rows.map(row => row.service_id),
-        dependencies
-    );
+    return okResponse(await describedAnalyses(caseId, dependencies));
+}
 
-    return okResponse(rows.map(row => {
-        const { ui, usable } = descriptions.get(row.service_id) ?? UNDESCRIBED_SERVICE;
-        return { ...serializeCaseAnalysis(row), ui, usable };
-    }));
+/**
+ * Adds services to the case's choice (#1039). `serviceIds` must be a
+ * non-empty list of case-scoped services the current AI service policy allows
+ * (resolveCaseAnalysisServiceIds). Each service the case has not chosen yet is
+ * reserved for its first generation and dispatched through `case-created`,
+ * with the case's render job; services already chosen are left as they are
+ * ("Generate again" regenerates them). Answers 202 with the case's analyses,
+ * as GET /cases/:id/analyses lists them.
+ */
+export async function addCaseAnalysesForOwner({
+    caseId,
+    userId,
+    serviceIds,
+    dependencies = defaultDependencies,
+}) {
+    if (!Array.isArray(serviceIds) || serviceIds.length === 0) {
+        return serviceInvalid();
+    }
+
+    const caseRow = await dependencies.getOwnedCase(caseId, userId);
+    if (!caseRow) {
+        return caseNotFound();
+    }
+
+    const choice = await dependencies.resolveServiceIds(serviceIds);
+    if (!choice.valid) {
+        return serviceInvalid();
+    }
+
+    // Fire-and-forget: `dispatched` never rejects, and the adapters record
+    // their progress in the analysis rows.
+    await dependencies.requestAnalyses({
+        caseRow,
+        serviceIds:     choice.serviceIds,
+        userId,
+        pdfRenderJobId: caseRow.pdf_render_job_id ?? null,
+    });
+
+    return okResponse(await describedAnalyses(caseId, dependencies), 202);
 }
 
 export async function getCaseAnalysisForOwner({
@@ -351,6 +411,16 @@ export function createCaseAnalysesRouter(dependencies = defaultDependencies) {
     router.get("/cases/:id/analyses", teacherCaseRoute(
         ({ caseId, userId }) => listCaseAnalysesForOwner({ caseId, userId, dependencies }),
         "Failed to load the case analyses"
+    ));
+
+    router.post("/cases/:id/analyses", teacherCaseRoute(
+        ({ req, caseId, userId }) => addCaseAnalysesForOwner({
+            caseId,
+            userId,
+            serviceIds: req.body?.serviceIds,
+            dependencies,
+        }),
+        "Failed to add the case analyses"
     ));
 
     router.get("/cases/:id/analyses/:serviceId", teacherCaseRoute(
