@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
     completeCaseAnalysis,
+    copyReadyCaseAnalyses,
     failCaseAnalysis,
     getCaseAnalysis,
     insertRequestedCaseAnalyses,
@@ -62,6 +63,25 @@ test("insertRequestedCaseAnalyses: sends no query when no service was chosen", a
 
     assert.deepEqual(rows, []);
     assert.equal(calls.length, 0);
+});
+
+test("copyReadyCaseAnalyses: copies ready rows with a document, without job, requester or review", async () => {
+    const { query, calls } = makeQuery([{ service_id: "svc-a" }]);
+
+    const rows = await copyReadyCaseAnalyses({ sourceCaseId: 5, targetCaseId: 9 }, query);
+
+    assert.deepEqual(rows, [{ service_id: "svc-a" }]);
+    assert.deepEqual(calls[0].sqlParams, [5, 9]);
+    assert.ok(calls[0].sql.includes(
+        "INSERT INTO case_analyses (case_id, service_id, status, document_schema, document, "
+            + "error_code, error_message, requested_at, generated_at) "
+            + "SELECT $2, source.service_id, 'ready',"
+    ));
+    assert.ok(calls[0].sql.includes(
+        "WHERE source.case_id = $1 AND source.status = 'ready' AND source.document IS NOT NULL"
+    ));
+    assert.match(calls[0].sql, /ON CONFLICT \(case_id, service_id\) DO NOTHING RETURNING service_id;$/);
+    assert.doesNotMatch(calls[0].sql, /job_id|reviewed_|requested_by/);
 });
 
 test("listCaseAnalyses: selects the analyses of a case without their documents", async () => {

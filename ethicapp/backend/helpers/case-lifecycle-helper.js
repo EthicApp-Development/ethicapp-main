@@ -1,6 +1,10 @@
 import externalServicesRegistry from "../services/external-services.service.js";
 import { dispatchReservedGenerations } from "./analysis-dispatch-helper.js";
-import { releaseUnstartedCaseAnalysis } from "./case-analyses-helper.js";
+import {
+    insertRequestedCaseAnalyses,
+    listCaseAnalyses,
+    releaseUnstartedCaseAnalysis,
+} from "./case-analyses-helper.js";
 
 export const CASE_CREATED_HOOK = "case-created";
 
@@ -127,4 +131,71 @@ export async function dispatchCaseCreatedHook(
         release: ({ case_id: caseId, service_id: serviceId, job_id: jobId }) =>
             releaseReservation({ caseId, serviceId, jobId }),
     });
+}
+
+/**
+ * Requests the analyses a copy of a case did not inherit (#1038), once the
+ * copy is committed: copyReadyCaseAnalyses() gave it the source's ready
+ * analyses, and each other service the source chose (requested, processing,
+ * or failed without a document) is reserved for the copy's first generation,
+ * with the copying teacher as requester, and dispatched through `case-created`
+ * as POST /cases does. A service the current AI service policy no longer
+ * allows for cases is left out, as it would be at creation. A source without
+ * chosen services reserves nothing.
+ *
+ * Meant to be called fire-and-forget after the copy's answer: it never
+ * rejects, and logs what fails instead.
+ *
+ * @param {Object} copy
+ * @param {number} copy.sourceCaseId - The case that was copied.
+ * @param {Object} copy.copiedCase - The copy's `ethical_cases` row (see
+ *     buildCaseCreatedContext()).
+ * @param {number} copy.userId - The teacher who made the copy.
+ * @param {number|null} [copy.pdfRenderJobId] - The copy's render job, if any.
+ * @param {Object} [dependencies] - Overrides for tests.
+ * @returns {Promise<Array>} Settled handler outcomes, or [] when nothing ran.
+ */
+export async function requestCaseCopyAnalyses(
+    { sourceCaseId, copiedCase, userId, pdfRenderJobId = null },
+    {
+        registry = externalServicesRegistry,
+        listAnalyses = listCaseAnalyses,
+        insertRequested = insertRequestedCaseAnalyses,
+        dispatch = dispatchCaseCreatedHook,
+    } = {}
+) {
+    const caseId = toPositiveInteger(copiedCase?.id);
+
+    try {
+        const sourceServiceIds = (await listAnalyses(sourceCaseId))
+            .map(row => row.service_id);
+        if (!caseId || sourceServiceIds.length === 0) {
+            return [];
+        }
+
+        await registry.initialize();
+        const allowed = new Set(await registry.getUsableServiceIdsForScope("case"));
+        // The inherited analyses are already the copy's rows, so the insert
+        // reserves only the services the copy lacks.
+        const reservations = await insertRequested({
+            caseId,
+            serviceIds: sourceServiceIds.filter(serviceId => allowed.has(serviceId)),
+            userId,
+        });
+        if (reservations.length === 0) {
+            return [];
+        }
+
+        return await dispatch(
+            buildCaseCreatedContext(copiedCase, { userId, pdfRenderJobId }),
+            { reservations, registry }
+        );
+    } catch (error) {
+        console.error("[case-analyses] Could not request the analyses of a case copy.", {
+            sourceCaseId,
+            caseId,
+            error,
+        });
+        return [];
+    }
 }

@@ -20,6 +20,8 @@ import {
     copyCaseDocuments,
     normalizeCaseDocumentSummaries,
 } from "../helpers/case-documents.js";
+import { copyReadyCaseAnalyses } from "../helpers/case-analyses-helper.js";
+import { requestCaseCopyAnalyses } from "../helpers/case-lifecycle-helper.js";
 import { copyReadyDesignAnalyses } from "../helpers/design-analyses-helper.js";
 import { checkDesignCase } from "../helpers/design-case-association.js";
 import { isCaseCopyableBy, isListedDesignImportableBy } from "../helpers/design-import.js";
@@ -57,6 +59,11 @@ import {
 
 const router = express.Router();
 const uploadsRoot = path.resolve(process.cwd(), uploadsPath);
+// What a case copied with a design requests once it is committed (#1038).
+// Tests replace it with a fake.
+export const designCaseCopyServices = {
+    requestCopyAnalyses: requestCaseCopyAnalyses,
+};
 const MAX_SEMANTIC_TAGS = 5;
 const DESIGN_IN_USE_CODE = "DESIGN_IN_USE";
 
@@ -314,6 +321,19 @@ async function getUniqueDesignCopyTitle(client, userId, baseTitle, languageCode)
     return buildLocalizedCopyTitle(baseTitle, languageCode, Date.now());
 }
 
+// The helpers' query signature over a transaction's client.
+function transactionQuery(client) {
+    return ({ sql, sqlParams }) => client.query(sql, sqlParams).then(({ rows }) => rows);
+}
+
+/**
+ * Gives the teacher a copy of a case, inside the caller's transaction. Unless
+ * `options.forceNew` is set, a copy the teacher already has of the case (or of
+ * its original) is reused. Returns null when the teacher may not copy the
+ * case, and otherwise `{ caseId, copy }`: `copy` is
+ * `{ sourceCaseId, copiedCase }` when a new copy was made, which holds the
+ * source's ready analyses (#1038), and null when an existing one is reused.
+ */
 async function copyCaseForUser(client, sourceCaseId, userId, visibility = PRIVATE_VISIBILITY, options = {}) {
     if (!sourceCaseId) {
         return null;
@@ -353,7 +373,7 @@ async function copyCaseForUser(client, sourceCaseId, userId, visibility = PRIVAT
         LIMIT 1;
     `, [userId, sourceCase.id, rootCaseId]);
     if (!options.forceNew && existingResult.rows[0]?.id) {
-        return existingResult.rows[0].id;
+        return { caseId: existingResult.rows[0].id, copy: null };
     }
 
     const nextIdResult = await client.query("SELECT nextval(pg_get_serial_sequence('ethical_cases', 'id')) AS id;");
@@ -371,7 +391,7 @@ async function copyCaseForUser(client, sourceCaseId, userId, visibility = PRIVAT
              language_code)
         VALUES
             ($1, $2, $3, $4, $5, $6, $7, $8, $9, COALESCE($10, $11), $12, $13, $14, $15, $16, true, $17)
-        RETURNING id;
+        RETURNING id, case_uuid, title, pdf_path, language_code, visibility;
     `, [
         caseId,
         sourceCase.title,
@@ -427,8 +447,14 @@ async function copyCaseForUser(client, sourceCaseId, userId, visibility = PRIVAT
 
     await copyCaseVideos(client, sourceCase.id, caseId);
     await copyCaseDocuments(client, sourceCase.id, caseId);
+    // The copy keeps the source's ready analyses (#1038).
+    await copyReadyCaseAnalyses(
+        { sourceCaseId: sourceCase.id, targetCaseId: caseId },
+        transactionQuery(client)
+    );
 
-    return inserted.rows[0].id;
+    const copiedCase = inserted.rows[0];
+    return { caseId: copiedCase.id, copy: { sourceCaseId: sourceCase.id, copiedCase } };
 }
 
 // The designs a teacher may read: their own and the public ones, with the
@@ -451,17 +477,38 @@ function designInUseResponse(res) {
     });
 }
 
-// After a design copy is committed (#848): its case is rendered when it has no
-// render yet, so analyses and screens get its text, and the copy, a new
-// design, requests the analyses it did not inherit (design-created). Both run
-// in the background, after the answer.
-function scheduleCopyFollowUp(designId, caseId, userId) {
-    if (caseId) {
-        ensureCasePdfRenderJob(caseId, { metadata: { reason: "design_copied" } })
-            .catch(error => console.error("Unable to queue PDF render job for a copied case:", {
-                caseId,
-                error,
-            }));
+/**
+ * After a case copied with a design is committed (`caseCopy` from
+ * copyCaseForUser): the case is rendered when it has no render yet, so
+ * analyses and screens get its text, and a new copy then requests the case
+ * analyses it did not inherit (#1038). It runs in the background, after the
+ * answer.
+ */
+function scheduleCaseCopyFollowUp(caseCopy, userId, reason) {
+    const { caseId, copy } = caseCopy;
+    ensureCasePdfRenderJob(caseId, { metadata: { reason } })
+        .catch(error => {
+            console.error("Unable to queue PDF render job for a copied case:", { caseId, error });
+            return null;
+        })
+        .then(renderJob => copy && designCaseCopyServices.requestCopyAnalyses({
+            sourceCaseId:   copy.sourceCaseId,
+            copiedCase:     copy.copiedCase,
+            userId,
+            pdfRenderJobId: renderJob?.pdf_render_job_id ?? null,
+        }))
+        .catch(error => console.error("Unable to request the analyses of a copied case:", {
+            caseId,
+            error,
+        }));
+}
+
+// After a design copy is committed (#848): its case follows up as above, and
+// the copy, a new design, requests the analyses it did not inherit
+// (design-created). Both run in the background, after the answer.
+function scheduleCopyFollowUp(designId, caseCopy, userId) {
+    if (caseCopy) {
+        scheduleCaseCopyFollowUp(caseCopy, userId, "design_copied");
     }
     scheduleDesignAnalyses(designId, { trigger: DESIGN_HOOK_TRIGGERS.CREATED, userId });
 }
@@ -912,6 +959,7 @@ router.patch("/designs/:id/toggle_public", async (req, res) => {
 
             const nextVisibility = isPublicVisibility(design.visibility) ? PRIVATE_VISIBILITY : PUBLIC_VISIBILITY;
             let nextCaseId = design.case_id;
+            let caseCopy = null;
 
             if (nextVisibility === PUBLIC_VISIBILITY) {
                 if (!design.license_code) {
@@ -937,7 +985,8 @@ router.patch("/designs/:id/toggle_public", async (req, res) => {
                                 WHERE id = $1 AND creator = $2;
                             `, [design.case_id, sessionUid]);
                         } else if (req.body?.publishCaseCopy === true) {
-                            nextCaseId = await copyCaseForUser(client, design.case_id, sessionUid, PUBLIC_VISIBILITY, { forceNew: true });
+                            caseCopy = await copyCaseForUser(client, design.case_id, sessionUid, PUBLIC_VISIBILITY, { forceNew: true });
+                            nextCaseId = caseCopy?.caseId ?? null;
                             if (!nextCaseId) {
                                 await client.query("ROLLBACK");
                             return res.status(409).json({
@@ -967,7 +1016,7 @@ router.patch("/designs/:id/toggle_public", async (req, res) => {
             `, [nextVisibility, nextVisibility === PUBLIC_VISIBILITY, nextCaseId, designId]);
             await client.query("COMMIT");
 
-            return res.json({
+            const response = res.json({
                 status: "ok",
                 result: {
                     id: designId,
@@ -976,6 +1025,10 @@ router.patch("/designs/:id/toggle_public", async (req, res) => {
                     caseId: nextCaseId,
                 },
             });
+            if (caseCopy) {
+                scheduleCaseCopyFollowUp(caseCopy, sessionUid, "design_published");
+            }
+            return response;
         } catch (error) {
             await client.query("ROLLBACK");
             throw error;
@@ -1157,9 +1210,10 @@ router.post("/designs/:id/duplicate", async (req, res) => {
                 visibility: PRIVATE_VISIBILITY,
             });
 
-            const copiedCaseId = design.case_id
+            const caseCopy = design.case_id
                 ? await copyCaseForUser(client, design.case_id, sessionUid, PRIVATE_VISIBILITY)
                 : null;
+            const copiedCaseId = caseCopy?.caseId ?? null;
             if (design.case_id && !copiedCaseId) {
                 await client.query("ROLLBACK");
                 return res.status(409).json({
@@ -1221,7 +1275,7 @@ router.post("/designs/:id/duplicate", async (req, res) => {
             if (result.rows[0]?.id) {
                 const copyId = result.rows[0].id;
                 const response = res.json({ status: "ok", id: copyId, caseId: copiedCaseId });
-                scheduleCopyFollowUp(copyId, copiedCaseId, sessionUid);
+                scheduleCopyFollowUp(copyId, caseCopy, sessionUid);
                 return response;
             }
 

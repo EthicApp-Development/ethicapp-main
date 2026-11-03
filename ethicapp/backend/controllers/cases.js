@@ -32,9 +32,13 @@ import { moveUploadedFile, pdfUpload, removeUploadedFile } from "../middleware/u
 import {
     buildCaseCreatedContext,
     dispatchCaseCreatedHook,
+    requestCaseCopyAnalyses,
     resolveCaseAnalysisServiceIds,
 } from "../helpers/case-lifecycle-helper.js";
-import { insertRequestedCaseAnalyses } from "../helpers/case-analyses-helper.js";
+import {
+    copyReadyCaseAnalyses,
+    insertRequestedCaseAnalyses,
+} from "../helpers/case-analyses-helper.js";
 import { associableCaseSql } from "../helpers/design-case-association.js";
 import { applyCaseVisibility, countDesignsKeepingCaseAccess } from "../helpers/case-visibility.js";
 import {
@@ -77,6 +81,11 @@ const caseVideoServices = {
 // The availability service of the case documents. Tests replace it with a fake.
 export const caseDocumentServices = {
     availabilityService: googleDocumentAvailability,
+};
+// What a copy of a case requests once it is committed (#1038). Tests replace
+// it with a fake.
+export const caseCopyServices = {
+    requestCopyAnalyses: requestCaseCopyAnalyses,
 };
 const uploadsRoot = path.resolve(process.cwd(), uploadsPath);
 const MAX_SEMANTIC_TAGS = 5;
@@ -1200,6 +1209,29 @@ router.patch("/cases/:id", pdfUpload, async (req, res) => {
     }
 });
 
+// The helpers' query signature over a transaction's client.
+function transactionQuery(client) {
+    return ({ sql, sqlParams }) => client.query(sql, sqlParams).then(({ rows }) => rows);
+}
+
+// After a copy of a case is committed and its render queued: requests, in the
+// background, the analyses the source chose that the copy did not inherit
+// (#1038). Nothing it does affects the answer.
+function scheduleCaseCopyAnalyses(sourceCaseId, copiedCase, userId) {
+    Promise.resolve()
+        .then(() => caseCopyServices.requestCopyAnalyses({
+            sourceCaseId,
+            copiedCase,
+            userId,
+            pdfRenderJobId: copiedCase.pdf_render_job_id ?? null,
+        }))
+        .catch(error => console.error("Unable to request the analyses of a case copy:", {
+            sourceCaseId,
+            caseId: copiedCase.id,
+            error,
+        }));
+}
+
 router.post("/cases/:id/import", async (req, res) => {
     if (!requireRole(req, res, "P")) {
         return;
@@ -1322,6 +1354,11 @@ router.post("/cases/:id/import", async (req, res) => {
 
         await copyCaseVideos(client, sourceCase.id, importedCaseId);
         await copyCaseDocuments(client, sourceCase.id, importedCaseId);
+        // The copy keeps the source's ready analyses (#1038).
+        await copyReadyCaseAnalyses(
+            { sourceCaseId: sourceCase.id, targetCaseId: importedCaseId },
+            transactionQuery(client)
+        );
 
         const importedCase = await client.query(`
             SELECT c.id, c.case_uuid, c.title, c.author_firstname, c.author_lastname, c.author_email,
@@ -1341,7 +1378,9 @@ router.post("/cases/:id/import", async (req, res) => {
             Object.assign(caseObj, renderJob);
         }
 
-        return res.status(201).json({ status: "ok", result: normalizeCase(caseObj) });
+        const response = res.status(201).json({ status: "ok", result: normalizeCase(caseObj) });
+        scheduleCaseCopyAnalyses(sourceCase.id, caseObj, req.session.uid);
+        return response;
     } catch (error) {
         await client.query("ROLLBACK");
         console.error("Error importing case:", error);
@@ -1468,6 +1507,11 @@ router.post("/cases/:id/duplicate", async (req, res) => {
 
         await copyCaseVideos(client, sourceCase.id, duplicatedCaseId);
         await copyCaseDocuments(client, sourceCase.id, duplicatedCaseId);
+        // The copy keeps the source's ready analyses (#1038).
+        await copyReadyCaseAnalyses(
+            { sourceCaseId: sourceCase.id, targetCaseId: duplicatedCaseId },
+            transactionQuery(client)
+        );
 
         const duplicatedCase = await client.query(`
             SELECT c.id, c.case_uuid, c.title, c.author_firstname, c.author_lastname, c.author_email,
@@ -1487,7 +1531,9 @@ router.post("/cases/:id/duplicate", async (req, res) => {
             Object.assign(caseObj, renderJob);
         }
 
-        return res.status(201).json({ status: "ok", result: normalizeCase(caseObj) });
+        const response = res.status(201).json({ status: "ok", result: normalizeCase(caseObj) });
+        scheduleCaseCopyAnalyses(sourceCase.id, caseObj, req.session.uid);
+        return response;
     } catch (error) {
         await client.query("ROLLBACK");
         console.error("Error duplicating case:", error);

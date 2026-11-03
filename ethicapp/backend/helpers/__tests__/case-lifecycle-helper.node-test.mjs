@@ -4,6 +4,7 @@ import {
     CASE_CREATED_HOOK,
     buildCaseCreatedContext,
     dispatchCaseCreatedHook,
+    requestCaseCopyAnalyses,
     resolveCaseAnalysisServiceIds,
 } from "../case-lifecycle-helper.js";
 
@@ -268,5 +269,159 @@ test("resolveCaseAnalysisServiceIds: rejects values that are not a JSON list of 
         const choice = await resolveCaseAnalysisServiceIds(value, { registry });
 
         assert.equal(choice.valid, false, value);
+    }
+});
+
+// ─── copies of a case (#1038) ────────────────────────────────────────────────
+
+const SOURCE_CASE_ID = 41;
+const COPIED_CASE = { ...CREATED_CASE, id: 99, title: "Autonomous vehicles (copy)" };
+
+/**
+ * Fakes for requestCaseCopyAnalyses: the source's analyses, the case services
+ * the policy allows, and an insert that reserves the requested services the
+ * copy does not have yet (`inherited`), as ON CONFLICT DO NOTHING does.
+ */
+function makeCopyDependencies({
+    sourceServiceIds = [],
+    allowedServiceIds = [],
+    inherited = [],
+    failures = {},
+} = {}) {
+    const calls = { listed: [], inserted: [], dispatched: [] };
+    const registry = makeCaseRegistry(allowedServiceIds);
+
+    return {
+        calls,
+        registry,
+        dependencies: {
+            registry,
+            listAnalyses: async caseId => {
+                calls.listed.push(caseId);
+                if (failures.list) {
+                    throw failures.list;
+                }
+                return sourceServiceIds.map(serviceId => ({ case_id: caseId, service_id: serviceId }));
+            },
+            insertRequested: async args => {
+                calls.inserted.push(args);
+                if (failures.insert) {
+                    throw failures.insert;
+                }
+                return args.serviceIds
+                    .filter(serviceId => !inherited.includes(serviceId))
+                    .map(serviceId => ({
+                        case_id:    args.caseId,
+                        service_id: serviceId,
+                        job_id:     `job-${serviceId}`,
+                        status:     "requested",
+                    }));
+            },
+            dispatch: async (context, options) => {
+                calls.dispatched.push({ context, options });
+                if (failures.dispatch) {
+                    throw failures.dispatch;
+                }
+                return [{ status: "fulfilled", value: undefined }];
+            },
+        },
+    };
+}
+
+const copyRequest = (overrides = {}) => ({
+    sourceCaseId:   SOURCE_CASE_ID,
+    copiedCase:     COPIED_CASE,
+    userId:         8,
+    pdfRenderJobId: 77,
+    ...overrides,
+});
+
+test("requestCaseCopyAnalyses: reserves the source's other choices for the copy and dispatches them", async () => {
+    const { calls, registry, dependencies } = makeCopyDependencies({
+        sourceServiceIds:  ["svc-ready", "svc-failed", "svc-processing"],
+        allowedServiceIds: ["svc-ready", "svc-failed", "svc-processing"],
+        inherited:         ["svc-ready"],
+    });
+
+    const outcomes = await requestCaseCopyAnalyses(copyRequest(), dependencies);
+
+    assert.deepEqual(calls.listed, [SOURCE_CASE_ID]);
+    assert.equal(registry.initialized, true);
+    // The copying teacher requests them; the insert skips the inherited one.
+    assert.deepEqual(calls.inserted, [{
+        caseId:     99,
+        serviceIds: ["svc-ready", "svc-failed", "svc-processing"],
+        userId:     8,
+    }]);
+    assert.equal(calls.dispatched.length, 1);
+    const [{ context, options }] = calls.dispatched;
+    assert.deepEqual(context, buildCaseCreatedContext(COPIED_CASE, { userId: 8, pdfRenderJobId: 77 }));
+    assert.deepEqual(
+        options.reservations.map(reservation => reservation.service_id),
+        ["svc-failed", "svc-processing"],
+        "only the copy's new reservations are dispatched"
+    );
+    assert.equal(options.registry, registry);
+    assert.equal(outcomes.length, 1);
+});
+
+test("requestCaseCopyAnalyses: leaves out services the current policy does not allow for cases", async () => {
+    const { calls, dependencies } = makeCopyDependencies({
+        sourceServiceIds:  ["svc-allowed", "svc-switched-off"],
+        allowedServiceIds: ["svc-allowed"],
+    });
+
+    await requestCaseCopyAnalyses(copyRequest(), dependencies);
+
+    assert.deepEqual(calls.inserted[0].serviceIds, ["svc-allowed"]);
+    assert.deepEqual(
+        calls.dispatched[0].options.reservations.map(reservation => reservation.service_id),
+        ["svc-allowed"]
+    );
+});
+
+test("requestCaseCopyAnalyses: dispatches nothing when every choice is inherited or not allowed", async () => {
+    const inherited = makeCopyDependencies({
+        sourceServiceIds:  ["svc-ready"],
+        allowedServiceIds: ["svc-ready"],
+        inherited:         ["svc-ready"],
+    });
+    assert.deepEqual(await requestCaseCopyAnalyses(copyRequest(), inherited.dependencies), []);
+    assert.equal(inherited.calls.dispatched.length, 0);
+
+    const notAllowed = makeCopyDependencies({ sourceServiceIds: ["svc-switched-off"] });
+    assert.deepEqual(await requestCaseCopyAnalyses(copyRequest(), notAllowed.dependencies), []);
+    assert.deepEqual(notAllowed.calls.inserted[0].serviceIds, []);
+    assert.equal(notAllowed.calls.dispatched.length, 0);
+});
+
+test("requestCaseCopyAnalyses: a source without chosen services requests nothing", async () => {
+    const { calls, registry, dependencies } = makeCopyDependencies({
+        allowedServiceIds: ["svc-case"],
+    });
+
+    assert.deepEqual(await requestCaseCopyAnalyses(copyRequest(), dependencies), []);
+    assert.equal(registry.initialized, false, "the registry is not read");
+    assert.equal(calls.inserted.length, 0);
+    assert.equal(calls.dispatched.length, 0);
+});
+
+test("requestCaseCopyAnalyses: never rejects, and logs what failed", async () => {
+    for (const step of ["list", "insert", "dispatch"]) {
+        const { dependencies } = makeCopyDependencies({
+            sourceServiceIds:  ["svc-case"],
+            allowedServiceIds: ["svc-case"],
+            failures:          { [step]: new Error(`${step} failed`) },
+        });
+
+        let outcomes;
+        const logged = await withCapturedErrors(async () => {
+            outcomes = await requestCaseCopyAnalyses(copyRequest(), dependencies);
+        });
+
+        assert.deepEqual(outcomes, [], step);
+        assert.equal(logged.length, 1, step);
+        assert.equal(logged[0][1].error.message, `${step} failed`);
+        assert.equal(logged[0][1].caseId, 99);
     }
 });
