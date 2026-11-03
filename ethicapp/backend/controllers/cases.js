@@ -35,6 +35,7 @@ import {
 import { insertRequestedCaseAnalyses } from "../helpers/case-analyses-helper.js";
 import { associableCaseSql } from "../helpers/design-case-association.js";
 import { applyCaseVisibility } from "../helpers/case-visibility.js";
+import { caseUsageJsonSql, normalizeCaseUsage } from "../helpers/case-usage.js";
 import {
     caseVideoSummariesFromIds,
     caseVideosJsonSql,
@@ -199,6 +200,8 @@ function normalizeCase(row) {
         languageCode: row.language_code || DEFAULT_LANGUAGE_CODE,
         archived: row.archived === true,
         hasLaunchedDesignActivity: row.has_launched_design_activity === true,
+        // Only for the queries that select it: the teacher's own and archived cases.
+        ...(row.case_usage === undefined ? {} : { usage: normalizeCaseUsage(row.case_usage) }),
         authors: Array.isArray(row.authors) && row.authors.length > 0
             ? row.authors
             : [{
@@ -624,6 +627,8 @@ router.get("/cases", async (req, res) => {
     const scope = String(req.query.scope || "own").trim().toLowerCase();
     const isPublicScope = scope === "public";
     const isArchivedScope = scope === "archived";
+    // Other teachers' use of a case is reported only to its author (#1011).
+    const usageSelectSql = isPublicScope ? "" : `${caseUsageJsonSql("c", "$1")} AS case_usage,`;
 
     try {
         const cases = await rpg2.execSQL({
@@ -632,6 +637,7 @@ router.get("/cases", async (req, res) => {
                 SELECT c.id, c.case_uuid, c.title, c.author_firstname, c.author_lastname, c.author_email,
                        c.pdf_path, c.creator, c.created_at, c.updated_at,
                        ${caseSharingSelectSql},
+                       ${usageSelectSql}
                        ${pdfRenderJobSelectSql}
                 FROM ethical_cases c
                 ${pdfRenderJobJoinSql}
