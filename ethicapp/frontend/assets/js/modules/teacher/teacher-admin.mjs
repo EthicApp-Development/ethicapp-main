@@ -14,6 +14,9 @@ import { CaseAnalysesService } from "../../services/case-analyses.service.js";
 import {
     CaseAnalysisAddDialogService,
 } from "../../services/case-analysis-add-dialog.service.js";
+import {
+    CaseAnalysisRemoveDialogService,
+} from "../../services/case-analysis-remove-dialog.service.js";
 import { DesignAnalysesService } from "../../services/design-analyses.service.js";
 import { ExternalServicesCatalogService } from "../../services/external-services-catalog.service.js";
 import { LanguageCatalogService } from "../../services/language-catalog.service.js";
@@ -59,6 +62,8 @@ app.factory("ActivityStateService", ["$http", "TeacherSocketService", ActivitySt
     .factory("CaseAnalysesService", ["$http", CaseAnalysesService])
     .factory("CaseAnalysisAddDialogService",
         ["$uibModal", "CaseAnalysesService", CaseAnalysisAddDialogService])
+    .factory("CaseAnalysisRemoveDialogService",
+        ["$uibModal", "CaseAnalysesService", CaseAnalysisRemoveDialogService])
     .factory("DesignAnalysesService", ["$http", DesignAnalysesService])
     .factory("TutorModesService", ["$http", TutorModesService])
     .factory("LanguageCatalogService", ["$http", "$translate", LanguageCatalogService])

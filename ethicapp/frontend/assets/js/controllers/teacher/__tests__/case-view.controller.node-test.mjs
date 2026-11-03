@@ -239,6 +239,17 @@ describe("CaseViewController", () => {
         assert.equal(calls.toasts.at(-1).message, "ethical_cases_import_success");
     });
 
+    it("confirms a removed analysis with a toast (#1040)", async () => {
+        const { vm, calls } = createView();
+        await vm.ready;
+
+        vm.handleAnalysisRemoved("Mock analysis");
+
+        assert.equal(calls.toasts.at(-1).message, "case_analysis_remove_notice");
+        assert.equal(calls.toasts.at(-1).className, undefined);
+        assert.equal(calls.toasts.at(-1).containerClass, "cases-toast-container");
+    });
+
     it("shows another teacher's copy they already have", async () => {
         const { vm } = createView({
             item:     caseItem({ creator: 700, visibility: "public", public: true }),
@@ -466,6 +477,8 @@ describe("cases.view.html", () => {
             /<case-view-tabs[^>]*material-count="cv\.view\.materialCount"[^>]*show-rights="true"/u);
         assert.match(template, /<case-view-material>\s*<case-material/u);
         assert.match(template, /<case-view-rights>/u);
+        assert.match(template,
+            /<case-view-tabs[^>]*on-analysis-removed="cv\.handleAnalysisRemoved\(title\)"/u);
     });
 
     it("links to a new design with the case before the primary action (#1019)", () => {

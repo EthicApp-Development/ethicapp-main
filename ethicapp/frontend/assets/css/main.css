@@ -4570,8 +4570,12 @@ tr.group-summary {
     font-size: 12px;
 }
 
-.case-analysis-generate-button,
-.case-analysis-generate-progress {
+/* "Generate again" and "Remove analysis" (#1040), at the end of the header. */
+.case-analysis-panel-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
     margin-left: auto;
 }
 

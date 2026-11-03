@@ -115,7 +115,9 @@
             case-item="$ctrl.caseItem"
             summary="analysis"
             on-analysis-changed="$ctrl.handleAnalysisChanged(analysis)"
-            on-generate="$ctrl.generateAnalysis(serviceId)">
+            on-generate="$ctrl.generateAnalysis(serviceId)"
+            removable="$ctrl.canRemoveAnalyses()"
+            on-remove="$ctrl.removeAnalysis(serviceId)">
         </case-analysis-panel>
     </div>
 

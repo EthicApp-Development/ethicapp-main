@@ -75,6 +75,23 @@ export function CaseAnalysesService($http) {
             }
         },
 
+        /**
+         * Removes a service from the case's choice (#1040), with its result
+         * and the teacher's edits. A 404 `CASE_ANALYSIS_NOT_FOUND` means it
+         * was removed already, for example from another tab, so it resolves
+         * too. Other failures reject with the HTTP response.
+         */
+        async removeAnalysis(caseId, serviceId) {
+            try {
+                await $http.delete(analysisUrl(caseId, serviceId));
+            } catch (error) {
+                if (error?.status === 404 && error?.data?.code === "CASE_ANALYSIS_NOT_FOUND") {
+                    return;
+                }
+                throw error;
+            }
+        },
+
         // Stores a teacher edit, validated by the service's adapter. Rejects
         // with the HTTP response on 400 (`data.details`), 405 and 409.
         async saveAnalysis(caseId, serviceId, document) {

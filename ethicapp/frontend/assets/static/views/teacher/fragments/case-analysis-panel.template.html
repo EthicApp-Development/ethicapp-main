@@ -13,17 +13,30 @@
                     · {{ 'case_analysis_reviewed_at' | translate:{ date: ($ctrl.summary.reviewedAt | date:'yyyy-MM-dd HH:mm') } }}
                 </span>
             </span>
-            <button
-                type="button"
-                class="btn btn-default btn-sm case-analysis-generate-button"
-                ng-if="$ctrl.canGenerate() && !$ctrl.confirmingGenerate"
-                ng-click="$ctrl.askToGenerate()">
-                <i class="fa-solid fa-rotate" aria-hidden="true"></i>
-                {{ 'case_analysis_generate_again' | translate }}
-            </button>
-            <span class="case-analysis-generate-progress text-muted" ng-if="$ctrl.generating">
-                <i class="fa-solid fa-circle-notch fa-spin" aria-hidden="true"></i>
-                {{ 'case_analysis_generate_requesting' | translate }}
+            <span class="case-analysis-panel-actions">
+                <button
+                    type="button"
+                    class="btn btn-default btn-sm case-analysis-generate-button"
+                    ng-if="$ctrl.canGenerate() && !$ctrl.confirmingGenerate"
+                    ng-click="$ctrl.askToGenerate()">
+                    <i class="fa-solid fa-rotate" aria-hidden="true"></i>
+                    {{ 'case_analysis_generate_again' | translate }}
+                </button>
+                <span class="case-analysis-generate-progress text-muted" ng-if="$ctrl.generating">
+                    <i class="fa-solid fa-circle-notch fa-spin" aria-hidden="true"></i>
+                    {{ 'case_analysis_generate_requesting' | translate }}
+                </span>
+                <!-- "Remove analysis" (#1040), for the case's creator; the
+                     tabs open its confirmation dialog. -->
+                <button
+                    type="button"
+                    class="btn btn-default btn-sm case-analysis-remove-button"
+                    ng-if="$ctrl.canRemove()"
+                    ng-disabled="$ctrl.removing || $ctrl.generating"
+                    ng-click="$ctrl.askToRemove()">
+                    <i class="fa-solid fa-trash-can" aria-hidden="true"></i>
+                    {{ 'case_analysis_remove_action' | translate }}
+                </button>
             </span>
         </div>
 
@@ -53,7 +66,7 @@
             <div class="alert alert-info" ng-if="$ctrl.state() === 'pending'">
                 <i class="fa-solid fa-circle-notch fa-spin" aria-hidden="true"></i>
                 {{ 'case_analysis_pending_message' | translate }}
-                <span ng-if="$ctrl.hasDocument()">{{ 'case_analysis_previous_result_note' | translate }}</span>
+                <span ng-if="$ctrl.showsPreviousResult()">{{ 'case_analysis_previous_result_note' | translate }}</span>
             </div>
 
             <div class="alert alert-warning" ng-if="$ctrl.state() === 'stuck'">

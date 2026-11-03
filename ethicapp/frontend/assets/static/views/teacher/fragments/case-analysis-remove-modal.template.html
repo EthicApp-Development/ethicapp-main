@@ -1,0 +1,32 @@
+<!-- The case view's "Remove analysis" dialog (#1040). "Cancel" has the
+     initial focus; "Remove" waits while the request runs, and so do Escape
+     and the backdrop. -->
+<div class="modal-header">
+    <button type="button" class="close" ng-click="$ctrl.cancel()" ng-disabled="$ctrl.submitting" aria-label="{{ 'cancel' | translate }}">
+        <span aria-hidden="true">&times;</span>
+    </button>
+    <h4 id="caseAnalysisRemoveTitle" class="modal-title"
+        ng-bind-html="('case_analysis_remove_title' | translate:{ title: $ctrl.title })"></h4>
+</div>
+<div id="caseAnalysisRemoveBody" class="modal-body" aria-busy="{{ $ctrl.submitting ? 'true' : 'false' }}">
+    <p class="case-analysis-remove-text">{{ 'case_analysis_remove_body' | translate }}</p>
+    <p class="case-analysis-remove-in-flight text-warning" ng-if="$ctrl.inFlight">
+        <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+        {{ 'case_analysis_remove_in_flight' | translate }}
+    </p>
+
+    <div class="alert alert-danger case-analysis-remove-error" ng-if="$ctrl.errorKey" role="alert">
+        {{ $ctrl.errorKey | translate }}
+    </div>
+</div>
+<div class="modal-footer">
+    <button type="button" class="btn btn-default case-analysis-remove-cancel" autofocus
+        ng-disabled="$ctrl.submitting"
+        ng-click="$ctrl.cancel()">{{ 'cancel' | translate }}</button>
+    <button type="button" class="btn btn-danger case-analysis-remove-confirm"
+        ng-disabled="$ctrl.submitting"
+        ng-click="$ctrl.confirm()">
+        <i class="fa-solid fa-spinner fa-spin" aria-hidden="true" ng-if="$ctrl.submitting"></i>
+        {{ ($ctrl.submitting ? 'case_analysis_remove_submitting' : 'case_analysis_remove_confirm') | translate }}
+    </button>
+</div>

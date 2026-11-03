@@ -3,7 +3,8 @@
 // the status and the latest error, offers "Generate again" with a
 // confirmation, and renders the document with the component registered for
 // the service (see case-analysis-component-host) or with a generic read-only
-// view.
+// view. For the case's creator (`canRemove`) it also offers "Remove analysis"
+// (#1040), which the case view tabs confirm and carry out (`onRemove`).
 
 import {
     canRegenerateCaseAnalysis,
@@ -14,6 +15,7 @@ import {
     genericCaseAnalysisFields,
     hasLatestGenerationFailed,
     resolveCaseAnalysisComponent,
+    showsPreviousCaseAnalysisResult,
 } from "../helpers/case-analyses.js";
 
 const GENERATE_NOTICES = Object.freeze({
@@ -32,6 +34,8 @@ function CaseAnalysisPanelController($scope, CaseAnalysesService) {
     vm.loadFailed = false;
     vm.confirmingGenerate = false;
     vm.generating = false;
+    // True while the "Remove analysis" dialog is open.
+    vm.removing = false;
     vm.notice = null;
     vm.genericFields = [];
 
@@ -104,6 +108,12 @@ function CaseAnalysisPanelController($scope, CaseAnalysesService) {
         return document !== null && document !== undefined;
     };
 
+    // "Meanwhile, the previous result is shown below": only when the document
+    // shown is from a generation before the one in flight.
+    vm.showsPreviousResult = function() {
+        return showsPreviousCaseAnalysisResult(vm.summary, vm.detail);
+    };
+
     vm.componentName = function() {
         return vm.summary?.ui?.component ?? null;
     };
@@ -160,6 +170,33 @@ function CaseAnalysisPanelController($scope, CaseAnalysesService) {
         }
     };
 
+    vm.canRemove = function() {
+        return vm.removable === true && typeof vm.onRemove === "function";
+    };
+
+    // The case view tabs ask for the confirmation and remove the tab once the
+    // analysis is removed, which destroys this panel; on cancel it stays.
+    vm.askToRemove = async function() {
+        const serviceId = vm.summary?.serviceId;
+        if (!serviceId || vm.removing || !vm.canRemove()) {
+            return;
+        }
+
+        vm.confirmingGenerate = false;
+        vm.notice = null;
+        vm.removing = true;
+        try {
+            await vm.onRemove({ serviceId });
+        } catch (error) {
+            console.error("[caseAnalysisPanel] Could not remove the analysis.", error);
+        } finally {
+            if (!destroyed) {
+                vm.removing = false;
+                $scope.$applyAsync();
+            }
+        }
+    };
+
     // A registered component stored an edit: keep its document and update the tab.
     vm.handleAnalysisUpdated = function(analysis) {
         if (!analysis) {
@@ -177,6 +214,9 @@ export default {
         summary:           "<",
         onAnalysisChanged: "&",
         onGenerate:        "&",
+        // Whether the teacher is the case's creator, who can remove it.
+        removable:         "<?",
+        onRemove:          "&?",
     },
     controller:  ["$scope", "CaseAnalysesService", CaseAnalysisPanelController],
     templateUrl: "/assets/static/views/teacher/fragments/case-analysis-panel.template.html",

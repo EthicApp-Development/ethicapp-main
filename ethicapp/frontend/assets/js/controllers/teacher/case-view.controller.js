@@ -93,6 +93,11 @@ export function CaseViewController($scope, $routeParams, $interval, $translate, 
         showToast(key, { className: "alert-danger", timeout: TOAST_ERROR_TIMEOUT_MS });
     };
 
+    // The tabs removed an analysis (#1040).
+    vm.handleAnalysisRemoved = function(title) {
+        showToast("case_analysis_remove_notice", { params: { title } });
+    };
+
     // Loading
 
     vm.refresh = function() {
