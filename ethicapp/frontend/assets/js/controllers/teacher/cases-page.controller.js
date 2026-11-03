@@ -13,6 +13,9 @@
 // (`?status=in-use&q=...`, `helpers/cases-filters.js`). Switching tabs clears
 // them, as the tabs' links do.
 //
+// Deleting asks first (`CaseDeleteConfirmService`), and every row action
+// ends with a notice that names its result (#1017).
+//
 // The view and the case forms keep `CasesController`.
 
 import {
@@ -49,6 +52,25 @@ import {
     statusFilterFromSearch,
     statusFilterSearchValue,
 } from "../../helpers/cases-filters.js";
+import {
+    DELETE_CHOICE_ARCHIVE,
+    DELETE_CHOICE_DELETE,
+    NOTICE_ACTION_EDIT_COPY,
+    NOTICE_ACTION_SHOW_IN_MINE,
+    NOTICE_ACTION_UNDO_ARCHIVE,
+    NOTICE_TIMEOUT_MS,
+    archiveFailureNotice,
+    archiveNotice,
+    caseTitle,
+    deleteFailureNotice,
+    deleteNotice,
+    duplicateFailureNotice,
+    duplicateNotice,
+    findCaseTitle,
+    isCodedDeleteRefusal,
+    restoreFailureNotice,
+    restoreNotice,
+} from "../../helpers/case-action-feedback.js";
 
 // The page's own URL search keys, which are not carried to the next page.
 const PAGE_SEARCH_KEYS = ["tab", "status", "q"];
@@ -64,12 +86,6 @@ const TOAST_VISIBILITY_TIMEOUT_MS = 12 * 1000;
 // How often the rows of cases whose PDF is being processed are refreshed.
 const DOCUMENT_PROCESSING_POLL_MS = 5000;
 
-// The refusals of DELETE /cases/:id, until the delete dialog (#1017).
-const DELETE_ERROR_KEYS = {
-    CASE_USED_BY_LAUNCHED_ACTIVITY: "case_cannot_delete_used_by_activity",
-    CASE_USED_BY_OTHER_TEACHERS:    "cases_delete_refused_other_teachers",
-};
-
 function initialVisibleCounts() {
     return {
         [CASES_TAB_MINE]:     CASES_PAGE_SIZE,
@@ -79,7 +95,8 @@ function initialVisibleCounts() {
 }
 
 export function CasesPageController($scope, $location, $translate, $interval, toast,
-    CasesCatalogService, LanguageCatalogService, CasePublicationNoticeService) {
+    CasesCatalogService, LanguageCatalogService, CasePublicationNoticeService,
+    $timeout, CaseDeleteConfirmService) {
 
     const vm = this;
 
@@ -373,7 +390,52 @@ export function CasesPageController($scope, $location, $translate, $interval, to
         }
     };
 
-    // Row actions. Their notices stay the previous page's until #1017.
+    // Notices after row actions and imports (#1017): one at a time, for a few
+    // seconds, and dismissible. Built by `helpers/case-action-feedback.js`.
+
+    vm.notice = null;
+    let noticeTimer = null;
+
+    function cancelNoticeTimer() {
+        if (noticeTimer) {
+            $timeout.cancel(noticeTimer);
+            noticeTimer = null;
+        }
+    }
+
+    $scope.$on("$destroy", cancelNoticeTimer);
+
+    vm.showNotice = function(notice) {
+        cancelNoticeTimer();
+        vm.notice = notice;
+        noticeTimer = $timeout(() => {
+            noticeTimer = null;
+            if (vm.notice === notice) {
+                vm.notice = null;
+            }
+        }, NOTICE_TIMEOUT_MS);
+        $scope.$applyAsync();
+    };
+
+    vm.dismissNotice = function() {
+        cancelNoticeTimer();
+        vm.notice = null;
+    };
+
+    // A notice's links: "Edit copy" opens the copy in the editor, "View in My
+    // cases" opens that tab, and "Undo" restores the case just archived.
+    vm.runNoticeAction = async function(action) {
+        vm.dismissNotice();
+        if (action?.id === NOTICE_ACTION_EDIT_COPY) {
+            $scope.navigateTo(`/cases/${action.caseId}/edit`);
+        } else if (action?.id === NOTICE_ACTION_SHOW_IN_MINE) {
+            vm.selectTab(CASES_TAB_MINE);
+        } else if (action?.id === NOTICE_ACTION_UNDO_ARCHIVE) {
+            await withBusy(action.caseId, () => setArchived(action.caseId, false));
+        }
+    };
+
+    // Row actions. Each one stays on the page and its tab.
 
     async function withBusy(id, run) {
         if (vm.busy[id]) {
@@ -388,6 +450,10 @@ export function CasesPageController($scope, $location, $translate, $interval, to
         }
     }
 
+    function findCase(id) {
+        return [...cases.own, ...cases.archived].find(item => item?.id === id) || null;
+    }
+
     async function copyCase(id) {
         try {
             const copy = await CasesCatalogService.duplicateCase(id);
@@ -395,15 +461,17 @@ export function CasesPageController($scope, $location, $translate, $interval, to
             return copy;
         } catch (error) {
             console.error("[CasesPageController] Error duplicating case.", error);
-            vm.showErrorToast("ethical_cases_duplicate_error");
+            vm.showNotice(duplicateFailureNotice());
             return null;
         }
     }
 
-    // "Duplicate" stays on the page and tab.
+    // "Duplicate" names the copy, with "Edit copy".
     async function duplicate(id) {
-        if (await copyCase(id)) {
-            vm.showInfoToast("ethical_cases_duplicate_success");
+        const copy = await copyCase(id);
+        if (copy) {
+            vm.showNotice(duplicateNotice(copy.id,
+                caseTitle(copy) || findCaseTitle(cases.own, copy.id)));
         }
     }
 
@@ -415,28 +483,64 @@ export function CasesPageController($scope, $location, $translate, $interval, to
         }
     }
 
+    // "Archive" names the case, with "Undo"; "Restore" names it too.
     async function setArchived(id, archived) {
+        const title = caseTitle(findCase(id));
         try {
             await CasesCatalogService.updateCaseArchived(id, archived);
             await vm.reloadFromCatalog();
-            vm.showInfoToast(archived
-                ? "ethical_cases_archive_success"
-                : "ethical_cases_unarchive_success");
+            vm.showNotice(archived ? archiveNotice(id, title) : restoreNotice(title));
         } catch (error) {
             console.error("[CasesPageController] Error updating archived status.", error);
-            vm.showErrorToast("ethical_cases_archive_error");
+            vm.showNotice(archived ? archiveFailureNotice() : restoreFailureNotice());
         }
     }
 
-    // Deleting keeps the previous page's behavior until its dialog (#1017).
+    // After a coded refusal the lists were stale, and the catalog did not
+    // reload them: they are fetched again, so the row says why the case
+    // cannot be deleted, or the case leaves the list.
+    async function reloadStaleLists() {
+        try {
+            const [own, shared, archived] = await Promise.all([
+                CasesCatalogService.getCases(true),
+                CasesCatalogService.getPublicCases(true),
+                CasesCatalogService.getArchivedCases(true),
+            ]);
+            cases = { own, shared, archived };
+            vm.refresh();
+        } catch (error) {
+            console.warn("[CasesPageController] Could not reload cases.", error);
+        }
+    }
+
+    // Deleting asks first, and offers to archive instead unless the case is
+    // archived already. Its copies are kept; the teacher's designs that use
+    // it lose their case.
     async function deleteCase(id) {
+        const caseItem = findCase(id);
+        const title = caseTitle(caseItem);
+        const choice = await CaseDeleteConfirmService.confirm({
+            caseId:   id,
+            title,
+            archived: cases.archived.some(item => item?.id === id),
+        });
+        if (choice === DELETE_CHOICE_ARCHIVE) {
+            await setArchived(id, true);
+            return;
+        }
+        if (choice !== DELETE_CHOICE_DELETE) {
+            return;
+        }
         try {
             await CasesCatalogService.deleteCase(id);
             await vm.reloadFromCatalog();
-            vm.showInfoToast("ethical_cases_delete_success");
+            vm.showNotice(deleteNotice(title));
         } catch (error) {
             console.error("[CasesPageController] Error deleting case.", error);
-            vm.showErrorToast(DELETE_ERROR_KEYS[error?.data?.code] || "ethical_cases_delete_error");
+            vm.showNotice(deleteFailureNotice(error));
+            if (isCodedDeleteRefusal(error)) {
+                await reloadStaleLists();
+            }
         }
     }
 

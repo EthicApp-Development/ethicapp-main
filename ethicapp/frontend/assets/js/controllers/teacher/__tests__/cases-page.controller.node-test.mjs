@@ -1,6 +1,7 @@
 // The Cases page (#1013, epic #1008): the tab lives in the URL, rows run
-// their actions through the catalog, and the share switch keeps the
-// publication dialog. AngularJS services are fakes.
+// their actions through the catalog, deleting asks first and every action
+// ends with a notice (#1017), and the share switch keeps the publication
+// dialog. AngularJS services are fakes.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
@@ -39,13 +40,18 @@ function makeCases() {
     };
 }
 
-function createPage({ search = {}, catalog = {}, confirmAnswer = true } = {}) {
+function createPage({
+    search = {}, catalog = {}, confirmAnswer = true, deleteAnswer = "delete",
+} = {}) {
     const scopeHandlers = {};
     const calls = {
         navigated:  [], toasts:     [], pushes:     [], replaces:   [], duplicated: [],
         archived:   [], deleted:    [], visibility: [], imported:   [], confirms:   0,
         polled:     [], intervals:  [], cancelled:  [],
     };
+    // The delete dialogs opened, the notices' timers and the forced reloads.
+    Object.assign(calls,
+        { deleteDialogs: [], timeouts: [], cancelledTimeouts: [], forcedLoads: 0 });
     let current = { ...search };
     const lists = makeCases();
 
@@ -92,9 +98,21 @@ function createPage({ search = {}, catalog = {}, confirmAnswer = true } = {}) {
     };
     $interval.cancel = timer => calls.cancelled.push(timer);
     const toast = { create: options => calls.toasts.push(options) };
+    // Timeouts run only when the test says so.
+    const $timeout = (fn, delay) => {
+        const timer = { fn, delay };
+        calls.timeouts.push(timer);
+        return timer;
+    };
+    $timeout.cancel = timer => calls.cancelledTimeouts.push(timer);
 
     const CasesCatalogService = {
-        getCases:                  async () => lists.own,
+        getCases: async (force) => {
+            if (force) {
+                calls.forcedLoads += 1;
+            }
+            return lists.own;
+        },
         getPublicCases:            async () => lists.shared,
         getArchivedCases:          async () => lists.archived,
         getCaseDocumentProcessing: async (id) => {
@@ -133,9 +151,17 @@ function createPage({ search = {}, catalog = {}, confirmAnswer = true } = {}) {
         },
     };
 
+    const CaseDeleteConfirmService = {
+        confirm: async (dialog) => {
+            calls.deleteDialogs.push(dialog);
+            return deleteAnswer;
+        },
+    };
+
     const vm = {};
     CasesPageController.call(vm, $scope, $location, $translate, $interval, toast,
-        CasesCatalogService, LanguageCatalogService, CasePublicationNoticeService);
+        CasesCatalogService, LanguageCatalogService, CasePublicationNoticeService,
+        $timeout, CaseDeleteConfirmService);
 
     return {
         vm,
@@ -158,6 +184,12 @@ function createPage({ search = {}, catalog = {}, confirmAnswer = true } = {}) {
 const rowOf = (vm, id, tab = "mine") => vm.getRows(tab).find(row => row.id === id);
 const entryOf = (row, id) => row.menu.find(entry => entry.id === id);
 const toastMessages = calls => calls.toasts.map(entry => entry.message);
+const noticeOf = vm => vm.notice && {
+    key:     vm.notice.messageKey,
+    params:  vm.notice.params,
+    tone:    vm.notice.tone,
+    actions: vm.notice.actions.map(action => [action.id, action.caseId]),
+};
 
 function quietly(run) {
     const originalError = console.error;
@@ -437,56 +469,160 @@ describe("cases page, row actions", () => {
             await vm.ready;
             await vm.runAction(rowOf(vm, 4), rowOf(vm, 4).primary);
             assert.deepEqual(calls.navigated, []);
-            assert.deepEqual(toastMessages(calls), ["ethical_cases_duplicate_error"]);
+            assert.deepEqual(noticeOf(vm), {
+                key: "cases_notice_duplicate_failed", params: {}, tone: "danger", actions: [],
+            });
             assert.deepEqual(vm.busy, {});
         });
     });
 
-    it("duplicates from the menu, staying on the tab with the copy listed", async () => {
+    it("duplicates from the menu, staying on the tab and naming the copy", async () => {
         const { vm, calls } = createPage();
         await vm.ready;
         await vm.runAction(rowOf(vm, 1), entryOf(rowOf(vm, 1), "duplicate"));
         assert.deepEqual(calls.navigated, []);
         assert.equal(vm.tab, "mine");
         assert.ok(rowOf(vm, 99));
-        assert.deepEqual(toastMessages(calls), ["ethical_cases_duplicate_success"]);
+        assert.deepEqual(noticeOf(vm), {
+            key:     "cases_notice_duplicated",
+            params:  { title: "Copy" },
+            tone:    "success",
+            actions: [["edit-copy", 99]],
+        });
+        assert.deepEqual(toastMessages(calls), []);
     });
 
-    it("archives from the menu and restores from the Archived tab", async () => {
+    it("opens the copy in the editor from its notice", async () => {
+        const { vm, calls } = createPage();
+        await vm.ready;
+        await vm.runAction(rowOf(vm, 1), entryOf(rowOf(vm, 1), "duplicate"));
+        await vm.runNoticeAction(vm.notice.actions[0]);
+        assert.deepEqual(calls.navigated, ["/cases/99/edit"]);
+        assert.equal(vm.notice, null);
+    });
+
+    it("archives from the menu, naming the case, and Undo restores it", async () => {
         const { vm, calls } = createPage();
         await vm.ready;
         await vm.runAction(rowOf(vm, 1), entryOf(rowOf(vm, 1), "archive"));
+        assert.deepEqual(noticeOf(vm), {
+            key:     "cases_notice_archived",
+            params:  { title: "Ready" },
+            tone:    "success",
+            actions: [["undo-archive", 1]],
+        });
+        await vm.runNoticeAction(vm.notice.actions[0]);
+        assert.deepEqual(calls.archived, [[1, true], [1, false]]);
+        assert.equal(noticeOf(vm).key, "cases_notice_restored");
+        assert.equal(vm.tab, "mine");
+        assert.deepEqual(vm.busy, {});
+    });
+
+    it("restores from the Archived tab, naming the case and staying on the tab", async () => {
+        const { vm, calls } = createPage({ search: { tab: "archived" } });
+        await vm.ready;
         const archived = rowOf(vm, 6, "archived");
         await vm.runAction(archived, archived.primary);
-        assert.deepEqual(calls.archived, [[1, true], [6, false]]);
-        assert.deepEqual(toastMessages(calls),
-            ["ethical_cases_archive_success", "ethical_cases_unarchive_success"]);
+        assert.deepEqual(calls.archived, [[6, false]]);
+        assert.deepEqual(noticeOf(vm), {
+            key: "cases_notice_restored", params: { title: "Gone" }, tone: "success", actions: [],
+        });
+        assert.equal(vm.tab, "archived");
+    });
+
+    it("says when archiving or restoring fails", async () => {
+        await quietly(async () => {
+            const { vm } = createPage({
+                catalog: { updateCaseArchived: async () => { throw new Error("nope"); } },
+            });
+            await vm.ready;
+            await vm.runAction(rowOf(vm, 1), entryOf(rowOf(vm, 1), "archive"));
+            assert.equal(noticeOf(vm).key, "cases_notice_archive_failed");
+            const archived = rowOf(vm, 6, "archived");
+            await vm.runAction(archived, archived.primary);
+            assert.equal(noticeOf(vm).key, "cases_notice_restore_failed");
+            assert.equal(noticeOf(vm).tone, "danger");
+        });
+    });
+
+    it("asks before deleting, then names the deleted case", async () => {
+        const { vm, calls } = createPage();
+        await vm.ready;
+        await vm.runAction(rowOf(vm, 1), entryOf(rowOf(vm, 1), "delete"));
+        assert.deepEqual(calls.deleteDialogs, [{ caseId: 1, title: "Ready", archived: false }]);
+        assert.deepEqual(calls.deleted, [1]);
+        assert.deepEqual(noticeOf(vm), {
+            key: "cases_notice_deleted", params: { title: "Ready" }, tone: "success", actions: [],
+        });
         assert.equal(vm.tab, "mine");
     });
 
-    it("deletes a case nobody else uses, and not one that is disabled", async () => {
+    it("does not open the dialog for a case whose Delete is disabled", async () => {
         const { vm, calls } = createPage();
         await vm.ready;
         await vm.runAction(rowOf(vm, 4), entryOf(rowOf(vm, 4), "delete"));
         await vm.runAction(rowOf(vm, 5), entryOf(rowOf(vm, 5), "delete"));
+        assert.deepEqual(calls.deleteDialogs, []);
         assert.deepEqual(calls.deleted, []);
-        await vm.runAction(rowOf(vm, 1), entryOf(rowOf(vm, 1), "delete"));
-        assert.deepEqual(calls.deleted, [1]);
-        assert.deepEqual(toastMessages(calls), ["ethical_cases_delete_success"]);
     });
 
-    it("explains a refused delete", async () => {
+    it("tells the dialog an archived case is archived", async () => {
+        const { vm, calls } = createPage({ search: { tab: "archived" } });
+        await vm.ready;
+        const archived = rowOf(vm, 6, "archived");
+        await vm.runAction(archived, entryOf(archived, "delete"));
+        assert.deepEqual(calls.deleteDialogs, [{ caseId: 6, title: "Gone", archived: true }]);
+    });
+
+    it("changes nothing when the teacher cancels the dialog", async () => {
+        const { vm, calls } = createPage({ deleteAnswer: "cancel" });
+        await vm.ready;
+        await vm.runAction(rowOf(vm, 1), entryOf(rowOf(vm, 1), "delete"));
+        assert.deepEqual(calls.deleted, []);
+        assert.deepEqual(calls.archived, []);
+        assert.equal(vm.notice, null);
+        assert.deepEqual(vm.busy, {});
+    });
+
+    it("archives instead when the teacher chooses so, with Undo", async () => {
+        const { vm, calls } = createPage({ deleteAnswer: "archive" });
+        await vm.ready;
+        await vm.runAction(rowOf(vm, 1), entryOf(rowOf(vm, 1), "delete"));
+        assert.deepEqual(calls.deleted, []);
+        assert.deepEqual(calls.archived, [[1, true]]);
+        assert.deepEqual(noticeOf(vm).actions, [["undo-archive", 1]]);
+    });
+
+    it("explains a refused delete in red and reloads the stale lists", async () => {
+        await quietly(async () => {
+            for (const [code, key] of [
+                ["CASE_USED_BY_OTHER_TEACHERS", "cases_notice_delete_used_by_other_teachers"],
+                ["CASE_USED_BY_LAUNCHED_ACTIVITY", "cases_notice_delete_used_by_activity"],
+                ["CASE_NOT_FOUND", "cases_notice_delete_not_found"],
+            ]) {
+                const { vm, calls } = createPage({
+                    catalog: { deleteCase: async () => { throw { data: { code } }; } },
+                });
+                await vm.ready;
+                const loadsBefore = calls.forcedLoads;
+                await vm.runAction(rowOf(vm, 1), entryOf(rowOf(vm, 1), "delete"));
+                assert.deepEqual(noticeOf(vm),
+                    { key, params: {}, tone: "danger", actions: [] }, code);
+                assert.equal(calls.forcedLoads, loadsBefore + 1, code);
+            }
+        });
+    });
+
+    it("says when a delete fails for another reason, without reloading", async () => {
         await quietly(async () => {
             const { vm, calls } = createPage({
-                catalog: {
-                    deleteCase: async () => {
-                        throw { data: { code: "CASE_USED_BY_OTHER_TEACHERS" } };
-                    },
-                },
+                catalog: { deleteCase: async () => { throw new Error("down"); } },
             });
             await vm.ready;
+            const loadsBefore = calls.forcedLoads;
             await vm.runAction(rowOf(vm, 1), entryOf(rowOf(vm, 1), "delete"));
-            assert.deepEqual(toastMessages(calls), ["cases_delete_refused_other_teachers"]);
+            assert.equal(noticeOf(vm).key, "cases_notice_delete_failed");
+            assert.equal(calls.forcedLoads, loadsBefore);
         });
     });
 
@@ -613,6 +749,7 @@ describe("cases page, Shared by others", () => {
 describe("cases page template", () => {
     it("uses its own controller and keeps each tab in its own fragment", () => {
         assert.match(template, /ng-controller="CasesPageController as cp"/u);
+        assert.match(template, /fragments\/cases-action-notice\.template\.html/u);
         assert.doesNotMatch(template, /CasesController/u);
         for (const name of ["cases-own-tab", "cases-shared-tab", "cases-archived-tab"]) {
             assert.match(template, new RegExp(`fragments/${name}\\.template\\.html`, "u"));
@@ -655,5 +792,67 @@ describe("cases page template", () => {
         const shared = fragment("cases-shared-tab");
         assert.match(shared, /<case-card/u);
         assert.match(shared, /on-import="cp\.importCase"/u);
+    });
+});
+
+describe("cases page, notices", () => {
+    it("shows one notice at a time, each for a few seconds", async () => {
+        const { vm, calls } = createPage();
+        await vm.ready;
+        const first = { messageKey: "first", params: {}, tone: "success", actions: [] };
+        const second = { messageKey: "second", params: {}, tone: "success", actions: [] };
+        vm.showNotice(first);
+        vm.showNotice(second);
+        assert.equal(vm.notice, second);
+        assert.deepEqual(calls.cancelledTimeouts, [calls.timeouts[0]]);
+        assert.equal(calls.timeouts[1].delay, 8000);
+        // The first notice's timer is cancelled; had it run, it keeps the second.
+        calls.timeouts[0].fn();
+        assert.equal(vm.notice, second);
+        calls.timeouts[1].fn();
+        assert.equal(vm.notice, null);
+    });
+
+    it("dismisses a notice, and stops its timer when the page goes away", async () => {
+        const { vm, calls, destroy } = createPage();
+        await vm.ready;
+        vm.showNotice({ messageKey: "shown", params: {}, tone: "success", actions: [] });
+        vm.dismissNotice();
+        assert.equal(vm.notice, null);
+        assert.deepEqual(calls.cancelledTimeouts, [calls.timeouts[0]]);
+        vm.showNotice({ messageKey: "again", params: {}, tone: "success", actions: [] });
+        destroy();
+        assert.deepEqual(calls.cancelledTimeouts, [calls.timeouts[0], calls.timeouts[1]]);
+    });
+
+    it("runs an import notice's links: Edit copy and View in My cases", async () => {
+        const { vm, calls } = createPage({ search: { tab: "shared" } });
+        await vm.ready;
+        const notice = {
+            messageKey: "cases_notice_imported",
+            params:     { title: "Theirs (copy)" },
+            tone:       "success",
+            actions:    [
+                { id: "edit-copy", key: "cases_notice_edit_copy", caseId: 98 },
+                { id: "show-in-mine", key: "cases_notice_show_in_mine", caseId: 98 },
+            ],
+        };
+        vm.showNotice(notice);
+        await vm.runNoticeAction(notice.actions[1]);
+        assert.equal(vm.tab, "mine");
+        assert.equal(vm.notice, null);
+        vm.showNotice(notice);
+        await vm.runNoticeAction(notice.actions[0]);
+        assert.deepEqual(calls.navigated, ["/cases/98/edit"]);
+    });
+
+    it("draws the notice in a live region, with its links and a dismiss button", () => {
+        const notice = fragment("cases-action-notice");
+        assert.match(notice, /class="cases-notice-region" role="status" aria-live="polite"/u);
+        assert.match(notice,
+            /ng-bind-html="cp\.notice\.messageKey \| translate:cp\.notice\.params"/u);
+        assert.match(notice, /ng-click="cp\.runNoticeAction\(action\)"/u);
+        assert.match(notice, /class="close cases-notice-dismiss"/u);
+        assert.match(notice, /'alert-danger' : 'alert-success'/u);
     });
 });

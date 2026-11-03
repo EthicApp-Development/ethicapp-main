@@ -8,6 +8,7 @@ import { DesignPublicationService } from "../../services/design-publication.serv
 import { CaseVideoPickerService } from "../../services/case-video-picker.service.js";
 import { CasePublicationNoticeService } from "../../services/case-publication-notice.service.js";
 import { DesignDeleteConfirmService } from "../../services/design-delete-confirm.service.js";
+import { CaseDeleteConfirmService } from "../../services/case-delete-confirm.service.js";
 import { CasesCatalogService } from "../../services/cases-catalog.service.js";
 import { CaseAnalysesService } from "../../services/case-analyses.service.js";
 import { DesignAnalysesService } from "../../services/design-analyses.service.js";
@@ -45,6 +46,8 @@ app.factory("ActivityStateService", ["$http", "TeacherSocketService", ActivitySt
     .factory("CaseVideoPickerService", ["$uibModal", CaseVideoPickerService])
     .factory("CasePublicationNoticeService", ["$uibModal", CasePublicationNoticeService])
     .factory("DesignDeleteConfirmService", ["$uibModal", DesignDeleteConfirmService])
+    .factory("CaseDeleteConfirmService",
+        ["$uibModal", "CasesCatalogService", CaseDeleteConfirmService])
     .factory("DesignStateService", ["$rootScope", "$http", DesignStateService])
     .factory("ExternalServicesCatalogService",
         ["$http", "LanguageCatalogService", ExternalServicesCatalogService])
@@ -183,7 +186,7 @@ app.controller("CasesController",
 app.controller("CasesPageController",
     ["$scope", "$location", "$translate", "$interval", "toast",
         "CasesCatalogService", "LanguageCatalogService", "CasePublicationNoticeService",
-        CasesPageController]);
+        "$timeout", "CaseDeleteConfirmService", CasesPageController]);
 app.controller("ErrorController", 
     ["$scope", "$window", "$routeParams",
         ErrorController]);
