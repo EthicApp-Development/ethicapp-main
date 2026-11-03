@@ -29,6 +29,7 @@ import {
     ROW_ACTION_DUPLICATE,
     ROW_ACTION_DUPLICATE_TO_EDIT,
     ROW_ACTION_EDIT,
+    ROW_ACTION_NEW_DESIGN,
     ROW_ACTION_REPLACE_PDF,
     ROW_ACTION_RESTORE,
     ROW_ACTION_VIEW,
@@ -79,6 +80,7 @@ import {
     restoreFailureNotice,
     restoreNotice,
 } from "../../helpers/case-action-feedback.js";
+import { newDesignFromCasePath } from "../../helpers/new-design-from-case.js";
 
 // The page's own URL search keys, which are not carried to the next page.
 const PAGE_SEARCH_KEYS = ["tab", "status", "q"];
@@ -554,12 +556,25 @@ export function CasesPageController($scope, $location, $translate, $interval, to
         [ROW_ACTION_EDIT]:              id => $scope.navigateTo(`/cases/${id}/edit`),
         [ROW_ACTION_REPLACE_PDF]:       id => $scope.navigateTo(`/cases/${id}/edit`),
         [ROW_ACTION_VIEW]:              id => $scope.navigateTo(`/cases/${id}`),
+        [ROW_ACTION_NEW_DESIGN]:        newDesignWithCase,
         [ROW_ACTION_DUPLICATE_TO_EDIT]: duplicateToEdit,
         [ROW_ACTION_DUPLICATE]:         duplicate,
         [ROW_ACTION_ARCHIVE]:           id => setArchived(id, true),
         [ROW_ACTION_RESTORE]:           id => setArchived(id, false),
         [ROW_ACTION_DELETE]:            deleteCase,
     };
+
+    // "New design with this case" (#1019): the design form, with the case
+    // preselected. `navigateTo` sets only the path, so the form's URL is set
+    // whole; the page's history entry keeps its tab and filters for Back.
+    function newDesignWithCase(id) {
+        const path = newDesignFromCasePath(id);
+        if (path) {
+            $scope.$applyAsync(() => {
+                $location.url(path);
+            });
+        }
+    }
 
     vm.runAction = async function(row, action) {
         if (!action || action.disabled || !ACTIONS[action.id]) {

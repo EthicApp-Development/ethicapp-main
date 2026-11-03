@@ -67,6 +67,8 @@ function createPage({
     // The delete dialogs opened, the notices' timers and the forced reloads.
     Object.assign(calls,
         { deleteDialogs: [], timeouts: [], cancelledTimeouts: [], forcedLoads: 0 });
+    // The URLs set whole, with their search (#1019).
+    calls.urls = [];
     let current = { ...search };
     const lists = makeCases();
 
@@ -82,6 +84,9 @@ function createPage({
         },
     };
     const $location = {
+        url(value) {
+            calls.urls.push(value);
+        },
         search(key, value) {
             if (key === undefined) {
                 return { ...current };
@@ -468,6 +473,17 @@ describe("cases page, row actions", () => {
         await vm.runAction(rowOf(vm, 3), rowOf(vm, 3).primary);
         await vm.runAction(rowOf(vm, 2), entryOf(rowOf(vm, 2), "view"));
         assert.deepEqual(calls.navigated, ["/cases/1/edit", "/cases/3/edit", "/cases/2"]);
+    });
+
+    it("opens a new design with the case from the menu, in My cases only (#1019)", async () => {
+        const { vm, calls } = createPage({ search: { status: "in-use" } });
+        await vm.ready;
+        await vm.runAction(rowOf(vm, 4), entryOf(rowOf(vm, 4), "new-design"));
+        assert.deepEqual(calls.urls, ["/designs/new?caseId=4"]);
+        assert.deepEqual(calls.navigated, []);
+        // The page's filters stay in its own history entry, for Back.
+        assert.deepEqual(calls.pushes, []);
+        assert.equal(entryOf(rowOf(vm, 6, "archived"), "new-design"), undefined);
     });
 
     it("duplicates a case in use and opens the copy in the editor", async () => {
@@ -949,6 +965,13 @@ describe("cases page template", () => {
         assert.match(shared, /ng-click="cp\.importCase\(row\)"/u);
         assert.match(shared, /class="cases-shared-view-copy" data-action="view-copy"/u);
         assert.match(shared, /ng-href="#!\/cases\/\{\{ row\.copyId \}\}"/u);
+    });
+
+    it("links each shared row to a new design with the case, as a secondary link (#1019)", () => {
+        const shared = fragment("cases-shared-tab");
+        assert.match(shared,
+            /class="btn btn-link btn-sm cases-shared-new-design" data-action="new-design"/u);
+        assert.match(shared, /ng-href="\{\{ row\.newDesignHref \}\}"/u);
     });
 });
 

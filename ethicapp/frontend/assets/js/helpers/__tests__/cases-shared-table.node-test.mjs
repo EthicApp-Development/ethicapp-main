@@ -70,6 +70,15 @@ describe("shared cases table, rows", () => {
         ]);
     });
 
+    it("links every row to a new design with the case, imported or not (#1019)", () => {
+        const copies = [{ id: 20, importedFromCaseId: 5 }];
+        const rows = buildSharedCaseRows([shared(5), shared(6)], copies);
+        assert.deepEqual(rows.map(row => [row.id, row.importState, row.newDesignHref]), [
+            [5, "imported", "#!/designs/new?caseId=5"],
+            [6, "importable", "#!/designs/new?caseId=6"],
+        ]);
+    });
+
     it("keeps the order of the shared cases, and lists nothing without them", () => {
         const rows = buildSharedCaseRows([shared(9), shared(3)], []);
         assert.deepEqual(rows.map(row => row.id), [9, 3]);

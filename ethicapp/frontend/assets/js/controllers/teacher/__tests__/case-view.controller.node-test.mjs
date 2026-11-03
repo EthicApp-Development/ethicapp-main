@@ -259,8 +259,32 @@ describe("CaseViewController", () => {
         await vm.ready;
 
         assert.equal(vm.view.primary, null);
+        assert.equal(vm.view.newDesign, null);
         // Their activities do not lock another teacher's case for them.
         assert.equal(vm.view.statusInfo.status, "ready");
+    });
+
+    it("offers a new design with an own or shared case, not an archived one (#1019)", async () => {
+        const href = "#!/designs/new?caseId=7";
+        const own = createView();
+        await own.vm.ready;
+        assert.equal(own.vm.view.newDesign.href, href);
+
+        const shared = createView({
+            item: caseItem({ creator: 700, visibility: "public", public: true }),
+            uses: { ownDesigns: [], activityCount: 0 },
+        });
+        await shared.vm.ready;
+        assert.equal(shared.vm.view.newDesign.href, href);
+        assert.equal(shared.vm.view.primary.id, "import");
+
+        const archived = createView({ item: caseItem({ archived: true }) });
+        await archived.vm.ready;
+        assert.equal(archived.vm.view.newDesign, null);
+
+        // Archiving from the view takes it away.
+        await own.vm.runAction(own.vm.view.menu.find(entry => entry.id === "archive"));
+        assert.equal(own.vm.view.newDesign, null);
     });
 
     it("keeps the lock of a case in use when its uses fail", async () => {
@@ -442,5 +466,12 @@ describe("cases.view.html", () => {
             /<case-view-tabs[^>]*material-count="cv\.view\.materialCount"[^>]*show-rights="true"/u);
         assert.match(template, /<case-view-material>\s*<case-material/u);
         assert.match(template, /<case-view-rights>/u);
+    });
+
+    it("links to a new design with the case before the primary action (#1019)", () => {
+        const newDesign = template.indexOf('class="btn btn-default case-view-new-design"');
+        assert.ok(newDesign > 0);
+        assert.ok(newDesign < template.indexOf("case-view-primary"));
+        assert.match(template, /ng-href="\{\{ cv\.view\.newDesign\.href \}\}"/u);
     });
 });
