@@ -11,6 +11,9 @@ import { DesignDeleteConfirmService } from "../../services/design-delete-confirm
 import { CaseDeleteConfirmService } from "../../services/case-delete-confirm.service.js";
 import { CasesCatalogService } from "../../services/cases-catalog.service.js";
 import { CaseAnalysesService } from "../../services/case-analyses.service.js";
+import {
+    CaseAnalysisAddDialogService,
+} from "../../services/case-analysis-add-dialog.service.js";
 import { DesignAnalysesService } from "../../services/design-analyses.service.js";
 import { ExternalServicesCatalogService } from "../../services/external-services-catalog.service.js";
 import { LanguageCatalogService } from "../../services/language-catalog.service.js";
@@ -54,6 +57,8 @@ app.factory("ActivityStateService", ["$http", "TeacherSocketService", ActivitySt
     .factory("UserProfileService", ["$http", "$rootScope", "Upload", UserProfileService])
     .factory("CasesCatalogService", ["$rootScope", "$http", CasesCatalogService])
     .factory("CaseAnalysesService", ["$http", CaseAnalysesService])
+    .factory("CaseAnalysisAddDialogService",
+        ["$uibModal", "CaseAnalysesService", CaseAnalysisAddDialogService])
     .factory("DesignAnalysesService", ["$http", DesignAnalysesService])
     .factory("TutorModesService", ["$http", TutorModesService])
     .factory("LanguageCatalogService", ["$http", "$translate", LanguageCatalogService])

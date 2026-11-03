@@ -54,7 +54,9 @@ function analysis(overrides = {}) {
 
 // `listResults` are returned in order (the last one repeats); a deferred()
 // entry keeps its request pending until the test resolves it.
-function createTabs(listResults, { generate } = {}) {
+// `caseServices` are the usable case services the catalog lists; `dialog`
+// answers the "Add analysis" dialog (#1039), or is a deferred() entry.
+function createTabs(listResults, { generate, caseServices = [], dialog = null } = {}) {
     const results = [...listResults];
     const calls = [];
     const generateCalls = [];
@@ -77,8 +79,24 @@ function createTabs(listResults, { generate } = {}) {
     const $element = [{ querySelector: () => null }];
     const languageCatalog = { getCurrentUiLanguageCode: () => "es_CL" };
 
-    const vm = new CaseViewTabsController($scope, $element, $timeout, service, languageCatalog);
-    return { vm, calls, generateCalls, timers, fire };
+    const serviceRequests = [];
+    const servicesCatalog = {
+        getServices: async (options) => {
+            serviceRequests.push(options);
+            return caseServices;
+        },
+    };
+    const dialogCalls = [];
+    const addDialog = {
+        open: async (options) => {
+            dialogCalls.push(options);
+            return dialog?.promise ?? dialog;
+        },
+    };
+
+    const vm = new CaseViewTabsController($scope, $element, $timeout, service, languageCatalog,
+        servicesCatalog, addDialog);
+    return { vm, calls, generateCalls, timers, fire, serviceRequests, dialogCalls };
 }
 
 function openCase(vm, caseId = 7) {
@@ -327,6 +345,136 @@ describe("caseViewTabs with material and rights (#1018)", () => {
         assert.match(vm.tabId(vm.materialTab), /-tab-material$/);
         assert.match(vm.panelId(vm.rightsTab), /-panel-rights$/);
         assert.notEqual(vm.tabId(vm.rightsTab), vm.tabId("rights"));
+    });
+});
+
+describe("caseViewTabs: Add analysis (#1039)", () => {
+    const SERVICES = [{ id: "mock-case-analysis" }, { id: "case-evaluation" }];
+
+    // Opens the case as its creator would.
+    async function openAsCreator(vm, { canAddAnalyses = true } = {}) {
+        vm.caseItem = { id: 7 };
+        vm.canAddAnalyses = canAddAnalyses;
+        vm.showRights = true;
+        vm.$onChanges({
+            caseItem:       { currentValue: vm.caseItem },
+            canAddAnalyses: { currentValue: canAddAnalyses },
+        });
+        await flush();
+    }
+
+    it("offers it to the creator of a case without analyses", async () => {
+        const { vm, serviceRequests } = createTabs([[]], { caseServices: SERVICES });
+
+        await openAsCreator(vm);
+
+        assert.deepEqual(serviceRequests, [{ scopes: ["case"] }]);
+        assert.equal(vm.canAddAnalysis(), true);
+        assert.equal(vm.hasTabBar(), true);
+    });
+
+    it("offers it while a service is not chosen, and not once all are", async () => {
+        const some = createTabs([[analysis()]], { caseServices: SERVICES });
+        await openAsCreator(some.vm);
+        assert.equal(some.vm.canAddAnalysis(), true);
+
+        const all = createTabs([[analysis(), analysis({ serviceId: "case-evaluation" })]], {
+            caseServices: SERVICES,
+        });
+        await openAsCreator(all.vm);
+        assert.equal(all.vm.canAddAnalysis(), false);
+    });
+
+    it("is not offered to other teachers, without services, or before the list loads", async () => {
+        const other = createTabs([[]], { caseServices: SERVICES });
+        await openAsCreator(other.vm, { canAddAnalyses: false });
+        assert.equal(other.vm.canAddAnalysis(), false);
+        assert.deepEqual(other.serviceRequests, [], "the services are not asked for");
+
+        const none = createTabs([[]], { caseServices: [] });
+        await openAsCreator(none.vm);
+        assert.equal(none.vm.canAddAnalysis(), false);
+
+        const slow = deferred();
+        const loading = createTabs([slow], { caseServices: SERVICES });
+        await openAsCreator(loading.vm);
+        assert.equal(loading.vm.canAddAnalysis(), false);
+        slow.resolve([]);
+        await flush();
+        assert.equal(loading.vm.canAddAnalysis(), true);
+
+        const failed = createTabs([new Error("offline")], { caseServices: SERVICES });
+        const originalError = console.error;
+        console.error = () => {};
+        try {
+            await openAsCreator(failed.vm);
+        } finally {
+            console.error = originalError;
+        }
+        assert.equal(failed.vm.canAddAnalysis(), false);
+    });
+
+    it("shows the new analyses in their processing state, opens the first and polls", async () => {
+        const added = [analysis(), analysis({ serviceId: "case-evaluation", status: "requested" })];
+        const { vm, dialogCalls, timers } = createTabs([[analysis()]], {
+            caseServices: SERVICES,
+            dialog:       added,
+        });
+        await openAsCreator(vm);
+
+        await vm.addAnalyses();
+
+        assert.deepEqual(dialogCalls, [{ caseId: 7, chosenServiceIds: ["mock-case-analysis"] }]);
+        assert.deepEqual(vm.analyses, added);
+        assert.equal(vm.isActive("case-evaluation"), true);
+        assert.equal(timers.size, 1, "the new analysis is polled");
+        assert.equal(vm.canAddAnalysis(), false, "nothing is left to add");
+        assert.equal(vm.adding, false);
+    });
+
+    it("opens one dialog for two quick clicks", async () => {
+        const pending = deferred();
+        const { vm, dialogCalls } = createTabs([[]], { caseServices: SERVICES, dialog: pending });
+        await openAsCreator(vm);
+
+        const first = vm.addAnalyses();
+        const second = vm.addAnalyses();
+        assert.equal(vm.adding, true);
+        pending.resolve(null);
+        await Promise.all([first, second]);
+
+        assert.equal(dialogCalls.length, 1);
+        assert.equal(vm.adding, false);
+    });
+
+    it("keeps the list as it was when the dialog is cancelled", async () => {
+        const { vm, timers } = createTabs([[analysis()]], { caseServices: SERVICES, dialog: null });
+        await openAsCreator(vm);
+        const before = vm.analyses;
+
+        await vm.addAnalyses();
+
+        assert.equal(vm.analyses, before);
+        assert.equal(vm.isActive(null), true);
+        assert.equal(timers.size, 0);
+    });
+
+    it("ignores a list loaded before the analyses were added", async () => {
+        const slow = deferred();
+        const added = [analysis({ status: "requested" })];
+        const { vm, calls } = createTabs([[], slow, added], {
+            caseServices: SERVICES,
+            dialog:       added,
+        });
+        await openAsCreator(vm);
+
+        const refresh = vm.refresh();
+        await vm.addAnalyses();
+        slow.resolve([]);
+        await refresh;
+
+        assert.deepEqual(vm.analyses, added);
+        assert.equal(calls.length, 3, "the stale list is asked for again");
     });
 });
 

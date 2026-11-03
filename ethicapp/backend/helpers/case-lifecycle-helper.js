@@ -37,12 +37,14 @@ function parseServiceIds(value) {
 }
 
 /**
- * Resolves the analysis services a teacher chose when creating a case. Each id
+ * Resolves the analysis services a teacher chose when creating a case, or
+ * later for it (POST /cases/:id/analyses, #1039). Each id
  * must name a usable service with the `case` scope (allowed by the current AI
  * service policy version, with a connection; #815); a value that is not a
  * list of ids is invalid too.
  *
- * @param {unknown} value - The `analysisServiceIds` field of the request.
+ * @param {unknown} value - The `analysisServiceIds` field of the request, or
+ *     the `serviceIds` of POST /cases/:id/analyses.
  * @param {Object} [options]
  * @param {Object} [options.registry] - Registry override for tests.
  * @returns {Promise<{serviceIds: string[], valid: boolean}>} The chosen ids.
@@ -134,12 +136,63 @@ export async function dispatchCaseCreatedHook(
 }
 
 /**
+ * Requests services for an existing case: each one the case has not chosen
+ * yet gets a row reserved for its first generation (insertRequestedCaseAnalyses),
+ * and only those reservations are dispatched through `case-created`, as
+ * POST /cases does. Services the case already has are left as they are, so of
+ * two concurrent requests for a service one reserves and dispatches it. The
+ * caller checks that the services are allowed.
+ *
+ * Resolves once the reservations are stored, with them and `dispatched`, the
+ * promise of their settled handler outcomes. `dispatched` never rejects (a
+ * failure is logged and gives []), so the caller may leave it unawaited.
+ *
+ * @param {Object} request
+ * @param {Object} request.caseRow - The case's `ethical_cases` row (see
+ *     buildCaseCreatedContext()).
+ * @param {string[]} request.serviceIds - The services to request.
+ * @param {number} request.userId - The teacher who requests them.
+ * @param {number|null} [request.pdfRenderJobId] - The case's render job, if any.
+ * @param {Object} [dependencies] - Overrides for tests.
+ * @returns {Promise<{reservations: Array, dispatched: Promise<Array>}>}
+ */
+export async function requestCaseAnalyses(
+    { caseRow, serviceIds, userId, pdfRenderJobId = null },
+    {
+        registry = externalServicesRegistry,
+        insertRequested = insertRequestedCaseAnalyses,
+        dispatch = dispatchCaseCreatedHook,
+    } = {}
+) {
+    const caseId = toPositiveInteger(caseRow?.id);
+    const reservations = await insertRequested({ caseId, serviceIds, userId });
+    if (reservations.length === 0) {
+        return { reservations, dispatched: Promise.resolve([]) };
+    }
+
+    const dispatched = Promise.resolve()
+        .then(() => dispatch(
+            buildCaseCreatedContext(caseRow, { userId, pdfRenderJobId }),
+            { reservations, registry }
+        ))
+        .catch((error) => {
+            console.error("[case-analyses] Could not dispatch the analyses of a case.", {
+                caseId,
+                error,
+            });
+            return [];
+        });
+
+    return { reservations, dispatched };
+}
+
+/**
  * Requests the analyses a copy of a case did not inherit (#1038), once the
  * copy is committed: copyReadyCaseAnalyses() gave it the source's ready
  * analyses, and each other service the source chose (requested, processing,
  * or failed without a document) is reserved for the copy's first generation,
  * with the copying teacher as requester, and dispatched through `case-created`
- * as POST /cases does. A service the current AI service policy no longer
+ * (requestCaseAnalyses). A service the current AI service policy no longer
  * allows for cases is left out, as it would be at creation. A source without
  * chosen services reserves nothing.
  *
@@ -177,19 +230,14 @@ export async function requestCaseCopyAnalyses(
         const allowed = new Set(await registry.getUsableServiceIdsForScope("case"));
         // The inherited analyses are already the copy's rows, so the insert
         // reserves only the services the copy lacks.
-        const reservations = await insertRequested({
-            caseId,
+        const { dispatched } = await requestCaseAnalyses({
+            caseRow:    copiedCase,
             serviceIds: sourceServiceIds.filter(serviceId => allowed.has(serviceId)),
             userId,
-        });
-        if (reservations.length === 0) {
-            return [];
-        }
+            pdfRenderJobId,
+        }, { registry, insertRequested, dispatch });
 
-        return await dispatch(
-            buildCaseCreatedContext(copiedCase, { userId, pdfRenderJobId }),
-            { reservations, registry }
-        );
+        return await dispatched;
     } catch (error) {
         console.error("[case-analyses] Could not request the analyses of a case copy.", {
             sourceCaseId,

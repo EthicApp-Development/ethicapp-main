@@ -3,7 +3,12 @@ import { createServer } from "node:http";
 import test from "node:test";
 import express from "express";
 
+import {
+    requestCaseAnalyses,
+    resolveCaseAnalysisServiceIds,
+} from "../../helpers/case-lifecycle-helper.js";
 import caseAnalysesRouter, {
+    addCaseAnalysesForOwner,
     createCaseAnalysesRouter,
     describeServices,
     generateCaseAnalysisForOwner,
@@ -450,6 +455,7 @@ async function serve(router, { role }) {
 test("routes: students get 403 and invalid case ids 400, before any lookup", async () => {
     const routes = [
         ["GET", "/cases/7/analyses"],
+        ["POST", "/cases/7/analyses", { serviceIds: ["svc-added"] }],
         ["GET", "/cases/7/analyses/svc-ready"],
         ["PUT", "/cases/7/analyses/svc-ready", { document: {} }],
         ["POST", "/cases/7/analyses/svc-ready/generate"],
@@ -582,6 +588,292 @@ test("routes: an edit is refused once a generation is accepted, and kept after i
         assert.equal(await table.complete({ ...generation, document: { words: 20 } }), null);
         assert.deepEqual(table.rows.get("svc-ready").document, { words: 99 });
         assert.equal(table.rows.get("svc-ready").reviewed_by, OWNER_ID);
+    } finally {
+        await app.close();
+    }
+});
+
+// ─── adding services (#1039) ─────────────────────────────────────────────────
+
+// The case-scoped services the current policy allows in these tests.
+const ALLOWED_SERVICE_IDS = ["svc-ready", "svc-added", "svc-other-added"];
+
+const resolveAllowed = value => resolveCaseAnalysisServiceIds(value, {
+    registry: {
+        initialize:                  async () => {},
+        getUsableServiceIdsForScope: async scope => (scope === "case" ? ALLOWED_SERVICE_IDS : []),
+    },
+});
+
+/**
+ * Dependencies over in-memory case_analyses rows. The insert yields first,
+ * like a query round trip, then inserts the services the case lacks without
+ * yielding, as one INSERT ... ON CONFLICT DO NOTHING does. requestAnalyses is
+ * the real helper over that insert and `dispatch` (by default one that only
+ * records the reservations).
+ */
+function makeAddDependencies({ rows = [READY_ROW], dispatch } = {}) {
+    const table = new Map(rows.map(row => [row.service_id, { ...row }]));
+    const calls = { inserted: [], dispatched: [] };
+    let jobCount = 0;
+
+    const insertRequested = async ({ caseId, serviceIds, userId }) => {
+        calls.inserted.push({ caseId, serviceIds, userId });
+        await new Promise(resolve => setImmediate(resolve));
+        return serviceIds.filter(serviceId => !table.has(serviceId)).map((serviceId) => {
+            const row = {
+                ...REQUESTED_ROW,
+                service_id:   serviceId,
+                job_id:       `job-${++jobCount}`,
+                requested_by: userId,
+            };
+            table.set(serviceId, row);
+            return {
+                case_id:    caseId,
+                service_id: serviceId,
+                job_id:     row.job_id,
+                status:     "requested",
+            };
+        });
+    };
+    const recordDispatch = async (context, { reservations }) => {
+        calls.dispatched.push({ context, reservations });
+        return [];
+    };
+
+    const { dependencies } = makeDependencies({
+        // The owner's case 7; any other case is missing.
+        getOwnedCase: async (caseId, userId) => (
+            caseId === CASE_ROW.id && userId === OWNER_ID ? CASE_ROW : null
+        ),
+        listAnalyses:     async () => [...table.values()],
+        describeServices: async serviceIds => new Map(serviceIds.map(serviceId => [serviceId, {
+            ui:     { component: null, translations: null },
+            usable: true,
+        }])),
+        resolveServiceIds: resolveAllowed,
+        requestAnalyses:   request => requestCaseAnalyses(request, {
+            registry: {},
+            insertRequested,
+            dispatch: dispatch ?? recordDispatch,
+        }),
+    });
+
+    return { dependencies, calls, table };
+}
+
+const settle = () => new Promise(resolve => setImmediate(resolve));
+
+test("addCaseAnalysesForOwner: reserves and dispatches a new service, answering the list", async () => {
+    const { dependencies, calls } = makeAddDependencies();
+
+    const { status, body } = await addCaseAnalysesForOwner({
+        caseId:     7,
+        userId:     OWNER_ID,
+        serviceIds: ["svc-added"],
+        dependencies,
+    });
+    await settle();
+
+    assert.equal(status, 202);
+    assert.deepEqual(
+        body.result.map(analysis => [analysis.serviceId, analysis.status]),
+        [["svc-ready", "ready"], ["svc-added", "requested"]]
+    );
+    // The shape of GET /cases/:id/analyses: no documents, with ui and usable.
+    assert.equal(Object.hasOwn(body.result[1], "document"), false);
+    assert.equal(body.result[1].usable, true);
+    assert.deepEqual(calls.inserted, [{ caseId: 7, serviceIds: ["svc-added"], userId: OWNER_ID }]);
+    assert.equal(calls.dispatched.length, 1);
+    const [{ context, reservations }] = calls.dispatched;
+    assert.equal(context.caseId, 7);
+    assert.equal(context.userId, OWNER_ID);
+    assert.equal(context.pdfRenderJobId, 11, "the case's render job");
+    assert.deepEqual(
+        reservations.map(row => [row.service_id, row.job_id]),
+        [["svc-added", "job-1"]]
+    );
+});
+
+test("addCaseAnalysesForOwner: leaves a chosen service as it is and adds only the others", async () => {
+    const { dependencies, calls, table } = makeAddDependencies();
+
+    const chosen = await addCaseAnalysesForOwner({
+        caseId:     7,
+        userId:     OWNER_ID,
+        serviceIds: ["svc-ready"],
+        dependencies,
+    });
+    await settle();
+
+    assert.equal(chosen.status, 202);
+    assert.deepEqual(chosen.body.result.map(analysis => analysis.serviceId), ["svc-ready"]);
+    assert.equal(calls.dispatched.length, 0, "nothing is regenerated");
+    assert.deepEqual(table.get("svc-ready"), READY_ROW);
+
+    const mixed = await addCaseAnalysesForOwner({
+        caseId:     7,
+        userId:     OWNER_ID,
+        serviceIds: ["svc-ready", "svc-added", "svc-other-added"],
+        dependencies,
+    });
+    await settle();
+
+    assert.equal(mixed.status, 202);
+    assert.deepEqual(
+        mixed.body.result.map(analysis => [analysis.serviceId, analysis.status]),
+        [["svc-ready", "ready"], ["svc-added", "requested"], ["svc-other-added", "requested"]]
+    );
+    assert.equal(calls.dispatched.length, 1);
+    assert.deepEqual(
+        calls.dispatched[0].reservations.map(row => row.service_id),
+        ["svc-added", "svc-other-added"]
+    );
+    assert.deepEqual(table.get("svc-ready"), READY_ROW);
+});
+
+test("addCaseAnalysesForOwner: 404 for another teacher's or a missing case", async () => {
+    const { dependencies, calls } = makeAddDependencies();
+
+    for (const [caseId, userId] of [[7, OTHER_TEACHER_ID], [404, OWNER_ID]]) {
+        const { status, body } = await addCaseAnalysesForOwner({
+            caseId,
+            userId,
+            serviceIds: ["svc-added"],
+            dependencies,
+        });
+
+        assert.equal(status, 404, String(caseId));
+        assert.equal(body.code, "CASE_NOT_FOUND", String(caseId));
+    }
+    assert.equal(calls.inserted.length, 0);
+    assert.equal(calls.dispatched.length, 0);
+});
+
+test("addCaseAnalysesForOwner: 400 for invalid or disallowed ids, without reserving", async () => {
+    const { dependencies, calls } = makeAddDependencies();
+    const invalidValues = [
+        undefined,
+        [],
+        "svc-added",
+        JSON.stringify(["svc-added"]),
+        { serviceId: "svc-added" },
+        [42],
+        [""],
+        ["svc-unknown"],
+        // Not allowed by the current policy, alone or with an allowed one.
+        ["svc-switched-off"],
+        ["svc-added", "svc-switched-off"],
+    ];
+
+    for (const serviceIds of invalidValues) {
+        const { status, body } = await addCaseAnalysesForOwner({
+            caseId: 7,
+            userId: OWNER_ID,
+            serviceIds,
+            dependencies,
+        });
+
+        assert.equal(status, 400, JSON.stringify(serviceIds));
+        assert.equal(body.code, "CASE_ANALYSIS_SERVICE_INVALID", JSON.stringify(serviceIds));
+    }
+    assert.equal(calls.inserted.length, 0);
+    assert.equal(calls.dispatched.length, 0);
+});
+
+test("addCaseAnalysesForOwner: a dispatch that throws does not fail the response", async () => {
+    const failures = [
+        async () => {
+            throw new Error("dispatch failed");
+        },
+        () => {
+            throw new Error("dispatch failed");
+        },
+    ];
+
+    for (const dispatch of failures) {
+        const { dependencies, table } = makeAddDependencies({ dispatch });
+        const originalError = console.error;
+        const logged = [];
+        console.error = (...args) => {
+            logged.push(args);
+        };
+
+        let response;
+        try {
+            response = await addCaseAnalysesForOwner({
+                caseId:     7,
+                userId:     OWNER_ID,
+                serviceIds: ["svc-added"],
+                dependencies,
+            });
+            await settle();
+        } finally {
+            console.error = originalError;
+        }
+
+        assert.equal(response.status, 202);
+        assert.equal(table.get("svc-added").status, "requested");
+        assert.equal(logged.length, 1);
+        assert.equal(logged[0][1].error.message, "dispatch failed");
+    }
+});
+
+test("routes: POST /cases/:id/analyses answers 202, 400 and 404 over JSON", async () => {
+    const { dependencies } = makeAddDependencies();
+    const app = await serve(createCaseAnalysesRouter(dependencies), { role: "P" });
+
+    try {
+        const added = await app.request("POST", "/cases/7/analyses", { serviceIds: ["svc-added"] });
+        assert.equal(added.status, 202);
+        assert.equal(added.body.status, "ok");
+        assert.deepEqual(
+            added.body.result.map(analysis => analysis.serviceId),
+            ["svc-ready", "svc-added"]
+        );
+
+        const listed = await app.request("GET", "/cases/7/analyses");
+        assert.deepEqual(added.body.result, listed.body.result, "the shape of the listing");
+
+        const missingBody = await app.request("POST", "/cases/7/analyses");
+        assert.equal(missingBody.status, 400);
+        assert.equal(missingBody.body.code, "CASE_ANALYSIS_SERVICE_INVALID");
+
+        const missingCase = await app.request("POST", "/cases/8/analyses", {
+            serviceIds: ["svc-added"],
+        });
+        assert.equal(missingCase.status, 404);
+        assert.equal(missingCase.body.code, "CASE_NOT_FOUND");
+
+        const invalidId = await app.request("POST", "/cases/abc/analyses", {
+            serviceIds: ["svc-added"],
+        });
+        assert.equal(invalidId.status, 400);
+    } finally {
+        await app.close();
+    }
+});
+
+test("routes: two concurrent requests for a service create one analysis and one generation", async () => {
+    const { dependencies, calls, table } = makeAddDependencies();
+    const app = await serve(createCaseAnalysesRouter(dependencies), { role: "P" });
+
+    try {
+        const responses = await Promise.all([1, 2].map(() =>
+            app.request("POST", "/cases/7/analyses", { serviceIds: ["svc-added"] })
+        ));
+        await settle();
+
+        assert.deepEqual(responses.map(({ status }) => status), [202, 202]);
+        for (const { body } of responses) {
+            assert.deepEqual(
+                body.result.map(analysis => analysis.serviceId),
+                ["svc-ready", "svc-added"]
+            );
+        }
+        assert.equal(calls.inserted.length, 2);
+        assert.equal(calls.dispatched.length, 1, "a single generation is dispatched");
+        assert.equal(calls.dispatched[0].reservations[0].job_id, table.get("svc-added").job_id);
     } finally {
         await app.close();
     }

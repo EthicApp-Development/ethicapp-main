@@ -73,10 +73,10 @@ Which version applies:
 | Path | Version |
 | --- | --- |
 | Session hooks (`phase-started`, `phase-ended`, `activity-started`, `activity-finished`, `student-response-submitted`, `chat-message-received`, and any hook other than `case-created`, `design-created` and `design-updated`) | The version the session was pinned to at launch (`sessions.ai_service_policy_version_id`), found from `context.sessionId`. A hook without `sessionId` follows no version. |
-| `case-created` (`NON_SESSION_HOOKS`) | The current version. It only bounds the author's choice (`case_analyses`): the candidates are the services chosen for the case, never every allowed one. |
+| `case-created` (`NON_SESSION_HOOKS`) | The current version. It only bounds the author's choice (`case_analyses`), made when the case is created or later from the case view (`POST /cases/:id/analyses`, #1039): the candidates are the services chosen for the case, never every allowed one. |
 | `user-forgotten` (`NON_SESSION_HOOKS`, `ERASURE_HOOKS`) | None: erasure hooks skip the policy and only need the AI Additions connection. |
 | `design-created` and `design-updated` (`NON_SESSION_HOOKS`) | The current version. Only the reserved design analyses receive them (see "Design Analyses"). |
-| `GET /external-services`, `GET /external-services/:id/instance-configuration`, design saving, the case form's choice (`POST /cases`), regenerating a case or design analysis | The current version. |
+| `GET /external-services`, `GET /external-services/:id/instance-configuration`, design saving, the case form's choice (`POST /cases`), adding services to a case (`POST /cases/:id/analyses`), regenerating a case or design analysis | The current version. |
 | The student activity descriptor | The session's pinned version. |
 | Callbacks | See below. |
 
@@ -588,7 +588,7 @@ failures are isolated from teacher and student requests.
 | `activity-finished` | `POST /activities/:id/finish` | Union of services enabled in any phase of the design | `sessionId`, `phaseId` (= last active), `startedPhaseId: null`, `endedPhaseId` |
 | `student-response-submitted` | Student response endpoints in `controllers/activities/activities-student.js` | Services enabled for the phase | `sessionId`, `phaseId`, `userId`, `questionId`, `designType`, `requestPayload`, `responsePayload`, `source` (`{ kind: "response", id }`: the stored `differential_selection` row, or `actor_selection` for ranking) |
 | `chat-message-received` | `controllers/group-messages.js` after a group chat message is saved | Services enabled for the phase | `sessionId`, `phaseId`, `questionId`, `groupId`, `userId`, `parentId`, `content`, `savedMessage`, `notificationPayload`, `designType`, `source` (`{ kind: "chat_message", id }`: the saved `differential_chat` row, or `chat` for ranking) |
-| `case-created` | `POST /cases` after the case, authors, tags, analyses, and render job are persisted, and `POST /cases/:id/analyses/:serviceId/generate` (`helpers/case-lifecycle-helper.js`) | Services chosen for the case when it was created; generate reaches one of them | `caseId`, `caseUuid`, `userId` (creator), `title`, `pdfPath`, `languageCode`, `visibility`, `pdfRenderJobId` |
+| `case-created` | `POST /cases` after the case, authors, tags, analyses, and render job are persisted, `POST /cases/:id/analyses` after the added services are reserved, and `POST /cases/:id/analyses/:serviceId/generate` (`helpers/case-lifecycle-helper.js`) | The reserved services chosen for the case: at creation, the ones added later, or the one generate reaches | `caseId`, `caseUuid`, `userId` (creator), `title`, `pdfPath`, `languageCode`, `visibility`, `pdfRenderJobId` |
 | `design-created` | After `POST /designs` answers, and after `POST /designs/:id/duplicate` (duplicate or import) commits the copy (`helpers/design-analyses-lifecycle-helper.js`) | Each design-scoped service whose generation was reserved, one dispatch per service (see "Design Analyses") | `trigger` (`"created"`), `designId`, `userId` (requester), `caseId`, `languageCode` (the case's), `design` (the design document), `analysisInput` and `inputHash` (from the service's `designAnalysisInput()`) |
 | `design-updated` | After `PATCH /designs/:id` answers (`trigger: "updated"`), and from `POST /designs/:id/analyses/:serviceId/generate` with the current design (`trigger: "generate"`) (`helpers/design-analyses-lifecycle-helper.js`) | As for `design-created` | As for `design-created`, with `trigger` `"updated"` or `"generate"` |
 | `callback-received` | `POST /external-services/callbacks` | Only the service named in the callback body | `serviceId`, `eventType`, `correlationId`, `eventId`, `requestPayload`, `rawBody`, `auth` |
@@ -610,12 +610,13 @@ dispatch site resolves the audience from the activity design:
 phase when authoring the design. The activity, phase, response, and chat hooks
 in the catalog above are phase-scoped.
 
-**Case hooks (case creation opt-in).** `case-created` reaches the services the
-teacher chose when creating the case (`analysisServiceIds`, see "Case
-Analyses"): `dispatchCaseCreatedHook(context, { reservations })` dispatches each
-reserved analysis to its service only (`enabledServiceIds`), under the job id of
-its reservation (`jobIds`). A case created without a choice dispatches nothing,
-and editing the case never changes the choice.
+**Case hooks (case opt-in).** `case-created` reaches the services the teacher
+chose for the case, when creating it (`analysisServiceIds`) or later (`POST
+/cases/:id/analyses`, see "Case Analyses"): `dispatchCaseCreatedHook(context, {
+reservations })` dispatches each reserved analysis to its service only
+(`enabledServiceIds`), under the job id of its reservation (`jobIds`). A case
+without a choice dispatches nothing, and editing the case never changes the
+choice.
 
 **Design hooks (reserved generations).** `design-created` and
 `design-updated` reach only the design-scoped services whose generation was
@@ -1005,8 +1006,20 @@ version (the form lists `GET /external-services?scope=case`); otherwise, or when
 not such a list, the request answers `400 CASE_ANALYSIS_SERVICE_INVALID` before
 the PDF is stored. Each chosen service gets a `requested` row, already reserved
 for its first generation, and `case-created` is dispatched to those services
-only, under the reserved job ids. Editing, importing, or duplicating a case
-never changes or requests analyses.
+only, under the reserved job ids. Editing a case never changes its choice; a
+copy of a case inherits the source's ready analyses and requests the others
+(#1038).
+
+The case's creator can add services later from the case view (#1039): `POST
+/cases/:id/analyses` takes `{ serviceIds }`, validated as at creation (an empty
+list answers `400 CASE_ANALYSIS_SERVICE_INVALID` too). Each service the case
+has not chosen yet gets a reserved row and its `case-created` dispatch, with the
+case's render job; a service already chosen is left as it is. The insert skips
+existing rows (`ON CONFLICT DO NOTHING`) and only the rows it returns are
+dispatched, so two concurrent requests for a service create one analysis and
+one generation. It is accepted for a case in use or archived, like the other
+analysis endpoints: an analysis changes neither the case nor what activities
+showed (epic #1008, decision of 2026-11-02).
 
 Two decisions bound each analysis. The installation decides which services may
 be offered at all: only services its manifest enables are valid, and the
@@ -1134,6 +1147,7 @@ teachers `404 CASE_NOT_FOUND`. Services not chosen for the case answer
 | Endpoint | Description |
 | --- | --- |
 | `GET /cases/:id/analyses` | The chosen services with status and timestamps, without documents. Each entry also carries `ui: { component, translations }`, as in `GET /external-services`, and `usable`, whether the service is usable now (see "Case view tabs"). |
+| `POST /cases/:id/analyses` | Body `{ serviceIds }`. Reserves and dispatches the services the case has not chosen yet (see "Choosing services") and answers `202` with the case's analyses, as `GET /cases/:id/analyses` lists them. Answers `400 CASE_ANALYSIS_SERVICE_INVALID` for an empty list, a value that is not a list, or an id that is not a usable case-scoped service. |
 | `GET /cases/:id/analyses/:serviceId` | One analysis with its document. |
 | `PUT /cases/:id/analyses/:serviceId` | Body `{ document }`, validated by the adapter. Answers `405 CASE_ANALYSIS_NOT_EDITABLE` without a validator, `400 CASE_ANALYSIS_DOCUMENT_INVALID` with `details`, and `409 CASE_ANALYSIS_PROCESSING` while a generation is in flight. Records `reviewed_at` and `reviewed_by`. |
 | `POST /cases/:id/analyses/:serviceId/generate` | Reserves a new generation, replays `case-created` for that service only, and answers `202` with the reserved analysis. Answers `409 CASE_ANALYSIS_PROCESSING` while a generation is in flight and `503 CASE_ANALYSIS_SERVICE_DISABLED` when the service is disabled. It also recovers stale generations. |
@@ -1150,6 +1164,13 @@ Cases without analyses show no tab bar. The tab title is the adapter's
 `tabTitle` in the UI language, or its `label`, or the service id. An analysis
 tab loads its document (`GET /cases/:id/analyses/:serviceId`) only when it is
 opened, and the list is polled while a generation is in flight.
+
+For the case's creator, "Add analysis", at the end of the tab bar, offers the
+usable case-scoped services (`GET /external-services?scope=case`) the case has
+not chosen. It shows only when there is one, opens a dialog with the creation
+form's options (`case-analysis-options` in `add` mode) and calls `POST
+/cases/:id/analyses`; the new tabs appear in their processing state and the
+list is polled as after creation.
 
 AngularJS cannot load a component named by the manifest, so the frontend keeps
 an allowlist from `ui.component` to registered components

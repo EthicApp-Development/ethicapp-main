@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
+    caseAnalysisAddErrorKey,
     caseAnalysisSaveErrorKey,
+    caseAnalysisServicesToAdd,
     caseAnalysisServiceDescription,
     caseAnalysisServiceIdsPayload,
     caseAnalysisServiceLabel,
@@ -132,5 +134,52 @@ describe("caseAnalysisSaveErrorKey", () => {
         assert.equal(caseAnalysisSaveErrorKey({ data: { code: "CASE_PDF_REQUIRED" } }), null);
         assert.equal(caseAnalysisSaveErrorKey({ data: { code: "toString" } }), null);
         assert.equal(caseAnalysisSaveErrorKey(undefined), null);
+    });
+});
+
+describe("caseAnalysisServicesToAdd (#1039)", () => {
+    const services = [
+        MOCK_SERVICE,
+        { id: "case-evaluation" },
+        { id: "case-topic-listing" },
+    ];
+
+    it("offers the services the case has not chosen, in their order", () => {
+        assert.deepEqual(
+            caseAnalysisServicesToAdd(services, ["case-evaluation"]).map(service => service.id),
+            ["mock-case-analysis", "case-topic-listing"]
+        );
+    });
+
+    it("offers every service to a case without analyses, and none once all are chosen", () => {
+        assert.deepEqual(caseAnalysisServicesToAdd(services, []), services);
+        assert.deepEqual(caseAnalysisServicesToAdd(services, undefined), services);
+        assert.deepEqual(caseAnalysisServicesToAdd(
+            services,
+            ["mock-case-analysis", "case-evaluation", "case-topic-listing"]
+        ), []);
+    });
+
+    it("ignores a chosen service the policy no longer allows, and malformed input", () => {
+        assert.deepEqual(
+            caseAnalysisServicesToAdd([MOCK_SERVICE], ["switched-off"]).map(service => service.id),
+            ["mock-case-analysis"]
+        );
+        assert.deepEqual(caseAnalysisServicesToAdd(null, []), []);
+        assert.deepEqual(
+            caseAnalysisServicesToAdd([null, { id: 3 }, MOCK_SERVICE], []),
+            [MOCK_SERVICE]
+        );
+    });
+});
+
+describe("caseAnalysisAddErrorKey (#1039)", () => {
+    it("explains a service that is no longer allowed, and any other failure", () => {
+        assert.equal(
+            caseAnalysisAddErrorKey({ data: { code: "CASE_ANALYSIS_SERVICE_INVALID" } }),
+            "case_analysis_save_invalid"
+        );
+        assert.equal(caseAnalysisAddErrorKey({ status: 500 }), "case_analysis_add_failed");
+        assert.equal(caseAnalysisAddErrorKey(new Error("offline")), "case_analysis_add_failed");
     });
 });

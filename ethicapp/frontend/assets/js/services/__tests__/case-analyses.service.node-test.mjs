@@ -64,6 +64,36 @@ describe("CaseAnalysesService.getAnalysis", () => {
     });
 });
 
+describe("CaseAnalysesService.addAnalyses (#1039)", () => {
+    it("posts the chosen services and returns the case's analyses", async () => {
+        const list = [
+            { serviceId: "case-evaluation", status: "ready" },
+            { serviceId: "mock-case-analysis", status: "requested" },
+        ];
+        const { service, requests } = createService({ post: async () => ok(list) });
+
+        assert.deepEqual(await service.addAnalyses(7, ["mock-case-analysis"]), list);
+        assert.deepEqual(requests, [{
+            method: "post",
+            url:    "/cases/7/analyses",
+            body:   { serviceIds: ["mock-case-analysis"] },
+        }]);
+    });
+
+    it("rejects with the response when the services are refused", async () => {
+        const refused = { status: 400, data: { code: "CASE_ANALYSIS_SERVICE_INVALID" } };
+        const { service } = createService({ post: async () => { throw refused; } });
+
+        await assert.rejects(service.addAnalyses(7, ["svc"]), error => error === refused);
+    });
+
+    it("rejects an unexpected response", async () => {
+        const { service } = createService({ post: async () => ({ data: { status: "err" } }) });
+
+        await assert.rejects(service.addAnalyses(7, ["svc"]), /Unexpected case analyses response/);
+    });
+});
+
 describe("CaseAnalysesService.generateAnalysis", () => {
     it("returns the reserved analysis when the generation is accepted", async () => {
         const reserved = { serviceId: "mock-case-analysis", status: "requested" };

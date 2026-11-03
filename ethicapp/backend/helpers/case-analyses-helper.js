@@ -24,10 +24,10 @@ export { STALE_GENERATION_INTERVAL };
 const store = createAnalysesStore({ table: "case_analyses", ownerColumn: "case_id" });
 
 /**
- * Records the services a teacher chose when creating a case, one 'requested'
- * row each, already reserved for the first generation under a new job id.
- * Choices that already exist are left as they are, so only the returned rows
- * are reserved.
+ * Records the services a teacher chose for a case, when creating it or later
+ * (#1039), one 'requested' row each, already reserved for the first
+ * generation under a new job id. Choices that already exist are left as they
+ * are, so only the returned rows are reserved, also of concurrent calls.
  */
 export async function insertRequestedCaseAnalyses(
     { caseId, serviceIds, userId },

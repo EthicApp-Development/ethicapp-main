@@ -6,6 +6,11 @@
 // Analysis tabs render their panel only while open, so opening a case loads
 // the case text and the analysis list (statuses, without documents) only. The
 // list is polled while a generation is in flight.
+//
+// For the case's creator (`canAddAnalyses`), "Add analysis" at the end of the
+// tab bar (#1039) offers the usable case-scoped services the case has not
+// chosen, in a dialog, and shows only when there is one. The services it adds
+// appear as tabs in their processing state, polled as after creation.
 
 import {
     CASE_ANALYSES_POLL_INTERVAL_MS,
@@ -14,6 +19,10 @@ import {
     isCaseAnalysisInFlight,
     mergeCaseAnalysis,
 } from "../helpers/case-analyses.js";
+import {
+    CASE_ANALYSIS_SCOPE,
+    caseAnalysisServicesToAdd,
+} from "../helpers/case-analysis-options.js";
 
 // The keys of the fixed tabs. Analysis tabs are keyed by their service id,
 // which is kebab-case (`ai-services-catalog.service.js`), so these cannot
@@ -28,7 +37,7 @@ const FIXED_TAB_DOM_IDS = {
 let instanceCount = 0;
 
 function CaseViewTabsController($scope, $element, $timeout, CaseAnalysesService,
-    LanguageCatalogService) {
+    LanguageCatalogService, ExternalServicesCatalogService, CaseAnalysisAddDialogService) {
     const vm = this;
     instanceCount += 1;
     const idPrefix = `case-view-tabs-${instanceCount}`;
@@ -47,6 +56,12 @@ function CaseViewTabsController($scope, $element, $timeout, CaseAnalysesService,
     vm.analyses = [];
     vm.activeServiceId = null;
     vm.listFailed = false;
+    // Whether the list of the current case has loaded once.
+    vm.listLoaded = false;
+    // The usable case-scoped services, for "Add analysis".
+    vm.caseServices = [];
+    // True while the "Add analysis" dialog is open.
+    vm.adding = false;
     vm.materialTab = CASE_VIEW_TAB_MATERIAL;
     vm.rightsTab = CASE_VIEW_TAB_RIGHTS;
 
@@ -54,6 +69,9 @@ function CaseViewTabsController($scope, $element, $timeout, CaseAnalysesService,
         // A fixed tab that goes away while open gives way to the case text.
         if (!tabKeys().includes(vm.activeServiceId)) {
             vm.activeServiceId = null;
+        }
+        if (changes.canAddAnalyses && vm.canAddAnalyses === true) {
+            loadCaseServices();
         }
         if (!changes.caseItem) {
             return;
@@ -68,8 +86,24 @@ function CaseViewTabsController($scope, $element, $timeout, CaseAnalysesService,
         vm.analyses = [];
         vm.activeServiceId = null;
         vm.listFailed = false;
+        vm.listLoaded = false;
         vm.refresh();
     };
+
+    // The services "Add analysis" may offer. Without them the action is not
+    // shown; the dialog asks for them again when it opens.
+    async function loadCaseServices() {
+        try {
+            const services = await ExternalServicesCatalogService.getServices({
+                scopes: [CASE_ANALYSIS_SCOPE],
+            });
+            vm.caseServices = Array.isArray(services) ? services : [];
+        } catch (error) {
+            console.warn("[caseViewTabs] Could not load the case analysis services.", error);
+            vm.caseServices = [];
+        }
+        $scope.$applyAsync();
+    }
 
     vm.$onDestroy = function() {
         destroyed = true;
@@ -116,6 +150,7 @@ function CaseViewTabsController($scope, $element, $timeout, CaseAnalysesService,
             }
             vm.analyses = analyses;
             vm.listFailed = false;
+            vm.listLoaded = true;
             if (!tabKeys().includes(vm.activeServiceId)) {
                 vm.activeServiceId = null;
             }
@@ -165,7 +200,21 @@ function CaseViewTabsController($scope, $element, $timeout, CaseAnalysesService,
     };
 
     vm.hasTabBar = function() {
-        return vm.hasAnalysisTabs() || vm.hasMaterialTab() || vm.hasRightsTab();
+        return vm.hasAnalysisTabs() || vm.hasMaterialTab() || vm.hasRightsTab()
+            || vm.canAddAnalysis();
+    };
+
+    function chosenServiceIds() {
+        return vm.analyses.map(analysis => analysis.serviceId);
+    }
+
+    // "Add analysis": for the creator, once the list is known, when a usable
+    // case-scoped service is not chosen yet.
+    vm.canAddAnalysis = function() {
+        return vm.canAddAnalyses === true
+            && vm.listLoaded
+            && !vm.listFailed
+            && caseAnalysisServicesToAdd(vm.caseServices, chosenServiceIds()).length > 0;
     };
 
     // Tabs in display order: null stands for the case text.
@@ -238,6 +287,41 @@ function CaseViewTabsController($scope, $element, $timeout, CaseAnalysesService,
         });
     };
 
+    /**
+     * Opens the "Add analysis" dialog, once at a time. The list it answers
+     * replaces this one, with the new analyses in their processing state,
+     * and the first of them is opened.
+     */
+    vm.addAnalyses = async function() {
+        if (vm.adding || !vm.canAddAnalysis()) {
+            return;
+        }
+        const caseId = loadedCaseId;
+        const previousIds = new Set(chosenServiceIds());
+        vm.adding = true;
+        try {
+            const analyses = await CaseAnalysisAddDialogService.open({
+                caseId,
+                chosenServiceIds: [...previousIds],
+            });
+            if (destroyed || caseId !== loadedCaseId || !Array.isArray(analyses)) {
+                return;
+            }
+            localRevision += 1;
+            vm.analyses = analyses;
+            const added = analyses.find(analysis => !previousIds.has(analysis.serviceId));
+            if (added) {
+                vm.selectTab(added.serviceId);
+            }
+            schedulePoll();
+        } catch (error) {
+            console.error("[caseViewTabs] Could not add the case analyses.", error);
+        } finally {
+            vm.adding = false;
+            $scope.$applyAsync();
+        }
+    };
+
     vm.handleAnalysisChanged = function(analysis) {
         localRevision += 1;
         vm.analyses = mergeCaseAnalysis(vm.analyses, analysis);
@@ -271,11 +355,13 @@ function CaseViewTabsController($scope, $element, $timeout, CaseAnalysesService,
 
 export default {
     bindings: {
-        caseItem:      "<",
+        caseItem:       "<",
         // The number of videos and documents; the "Material" tab shows when
         // there is any.
-        materialCount: "<?",
-        showRights:    "<?",
+        materialCount:  "<?",
+        showRights:     "<?",
+        // Whether the teacher is the case's creator, who can add analyses.
+        canAddAnalyses: "<?",
     },
     transclude: {
         material: "?caseViewMaterial",
@@ -283,7 +369,7 @@ export default {
     },
     controller: [
         "$scope", "$element", "$timeout", "CaseAnalysesService", "LanguageCatalogService",
-        CaseViewTabsController,
+        "ExternalServicesCatalogService", "CaseAnalysisAddDialogService", CaseViewTabsController,
     ],
     templateUrl: "/assets/static/views/teacher/fragments/case-view-tabs.template.html",
 };

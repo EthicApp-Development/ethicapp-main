@@ -4526,9 +4526,24 @@ tr.group-summary {
 }
 
 /* Case view tabs (#651): the case text, then one tab per analysis chosen for
-   the case. The tab bar scrolls sideways on phones (teacher-index-tabs). */
-.case-view-tabs-bar {
+   the case. The tab bar scrolls sideways on phones (teacher-index-tabs).
+   "Add analysis" (#1039) sits after it, outside the scroll, and goes to the
+   next line when the tabs fill the row. */
+.case-view-tabs-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
     margin-bottom: 16px;
+}
+
+.case-view-tabs-bar {
+    flex: 0 1 auto;
+    min-width: 0;
+}
+
+.case-view-add-analysis {
+    flex: 0 0 auto;
 }
 
 .case-view-tab-status {
