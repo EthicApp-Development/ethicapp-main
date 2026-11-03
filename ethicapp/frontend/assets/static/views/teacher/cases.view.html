@@ -1,25 +1,137 @@
-<div class="container" ng-controller="CasesController as vm" ng-init="vm.loadCase()">
-    <div class="row">
-        <div class="col-md-12">
-            <h2><i class="fa fa-book"></i> {{ 'ethical_cases_view_title' | translate }}</h2>
-            <button type="button" class="btn btn-default btn-sm" ng-click="vm.goBack()">
-                <i class="fa fa-arrow-left" aria-hidden="true"></i> {{ 'go_back' | translate }}
-            </button>
-        </div>
+<!-- The case view (#1018, epic #1008): a head with the case's actions, its
+     facts as chips, the designs that use it, then its tabs. The forms keep
+     `CasesController`. -->
+<div class="case-view" ng-controller="CaseViewController as cv">
+    <a class="case-view-back" ng-href="{{ cv.backHref }}">
+        <span aria-hidden="true">&larr;</span> {{ 'cases_page_title' | translate }}
+    </a>
+
+    <p class="text-muted" ng-if="!cv.loaded">{{ 'loading' | translate }}</p>
+    <div class="alert alert-danger case-view-load-failed" ng-if="cv.loaded && cv.loadErrorKey" role="alert">
+        {{ cv.loadErrorKey | translate }}
     </div>
 
-    <div class="row margin-top-24" ng-if="vm.caseObj">
-        <div class="col-md-12">
-            <case-card case-item="vm.caseObj" show-actions="false" show-extended-info="true"></case-card>
-        </div>
-    </div>
+    <div ng-if="cv.view">
+        <header class="case-view-head">
+            <div class="case-view-heading">
+                <h2 class="case-view-title">{{ cv.view.title }}</h2>
+                <p class="case-view-byline">
+                    <span class="case-view-authors" ng-if="cv.view.authors">{{ cv.view.authors }}</span><span
+                        ng-if="cv.view.authors && cv.view.createdOn"> &middot; </span><span
+                        class="case-view-created" ng-if="cv.view.createdOn">{{ 'case_view_created' | translate:{ date: cv.view.createdOn } }}</span>
+                </p>
+            </div>
+            <div class="case-view-actions">
+                <!-- "New design with this case" (#1019) goes first, before the
+                     primary action. -->
+                <a class="btn btn-default case-view-primary case-view-view-copy"
+                    ng-if="cv.view.primary.href"
+                    data-action="{{ cv.view.primary.id }}"
+                    ng-href="{{ cv.view.primary.href }}">
+                    <i ng-class="cv.view.primary.icon" aria-hidden="true"></i> {{ cv.view.primary.key | translate }}
+                </a>
+                <button type="button" class="btn btn-primary case-view-primary"
+                    ng-if="cv.view.primary && !cv.view.primary.href"
+                    data-action="{{ cv.view.primary.id }}"
+                    ng-disabled="cv.busy"
+                    ng-click="cv.runAction(cv.view.primary)">
+                    <i ng-class="cv.view.primary.icon" aria-hidden="true"></i> {{ cv.view.primary.key | translate }}
+                </button>
+                <!-- The "⋯" menu: Duplicate, then Archive or Restore. Delete
+                     (#1017) goes last, after a divider and in red, with the
+                     delete dialog. -->
+                <div class="btn-group case-view-menu" uib-dropdown keyboard-nav ng-if="cv.view.menu.length > 0">
+                    <button type="button" class="btn btn-default case-view-menu-toggle" uib-dropdown-toggle
+                        ng-disabled="cv.busy"
+                        aria-label="{{ 'cases_more_actions' | translate }}">
+                        <i class="fa-solid fa-ellipsis" aria-hidden="true"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-right cases-menu" uib-dropdown-menu role="menu">
+                        <li role="none" ng-repeat="entry in cv.view.menu track by entry.id"
+                            data-action="{{ entry.id }}"
+                            ng-class="{ 'disabled': entry.disabled, 'cases-menu-danger': entry.danger }">
+                            <a href="" role="menuitem" class="cases-menu-link"
+                                ng-class="{ 'cases-menu-link-danger': entry.danger && !entry.disabled }"
+                                ng-attr-aria-disabled="{{ entry.disabled ? 'true' : undefined }}"
+                                ng-click="cv.runAction(entry)">
+                                <i ng-class="entry.icon" aria-hidden="true"></i>
+                                <span class="cases-menu-label">{{ entry.key | translate }}</span>
+                                <span class="cases-menu-reason" ng-if="entry.reason">{{ entry.reason.key | translate:entry.reason.params }}</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </header>
 
-    <div class="row" ng-if="vm.caseObj">
-        <div class="col-md-12">
-            <case-view-tabs case-item="vm.caseObj">
-                <case-document-viewer case-item="vm.caseObj"></case-document-viewer>
-                <case-material case-item="vm.caseObj"></case-material>
-            </case-view-tabs>
+        <div class="cases-toast-container teacher-index-toast-container">
+            <toast></toast>
         </div>
+
+        <ul class="case-view-facts" aria-label="{{ 'case_view_facts_label' | translate }}">
+            <li class="case-view-chip" ng-repeat="chip in cv.view.chips"
+                ng-class="['case-view-chip-' + chip.kind, chip.tone ? 'case-view-chip-tone-' + chip.tone : '']"
+                ng-attr-title="{{ chip.title || undefined }}">
+                <i class="fa-solid fa-circle" aria-hidden="true" ng-if="chip.tone === 'ready' || chip.tone === 'shared'"></i>
+                <i class="fa-solid fa-rotate" aria-hidden="true" ng-if="chip.tone === 'processing'"></i>
+                <i class="fa-solid fa-triangle-exclamation" aria-hidden="true" ng-if="chip.tone === 'pdf-error'"></i>
+                <i class="fa-solid fa-lock" aria-hidden="true" ng-if="chip.tone === 'in-use'"></i>
+                <i class="fa-solid fa-box-archive" aria-hidden="true" ng-if="chip.kind === 'archived'"></i>
+                <span ng-repeat="part in chip.parts">{{ part.key ? (part.key | translate:part.params) : part.text }}<span
+                    ng-if="!$last"> &middot; </span></span>
+            </li>
+        </ul>
+
+        <section class="case-view-uses" aria-label="{{ 'case_view_uses_label' | translate }}">
+            <p class="case-view-uses-failed text-muted" ng-if="cv.usesFailed">{{ 'case_view_uses_failed' | translate }}</p>
+            <p class="case-view-uses-line" ng-if="cv.view.uses">
+                <strong class="case-view-uses-summary">{{ cv.view.uses.summary.key | translate:cv.view.uses.summary.params }}</strong><span
+                    class="case-view-uses-breakdown" ng-if="cv.view.uses.breakdown.length > 0"> &middot; <span
+                    ng-repeat="part in cv.view.uses.breakdown">{{ part.key | translate:part.params }}<span ng-if="!$last">, </span></span></span>
+            </p>
+            <ul class="case-view-uses-designs" ng-if="cv.view.uses.designs.length > 0">
+                <li class="case-view-uses-design" ng-repeat="design in cv.view.uses.designs track by design.id">
+                    <a class="case-view-uses-link" ng-href="{{ design.href }}">{{ design.title || ('case_view_uses_untitled' | translate) }}</a>
+                    <span class="case-view-uses-archived" ng-if="design.archived">{{ 'case_view_uses_design_archived' | translate }}</span>
+                </li>
+                <li class="case-view-uses-others" ng-if="cv.view.uses.othersTail">{{ cv.view.uses.othersTail.key | translate:cv.view.uses.othersTail.params }}</li>
+            </ul>
+            <p class="case-view-uses-kept" ng-if="cv.view.uses.kept">
+                <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+                {{ cv.view.uses.kept.key | translate:cv.view.uses.kept.params }}
+            </p>
+        </section>
+
+        <case-view-tabs case-item="cv.caseItem" material-count="cv.view.materialCount" show-rights="true">
+            <case-document-viewer case-item="cv.caseItem"></case-document-viewer>
+            <case-view-material>
+                <case-material case-item="cv.caseItem"></case-material>
+            </case-view-material>
+            <case-view-rights>
+                <dl class="case-view-rights">
+                    <dt>{{ 'case_view_rights_authors' | translate }}</dt>
+                    <dd>
+                        <span class="case-view-rights-author" ng-repeat="author in cv.view.rights.authors">{{ author.name }}<a
+                            ng-if="author.email" class="case-view-rights-email" ng-href="mailto:{{ author.email }}">{{ author.email }}</a></span>
+                    </dd>
+                    <dt ng-if-start="cv.view.rights.license">{{ 'license' | translate }}</dt>
+                    <dd ng-if-end>
+                        <a ng-if="cv.view.rights.license.href" ng-href="{{ cv.view.rights.license.href }}" target="_blank" rel="noopener noreferrer">{{ cv.view.rights.license.label.key ? (cv.view.rights.license.label.key | translate) : cv.view.rights.license.label.text }}<span
+                            class="sr-only"> {{ 'rich_text_link_new_tab' | translate }}</span></a>
+                        <span ng-if="!cv.view.rights.license.href">{{ cv.view.rights.license.label.key ? (cv.view.rights.license.label.key | translate) : cv.view.rights.license.label.text }}</span>
+                    </dd>
+                    <dt>{{ 'rights_status' | translate }}</dt>
+                    <dd>{{ cv.view.rights.rightsStatusKey | translate }}</dd>
+                    <dt ng-repeat-start="detail in cv.view.rights.details">{{ detail.labelKey | translate }}</dt>
+                    <dd ng-repeat-end class="case-view-rights-text">{{ detail.text }}</dd>
+                    <dt ng-if-start="cv.view.rights.source">{{ 'case_view_rights_source' | translate }}</dt>
+                    <dd ng-if-end>
+                        {{ cv.view.rights.source.title }}<span ng-if="cv.view.rights.source.author"> &middot; {{ cv.view.rights.source.author }}</span><span
+                            ng-if="cv.view.rights.source.license"> &middot; {{ cv.view.rights.source.license.key ? (cv.view.rights.source.license.key | translate) : cv.view.rights.source.license.text }}</span>
+                    </dd>
+                </dl>
+                <p class="text-muted case-view-rights-none" ng-if="cv.view.rights.details.length === 0">{{ 'case_view_rights_no_details' | translate }}</p>
+            </case-view-rights>
+        </case-view-tabs>
     </div>
 </div>
