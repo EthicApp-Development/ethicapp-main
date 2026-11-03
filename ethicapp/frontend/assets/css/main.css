@@ -6805,6 +6805,88 @@ button.launch-wizard-step-body:focus-visible .launch-wizard-step-name {
     color: var(--cases-error);
 }
 
+/* Cases page, action feedback (#1017): the notice after a row action, fixed
+   at the bottom as on the Designs page so it does not move the table, and
+   the delete confirmation dialog. */
+.cases-notice-region {
+    bottom: 24px;
+    left: 50%;
+    max-width: calc(100% - 32px);
+    position: fixed;
+    transform: translateX(-50%);
+    width: 560px;
+    z-index: 1040;
+}
+
+.cases-notice {
+    align-items: center;
+    box-shadow: 0 6px 18px rgb(0 0 0 / 18%);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    margin: 0;
+    padding: 10px 12px 10px 16px;
+}
+
+.cases-notice-message {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.cases-notice-links {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.cases-notice .cases-notice-link {
+    color: inherit;
+    font-weight: 600;
+    padding: 2px 6px;
+    text-decoration: underline;
+}
+
+.cases-notice .cases-notice-dismiss {
+    float: none;
+    margin-left: auto;
+    opacity: 0.6;
+}
+
+.case-delete-confirm .modal-title {
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.case-delete-confirm .case-delete-confirm-designs {
+    margin-bottom: 10px;
+    max-height: 180px;
+    overflow-y: auto;
+    overflow-wrap: anywhere;
+    padding-left: 20px;
+}
+
+.case-delete-confirm .case-delete-confirm-hint {
+    color: #6b6b6b;
+    font-size: 0.9em;
+    margin-bottom: 0;
+}
+
+.case-delete-confirm .case-delete-confirm-refusal {
+    margin-bottom: 0;
+}
+
+.case-delete-confirm .modal-footer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.case-delete-confirm .modal-footer .btn + .btn {
+    margin-left: 0;
+}
+
 .cases-table-footer {
     color: var(--cases-muted);
     display: flex;

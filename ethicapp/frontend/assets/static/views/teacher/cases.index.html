@@ -45,6 +45,8 @@
         <toast></toast>
     </div>
 
+    <div ng-include="'/assets/static/views/teacher/fragments/cases-action-notice.template.html'"></div>
+
     <p class="text-muted" ng-if="!cp.loaded">{{ 'loading' | translate }}</p>
     <div class="alert alert-danger" ng-if="cp.loaded && cp.loadFailed">{{ 'cases_load_failed' | translate }}</div>
 
