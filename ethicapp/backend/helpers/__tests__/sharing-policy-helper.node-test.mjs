@@ -14,6 +14,8 @@ import {
     getDesignAuthorName,
     getDesignTitle,
     getLocalizedCopyLabel,
+    hasValidCaseSharingFieldTypes,
+    normalizeCaseSharingFields,
     normalizeLanguageCode,
     normalizeLicenseCode,
     normalizeRightsStatus,
@@ -97,4 +99,78 @@ test("a design is attributed to its creator, or to the author it keeps once the 
         }, { metainfo: {} }),
         ""
     );
+});
+
+const EXISTING_CASE = {
+    visibility:           "private",
+    license_code:         "CC-BY-4.0",
+    attribution_text:     "By Ada",
+    rights_status:        "open_license",
+    license_notes:        "Notes",
+    permission_statement: "Permission",
+    commercial_source:    "Source",
+};
+
+test("normalizeCaseSharingFields reads snake and camel case sharing fields (#1014)", () => {
+    const sharing = {
+        visibility:          "public",
+        licenseCode:         "CC-BY-SA-4.0",
+        attributionText:     "By Grace",
+        rightsStatus:        "used_with_permission",
+        licenseNotes:        "New notes",
+        permissionStatement: "Granted",
+        commercialSource:    "",
+    };
+    const snakeCase = {
+        visibility:           "public",
+        license_code:         "CC-BY-SA-4.0",
+        attribution_text:     "By Grace",
+        rights_status:        "used_with_permission",
+        license_notes:        "New notes",
+        permission_statement: "Granted",
+        commercial_source:    "",
+    };
+
+    assert.deepEqual(normalizeCaseSharingFields(sharing, EXISTING_CASE), sharing);
+    assert.deepEqual(normalizeCaseSharingFields(snakeCase, EXISTING_CASE), sharing);
+});
+
+test("normalizeCaseSharingFields keeps the case's values for absent or invalid fields", () => {
+    assert.deepEqual(normalizeCaseSharingFields({}, EXISTING_CASE), {
+        visibility:          "private",
+        licenseCode:         "CC-BY-4.0",
+        attributionText:     "By Ada",
+        rightsStatus:        "open_license",
+        licenseNotes:        "Notes",
+        permissionStatement: "Permission",
+        commercialSource:    "Source",
+    });
+
+    const invalid = normalizeCaseSharingFields(
+        { visibility: "shared", licenseCode: "  ", rightsStatus: "private_use_only" },
+        EXISTING_CASE
+    );
+    assert.equal(invalid.visibility, "private");
+    assert.equal(invalid.licenseCode, "CC-BY-4.0");
+    assert.equal(invalid.rightsStatus, "open_license");
+});
+
+test("normalizeCaseSharingFields falls back to the case defaults for an unset case", () => {
+    const sharing = normalizeCaseSharingFields({}, {});
+
+    assert.equal(sharing.visibility, PRIVATE_VISIBILITY);
+    assert.equal(sharing.licenseCode, CASE_DEFAULT_LICENSE);
+    assert.equal(sharing.attributionText, null);
+    assert.equal(sharing.licenseNotes, null);
+});
+
+test("hasValidCaseSharingFieldTypes accepts strings and null, and nothing else", () => {
+    assert.equal(hasValidCaseSharingFieldTypes({}), true);
+    assert.equal(hasValidCaseSharingFieldTypes({ visibility: "public", licenseNotes: null }), true);
+    assert.equal(hasValidCaseSharingFieldTypes({ title: 3 }), true);
+    assert.equal(hasValidCaseSharingFieldTypes({ attributionText: { text: "x" } }), false);
+    assert.equal(hasValidCaseSharingFieldTypes({ license_code: 4 }), false);
+    assert.equal(hasValidCaseSharingFieldTypes([]), false);
+    assert.equal(hasValidCaseSharingFieldTypes(null), false);
+    assert.equal(hasValidCaseSharingFieldTypes("public"), false);
 });

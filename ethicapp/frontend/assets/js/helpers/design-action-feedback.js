@@ -41,9 +41,12 @@ export function findDesignTitle(designs, id) {
     return designTitle(design);
 }
 
-// A notice that names its design, or says the same without a name when the
-// title is unknown.
-function titledNotice(baseKey, title, { tone = NOTICE_TONE_SUCCESS, actions = [] } = {}) {
+/**
+ * A notice that names its item, or says the same without a name when the
+ * title is unknown (`<baseKey>_untitled`). The Cases page's notices use it
+ * too (#1017).
+ */
+export function titledNotice(baseKey, title, { tone = NOTICE_TONE_SUCCESS, actions = [] } = {}) {
     return {
         messageKey: title ? baseKey : `${baseKey}_untitled`,
         params:     title ? { title } : {},
@@ -52,7 +55,8 @@ function titledNotice(baseKey, title, { tone = NOTICE_TONE_SUCCESS, actions = []
     };
 }
 
-function failureNotice(messageKey) {
+/** A failure, in red, without links. */
+export function failureNotice(messageKey) {
     return { messageKey, params: {}, tone: NOTICE_TONE_DANGER, actions: [] };
 }
 

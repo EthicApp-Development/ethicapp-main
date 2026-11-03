@@ -8,6 +8,7 @@ import { DesignPublicationService } from "../../services/design-publication.serv
 import { CaseVideoPickerService } from "../../services/case-video-picker.service.js";
 import { CasePublicationNoticeService } from "../../services/case-publication-notice.service.js";
 import { DesignDeleteConfirmService } from "../../services/design-delete-confirm.service.js";
+import { CaseDeleteConfirmService } from "../../services/case-delete-confirm.service.js";
 import { CasesCatalogService } from "../../services/cases-catalog.service.js";
 import { CaseAnalysesService } from "../../services/case-analyses.service.js";
 import { DesignAnalysesService } from "../../services/design-analyses.service.js";
@@ -45,6 +46,8 @@ app.factory("ActivityStateService", ["$http", "TeacherSocketService", ActivitySt
     .factory("CaseVideoPickerService", ["$uibModal", CaseVideoPickerService])
     .factory("CasePublicationNoticeService", ["$uibModal", CasePublicationNoticeService])
     .factory("DesignDeleteConfirmService", ["$uibModal", DesignDeleteConfirmService])
+    .factory("CaseDeleteConfirmService",
+        ["$uibModal", "CasesCatalogService", CaseDeleteConfirmService])
     .factory("DesignStateService", ["$rootScope", "$http", DesignStateService])
     .factory("ExternalServicesCatalogService",
         ["$http", "LanguageCatalogService", ExternalServicesCatalogService])
@@ -80,6 +83,14 @@ import { VoidController } from "../../controllers/common/void.controller.js";
 import { DesignEditorController } from "../../controllers/teacher/design-editor.controller.js";
 import { DesignViewerController } from "../../controllers/teacher/design-viewer.controller.js";
 import { CasesController } from "../../controllers/teacher/cases.controller.js";
+// The Cases page (#1013, epic #1008).
+import { CasesPageController } from "../../controllers/teacher/cases-page.controller.js";
+// The case view (#1018, epic #1008), and the list URL its "← Cases" returns to.
+import { CaseViewController } from "../../controllers/teacher/case-view.controller.js";
+import {
+    CasesListLocationService,
+    trackCasesListLocation,
+} from "../../services/cases-list-location.service.js";
 import { ProfileController } from "../../controllers/teacher/profile.controller.js";
 
 import { TeacherRouter } from "./teacher-routes.js";
@@ -165,7 +176,7 @@ app.controller("LaunchActivityWizardController",
         "LanguageCatalogService", LaunchActivityWizardController]);
 app.controller("CreateDesignController", 
     ["$scope", "$window", "DesignCatalogService", "UserProfileService",
-        "LanguageCatalogService", CreateDesignController]);
+        "LanguageCatalogService", "$location", "CasesCatalogService", CreateDesignController]);
 app.controller("DashboardController", 
     ["$scope", "$routeParams", "$http", "$translate", "$timeout",
         "ActivityStateService", "ActivityCatalogService", "DesignCatalogService",
@@ -175,9 +186,20 @@ app.controller("DesignViewerController",
     ["$scope", "$routeParams", "$window", "DesignCatalogService", "CasesCatalogService",
         "DesignPublicationService", DesignViewerController]);
 app.controller("CasesController",
-    ["$scope", "$routeParams", "$window", "$interval", "$translate", "toast",
+    ["$scope", "$routeParams", "$window", "$translate", "toast",
         "CasesCatalogService", "LanguageCatalogService", "UserProfileService",
         "CasePublicationNoticeService", CasesController]);
+app.controller("CasesPageController",
+    ["$scope", "$location", "$translate", "$interval", "toast",
+        "CasesCatalogService", "LanguageCatalogService", "CasePublicationNoticeService",
+        "$timeout", "CaseDeleteConfirmService", CasesPageController]);
+app.factory("CasesListLocationService", [CasesListLocationService]);
+app.run(["$rootScope", "$location", "CasesListLocationService", trackCasesListLocation]);
+app.controller("CaseViewController",
+    ["$scope", "$routeParams", "$interval", "$translate", "toast",
+        "CasesCatalogService", "LanguageCatalogService", "UserProfileService",
+        "CasesListLocationService", "$location", "CaseDeleteConfirmService",
+        CaseViewController]);
 app.controller("ErrorController", 
     ["$scope", "$window", "$routeParams",
         ErrorController]);
@@ -263,7 +285,6 @@ import launchDesignPreviewComponent from "../../components/launch-design-preview
 // The launch wizard's second step: identify and launch (#972).
 import launchActivityStepComponent from "../../components/launch-activity-step.component.js";
 import caseSearchSelectorComponent from "../../components/case-search-selector.component.js";
-import caseCardComponent from "../../components/case-card.component.js";
 import caseDocumentViewerComponent from "../../components/case-document-viewer.component.js";
 import caseMaterialComponent from "../../components/case-material.component.js";
 import caseViewTabsComponent from "../../components/case-view-tabs.component.js";
@@ -319,7 +340,6 @@ app.component('designItem', designItemComponent);
 app.component("launchDesignPreview", launchDesignPreviewComponent);
 app.component("launchActivityStep", launchActivityStepComponent);
 app.component("caseSearchSelector", caseSearchSelectorComponent);
-app.component("caseCard", caseCardComponent);
 app.component("caseDocumentViewer", caseDocumentViewerComponent);
 app.component("caseMaterial", caseMaterialComponent);
 app.component("caseViewTabs", caseViewTabsComponent);

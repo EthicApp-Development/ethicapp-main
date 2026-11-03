@@ -15,6 +15,8 @@ import {
     buildAttributionText,
     buildLocalizedCopyTitle,
     getCaseAuthorName,
+    hasValidCaseSharingFieldTypes,
+    normalizeCaseSharingFields,
     normalizeLicenseCode,
     normalizeLanguageCode,
     normalizeRightsStatus,
@@ -34,7 +36,14 @@ import {
 } from "../helpers/case-lifecycle-helper.js";
 import { insertRequestedCaseAnalyses } from "../helpers/case-analyses-helper.js";
 import { associableCaseSql } from "../helpers/design-case-association.js";
-import { applyCaseVisibility } from "../helpers/case-visibility.js";
+import { applyCaseVisibility, countDesignsKeepingCaseAccess } from "../helpers/case-visibility.js";
+import {
+    caseOwnDesignsJsonSql,
+    caseUsageJsonSql,
+    normalizeCaseUsage,
+    normalizeCaseUses,
+} from "../helpers/case-usage.js";
+import { removeCaseUploadDirectory } from "../helpers/case-upload-directory.js";
 import {
     caseVideoSummariesFromIds,
     caseVideosJsonSql,
@@ -142,7 +151,13 @@ const caseSharingSelectSql = `
           AND d.visibility = 'public'
           AND COALESCE(d.archived, false) = false
     ), '[]'::json) AS public_designs
-    ,
+`;
+
+// Whether an activity was launched from a design that uses the case, for
+// GET /cases/:id only: the edit form locks a case in use with it, and the case
+// view falls back on it when GET /cases/:id/uses fails. The cases page reads
+// `usage` instead (#1011).
+const caseLaunchedActivitySelectSql = `
     EXISTS (
         SELECT 1
         FROM designs d
@@ -198,7 +213,12 @@ function normalizeCase(row) {
         public: (row.visibility || PRIVATE_VISIBILITY) === PUBLIC_VISIBILITY,
         languageCode: row.language_code || DEFAULT_LANGUAGE_CODE,
         archived: row.archived === true,
-        hasLaunchedDesignActivity: row.has_launched_design_activity === true,
+        // Only for the query that selects it: GET /cases/:id.
+        ...(row.has_launched_design_activity === undefined
+            ? {}
+            : { hasLaunchedDesignActivity: row.has_launched_design_activity === true }),
+        // Only for the queries that select it: the teacher's own and archived cases.
+        ...(row.case_usage === undefined ? {} : { usage: normalizeCaseUsage(row.case_usage) }),
         authors: Array.isArray(row.authors) && row.authors.length > 0
             ? row.authors
             : [{
@@ -552,6 +572,7 @@ async function getReadableCaseWithDocumentProcessing(caseId, userId) {
             SELECT c.id, c.case_uuid, c.title, c.author_firstname, c.author_lastname, c.author_email,
                    c.pdf_path, c.creator, c.created_at, c.updated_at,
                    ${caseSharingSelectSql},
+                   ${caseLaunchedActivitySelectSql},
                    ${pdfRenderJobSelectSql}
             FROM ethical_cases c
             ${pdfRenderJobJoinSql}
@@ -624,6 +645,8 @@ router.get("/cases", async (req, res) => {
     const scope = String(req.query.scope || "own").trim().toLowerCase();
     const isPublicScope = scope === "public";
     const isArchivedScope = scope === "archived";
+    // Other teachers' use of a case is reported only to its author (#1011).
+    const usageSelectSql = isPublicScope ? "" : `${caseUsageJsonSql("c", "$1")} AS case_usage,`;
 
     try {
         const cases = await rpg2.execSQL({
@@ -632,6 +655,7 @@ router.get("/cases", async (req, res) => {
                 SELECT c.id, c.case_uuid, c.title, c.author_firstname, c.author_lastname, c.author_email,
                        c.pdf_path, c.creator, c.created_at, c.updated_at,
                        ${caseSharingSelectSql},
+                       ${usageSelectSql}
                        ${pdfRenderJobSelectSql}
                 FROM ethical_cases c
                 ${pdfRenderJobJoinSql}
@@ -775,6 +799,62 @@ router.get("/cases/:id/document-processing", async (req, res) => {
             status:  "err",
             message: "Failed to load case document processing status.",
         });
+    }
+});
+
+// The designs that use a case, for the case view and the delete dialog
+// (#1012, epic #1008): the teacher's own designs, and for the case's author
+// only, the counts of other teachers' designs (#923). Teachers only, for a
+// case they can read; any other case answers like a missing one.
+router.get("/cases/:id/uses", async (req, res) => {
+    if (!requireRole(req, res, "P")) {
+        return;
+    }
+
+    const caseId = parseCaseId(req.params.id);
+    if (!caseId) {
+        return res.status(400).json({ status: "err", message: "Invalid case id." });
+    }
+
+    try {
+        const teacherId = req.session.uid;
+        const caseObj = await getReadableCaseWithDocumentProcessing(caseId, teacherId);
+        if (!caseObj || !caseObj.id) {
+            return caseNotFoundResponse(res);
+        }
+
+        const usesRow = await rpg2.singleSQL({
+            dbcon: config.dbconnString,
+            sql:   `
+                SELECT ${caseOwnDesignsJsonSql("c", "$2")} AS own_designs,
+                       ${caseUsageJsonSql("c", "$2")} AS case_usage
+                FROM ethical_cases c
+                WHERE c.id = $1;
+            `,
+            sqlParams: [
+                rpg2.param("plain", caseId),
+                rpg2.param("plain", teacherId),
+            ],
+        });
+
+        const isAuthor = Number(caseObj.creator) === Number(teacherId);
+        const designsKeepingAccess = isAuthor
+            ? await countDesignsKeepingCaseAccess(
+                await rpg2.getDBInstance(config.dbconnString), caseId, teacherId)
+            : 0;
+
+        return res.status(200).json({
+            status: "ok",
+            result: normalizeCaseUses({
+                ownDesigns: usesRow?.own_designs,
+                usage:      usesRow?.case_usage,
+                isAuthor,
+                designsKeepingAccess,
+            }),
+        });
+    } catch (error) {
+        console.error("Error retrieving case uses:", error);
+        return res.status(500).json({ status: "err", message: "Failed to load case uses." });
     }
 });
 
@@ -985,19 +1065,6 @@ router.patch("/cases/:id", pdfUpload, async (req, res) => {
 
     const {
         title,
-        visibility,
-        license_code: licenseCode,
-        licenseCode: licenseCodeCamel,
-        attribution_text: attributionText,
-        attributionText: attributionTextCamel,
-        rights_status: rightsStatus,
-        rightsStatus: rightsStatusCamel,
-        license_notes: licenseNotes,
-        licenseNotes: licenseNotesCamel,
-        permission_statement: permissionStatement,
-        permissionStatement: permissionStatementCamel,
-        commercial_source: commercialSource,
-        commercialSource: commercialSourceCamel,
         language_code: languageCode,
         languageCode: languageCodeCamel,
     } = req.body;
@@ -1045,7 +1112,8 @@ router.patch("/cases/:id", pdfUpload, async (req, res) => {
         }
 
         // A case a launched activity uses is locked: the form refuses every
-        // change, its visibility included, as the visibility switch does.
+        // change, its sharing fields included. Its sharing alone can still
+        // change through PATCH /cases/:id/sharing and the visibility switch.
         if (await hasLaunchedDesignActivity(caseId)) {
             await removeUploadedFile(req.file);
             return lockedCaseResponse(res);
@@ -1076,9 +1144,7 @@ router.patch("/cases/:id", pdfUpload, async (req, res) => {
 
         const hasPdf = req.file && req.file.mimetype === "application/pdf";
         const pdfPath = hasPdf ? `/uploads/cases/${caseId}/case.pdf` : existingCase.pdf_path;
-        const normalizedLicenseCode = normalizeLicenseCode(licenseCode ?? licenseCodeCamel, existingCase.license_code || CASE_DEFAULT_LICENSE);
-        const normalizedRightsStatus = normalizeRightsStatus(rightsStatus ?? rightsStatusCamel, existingCase.rights_status);
-        const normalizedVisibility = normalizeVisibility(visibility, existingCase.visibility || PRIVATE_VISIBILITY);
+        const sharing = normalizeCaseSharingFields(req.body, existingCase);
 
         const saved = await updateCaseRecord([
             title,
@@ -1088,13 +1154,13 @@ router.patch("/cases/:id", pdfUpload, async (req, res) => {
             pdfPath,
             caseId,
             req.session.uid,
-            normalizedVisibility,
-            normalizedLicenseCode,
-            attributionText ?? attributionTextCamel ?? existingCase.attribution_text ?? null,
-            normalizedRightsStatus,
-            licenseNotes ?? licenseNotesCamel ?? existingCase.license_notes ?? null,
-            permissionStatement ?? permissionStatementCamel ?? existingCase.permission_statement ?? null,
-            commercialSource ?? commercialSourceCamel ?? existingCase.commercial_source ?? null,
+            sharing.visibility,
+            sharing.licenseCode,
+            sharing.attributionText,
+            sharing.rightsStatus,
+            sharing.licenseNotes,
+            sharing.permissionStatement,
+            sharing.commercialSource,
             normalizeLanguageCode(languageCode ?? languageCodeCamel, existingCase.language_code || DEFAULT_LANGUAGE_CODE),
         ]);
         if (!saved) {
@@ -1449,9 +1515,10 @@ router.patch("/cases/:id/visibility", async (req, res) => {
     try {
         await client.query("BEGIN");
 
-        // Ownership comes before the in-use check, so a teacher who does not
-        // own the case gets the same 404 as for a missing case, whether or
-        // not a launched activity uses it (#929).
+        // A teacher who does not own the case gets the same 404 as for a
+        // missing case (#929). A case a launched activity uses keeps its
+        // visibility editable in both directions: the lock covers only its
+        // content and its deletion (#1014).
         const ownedResult = await client.query(
             `
                 SELECT id
@@ -1466,11 +1533,6 @@ router.patch("/cases/:id/visibility", async (req, res) => {
         if (!ownedResult.rows[0]?.id) {
             await client.query("ROLLBACK");
             return caseNotFoundResponse(res);
-        }
-
-        if (await hasLaunchedDesignActivity(caseId)) {
-            await client.query("ROLLBACK");
-            return lockedCaseResponse(res);
         }
 
         const updatedResult = await client.query(
@@ -1517,6 +1579,119 @@ router.patch("/cases/:id/visibility", async (req, res) => {
         return res.status(500).json({ status: "err", message: "Failed to update case visibility." });
     } finally {
         client.release();
+    }
+});
+
+const sharingSettingsColumnsSql = `
+    id, visibility, license_code, attribution_text, rights_status,
+    license_notes, permission_statement, commercial_source
+`;
+
+// $1 visibility, $2 license, $3 attribution, $4 rights status,
+// $5 license notes, $6 permission statement, $7 commercial source,
+// $8 case id, $9 user id.
+const updateCaseSharingSql = `
+    UPDATE ethical_cases
+    SET visibility = $1,
+        license_code = $2,
+        attribution_text = $3,
+        rights_status = $4,
+        license_notes = $5,
+        permission_statement = $6,
+        commercial_source = $7,
+        updated_at = NOW()
+    WHERE id = $8
+      AND creator = $9
+    RETURNING ${sharingSettingsColumnsSql};
+`;
+
+// The sharing settings of Diseños' case publication modal: only the case's
+// visibility, license and rights, validated as the case form validates them.
+// A case a launched activity uses keeps its sharing editable, since the lock
+// covers only its content and its deletion (#1014). Answers like the
+// visibility switch, with the sharing fields it wrote.
+router.patch("/cases/:id/sharing", async (req, res) => {
+    if (!requireRole(req, res, "P")) {
+        return;
+    }
+
+    const caseId = parseCaseId(req.params.id);
+    if (!caseId) {
+        return res.status(400).json({ status: "err", message: "Invalid case id." });
+    }
+
+    const body = req.body ?? {};
+    if (!hasValidCaseSharingFieldTypes(body)) {
+        return res.status(400).json({
+            status:  "err",
+            message: "Invalid sharing fields.",
+            code:    "CASE_VALIDATION_FAILED",
+        });
+    }
+
+    try {
+        const saved = await inTransaction(async (client) => {
+            const ownedResult = await client.query(`
+                SELECT ${sharingSettingsColumnsSql}
+                FROM ethical_cases
+                WHERE id = $1
+                  AND creator = $2
+                FOR UPDATE;
+            `, [caseId, req.session.uid]);
+            const existingCase = ownedResult.rows[0];
+            if (!existingCase?.id) {
+                return null;
+            }
+
+            const sharing = normalizeCaseSharingFields(body, existingCase);
+            const updatedResult = await client.query(updateCaseSharingSql, [
+                sharing.visibility,
+                sharing.licenseCode,
+                sharing.attributionText,
+                sharing.rightsStatus,
+                sharing.licenseNotes,
+                sharing.permissionStatement,
+                sharing.commercialSource,
+                caseId,
+                req.session.uid,
+            ]);
+            const updated = updatedResult.rows[0];
+            if (!updated?.id) {
+                return null;
+            }
+
+            const visibilityEffects = await applyCaseVisibility(client, {
+                caseId,
+                ownerId:    req.session.uid,
+                visibility: updated.visibility,
+            });
+            return { updated, ...visibilityEffects };
+        });
+
+        if (!saved) {
+            return caseNotFoundResponse(res);
+        }
+
+        const { updated, affectedDesignIds, designsKeepingAccess } = saved;
+        return res.status(200).json({
+            status: "ok",
+            result: {
+                id:                  updated.id,
+                visibility:          updated.visibility,
+                public:              updated.visibility === PUBLIC_VISIBILITY,
+                licenseCode:         updated.license_code,
+                attributionText:     updated.attribution_text,
+                rightsStatus:        updated.rights_status,
+                licenseNotes:        updated.license_notes,
+                permissionStatement: updated.permission_statement,
+                commercialSource:    updated.commercial_source,
+                affectedDesignIds,
+                designsKeepingAccess,
+            },
+        });
+    } catch (error) {
+        console.error("Error updating case sharing:", error);
+        return res.status(500).json({ status: "err", message: "Failed to update case sharing." });
     }
 });
 
@@ -1567,6 +1742,59 @@ router.patch("/cases/:id/archive", async (req, res) => {
     }
 });
 
+// The answer for deleting a case that a design of another teacher uses,
+// archived or not: associations are never detached (#1010, epic #923).
+function caseUsedByOtherTeachersResponse(res) {
+    return res.status(409).json({
+        status:  "err",
+        message: "This case cannot be deleted because designs of other teachers use it.",
+        code:    "CASE_USED_BY_OTHER_TEACHERS",
+    });
+}
+
+// Locks the owner's case and the designs that use it, then answers why the
+// case cannot be deleted, or null when it can. The case's row lock keeps a
+// design from taking the case meanwhile, and the designs' locks keep an
+// activity from being launched from one. The checks are separate statements
+// after the locks, so they see what the transactions they waited for
+// committed (#1010).
+async function caseDeletionRefusal(client, caseId, ownerId) {
+    const ownedResult = await client.query(
+        `
+            SELECT id
+            FROM ethical_cases
+            WHERE id = $1
+              AND creator = $2
+            FOR UPDATE;
+        `,
+        [caseId, ownerId]
+    );
+    if (!ownedResult.rows[0]?.id) {
+        return caseNotFoundResponse;
+    }
+
+    await client.query(
+        `
+            SELECT id
+            FROM designs
+            WHERE case_id = $1
+            FOR UPDATE;
+        `,
+        [caseId]
+    );
+
+    const launchedResult = await client.query(launchedActivityByCaseSql, [caseId]);
+    if (launchedResult.rows[0]?.id) {
+        return lockedCaseResponse;
+    }
+
+    if (await countDesignsKeepingCaseAccess(client, caseId, ownerId) > 0) {
+        return caseUsedByOtherTeachersResponse;
+    }
+
+    return null;
+}
+
 router.delete("/cases/:id", async (req, res) => {
     if (!requireRole(req, res, "P")) {
         return;
@@ -1577,50 +1805,43 @@ router.delete("/cases/:id", async (req, res) => {
         return res.status(400).json({ status: "err", message: "Invalid case id." });
     }
 
+    const db = await rpg2.getDBInstance(config.dbconnString);
+    const client = await db.connect();
+
     try {
-        const ownedCase = await rpg2.singleSQL({
-            dbcon: config.dbconnString,
-            sql: `
-                SELECT id
-                FROM ethical_cases
-                WHERE id = $1 AND creator = $2;
-            `,
-            sqlParams: [
-                rpg2.param("plain", caseId),
-                rpg2.param("plain", req.session.uid),
-            ],
-        });
+        await client.query("BEGIN");
 
-        if (!ownedCase?.id) {
-            return res.status(404).json({ status: "err", message: "Case not found." });
+        const refusal = await caseDeletionRefusal(client, caseId, req.session.uid);
+        if (refusal) {
+            await client.query("ROLLBACK");
+            return refusal(res);
         }
 
-        if (await hasLaunchedDesignActivity(caseId)) {
-            return lockedCaseResponse(res);
-        }
-
-        const deleted = await rpg2.singleSQL({
-            dbcon: config.dbconnString,
-            sql: `
+        // Its copies stay and lose only their link to it (V40); the owner's
+        // designs that use it lose their case (designs_case_id_fkey).
+        await client.query(
+            `
                 DELETE FROM ethical_cases
-                WHERE id = $1 AND creator = $2
-                RETURNING id;
+                WHERE id = $1
+                  AND creator = $2;
             `,
-            sqlParams: [
-                rpg2.param("plain", caseId),
-                rpg2.param("plain", req.session.uid),
-            ],
-        });
+            [caseId, req.session.uid]
+        );
 
-        if (!deleted || !deleted.id) {
-            return res.status(404).json({ status: "err", message: "Case not found." });
-        }
-
-        return res.status(200).json({ status: "ok", message: "Case deleted." });
+        await client.query("COMMIT");
     } catch (error) {
+        await client.query("ROLLBACK");
         console.error("Error deleting case:", error);
         return res.status(500).json({ status: "err", message: "Failed to delete case." });
+    } finally {
+        client.release();
     }
+
+    // Its PDF, rendered pages and manifest. A failure is logged and does not
+    // change the answer: the case is already gone.
+    await removeCaseUploadDirectory(caseId);
+
+    return res.status(200).json({ status: "ok", message: "Case deleted." });
 });
 
 export default router;

@@ -37,7 +37,11 @@
                         on-select="cdc.selectCase(caseItem)"
                         on-clear="cdc.clearAssociatedCase()">
                     </case-search-selector>
-                    <p class="text-danger" role="alert" ng-if="cdc.caseErrorKey">
+                    <!-- The case of `?caseId=` (#1019), while it loads. -->
+                    <p class="help-block design-new-case-loading" ng-if="cdc.caseLoading">
+                        {{ 'design_new_from_case_loading' | translate }}
+                    </p>
+                    <p class="text-danger design-new-case-error" role="alert" ng-if="cdc.caseErrorKey">
                         {{ cdc.caseErrorKey | translate }}
                     </p>
                 </fieldset>
@@ -91,7 +95,7 @@
         <div class="row">
             <div class="col-md-12">
                 <hr class="mt-1medio mb-2">
-                <button class="btn btn-primary" type="submit">{{ 'next' | translate }}</button>
+                <button class="btn btn-primary" type="submit" ng-disabled="cdc.caseLoading">{{ 'next' | translate }}</button>
             </div>
         </div>
     </form>

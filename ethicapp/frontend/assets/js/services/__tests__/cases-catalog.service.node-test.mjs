@@ -137,3 +137,126 @@ describe("CasesCatalogService and the designs that keep a case (#939)", () => {
         assert.deepEqual(patches[0].body, { visibility: "public" });
     });
 });
+
+describe("CasesCatalogService.updateCaseSharing (#1014)", () => {
+    // The publication modal's model: the whole case form, of which only the
+    // sharing fields are sent.
+    const MODAL_FORM = {
+        title:               "A case",
+        authors:             [{ authorFirstname: "Ada", authorEmail: "ada@example.test" }],
+        currentPdfPath:      "/uploads/cases/41/case.pdf",
+        visibility:          "public",
+        licenseCode:         "CC-BY-SA-4.0",
+        attributionText:     "By Ada",
+        rightsStatus:        "used_with_permission",
+        licenseNotes:        "Notes",
+        permissionStatement: "Granted",
+        commercialSource:    "",
+        languageCode:        "en_US",
+    };
+
+    it("sends only the sharing fields, as JSON, to the sharing endpoint", async () => {
+        const { service, patches } = createService({
+            id: 41, visibility: "public", affectedDesignIds: [],
+        });
+
+        await service.updateCaseSharing(41, MODAL_FORM);
+
+        assert.deepEqual(patches[0], {
+            url:  "/cases/41/sharing",
+            body: {
+                visibility:          "public",
+                licenseCode:         "CC-BY-SA-4.0",
+                attributionText:     "By Ada",
+                rightsStatus:        "used_with_permission",
+                licenseNotes:        "Notes",
+                permissionStatement: "Granted",
+                commercialSource:    "",
+            },
+        });
+    });
+
+    it("fills the defaults of the case form for empty fields", async () => {
+        const { service, patches } = createService({ id: 41, visibility: "private" });
+
+        await service.updateCaseSharing(41, {});
+
+        assert.deepEqual(patches[0].body, {
+            visibility:          "private",
+            licenseCode:         "CC-BY-NC-SA-4.0",
+            attributionText:     "",
+            rightsStatus:        "own_work",
+            licenseNotes:        "",
+            permissionStatement: "",
+            commercialSource:    "",
+        });
+    });
+
+    it("announces the designs the save turned private and hands back the answer", async () => {
+        const { service, broadcasts } = createService({
+            id: 41, visibility: "private", affectedDesignIds: [12], designsKeepingAccess: 2,
+        });
+
+        const result = await service.updateCaseSharing(41, {
+            ...MODAL_FORM,
+            visibility: "private",
+        });
+
+        assert.equal(result.designsKeepingAccess, 2);
+        assert.deepEqual(broadcasts, [{
+            name: "caseVisibilityUpdatedDesigns",
+            data: { caseId: 41, affectedDesignIds: [12], visibility: "private" },
+        }]);
+    });
+});
+
+describe("CasesCatalogService.getCaseUses (#1012)", () => {
+    function createUsesService(answer) {
+        const gets = [];
+        const $http = {
+            async get(url, config) {
+                gets.push({ url, config });
+                return answer();
+            },
+        };
+        return { service: CasesCatalogService({ $broadcast() {} }, $http), gets };
+    }
+
+    it("reads the case's uses and hands back the answer's result", async () => {
+        const uses = {
+            ownDesigns:           [{ id: 12, title: "Mine", archived: false }],
+            activityCount:        3,
+            otherDesignCount:     2,
+            otherTeacherCount:    1,
+            designsKeepingAccess: 2,
+        };
+        const { service, gets } = createUsesService(() => ({
+            data: { status: "ok", result: uses },
+        }));
+
+        const result = await service.getCaseUses(41);
+
+        assert.deepEqual(gets, [{ url: "/cases/41/uses", config: undefined }]);
+        assert.deepEqual(result, uses);
+    });
+
+    it("leaves the cached lists alone", async () => {
+        const { service, gets } = createUsesService(() => ({
+            data: { status: "ok", result: { ownDesigns: [], activityCount: 0 } },
+        }));
+
+        await service.getCaseUses(41);
+
+        assert.equal(gets.length, 1);
+        assert.deepEqual(service.cases, []);
+    });
+
+    it("rejects with the answer of a case the teacher cannot read", async () => {
+        const notFound = { status: 404, data: { status: "err", code: "CASE_NOT_FOUND" } };
+        const { service } = createUsesService(() => {
+            throw notFound;
+        });
+
+        await assert.rejects(service.getCaseUses(999), error => error === notFound);
+    });
+});

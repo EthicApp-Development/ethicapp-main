@@ -1,0 +1,1038 @@
+// The Cases page (#1013, epic #1008): the tab lives in the URL, rows run
+// their actions through the catalog, deleting asks first and every action
+// ends with a notice (#1017), and the share switch keeps the publication
+// dialog. AngularJS services are fakes.
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { describe, it } from "node:test";
+
+import { CasesPageController } from "../cases-page.controller.js";
+
+const fragment = name => readFileSync(new URL(
+    `../../../../static/views/teacher/fragments/${name}.template.html`, import.meta.url), "utf8");
+const template = readFileSync(new URL(
+    "../../../../static/views/teacher/cases.index.html", import.meta.url), "utf8");
+
+const NO_USE = { activityCount: 0, ownDesignCount: 0, otherDesignCount: 0, otherTeacherCount: 0 };
+
+function own(id, title, fields = {}) {
+    return {
+        id, title, visibility:   "private", public:       false, languageCode: "es_CL",
+        createdAt:    `2026-10-${String(10 + id).padStart(2, "0")}T00:00:00Z`,
+        usage:        { ...NO_USE }, ...fields,
+    };
+}
+
+function makeCases() {
+    return {
+        own: [
+            own(1, "Ready"),
+            own(2, "Processing", { documentProcessing: { status: "processing" } }),
+            own(3, "Broken PDF", { documentProcessing: { status: "failed" } }),
+            own(4, "Used", { usage: { ...NO_USE, activityCount: 2, ownDesignCount: 1 } }),
+            own(5, "Kept by others", {
+                visibility: "public", public:     true,
+                usage:      { ...NO_USE, otherDesignCount: 3, otherTeacherCount: 2 },
+            }),
+        ],
+        // The teacher's archived copy of shared case 8.
+        archived: [own(6, "Gone", { archived: true, importedFromCaseId: 8 })],
+        shared:   [
+            theirs(7, "Theirs", {
+                authors:   [{ authorFirstname: "Andrea", authorLastname: "Rojas" }],
+                tags:      [{ label: "Minería" }],
+                createdAt: "2026-10-02T00:00:00Z",
+            }),
+            theirs(8, "Already mine", {
+                authors:   [{ authorFirstname: "Tomás", authorLastname: "Pérez" }],
+                createdAt: "2026-10-01T00:00:00Z",
+            }),
+        ],
+    };
+}
+
+function theirs(id, title, fields) {
+    return { id, title, visibility: "public", public: true, ...fields };
+}
+
+function createPage({
+    search = {}, catalog = {}, confirmAnswer = true, deleteAnswer = "delete",
+} = {}) {
+    const scopeHandlers = {};
+    const calls = {
+        navigated:  [], toasts:     [], pushes:     [], replaces:   [], duplicated: [],
+        archived:   [], deleted:    [], visibility: [], imported:   [], confirms:   0,
+        polled:     [], intervals:  [], cancelled:  [],
+    };
+    // The delete dialogs opened, the notices' timers and the forced reloads.
+    Object.assign(calls,
+        { deleteDialogs: [], timeouts: [], cancelledTimeouts: [], forcedLoads: 0 });
+    // The URLs set whole, with their search (#1019).
+    calls.urls = [];
+    let current = { ...search };
+    const lists = makeCases();
+
+    const $scope = {
+        $on(name, handler) {
+            (scopeHandlers[name] ||= []).push(handler);
+        },
+        $applyAsync(fn) {
+            fn?.();
+        },
+        navigateTo(path) {
+            calls.navigated.push(path);
+        },
+    };
+    const $location = {
+        url(value) {
+            calls.urls.push(value);
+        },
+        search(key, value) {
+            if (key === undefined) {
+                return { ...current };
+            }
+            const next = { ...current };
+            if (value === null) {
+                delete next[key];
+            } else {
+                next[key] = String(value);
+            }
+            current = next;
+            calls.pushes.push({ ...current });
+            return {
+                replace() {
+                    calls.pushes.pop();
+                    calls.replaces.push({ ...current });
+                },
+            };
+        },
+    };
+    const $translate = {
+        instant: (key, values) => (values ? `${key}(${values.count})` : key),
+    };
+    // Intervals run only when the test says so.
+    const $interval = (fn, delay) => {
+        const timer = { fn, delay };
+        calls.intervals.push(timer);
+        return timer;
+    };
+    $interval.cancel = timer => calls.cancelled.push(timer);
+    const toast = { create: options => calls.toasts.push(options) };
+    // Timeouts run only when the test says so.
+    const $timeout = (fn, delay) => {
+        const timer = { fn, delay };
+        calls.timeouts.push(timer);
+        return timer;
+    };
+    $timeout.cancel = timer => calls.cancelledTimeouts.push(timer);
+
+    const CasesCatalogService = {
+        getCases: async (force) => {
+            if (force) {
+                calls.forcedLoads += 1;
+            }
+            return lists.own;
+        },
+        getPublicCases:            async () => lists.shared,
+        getArchivedCases:          async () => lists.archived,
+        getCaseDocumentProcessing: async (id) => {
+            calls.polled.push(id);
+            return { documentProcessing: { status: "completed", pageCount: 4 } };
+        },
+        duplicateCase: async (id) => {
+            calls.duplicated.push(id);
+            const copy = own(99, "Copy");
+            lists.own = [...lists.own, copy];
+            return copy;
+        },
+        updateCaseArchived: async (id, archived) => {
+            calls.archived.push([id, archived]);
+        },
+        deleteCase: async (id) => {
+            calls.deleted.push(id);
+        },
+        updateCaseVisibility: async (id, visibility) => {
+            calls.visibility.push([id, visibility]);
+            return { id, visibility, public: visibility === "public", affectedDesignIds: [] };
+        },
+        importCase: async (id) => {
+            calls.imported.push(id);
+            const copy = own(98, "Theirs (copy)", { importedFromCaseId: id });
+            lists.own = [...lists.own, copy];
+            return copy;
+        },
+        ...catalog,
+    };
+    const LanguageCatalogService = {
+        getLanguages: async () => [{ code: "es_CL", native_name: "Español" }],
+    };
+    const CasePublicationNoticeService = {
+        confirm: async () => {
+            calls.confirms += 1;
+            return confirmAnswer;
+        },
+    };
+
+    const CaseDeleteConfirmService = {
+        confirm: async (dialog) => {
+            calls.deleteDialogs.push(dialog);
+            return deleteAnswer;
+        },
+    };
+
+    const vm = {};
+    CasesPageController.call(vm, $scope, $location, $translate, $interval, toast,
+        CasesCatalogService, LanguageCatalogService, CasePublicationNoticeService,
+        $timeout, CaseDeleteConfirmService);
+
+    return {
+        vm,
+        calls,
+        lists,
+        // Angular's route update after a search change (Back, Forward, a tab link).
+        visit(nextSearch) {
+            current = { ...nextSearch };
+            (scopeHandlers.$routeUpdate || []).forEach(handler => handler());
+        },
+        leave() {
+            (scopeHandlers.$routeChangeStart || []).forEach(handler => handler());
+        },
+        destroy() {
+            (scopeHandlers.$destroy || []).forEach(handler => handler());
+        },
+    };
+}
+
+const rowOf = (vm, id, tab = "mine") => vm.getRows(tab).find(row => row.id === id);
+const entryOf = (row, id) => row.menu.find(entry => entry.id === id);
+const toastMessages = calls => calls.toasts.map(entry => entry.message);
+const noticeOf = vm => vm.notice && {
+    key:     vm.notice.messageKey,
+    params:  vm.notice.params,
+    tone:    vm.notice.tone,
+    actions: vm.notice.actions.map(action => [action.id, action.caseId]),
+};
+
+function quietly(run) {
+    const originalError = console.error;
+    console.error = () => {};
+    return Promise.resolve(run()).finally(() => {
+        console.error = originalError;
+    });
+}
+
+describe("cases page, tabs", () => {
+    it("opens My cases by default, newest first, and counts each tab", async () => {
+        const { vm } = createPage();
+        await vm.ready;
+        assert.equal(vm.tab, "mine");
+        assert.deepEqual(vm.getRows("mine").map(row => row.id), [5, 4, 3, 2, 1]);
+        assert.equal(vm.count("mine"), 5);
+        assert.equal(vm.count("shared"), 2);
+        assert.equal(vm.count("archived"), 1);
+    });
+
+    it("opens the URL's tab, as after a reload", async () => {
+        const { vm } = createPage({ search: { tab: "archived" } });
+        await vm.ready;
+        assert.equal(vm.tab, "archived");
+    });
+
+    it("follows the URL on Back and Forward", async () => {
+        const { vm, visit } = createPage();
+        await vm.ready;
+        visit({ tab: "shared" });
+        assert.equal(vm.tab, "shared");
+        visit({});
+        assert.equal(vm.tab, "mine");
+    });
+
+    it("opens Shared by others from Import a shared case, adding a history entry", async () => {
+        const { vm, calls } = createPage();
+        await vm.ready;
+        vm.openSharedTab();
+        assert.equal(vm.tab, "shared");
+        assert.deepEqual(calls.pushes, [{ tab: "shared" }]);
+    });
+
+    it("does not carry the tab to the next page", async () => {
+        const { vm, calls, leave } = createPage({ search: { tab: "archived" } });
+        await vm.ready;
+        leave();
+        assert.deepEqual(calls.replaces, [{}]);
+    });
+
+    it("shows 20 rows, then more on request", async () => {
+        const { vm } = createPage();
+        await vm.ready;
+        vm.tables.mine = Array.from({ length: 45 }, (_, index) => ({ id: index }));
+        assert.equal(vm.getVisibleRows("mine").length, 20);
+        assert.equal(vm.hasMoreRows("mine"), true);
+        vm.showMore("mine");
+        vm.showMore("mine");
+        assert.equal(vm.getVisibleRows("mine").length, 45);
+        assert.equal(vm.hasMoreRows("mine"), false);
+    });
+
+    it("says when the cases cannot be loaded", async () => {
+        await quietly(async () => {
+            const { vm } = createPage({
+                catalog: { getCases: async () => { throw new Error("down"); } },
+            });
+            await vm.ready;
+            assert.equal(vm.loaded, true);
+            assert.equal(vm.loadFailed, true);
+        });
+    });
+});
+
+describe("cases page, search and status filters", () => {
+    const mineIds = vm => vm.getRows("mine").map(row => row.id);
+    const chipIds = vm => vm.getFilterChips().map(chip => chip.id);
+
+    it("lists every case of My cases under All, with the PDF errors counted", async () => {
+        const { vm } = createPage();
+        await vm.ready;
+        assert.equal(vm.statusFilter, "all");
+        assert.equal(vm.search, "");
+        assert.deepEqual(chipIds(vm), ["all", "ready", "in-use", "shared", "pdf-error"]);
+        assert.equal(vm.getFilterChips().find(chip => chip.id === "pdf-error").count, 1);
+        assert.deepEqual(mineIds(vm), [5, 4, 3, 2, 1]);
+    });
+
+    it("lists exactly the cases of each chip, a processing case under All only", async () => {
+        const { vm } = createPage();
+        await vm.ready;
+        const listed = {};
+        for (const filter of ["ready", "in-use", "shared", "pdf-error"]) {
+            vm.selectStatusFilter(filter);
+            listed[filter] = mineIds(vm);
+        }
+        assert.deepEqual(listed, {
+            "ready":     [5, 1],
+            "in-use":    [4],
+            "shared":    [5],
+            "pdf-error": [3],
+        });
+    });
+
+    it("hides PDF error when no case has one", async () => {
+        const { vm } = createPage({
+            catalog: { getCases: async () => [own(1, "Ready"), own(2, "Also ready")] },
+        });
+        await vm.ready;
+        assert.deepEqual(chipIds(vm), ["all", "ready", "in-use", "shared"]);
+    });
+
+    it("opens the URL's filter and search, as after a reload or Back from a case", async () => {
+        const { vm } = createPage({ search: { status: "in-use" } });
+        await vm.ready;
+        assert.equal(vm.statusFilter, "in-use");
+        assert.deepEqual(mineIds(vm), [4]);
+        assert.equal(vm.count("mine"), 5, "the tab still counts every case");
+
+        const searched = createPage({ search: { status: "shared", q: "kept" } });
+        await searched.vm.ready;
+        assert.equal(searched.vm.search, "kept");
+        assert.deepEqual(mineIds(searched.vm), [5]);
+
+        const unknown = createPage({ search: { status: "processing" } });
+        await unknown.vm.ready;
+        assert.equal(unknown.vm.statusFilter, "all");
+    });
+
+    it("searches the titles, authors and tags without accents or case", async () => {
+        const { vm } = createPage({
+            catalog: {
+                getCases: async () => [
+                    own(1, "Ética en la IA", {
+                        authors: [{ authorFirstname: "Camila", authorLastname: "Núñez" }],
+                    }),
+                    own(2, "Datos de pacientes", { tags: [{ label: "Salud pública" }] }),
+                ],
+            },
+            search: { q: "ETICA" },
+        });
+        await vm.ready;
+        assert.deepEqual(mineIds(vm), [1]);
+        for (const [query, expected] of [["nunez", [1]], ["salud publica", [2]], ["zzz", []]]) {
+            vm.search = query;
+            vm.handleSearchChange();
+            assert.deepEqual(mineIds(vm), expected, query);
+        }
+    });
+
+    it("applies the filters to My cases only", async () => {
+        const { vm } = createPage({ search: { status: "in-use", q: "zzz" } });
+        await vm.ready;
+        assert.deepEqual(vm.getRows("archived").map(row => row.id), [6]);
+        assert.equal(vm.getRows("shared").length, 2);
+    });
+
+    it("adds a history entry for a chip and replaces it while typing", async () => {
+        const { vm, calls } = createPage();
+        await vm.ready;
+        vm.selectStatusFilter("in-use");
+        assert.deepEqual(calls.pushes, [{ status: "in-use" }]);
+
+        vm.search = "  used ";
+        vm.handleSearchChange();
+        assert.deepEqual(calls.replaces, [{ status: "in-use", q: "used" }]);
+        assert.deepEqual(mineIds(vm), [4]);
+
+        vm.search = " ";
+        vm.handleSearchChange();
+        assert.deepEqual(calls.replaces.at(-1), { status: "in-use" });
+
+        vm.selectStatusFilter("all");
+        assert.deepEqual(calls.pushes.at(-1), {});
+    });
+
+    it("follows the URL on Back and Forward, keeping what is being typed", async () => {
+        const { vm, visit } = createPage({ search: { status: "in-use" } });
+        await vm.ready;
+        visit({ status: "pdf-error", q: "broken" });
+        assert.equal(vm.statusFilter, "pdf-error");
+        assert.equal(vm.search, "broken");
+        assert.deepEqual(mineIds(vm), [3]);
+
+        vm.search = "broken ";
+        visit({ status: "pdf-error", q: "broken" });
+        assert.equal(vm.search, "broken ", "the trailing space survives the URL update");
+
+        visit({});
+        assert.equal(vm.statusFilter, "all");
+        assert.equal(vm.search, "");
+    });
+
+    it("starts again from the first rows when a filter changes", async () => {
+        const { vm, visit } = createPage();
+        await vm.ready;
+        vm.showMore("mine");
+        vm.selectStatusFilter("ready");
+        assert.equal(vm.visibleCounts.mine, 20);
+
+        vm.showMore("mine");
+        vm.search = "ready";
+        vm.handleSearchChange();
+        assert.equal(vm.visibleCounts.mine, 20);
+
+        vm.showMore("mine");
+        visit({ status: "shared" });
+        assert.equal(vm.visibleCounts.mine, 20);
+    });
+
+    it("clears the filter and the search", async () => {
+        const { vm, calls } = createPage({ search: { status: "in-use", q: "zzz" } });
+        await vm.ready;
+        assert.deepEqual(vm.getRows("mine"), []);
+        vm.clearFilters();
+        assert.equal(vm.statusFilter, "all");
+        assert.equal(vm.search, "");
+        assert.deepEqual(calls.pushes.at(-1), {});
+        assert.equal(vm.getRows("mine").length, 5);
+    });
+
+    it("clears the filters when switching tabs, as the tabs' links do", async () => {
+        const { vm, calls } = createPage({ search: { status: "in-use", q: "used" } });
+        await vm.ready;
+        vm.openSharedTab();
+        assert.deepEqual(calls.pushes.at(-1), { tab: "shared" });
+        assert.equal(vm.statusFilter, "all");
+        assert.equal(vm.search, "");
+    });
+
+    it("does not carry the filter and the search to the next page", async () => {
+        const { vm, calls, leave } = createPage({
+            search: { tab: "mine", status: "in-use", q: "x" },
+        });
+        await vm.ready;
+        leave();
+        assert.deepEqual(calls.replaces.at(-1), {});
+    });
+});
+
+describe("cases page, rows", () => {
+    it("names each case's language and chooses its action by status", async () => {
+        const { vm } = createPage();
+        await vm.ready;
+        assert.deepEqual(rowOf(vm, 1).meta, [{ text: "Español" }]);
+        assert.deepEqual([1, 2, 3, 4].map(id => rowOf(vm, id).primary.id),
+            ["edit", "edit", "replace-pdf", "duplicate-to-edit"]);
+        assert.equal(rowOf(vm, 6, "archived").primary.id, "restore");
+        assert.equal(entryOf(rowOf(vm, 4), "delete").disabled, true);
+        assert.equal(entryOf(rowOf(vm, 5), "delete").reason.key, "cases_delete_used_by_others_other");
+    });
+});
+
+describe("cases page, row actions", () => {
+    it("opens the editor to edit a case or replace its PDF, and views one from the menu", async () => {
+        const { vm, calls } = createPage();
+        await vm.ready;
+        await vm.runAction(rowOf(vm, 1), rowOf(vm, 1).primary);
+        await vm.runAction(rowOf(vm, 3), rowOf(vm, 3).primary);
+        await vm.runAction(rowOf(vm, 2), entryOf(rowOf(vm, 2), "view"));
+        assert.deepEqual(calls.navigated, ["/cases/1/edit", "/cases/3/edit", "/cases/2"]);
+    });
+
+    it("opens a new design with the case from the menu, in My cases only (#1019)", async () => {
+        const { vm, calls } = createPage({ search: { status: "in-use" } });
+        await vm.ready;
+        await vm.runAction(rowOf(vm, 4), entryOf(rowOf(vm, 4), "new-design"));
+        assert.deepEqual(calls.urls, ["/designs/new?caseId=4"]);
+        assert.deepEqual(calls.navigated, []);
+        // The page's filters stay in its own history entry, for Back.
+        assert.deepEqual(calls.pushes, []);
+        assert.equal(entryOf(rowOf(vm, 6, "archived"), "new-design"), undefined);
+    });
+
+    it("duplicates a case in use and opens the copy in the editor", async () => {
+        const { vm, calls } = createPage();
+        await vm.ready;
+        await vm.runAction(rowOf(vm, 4), rowOf(vm, 4).primary);
+        assert.deepEqual(calls.duplicated, [4]);
+        assert.deepEqual(calls.navigated, ["/cases/99/edit"]);
+    });
+
+    it("stays on the page and says so when Duplicate to edit fails", async () => {
+        await quietly(async () => {
+            const { vm, calls } = createPage({
+                catalog: { duplicateCase: async () => { throw new Error("nope"); } },
+            });
+            await vm.ready;
+            await vm.runAction(rowOf(vm, 4), rowOf(vm, 4).primary);
+            assert.deepEqual(calls.navigated, []);
+            assert.deepEqual(noticeOf(vm), {
+                key: "cases_notice_duplicate_failed", params: {}, tone: "danger", actions: [],
+            });
+            assert.deepEqual(vm.busy, {});
+        });
+    });
+
+    it("duplicates from the menu, staying on the tab and naming the copy", async () => {
+        const { vm, calls } = createPage();
+        await vm.ready;
+        await vm.runAction(rowOf(vm, 1), entryOf(rowOf(vm, 1), "duplicate"));
+        assert.deepEqual(calls.navigated, []);
+        assert.equal(vm.tab, "mine");
+        assert.ok(rowOf(vm, 99));
+        assert.deepEqual(noticeOf(vm), {
+            key:     "cases_notice_duplicated",
+            params:  { title: "Copy" },
+            tone:    "success",
+            actions: [["edit-copy", 99]],
+        });
+        assert.deepEqual(toastMessages(calls), []);
+    });
+
+    it("opens the copy in the editor from its notice", async () => {
+        const { vm, calls } = createPage();
+        await vm.ready;
+        await vm.runAction(rowOf(vm, 1), entryOf(rowOf(vm, 1), "duplicate"));
+        await vm.runNoticeAction(vm.notice.actions[0]);
+        assert.deepEqual(calls.navigated, ["/cases/99/edit"]);
+        assert.equal(vm.notice, null);
+    });
+
+    it("archives from the menu, naming the case, and Undo restores it", async () => {
+        const { vm, calls } = createPage();
+        await vm.ready;
+        await vm.runAction(rowOf(vm, 1), entryOf(rowOf(vm, 1), "archive"));
+        assert.deepEqual(noticeOf(vm), {
+            key:     "cases_notice_archived",
+            params:  { title: "Ready" },
+            tone:    "success",
+            actions: [["undo-archive", 1]],
+        });
+        await vm.runNoticeAction(vm.notice.actions[0]);
+        assert.deepEqual(calls.archived, [[1, true], [1, false]]);
+        assert.equal(noticeOf(vm).key, "cases_notice_restored");
+        assert.equal(vm.tab, "mine");
+        assert.deepEqual(vm.busy, {});
+    });
+
+    it("restores from the Archived tab, naming the case and staying on the tab", async () => {
+        const { vm, calls } = createPage({ search: { tab: "archived" } });
+        await vm.ready;
+        const archived = rowOf(vm, 6, "archived");
+        await vm.runAction(archived, archived.primary);
+        assert.deepEqual(calls.archived, [[6, false]]);
+        assert.deepEqual(noticeOf(vm), {
+            key: "cases_notice_restored", params: { title: "Gone" }, tone: "success", actions: [],
+        });
+        assert.equal(vm.tab, "archived");
+    });
+
+    it("says when archiving or restoring fails", async () => {
+        await quietly(async () => {
+            const { vm } = createPage({
+                catalog: { updateCaseArchived: async () => { throw new Error("nope"); } },
+            });
+            await vm.ready;
+            await vm.runAction(rowOf(vm, 1), entryOf(rowOf(vm, 1), "archive"));
+            assert.equal(noticeOf(vm).key, "cases_notice_archive_failed");
+            const archived = rowOf(vm, 6, "archived");
+            await vm.runAction(archived, archived.primary);
+            assert.equal(noticeOf(vm).key, "cases_notice_restore_failed");
+            assert.equal(noticeOf(vm).tone, "danger");
+        });
+    });
+
+    it("asks before deleting, then names the deleted case", async () => {
+        const { vm, calls } = createPage();
+        await vm.ready;
+        await vm.runAction(rowOf(vm, 1), entryOf(rowOf(vm, 1), "delete"));
+        assert.deepEqual(calls.deleteDialogs, [{ caseId: 1, title: "Ready", archived: false }]);
+        assert.deepEqual(calls.deleted, [1]);
+        assert.deepEqual(noticeOf(vm), {
+            key: "cases_notice_deleted", params: { title: "Ready" }, tone: "success", actions: [],
+        });
+        assert.equal(vm.tab, "mine");
+    });
+
+    it("does not open the dialog for a case whose Delete is disabled", async () => {
+        const { vm, calls } = createPage();
+        await vm.ready;
+        await vm.runAction(rowOf(vm, 4), entryOf(rowOf(vm, 4), "delete"));
+        await vm.runAction(rowOf(vm, 5), entryOf(rowOf(vm, 5), "delete"));
+        assert.deepEqual(calls.deleteDialogs, []);
+        assert.deepEqual(calls.deleted, []);
+    });
+
+    it("tells the dialog an archived case is archived", async () => {
+        const { vm, calls } = createPage({ search: { tab: "archived" } });
+        await vm.ready;
+        const archived = rowOf(vm, 6, "archived");
+        await vm.runAction(archived, entryOf(archived, "delete"));
+        assert.deepEqual(calls.deleteDialogs, [{ caseId: 6, title: "Gone", archived: true }]);
+    });
+
+    it("changes nothing when the teacher cancels the dialog", async () => {
+        const { vm, calls } = createPage({ deleteAnswer: "cancel" });
+        await vm.ready;
+        await vm.runAction(rowOf(vm, 1), entryOf(rowOf(vm, 1), "delete"));
+        assert.deepEqual(calls.deleted, []);
+        assert.deepEqual(calls.archived, []);
+        assert.equal(vm.notice, null);
+        assert.deepEqual(vm.busy, {});
+    });
+
+    it("archives instead when the teacher chooses so, with Undo", async () => {
+        const { vm, calls } = createPage({ deleteAnswer: "archive" });
+        await vm.ready;
+        await vm.runAction(rowOf(vm, 1), entryOf(rowOf(vm, 1), "delete"));
+        assert.deepEqual(calls.deleted, []);
+        assert.deepEqual(calls.archived, [[1, true]]);
+        assert.deepEqual(noticeOf(vm).actions, [["undo-archive", 1]]);
+    });
+
+    it("explains a refused delete in red and reloads the stale lists", async () => {
+        await quietly(async () => {
+            for (const [code, key] of [
+                ["CASE_USED_BY_OTHER_TEACHERS", "cases_notice_delete_used_by_other_teachers"],
+                ["CASE_USED_BY_LAUNCHED_ACTIVITY", "cases_notice_delete_used_by_activity"],
+                ["CASE_NOT_FOUND", "cases_notice_delete_not_found"],
+            ]) {
+                const { vm, calls } = createPage({
+                    catalog: { deleteCase: async () => { throw { data: { code } }; } },
+                });
+                await vm.ready;
+                const loadsBefore = calls.forcedLoads;
+                await vm.runAction(rowOf(vm, 1), entryOf(rowOf(vm, 1), "delete"));
+                assert.deepEqual(noticeOf(vm),
+                    { key, params: {}, tone: "danger", actions: [] }, code);
+                assert.equal(calls.forcedLoads, loadsBefore + 1, code);
+            }
+        });
+    });
+
+    it("says when a delete fails for another reason, without reloading", async () => {
+        await quietly(async () => {
+            const { vm, calls } = createPage({
+                catalog: { deleteCase: async () => { throw new Error("down"); } },
+            });
+            await vm.ready;
+            const loadsBefore = calls.forcedLoads;
+            await vm.runAction(rowOf(vm, 1), entryOf(rowOf(vm, 1), "delete"));
+            assert.equal(noticeOf(vm).key, "cases_notice_delete_failed");
+            assert.equal(calls.forcedLoads, loadsBefore);
+        });
+    });
+
+    it("runs one action at a time per case", async () => {
+        let release;
+        const { vm, calls } = createPage({
+            catalog: {
+                updateCaseArchived: (id, archived) => new Promise((resolve) => {
+                    calls.archived.push([id, archived]);
+                    release = resolve;
+                }),
+            },
+        });
+        await vm.ready;
+        const row = rowOf(vm, 1);
+        const first = vm.runAction(row, entryOf(row, "archive"));
+        await vm.runAction(row, entryOf(row, "archive"));
+        assert.equal(vm.busy[1], true);
+        release();
+        await first;
+        assert.deepEqual(calls.archived, [[1, true]]);
+        assert.deepEqual(vm.busy, {});
+    });
+});
+
+describe("cases page, sharing", () => {
+    it("asks before sharing a private case, then saves it", async () => {
+        const { vm, calls } = createPage();
+        await vm.ready;
+        await vm.toggleSharing(rowOf(vm, 1));
+        assert.equal(calls.confirms, 1);
+        assert.deepEqual(calls.visibility, [[1, "public"]]);
+        assert.equal(vm.isShared(rowOf(vm, 1)), true);
+    });
+
+    it("shares a case in use", async () => {
+        const { vm, calls } = createPage();
+        await vm.ready;
+        assert.equal(rowOf(vm, 4).sharing.disabled, false);
+        await vm.toggleSharing(rowOf(vm, 4));
+        assert.deepEqual(calls.visibility, [[4, "public"]]);
+    });
+
+    it("changes nothing when the author cancels the publication", async () => {
+        const { vm, calls } = createPage({ confirmAnswer: false });
+        await vm.ready;
+        await vm.toggleSharing(rowOf(vm, 1));
+        assert.deepEqual(calls.visibility, []);
+        assert.equal(vm.isShared(rowOf(vm, 1)), false);
+    });
+
+    it("stops sharing without asking, and tells how many designs keep the case", async () => {
+        const { vm, calls } = createPage({
+            catalog: {
+                updateCaseVisibility: async (id, visibility) => {
+                    calls.visibility.push([id, visibility]);
+                    return { id, visibility, public: false, affectedDesignIds: [8], designsKeepingAccess: 3 };
+                },
+            },
+        });
+        await vm.ready;
+        await vm.toggleSharing(rowOf(vm, 5));
+        assert.equal(calls.confirms, 0);
+        assert.deepEqual(calls.visibility, [[5, "private"]]);
+        assert.deepEqual(toastMessages(calls), [
+            "ethical_cases_designs_made_private_one(1) ethical_cases_designs_keeping_access_other(3)",
+        ]);
+    });
+
+    it("puts the switch back and says so when the save fails", async () => {
+        await quietly(async () => {
+            const { vm, calls } = createPage({
+                catalog: { updateCaseVisibility: async () => { throw new Error("nope"); } },
+            });
+            await vm.ready;
+            await vm.toggleSharing(rowOf(vm, 5));
+            assert.equal(vm.isShared(rowOf(vm, 5)), true);
+            assert.deepEqual(toastMessages(calls), ["ethical_cases_save_error"]);
+            assert.deepEqual(vm.busy, {});
+        });
+    });
+
+    it("does not change the sharing of an archived case", async () => {
+        const { vm, calls } = createPage({ search: { tab: "archived" } });
+        await vm.ready;
+        await vm.toggleSharing(rowOf(vm, 6, "archived"));
+        assert.deepEqual(calls.visibility, []);
+    });
+});
+
+describe("cases page, document processing", () => {
+    it("refreshes the cases being processed until they are done", async () => {
+        const { vm, calls, destroy } = createPage();
+        await vm.ready;
+        assert.equal(calls.intervals.length, 1);
+        await vm.refreshDocumentProcessing();
+        assert.deepEqual(calls.polled, [2]);
+        assert.equal(rowOf(vm, 2).status.tone, "ready");
+        assert.deepEqual(rowOf(vm, 2).meta[0], { key: "cases_meta_pages_other", params: { count: 4 } });
+        assert.deepEqual(calls.cancelled, [calls.intervals[0]]);
+        destroy();
+        assert.equal(calls.cancelled.length, 1);
+    });
+});
+
+describe("cases page, Shared by others", () => {
+    const sharedRowOf = (vm, id) => vm.getSharedRows().find(row => row.id === id);
+
+    it("lists the shared cases newest first, with the teacher's copies marked", async () => {
+        const { vm } = createPage({ search: { tab: "shared" } });
+        await vm.ready;
+        assert.deepEqual(vm.getSharedRows().map(row => [row.id, row.importState, row.copyId]), [
+            [7, "importable", null],
+            [8, "imported", 6],
+        ]);
+        assert.equal(sharedRowOf(vm, 7).author, "Andrea Rojas");
+    });
+
+    it("imports a case, staying on the tab with the row imported and the copy listed", async () => {
+        const { vm, calls } = createPage({ search: { tab: "shared" } });
+        await vm.ready;
+        await vm.importCase(sharedRowOf(vm, 7));
+        assert.deepEqual(calls.imported, [7]);
+        assert.equal(vm.tab, "shared");
+        assert.deepEqual(calls.pushes, []);
+        assert.deepEqual(calls.navigated, []);
+        assert.equal(sharedRowOf(vm, 7).importState, "imported");
+        assert.equal(sharedRowOf(vm, 7).copyId, 98);
+        assert.ok(rowOf(vm, 98));
+        assert.deepEqual(noticeOf(vm), {
+            key:     "cases_notice_imported",
+            params:  { title: "Theirs (copy)" },
+            tone:    "success",
+            actions: [["edit-copy", 98], ["show-in-mine", 98]],
+        });
+        assert.deepEqual(toastMessages(calls), []);
+        assert.deepEqual(vm.busy, {});
+    });
+
+    it("opens the copy in the editor from the import's notice", async () => {
+        const { vm, calls } = createPage({ search: { tab: "shared" } });
+        await vm.ready;
+        await vm.importCase(sharedRowOf(vm, 7));
+        await vm.runNoticeAction(vm.notice.actions[0]);
+        assert.deepEqual(calls.navigated, ["/cases/98/edit"]);
+        assert.equal(vm.notice, null);
+    });
+
+    it("opens My cases from the import's notice", async () => {
+        const { vm, calls } = createPage({ search: { tab: "shared" } });
+        await vm.ready;
+        await vm.importCase(sharedRowOf(vm, 7));
+        await vm.runNoticeAction(vm.notice.actions[1]);
+        assert.equal(vm.tab, "mine");
+        assert.deepEqual(calls.pushes, [{}]);
+        assert.equal(vm.notice, null);
+    });
+
+    it("does not import a case the teacher already has a copy of", async () => {
+        const { vm, calls } = createPage({ search: { tab: "shared" } });
+        await vm.ready;
+        await vm.importCase(sharedRowOf(vm, 8));
+        assert.deepEqual(calls.imported, []);
+    });
+
+    it("imports a case once while the import is pending", async () => {
+        let release;
+        const { vm, calls } = createPage({
+            search:  { tab: "shared" },
+            catalog: {
+                importCase: id => new Promise((resolve) => {
+                    calls.imported.push(id);
+                    release = resolve;
+                }),
+            },
+        });
+        await vm.ready;
+        const row = sharedRowOf(vm, 7);
+        const first = vm.importCase(row);
+        await vm.importCase(row);
+        assert.equal(vm.busy[7], true);
+        release(own(98, "Theirs (copy)", { importedFromCaseId: 7 }));
+        await first;
+        assert.deepEqual(calls.imported, [7]);
+        assert.deepEqual(vm.busy, {});
+    });
+
+    it("keeps the row importable and says so when the import fails", async () => {
+        await quietly(async () => {
+            const { vm, calls } = createPage({
+                search:  { tab: "shared" },
+                catalog: { importCase: async () => { throw new Error("down"); } },
+            });
+            await vm.ready;
+            await vm.importCase(sharedRowOf(vm, 7));
+            assert.equal(vm.tab, "shared");
+            assert.equal(sharedRowOf(vm, 7).importState, "importable");
+            assert.deepEqual(noticeOf(vm), {
+                key: "cases_notice_import_failed", params: {}, tone: "danger", actions: [],
+            });
+            assert.deepEqual(toastMessages(calls), []);
+            assert.deepEqual(vm.busy, {});
+        });
+    });
+
+    it("drops a case that stopped being shared when its import is refused", async () => {
+        // Like the catalog, the list changes only when it is loaded again.
+        let loaded = makeCases().shared;
+        let onServer = loaded;
+        const { vm, calls } = createPage({
+            search:  { tab: "shared" },
+            catalog: {
+                importCase: async () => {
+                    onServer = onServer.filter(item => item.id !== 7);
+                    throw { data: { code: "CASE_NOT_IMPORTABLE" } };
+                },
+                getPublicCases: async (reload) => {
+                    if (reload) {
+                        loaded = onServer;
+                    }
+                    return loaded;
+                },
+            },
+        });
+        await vm.ready;
+        await vm.importCase(sharedRowOf(vm, 7));
+        assert.deepEqual(noticeOf(vm), {
+            key: "cases_notice_import_not_importable", params: {}, tone: "danger", actions: [],
+        });
+        assert.deepEqual(toastMessages(calls), []);
+        assert.deepEqual(vm.getSharedRows().map(row => row.id), [8]);
+        assert.equal(vm.tab, "shared");
+    });
+
+    it("searches the title, author and tags, from the first 20 rows again", async () => {
+        const { vm } = createPage({ search: { tab: "shared" } });
+        await vm.ready;
+        vm.sharedSearch = "perez";
+        assert.deepEqual(vm.getSharedRows().map(row => row.id), [8]);
+        vm.sharedSearch = "MINERIA";
+        assert.deepEqual(vm.getSharedRows().map(row => row.id), [7]);
+        vm.sharedSearch = "nothing";
+        assert.deepEqual(vm.getSharedRows(), []);
+        assert.equal(vm.count("shared"), 2);
+
+        vm.sharedSearch = "";
+        vm.tables.shared = Array.from({ length: 45 }, (_, index) => ({ id: index, title: "x" }));
+        vm.showMore("shared");
+        assert.equal(vm.getVisibleSharedRows().length, 40);
+        assert.equal(vm.hasMoreSharedRows(), true);
+        vm.handleSharedSearchChange();
+        assert.equal(vm.getVisibleSharedRows().length, 20);
+    });
+});
+
+describe("cases page template", () => {
+    it("uses its own controller and keeps each tab in its own fragment", () => {
+        assert.match(template, /ng-controller="CasesPageController as cp"/u);
+        assert.match(template, /fragments\/cases-action-notice\.template\.html/u);
+        assert.doesNotMatch(template, /CasesController/u);
+        for (const name of ["cases-own-tab", "cases-shared-tab", "cases-archived-tab"]) {
+            assert.match(template, new RegExp(`fragments/${name}\\.template\\.html`, "u"));
+        }
+        assert.match(fragment("cases-own-tab"), /fragments\/cases-table\.template\.html/u);
+        assert.match(fragment("cases-archived-tab"), /fragments\/cases-table\.template\.html/u);
+        assert.match(fragment("cases-table"), /fragments\/case-row-menu\.template\.html/u);
+    });
+
+    it("puts the tab in the URL and links the role line to a new design", () => {
+        assert.match(template, /href="#!\/cases"/u);
+        assert.match(template, /href="#!\/cases\?tab=shared"/u);
+        assert.match(template, /href="#!\/cases\?tab=archived"/u);
+        assert.match(template, /href="#!\/designs\/new"/u);
+    });
+
+    it("draws the search and the status chips in My cases, and a state for no matches", () => {
+        const mine = fragment("cases-own-tab");
+        assert.match(mine, /ng-model="cp\.search"/u);
+        assert.match(mine, /ng-change="cp\.handleSearchChange\(\)"/u);
+        assert.match(mine, /ng-repeat="chip in cp\.getFilterChips\(\) track by chip\.id"/u);
+        assert.match(mine, /aria-pressed=/u);
+        assert.match(mine, /class="cases-no-matches" role="status"/u);
+        assert.match(mine, /ng-click="cp\.clearFilters\(\)"/u);
+        assert.doesNotMatch(fragment("cases-archived-tab"), /getFilterChips|cp\.search/u);
+    });
+
+    it("draws the rows with a title link, a switch and a menu", () => {
+        const table = fragment("cases-table");
+        assert.match(table, /class="cases-row-title" ng-href="#!\/cases\/\{\{ row\.id \}\}"/u);
+        assert.match(table, /role="switch"/u);
+        assert.match(table, /aria-checked=/u);
+        assert.match(table, /ng-click="cp\.toggleSharing\(row\)"/u);
+        const menu = fragment("case-row-menu");
+        assert.match(menu, /uib-dropdown keyboard-nav/u);
+        assert.match(menu, /role="menuitem"/u);
+    });
+
+    it("draws Shared by others as a table with a banner, a search and one action per row", () => {
+        const shared = fragment("cases-shared-tab");
+        assert.doesNotMatch(shared, /<case-card/u);
+        assert.match(shared, /class="cases-shared-banner"/u);
+        assert.match(shared, /ng-model="cp\.sharedSearch"/u);
+        assert.match(shared, /ng-repeat="row in cp\.getVisibleSharedRows\(\) track by row\.id"/u);
+        assert.match(shared, /class="cases-row cases-shared-row"/u);
+        assert.match(shared, /data-case-id="\{\{ row\.id \}\}"/u);
+        assert.match(shared, /class="cases-row-title" ng-href="#!\/cases\/\{\{ row\.id \}\}"/u);
+        assert.match(shared, /ng-click="cp\.importCase\(row\)"/u);
+        assert.match(shared, /class="cases-shared-view-copy" data-action="view-copy"/u);
+        assert.match(shared, /ng-href="#!\/cases\/\{\{ row\.copyId \}\}"/u);
+    });
+
+    it("links each shared row to a new design with the case, as a secondary link (#1019)", () => {
+        const shared = fragment("cases-shared-tab");
+        assert.match(shared,
+            /class="btn btn-link btn-sm cases-shared-new-design" data-action="new-design"/u);
+        assert.match(shared, /ng-href="\{\{ row\.newDesignHref \}\}"/u);
+    });
+});
+
+describe("cases page, notices", () => {
+    it("shows one notice at a time, each for a few seconds", async () => {
+        const { vm, calls } = createPage();
+        await vm.ready;
+        const first = { messageKey: "first", params: {}, tone: "success", actions: [] };
+        const second = { messageKey: "second", params: {}, tone: "success", actions: [] };
+        vm.showNotice(first);
+        vm.showNotice(second);
+        assert.equal(vm.notice, second);
+        assert.deepEqual(calls.cancelledTimeouts, [calls.timeouts[0]]);
+        assert.equal(calls.timeouts[1].delay, 8000);
+        // The first notice's timer is cancelled; had it run, it keeps the second.
+        calls.timeouts[0].fn();
+        assert.equal(vm.notice, second);
+        calls.timeouts[1].fn();
+        assert.equal(vm.notice, null);
+    });
+
+    it("dismisses a notice, and stops its timer when the page goes away", async () => {
+        const { vm, calls, destroy } = createPage();
+        await vm.ready;
+        vm.showNotice({ messageKey: "shown", params: {}, tone: "success", actions: [] });
+        vm.dismissNotice();
+        assert.equal(vm.notice, null);
+        assert.deepEqual(calls.cancelledTimeouts, [calls.timeouts[0]]);
+        vm.showNotice({ messageKey: "again", params: {}, tone: "success", actions: [] });
+        destroy();
+        assert.deepEqual(calls.cancelledTimeouts, [calls.timeouts[0], calls.timeouts[1]]);
+    });
+
+    it("runs an import notice's links: Edit copy and View in My cases", async () => {
+        const { vm, calls } = createPage({ search: { tab: "shared" } });
+        await vm.ready;
+        const notice = {
+            messageKey: "cases_notice_imported",
+            params:     { title: "Theirs (copy)" },
+            tone:       "success",
+            actions:    [
+                { id: "edit-copy", key: "cases_notice_edit_copy", caseId: 98 },
+                { id: "show-in-mine", key: "cases_notice_show_in_mine", caseId: 98 },
+            ],
+        };
+        vm.showNotice(notice);
+        await vm.runNoticeAction(notice.actions[1]);
+        assert.equal(vm.tab, "mine");
+        assert.equal(vm.notice, null);
+        vm.showNotice(notice);
+        await vm.runNoticeAction(notice.actions[0]);
+        assert.deepEqual(calls.navigated, ["/cases/98/edit"]);
+    });
+
+    it("draws the notice in a live region, with its links and a dismiss button", () => {
+        const notice = fragment("cases-action-notice");
+        assert.match(notice, /class="cases-notice-region" role="status" aria-live="polite"/u);
+        assert.match(notice,
+            /ng-bind-html="cp\.notice\.messageKey \| translate:cp\.notice\.params"/u);
+        assert.match(notice, /ng-click="cp\.runNoticeAction\(action\)"/u);
+        assert.match(notice, /class="close cases-notice-dismiss"/u);
+        assert.match(notice, /'alert-danger' : 'alert-success'/u);
+    });
+});

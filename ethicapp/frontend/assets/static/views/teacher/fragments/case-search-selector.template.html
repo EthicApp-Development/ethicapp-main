@@ -16,7 +16,7 @@
     <p class="help-block" ng-if="!$ctrl.associatedCase">
         {{ 'design_no_case_associated' | translate }}
     </p>
-    <p class="help-block" ng-if="$ctrl.associatedCase">
+    <p class="help-block case-search-selector-current" ng-if="$ctrl.associatedCase">
         <strong>{{ 'design_associated_case_current' | translate }}:</strong>
         <a ng-href="#!/cases/{{$ctrl.associatedCase.id}}">
             {{ $ctrl.formatCaseLabel($ctrl.associatedCase) }}

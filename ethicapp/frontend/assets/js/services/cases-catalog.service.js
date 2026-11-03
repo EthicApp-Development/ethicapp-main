@@ -107,6 +107,16 @@ let CasesCatalogService = ($rootScope, $http) => {
             return response.data.result;
         },
 
+        // The designs that use a case (#1012): `{ ownDesigns, activityCount }`,
+        // the teacher's own designs as `{ id, title, archived }`, and for the
+        // case's author also `otherDesignCount`, `otherTeacherCount` and
+        // `designsKeepingAccess`. Rejects with the 404 of a case the teacher
+        // cannot read.
+        async getCaseUses(caseId) {
+            const response = await $http.get(`/cases/${caseId}/uses`);
+            return response.data.result;
+        },
+
         async getCaseByDesignId(designId) {
             const response = await $http.get(`/designs/${designId}/case`);
             const associatedCase = response.data.result;
@@ -233,6 +243,27 @@ let CasesCatalogService = ($rootScope, $http) => {
             await service.getArchivedCases(true);
             announceDesignsMadePrivate(caseId, response.data.result, visibility);
             return response.data.result;
+        },
+
+        // Saves only the case's visibility, license and rights, which stay
+        // editable while a launched activity uses the case (#1014). Answers
+        // like the share switch, with the sharing fields it wrote.
+        async updateCaseSharing(caseId, caseData) {
+            const response = await $http.patch(`/cases/${caseId}/sharing`, {
+                visibility:          caseData.visibility || "private",
+                licenseCode:         caseData.licenseCode || "CC-BY-NC-SA-4.0",
+                attributionText:     caseData.attributionText || "",
+                rightsStatus:        caseData.rightsStatus || "own_work",
+                licenseNotes:        caseData.licenseNotes || "",
+                permissionStatement: caseData.permissionStatement || "",
+                commercialSource:    caseData.commercialSource || "",
+            });
+            await service.getCases(true);
+            await service.getPublicCases(true);
+            await service.getArchivedCases(true);
+            const result = response.data.result;
+            announceDesignsMadePrivate(caseId, result, result?.visibility);
+            return result;
         },
 
         async importCase(caseId) {

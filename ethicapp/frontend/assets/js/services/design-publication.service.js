@@ -1,7 +1,10 @@
+import { casePublicationSummary } from "../helpers/case-publication.js";
+
 function CasePublicationSettingsModalController($uibModalInstance, caseItem, licenses) {
     const vm = this;
 
     vm.caseItem = caseItem;
+    vm.summary = casePublicationSummary(caseItem);
     vm.licenses = licenses;
     vm.hasAttemptedSubmit = false;
     vm.publicSharingError = false;
@@ -137,8 +140,14 @@ let DesignPublicationService = ($uibModal, DesignCatalogService, CasesCatalogSer
     service.updateCaseSettingsAndPublishDesign = async function(design, associatedCase) {
         service.restorePrivateDesignState(design);
 
+        // The modal saves only the case's sharing, so it works for a case a
+        // launched activity uses, whose content is locked (#1014).
         const updatedCaseForm = await service.openCaseSettingsModal(associatedCase);
-        const updatedCase = await CasesCatalogService.updateCase(associatedCase.id, updatedCaseForm);
+        const sharing = await CasesCatalogService.updateCaseSharing(
+            associatedCase.id,
+            updatedCaseForm
+        );
+        const updatedCase = { ...associatedCase, ...sharing };
         design.associatedCase = updatedCase;
 
         if (!service.isCaseReadyForPublicDesign(updatedCase)) {

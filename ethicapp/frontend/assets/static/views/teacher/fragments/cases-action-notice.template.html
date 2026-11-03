@@ -1,0 +1,22 @@
+<!-- The notice after a row action or an import (#1017): what happened, with
+     its links ("Edit copy", "Undo", "View in My cases"), or why the action
+     failed. It disappears after a few seconds and can be dismissed. The live
+     region stays in the page so screen readers announce each new notice. -->
+<div class="cases-notice-region" role="status" aria-live="polite" aria-atomic="true">
+    <div class="alert cases-notice" ng-if="cp.notice"
+        ng-class="cp.notice.tone === 'danger' ? 'alert-danger' : 'alert-success'">
+        <span class="cases-notice-message"
+            ng-bind-html="cp.notice.messageKey | translate:cp.notice.params"></span>
+        <span class="cases-notice-links" ng-if="cp.notice.actions.length > 0">
+            <button type="button" class="btn btn-link cases-notice-link"
+                ng-repeat="action in cp.notice.actions track by action.id"
+                data-action="{{ action.id }}"
+                ng-click="cp.runNoticeAction(action)">{{ action.key | translate }}</button>
+        </span>
+        <button type="button" class="close cases-notice-dismiss"
+            aria-label="{{ 'cases_notice_dismiss' | translate }}"
+            ng-click="cp.dismissNotice()">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+</div>

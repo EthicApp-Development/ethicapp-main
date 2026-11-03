@@ -1,0 +1,54 @@
+<!-- Asks before deleting a case (#1017). It lists the teacher's designs that
+     will lose their case, loaded when it opens, and says why the case cannot
+     be deleted when the server would refuse. "Cancel" has the initial focus;
+     Escape and the backdrop cancel too. -->
+<div class="modal-header">
+    <button type="button" class="close" ng-click="$ctrl.cancel()" aria-label="{{ 'cancel' | translate }}">
+        <span aria-hidden="true">&times;</span>
+    </button>
+    <h4 id="caseDeleteConfirmTitle" class="modal-title"
+        ng-bind-html="(($ctrl.title ? 'cases_delete_dialog_title' : 'cases_delete_dialog_title_untitled') | translate:{ title: $ctrl.title })"></h4>
+</div>
+<div id="caseDeleteConfirmBody" class="modal-body" aria-busy="{{ $ctrl.loading ? 'true' : 'false' }}">
+    <p class="case-delete-confirm-text" ng-if="!$ctrl.refusal">{{ 'cases_delete_dialog_body' | translate }}</p>
+
+    <p class="case-delete-confirm-loading text-muted" ng-if="$ctrl.loading">
+        <i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i> {{ 'cases_delete_dialog_loading' | translate }}
+    </p>
+    <p class="case-delete-confirm-load-failed text-warning" ng-if="$ctrl.loadFailed">{{ 'cases_delete_dialog_load_failed' | translate }}</p>
+
+    <div class="alert alert-warning case-delete-confirm-refusal" ng-if="$ctrl.refusal">
+        {{ 'cases_delete_dialog_refused' | translate }} {{ $ctrl.refusal.key | translate:$ctrl.refusal.params }}.
+        <span ng-if="$ctrl.canArchive">{{ 'cases_delete_dialog_refused_archive_hint' | translate }}</span>
+    </div>
+
+    <div class="case-delete-confirm-uses" ng-if="!$ctrl.loading && !$ctrl.loadFailed && !$ctrl.refusal">
+        <p class="case-delete-confirm-designs-label" ng-if="$ctrl.designs.length > 0">
+            {{ ($ctrl.designs.length === 1 ? 'cases_delete_dialog_designs_one' : 'cases_delete_dialog_designs_other') | translate:{ count: $ctrl.designs.length } }}
+        </p>
+        <ul class="case-delete-confirm-designs" ng-if="$ctrl.designs.length > 0">
+            <li ng-repeat="design in $ctrl.designs track by design.id">
+                <span ng-if="design.title">{{ design.title }}</span>
+                <em ng-if="!design.title">{{ 'cases_delete_dialog_design_untitled' | translate }}</em>
+                <span class="case-delete-confirm-design-archived text-muted" ng-if="design.archived">· {{ 'cases_delete_dialog_design_archived' | translate }}</span>
+            </li>
+        </ul>
+        <p class="case-delete-confirm-no-designs" ng-if="$ctrl.designs.length === 0">{{ 'cases_delete_dialog_designs_none' | translate }}</p>
+    </div>
+
+    <p class="case-delete-confirm-hint" ng-if="!$ctrl.refusal">
+        {{ 'cases_delete_dialog_copies' | translate }}
+        <span ng-if="$ctrl.canArchive">{{ 'cases_delete_dialog_archive_hint' | translate }}</span>
+    </p>
+</div>
+<div class="modal-footer">
+    <button type="button" class="btn btn-default case-delete-confirm-archive"
+        ng-if="$ctrl.canArchive"
+        ng-click="$ctrl.archiveInstead()">{{ 'cases_delete_dialog_archive' | translate }}</button>
+    <button type="button" class="btn btn-default case-delete-confirm-cancel" autofocus
+        ng-click="$ctrl.cancel()">{{ 'cancel' | translate }}</button>
+    <button type="button" class="btn btn-danger case-delete-confirm-delete"
+        ng-if="!$ctrl.refusal"
+        ng-disabled="!$ctrl.canDelete()"
+        ng-click="$ctrl.confirmDelete()">{{ 'cases_delete_dialog_confirm' | translate }}</button>
+</div>

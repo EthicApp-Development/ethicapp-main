@@ -906,7 +906,6 @@ table {
     border-top: 1px solid #b5c2fd;
 }
 
-.case-card-panel .panel-body,
 .design-item-panel .panel-body,
 .activity-item-panel .panel-body {
     padding-bottom: 12px;
@@ -951,7 +950,6 @@ table {
 }
 
 @media (max-width: 767px) {
-    .case-card-panel .panel-body,
     .design-item-panel .panel-body,
     .activity-item-panel .panel-body {
         padding-bottom: 4px;
@@ -965,7 +963,6 @@ table {
     }
 
     .teacher-card-action-buttons,
-    .case-card-panel .case-card-button-group,
     .design-item-panel .design-item-button-group {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -982,9 +979,6 @@ table {
         white-space: normal;
     }
 
-    .case-card-button-group > .btn,
-    .case-card-button-group > .locked-svg,
-    .case-card-share-control,
     .design-item-panel .design-item-button-group > .btn,
     .design-item-panel .design-item-button-group > .locked-svg,
     .design-item-panel .design-item-share-control {

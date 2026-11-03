@@ -1,0 +1,61 @@
+<!-- The table of "My cases" and "Archived" (#1013): a row per case. Below
+     1200 px the rows become compact rows. The row's "⋯" menu has its own
+     fragment. -->
+<table class="cases-table">
+    <caption class="sr-only">{{ (cp.tab === 'archived' ? 'cases_tab_archived' : 'cases_tab_mine') | translate }}</caption>
+    <thead>
+        <tr>
+            <th scope="col" class="cases-head-cell cases-col-case">{{ 'cases_col_case' | translate }}</th>
+            <th scope="col" class="cases-head-cell cases-col-status">{{ 'cases_col_status' | translate }}</th>
+            <th scope="col" class="cases-head-cell cases-col-designs">{{ 'cases_col_designs' | translate }}</th>
+            <th scope="col" class="cases-head-cell cases-col-sharing">{{ 'cases_col_shared' | translate }}</th>
+            <th scope="col" class="cases-head-cell cases-col-actions"><span class="sr-only">{{ 'cases_col_actions' | translate }}</span></th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr class="cases-row" ng-repeat="row in cp.getVisibleRows(cp.tab) track by row.id" data-case-id="{{ row.id }}">
+            <td class="cases-cell cases-cell-case">
+                <a class="cases-row-title" ng-href="#!/cases/{{ row.id }}">{{ row.title }}</a>
+                <span class="cases-row-meta"><span ng-repeat="part in row.meta">{{ part.key ? (part.key | translate:part.params) : part.text }}<span
+                    ng-if="!$last"> &middot; </span></span></span>
+            </td>
+            <td class="cases-cell cases-cell-status">
+                <span class="cases-status" ng-class="'cases-status-' + row.status.tone">
+                    <i class="fa-solid fa-circle" aria-hidden="true" ng-if="row.status.tone === 'ready'"></i>
+                    <i class="fa-solid fa-rotate" aria-hidden="true" ng-if="row.status.tone === 'processing'"></i>
+                    <i class="fa-solid fa-triangle-exclamation" aria-hidden="true" ng-if="row.status.tone === 'pdf-error'"></i>
+                    <i class="fa-solid fa-lock" aria-hidden="true" ng-if="row.status.tone === 'in-use'"></i>
+                    {{ row.status.key | translate:row.status.params }}
+                </span>
+            </td>
+            <td class="cases-cell cases-cell-designs">
+                <span class="cases-designs-total" ng-class="{ 'cases-designs-none': row.designs.none }">{{ row.designs.total.key | translate:row.designs.total.params }}</span>
+                <span class="cases-designs-others" ng-if="row.designs.others">{{ row.designs.others.key | translate:row.designs.others.params }}</span>
+            </td>
+            <td class="cases-cell cases-cell-sharing">
+                <span class="cases-sharing-label" aria-hidden="true">{{ 'cases_col_shared' | translate }}</span>
+                <span class="cases-switch-wrapper" title="{{ row.sharing.reasonKey ? (row.sharing.reasonKey | translate) : '' }}">
+                    <button type="button" role="switch" class="cases-switch"
+                        ng-class="{ 'is-on': cp.isShared(row) }"
+                        aria-checked="{{ cp.isShared(row) ? 'true' : 'false' }}"
+                        aria-label="{{ 'cases_share_switch_label' | translate }}: {{ row.title }}"
+                        ng-attr-aria-describedby="{{ row.sharing.reasonKey ? 'cases-sharing-reason-' + row.id : undefined }}"
+                        ng-disabled="row.sharing.disabled || cp.busy[row.id]"
+                        ng-click="cp.toggleSharing(row)">
+                        <span class="cases-switch-knob" aria-hidden="true"></span>
+                    </button>
+                    <span class="sr-only" id="cases-sharing-reason-{{ row.id }}" ng-if="row.sharing.reasonKey">{{ row.sharing.reasonKey | translate }}</span>
+                </span>
+            </td>
+            <td class="cases-cell cases-cell-actions">
+                <button type="button" class="btn btn-default btn-sm cases-row-primary"
+                    data-action="{{ row.primary.id }}"
+                    ng-disabled="cp.busy[row.id]"
+                    ng-click="cp.runAction(row, row.primary)">
+                    <i ng-class="row.primary.icon" aria-hidden="true"></i> {{ row.primary.key | translate }}
+                </button>
+                <div class="cases-row-menu-slot" ng-include="'/assets/static/views/teacher/fragments/case-row-menu.template.html'"></div>
+            </td>
+        </tr>
+    </tbody>
+</table>

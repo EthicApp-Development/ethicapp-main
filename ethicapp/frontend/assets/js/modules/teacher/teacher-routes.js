@@ -9,8 +9,11 @@ function TeacherRouter($routeProvider) {
             templateUrl:    'static/views/teacher/design.index.html',
             reloadOnSearch: false,
         })
+        // The form reads the case to preselect (`?caseId=`, #1019) and then
+        // removes it from the URL, which must not reload the form.
         .when('/designs/new', {
-            templateUrl: 'static/views/teacher/design.new.html',
+            templateUrl:    'static/views/teacher/design.new.html',
+            reloadOnSearch: false,
         })
         .when('/designs/:id', {
             templateUrl: 'static/views/teacher/design.view.html',
@@ -41,8 +44,12 @@ function TeacherRouter($routeProvider) {
         .when('/profile', {
             templateUrl: 'static/views/teacher/profile.html',
         })  
+        // The Cases page keeps its state when its tab or filters change in
+        // the URL (`?tab=archived`, #1013; `?status=`, `?q=`, #1015): a
+        // search change is a route update.
         .when('/cases', {
-            templateUrl: 'static/views/teacher/cases.index.html',
+            templateUrl:    'static/views/teacher/cases.index.html',
+            reloadOnSearch: false,
         })
         .when('/cases/new', {
             templateUrl: 'static/views/teacher/cases.new.html',

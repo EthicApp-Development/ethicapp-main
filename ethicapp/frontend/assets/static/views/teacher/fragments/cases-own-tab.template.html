@@ -1,0 +1,53 @@
+<!-- "My cases" (#1013): the teacher's cases, newest first, in the cases
+     table, with a search and status filters kept in the URL (`?q=`,
+     `?status=`) (#1015). -->
+<section class="cases-table-section cases-own-tab">
+    <div class="cases-table-tools" ng-if="cp.count('mine') > 0">
+        <div class="cases-filters">
+            <div class="search-field-wrapper cases-search">
+                <label for="cases-mine-search" class="sr-only">{{ 'cases_search_label' | translate }}</label>
+                <input id="cases-mine-search" class="form-control search-input search-decorated-input" type="search"
+                    autocomplete="off"
+                    placeholder="{{ 'cases_search_placeholder' | translate }}"
+                    ng-model="cp.search"
+                    ng-model-options="{ debounce: 250 }"
+                    ng-change="cp.handleSearchChange()">
+                <i class="fa-solid fa-magnifying-glass search-field-icon" aria-hidden="true"></i>
+            </div>
+            <div class="cases-filter-chips" role="group" aria-label="{{ 'cases_filter_label' | translate }}">
+                <button type="button" class="cases-filter-chip" data-filter="{{ chip.id }}"
+                    ng-repeat="chip in cp.getFilterChips() track by chip.id"
+                    ng-class="{ 'is-active': chip.active }"
+                    aria-pressed="{{ chip.active ? 'true' : 'false' }}"
+                    ng-click="cp.selectStatusFilter(chip.id)">{{ chip.key | translate }}<span
+                    class="cases-filter-chip-count" ng-if="chip.count !== null"> &middot; {{ chip.count }}</span></button>
+            </div>
+        </div>
+        <p class="cases-table-order">{{ 'cases_order_newest' | translate }}</p>
+    </div>
+
+    <div ng-if="cp.getRows('mine').length > 0"
+        ng-include="'/assets/static/views/teacher/fragments/cases-table.template.html'"></div>
+
+    <div class="cases-table-footer" ng-if="cp.getRows('mine').length > 0">
+        <span>
+            {{ 'cases_showing' | translate:{ shown: cp.getVisibleRows('mine').length, total: cp.getRows('mine').length } }}
+            <span ng-if="cp.hasMoreRows('mine')">&middot;
+                <button type="button" class="btn btn-link cases-show-more" ng-click="cp.showMore('mine')">
+                    {{ 'cases_show_more' | translate }}
+                </button>
+            </span>
+        </span>
+        <span class="cases-archive-hint">{{ 'cases_archive_hint' | translate }}</span>
+    </div>
+
+    <div class="cases-no-matches" role="status"
+        ng-if="cp.count('mine') > 0 && cp.getRows('mine').length === 0">
+        <span>{{ 'cases_filter_no_matches' | translate }}</span>
+        <button type="button" class="btn btn-default btn-sm cases-clear-filters" ng-click="cp.clearFilters()">{{ 'cases_filter_clear' | translate }}</button>
+    </div>
+    <div class="alert alert-info" ng-if="cp.count('mine') === 0">
+        <span>{{ 'empty_cases_message' | translate }}</span>
+        <a href="" ng-click="navigateTo('/cases/new')">{{ 'empty_cases_link' | translate }}</a>.
+    </div>
+</section>
