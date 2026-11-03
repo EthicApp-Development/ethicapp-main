@@ -1,0 +1,27 @@
+<!-- "Shared by others": the previous page's case cards, with their import
+     action, until this tab gets its own table and import flow (#1016). -->
+<section class="cases-shared-tab">
+    <div ng-if="cp.getRows('shared').length > 0">
+        <case-card
+            ng-repeat="caseItem in cp.getVisibleRows('shared') track by caseItem.id"
+            case-item="caseItem"
+            on-view="cp.viewCase"
+            on-import="cp.importCase">
+        </case-card>
+
+        <div class="cases-table-footer">
+            <span>
+                {{ 'cases_showing' | translate:{ shown: cp.getVisibleRows('shared').length, total: cp.getRows('shared').length } }}
+                <span ng-if="cp.hasMoreRows('shared')">&middot;
+                    <button type="button" class="btn btn-link cases-show-more" ng-click="cp.showMore('shared')">
+                        {{ 'cases_show_more' | translate }}
+                    </button>
+                </span>
+            </span>
+        </div>
+    </div>
+
+    <div class="alert alert-info" ng-if="cp.count('shared') === 0">
+        <span>{{ 'cases_shared_empty' | translate }}</span>
+    </div>
+</section>

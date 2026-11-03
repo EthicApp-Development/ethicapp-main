@@ -1,0 +1,24 @@
+<!-- The "⋯" menu of a row of "My cases" and "Archived" (#1013). Its entries
+     come from `helpers/cases-table.js`; Delete is last, disabled with its
+     reason when the case cannot be deleted. -->
+<div class="btn-group cases-row-menu" uib-dropdown keyboard-nav>
+    <button type="button" class="btn btn-default btn-sm cases-row-menu-toggle" uib-dropdown-toggle
+        ng-disabled="cp.busy[row.id]"
+        aria-label="{{ 'cases_more_actions' | translate }}: {{ row.title }}">
+        <i class="fa-solid fa-ellipsis" aria-hidden="true"></i>
+    </button>
+    <ul class="dropdown-menu dropdown-menu-right cases-menu" uib-dropdown-menu role="menu">
+        <li role="none" ng-repeat="entry in row.menu track by entry.id"
+            data-action="{{ entry.id }}"
+            ng-class="{ 'disabled': entry.disabled, 'cases-menu-danger': entry.danger }">
+            <a href="" role="menuitem" class="cases-menu-link"
+                ng-class="{ 'cases-menu-link-danger': entry.danger && !entry.disabled }"
+                ng-attr-aria-disabled="{{ entry.disabled ? 'true' : undefined }}"
+                ng-click="cp.runAction(row, entry)">
+                <i ng-class="entry.icon" aria-hidden="true"></i>
+                <span class="cases-menu-label">{{ entry.key | translate }}</span>
+                <span class="cases-menu-reason" ng-if="entry.reason">{{ entry.reason.key | translate:entry.reason.params }}</span>
+            </a>
+        </li>
+    </ul>
+</div>

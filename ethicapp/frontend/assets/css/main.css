@@ -6461,3 +6461,396 @@ button.launch-wizard-step-body:focus-visible .launch-wizard-step-name {
     gap: 8px 12px;
     padding: 14px 16px;
 }
+
+/* The Cases page (#1013, epic #1008): a head with the page's actions, tabs
+   with counts, and the "My cases" and "Archived" tables, after the Designs
+   page. From 1200 px each case is a table row; below, the same rows become
+   compact rows: the title and its details, then the status, designs, sharing
+   and actions on a second line. */
+.cases-page {
+    --cases-accent: var(--teacher-link-color, #2649ec);
+    --cases-line: #d9dde8;
+    --cases-muted: #5f6577;
+    --cases-ready: #2f7d32;
+    --cases-error: #c62828;
+    --cases-in-use: #8a6100;
+
+    padding: 8px 12px 48px;
+}
+
+.cases-page-head {
+    align-items: flex-start;
+    display: flex;
+    gap: 12px 24px;
+    justify-content: space-between;
+    margin-bottom: 14px;
+}
+
+.cases-page-intro {
+    min-width: 0;
+}
+
+.cases-page-title {
+    color: var(--cases-accent);
+    margin: 0 0 6px;
+}
+
+.cases-page-role {
+    color: var(--cases-muted);
+    margin: 0;
+    max-width: 900px;
+}
+
+.cases-page-design-link {
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.cases-page-actions {
+    display: flex;
+    flex: 0 0 auto;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.cases-page-tabs {
+    margin-bottom: 12px;
+}
+
+.cases-tab-count {
+    color: var(--cases-muted);
+    font-size: 12px;
+    margin-left: 2px;
+}
+
+.cases-table-tools {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    justify-content: flex-end;
+    margin-bottom: 6px;
+}
+
+.cases-table-order {
+    color: var(--cases-muted);
+    font-size: 13px;
+    margin: 0;
+}
+
+.cases-table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+.cases-table .cases-head-cell {
+    border-bottom: 2px solid var(--cases-line);
+    font-weight: 700;
+    padding: 6px 12px;
+    text-align: left;
+}
+
+.cases-table .cases-cell {
+    border-bottom: 1px solid var(--cases-line);
+    padding: 8px 12px;
+    vertical-align: middle;
+}
+
+.cases-row {
+    background: #fff;
+}
+
+.cases-row:hover {
+    background: #f3f5fc;
+}
+
+.cases-col-case {
+    width: 38%;
+}
+
+.cases-col-status {
+    width: 19%;
+}
+
+.cases-col-designs {
+    width: 15%;
+}
+
+.cases-col-sharing {
+    width: 10%;
+}
+
+.cases-cell-case {
+    max-width: 0;
+}
+
+.cases-row-title {
+    color: inherit;
+    display: block;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.cases-row-title:hover,
+.cases-row-title:focus {
+    color: var(--cases-accent);
+}
+
+.cases-row-meta,
+.cases-designs-others {
+    color: var(--cases-muted);
+    display: block;
+    font-size: 13px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.cases-status {
+    white-space: nowrap;
+}
+
+.cases-status .fa-circle {
+    font-size: 9px;
+    vertical-align: 1px;
+}
+
+.cases-status-ready {
+    color: var(--cases-ready);
+}
+
+.cases-status-processing {
+    color: var(--cases-muted);
+}
+
+.cases-status-pdf-error {
+    color: var(--cases-error);
+}
+
+.cases-status-in-use {
+    color: var(--cases-in-use);
+}
+
+.cases-designs-total {
+    white-space: nowrap;
+}
+
+.cases-designs-none {
+    color: var(--cases-muted);
+}
+
+/* Shown beside the switch only in the compact rows. */
+.cases-sharing-label {
+    color: var(--cases-muted);
+    display: none;
+    font-size: 13px;
+    margin-right: 6px;
+}
+
+.cases-switch-wrapper {
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.cases-switch {
+    background: #c3c7d1;
+    border: 0;
+    border-radius: 999px;
+    display: inline-block;
+    height: 22px;
+    padding: 0;
+    position: relative;
+    transition: background-color 0.15s ease;
+    vertical-align: middle;
+    width: 40px;
+}
+
+.cases-switch-knob {
+    background: #fff;
+    border-radius: 50%;
+    box-shadow: 0 1px 2px rgb(0 0 0 / 30%);
+    height: 18px;
+    left: 2px;
+    position: absolute;
+    top: 2px;
+    transition: left 0.15s ease;
+    width: 18px;
+}
+
+.cases-switch.is-on {
+    background: var(--cases-ready);
+}
+
+.cases-switch.is-on .cases-switch-knob {
+    left: 20px;
+}
+
+.cases-switch:focus-visible {
+    outline: 2px solid var(--cases-accent);
+    outline-offset: 2px;
+}
+
+.cases-switch[disabled] {
+    cursor: not-allowed;
+    opacity: 0.4;
+}
+
+.cases-cell-actions {
+    text-align: right;
+    white-space: nowrap;
+}
+
+.cases-row-primary {
+    margin-right: 6px;
+}
+
+.cases-row-menu-slot,
+.cases-row-menu {
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.cases-menu {
+    min-width: 260px;
+}
+
+.cases-menu .cases-menu-link {
+    align-items: baseline;
+    display: flex;
+    gap: 8px;
+    padding: 6px 14px;
+}
+
+.cases-menu .cases-menu-label {
+    flex: 1 1 auto;
+}
+
+.cases-menu .cases-menu-reason {
+    color: var(--cases-muted);
+    font-size: 12px;
+    max-width: 150px;
+    text-align: right;
+    white-space: normal;
+}
+
+.cases-menu > li.cases-menu-danger {
+    border-top: 1px solid var(--cases-line);
+    margin-top: 4px;
+    padding-top: 4px;
+}
+
+.cases-menu .cases-menu-link-danger,
+.cases-menu .cases-menu-link-danger:hover,
+.cases-menu .cases-menu-link-danger:focus {
+    color: var(--cases-error);
+}
+
+.cases-table-footer {
+    color: var(--cases-muted);
+    display: flex;
+    flex-wrap: wrap;
+    font-size: 13px;
+    gap: 6px 12px;
+    justify-content: space-between;
+    padding: 10px 4px 4px;
+}
+
+.cases-show-more {
+    font-size: inherit;
+    padding: 0;
+    vertical-align: baseline;
+}
+
+@media (width < 1200px) {
+    .cases-table thead {
+        display: none;
+    }
+
+    .cases-table,
+    .cases-table tbody {
+        display: block;
+    }
+
+    .cases-row {
+        border: 1px solid var(--cases-line);
+        border-radius: 6px;
+        display: grid;
+        gap: 6px 12px;
+        grid-template-areas:
+            "case case case case"
+            "status designs sharing actions";
+        grid-template-columns: auto auto auto minmax(0, 1fr);
+        margin-bottom: 8px;
+        padding: 10px 14px;
+    }
+
+    .cases-table .cases-cell {
+        border: 0;
+        display: block;
+        padding: 0;
+    }
+
+    .cases-cell-case {
+        grid-area: case;
+        max-width: none;
+        min-width: 0;
+    }
+
+    .cases-cell-status {
+        align-self: center;
+        grid-area: status;
+    }
+
+    .cases-cell-designs {
+        align-self: center;
+        grid-area: designs;
+    }
+
+    /* Frame E: a compact row says only how many designs use the case. */
+    .cases-designs-others {
+        display: none;
+    }
+
+    .cases-cell-sharing {
+        align-self: center;
+        grid-area: sharing;
+    }
+
+    .cases-cell-actions {
+        grid-area: actions;
+    }
+
+    .cases-sharing-label {
+        display: inline;
+    }
+}
+
+@media (width < 768px) {
+    .cases-page {
+        padding-left: 0;
+        padding-right: 0;
+    }
+
+    .cases-page-head {
+        flex-direction: column;
+    }
+
+    .cases-page-actions {
+        justify-content: flex-start;
+    }
+
+    .cases-row {
+        grid-template-areas:
+            "case case case"
+            "status designs sharing"
+            "actions actions actions";
+        grid-template-columns: auto auto minmax(0, 1fr);
+    }
+
+    .cases-cell-actions {
+        text-align: left;
+    }
+}
