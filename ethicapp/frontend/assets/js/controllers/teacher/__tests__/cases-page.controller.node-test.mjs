@@ -232,6 +232,172 @@ describe("cases page, tabs", () => {
     });
 });
 
+describe("cases page, search and status filters", () => {
+    const mineIds = vm => vm.getRows("mine").map(row => row.id);
+    const chipIds = vm => vm.getFilterChips().map(chip => chip.id);
+
+    it("lists every case of My cases under All, with the PDF errors counted", async () => {
+        const { vm } = createPage();
+        await vm.ready;
+        assert.equal(vm.statusFilter, "all");
+        assert.equal(vm.search, "");
+        assert.deepEqual(chipIds(vm), ["all", "ready", "in-use", "shared", "pdf-error"]);
+        assert.equal(vm.getFilterChips().find(chip => chip.id === "pdf-error").count, 1);
+        assert.deepEqual(mineIds(vm), [5, 4, 3, 2, 1]);
+    });
+
+    it("lists exactly the cases of each chip, a processing case under All only", async () => {
+        const { vm } = createPage();
+        await vm.ready;
+        const listed = {};
+        for (const filter of ["ready", "in-use", "shared", "pdf-error"]) {
+            vm.selectStatusFilter(filter);
+            listed[filter] = mineIds(vm);
+        }
+        assert.deepEqual(listed, {
+            "ready":     [5, 1],
+            "in-use":    [4],
+            "shared":    [5],
+            "pdf-error": [3],
+        });
+    });
+
+    it("hides PDF error when no case has one", async () => {
+        const { vm } = createPage({
+            catalog: { getCases: async () => [own(1, "Ready"), own(2, "Also ready")] },
+        });
+        await vm.ready;
+        assert.deepEqual(chipIds(vm), ["all", "ready", "in-use", "shared"]);
+    });
+
+    it("opens the URL's filter and search, as after a reload or Back from a case", async () => {
+        const { vm } = createPage({ search: { status: "in-use" } });
+        await vm.ready;
+        assert.equal(vm.statusFilter, "in-use");
+        assert.deepEqual(mineIds(vm), [4]);
+        assert.equal(vm.count("mine"), 5, "the tab still counts every case");
+
+        const searched = createPage({ search: { status: "shared", q: "kept" } });
+        await searched.vm.ready;
+        assert.equal(searched.vm.search, "kept");
+        assert.deepEqual(mineIds(searched.vm), [5]);
+
+        const unknown = createPage({ search: { status: "processing" } });
+        await unknown.vm.ready;
+        assert.equal(unknown.vm.statusFilter, "all");
+    });
+
+    it("searches the titles, authors and tags without accents or case", async () => {
+        const { vm } = createPage({
+            catalog: {
+                getCases: async () => [
+                    own(1, "Ética en la IA", {
+                        authors: [{ authorFirstname: "Camila", authorLastname: "Núñez" }],
+                    }),
+                    own(2, "Datos de pacientes", { tags: [{ label: "Salud pública" }] }),
+                ],
+            },
+            search: { q: "ETICA" },
+        });
+        await vm.ready;
+        assert.deepEqual(mineIds(vm), [1]);
+        for (const [query, expected] of [["nunez", [1]], ["salud publica", [2]], ["zzz", []]]) {
+            vm.search = query;
+            vm.handleSearchChange();
+            assert.deepEqual(mineIds(vm), expected, query);
+        }
+    });
+
+    it("applies the filters to My cases only", async () => {
+        const { vm } = createPage({ search: { status: "in-use", q: "zzz" } });
+        await vm.ready;
+        assert.deepEqual(vm.getRows("archived").map(row => row.id), [6]);
+        assert.equal(vm.getRows("shared").length, 1);
+    });
+
+    it("adds a history entry for a chip and replaces it while typing", async () => {
+        const { vm, calls } = createPage();
+        await vm.ready;
+        vm.selectStatusFilter("in-use");
+        assert.deepEqual(calls.pushes, [{ status: "in-use" }]);
+
+        vm.search = "  used ";
+        vm.handleSearchChange();
+        assert.deepEqual(calls.replaces, [{ status: "in-use", q: "used" }]);
+        assert.deepEqual(mineIds(vm), [4]);
+
+        vm.search = " ";
+        vm.handleSearchChange();
+        assert.deepEqual(calls.replaces.at(-1), { status: "in-use" });
+
+        vm.selectStatusFilter("all");
+        assert.deepEqual(calls.pushes.at(-1), {});
+    });
+
+    it("follows the URL on Back and Forward, keeping what is being typed", async () => {
+        const { vm, visit } = createPage({ search: { status: "in-use" } });
+        await vm.ready;
+        visit({ status: "pdf-error", q: "broken" });
+        assert.equal(vm.statusFilter, "pdf-error");
+        assert.equal(vm.search, "broken");
+        assert.deepEqual(mineIds(vm), [3]);
+
+        vm.search = "broken ";
+        visit({ status: "pdf-error", q: "broken" });
+        assert.equal(vm.search, "broken ", "the trailing space survives the URL update");
+
+        visit({});
+        assert.equal(vm.statusFilter, "all");
+        assert.equal(vm.search, "");
+    });
+
+    it("starts again from the first rows when a filter changes", async () => {
+        const { vm, visit } = createPage();
+        await vm.ready;
+        vm.showMore("mine");
+        vm.selectStatusFilter("ready");
+        assert.equal(vm.visibleCounts.mine, 20);
+
+        vm.showMore("mine");
+        vm.search = "ready";
+        vm.handleSearchChange();
+        assert.equal(vm.visibleCounts.mine, 20);
+
+        vm.showMore("mine");
+        visit({ status: "shared" });
+        assert.equal(vm.visibleCounts.mine, 20);
+    });
+
+    it("clears the filter and the search", async () => {
+        const { vm, calls } = createPage({ search: { status: "in-use", q: "zzz" } });
+        await vm.ready;
+        assert.deepEqual(vm.getRows("mine"), []);
+        vm.clearFilters();
+        assert.equal(vm.statusFilter, "all");
+        assert.equal(vm.search, "");
+        assert.deepEqual(calls.pushes.at(-1), {});
+        assert.equal(vm.getRows("mine").length, 5);
+    });
+
+    it("clears the filters when switching tabs, as the tabs' links do", async () => {
+        const { vm, calls } = createPage({ search: { status: "in-use", q: "used" } });
+        await vm.ready;
+        vm.openSharedTab();
+        assert.deepEqual(calls.pushes.at(-1), { tab: "shared" });
+        assert.equal(vm.statusFilter, "all");
+        assert.equal(vm.search, "");
+    });
+
+    it("does not carry the filter and the search to the next page", async () => {
+        const { vm, calls, leave } = createPage({
+            search: { tab: "mine", status: "in-use", q: "x" },
+        });
+        await vm.ready;
+        leave();
+        assert.deepEqual(calls.replaces.at(-1), {});
+    });
+});
+
 describe("cases page, rows", () => {
     it("names each case's language and chooses its action by status", async () => {
         const { vm } = createPage();
@@ -461,6 +627,17 @@ describe("cases page template", () => {
         assert.match(template, /href="#!\/cases\?tab=shared"/u);
         assert.match(template, /href="#!\/cases\?tab=archived"/u);
         assert.match(template, /href="#!\/designs\/new"/u);
+    });
+
+    it("draws the search and the status chips in My cases, and a state for no matches", () => {
+        const mine = fragment("cases-own-tab");
+        assert.match(mine, /ng-model="cp\.search"/u);
+        assert.match(mine, /ng-change="cp\.handleSearchChange\(\)"/u);
+        assert.match(mine, /ng-repeat="chip in cp\.getFilterChips\(\) track by chip\.id"/u);
+        assert.match(mine, /aria-pressed=/u);
+        assert.match(mine, /class="cases-no-matches" role="status"/u);
+        assert.match(mine, /ng-click="cp\.clearFilters\(\)"/u);
+        assert.doesNotMatch(fragment("cases-archived-tab"), /getFilterChips|cp\.search/u);
     });
 
     it("draws the rows with a title link, a switch and a menu", () => {

@@ -41,8 +41,9 @@ function TeacherRouter($routeProvider) {
         .when('/profile', {
             templateUrl: 'static/views/teacher/profile.html',
         })  
-        // The Cases page keeps its state when its tab changes in the URL
-        // (`?tab=archived`, #1013): a search change is a route update.
+        // The Cases page keeps its state when its tab or filters change in
+        // the URL (`?tab=archived`, #1013; `?status=`, `?q=`, #1015): a
+        // search change is a route update.
         .when('/cases', {
             templateUrl:    'static/views/teacher/cases.index.html',
             reloadOnSearch: false,
