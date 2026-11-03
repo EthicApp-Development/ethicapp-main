@@ -161,11 +161,11 @@
   <div class="legend"><span>fold (bottom of the viewport)</span><span class="n">numbered notes, explained under each frame</span></div>
 
   <h2>Where Actividades sits</h2>
-  <p class="lede" style="margin-bottom:0">An activity is a design launched with a group of students. Lanzar actividad starts one; the activity dashboard (<code>docs/design/teacher-activity-dashboard</code>, implemented) runs it; this page finds it again, before, during and after.</p>
+  <p class="lede" style="margin-bottom:0">An activity is a design launched with a group of participants. Lanzar actividad starts one; the activity dashboard (<code>docs/design/teacher-activity-dashboard</code>, implemented) runs it; this page finds it again, before, during and after.</p>
   <table class="roles">
     <tr><th></th><th>Actividades (this proposal)</th><th>Activity dashboard</th></tr>
     <tr><td><b>Job</b></td><td>Find an activity, see where each one stands, hand out its code, get to its reports, archive the finished ones.</td><td>Run one activity: start phases, follow the responses, end it.</td></tr>
-    <tr><td><b>What a row says</b></td><td>Its status (Sin iniciar, the phase and its mode, or Finalizada); how many students joined; the access code while it runs; when it was launched or ended.</td><td>Everything about one activity.</td></tr>
+    <tr><td><b>What a row says</b></td><td>Its status (Sin iniciar, the phase and its mode, or Finalizada); how many participants joined; the access code while it runs; when it was launched or ended.</td><td>Everything about one activity.</td></tr>
     <tr><td><b>Primary action</b></td><td>"Lanzar actividad"; per row "Abrir panel" (en curso) or "Reportes" (terminadas); "Restaurar" (archivadas).</td><td>"Iniciar fase siguiente", "Terminar actividad", "Reportes".</td></tr>
     <tr><td><b>Bridge</b></td><td>The role line links to Lanzar actividad; "Lanzar de nuevo" opens the wizard with the same design.</td><td>The browser's back button returns to the list with its tab and filters, which live in the URL.</td></tr>
   </table>
@@ -175,7 +175,7 @@
       <li>An activity's end time is recorded (<code>sessions.finished_at</code>), and Terminadas shows it.</li>
       <li>Rows show the status and the participants; there is no response count.</li>
       <li>Only a finished activity can be archived, in the page and in the server.</li>
-      <li>Archiving changes nothing for students: a finished activity and an archived one look the same to them.</li>
+      <li>Archiving changes nothing for participants: a finished activity and an archived one look the same to them.</li>
     </ul>
   </div>
 
@@ -191,7 +191,7 @@
   <p class="metrics" data-metrics="A"></p>
   <div id="A"></div>
   <ol class="notes">
-    <li><b>The page says what it is for:</b> "Sigue tus actividades, comparte su código con los estudiantes y revisa sus reportes. ¿Necesitas otra propuesta? Prepara un diseño →". The link leads to Diseños, since "Lanzar actividad" is already the page action. "Volver a la página anterior" goes away.</li>
+    <li><b>The page says what it is for:</b> "Sigue tus actividades, comparte su código con los participantes y revisa sus reportes. ¿Necesitas otra propuesta? Prepara un diseño →". The link leads to Diseños, since "Lanzar actividad" is already the page action. "Volver a la página anterior" goes away.</li>
     <li><b>One page action:</b> "🚀 Lanzar actividad", top right, as "+ Nuevo diseño" and "+ Nuevo caso".</li>
     <li><b>Tabs with counts:</b> "En curso", "Terminadas", "Archivadas" (today "Actuales", "Terminadas", "Archivadas"). Tab and filters are part of the URL.</li>
     <li><b>Filters:</b> search over the activity's name and description, its design, its case and its code; chips "Todas", "Sin iniciar · 9" and "Con fase en curso". The order is stated.</li>
@@ -199,8 +199,8 @@
       <ul>
         <li><b>Actividad:</b> the name and, after "·", the description the teacher gave at launch (#973); under it the case, and the design only when the activity was renamed at launch. A click on the name opens the dashboard.</li>
         <li><b>Estado:</b> "○ Sin iniciar" while no phase has started, or "● Fase 2 de 3 · Grupal", the same words as the dashboard's bar. "IA" marks an activity with AI services on.</li>
-        <li><b>Estudiantes:</b> how many joined.</li>
-        <li><b>Código:</b> the access code, copied with one click, as students are told to type it.</li>
+        <li><b>Participantes:</b> how many joined.</li>
+        <li><b>Código:</b> the access code, copied with one click, as participants are told to type it.</li>
         <li><b>Lanzada:</b> in the teacher's time zone ("hoy, 18:01", "ayer", "12 oct."), instead of today's "02-11-2026 18:01 (UTC)".</li>
       </ul></li>
     <li><b>One visible action per row:</b> "Abrir panel", the dashboard.</li>
@@ -212,17 +212,17 @@
   <div id="B"></div>
   <ol class="notes">
     <li><b>"Reportes" is the visible action</b> of a finished activity: it opens the reports page directly, one click instead of two.</li>
-    <li><b>Columns for a finished activity:</b> its status, the students who took part, and when it ended (<code>sessions.finished_at</code>). An activity finished before the end time was recorded shows "—". The code column goes away.</li>
+    <li><b>Columns for a finished activity:</b> its status, the participants who took part, and when it ended (<code>sessions.finished_at</code>). An activity finished before the end time was recorded shows "—". The code column goes away.</li>
     <li><b>The row menu:</b> Abrir panel, Lanzar de nuevo (the wizard on this design, <code>#!/activities/new/:designId</code>), Ver diseño, Archivar.</li>
-    <li><b>After archiving,</b> a notice names the activity and offers "Deshacer". Today the card disappears without a word. Students see nothing different, so the notice does not mention them.</li>
+    <li><b>After archiving,</b> a notice names the activity and offers "Deshacer". Today the card disappears without a word. Participants see nothing different, so the notice does not mention them.</li>
   </ol>
 
   <h2>C. 1366 × 768: activities that have not started</h2>
   <p class="metrics" data-metrics="C"></p>
   <div id="C"></div>
   <ol class="notes">
-    <li><b>The "Sin iniciar" filter is on.</b> These activities were launched, but no phase has started: their students can join and wait. Today they mix with the running ones under "Actuales", with the same "En curso" look.</li>
-    <li><b>The code is the point of these rows:</b> the teacher shows it to the students before starting phase 1. The visible action stays "Abrir panel", where phase 1 starts.</li>
+    <li><b>The "Sin iniciar" filter is on.</b> These activities were launched, but no phase has started: their participants can join and wait. Today they mix with the running ones under "Actuales", with the same "En curso" look.</li>
+    <li><b>The code is the point of these rows:</b> the teacher shows it to the participants before starting phase 1. The visible action stays "Abrir panel", where phase 1 starts.</li>
     <li><b>The footer reminds what the tab holds</b> and how to archive: an activity can be archived once it is finished.</li>
   </ol>
 
@@ -231,7 +231,7 @@
   <div id="D"></div>
   <ol class="notes">
     <li>Below 1200 px the app's menu folds, the role line wraps under the title, and "Lanzar actividad" stays at the top right.</li>
-    <li>The table becomes compact rows: name and design, then status, students, code and the actions on a second line.</li>
+    <li>The table becomes compact rows: name and design, then status, participants, code and the actions on a second line.</li>
   </ol>
 
   <h2>E. 1366 × 768: a teacher with no activities yet</h2>
@@ -280,31 +280,31 @@
   const meta = (a) => [a.ds === a.n ? "" : `Diseño: ${a.ds}`, a.cs === "Sin caso" ? "Sin caso" : `Caso: ${a.cs}`].filter(Boolean).join(" · ");
   const status = (a) => (a.st === "wait" ? '<span class="st wait">○ Sin iniciar</span>'
     : `<span class="st ok">● Fase ${a.ph} de ${a.of} · ${a.mode}</span>`) + (a.ai ? '<span class="ai">IA</span>' : "");
-  const students = (a) => a.stu ? plural(a.stu, "estudiante", "estudiantes") : '<span class="sub">Nadie aún</span>';
+  const participants = (a) => a.stu ? plural(a.stu, "participante", "participantes") : '<span class="sub">Nadie aún</span>';
   const code = (a) => `<span class="code">${a.code}</span> <span class="sub">⧉</span>`;
 
   function runningTable(rows, { menuRow = -1 } = {}) {
-    const head = "<tr><th>Actividad</th><th>Estado</th><th>Estudiantes</th><th>Código</th><th>Lanzada</th><th></th></tr>";
+    const head = "<tr><th>Actividad</th><th>Estado</th><th>Participantes</th><th>Código</th><th>Lanzada</th><th></th></tr>";
     const body = rows.map((a, i) => `<tr${i === menuRow ? ' class="hl"' : ""}><td class="t"><div class="title">${title(a)}</div><div class="meta">${meta(a)}</div></td>`
-      + `<td>${status(a)}</td><td>${students(a)}</td><td>${code(a)}</td><td class="sub">${a.at}</td>`
+      + `<td>${status(a)}</td><td>${participants(a)}</td><td>${code(a)}</td><td class="sub">${a.at}</td>`
       + `<td class="acts"><span class="btn sm">▶ Abrir panel</span><span class="kebab"${i === menuRow ? ' data-menu="1"' : ""}>⋯</span></td></tr>`).join("");
     return `<table class="dt" data-role="activities"><thead>${head}</thead><tbody>${body}</tbody></table>`;
   }
 
   function finishedTable(rows) {
-    const head = "<tr><th>Actividad</th><th>Estado</th><th>Estudiantes</th><th>Terminada</th><th></th></tr>";
+    const head = "<tr><th>Actividad</th><th>Estado</th><th>Participantes</th><th>Terminada</th><th></th></tr>";
     const body = rows.map((a) => `<tr><td class="t"><div class="title">${title(a)}</div><div class="meta">${meta(a)}</div></td>`
-      + `<td><span class="st proc">■ Finalizada</span>${a.ai ? '<span class="ai">IA</span>' : ""}</td><td>${plural(a.stu, "estudiante", "estudiantes")}</td><td class="sub"${a.end === "—" ? ` title="Lanzada el ${a.at}"` : ""}>${a.end}</td>`
+      + `<td><span class="st proc">■ Finalizada</span>${a.ai ? '<span class="ai">IA</span>' : ""}</td><td>${plural(a.stu, "participante", "participantes")}</td><td class="sub"${a.end === "—" ? ` title="Lanzada el ${a.at}"` : ""}>${a.end}</td>`
       + '<td class="acts"><span class="btn sm">📊 Reportes</span><span class="kebab">⋯</span></td></tr>').join("");
     return `<table class="dt" data-role="activities"><thead>${head}</thead><tbody>${body}</tbody></table>`;
   }
 
   function runningList(rows) {
     return `<div class="cards" data-role="activities">${rows.map((a) => `<div class="box card"><div class="row1"><span style="min-width:0"><div class="lbl">${title(a)}</div><div class="sub">${meta(a)}</div></span><span class="sub">${a.at}</span></div>
-      <div class="row2">${status(a)}<span class="sub">${a.stu ? plural(a.stu, "estudiante", "estudiantes") : "Nadie aún"}</span>${code(a)}<span style="flex:1"></span><span class="btn sm">▶ Abrir panel</span><span class="kebab">⋯</span></div></div>`).join("")}</div>`;
+      <div class="row2">${status(a)}<span class="sub">${a.stu ? plural(a.stu, "participante", "participantes") : "Nadie aún"}</span>${code(a)}<span style="flex:1"></span><span class="btn sm">▶ Abrir panel</span><span class="kebab">⋯</span></div></div>`).join("")}</div>`;
   }
 
-  const pageHead = `<div class="head"><div class="titles"><h3>🥁 Actividades</h3><div class="role">Sigue tus actividades, comparte su código con los estudiantes y revisa sus reportes. ¿Necesitas otra propuesta? <a>Prepara un diseño →</a></div></div>
+  const pageHead = `<div class="head"><div class="titles"><h3>🥁 Actividades</h3><div class="role">Sigue tus actividades, comparte su código con los participantes y revisa sus reportes. ¿Necesitas otra propuesta? <a>Prepara un diseño →</a></div></div>
     <div class="acts"><span class="btn primary">🚀 Lanzar actividad</span></div></div>`;
 
   function listPage({ tab, one, rows, filter, menuRow, empty }) {
@@ -314,9 +314,9 @@
       <span class="tab${tab === "arc" ? " on" : ""}">Archivadas<span class="count">${counts.arc}</span></span></div>`;
     if (empty) {
       return pageHead + tabs + `<div class="box empty"><div class="lbl" style="font-size:19px">Todavía no has lanzado actividades</div>
-        <div class="sub">Una actividad es un diseño que lanzas con un grupo de estudiantes. Ellos se unen con un código.</div>
+        <div class="sub">Una actividad es un diseño que lanzas con un grupo de participantes. Ellos se unen con un código.</div>
         <div class="steps"><div class="box step"><div class="lbl">1. Prepara un diseño</div><div class="sub">Elige un caso y escribe las fases y preguntas.</div><div style="margin-top:8px"><span class="btn sm">+ Nuevo diseño</span></div></div>
-        <div class="box step"><div class="lbl">2. Lanza la actividad</div><div class="sub">Elige el diseño y entrega el código a tus estudiantes.</div><div style="margin-top:8px"><span class="btn sm primary">🚀 Lanzar actividad</span></div></div></div></div>`;
+        <div class="box step"><div class="lbl">2. Lanza la actividad</div><div class="sub">Elige el diseño y entrega el código a tus participantes.</div><div style="margin-top:8px"><span class="btn sm primary">🚀 Lanzar actividad</span></div></div></div></div>`;
     }
     const search = '<span class="search">🔍 Nombre, diseño, caso o código</span>';
     if (tab === "fin") {
@@ -326,7 +326,7 @@
     const chip = (k, label) => `<span class="chip${filter === k ? " on" : ""}" data-k="${k}">${label}</span>`;
     const tools = `<div class="tools">${search}${chip("all", "Todas")}${chip("wait", "Sin iniciar · 9")}${chip("run", "Con fase en curso")}<span class="sub sort">Más recientes primero ▾</span></div>`;
     const list = filter === "wait" ? RUNNING.filter((a) => a.st === "wait") : RUNNING.slice(0, rows);
-    const foot = `<div class="foot"><span>${filter === "wait" ? `Mostrando ${list.length} de 9 sin iniciar · <span style="color:var(--accent)">Mostrar más</span>` : `Mostrando ${list.length} de 53 · <span style="color:var(--accent)">Mostrar más</span>`}</span><span>${filter === "wait" ? "Sus estudiantes pueden unirse y esperar a que inicies la fase 1." : "Una actividad se puede archivar cuando termina."}</span></div>`;
+    const foot = `<div class="foot"><span>${filter === "wait" ? `Mostrando ${list.length} de 9 sin iniciar · <span style="color:var(--accent)">Mostrar más</span>` : `Mostrando ${list.length} de 53 · <span style="color:var(--accent)">Mostrar más</span>`}</span><span>${filter === "wait" ? "Sus participantes pueden unirse y esperar a que inicies la fase 1." : "Una actividad se puede archivar cuando termina."}</span></div>`;
     return pageHead + tabs + tools + (one ? runningList(list) : runningTable(list, { menuRow })) + foot;
   }
 

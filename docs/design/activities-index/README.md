@@ -35,7 +35,7 @@ The page was measured with headless Chrome. The numbers are the same at 1920, 13
 
 **What the page does not say.**
 - Where a running activity stands: which phase, of how many, and whether it is a team or an individual phase. The dashboard's bar says it ("Fase 2 de 3 · Grupal"); the list says "En curso".
-- How many students joined.
+- How many participants joined.
 - Which current activities have not started. "Actuales" mixes the 9 launched activities with no phase started (status `initiated`) with the 44 that have one in progress, and both read "En curso" in green.
 - Whether AI services are on (`sessions.ai_services_enabled`, V36).
 
@@ -59,7 +59,7 @@ The page was measured with headless Chrome. The numbers are the same at 1920, 13
 ### Page head (frame A)
 
 - **Title:** "Actividades", as today.
-- **A role line:** "Sigue tus actividades, comparte su código con los estudiantes y revisa sus reportes. ¿Necesitas otra propuesta? Prepara un diseño →". The link leads to Diseños, because "Lanzar actividad" is already the page action.
+- **A role line:** "Sigue tus actividades, comparte su código con los participantes y revisa sus reportes. ¿Necesitas otra propuesta? Prepara un diseño →". The link leads to Diseños, because "Lanzar actividad" is already the page action.
 - **Page action:** "🚀 Lanzar actividad" (primary), with the side menu's label.
 - "Volver a la página anterior" goes away.
 
@@ -81,7 +81,7 @@ The page was measured with headless Chrome. The numbers are the same at 1920, 13
   - "○ Sin iniciar" while no phase has started;
   - "● Fase n de m · Grupal" or "· Individual", with the dashboard bar's words and keys (`activity_bar_phase_label`, `activity_bar_phase_mode_*`);
   - an "IA" mark when the activity's AI services are on.
-- **Estudiantes:** how many students joined; "Nadie aún" when none has.
+- **Participantes:** how many participants joined; "Nadie aún" when none has.
 - **Código:** the access code, with a copy button.
 - **Lanzada:** in the browser's time zone, relative when recent ("hoy, 18:01", "ayer, 09:05") and as a short date after that ("12 oct."). The full date and time show on hover.
 - 12 rows fit on the first screen at 1920 × 1080, and 6 at 1366 × 768.
@@ -92,16 +92,16 @@ The page was measured with headless Chrome. The numbers are the same at 1920, 13
 - Ending an activity stays in the dashboard, behind its hold-to-confirm button. The list has no destructive action for a running activity.
 
 **Not started (frame C)**
-- The "Sin iniciar" filter lists the activities whose students can join and wait. Their code is what the teacher needs, and it is on the row.
-- The footer says what these activities are: "Sus estudiantes pueden unirse y esperar a que inicies la fase 1."
+- The "Sin iniciar" filter lists the activities whose participants can join and wait. Their code is what the teacher needs, and it is on the row.
+- The footer says what these activities are: "Sus participantes pueden unirse y esperar a que inicies la fase 1."
 
 ### Terminadas (frame B)
 
-- **Columns:** activity, status ("■ Finalizada", with the "IA" mark), students who took part, and when it ended. The code goes away.
+- **Columns:** activity, status ("■ Finalizada", with the "IA" mark), participants who took part, and when it ended. The code goes away.
 - **Terminada** is the date and time the teacher ended the activity (`sessions.finished_at`, see Decisions), relative when recent. Activities finished before the migration have no end time and show "—", with the launch date on hover.
 - **"📊 Reportes" is the visible action:** the reports page (`#!/activities/:id/reports`), one click instead of two.
 - **The "⋯" menu** holds Abrir panel, Lanzar de nuevo (the wizard on the same design, `#!/activities/new/:designId`), Ver diseño and Archivar.
-- **The footer** says what archiving does: it removes the activity from this list and keeps its reports. Students see a finished activity and an archived one the same way, so the notice says nothing about them.
+- **The footer** says what archiving does: it removes the activity from this list and keeps its reports. Participants see a finished activity and an archived one the same way, so the notice says nothing about them.
 
 ### Archivadas
 
@@ -127,7 +127,7 @@ Each notice disappears after a few seconds and can be dismissed. The page stays 
 ### Widths
 
 - **From 1200 px:** a table.
-- **Below 1200 px (frame D):** the app's menu folds and the table becomes compact rows: name, description and case, with the launch date on the right; then status, students, code and the actions on a second line.
+- **Below 1200 px (frame D):** the app's menu folds and the table becomes compact rows: name, description and case, with the launch date on the right; then status, participants, code and the actions on a second line.
 
 ### Where today's pieces go
 
@@ -159,7 +159,7 @@ Each notice disappears after a few seconds and can be dismissed. The page stays 
 **Data**
 - `GET /activities` (`backend/controllers/activities/activities-teacher.js:87`) returns the session's `status`, `time`, `code`, `archived` and the whole design document. The rows also need:
   - the current phase's number and mode (`sessions.current_stage`, joined to `stages`) and the number of phases;
-  - the number of students who joined (`sesusers` with role `A`, as the dashboard's bar counts them);
+  - the number of participants who joined (`sesusers` with role `A`, as the dashboard's bar counts them);
   - `ai_services_enabled`;
   - `finished_at`, for finished activities.
 - The design document is used for its title and case. Returning those fields alone would make the response much smaller for teachers with many activities.
@@ -175,13 +175,15 @@ Each notice disappears after a few seconds and can be dismissed. The page stays 
 
 **Translations**
 - New keys in `es_CL` and `en_US`. "Actuales" becomes "En curso"; "Desarchivar" becomes "Restaurar".
+- The page says "participantes" ("participants" in `en_US`), never "estudiantes" (see Decisions). The dashboard's bar says "estudiantes conectados" (`activity_bar_connected_description`) and should follow.
 
 ## Decisions
 
 - **2026-11-03: an activity's end time is recorded.** Most activities are synchronous and last under an hour, but the record of when an activity ended is worth keeping. Terminadas shows it.
 - **2026-11-03: the list shows each activity's status and its participants,** with no response count. The status is "Sin iniciar" (`initiated`), "Fase n de m · Grupal" or "· Individual" (`in_progress`) or "Finalizada" (`finished`).
 - **2026-11-03: only a finished activity can be archived.** The page and the server apply the same rule.
-- **2026-11-03: archiving changes nothing for students.** They see a finished activity and an archived one the same way.
+- **2026-11-03: archiving changes nothing for participants.** They see a finished activity and an archived one the same way.
+- **2026-11-03: the people in an activity are "participantes".** EthicApp is used with students, with professionals in training and in teacher training, so the page never calls them "estudiantes".
 
 ## Out of scope
 
