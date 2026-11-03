@@ -16,6 +16,7 @@ import {
     duplicateFailureNotice,
     duplicateNotice,
     findCaseTitle,
+    importFailureNotice,
     importNotice,
     isCodedDeleteRefusal,
     restoreFailureNotice,
@@ -175,12 +176,25 @@ describe("case notices", () => {
         assert.equal(restoreFailureNotice().tone, "danger");
     });
 
+    it("says why an import failed: the case is no longer shared, or another failure", () => {
+        assert.deepEqual(importFailureNotice({ data: { code: "CASE_NOT_IMPORTABLE" } }), {
+            messageKey: "cases_notice_import_not_importable",
+            params:     {},
+            tone:       "danger",
+            actions:    [],
+        });
+        assert.equal(importFailureNotice(new Error("down")).messageKey,
+            "cases_notice_import_failed");
+        assert.equal(importFailureNotice({ data: { code: "OTHER" } }).tone, "danger");
+    });
+
     it("has every key it uses in both locales", () => {
         const notices = [
             duplicateNotice(1, "t"), duplicateNotice(1, ""), importNotice(1, "t"),
             importNotice(1, ""), archiveNotice(1, "t"), archiveNotice(1, ""),
             restoreNotice("t"), restoreNotice(""), deleteNotice("t"), deleteNotice(""),
             duplicateFailureNotice(), archiveFailureNotice(), restoreFailureNotice(),
+            importFailureNotice({ data: { code: "CASE_NOT_IMPORTABLE" } }), importFailureNotice(),
             ...["CASE_NOT_FOUND", "CASE_USED_BY_LAUNCHED_ACTIVITY", "CASE_USED_BY_OTHER_TEACHERS",
                 "OTHER"].map(code => deleteFailureNotice({ data: { code } })),
         ];

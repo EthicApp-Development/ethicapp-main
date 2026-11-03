@@ -35,9 +35,24 @@ function makeCases() {
                 usage:      { ...NO_USE, otherDesignCount: 3, otherTeacherCount: 2 },
             }),
         ],
-        archived: [own(6, "Gone", { archived: true })],
-        shared:   [{ id: 7, title: "Theirs", visibility: "public", public: true }],
+        // The teacher's archived copy of shared case 8.
+        archived: [own(6, "Gone", { archived: true, importedFromCaseId: 8 })],
+        shared:   [
+            theirs(7, "Theirs", {
+                authors:   [{ authorFirstname: "Andrea", authorLastname: "Rojas" }],
+                tags:      [{ label: "Minería" }],
+                createdAt: "2026-10-02T00:00:00Z",
+            }),
+            theirs(8, "Already mine", {
+                authors:   [{ authorFirstname: "Tomás", authorLastname: "Pérez" }],
+                createdAt: "2026-10-01T00:00:00Z",
+            }),
+        ],
     };
+}
+
+function theirs(id, title, fields) {
+    return { id, title, visibility: "public", public: true, ...fields };
 }
 
 function createPage({
@@ -137,7 +152,9 @@ function createPage({
         },
         importCase: async (id) => {
             calls.imported.push(id);
-            return own(98, "Theirs (copy)", { importedFromCaseId: id });
+            const copy = own(98, "Theirs (copy)", { importedFromCaseId: id });
+            lists.own = [...lists.own, copy];
+            return copy;
         },
         ...catalog,
     };
@@ -206,7 +223,7 @@ describe("cases page, tabs", () => {
         assert.equal(vm.tab, "mine");
         assert.deepEqual(vm.getRows("mine").map(row => row.id), [5, 4, 3, 2, 1]);
         assert.equal(vm.count("mine"), 5);
-        assert.equal(vm.count("shared"), 1);
+        assert.equal(vm.count("shared"), 2);
         assert.equal(vm.count("archived"), 1);
     });
 
@@ -344,7 +361,7 @@ describe("cases page, search and status filters", () => {
         const { vm } = createPage({ search: { status: "in-use", q: "zzz" } });
         await vm.ready;
         assert.deepEqual(vm.getRows("archived").map(row => row.id), [6]);
-        assert.equal(vm.getRows("shared").length, 1);
+        assert.equal(vm.getRows("shared").length, 2);
     });
 
     it("adds a history entry for a chip and replaces it while typing", async () => {
@@ -729,20 +746,152 @@ describe("cases page, document processing", () => {
 });
 
 describe("cases page, Shared by others", () => {
-    it("imports a case and opens My cases, as the previous page did", async () => {
-        const { vm, calls } = createPage({ search: { tab: "shared" } });
+    const sharedRowOf = (vm, id) => vm.getSharedRows().find(row => row.id === id);
+
+    it("lists the shared cases newest first, with the teacher's copies marked", async () => {
+        const { vm } = createPage({ search: { tab: "shared" } });
         await vm.ready;
-        await vm.importCase(vm.getRows("shared")[0]);
-        assert.deepEqual(calls.imported, [7]);
-        assert.deepEqual(toastMessages(calls), ["ethical_cases_import_success"]);
-        assert.equal(vm.tab, "mine");
+        assert.deepEqual(vm.getSharedRows().map(row => [row.id, row.importState, row.copyId]), [
+            [7, "importable", null],
+            [8, "imported", 6],
+        ]);
+        assert.equal(sharedRowOf(vm, 7).author, "Andrea Rojas");
     });
 
-    it("views a shared case", async () => {
+    it("imports a case, staying on the tab with the row imported and the copy listed", async () => {
         const { vm, calls } = createPage({ search: { tab: "shared" } });
         await vm.ready;
-        vm.viewCase(vm.getRows("shared")[0]);
-        assert.deepEqual(calls.navigated, ["/cases/7"]);
+        await vm.importCase(sharedRowOf(vm, 7));
+        assert.deepEqual(calls.imported, [7]);
+        assert.equal(vm.tab, "shared");
+        assert.deepEqual(calls.pushes, []);
+        assert.deepEqual(calls.navigated, []);
+        assert.equal(sharedRowOf(vm, 7).importState, "imported");
+        assert.equal(sharedRowOf(vm, 7).copyId, 98);
+        assert.ok(rowOf(vm, 98));
+        assert.deepEqual(noticeOf(vm), {
+            key:     "cases_notice_imported",
+            params:  { title: "Theirs (copy)" },
+            tone:    "success",
+            actions: [["edit-copy", 98], ["show-in-mine", 98]],
+        });
+        assert.deepEqual(toastMessages(calls), []);
+        assert.deepEqual(vm.busy, {});
+    });
+
+    it("opens the copy in the editor from the import's notice", async () => {
+        const { vm, calls } = createPage({ search: { tab: "shared" } });
+        await vm.ready;
+        await vm.importCase(sharedRowOf(vm, 7));
+        await vm.runNoticeAction(vm.notice.actions[0]);
+        assert.deepEqual(calls.navigated, ["/cases/98/edit"]);
+        assert.equal(vm.notice, null);
+    });
+
+    it("opens My cases from the import's notice", async () => {
+        const { vm, calls } = createPage({ search: { tab: "shared" } });
+        await vm.ready;
+        await vm.importCase(sharedRowOf(vm, 7));
+        await vm.runNoticeAction(vm.notice.actions[1]);
+        assert.equal(vm.tab, "mine");
+        assert.deepEqual(calls.pushes, [{}]);
+        assert.equal(vm.notice, null);
+    });
+
+    it("does not import a case the teacher already has a copy of", async () => {
+        const { vm, calls } = createPage({ search: { tab: "shared" } });
+        await vm.ready;
+        await vm.importCase(sharedRowOf(vm, 8));
+        assert.deepEqual(calls.imported, []);
+    });
+
+    it("imports a case once while the import is pending", async () => {
+        let release;
+        const { vm, calls } = createPage({
+            search:  { tab: "shared" },
+            catalog: {
+                importCase: id => new Promise((resolve) => {
+                    calls.imported.push(id);
+                    release = resolve;
+                }),
+            },
+        });
+        await vm.ready;
+        const row = sharedRowOf(vm, 7);
+        const first = vm.importCase(row);
+        await vm.importCase(row);
+        assert.equal(vm.busy[7], true);
+        release(own(98, "Theirs (copy)", { importedFromCaseId: 7 }));
+        await first;
+        assert.deepEqual(calls.imported, [7]);
+        assert.deepEqual(vm.busy, {});
+    });
+
+    it("keeps the row importable and says so when the import fails", async () => {
+        await quietly(async () => {
+            const { vm, calls } = createPage({
+                search:  { tab: "shared" },
+                catalog: { importCase: async () => { throw new Error("down"); } },
+            });
+            await vm.ready;
+            await vm.importCase(sharedRowOf(vm, 7));
+            assert.equal(vm.tab, "shared");
+            assert.equal(sharedRowOf(vm, 7).importState, "importable");
+            assert.deepEqual(noticeOf(vm), {
+                key: "cases_notice_import_failed", params: {}, tone: "danger", actions: [],
+            });
+            assert.deepEqual(toastMessages(calls), []);
+            assert.deepEqual(vm.busy, {});
+        });
+    });
+
+    it("drops a case that stopped being shared when its import is refused", async () => {
+        // Like the catalog, the list changes only when it is loaded again.
+        let loaded = makeCases().shared;
+        let onServer = loaded;
+        const { vm, calls } = createPage({
+            search:  { tab: "shared" },
+            catalog: {
+                importCase: async () => {
+                    onServer = onServer.filter(item => item.id !== 7);
+                    throw { data: { code: "CASE_NOT_IMPORTABLE" } };
+                },
+                getPublicCases: async (reload) => {
+                    if (reload) {
+                        loaded = onServer;
+                    }
+                    return loaded;
+                },
+            },
+        });
+        await vm.ready;
+        await vm.importCase(sharedRowOf(vm, 7));
+        assert.deepEqual(noticeOf(vm), {
+            key: "cases_notice_import_not_importable", params: {}, tone: "danger", actions: [],
+        });
+        assert.deepEqual(toastMessages(calls), []);
+        assert.deepEqual(vm.getSharedRows().map(row => row.id), [8]);
+        assert.equal(vm.tab, "shared");
+    });
+
+    it("searches the title, author and tags, from the first 20 rows again", async () => {
+        const { vm } = createPage({ search: { tab: "shared" } });
+        await vm.ready;
+        vm.sharedSearch = "perez";
+        assert.deepEqual(vm.getSharedRows().map(row => row.id), [8]);
+        vm.sharedSearch = "MINERIA";
+        assert.deepEqual(vm.getSharedRows().map(row => row.id), [7]);
+        vm.sharedSearch = "nothing";
+        assert.deepEqual(vm.getSharedRows(), []);
+        assert.equal(vm.count("shared"), 2);
+
+        vm.sharedSearch = "";
+        vm.tables.shared = Array.from({ length: 45 }, (_, index) => ({ id: index, title: "x" }));
+        vm.showMore("shared");
+        assert.equal(vm.getVisibleSharedRows().length, 40);
+        assert.equal(vm.hasMoreSharedRows(), true);
+        vm.handleSharedSearchChange();
+        assert.equal(vm.getVisibleSharedRows().length, 20);
     });
 });
 
@@ -788,10 +937,18 @@ describe("cases page template", () => {
         assert.match(menu, /role="menuitem"/u);
     });
 
-    it("keeps the case cards in Shared by others", () => {
+    it("draws Shared by others as a table with a banner, a search and one action per row", () => {
         const shared = fragment("cases-shared-tab");
-        assert.match(shared, /<case-card/u);
-        assert.match(shared, /on-import="cp\.importCase"/u);
+        assert.doesNotMatch(shared, /<case-card/u);
+        assert.match(shared, /class="cases-shared-banner"/u);
+        assert.match(shared, /ng-model="cp\.sharedSearch"/u);
+        assert.match(shared, /ng-repeat="row in cp\.getVisibleSharedRows\(\) track by row\.id"/u);
+        assert.match(shared, /class="cases-row cases-shared-row"/u);
+        assert.match(shared, /data-case-id="\{\{ row\.id \}\}"/u);
+        assert.match(shared, /class="cases-row-title" ng-href="#!\/cases\/\{\{ row\.id \}\}"/u);
+        assert.match(shared, /ng-click="cp\.importCase\(row\)"/u);
+        assert.match(shared, /class="cases-shared-view-copy" data-action="view-copy"/u);
+        assert.match(shared, /ng-href="#!\/cases\/\{\{ row\.copyId \}\}"/u);
     });
 });
 
