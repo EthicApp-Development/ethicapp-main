@@ -165,16 +165,17 @@
   <table class="roles">
     <tr><th></th><th>Actividades (this proposal)</th><th>Activity dashboard</th></tr>
     <tr><td><b>Job</b></td><td>Find an activity, see where each one stands, hand out its code, get to its reports, archive the finished ones.</td><td>Run one activity: start phases, follow the responses, end it.</td></tr>
-    <tr><td><b>What a row says</b></td><td>Phase and mode, or "Sin iniciar"; how many students joined; the access code; when it was launched.</td><td>Everything about one activity.</td></tr>
+    <tr><td><b>What a row says</b></td><td>Its status (Sin iniciar, the phase and its mode, or Finalizada); how many students joined; the access code while it runs; when it was launched or ended.</td><td>Everything about one activity.</td></tr>
     <tr><td><b>Primary action</b></td><td>"Lanzar actividad"; per row "Abrir panel" (en curso) or "Reportes" (terminadas); "Restaurar" (archivadas).</td><td>"Iniciar fase siguiente", "Terminar actividad", "Reportes".</td></tr>
     <tr><td><b>Bridge</b></td><td>The role line links to Lanzar actividad; "Lanzar de nuevo" opens the wizard with the same design.</td><td>The browser's back button returns to the list with its tab and filters, which live in the URL.</td></tr>
   </table>
 
-  <div class="open"><b>Open questions</b> (see the README):
+  <div class="open"><b>Decisions, 2026-11-03</b> (see the README):
     <ul>
-      <li>When did an activity end? <code>sessions</code> stores no end time; the Terminadas tab shows the launch date until it does.</li>
-      <li>Should a finished activity's row show its response count, which needs a server query per activity?</li>
-      <li>Can an activity in progress be archived? Today only finished ones can.</li>
+      <li>An activity's end time is recorded (<code>sessions.finished_at</code>), and Terminadas shows it.</li>
+      <li>Rows show the status and the participants; there is no response count.</li>
+      <li>Only a finished activity can be archived, in the page and in the server.</li>
+      <li>Archiving changes nothing for students: a finished activity and an archived one look the same to them.</li>
     </ul>
   </div>
 
@@ -211,9 +212,9 @@
   <div id="B"></div>
   <ol class="notes">
     <li><b>"Reportes" is the visible action</b> of a finished activity: it opens the reports page directly, one click instead of two.</li>
-    <li><b>Columns for a finished activity:</b> students who took part, phases completed, and the launch date. The code column goes away; it is no longer useful.</li>
+    <li><b>Columns for a finished activity:</b> its status, the students who took part, and when it ended (<code>sessions.finished_at</code>). An activity finished before the end time was recorded shows "—". The code column goes away.</li>
     <li><b>The row menu:</b> Abrir panel, Lanzar de nuevo (the wizard on this design, <code>#!/activities/new/:designId</code>), Ver diseño, Archivar.</li>
-    <li><b>After archiving,</b> a notice names the activity and offers "Deshacer". Today the card disappears without a word.</li>
+    <li><b>After archiving,</b> a notice names the activity and offers "Deshacer". Today the card disappears without a word. Students see nothing different, so the notice does not mention them.</li>
   </ol>
 
   <h2>C. 1366 × 768: activities that have not started</h2>
@@ -261,16 +262,16 @@
     { n: "Accesibilidad en el diseño de software", d: "Interacción humano-computador", ds: "Accesibilidad en el diseño de software", cs: "El portal de trámites", st: "run", ph: 1, of: 2, mode: "Individual", stu: 33, code: "k00471", at: "15 oct." },
   ];
   const FINISHED = [
-    { n: "Responsabilidades en el colapso del puente", d: "Sección 1", ds: "Responsabilidades en el colapso del puente", cs: "El puente del río Claro", of: 2, stu: 36, at: "2 nov.", ai: true },
-    { n: "Ética del trabajo remoto", d: "Gestión de personas", ds: "Ética del trabajo remoto", cs: "Monitoreo de pantallas", of: 3, stu: 28, at: "1 nov." },
-    { n: "Transparencia en reportes financieros", d: "", ds: "Transparencia en reportes financieros", cs: "El balance del trimestre", of: 2, stu: 19, at: "30 oct." },
-    { n: "Consentimiento en estudios con usuarios", d: "Métodos de investigación", ds: "Consentimiento en estudios con usuarios", cs: "La encuesta de la app", of: 3, stu: 24, at: "28 oct.", ai: true },
-    { n: "Conflictos en el equipo de proyecto", d: "Sección 2", ds: "Conflictos en el equipo de proyecto", cs: "La entrega atrasada", of: 2, stu: 31, at: "21 oct." },
-    { n: "Responsabilidad en accidentes de vehículos autónomos", d: "", ds: "Responsabilidad en accidentes de vehículos autónomos", cs: "El cruce de la avenida", of: 3, stu: 40, at: "14 oct." },
-    { n: "Prioridades en emergencias", d: "Salud pública", ds: "Prioridades en emergencias", cs: "Sin caso", of: 2, stu: 17, at: "7 oct." },
-    { n: "Ética en la minería", d: "Sección 4", ds: "Ética en la minería", cs: "El relave", of: 2, stu: 22, at: "30 sept." },
-    { n: "Datos genéticos y seguros", d: "", ds: "Datos genéticos y seguros", cs: "El examen de ADN", of: 2, stu: 14, at: "23 sept." },
-    { n: "Drones y vigilancia", d: "Sección 1", ds: "Drones y vigilancia", cs: "El barrio vigilado", of: 2, stu: 29, at: "16 sept." },
+    { n: "Responsabilidades en el colapso del puente", d: "Sección 1", ds: "Responsabilidades en el colapso del puente", cs: "El puente del río Claro", of: 2, stu: 36, at: "2 nov.", end: "hoy, 12:40", ai: true },
+    { n: "Ética del trabajo remoto", d: "Gestión de personas", ds: "Ética del trabajo remoto", cs: "Monitoreo de pantallas", of: 3, stu: 28, at: "1 nov.", end: "1 nov., 11:30" },
+    { n: "Transparencia en reportes financieros", d: "", ds: "Transparencia en reportes financieros", cs: "El balance del trimestre", of: 2, stu: 19, at: "30 oct.", end: "30 oct., 10:05" },
+    { n: "Consentimiento en estudios con usuarios", d: "Métodos de investigación", ds: "Consentimiento en estudios con usuarios", cs: "La encuesta de la app", of: 3, stu: 24, at: "28 oct.", end: "28 oct., 16:50", ai: true },
+    { n: "Conflictos en el equipo de proyecto", d: "Sección 2", ds: "Conflictos en el equipo de proyecto", cs: "La entrega atrasada", of: 2, stu: 31, at: "21 oct.", end: "21 oct., 09:45" },
+    { n: "Responsabilidad en accidentes de vehículos autónomos", d: "", ds: "Responsabilidad en accidentes de vehículos autónomos", cs: "El cruce de la avenida", of: 3, stu: 40, at: "14 oct.", end: "14 oct., 12:10" },
+    { n: "Prioridades en emergencias", d: "Salud pública", ds: "Prioridades en emergencias", cs: "Sin caso", of: 2, stu: 17, at: "7 oct.", end: "—" },
+    { n: "Ética en la minería", d: "Sección 4", ds: "Ética en la minería", cs: "El relave", of: 2, stu: 22, at: "30 sept.", end: "—" },
+    { n: "Datos genéticos y seguros", d: "", ds: "Datos genéticos y seguros", cs: "El examen de ADN", of: 2, stu: 14, at: "23 sept.", end: "—" },
+    { n: "Drones y vigilancia", d: "Sección 1", ds: "Drones y vigilancia", cs: "El barrio vigilado", of: 2, stu: 29, at: "16 sept.", end: "—" },
   ];
 
   const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
@@ -291,9 +292,9 @@
   }
 
   function finishedTable(rows) {
-    const head = "<tr><th>Actividad</th><th>Estudiantes</th><th>Fases</th><th>Lanzada</th><th></th></tr>";
+    const head = "<tr><th>Actividad</th><th>Estado</th><th>Estudiantes</th><th>Terminada</th><th></th></tr>";
     const body = rows.map((a) => `<tr><td class="t"><div class="title">${title(a)}</div><div class="meta">${meta(a)}</div></td>`
-      + `<td>${plural(a.stu, "estudiante", "estudiantes")}</td><td class="sub">${a.of} de ${a.of}${a.ai ? '<span class="ai">IA</span>' : ""}</td><td class="sub">${a.at}</td>`
+      + `<td><span class="st proc">■ Finalizada</span>${a.ai ? '<span class="ai">IA</span>' : ""}</td><td>${plural(a.stu, "estudiante", "estudiantes")}</td><td class="sub"${a.end === "—" ? ` title="Lanzada el ${a.at}"` : ""}>${a.end}</td>`
       + '<td class="acts"><span class="btn sm">📊 Reportes</span><span class="kebab">⋯</span></td></tr>').join("");
     return `<table class="dt" data-role="activities"><thead>${head}</thead><tbody>${body}</tbody></table>`;
   }
@@ -320,7 +321,7 @@
     const search = '<span class="search">🔍 Nombre, diseño, caso o código</span>';
     if (tab === "fin") {
       return pageHead + tabs + `<div class="tools">${search}<span class="sub sort">Más recientes primero ▾</span></div>` + finishedTable(FINISHED.slice(0, rows))
-        + `<div class="foot"><span>Mostrando ${Math.min(rows, FINISHED.length)} de 18 · <span style="color:var(--accent)">Mostrar más</span></span><span>Archivar una actividad la quita de esta lista; sus reportes se conservan.</span></div>`;
+        + `<div class="foot"><span>Mostrando ${Math.min(rows, FINISHED.length)} de 18 · <span style="color:var(--accent)">Mostrar más</span></span><span>Archivar una actividad terminada la quita de esta lista; sus reportes se conservan.</span></div>`;
     }
     const chip = (k, label) => `<span class="chip${filter === k ? " on" : ""}" data-k="${k}">${label}</span>`;
     const tools = `<div class="tools">${search}${chip("all", "Todas")}${chip("wait", "Sin iniciar · 9")}${chip("run", "Con fase en curso")}<span class="sub sort">Más recientes primero ▾</span></div>`;

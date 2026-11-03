@@ -97,14 +97,16 @@ The page was measured with headless Chrome. The numbers are the same at 1920, 13
 
 ### Terminadas (frame B)
 
-- **Columns:** activity, students who took part, phases ("2 de 2", with the "IA" mark) and the launch date. The code goes away.
+- **Columns:** activity, status ("■ Finalizada", with the "IA" mark), students who took part, and when it ended. The code goes away.
+- **Terminada** is the date and time the teacher ended the activity (`sessions.finished_at`, see Decisions), relative when recent. Activities finished before the migration have no end time and show "—", with the launch date on hover.
 - **"📊 Reportes" is the visible action:** the reports page (`#!/activities/:id/reports`), one click instead of two.
 - **The "⋯" menu** holds Abrir panel, Lanzar de nuevo (the wizard on the same design, `#!/activities/new/:designId`), Ver diseño and Archivar.
-- **The footer** says what archiving does: it removes the activity from this list and keeps its reports.
+- **The footer** says what archiving does: it removes the activity from this list and keeps its reports. Students see a finished activity and an archived one the same way, so the notice says nothing about them.
 
 ### Archivadas
 
 - The tab is not drawn. It uses the Terminadas table, with "Restaurar" as the visible action and Reportes, Abrir panel and Ver diseño in the menu.
+- Only finished activities reach this tab. Restoring one returns it to Terminadas.
 
 ### A new teacher (frame E)
 
@@ -141,7 +143,7 @@ Each notice disappears after a few seconds and can be dismissed. The page stays 
 | "Diseño usado" with the design's type | The design in the meta line when the activity was renamed; no type |
 | Case line | The meta line |
 | "Código de acceso" | The Código column, with copy |
-| "Fecha de inicio … (UTC)" | Lanzada, in the browser's time zone |
+| "Fecha de inicio … (UTC)" | Lanzada, in the browser's time zone; Terminada for finished activities |
 | "Ver" | "Abrir panel"; the name is a link too |
 | "Archivar" without feedback | In the Terminadas menu, with a notice and undo |
 | "Desarchivar" | "Restaurar" |
@@ -158,22 +160,28 @@ Each notice disappears after a few seconds and can be dismissed. The page stays 
 - `GET /activities` (`backend/controllers/activities/activities-teacher.js:87`) returns the session's `status`, `time`, `code`, `archived` and the whole design document. The rows also need:
   - the current phase's number and mode (`sessions.current_stage`, joined to `stages`) and the number of phases;
   - the number of students who joined (`sesusers` with role `A`, as the dashboard's bar counts them);
-  - `ai_services_enabled`.
+  - `ai_services_enabled`;
+  - `finished_at`, for finished activities.
 - The design document is used for its title and case. Returning those fields alone would make the response much smaller for teachers with many activities.
+
+**End time**
+- A migration adds `sessions.finished_at timestamptz NULL`. Existing finished sessions keep NULL: their end time is unknown, and guessing it from responses would record a time nobody saw.
+- `FINISH_SESSION_SQL` (`backend/helpers/activity-finish-helper.js`) sets it in the statement that makes the session `finished`, so the teacher's own finish and the finish of a forgotten teacher's open activities (#877) both record it. A finish that resumes a pending finalization keeps the first time.
 
 **Archive**
 - Replace the toggle with an explicit `PATCH /activities/:session_id/archive` taking `{ archived: true | false }`, as cases and designs have. Undo then sends `false`, and a repeated request does no harm.
-- Whether the server also refuses to archive an activity in progress is an open question.
+- Archiving an activity that is not finished is refused with a coded 409, `ACTIVITY_NOT_FINISHED`. Restoring is always allowed.
+- Archived sessions that are not finished may already exist from the toggle. A query in `deploy/README.md` lists them before deploying; whether they are finished or restored is decided then.
 
 **Translations**
 - New keys in `es_CL` and `en_US`. "Actuales" becomes "En curso"; "Desarchivar" becomes "Restaurar".
 
-## Open questions
+## Decisions
 
-- **End time.** `sessions` stores no end time, so "Terminadas" shows the launch date. Recording when the teacher ends an activity needs a migration, and would let the tab say "Terminada el 2 nov.".
-- **Responses in Terminadas.** A response count per activity is a useful signal of what the report holds, at the cost of a heavier query.
-- **Archiving an activity in progress.** Today the page allows it only for finished ones and the server for any. One rule should hold in both.
-- **Archivadas and students.** Whether archiving affects what students see of the activity is not visible from this page. If it does, the notice should say so.
+- **2026-11-03: an activity's end time is recorded.** Most activities are synchronous and last under an hour, but the record of when an activity ended is worth keeping. Terminadas shows it.
+- **2026-11-03: the list shows each activity's status and its participants,** with no response count. The status is "Sin iniciar" (`initiated`), "Fase n de m · Grupal" or "· Individual" (`in_progress`) or "Finalizada" (`finished`).
+- **2026-11-03: only a finished activity can be archived.** The page and the server apply the same rule.
+- **2026-11-03: archiving changes nothing for students.** They see a finished activity and an archived one the same way.
 
 ## Out of scope
 
