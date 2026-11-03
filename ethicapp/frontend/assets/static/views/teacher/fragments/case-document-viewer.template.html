@@ -1,15 +1,26 @@
 <div ng-class="$ctrl.getContainerClass()" ng-if="$ctrl.caseItem">
     <div class="panel-heading case-document-viewer-heading" ng-if="!$ctrl.isFrameless()">
         <strong>{{ 'ethical_cases_document_viewer_title' | translate }}</strong>
-        <button
-            type="button"
-            class="btn btn-default btn-sm case-document-fullscreen-button"
-            ng-if="$ctrl.hasRenderedImages()"
-            ng-click="$ctrl.openFullscreen()"
-            title="{{ 'ethical_cases_document_fullscreen_open' | translate }}">
-            <i class="fa fa-expand" aria-hidden="true"></i>
-            <span class="sr-only">{{ 'ethical_cases_document_fullscreen_open' | translate }}</span>
-        </button>
+        <span class="case-document-viewer-actions">
+            <button
+                type="button"
+                class="btn btn-default btn-sm case-document-fullscreen-button"
+                ng-if="$ctrl.hasRenderedImages()"
+                ng-click="$ctrl.openFullscreen()"
+                title="{{ 'ethical_cases_document_fullscreen_open' | translate }}">
+                <i class="fa fa-expand" aria-hidden="true"></i>
+                <span class="sr-only">{{ 'ethical_cases_document_fullscreen_open' | translate }}</span>
+            </button>
+            <a
+                class="btn btn-default btn-sm case-document-open-pdf"
+                ng-if="$ctrl.getPdfUrl()"
+                ng-href="{{ $ctrl.getPdfUrl() }}"
+                target="_blank"
+                rel="noopener noreferrer">
+                <i class="fa-solid fa-file-pdf" aria-hidden="true"></i> {{ 'case_view_open_pdf' | translate }}
+                <span class="sr-only">{{ 'rich_text_link_new_tab' | translate }}</span>
+            </a>
+        </span>
     </div>
     <div ng-class="$ctrl.getBodyClass()">
         <div class="case-document-viewer-frameless-actions" ng-if="$ctrl.isFrameless() && $ctrl.hasRenderedImages()">
