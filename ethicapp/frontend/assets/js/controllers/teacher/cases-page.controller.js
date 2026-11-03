@@ -17,7 +17,7 @@
 // Deleting asks first (`CaseDeleteConfirmService`), and every row action
 // ends with a notice that names its result (#1017).
 //
-// The view and the case forms keep `CasesController`.
+// The case forms keep `CasesController`.
 
 import {
     CASES_PAGE_SIZE,

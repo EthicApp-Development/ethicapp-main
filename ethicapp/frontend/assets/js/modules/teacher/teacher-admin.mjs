@@ -186,7 +186,7 @@ app.controller("DesignViewerController",
     ["$scope", "$routeParams", "$window", "DesignCatalogService", "CasesCatalogService",
         "DesignPublicationService", DesignViewerController]);
 app.controller("CasesController",
-    ["$scope", "$routeParams", "$window", "$interval", "$translate", "toast",
+    ["$scope", "$routeParams", "$window", "$translate", "toast",
         "CasesCatalogService", "LanguageCatalogService", "UserProfileService",
         "CasePublicationNoticeService", CasesController]);
 app.controller("CasesPageController",
