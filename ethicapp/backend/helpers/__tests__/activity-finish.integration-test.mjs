@@ -205,3 +205,58 @@ test("the teacher's route resumes a pending finalization with the phase it recor
     assert.deepEqual(effects.find(effect => effect[0] === "phase-ended"), ["phase-ended", inProgress.id, inProgress.phaseId]);
     assert.equal(await pendingFinalization(inProgress.id), null);
 });
+
+async function endTime(id) {
+    const [row] = await query("SELECT finished_at FROM sessions WHERE id = $1;", [id]);
+    return row.finished_at;
+}
+
+test("the first finish records the end time (V41), which a repeated or resumed finish keeps", {
+    skip: SKIP_REASON,
+}, async () => {
+    const teacher = await createTeacher();
+    const inProgress = await createSession(teacher, 2, { withPhase: true });
+    const interrupted = await createSession(teacher, 2, { withPhase: true });
+    const initiated = await createSession(teacher, 1);
+    const { finisher } = finisherWithFakes();
+
+    assert.equal(await endTime(inProgress.id), null);
+    await finisher.finishActivity(String(inProgress.id));
+    const firstEnd = await endTime(inProgress.id);
+    assert.ok(firstEnd instanceof Date);
+    await finisher.finishActivity(String(inProgress.id));
+    assert.deepEqual(await endTime(inProgress.id), firstEnd);
+
+    // The update that records the time is committed before the step that
+    // fails, and a resumption keeps it.
+    const broken = finisherWithFakes({ failingInvalidation: [interrupted.id] });
+    await assert.rejects(broken.finisher.finishActivity(String(interrupted.id)), /cache down/);
+    const interruptedEnd = await endTime(interrupted.id);
+    assert.ok(interruptedEnd instanceof Date);
+    await assert.rejects(broken.finisher.finishActivity(String(interrupted.id)), /cache down/);
+    assert.deepEqual(await endTime(interrupted.id), interruptedEnd);
+
+    // The internal finish of a forgotten teacher's activities (#877) resumes
+    // the interrupted one and records the initiated one's end time.
+    assert.deepEqual(await finisher.finishOpenActivitiesOf(teacher), {
+        finished: [interrupted.id, initiated.id],
+        skipped:  [],
+        failed:   [],
+    });
+    assert.deepEqual(await endTime(interrupted.id), interruptedEnd);
+    assert.ok(await endTime(initiated.id) instanceof Date);
+});
+
+test("a session finished before V41 keeps no end time when the teacher's route finishes it again", {
+    skip: SKIP_REASON,
+}, async () => {
+    const teacher = await createTeacher();
+    const finishedBefore = await createSession(teacher, 3);
+    const { finisher } = finisherWithFakes();
+
+    assert.deepEqual(
+        await finisher.finishActivity(String(finishedBefore.id)),
+        { status: "finished", sessionId: finishedBefore.id, previousPhaseId: null },
+    );
+    assert.equal(await endTime(finishedBefore.id), null);
+});
