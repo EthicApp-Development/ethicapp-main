@@ -171,11 +171,12 @@
     <tr><td><b>Bridge to the other</b></td><td>The role line links to Diseños; the row menu and the case view offer "Nuevo diseño con este caso".</td><td>The row's meta line names the case.</td></tr>
   </table>
 
-  <div class="open"><b>Open questions</b> (see the README):
+  <div class="open"><b>Decisions of 2026-11-02</b> (epic #1008, see the README):
     <ul>
-      <li>Can a case be deleted while other teachers' designs use it? The proposal says no, after epic #923: their designs would silently lose their case.</li>
-      <li>Should "Nuevo diseño con este caso" exist? It needs the design form to accept a case.</li>
-      <li>Is the case view's history of uses (which designs use the case) worth a server change?</li>
+      <li>A case that other teachers' designs use cannot be deleted; the page offers archiving.</li>
+      <li>"Nuevo diseño con este caso" exists, in "Mis casos", "Compartidos por otros" and the case view.</li>
+      <li>The case view lists the teacher's designs that use the case, and counts the others'.</li>
+      <li>A case in use locks its content and its deletion; its sharing stays editable.</li>
     </ul>
   </div>
 
@@ -198,9 +199,9 @@
     <li><b>One table row per case:</b>
       <ul>
         <li><b>Caso:</b> title; under it the pages, the material (videos, documents) and the language. A click on the title opens the case view.</li>
-        <li><b>Estado:</b> "● Listo"; "⟳ Procesando PDF"; "⚠ PDF con error", where students see the PDF instead of the pages; or "🔒 En uso · 3 actividades", which cannot be edited, deleted or made private. Today these are three separate lines of the card.</li>
+        <li><b>Estado:</b> "● Listo"; "⟳ Procesando PDF"; "⚠ PDF con error", where students see the PDF instead of the pages; or "🔒 En uso · 3 actividades", which cannot be edited or deleted. Today these are three separate lines of the card.</li>
         <li><b>Diseños:</b> how many designs use the case, and how many of them belong to other teachers. This is what sharing and deleting affect, and today it is not shown anywhere.</li>
-        <li><b>Compartido:</b> the switch that makes the case public, with today's publication confirmation (#939). A shared case in use cannot be made private, so its switch is locked.</li>
+        <li><b>Compartido:</b> the switch that makes the case public, with today's publication confirmation (#939). It works for a case in use too, in both directions (decision of 2026-11-02; the frame shows the earlier locked switch).</li>
       </ul></li>
     <li><b>One visible action per row:</b> "Editar"; "Reemplazar PDF" when the PDF could not be processed; "Duplicar para editar" when the case is in use.</li>
     <li><b>The row menu</b> (open on the second row): Ver, Nuevo diseño con este caso, Duplicar, Archivar, and Eliminar, last. Eliminar is disabled, with the reason, when the case is in use or when other teachers' designs use it.</li>
@@ -212,7 +213,7 @@
   <ol class="notes">
     <li><b>What the tab holds:</b> cases other teachers shared. The banner says the two ways to use one, which today the page does not tell: choose it directly in a design, or import a private, editable copy.</li>
     <li><b>Rows show what matters to decide:</b> author, language, license and rights.</li>
-    <li><b>"Importar" is the row's only action.</b> A case already imported shows "Importado · Ver copia" instead.</li>
+    <li><b>"Importar" is the row's visible action.</b> A case already imported shows "Importado · Ver copia" instead. "Nuevo diseño con este caso" sits next to it (decision of 2026-11-02; not drawn).</li>
     <li><b>After importing,</b> a notice names the copy and offers "Editar copia" and "Ver en Mis casos". Today it says "Caso importado" and the page jumps to "Tuyos".</li>
   </ol>
 

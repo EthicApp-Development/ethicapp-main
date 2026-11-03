@@ -87,11 +87,11 @@ The page was measured with headless Chrome. The numbers are the same at 1920 and
   - "● Listo";
   - "⟳ Procesando PDF", while the worker renders its pages;
   - "⚠ PDF con error", when rendering failed and students see the PDF instead of the pages;
-  - "🔒 En uso · n actividades", when an activity was launched from a design that uses it. The case cannot be edited, deleted or made private.
+  - "🔒 En uso · n actividades", when an activity was launched from a design that uses it. The case cannot be edited or deleted; its sharing stays editable (see Decisions).
 
   When a case is in use and its PDF failed, "En uso" wins: the teacher cannot replace the PDF anyway.
 - **Diseños:** how many designs use the case and, under it, how many belong to other teachers. "Sin diseños" when none does.
-- **Compartido:** the switch that makes the case public, keeping today's publication confirmation (#939) and the notice about the public designs that become private (#934). A shared case in use cannot be made private, so its switch is locked.
+- **Compartido:** the switch that makes the case public, keeping today's publication confirmation (#939) and the notice about the public designs that become private (#934). It works for a case in use too, in both directions (see Decisions).
 - 12 rows fit on the first screen at 1920 × 1080, and 6 at 1366 × 768.
 
 **One visible action per row, chosen by its state**
@@ -103,7 +103,7 @@ The page was measured with headless Chrome. The numbers are the same at 1920 and
 - Ver, Nuevo diseño con este caso, Duplicar and Archivar.
 - Then Eliminar, last. It is disabled, with the reason, in two cases:
   - the case is in use: "en uso por n actividades";
-  - other teachers' designs use it: "lo usan n diseños de m docentes" (see Open questions).
+  - other teachers' designs use it: "lo usan n diseños de m docentes" (see Decisions).
 
 **Footer**
 - The count and "Mostrar más"; there are no pages.
@@ -113,7 +113,7 @@ The page was measured with headless Chrome. The numbers are the same at 1920 and
 
 - **A one-line banner:** "Casos que otros docentes compartieron. Puedes elegirlos directamente en tus diseños, o importar uno para tener una copia privada y editable en Mis casos; el original no cambia."
 - **Columns:** case (pages, language), author, and license with the rights status under it.
-- **"⤓ Importar" is the row's only action.** A case the teacher already imported shows "✓ Importado · Ver copia" instead.
+- **"⤓ Importar" is the row's visible action.** A case the teacher already imported shows "✓ Importado · Ver copia" instead. "Nuevo diseño con este caso" sits next to it, since a shared case can be used without importing it.
 - **After an import,** a notice names the new copy and offers "Editar copia" and "Ver en Mis casos". The page stays on the tab.
 
 ### Archivados
@@ -190,7 +190,7 @@ Each notice disappears after a few seconds and can be dismissed. The page stays 
 
 **Delete**
 - A migration recreates `ethical_cases_original_case_id_fkey` and `ethical_cases_imported_from_case_id_fkey` with `ON DELETE SET NULL`, as #963 did for designs.
-- `DELETE /cases/:id` answers coded 409s: `CASE_USED_BY_LAUNCHED_ACTIVITY` (exists) and, if the open question is settled that way, a new `CASE_USED_BY_OTHER_TEACHERS`. The page shows the reason for a failed delete.
+- `DELETE /cases/:id` answers coded 409s: `CASE_USED_BY_LAUNCHED_ACTIVITY` (exists) and a new `CASE_USED_BY_OTHER_TEACHERS`. The page shows the reason for a failed delete.
 - The dialog uses the app's existing modal service.
 
 **Nuevo diseño con este caso**
@@ -199,12 +199,17 @@ Each notice disappears after a few seconds and can be dismissed. The page stays 
 **Translations**
 - New keys in `es_CL` and `en_US`. "Archivadas" becomes "Archivados" on this page.
 
-## Open questions
+## Decisions
 
-- **Deleting a case other teachers use.** The proposal refuses it with a 409 and suggests archiving, because their designs would silently lose their case, against the #923 decision that associations are never detached. The alternative is to allow it and warn, which leaves those designs with no case and their teachers uninformed.
-- **"Nuevo diseño con este caso".** Is it worth the change to the design form? Without it, the role line's link to Diseños is the only bridge.
-- **The uses panel in the case view.** It needs a new server query. A smaller first step is the counts alone, from the same data as the list's Diseños column.
-- **The "Derechos" tab.** Moving the rights details out of the head shortens the view, at the cost of one more tab.
+Recorded in epic #1008.
+
+- **2026-11-02: a case that other teachers' designs use cannot be deleted.** `DELETE /cases/:id` answers `409 CASE_USED_BY_OTHER_TEACHERS`, and the page offers archiving. Their designs would otherwise lose their case, against the #923 decision that associations are never detached.
+- **2026-11-02: "Nuevo diseño con este caso" is in scope,** as a shortcut to a new design built on the case: in the "Mis casos" row menu, next to "Importar" in "Compartidos por otros", and in the case view. The design creation form accepts `?caseId=`.
+- **2026-11-02: the case view's uses panel is complete:** the teacher's own designs that use the case, as links, and the counts of other teachers' designs. It needs a new server query.
+- **2026-11-02: the rights details go in a "Derechos" tab** of the case view.
+- **2026-11-02: a case in use locks only its content and its deletion.** Its visibility, license and rights stay editable in both directions, with the publication confirmation (#939) and the notice about the public designs that become private (#934). Visibility changes neither what activities showed nor who already reads the case, and making a case private has the same effect on other teachers' public designs whether the case is in use or not. Today the server refuses every change to a case in use, so a teacher cannot share a design used by an activity when its case is their own private case.
+
+Frames A and B were drawn before these decisions: A shows the Compartido switch of a case in use locked, and B shows "Importar" alone.
 
 ## Out of scope
 
