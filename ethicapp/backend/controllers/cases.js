@@ -151,7 +151,13 @@ const caseSharingSelectSql = `
           AND d.visibility = 'public'
           AND COALESCE(d.archived, false) = false
     ), '[]'::json) AS public_designs
-    ,
+`;
+
+// Whether an activity was launched from a design that uses the case, for
+// GET /cases/:id only: the edit form locks a case in use with it, and the case
+// view falls back on it when GET /cases/:id/uses fails. The cases page reads
+// `usage` instead (#1011).
+const caseLaunchedActivitySelectSql = `
     EXISTS (
         SELECT 1
         FROM designs d
@@ -207,7 +213,10 @@ function normalizeCase(row) {
         public: (row.visibility || PRIVATE_VISIBILITY) === PUBLIC_VISIBILITY,
         languageCode: row.language_code || DEFAULT_LANGUAGE_CODE,
         archived: row.archived === true,
-        hasLaunchedDesignActivity: row.has_launched_design_activity === true,
+        // Only for the query that selects it: GET /cases/:id.
+        ...(row.has_launched_design_activity === undefined
+            ? {}
+            : { hasLaunchedDesignActivity: row.has_launched_design_activity === true }),
         // Only for the queries that select it: the teacher's own and archived cases.
         ...(row.case_usage === undefined ? {} : { usage: normalizeCaseUsage(row.case_usage) }),
         authors: Array.isArray(row.authors) && row.authors.length > 0
@@ -563,6 +572,7 @@ async function getReadableCaseWithDocumentProcessing(caseId, userId) {
             SELECT c.id, c.case_uuid, c.title, c.author_firstname, c.author_lastname, c.author_email,
                    c.pdf_path, c.creator, c.created_at, c.updated_at,
                    ${caseSharingSelectSql},
+                   ${caseLaunchedActivitySelectSql},
                    ${pdfRenderJobSelectSql}
             FROM ethical_cases c
             ${pdfRenderJobJoinSql}
