@@ -38,6 +38,34 @@ test("chat transcript preserves its recorded team and avoids phase-wide team joi
     assert.match(sql, /esa\.service_id AS external_service_id/);
 });
 
+// ─── No RUT in the exports (#1071) ──────────────────────────────────────────
+
+// The headers before #1071, minus `rut`: every other column keeps its order.
+const RESPONSE_HEADER = [
+    "id", "user_id", "team_id", "name", "gender", "question_number", "question_text",
+    "left_pole", "right_pole", "max_scale_range", "selected_value", "comment",
+    "phase_number", "time",
+];
+const CHAT_HEADER = [
+    "id", "user_id", "external_agent_id", "team_id", "author_role", "name", "gender",
+    "external_service_id", "question_number", "question_text", "left_pole", "right_pole",
+    "message", "phase_number", "time", "reply_to",
+];
+
+test("the responses and chat exports have no rut column, and keep the other columns' order", () => {
+    assert.deepEqual([...SEMANTIC_DIFFERENTIAL_RESPONSE_COLUMNS], RESPONSE_HEADER);
+    assert.deepEqual([...SEMANTIC_DIFFERENTIAL_CHAT_COLUMNS], CHAT_HEADER);
+    const headers = [...RESPONSE_HEADER, ...CHAT_HEADER];
+    assert.deepEqual(headers.filter(column => /rut/i.test(column)), []);
+});
+
+test("neither report reads the user's rut", () => {
+    for (const sql of [buildSemanticDifferentialResponsesReportSql(),
+        buildSemanticDifferentialChatTranscriptSql()]) {
+        assert.doesNotMatch(sql, /\brut\b/i);
+    }
+});
+
 // ─── Plain question text (#768) ─────────────────────────────────────────────
 
 const BOM = "\uFEFF";
