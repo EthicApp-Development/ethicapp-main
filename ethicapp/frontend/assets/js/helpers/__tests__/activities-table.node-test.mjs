@@ -140,12 +140,38 @@ describe("activities table, the Actividad column", () => {
             [{ key: "activities_meta_no_case", text: "" }]);
     });
 
-    it("keeps the case's id from the design when its title is unknown", () => {
-        const idOnly = activity(1, {
-            design: { metainfo: NOT_STARTED.design.metainfo, caseId: 9 },
+    it("says Sin caso and disables Ver caso for a stale caseId without associatedCase", () => {
+        // `designs.case_id` NULL, with a leftover `caseId` in the document.
+        const stale = activity(1, {
+            design: { metainfo: NOT_STARTED.design.metainfo, caseId: "1" },
         });
-        assert.deepEqual(activityCaseOf(idOnly), { id: 9, title: "" });
-        assert.deepEqual(activityMetaParts(idOnly), []);
+        assert.equal(activityCaseOf(stale), null);
+        assert.deepEqual(activityMetaParts(stale),
+            [{ key: "activities_meta_no_case", text: "" }]);
+        const row = buildActivityRow(stale, dates);
+        assert.equal(row.caseId, null);
+        assert.deepEqual(row.menu.find(entry => entry.id === "view-case"), {
+            id:       "view-case",
+            key:      "activities_action_view_case",
+            icon:     "fa fa-book",
+            disabled: true,
+            reason:   { key: "activities_meta_no_case" },
+        });
+    });
+
+    it("needs both the id and the title of associatedCase", () => {
+        const metainfo = NOT_STARTED.design.metainfo;
+        const without = associatedCase => activity(1, {
+            design: { metainfo, associatedCase, caseId: 7 },
+        });
+        for (const associatedCase of [{ id: 7 }, { title: "Case" }, { id: "x", title: "Case" },
+            { id: 7, title: "   " }, null]) {
+            assert.equal(activityCaseOf(without(associatedCase)), null,
+                JSON.stringify(associatedCase));
+            assert.equal(buildActivityRow(without(associatedCase), dates).caseId, null);
+        }
+        assert.deepEqual(activityCaseOf(without({ id: "7", title: " Case " })),
+            { id: 7, title: "Case" });
     });
 
     it("gives the row the name and the description apart, and the title as one line", () => {

@@ -135,19 +135,18 @@ export function tableColumns(tab) {
 }
 
 /**
- * The activity's case, from its design: its id and title, either of which
- * may be missing. Null when the design has no case.
- * @returns {{ id: number|null, title: string }|null}
+ * The activity's case, from the design document's `associatedCase`, only
+ * when it has both an id and a title. Otherwise null, read as "Sin caso".
+ * The document's bare `caseId` is not trusted: it can outlive the design's
+ * case (`designs.case_id` NULL with a stale `caseId` in the JSON). #1055
+ * returns the case from the database instead.
+ * @returns {{ id: number, title: string }|null}
  */
 export function activityCaseOf(activity) {
-    const design = activity?.design;
-    const associated = design?.associatedCase;
-    const id = idOf(associated?.id) ?? idOf(design?.caseId);
+    const associated = activity?.design?.associatedCase;
+    const id = idOf(associated?.id);
     const title = cleanText(associated?.title);
-    if (id === null && !title) {
-        return null;
-    }
-    return { id, title };
+    return id !== null && title ? { id, title } : null;
 }
 
 /** The title of the design the activity was launched from, "" if unknown. */
@@ -170,9 +169,9 @@ export function activityMetaParts(activity) {
         parts.push({ key: "activities_meta_design", text: designTitle });
     }
     const caseInfo = activityCaseOf(activity);
-    if (caseInfo?.title) {
+    if (caseInfo) {
         parts.push({ key: "activities_meta_case", text: caseInfo.title });
-    } else if (!caseInfo) {
+    } else {
         parts.push({ key: "activities_meta_no_case", text: "" });
     }
     return parts;
