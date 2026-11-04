@@ -128,9 +128,12 @@ function createPage({
         ...catalog,
     };
 
+    // The notices' timer (#1052), which these tests never fire.
+    const $timeout = Object.assign(fn => ({ fn }), { cancel() {} });
+
     const vm = {};
     ActivitiesPageController.call(vm, $scope, $rootScope, $location, $translate, $window,
-        ActivityCatalogService);
+        ActivityCatalogService, $timeout);
 
     return {
         vm,

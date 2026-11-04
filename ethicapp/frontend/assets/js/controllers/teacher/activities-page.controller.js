@@ -51,6 +51,18 @@ import {
     statusFilterSearchValue,
     tabHasStatusFilter,
 } from "../../helpers/activities-filters.js";
+import {
+    NOTICE_ACTION_SHOW_ARCHIVED,
+    NOTICE_ACTION_SHOW_FINISHED,
+    NOTICE_ACTION_UNDO_ARCHIVE,
+    NOTICE_TIMEOUT_MS,
+    archiveChangeFailureNotice,
+    archiveNotice,
+    codeCopiedNotice,
+    copyFailureNotice,
+    restoreNotice,
+} from "../../helpers/activity-action-feedback.js";
+import { translatePlainText } from "../../helpers/plain-text-translation.js";
 
 // The page's own URL search keys, which are not carried to the next page.
 const PAGE_SEARCH_KEYS = ["tab", "status", "q"];
@@ -63,7 +75,7 @@ function initialVisibleCounts() {
 }
 
 export function ActivitiesPageController($scope, $rootScope, $location, $translate, $window,
-    ActivityCatalogService) {
+    ActivityCatalogService, $timeout) {
 
     const vm = this;
 
@@ -242,6 +254,63 @@ export function ActivitiesPageController($scope, $rootScope, $location, $transla
         }
     };
 
+    // Notices after "Copiar código", an archive or a restore (#1052): one at
+    // a time, for a few seconds, and dismissible. Built by
+    // `helpers/activity-action-feedback.js`.
+
+    vm.notice = null;
+    let noticeTimer = null;
+
+    function cancelNoticeTimer() {
+        if (noticeTimer) {
+            $timeout.cancel(noticeTimer);
+            noticeTimer = null;
+        }
+    }
+
+    $scope.$on("$destroy", cancelNoticeTimer);
+
+    vm.showNotice = function(notice) {
+        cancelNoticeTimer();
+        vm.notice = notice;
+        noticeTimer = $timeout(() => {
+            noticeTimer = null;
+            if (vm.notice === notice) {
+                vm.notice = null;
+            }
+        }, NOTICE_TIMEOUT_MS);
+        $scope.$applyAsync();
+    };
+
+    vm.dismissNotice = function() {
+        cancelNoticeTimer();
+        vm.notice = null;
+    };
+
+    // The notice's message, in the current language. The template binds it
+    // as text, so the activity's title is translated as plain text and any
+    // markup in it stays text.
+    vm.noticeMessage = function() {
+        return vm.notice
+            ? translatePlainText($translate, vm.notice.messageKey, vm.notice.params)
+            : "";
+    };
+
+    // A notice's links: "Deshacer" restores the activity just archived (it
+    // sends `archived: false`, so a second "Deshacer" leaves it restored);
+    // "Ver Archivadas" and "Ver en Terminadas" open that tab.
+    vm.runNoticeAction = async function(action) {
+        vm.dismissNotice();
+        if (action?.id === NOTICE_ACTION_UNDO_ARCHIVE) {
+            await withBusy(action.sessionId,
+                () => setArchived(action.sessionId, action.title, false));
+        } else if (action?.id === NOTICE_ACTION_SHOW_ARCHIVED) {
+            vm.selectTab("archived");
+        } else if (action?.id === NOTICE_ACTION_SHOW_FINISHED) {
+            vm.selectTab("finished");
+        }
+    };
+
     // Row actions. Each one leaves the page or stays on its tab.
 
     async function withBusy(id, run) {
@@ -257,37 +326,46 @@ export function ActivitiesPageController($scope, $rootScope, $location, $transla
         }
     }
 
-    // Copies the row's access code. Resolves true once copied. The notice
-    // "Código copiado" is #1052's.
+    // Copies the row's access code, from its button or the row menu, and
+    // says "Código copiado", or that the browser did not let it. Resolves
+    // true once copied.
     vm.copyCode = async function(row) {
         if (!row?.code) {
             return false;
         }
         try {
             await $window.navigator.clipboard.writeText(row.code);
+            vm.showNotice(codeCopiedNotice());
             return true;
         } catch (error) {
             console.error("[ActivitiesPageController] Could not copy the code.", error);
+            vm.showNotice(copyFailureNotice());
             return false;
         }
     };
 
-    // Archives a finished activity or restores an archived one. The catalog
-    // updates the activity and notifies the page, which builds its rows
-    // again. The server refuses to archive an activity that is not finished
-    // (409 ACTIVITY_NOT_FINISHED): the list was stale, so it is loaded again.
-    // The notices, with "Deshacer", are #1052's.
-    async function setArchived(row, archived) {
+    // Archives a finished activity or restores an archived one, and names it
+    // in a notice: "Se archivó" with "Deshacer" and "Ver Archivadas", or "Se
+    // restauró" with "Ver en Terminadas". The catalog updates the activity
+    // and notifies the page, which builds its rows again; the page stays on
+    // its tab. The server refuses to archive an activity that is not
+    // finished (409 ACTIVITY_NOT_FINISHED): the list was stale, so it is
+    // loaded again and the notice says why.
+    async function setArchived(id, title, archived) {
         try {
-            await ActivityCatalogService.setArchived(row.id, archived);
+            await ActivityCatalogService.setArchived(id, archived);
+            vm.showNotice(archived
+                ? archiveNotice(id, title, { showArchived: vm.tab !== "archived" })
+                : restoreNotice(id, title, { showFinished: vm.tab !== "finished" }));
         } catch (error) {
             if (error?.status === 409) {
                 console.warn("[ActivitiesPageController] The server refused the archive change; "
                     + "reloading the activities.", error?.data?.code);
                 await ActivityCatalogService.loadActivities();
-                return;
+            } else {
+                console.error("[ActivitiesPageController] Error updating archived status.", error);
             }
-            console.error("[ActivitiesPageController] Error updating archived status.", error);
+            vm.showNotice(archiveChangeFailureNotice(error, archived));
         }
     }
 
@@ -298,8 +376,8 @@ export function ActivitiesPageController($scope, $rootScope, $location, $transla
         [ROW_ACTION_VIEW_DESIGN]:    row => $scope.navigateTo(`/designs/${row.designId}`),
         [ROW_ACTION_VIEW_CASE]:      row => $scope.navigateTo(`/cases/${row.caseId}`),
         [ROW_ACTION_LAUNCH_AGAIN]:   row => $scope.navigateTo(`/activities/new/${row.designId}`),
-        [ROW_ACTION_ARCHIVE]:        row => setArchived(row, true),
-        [ROW_ACTION_RESTORE]:        row => setArchived(row, false),
+        [ROW_ACTION_ARCHIVE]:        row => setArchived(row.id, row.titleText, true),
+        [ROW_ACTION_RESTORE]:        row => setArchived(row.id, row.titleText, false),
     };
 
     vm.runAction = async function(row, action) {
