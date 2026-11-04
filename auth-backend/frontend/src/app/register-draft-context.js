@@ -3,7 +3,6 @@ import { createContext, useContext } from 'react';
 export const emptyRegisterDraft = Object.freeze({
   firstname: '',
   lastname: '',
-  dni: '',
   email: '',
   gender: '',
   password: '',

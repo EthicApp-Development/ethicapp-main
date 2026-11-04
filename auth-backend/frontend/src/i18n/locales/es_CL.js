@@ -11,7 +11,7 @@ const esCL = {
     subtitle: 'Accede con tus credenciales',
     noAccount: '¿No tienes cuenta?',
     createAccount: 'Crear cuenta',
-    usernameLabel: 'Usuario',
+    emailLabel: 'Correo electrónico',
     passwordLabel: 'Contraseña',
     forgotPassword: '¿Has olvidado tu contraseña?',
     submit: 'Entrar',
@@ -23,7 +23,7 @@ const esCL = {
     continuePolicyConnector: 'y',
     continuePolicySuffix: '.',
     errors: {
-      usernameRequired: 'El usuario es obligatorio.',
+      emailRequired: 'El correo electrónico es obligatorio.',
       passwordRequired: 'La contraseña es obligatoria.',
       genericLoginError: 'No se ha podido iniciar sesión. Verifica tus credenciales.'
     },
@@ -40,14 +40,12 @@ const esCL = {
     fields: {
       firstname: 'Nombre',
       lastname: 'Apellido',
-      dni: 'DNI / RUT',
       email: 'Correo electrónico',
       gender: 'Género',
       password: 'Contraseña',
       passwordConfirmation: 'Confirmar contraseña'
     },
     placeholders: {
-      dni: 'Sin puntos, con guión',
       gender: 'Selecciona una opción'
     },
     genderOptions: {
@@ -79,7 +77,6 @@ const esCL = {
     errors: {
       firstnameRequired: 'El nombre es obligatorio.',
       lastnameRequired: 'El apellido es obligatorio.',
-      dniRequired: 'El identificador es obligatorio.',
       emailRequired: 'El correo electrónico es obligatorio.',
       emailInvalid: 'Introduce un correo electrónico válido.',
       genderRequired: 'Debes seleccionar una opción.',

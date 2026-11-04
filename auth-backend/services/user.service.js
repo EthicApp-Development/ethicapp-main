@@ -7,7 +7,6 @@ function mapUser(row) {
   return {
     id: row.id,
     name: row.name,
-    rut: row.rut,
     email: row.mail,
     sex: row.sex,
     role: row.role,
@@ -23,7 +22,7 @@ function mapUser(row) {
 async function findById(id) {
   const result = await query(
     `
-      SELECT id, name, rut, mail, sex, role, preferred_locale, active, email_confirmed, auth_provider, password_bcrypt, session_version
+      SELECT id, name, mail, sex, role, preferred_locale, active, email_confirmed, auth_provider, password_bcrypt, session_version
       FROM users
       WHERE id = $1
       LIMIT 1
@@ -34,20 +33,9 @@ async function findById(id) {
   return mapUser(result.rows[0]);
 }
 
+// The email is the account identifier (#1067): a login is an email.
 async function findByLogin(login) {
-  const normalized = String(login || '').trim().toLowerCase();
-
-  const result = await query(
-    `
-      SELECT id, name, rut, mail, sex, role, preferred_locale, active, email_confirmed, auth_provider, password_bcrypt, session_version
-      FROM users
-      WHERE lower(mail) = $1 OR lower(rut) = $1
-      LIMIT 1
-    `,
-    [normalized]
-  );
-
-  return mapUser(result.rows[0]);
+  return findByEmail(login);
 }
 
 async function findByEmail(email) {
@@ -55,7 +43,7 @@ async function findByEmail(email) {
 
   const result = await query(
     `
-      SELECT id, name, rut, mail, sex, role, preferred_locale, active, email_confirmed, auth_provider, password_bcrypt, session_version
+      SELECT id, name, mail, sex, role, preferred_locale, active, email_confirmed, auth_provider, password_bcrypt, session_version
       FROM users
       WHERE lower(mail) = $1
       LIMIT 1
@@ -99,19 +87,19 @@ async function touchLastLogin(userId) {
   );
 }
 
-async function createUser({ name, lastname, dni, email, gender, password, preferredLocale = 'en_US', role = 'A' }) {
+async function createUser({ name, lastname, email, gender, password, preferredLocale = 'en_US', role = 'A' }) {
   const fullName = `${name} ${lastname}`.trim();
   const passwordHash = await hashPassword(password);
 
   const result = await query(
     `
       INSERT INTO users
-        (name, rut, pass, mail, sex, role, preferred_locale, password_bcrypt, auth_provider, active)
+        (name, pass, mail, sex, role, preferred_locale, password_bcrypt, auth_provider, active)
       VALUES
-        ($1, $2, '', $3, $4, $5, $6, $7, 'local', true)
-      RETURNING id, name, rut, mail, sex, role, preferred_locale, active, auth_provider, password_bcrypt
+        ($1, '', $2, $3, $4, $5, $6, 'local', true)
+      RETURNING id, name, mail, sex, role, preferred_locale, active, auth_provider, password_bcrypt
     `,
-    [fullName, dni, email, gender, role, preferredLocale, passwordHash]
+    [fullName, email, gender, role, preferredLocale, passwordHash]
   );
 
   return mapUser(result.rows[0]);

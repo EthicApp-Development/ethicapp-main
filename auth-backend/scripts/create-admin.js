@@ -1,108 +1,40 @@
 import 'dotenv/config';
 
-import bcrypt from 'bcrypt';
-
 import db from '../config/database.js';
+import { ADMIN_REQUIRED_VARIABLES, readAdminConfig, reconcileAdmin } from './lib/bootstrap-accounts.js';
+
+const OUTCOME_MESSAGES = {
+  created: 'Admin created',
+  reconciled: 'Admin reconciled and activated',
+  exists: 'Admin already exists, created at the same time by another instance'
+};
 
 async function main() {
-  const firstname = (process.env.ADMIN_FIRSTNAME || '').trim();
-  const lastname = (process.env.ADMIN_LASTNAME || '').trim();
-  const rut = (process.env.ADMIN_DNI || '').trim();
-  const email = (process.env.ADMIN_EMAIL || '').trim().toLowerCase();
-  const password = process.env.ADMIN_PASSWORD || '';
-  const sex = (process.env.ADMIN_SEX || 'M').trim();
+  const { config, missing } = readAdminConfig(process.env);
 
-  if (!firstname || !lastname || !rut || !email || !password) {
+  if (missing.length > 0) {
     console.error(`
-Missing required admin environment variables.
+Missing required admin environment variables: ${missing.join(', ')}
 
 Required:
-  ADMIN_FIRSTNAME
-  ADMIN_LASTNAME
-  ADMIN_DNI
-  ADMIN_EMAIL
-  ADMIN_PASSWORD
+${ADMIN_REQUIRED_VARIABLES.map((name) => `  ${name}`).join('\n')}
 
 Optional:
   ADMIN_SEX (default: M)
+
+An account that already has ADMIN_EMAIL (ignoring letter case) is made an
+active administrator with these values.
 `);
     process.exit(1);
   }
 
-  const existingByEmail = await db.query(
-    `
-      SELECT id, mail, rut
-      FROM users
-      WHERE mail = $1
-      LIMIT 1
-    `,
-    [email]
-  );
+  const outcome = await reconcileAdmin(db, config);
 
-  const hash = await bcrypt.hash(password, 12);
-  const fullName = [firstname, lastname].filter(Boolean).join(' ').trim();
-
-  if (existingByEmail.rowCount > 0) {
-    await db.query(
-      `
-        UPDATE users
-        SET firstname = $1,
-            lastname = $2,
-            name = $3,
-            rut = $4,
-            sex = $5,
-            role = 'S',
-            password_bcrypt = $6,
-            auth_provider = 'local',
-            active = true,
-            email_confirmed = true,
-            session_version = session_version + 1
-        WHERE mail = $7
-      `,
-      [firstname, lastname, fullName, rut, sex, hash, email]
-    );
-
-    console.log(`✔ Admin reconciled and activated: ${email}`);
-    process.exit(0);
-  }
-
-  const existingByRut = await db.query(
-    `
-      SELECT id, mail, rut
-      FROM users
-      WHERE rut = $1
-      LIMIT 1
-    `,
-    [rut]
-  );
-
-  if (existingByRut.rowCount > 0) {
-    console.error(
-      `Cannot create admin ${email}: ADMIN_DNI is already used by ${existingByRut.rows[0].mail}.`
-    );
-    process.exit(1);
-  }
-
-  await db.query(
-    `
-      INSERT INTO users
-        (firstname, lastname, name, rut, pass, mail, sex, role, password_bcrypt, auth_provider, active, email_confirmed)
-      VALUES
-        ($1, $2, $3, $4, '', $5, $6, $7, $8, 'local', true, true)
-    `,
-    [firstname, lastname, fullName, rut, email, sex, 'S', hash]
-  );
-
-  console.log(`✔ Admin created: ${email}`);
+  console.log(`✔ ${OUTCOME_MESSAGES[outcome]}: ${config.email}`);
   process.exit(0);
 }
 
 main().catch((err) => {
-  if (err.code === '23505') {
-    console.log(`✔ Admin already exists: ${(process.env.ADMIN_EMAIL || '').trim().toLowerCase()}`);
-    process.exit(0);
-  }
-
   console.error(err);
   process.exit(1);
 });

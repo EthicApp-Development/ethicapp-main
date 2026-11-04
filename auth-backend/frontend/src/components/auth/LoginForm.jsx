@@ -40,7 +40,7 @@ function LoginForm() {
     const nextErrors = {};
 
     if (!formData.username.trim()) {
-      nextErrors.username = t('login.errors.usernameRequired');
+      nextErrors.username = t('login.errors.emailRequired');
     }
 
     if (!formData.password) {
@@ -116,7 +116,8 @@ function LoginForm() {
       <TextField
         id="username"
         name="username"
-        label={t('login.usernameLabel')}
+        label={t('login.emailLabel')}
+        type="email"
         value={formData.username}
         onChange={handleChange}
         error={errors.username}

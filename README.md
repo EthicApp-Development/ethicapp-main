@@ -110,7 +110,7 @@ When an `.env.example` exists beside a service `.env`, copy it and adjust local 
 `auth-backend/.env` includes bootstrap controls for local and test data:
 
 - `CREATE_ADMIN`: when enabled, creates or ensures the configured admin user exists.
-- `ADMIN_FIRSTNAME`, `ADMIN_LASTNAME`, `ADMIN_DNI`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_SEX`: credentials and profile values for the bootstrap administrator.
+- `ADMIN_FIRSTNAME`, `ADMIN_LASTNAME`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_SEX`: credentials and profile values for the bootstrap administrator. An existing account with `ADMIN_EMAIL` (compared ignoring letter case) is made an active administrator with these values.
 - `SEED_USERS`: when enabled, runs test-user seed logic.
 - `WAIT_FOR_DB`: makes the service wait for PostgreSQL before bootstrapping.
 
