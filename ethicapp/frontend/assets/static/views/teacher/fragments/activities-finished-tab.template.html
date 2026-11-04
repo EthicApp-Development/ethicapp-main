@@ -1,8 +1,13 @@
 <!-- "Terminadas" (#1050): the finished activities that are not archived,
      newest first, with "Reportes" as each row's visible action. -->
 <section class="cases-table-section activities-finished-tab">
-    <div ng-if="ap.getRows('finished').length > 0"
-        ng-include="'/assets/static/views/teacher/fragments/activities-finished-table.template.html'"></div>
+    <activities-table ng-if="ap.getRows('finished').length > 0"
+        tab="finished"
+        rows="ap.getRows('finished')"
+        limit="ap.visibleCounts.finished"
+        busy="ap.busy"
+        on-action="ap.runAction(row, action)"
+        on-copy-code="ap.copyCode(row)"></activities-table>
 
     <div class="cases-table-footer" ng-if="ap.getRows('finished').length > 0">
         <span>

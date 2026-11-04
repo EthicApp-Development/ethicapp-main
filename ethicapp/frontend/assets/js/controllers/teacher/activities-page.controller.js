@@ -7,8 +7,9 @@
 //
 // Each tab is a table built by `helpers/activities-table.js`: one row per
 // activity with its status, participants, code and dates, one visible action
-// and a "⋯" menu. The dates come from `helpers/activity-dates.js`, in the
-// browser's time zone and the UI language.
+// and a "⋯" menu, shown by the `activities-table` component (#1095). The
+// dates come from `helpers/activity-dates.js`, in the browser's time zone
+// and the UI language.
 //
 // Each part of the page has its own fragment, so later changes stay apart:
 // - the filter bar (`activities-filters.template.html`, #1051): a search in
@@ -29,7 +30,6 @@ import {
     buildActivityTables,
     tabFromSearch,
     tabSearchValue,
-    tableColumns,
 } from "../../helpers/activities-table.js";
 import { createActivityDateFormatter, uiLanguageOf } from "../../helpers/activity-dates.js";
 import {
@@ -55,8 +55,8 @@ function initialVisibleCounts() {
     return Object.fromEntries(ACTIVITY_TABS.map(tab => [tab, ACTIVITIES_PAGE_SIZE]));
 }
 
-export function ActivitiesPageController($scope, $rootScope, $location, $translate, $window,
-    ActivityCatalogService, $timeout, DesignCatalogService, ActivityRowActionsService) {
+export function ActivitiesPageController($scope, $rootScope, $location, $translate,
+    ActivityCatalogService, DesignCatalogService, ActivityRowActionsService) {
 
     const vm = this;
 
@@ -67,8 +67,6 @@ export function ActivitiesPageController($scope, $rootScope, $location, $transla
     // The search of the current tab and the status filter of "En curso".
     vm.statusFilter = statusFilterFromSearch($location.search());
     vm.search = queryFromSearch($location.search());
-    // Each tab's columns, built once so the headers' repeat stays stable.
-    vm.columns = Object.fromEntries(ACTIVITY_TABS.map(tab => [tab, tableColumns(tab)]));
 
     // Lists
 
