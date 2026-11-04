@@ -5,6 +5,7 @@ import { API_ERROR_KINDS, classifyApiError, describeApiError } from '../api/apiE
 import { studentApi } from '../api/studentApi.js';
 import StudentTopbar from '../components/StudentTopbar.jsx';
 import { useStudentUser } from '../context/StudentUserContext.jsx';
+import { nonStudentHome } from '../utils/roleHome.js';
 
 const SESSION_PLACEHOLDER = {
   isAuthenticated: false,
@@ -18,6 +19,7 @@ export default function StudentLayout() {
   const [loadingSession, setLoadingSession] = useState(true);
   const [sessionRefreshKey, setSessionRefreshKey] = useState(0);
   const [sessionCheckError, setSessionCheckError] = useState('');
+  const [leavingFor, setLeavingFor] = useState(null);
   const { user, loadingUser, refreshUser, clearUser } = useStudentUser();
 
   const userDisplayName = useMemo(() => {
@@ -42,6 +44,15 @@ export default function StudentLayout() {
     studentApi
       .get('session')
       .then(({ data }) => {
+        // A professor or administrator session belongs to its own app, not this one.
+        const home = nonStudentHome(data);
+
+        if (home) {
+          setLeavingFor(home);
+          window.location.replace(home);
+          return;
+        }
+
         setSession(data);
         if (data?.isAuthenticated) {
           refreshUser();
@@ -69,6 +80,16 @@ export default function StudentLayout() {
   const handleSessionJoined = () => {
     setSessionRefreshKey((currentKey) => currentKey + 1);
   };
+
+  if (leavingFor) {
+    return (
+      <main className="container py-4 py-md-5">
+        <p className="text-muted mb-0" role="status">
+          {t('common.redirectingHome')}
+        </p>
+      </main>
+    );
+  }
 
   return (
     <div className="student-app-shell d-flex flex-column min-vh-100">

@@ -3,7 +3,8 @@ const enUS = {
     appName: 'EthicApp',
     studentLabel: 'Student',
     logout: 'Logout',
-    loadingUser: 'Loading user...'
+    loadingUser: 'Loading user...',
+    redirectingHome: 'Taking you to your home page...'
   },
   navigation: {
     sessionsNavigation: 'Sessions navigation',

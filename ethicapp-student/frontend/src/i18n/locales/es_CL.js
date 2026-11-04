@@ -3,7 +3,8 @@ const esCL = {
     appName: 'EthicApp',
     studentLabel: 'Estudiante',
     logout: 'Cerrar sesión',
-    loadingUser: 'Cargando usuario...'
+    loadingUser: 'Cargando usuario...',
+    redirectingHome: 'Te llevamos a tu página de inicio...'
   },
   navigation: {
     sessionsNavigation: 'Navegación de sesiones',
