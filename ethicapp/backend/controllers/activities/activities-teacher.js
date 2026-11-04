@@ -14,6 +14,10 @@ import {
 import { getDesignTypeBySessionId } from "./activities-common.js";
 import activityFinisher from "../../helpers/activity-finish-helper.js";
 import { CREATE_SESSION_SQL } from "../../helpers/teacher-activity-writes.js";
+import {
+    TEACHER_ACTIVITIES_SQL,
+    teacherActivityListItem,
+} from "../../helpers/teacher-activity-list.js";
 import { normalizeActivityDescription } from "../../../common/modules/activity-description.js";
 import {
     requireLaunchableDesign,
@@ -95,45 +99,11 @@ router.get("/activities", async (req, res) => {
 
         const rawActivities = await rpg2.execSQL({
             dbcon: config.dbconnString,
-            sql: `
-                SELECT
-                    activity.id AS id,
-                    activity.session AS "sessionId",
-                    sessions.creator,
-                    sessions.name,
-                    sessions.descr AS "description",
-                    sessions.time,
-                    sessions.code,
-                    sessions.archived,
-                    designs.design,
-                    sessions.status,
-                    sessions.type,
-                    designs.id AS "designId"
-                FROM activity
-                INNER JOIN sessions
-                    ON activity.session = sessions.id
-                INNER JOIN designs
-                    ON activity.design = designs.id
-                WHERE sessions.creator = $1
-                ORDER BY sessions.time DESC, sessions.id DESC;
-            `,
+            sql: TEACHER_ACTIVITIES_SQL,
             sqlParams: [rpg2.param("plain", userId)],
         });
 
-        const activities = rawActivities.map((row) => ({
-            id: row.id,
-            sessionId: row.sessionId,
-            creator: row.creator,
-            name: row.name,
-            description: row.description,
-            time: row.time,
-            code: row.code,
-            archived: row.archived,
-            design: row.design,
-            status: row.status,
-            type: row.type,
-            designId: row.designId,
-        }));
+        const activities = rawActivities.map(teacherActivityListItem);
 
         return res.status(200).json({ status: "ok", activities });
     } catch (err) {
