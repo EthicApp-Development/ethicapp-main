@@ -345,6 +345,7 @@ server {
     location /student/api/ {
         auth_request /_auth_check;
         error_page 401 = @auth_redirect;
+        error_page 403 = @forbidden;
         error_page 500 502 503 504 /_errors/unavailable;
         add_header Set-Cookie $auth_session_cookie always;
         add_header X-Request-Id $ethicapp_request_id always;
@@ -364,6 +365,7 @@ server {
     location /student/ {
         auth_request /_auth_check;
         error_page 401 = @auth_redirect;
+        error_page 403 = @forbidden;
         error_page 500 502 503 504 /_errors/unavailable;
         add_header Set-Cookie $auth_session_cookie always;
         add_header X-Request-Id $ethicapp_request_id always;
