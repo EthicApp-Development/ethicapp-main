@@ -1,8 +1,7 @@
 // Design copies and their analyses (#848, #1038): duplicating or importing a
 // design copies the source's ready analyses inside the transaction that
 // creates the copy, and answers before the copy's own analyses are requested.
-// The case copied with the design does the same with the case's analyses, and
-// so does the public copy of a case made when a design is published.
+// The case copied with the design does the same with the case's analyses.
 // PostgreSQL is a fake pg pool, so nothing here needs a database or the
 // network.
 import assert from "node:assert/strict";
@@ -26,18 +25,6 @@ function rowsFor(sql) {
             creator: 7,
             design:  { metainfo: { title: "A design" }, phases: [] },
             case_id: CASE_ID,
-        }];
-    }
-    if (/FROM designs d\s+LEFT JOIN ethical_cases c[\s\S]*FOR UPDATE OF d/u.test(sql)) {
-        return [{
-            id:                DESIGN_ID,
-            creator:           7,
-            visibility:        "private",
-            license_code:      "CC-BY-4.0",
-            case_id:           CASE_ID,
-            case_creator:      8,
-            case_visibility:   "private",
-            case_license_code: "CC-BY-4.0",
         }];
     }
     if (/SELECT id, title, author_firstname[\s\S]*FROM ethical_cases\s+WHERE id = \$1/u.test(sql)) {
@@ -187,27 +174,5 @@ describe("the case copied with a design and its case analyses (#1038)", () => {
         assert.ok(!db.queries.some(query => /INSERT INTO case_analyses/u.test(query.sql)));
         await settle(() => caseRequests.length > 0);
         assert.equal(caseRequests.length, 0);
-    });
-
-    it("a design published with a public copy of its case gives that copy the case's analyses", async () => {
-        const { status, body } = await requestRouter(designsRouter, {
-            method: "PATCH",
-            path:   `/designs/${DESIGN_ID}/toggle_public`,
-            body:   { publishCaseCopy: true },
-        });
-
-        assert.equal(status, 200);
-        assert.equal(body.result.caseId, COPY_CASE_ID);
-        assertAnalysesCopiedInTransaction(
-            "case_analyses",
-            "INSERT INTO ethical_cases (",
-            [CASE_ID, COPY_CASE_ID]
-        );
-
-        await settle(() => caseRequests.length > 0);
-        assert.equal(caseRequests.length, 1);
-        assert.equal(caseRequests[0].sourceCaseId, CASE_ID);
-        assert.equal(caseRequests[0].copiedCase.id, COPY_CASE_ID);
-        assert.equal(caseRequests[0].userId, 7);
     });
 });

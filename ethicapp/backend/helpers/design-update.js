@@ -1,7 +1,9 @@
 // Rules for PATCH /designs/:id (#730). Launching an activity locks its design
 // (`designs.locked`), so the activity keeps the content it started with; a
 // locked design's content can no longer change. Archiving and sharing
-// (`/archive`, `/toggle_public`) do not change the content and stay allowed.
+// (`/archive`, `/toggle_public`) do not change the content and stay allowed:
+// `/toggle_public` writes only the design's visibility, never its case_id, and
+// never changes the case (#1009).
 
 export const DESIGN_LOCKED_CODE = "DESIGN_LOCKED";
 
