@@ -143,7 +143,7 @@ const enUS = {
     },
     privacy: {
       title: 'Privacy Policy',
-      updatedAt: 'Last updated: October 29, 2026'
+      updatedAt: 'Last updated: November 4, 2026'
     },
     terms: {
       title: 'Terms of Use',

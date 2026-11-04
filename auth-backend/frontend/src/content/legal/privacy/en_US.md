@@ -11,7 +11,6 @@ For questions related to data privacy, contact **{{privacyContact}}**.
 The platform may collect the following data:
 
 - First and last name
-- Personal identifier (DNI, RUT, or equivalent)
 - Email address
 - Gender, when the user decides to provide it
 - Data derived from platform usage, such as responses, interactions, and activity
@@ -52,7 +51,7 @@ Student accounts are anonymized periodically on the following dates:
 When a student account is anonymized:
 
 - The account is disabled and its open sessions stop being valid
-- The student's personal data is anonymized, such as first and last name, email address, personal identifier, and gender
+- The student's personal data is anonymized, such as first and last name, email address, and gender
 - The student's written responses are replaced with placeholder text
 - The platform's artificial intelligence services are asked to erase the student's texts they keep
 - Activities and pedagogical records are kept, linked to the anonymized account

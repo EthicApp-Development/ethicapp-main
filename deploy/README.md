@@ -545,6 +545,22 @@ each set:
 
 Run the query again until it returns no rows, then run the migration job.
 
+### Dropping the RUT (V43)
+
+Migration `V43__drop_users_rut.sql` (#1072) drops the `users.rut` column and
+its index `idx_users_rut`. The RUT values still stored, from accounts created
+before the RUT was retired, are deleted with the column and are not migrated
+anywhere (epic #1067); after the migration they exist only in backups taken
+before it.
+
+Deploy V42 and V43 in the same release, together with the code of the whole
+epic (#1069, #1070, #1071 and #1072). Images built before that code read or
+write `users.rut`: sign-up, login, the console's search and forgetting, and
+the report exports fail once V43 has run. For the same reason, rolling back to
+an earlier image after V43 needs the database restored from the backup taken
+before the migration. Flyway applies V42 before V43, so when V42 stops on
+colliding emails, V43 does not run either.
+
 ## Health Diagnostics Targets
 
 `MNG_HEALTH_CHECK_TARGETS` is the allowlist used by the management-console

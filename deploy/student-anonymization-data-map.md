@@ -75,7 +75,6 @@ to `users` that the list does not name.
 | Table and fields | Production reachability | Decision | Current coverage |
 | --- | --- | --- | --- |
 | `users.name`, `users.firstname`, `users.lastname`, `users.mail` | Core account profile for student login and activity membership. | In scope. Replace with deterministic anonymous values. | Covered by the job. |
-| `users.rut` | Retired national ID (epic #1067); nothing writes it any more, but accounts created before may still hold one. | In scope. Clear (set to NULL) until #1072 drops the column. | Covered by the job. |
 | `users.pass`, `users.password_bcrypt`, `users.active`, `users.email_confirmed`, `users.session_version`, `users.anonymized_at`, `users.anonymization_run_id` | Core account and session state. | In scope. Disable account, clear credentials, invalidate sessions, and mark run metadata. | Covered by the job. |
 | `users.sex`, `users.last_login_at` | Demographic and activity metadata. | In scope. Clear during anonymization. | Covered by the job. |
 | `users.profile_image_path`, `users.profile_image_topbar_path` | Teacher/student profile image references served through protected uploads. | In scope. Null stored paths and delete the files. | Covered by the job. Since #877 the step records the files in `upload_deletion_requests` and ethicapp deletes them in the background; images orphaned before #877 are tracked in #552. |

@@ -11,7 +11,6 @@ Para consultas relacionadas con privacidad de datos, puedes contactar a **{{priv
 A través de la plataforma se pueden recoger los siguientes datos:
 
 - Nombre y apellidos
-- Identificador personal (DNI, RUT u otro equivalente)
 - Correo electrónico
 - Género, cuando el usuario decida proporcionarlo
 - Datos derivados del uso de la plataforma, como respuestas, interacciones y actividad
@@ -52,7 +51,7 @@ Las cuentas de estudiantes se anonimizan periódicamente en las siguientes fecha
 Al anonimizarse la cuenta de un estudiante:
 
 - La cuenta se desactiva y sus sesiones abiertas dejan de ser válidas
-- Se anonimizan sus datos personales, como el nombre, los apellidos, el correo electrónico, el identificador personal y el género
+- Se anonimizan sus datos personales, como el nombre, los apellidos, el correo electrónico y el género
 - Sus respuestas escritas se sustituyen por un texto de reemplazo
 - Se solicita a los servicios de inteligencia artificial de la plataforma la supresión de los textos del estudiante que conservan
 - Las actividades y los registros pedagógicos se conservan, asociados a la cuenta anonimizada
