@@ -196,6 +196,13 @@ export async function getUserById(userId, { queryFn = query } = {}) {
   };
 }
 
+// A unique violation on the account email: users_mail_lower_unique (V42), or
+// users_mail_unique on a schema before V42.
+function isUniqueMailViolation(error) {
+  return error?.code === '23505'
+    && ['users_mail_lower_unique', 'users_mail_unique'].includes(error.constraint);
+}
+
 export async function updateUserById(userId, payload, { queryFn = query } = {}) {
   const normalizedId = Number(userId);
 
@@ -279,6 +286,8 @@ export async function updateUserById(userId, payload, { queryFn = query } = {}) 
 
   const fullName = `${firstname} ${lastname}`.trim();
 
+  // users_mail_lower_unique (V42) backs the check above: an account that
+  // takes the email after it makes this update fail, answered the same way.
   const updateResult = await queryFn(
     `
       UPDATE users
@@ -309,7 +318,9 @@ export async function updateUserById(userId, payload, { queryFn = query } = {}) 
       normalizedId,
       isRoleChanged || isActiveChanged
     ]
-  );
+  ).catch((error) => {
+    throw isUniqueMailViolation(error) ? new Error('EMAIL_ALREADY_EXISTS') : error;
+  });
 
   // No row: the account was forgotten, or deleted, after the read above.
   // PostgreSQL re-checks the condition on the latest version of a row that a

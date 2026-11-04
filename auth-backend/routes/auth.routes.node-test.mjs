@@ -322,6 +322,118 @@ describe('Auth Routes', () => {
     });
   });
 
+  test('POST /register - an email that differs only in letter case is a duplicate', async () => {
+    recaptchaMock.verifyRecaptchaToken.mock.mockImplementationOnce(() => Promise.resolve(true));
+    dbMock.query.mock.mockImplementationOnce(() => Promise.resolve({
+      rowCount: 1,
+      rows: [{
+        id: 7,
+        mail: 'John@Example.com',
+        rut: '11111111-1'
+      }]
+    }));
+
+    const res = await supertest(app)
+      .post('/register')
+      .send(validRegistrationPayload({ email: 'JOHN@example.com' }));
+
+    assert.strictEqual(res.status, 409);
+    assert.strictEqual(res.body.code, 'email_already_registered');
+
+    const [sql, params] = dbMock.query.mock.calls[0].arguments;
+    assert.match(sql, /OR lower\(mail\) = \$2/);
+    assert.deepStrictEqual(params, ['12345678-9', 'john@example.com']);
+  });
+
+  // A sign-up with the same email commits between the duplicate check and
+  // the insert: the unique index refuses the insert.
+  for (const [label, violation] of [
+    ['the case-insensitive index', { constraint: 'users_mail_lower_unique' }],
+    ['the index detail', { detail: 'Key (lower(mail))=(john@example.com) already exists.' }]
+  ]) {
+    test(`POST /register - a unique violation on ${label} answers as a duplicate email`, async () => {
+      const consoleError = mock.method(console, 'error', () => {});
+      recaptchaMock.verifyRecaptchaToken.mock.mockImplementationOnce(() => Promise.resolve(true));
+      dbMock.query.mock.mockImplementation((queryStr) => {
+        if (queryStr.includes('INSERT INTO users')) {
+          return Promise.reject(Object.assign(new Error('duplicate key value'), { code: '23505', ...violation }));
+        }
+        return Promise.resolve({ rowCount: 0, rows: [] });
+      });
+
+      const res = await supertest(app)
+        .post('/register')
+        .send(validRegistrationPayload());
+
+      consoleError.mock.restore();
+      assert.strictEqual(res.status, 409);
+      assert.deepStrictEqual(res.body, {
+        error: 'An account with that email already exists',
+        code: 'email_already_registered',
+        recovery_path: '/forgot'
+      });
+      const statements = dbMock.query.mock.calls.map((call) => call.arguments[0].trim());
+      assert.ok(statements.includes('ROLLBACK'));
+      assert.strictEqual(mailMock.sendAccountConfirmationEmail.mock.calls.length, 0);
+    });
+  }
+
+  test('POST /register-prof - checks the email ignoring letter case', async () => {
+    dbMock.query.mock.mockImplementationOnce(() => Promise.resolve({ rowCount: 1, rows: [{ id: 7 }] }));
+
+    const res = await supertest(app)
+      .post('/register-prof')
+      .set('X-Test-User-Id', '7')
+      .set('X-Test-User-Role', 'S')
+      .send({
+        firstname: 'Pat',
+        lastname: 'Teacher',
+        dni: '1-9',
+        gender: 'F',
+        email: 'Pat@Example.com',
+        password: 'StrongPassword123!@',
+        password_confirmation: 'StrongPassword123!@'
+      });
+
+    assert.strictEqual(res.status, 409);
+    assert.strictEqual(res.body.error, 'A user with that identifier already exists');
+    const [sql, params] = dbMock.query.mock.calls[0].arguments;
+    assert.match(sql, /lower\(mail\) = \$2/);
+    assert.deepStrictEqual(params, ['1-9', 'pat@example.com']);
+    assert.strictEqual(dbMock.query.mock.calls.length, 1);
+  });
+
+  test('POST /register-prof - a unique violation on the email index answers as the duplicate check', async () => {
+    const consoleError = mock.method(console, 'error', () => {});
+    dbMock.query.mock.mockImplementation((queryStr) => {
+      if (queryStr.includes('INSERT INTO users')) {
+        return Promise.reject(Object.assign(new Error('duplicate key value'), {
+          code: '23505',
+          constraint: 'users_mail_lower_unique'
+        }));
+      }
+      return Promise.resolve({ rowCount: 0, rows: [] });
+    });
+
+    const res = await supertest(app)
+      .post('/register-prof')
+      .set('X-Test-User-Id', '7')
+      .set('X-Test-User-Role', 'S')
+      .send({
+        firstname: 'Pat',
+        lastname: 'Teacher',
+        dni: '1-9',
+        gender: 'F',
+        email: 'pat@example.com',
+        password: 'StrongPassword123!@',
+        password_confirmation: 'StrongPassword123!@'
+      });
+
+    consoleError.mock.restore();
+    assert.strictEqual(res.status, 409);
+    assert.strictEqual(res.body.error, 'A user with that identifier already exists');
+  });
+
   test('POST /register - duplicate identifier returns a stable error code', async () => {
     recaptchaMock.verifyRecaptchaToken.mock.mockImplementationOnce(() => Promise.resolve(true));
     dbMock.query.mock.mockImplementationOnce(() => Promise.resolve({

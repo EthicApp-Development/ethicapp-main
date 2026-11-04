@@ -52,8 +52,8 @@ test.after(async () => {
 async function insertProcessingJob() {
     const suffix = randomUUID();
     const [user] = await query(
-        "INSERT INTO users (name, rut, mail, role) VALUES ('Render teacher', $1, $2, 'P') RETURNING id;",
-        [suffix, `${suffix}@integration.test`]
+        "INSERT INTO users (name, mail, role) VALUES ('Render teacher', $1, 'P') RETURNING id;",
+        [`${suffix}@integration.test`]
     );
     const [caseRow] = await query(`
         INSERT INTO ethical_cases (title, author_firstname, author_lastname, author_email, pdf_path, creator)

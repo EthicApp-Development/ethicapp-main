@@ -51,12 +51,12 @@ async function insertUser({ role = 'A', active = true, emailConfirmed = true, an
   const [row] = await query(
     `
       INSERT INTO users
-        (name, rut, mail, role, pass, password_bcrypt, active, email_confirmed, anonymized_at)
+        (name, mail, role, pass, password_bcrypt, active, email_confirmed, anonymized_at)
       VALUES
-        ('Integration User', $1, $2, $3, 'legacy-md5', $4, $5, $6, CASE WHEN $7 THEN NOW() END)
+        ('Integration User', $1, $2, 'legacy-md5', $3, $4, $5, CASE WHEN $6 THEN NOW() END)
       RETURNING id, mail
     `,
-    [randomUUID(), mail, role, OLD_HASH, active, emailConfirmed, anonymized]
+    [mail, role, OLD_HASH, active, emailConfirmed, anonymized]
   );
   return row;
 }

@@ -483,6 +483,68 @@ does not expect. Settle each one with its teacher before the release:
 Rows left after the release can still be restored by their teacher, since the
 new route always allows `archived: false`.
 
+## Case-Insensitive Emails
+
+Migration `V42__retire_rut_and_unique_mail_ci.sql` (#1068) makes `users.rut`
+nullable and replaces the case-sensitive `users_mail_unique` constraint with
+the unique index `users_mail_lower_unique` on `lower(mail)`: two accounts can
+no longer have emails that differ only in letter case, such as
+`Ana@example.com` and `ana@example.com`. Sign-up and login already compared
+emails that way, but accounts created by older code, by the bootstrap scripts
+or by hand may still collide.
+
+When such accounts exist, the migration stops with
+`Some accounts have emails that differ only in letter case: ...`, listing each
+lowercased email and the ids of its accounts, and changes nothing (Flyway
+rolls it back). The application must not be started on the new release until
+the migration has run. Before deploying, run this read-only query against the
+production database and keep its output:
+
+```sql
+SELECT lower(u.mail) AS mail_key,
+       u.id AS user_id,
+       u.mail,
+       u.role,
+       u.active,
+       u.email_confirmed,
+       u.anonymized_at,
+       u.last_login_at,
+       u.created_at,
+       (SELECT count(*) FROM sessions AS s WHERE s.creator = u.id) AS activities_created,
+       (SELECT count(*) FROM sesusers AS su WHERE su.uid = u.id) AS activities_joined
+FROM users AS u
+WHERE lower(u.mail) IN (
+    SELECT lower(mail)
+    FROM users
+    GROUP BY lower(mail)
+    HAVING count(*) > 1
+)
+ORDER BY mail_key, u.id;
+```
+
+No rows means the migration will pass. Each set of rows with the same
+`mail_key` is one person, or two people, holding accounts the new index
+refuses. Resolving a set is a decision about people's data, so the migration
+does not make it. Take a backup first
+([`production-backup-runbook.md`](./production-backup-runbook.md)), then, for
+each set:
+
+- Keep the account the person uses: the one that signs in (`last_login_at`),
+  owns activities or joined them. When only one account is active, keep that
+  one.
+- Give every other account of the set a different email, so it no longer
+  collides, and leave its data where it is. Prefer the person's other real
+  address when they have one; otherwise use a placeholder the person can tell
+  apart, for example
+  `UPDATE users SET mail = 'duplicate-' || id || '-' || mail WHERE id = ...`.
+  The account keeps its activities, cases and designs, and an administrator
+  can still deactivate it, or delete it from the management console if it was
+  never active.
+- Do not merge accounts by moving rows between user ids: no tool does it, and
+  responses, groups and pseudonyms refer to the user id.
+
+Run the query again until it returns no rows, then run the migration job.
+
 ## Health Diagnostics Targets
 
 `MNG_HEALTH_CHECK_TARGETS` is the allowlist used by the management-console
