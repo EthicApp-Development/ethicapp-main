@@ -53,6 +53,7 @@ const enUS = {
       male: 'Male',
       other: 'Other'
     },
+    emailHelpText: 'Check that your email address is spelled correctly: we will send you a confirmation message right away.',
     passwordRules: {
       helpText: 'Minimum {{minLength}} characters and at least {{minSymbols}} symbols.',
       minLength: 'Minimum {{minLength}} characters',
@@ -70,9 +71,19 @@ const enUS = {
     privacyNoticePartThreeSuffix: '.',
     alreadyHaveAccount: 'Already have an account?',
     signInLink: 'Sign in',
-    successMessage: 'Account created successfully. Check your email to confirm it before signing in.',
-    redirectingToLoginPrefix: 'Redirecting to sign in in ',
-    redirectingToLoginSuffix: ' s...',
+    sent: {
+      title: 'Check your email',
+      subtitle: 'One more step to activate your account',
+      sentTo: 'Your account is created. We sent a message to confirm it to:',
+      openLink: 'Open that message and follow its link. You cannot sign in until your account is confirmed.',
+      checkSpam: 'If you do not see it within a few minutes, check your spam or junk folder.',
+      wrongEmailQuestion: 'Is the address misspelled? Then the message will not reach you: correct it and create the account again.',
+      correctEmail: 'Correct my email',
+      notArrivedPrefix: 'Still nothing after a while?',
+      requestNewLink: 'Request a new link',
+      notArrivedSuffix: ': we will send you one to choose your password, and using it confirms your account.',
+      goToLogin: 'Go to sign in'
+    },
     recoverPasswordLink: 'Recover password',
     errors: {
       firstnameRequired: 'First name is required.',

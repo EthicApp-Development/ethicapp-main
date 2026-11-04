@@ -53,6 +53,7 @@ const esCL = {
       male: 'Masculino',
       other: 'Otro'
     },
+    emailHelpText: 'Revisa que tu correo esté bien escrito: te enviaremos de inmediato un mensaje para confirmar tu cuenta.',
     passwordRules: {
       helpText: 'Mínimo {{minLength}} caracteres y al menos {{minSymbols}} símbolos.',
       minLength: 'Mínimo {{minLength}} caracteres',
@@ -70,9 +71,19 @@ const esCL = {
     privacyNoticePartThreeSuffix: '.',
     alreadyHaveAccount: '¿Ya tienes cuenta?',
     signInLink: 'Iniciar sesión',
-    successMessage: 'Cuenta creada correctamente. Revisa tu correo para confirmarla antes de iniciar sesión.',
-    redirectingToLoginPrefix: 'Redirigiendo al inicio de sesión en ',
-    redirectingToLoginSuffix: ' s...',
+    sent: {
+      title: 'Revisa tu correo',
+      subtitle: 'Falta un paso para activar tu cuenta',
+      sentTo: 'Tu cuenta está creada. Te enviamos un mensaje para confirmarla a:',
+      openLink: 'Abre ese mensaje y sigue su enlace. No podrás iniciar sesión hasta confirmar tu cuenta.',
+      checkSpam: 'Si no lo ves en unos minutos, revisa la carpeta de spam o de correo no deseado.',
+      wrongEmailQuestion: '¿La dirección está mal escrita? Entonces el mensaje no te llegará: corrígela y crea la cuenta de nuevo.',
+      correctEmail: 'Corregir mi correo',
+      notArrivedPrefix: '¿Pasó un rato y no llegó?',
+      requestNewLink: 'Pide un enlace nuevo',
+      notArrivedSuffix: ': te enviaremos uno para elegir tu contraseña, y al usarlo tu cuenta quedará confirmada.',
+      goToLogin: 'Ir a iniciar sesión'
+    },
     recoverPasswordLink: 'Recuperar contraseña',
     errors: {
       firstnameRequired: 'El nombre es obligatorio.',
