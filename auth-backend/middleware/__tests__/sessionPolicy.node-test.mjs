@@ -104,6 +104,7 @@ describe('auth-backend session policy', () => {
     assert.equal(shouldBypassSessionPolicy({ method: 'POST', path: '/api/auth/login' }), true);
     assert.equal(shouldBypassSessionPolicy({ method: 'GET', path: '/login' }), true);
     assert.equal(shouldBypassSessionPolicy({ method: 'GET', path: '/auth/session/check' }), false);
+    assert.equal(shouldBypassSessionPolicy({ method: 'GET', path: '/api/auth/session' }), false);
     assert.equal(shouldBypassSessionPolicy({ method: 'POST', path: '/api/auth/admin/change-password' }), false);
   });
 
@@ -136,6 +137,39 @@ describe('auth-backend session policy', () => {
     assert.equal(nextCalled, true);
     assert.equal(destroyed, false);
     assert.equal(res.ended, false);
+  });
+
+  // The sign-in page asks GET /api/auth/session whether to send the visitor
+  // home; a session the policy no longer accepts must not count (#1065).
+  it('ends an invalidated session that reaches the sign-in page session check', () => {
+    let destroyed = false;
+    const req = {
+      method: 'GET',
+      path: '/api/auth/session',
+      user: { role: 'P', sessionVersion: 5 },
+      session: {
+        cookie: {},
+        authPolicy: {
+          role: 'P',
+          sessionVersion: 4,
+          createdAt: 1000,
+          lastSeenAt: 1000
+        },
+        destroy(callback) {
+          destroyed = true;
+          callback();
+        }
+      }
+    };
+
+    const { nextCalled, res } = runMiddleware({
+      req,
+      nowMs: 1000 + HOUR_MS
+    });
+
+    assert.equal(nextCalled, false);
+    assert.equal(destroyed, true);
+    assert.equal(res.statusCode, 401);
   });
 
   it('initializes session policy metadata and role-specific cookie lifetime', () => {

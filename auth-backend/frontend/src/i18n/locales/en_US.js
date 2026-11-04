@@ -16,6 +16,7 @@ const enUS = {
     forgotPassword: 'Forgot your password?',
     submit: 'Sign in',
     submitting: 'Signing in...',
+    checkingSession: 'Checking your session...',
     continuePolicyPrefix: 'By continuing, you agree to our',
     privacyPolicy: 'Privacy Policy',
     termsOfUse: 'Terms of Use',
