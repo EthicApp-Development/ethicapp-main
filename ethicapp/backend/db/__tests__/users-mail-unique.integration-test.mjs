@@ -1,8 +1,9 @@
-// Integration test for V42 (epic #1067, sub-issue #1068), against a real
-// PostgreSQL database with migrations applied: users.rut is nullable, and
-// users_mail_lower_unique refuses two emails that differ only in letter case.
-// Replaying the migration over accounts that collide stops it with an error
-// that lists them.
+// Integration test for V42 and V43 (epic #1067, sub-issues #1068 and #1072),
+// against a real PostgreSQL database with migrations V1 to V43 or later
+// applied: users_mail_lower_unique refuses two emails that differ only in
+// letter case, and users has no rut column or idx_users_rut any more.
+// Replaying V42 over accounts that collide stops it with an error that lists
+// them; replaying V43 drops the column, its values and its index.
 //
 // Run with `npm run test:integration`, setting ETHICAPP_INTEGRATION_DATABASE_URL
 // to a disposable database. The accounts the first tests insert are not
@@ -24,16 +25,20 @@ if (SKIP_REASON) {
     console.warn(SKIP_REASON);
 }
 
-const MIGRATION_URL = new URL(
+const V42_MIGRATION_URL = new URL(
     "../../../../database/migrations/V42__retire_rut_and_unique_mail_ci.sql",
     import.meta.url
 );
+const V43_MIGRATION_URL = new URL(
+    "../../../../database/migrations/V43__drop_users_rut.sql",
+    import.meta.url
+);
 
-// Same columns as the auth-backend sign-up insert, without the RUT.
+// Same columns as the auth-backend sign-up insert.
 const INSERT_USER_SQL = `
     INSERT INTO users (firstname, lastname, name, mail, role, active, email_confirmed)
     VALUES ('Integration', 'Student', 'Integration Student', $1, 'A', false, false)
-    RETURNING id, rut;
+    RETURNING id;
 `;
 
 let pool = null;
@@ -51,13 +56,39 @@ test.after(async () => {
     await pool?.end();
 });
 
-// Goes back to the schema before V42, inside the caller's transaction only.
-// rut stays nullable: accounts inserted without one may exist by now, and the
-// migration's ALTER COLUMN changes nothing on a nullable column.
-async function restoreSchemaBeforeV42(client) {
+// Puts back the rut column and its index that V43 dropped, inside the
+// caller's transaction only. The column comes back nullable and empty: the
+// accounts in the database have no RUT by now, and V42's ALTER COLUMN changes
+// nothing on a nullable column.
+async function restoreSchemaBeforeV43(client) {
     await client.query("SET LOCAL lock_timeout = '10s';");
+    await client.query("ALTER TABLE users ADD COLUMN rut text;");
+    await client.query("CREATE INDEX idx_users_rut ON users (rut);");
+}
+
+// Goes back to the schema before V42, inside the caller's transaction only.
+async function restoreSchemaBeforeV42(client) {
+    await restoreSchemaBeforeV43(client);
     await client.query("DROP INDEX users_mail_lower_unique;");
     await client.query("ALTER TABLE users ADD CONSTRAINT users_mail_unique UNIQUE (mail);");
+}
+
+async function rutColumnAndIndex(client) {
+    const { rows: columns } = await client.query(`
+        SELECT column_name
+        FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'users'
+          AND column_name = 'rut';
+    `);
+    const { rows: indexes } = await client.query(`
+        SELECT indexname
+        FROM pg_indexes
+        WHERE schemaname = current_schema()
+          AND indexname = 'idx_users_rut';
+    `);
+
+    return { columns, indexes };
 }
 
 async function withRolledBackTransaction(work) {
@@ -72,19 +103,13 @@ async function withRolledBackTransaction(work) {
     }
 }
 
-test("an account is created without a RUT", { skip: SKIP_REASON }, async () => {
-    const { rows: [column] } = await getPool().query(`
-        SELECT is_nullable
-        FROM information_schema.columns
-        WHERE table_schema = current_schema()
-          AND table_name = 'users'
-          AND column_name = 'rut';
-    `);
+test("users has no rut column and no idx_users_rut", { skip: SKIP_REASON }, async () => {
+    const { columns, indexes } = await rutColumnAndIndex(getPool());
     const { rows: [user] } = await getPool().query(INSERT_USER_SQL, [uniqueMail()]);
 
-    assert.equal(column.is_nullable, "YES");
+    assert.deepEqual(columns, []);
+    assert.deepEqual(indexes, []);
     assert.ok(user.id);
-    assert.equal(user.rut, null);
 });
 
 test("two emails that differ only in letter case are refused", { skip: SKIP_REASON }, async () => {
@@ -142,7 +167,7 @@ test("the case-insensitive index replaces the case-sensitive constraint", {
 test("the migration stops, listing the accounts, when emails collide", {
     skip: SKIP_REASON,
 }, async () => {
-    const migrationSql = await readFile(MIGRATION_URL, "utf8");
+    const migrationSql = await readFile(V42_MIGRATION_URL, "utf8");
     const mail = uniqueMail();
 
     await withRolledBackTransaction(async (client) => {
@@ -166,7 +191,7 @@ test("the migration stops, listing the accounts, when emails collide", {
 test("the migration adds the index and drops the old constraint", {
     skip: SKIP_REASON,
 }, async () => {
-    const migrationSql = await readFile(MIGRATION_URL, "utf8");
+    const migrationSql = await readFile(V42_MIGRATION_URL, "utf8");
 
     await withRolledBackTransaction(async (client) => {
         await restoreSchemaBeforeV42(client);
@@ -182,5 +207,29 @@ test("the migration adds the index and drops the old constraint", {
         `);
 
         assert.deepEqual(rows.map((row) => row.indexname), ["users_mail_lower_unique"]);
+    });
+});
+
+test("V43 drops the rut column, its values and its index", {
+    skip: SKIP_REASON,
+}, async () => {
+    const migrationSql = await readFile(V43_MIGRATION_URL, "utf8");
+
+    await withRolledBackTransaction(async (client) => {
+        await restoreSchemaBeforeV43(client);
+        const { rows: [user] } = await client.query(INSERT_USER_SQL, [uniqueMail()]);
+        await client.query("UPDATE users SET rut = '12.345.678-5' WHERE id = $1;", [user.id]);
+
+        await client.query(migrationSql);
+
+        const { columns, indexes } = await rutColumnAndIndex(client);
+        const { rows: [kept] } = await client.query(
+            "SELECT id, mail FROM users WHERE id = $1;",
+            [user.id]
+        );
+
+        assert.deepEqual(columns, []);
+        assert.deepEqual(indexes, []);
+        assert.equal(kept.id, user.id);
     });
 });

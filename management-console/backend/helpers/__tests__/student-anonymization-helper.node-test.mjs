@@ -164,7 +164,8 @@ test("runStudentAnonymization anonymizes account, free-text data, session device
         77,
         5,
     ]);
-    assert.match(userUpdate.sql, /rut = NULL/);
+    // users.rut no longer exists (V43, #1072).
+    assert.doesNotMatch(userUpdate.sql, /\brut\b/);
     assert.match(userUpdate.sql, /active = false/);
     assert.match(userUpdate.sql, /email_confirmed = false/);
     assert.match(userUpdate.sql, /sex = NULL/);
@@ -343,7 +344,8 @@ test("anonymizeAccountInTransaction anonymizes a teacher as a teacher, in a run 
     assert.deepEqual(userUpdate.params.slice(0, 4), [
         "Former Teacher 8", "Former", "Teacher 8", "anon-teacher-8@anonymous.invalid",
     ]);
-    assert.match(userUpdate.sql, /rut = NULL/);
+    // users.rut no longer exists (V43, #1072).
+    assert.doesNotMatch(userUpdate.sql, /\brut\b/);
     assert.ok(client.calls.some(call => call.sql.includes("UPDATE chat SET content = $1")));
 });
 

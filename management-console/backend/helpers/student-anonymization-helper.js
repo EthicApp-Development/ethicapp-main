@@ -351,8 +351,6 @@ async function anonymizeAccountInTransaction(client, runId, user, options) {
         [user.id]
     );
 
-    // The RUT is retired (epic #1067), so a forgotten account keeps none:
-    // `rut = NULL` goes when #1072 drops users.rut.
     await client.query(
         `
             UPDATE users
@@ -360,7 +358,6 @@ async function anonymizeAccountInTransaction(client, runId, user, options) {
                 firstname = $2,
                 lastname = $3,
                 mail = $4,
-                rut = NULL,
                 sex = NULL,
                 pass = '',
                 password_bcrypt = NULL,
