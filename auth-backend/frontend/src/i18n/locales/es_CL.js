@@ -16,6 +16,7 @@ const esCL = {
     forgotPassword: '¿Has olvidado tu contraseña?',
     submit: 'Entrar',
     submitting: 'Accediendo...',
+    checkingSession: 'Verificando tu sesión...',
     continuePolicyPrefix: 'Al continuar, aceptas nuestra',
     privacyPolicy: 'Política de Privacidad',
     termsOfUse: 'Términos de Uso',

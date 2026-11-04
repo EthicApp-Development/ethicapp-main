@@ -222,6 +222,46 @@ describe('Auth Routes', () => {
     }
   }
 
+  test('GET /session - reports an anonymous visitor as unauthenticated', async () => {
+    const res = await supertest(app).get('/session');
+
+    assert.strictEqual(res.status, 200);
+    assert.deepStrictEqual(res.body, { authenticated: false });
+    assert.strictEqual(res.headers['cache-control'], 'no-store');
+    assert.strictEqual(dbMock.query.mock.calls.length, 0);
+  });
+
+  for (const [role, destination] of [['A', '/student'], ['P', '/home'], ['S', '/mng']]) {
+    test(`GET /session - sends a signed-in role ${role} to ${destination}, as POST /login does`, async () => {
+      const res = await supertest(app)
+        .get('/session')
+        .set('X-Test-User-Id', '7')
+        .set('X-Test-User-Role', role);
+
+      assert.strictEqual(res.status, 200);
+      assert.deepStrictEqual(res.body, {
+        authenticated: true,
+        role,
+        redirectTo: destination
+      });
+      assert.strictEqual(res.headers['cache-control'], 'no-store');
+      assert.strictEqual(dbMock.query.mock.calls.length, 0);
+    });
+  }
+
+  for (const role of ['X', 'constructor']) {
+    test(`GET /session - gives no destination to a role without a home (${JSON.stringify(role)})`, async () => {
+      const res = await supertest(app)
+        .get('/session')
+        .set('X-Test-User-Id', '7')
+        .set('X-Test-User-Role', role);
+
+      assert.strictEqual(res.status, 200);
+      assert.strictEqual(res.body.authenticated, true);
+      assert.strictEqual(res.body.redirectTo, null);
+    });
+  }
+
   test('POST /register - missing fields are rejected before reCAPTCHA', async () => {
     const res = await supertest(app)
       .post('/register')

@@ -60,6 +60,14 @@ export async function logout() {
   return response.data;
 }
 
+// Whether the browser already has a session: { authenticated: false }, or
+// { authenticated: true, role, redirectTo } with the role's home. The short
+// timeout keeps the sign-in page from waiting long before showing the form.
+export async function fetchSession() {
+  const response = await authApiClient.get('/session', { timeout: 5000 });
+  return response.data;
+}
+
 export async function fetchInstitution() {
   const response = await authApiClient.get('/institution');
   return response.data;
