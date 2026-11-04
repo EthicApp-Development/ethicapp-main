@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Teacher Home Wireframes</title>
+<style>
+  :root {
+    --ink: #2b2b2b; --muted: #6b6b6b; --line: #9a9a9a; --fill: #e9e9e9; --fill-2: #f4f4f4;
+    --paper: #ffffff; --page: #d9dde3; --accent: #1f5fd1; --accent-ink: #ffffff; --note: #c2410c;
+    --ok: #2f7d32; --ok-fill: #d7ecd8; --warn: #8a5a00; --warn-fill: #fff3d6; --danger: #b42318;
+    --danger-fill: #fde7e4; --fold: #d61f69; --sel: #dbe7ff; --off: #b9b9b9; --shade: rgba(0,0,0,.38);
+    --photo: #c9ced6; --photo-2: #bcc2cb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ink: #e6e6e6; --muted: #a9a9a9; --line: #6f6f6f; --fill: #3a3a3a; --fill-2: #2f2f2f;
+      --paper: #232323; --page: #15171a; --accent: #7aa7ff; --accent-ink: #10203f; --note: #ff9a5c;
+      --ok: #7fd18a; --ok-fill: #29452c; --warn: #ffd27a; --warn-fill: #3d3220; --danger: #ff8a80;
+      --danger-fill: #4a2522; --fold: #ff6fae; --sel: #22324f; --off: #555555; --shade: rgba(0,0,0,.6);
+      --photo: #3d424a; --photo-2: #353a41;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ink: #e6e6e6; --muted: #a9a9a9; --line: #6f6f6f; --fill: #3a3a3a; --fill-2: #2f2f2f;
+    --paper: #232323; --page: #15171a; --accent: #7aa7ff; --accent-ink: #10203f; --note: #ff9a5c;
+    --ok: #7fd18a; --ok-fill: #29452c; --warn: #ffd27a; --warn-fill: #3d3220; --danger: #ff8a80;
+    --danger-fill: #4a2522; --fold: #ff6fae; --sel: #22324f; --off: #555555; --shade: rgba(0,0,0,.6);
+    --photo: #3d424a; --photo-2: #353a41;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 24px 16px 64px; background: var(--page); color: var(--ink);
+    font: 15px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  .doc { max-width: 1100px; margin: 0 auto; }
+  h1 { font-size: 26px; margin: 0 0 4px; }
+  h2 { font-size: 20px; margin: 40px 0 6px; }
+  .lede { color: var(--muted); margin: 0 0 16px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 13px; color: var(--muted); margin: 8px 0 0; }
+  .legend span::before { content: ""; display: inline-block; width: 18px; height: 0; border-top: 2px dashed var(--fold); vertical-align: middle; margin-right: 6px; }
+  .legend span.n::before { width: 14px; height: 14px; border: 0; border-radius: 50%; background: var(--note); }
+  .metrics { font-size: 13px; color: var(--muted); margin: 6px 0 10px; }
+  .metrics b { color: var(--ink); }
+  .open { background: var(--paper); border-left: 4px solid var(--note); border-radius: 6px; padding: 10px 16px; font-size: 14px; margin: 10px 0 0; }
+  .open ul { margin: 4px 0 0; padding-left: 20px; }
+  .roles { width: 100%; border-collapse: collapse; background: var(--paper); border-radius: 6px; overflow: hidden; font-size: 14px; margin-top: 10px; }
+  .roles th, .roles td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--fill); vertical-align: top; }
+  .roles th { background: var(--fill-2); }
+  .notes { background: var(--paper); border-radius: 6px; padding: 12px 18px 12px 36px; margin: 12px 0 0; font-size: 14px; }
+  .notes li { margin: 4px 0; }
+  .notes li::marker { color: var(--note); font-weight: 700; }
+  figure { margin: 10px 0 0; }
+  figure img { width: 100%; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,.25); display: block; }
+  figcaption { font-size: 13px; color: var(--muted); margin-top: 6px; }
+  .shots { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+
+  /* A frame draws a viewport at its real pixel size, scaled down to fit. A
+     frame taller than its viewport shows the page below the fold. */
+  .frame-wrap { position: relative; overflow: hidden; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,.25); background: var(--paper); }
+  .frame { position: absolute; top: 0; left: 0; transform-origin: 0 0; background: var(--fill-2); overflow: hidden; }
+  .fold { position: absolute; left: 0; right: 0; border-top: 3px dashed var(--fold); z-index: 40; }
+  .fold::after { content: attr(data-label); position: absolute; right: 8px; top: 6px; background: var(--fold); color: #fff; font-size: 18px; padding: 2px 8px; border-radius: 4px; }
+
+  /* Wireframe vocabulary, in viewport pixels. */
+  .wf { font-size: 16px; color: var(--ink); }
+  .box { background: var(--paper); border: 2px solid var(--line); border-radius: 6px; }
+  .lbl { font-weight: 600; }
+  .sub { color: var(--muted); font-size: 14px; }
+  .btn { display: inline-flex; align-items: center; gap: 6px; border: 2px solid var(--line); border-radius: 6px; padding: 7px 14px; background: var(--paper); font-size: 15px; white-space: nowrap; }
+  .btn.sm { padding: 3px 10px; font-size: 14px; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+  .n { position: absolute; width: 34px; height: 34px; border-radius: 50%; background: var(--note); color: #fff; font: 700 18px/34px sans-serif; text-align: center; z-index: 45; }
+
+  .appbar { position: absolute; left: 0; right: 0; top: 0; height: 68px; background: var(--paper); border-bottom: 2px solid var(--line); display: flex; align-items: center; gap: 18px; padding: 0 24px; z-index: 5; }
+  .appnav { position: absolute; left: 0; top: 68px; bottom: 0; width: 244px; background: var(--paper); border-right: 2px solid var(--line); padding: 24px 16px; }
+  .appnav .item { height: 40px; border-radius: 8px; margin: 0 0 16px; display: flex; align-items: center; padding: 0 14px; color: var(--muted); }
+  .appnav .item.on { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+  .content { position: absolute; top: 68px; right: 0; bottom: 0; overflow: hidden; padding: 20px 24px 24px; }
+
+  /* The home keeps today's centred column, 1050 px wide. */
+  .column { max-width: 1050px; margin: 0 auto; }
+  .home-head h3 { margin: 22px 0 10px; font-size: 30px; color: var(--accent); }
+  .home-head p { margin: 0 0 18px; font-size: 15px; }
+
+  /* The launcher: six photo tiles. */
+  .launcher { padding: 34px 34px; margin-bottom: 22px; }
+  .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px 24px; }
+  .tile { position: relative; height: 190px; border-radius: 6px; overflow: hidden; background: repeating-linear-gradient(135deg, var(--photo) 0 18px, var(--photo-2) 18px 36px); }
+  .tile .cap { position: absolute; left: 0; right: 0; bottom: 0; height: 42px; background: rgba(0,0,0,.72); color: #fff; font-weight: 600; font-size: 15px; display: grid; place-items: center; }
+  .launcher.compact { padding: 16px; margin-bottom: 18px; }
+  .launcher.compact .tiles { grid-template-columns: repeat(6, 1fr); gap: 12px; }
+  .launcher.compact .tile { height: 96px; }
+  .launcher.compact .tile .cap { height: 34px; font-size: 13px; padding: 0 6px; text-align: center; line-height: 1.15; }
+
+  /* Today's panel heading and card, for frame "Today". */
+  .sec { margin-bottom: 22px; }
+  .sec-head { display: flex; align-items: baseline; gap: 14px; margin: 0 0 8px; }
+  .sec-head h4 { margin: 0; font-size: 20px; }
+  .sec-head .count { color: var(--muted); font-size: 15px; }
+  .sec-head .count a, .sec-head .all a, .foot a { color: var(--accent); font-weight: 600; text-decoration: none; }
+  .sec-head .all { margin-left: auto; font-size: 14px; }
+
+  /* The activities tables, as in docs/design/activities-index. */
+  table.dt { width: 100%; border-collapse: collapse; background: var(--paper); font-size: 15px; border: 2px solid var(--line); }
+  table.dt th { text-align: left; padding: 9px 12px; border-bottom: 2px solid var(--line); background: var(--fill-2); white-space: nowrap; font-size: 14px; }
+  table.dt td { padding: 9px 12px; border-bottom: 1px solid var(--fill); vertical-align: middle; }
+  table.dt td:not(.t) { white-space: nowrap; }
+  table.dt td.t { max-width: 1px; width: 38%; }
+  table.dt td.t .title { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  table.dt td.t .meta { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  table.dt td.acts { text-align: right; white-space: nowrap; width: 1%; }
+  table.dt tr.hl td { background: var(--sel); }
+  table.dt tr.hl td:first-child { box-shadow: inset 4px 0 0 var(--accent); }
+  .st { display: inline-flex; align-items: center; gap: 5px; font-size: 14px; white-space: nowrap; }
+  .st.ok { color: var(--ok); }
+  .st.proc, .st.wait { color: var(--muted); }
+  .kebab { display: inline-grid; place-items: center; width: 34px; height: 32px; border: 2px solid var(--line); border-radius: 6px; margin-left: 6px; font-weight: 700; }
+  .menu { position: absolute; z-index: 30; width: 330px; background: var(--paper); border: 2px solid var(--line); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.2); padding: 6px; font-size: 15px; }
+  .menu .mi { padding: 8px 10px; border-radius: 6px; }
+  .menu .mi.focus { background: var(--fill-2); }
+  .menu hr { border: 0; border-top: 1px solid var(--fill); margin: 4px 0; }
+  .foot { display: flex; justify-content: space-between; padding: 8px 4px 0; font-size: 14px; color: var(--muted); }
+  .cards { display: grid; gap: 8px; }
+  .card { padding: 10px 12px; }
+  .card .row1 { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+  .card .row2 { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 6px; }
+  .code { font: 600 14px/1 ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--fill-2); border: 1.5px solid var(--fill); border-radius: 5px; padding: 3px 7px; white-space: nowrap; }
+  .ai { font-size: 12px; border: 1.5px solid var(--line); border-radius: 4px; padding: 0 5px; color: var(--muted); margin-left: 6px; }
+  .empty { padding: 26px 30px; text-align: center; }
+  .empty .steps { display: flex; justify-content: center; gap: 18px; margin: 16px 0 4px; text-align: left; }
+  .empty .step { width: 300px; padding: 14px 16px; }
+
+  /* ?frame=X renders one frame alone at its real size, for the PNGs in frames/. */
+  body.solo { padding: 0; background: var(--paper); }
+  body.solo .doc > :not(.solo-host) { display: none; }
+  body.solo .doc { max-width: none; }
+</style>
+</head>
+<body>
+<div class="doc">
+  <h1>Teacher home: activities wireframes</h1>
+  <p class="lede">Low fidelity. The proposal replaces the home's "Actividades Recientes" panel, under the photo launcher, with two short tables in the design language of Actividades (epic #1046): the newest activities in progress, then the newest finished ones, with the same columns, status, actions and row menu as the Actividades tabs. Each frame is drawn at its real viewport size and scaled down; the dashed line is the fold, and frames taller than the viewport show the page below it. Labels are in Spanish, as a teacher sees them in es-CL. Titles, cases and people are fictional.</p>
+  <div class="legend"><span>fold (bottom of the viewport)</span><span class="n">numbered notes, explained under each frame</span></div>
+
+  <h2>Where the home's list sits</h2>
+  <p class="lede" style="margin-bottom:0">The home is the first page after sign-in. The launcher takes the teacher anywhere; the list under it answers "what is going on with my activities right now" and leads to Actividades (<code>docs/design/activities-index</code>, implemented) for everything else.</p>
+  <table class="roles">
+    <tr><th></th><th>Home list (this proposal)</th><th>Actividades</th></tr>
+    <tr><td><b>Job</b></td><td>Resume work: open a running activity's dashboard, hand out a code, reach the reports of one that just ended.</td><td>Find any activity, filter and search, archive and restore.</td></tr>
+    <tr><td><b>Rows</b></td><td>The 5 newest activities in progress or not started; the 3 newest finished ones. Archived activities are left out.</td><td>Every activity, 20 per page, in three tabs.</td></tr>
+    <tr><td><b>What a row says</b></td><td>The same as the Actividades row of the same tab: status, participants, code and launch, or status, participants and end.</td><td>Status, participants, code and launch (En curso); status, participants and end (Terminadas).</td></tr>
+    <tr><td><b>Bridge</b></td><td>"Ver las 53 en curso", "Sin iniciar · 9" and "Ver las 18 terminadas" open Actividades on that tab and filter.</td><td>"Inicio" in the side menu.</td></tr>
+  </table>
+
+  <div class="open"><b>Open questions</b> (see the README):
+    <ul>
+      <li>Does the launcher stay as it is (frames A, B), or does it become one row of smaller tiles so the list starts on the first screen at 1366 × 768 (frame C)?</li>
+      <li>Does the home keep a list of finished activities, or only the activities in progress?</li>
+      <li>How many rows: 5 in progress and 3 finished, or the 3 and 3 of today?</li>
+    </ul>
+  </div>
+
+  <h2>Today</h2>
+  <p class="metrics" id="today-metrics"></p>
+  <div class="shots">
+    <figure><img src="current/current-1366x768-fold.png" alt="Current teacher home at 1366 by 768, first screen"><figcaption>1366 × 768, first screen: the title, the intro and the six photo tiles. Only the heading "Actividades Recientes" reaches the bottom edge.</figcaption></figure>
+    <figure><img src="current/current-1920x1080-fold.png" alt="Current teacher home at 1920 by 1080, first screen"><figcaption>1920 × 1080, first screen: one card, the newest activity in progress, in the 1050 px column.</figcaption></figure>
+    <figure><img src="current/current-1920x1080-full.png" alt="Current teacher home at 1920 by 1080, whole page"><figcaption>Whole page: six 273 px cards, three in progress then three finished, with no heading between them. Each one's only button is "Ver".</figcaption></figure>
+  </div>
+
+  <h2>A. 1920 × 1080: activities in progress and recently finished</h2>
+  <p class="metrics" data-metrics="A"></p>
+  <div id="A"></div>
+  <ol class="notes">
+    <li><b>The head and the launcher stay as they are</b> (but see frame C).</li>
+    <li><b>"Actividades en curso", with its counts:</b> "53 · Sin iniciar 9". Each count is a link to Actividades: <code>#!/activities</code> and <code>#!/activities?status=not-started</code>. The order is stated: "Más recientes primero".</li>
+    <li><b>The En curso table of Actividades,</b> with its five newest rows: the activity's name and description over its case, "○ Sin iniciar" or "● Fase n de m · Grupal" with the "IA" mark, participants, the code with its copy button and the launch date in the teacher's time zone.</li>
+    <li><b>The same actions:</b> "▶ Abrir panel" and the "⋯" menu (open on the second row): Copiar código, Reportes, Ver diseño, Ver caso. Copying the code, from the menu or the copy button, shows the notice of Actividades, "Código copiado".</li>
+    <li><b>"Ver las 53 en curso →"</b> opens Actividades on its first tab.</li>
+    <li><b>"Terminadas recientemente":</b> the three newest finished activities, in the Terminadas table, with "📊 Reportes" as the visible action. Their code is gone, as in Terminadas. "Ver las 18 terminadas →" opens <code>#!/activities?tab=finished</code>.</li>
+  </ol>
+
+  <h2>B. 1366 × 768: the same page, with today's launcher</h2>
+  <p class="metrics" data-metrics="B"></p>
+  <div id="B"></div>
+  <ol class="notes">
+    <li><b>The list starts below the first screen,</b> as today: the launcher's six 190 px tiles fill it. The eight rows end about 1100 px higher than today's six cards.</li>
+  </ol>
+
+  <h2>C. 1366 × 768: option, a one-row launcher</h2>
+  <p class="metrics" data-metrics="C"></p>
+  <div id="C"></div>
+  <ol class="notes">
+    <li><b>The six tiles in one row,</b> 96 px tall, with the same photos cropped and the same captions. They keep their order and targets.</li>
+    <li><b>The list starts on the first screen:</b> the heading and the first rows of "Actividades en curso" are visible without scrolling.</li>
+  </ol>
+
+  <h2>D. 1024 × 768: one column</h2>
+  <p class="metrics" data-metrics="D"></p>
+  <div id="D"></div>
+  <ol class="notes">
+    <li>Below 1200 px the app's menu folds and each table becomes the compact rows of Actividades: name, description and case, with the date on the right; then status, participants, code and the actions.</li>
+  </ol>
+
+  <h2>E. 1366 × 768: a teacher with no activities yet</h2>
+  <p class="metrics" data-metrics="E"></p>
+  <div id="E"></div>
+  <ol class="notes">
+    <li><b>The empty page of Actividades,</b> in place of both tables: what an activity is, then "1. Prepara un diseño" and "2. Lanza la actividad". The first step is left out when the teacher already has a design ready to launch. Today's panel shows one sentence and three buttons in a row.</li>
+  </ol>
+</div>
+
+<script>
+  const RUNNING = [
+    { n: "Privacidad en apps de salud", d: "Sección 2, martes", ds: "Privacidad en apps de salud", cs: "Datos de pacientes en la nube", st: "run", ph: 2, of: 3, mode: "Grupal", stu: 34, code: "k0051c", at: "hoy, 18:01", ai: true },
+    { n: "Dilema del examen", d: "Ética profesional, grupo A", ds: "Dilema del examen: ayudar a un compañero", cs: "El examen de Sebastián", st: "wait", of: 2, stu: 12, code: "k0052a", at: "hoy, 17:40" },
+    { n: "Denunciar una falla de software", d: "Ingeniería de software", ds: "Denunciar una falla de software", cs: "El bug del sistema de frenos", st: "run", ph: 1, of: 2, mode: "Individual", stu: 41, code: "k004z9", at: "hoy, 11:15", ai: true },
+    { n: "Seguridad frente a plazos en obra", d: "Taller de obras civiles", ds: "Seguridad frente a plazos en obra", cs: "Andamios en la torre B", st: "run", ph: 2, of: 2, mode: "Grupal", stu: 27, code: "k004x1", at: "ayer, 16:20" },
+    { n: "Conflicto de interés en consultoría", d: "", ds: "Conflicto de interés en consultoría", cs: "La consultora y el municipio", st: "wait", of: 3, stu: 0, code: "k004w7", at: "ayer, 09:05" },
+  ];
+  const FINISHED = [
+    { n: "Responsabilidades en el colapso del puente", d: "Sección 1", ds: "Responsabilidades en el colapso del puente", cs: "El puente del río Claro", of: 2, stu: 36, end: "hoy, 12:40", ai: true },
+    { n: "Ética del trabajo remoto", d: "Gestión de personas", ds: "Ética del trabajo remoto", cs: "Monitoreo de pantallas", of: 3, stu: 28, end: "1 nov., 11:30" },
+    { n: "Transparencia en reportes financieros", d: "", ds: "Transparencia en reportes financieros", cs: "El balance del trimestre", of: 2, stu: 19, end: "30 oct., 10:05" },
+  ];
+  const TILES = ["Crear un caso", "Buscar casos", "Diseñar una actividad", "Buscar diseños", "Lanzar una actividad", "Ver actividades"];
+
+  const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+  const title = (a) => `${a.n}${a.d ? ` <span class="sub" style="font-weight:400">· ${a.d}</span>` : ""}`;
+  // The design is named only when the activity was renamed at launch.
+  const meta = (a) => [a.ds === a.n ? "" : `Diseño: ${a.ds}`, `Caso: ${a.cs}`].filter(Boolean).join(" · ");
+  const status = (a) => (a.st === "wait" ? '<span class="st wait">○ Sin iniciar</span>'
+    : `<span class="st ok">● Fase ${a.ph} de ${a.of} · ${a.mode}</span>`) + (a.ai ? '<span class="ai">IA</span>' : "");
+  const participants = (a) => a.stu ? plural(a.stu, "participante", "participantes") : '<span class="sub">Nadie aún</span>';
+  const code = (a) => `<span class="code">${a.code}</span> <span class="sub">⧉</span>`;
+
+  function runningTable(rows, menuRow) {
+    const head = "<tr><th>Actividad</th><th>Estado</th><th>Participantes</th><th>Código</th><th>Lanzada</th><th></th></tr>";
+    const body = rows.map((a, i) => `<tr${i === menuRow ? ' class="hl"' : ""}><td class="t"><div class="title">${title(a)}</div><div class="meta">${meta(a)}</div></td>`
+      + `<td>${status(a)}</td><td>${participants(a)}</td><td>${code(a)}</td><td class="sub">${a.at}</td>`
+      + `<td class="acts"><span class="btn sm">▶ Abrir panel</span><span class="kebab"${i === menuRow ? ' data-menu="1"' : ""}>⋯</span></td></tr>`).join("");
+    return `<table class="dt" data-role="running"><thead>${head}</thead><tbody>${body}</tbody></table>`;
+  }
+
+  function finishedTable(rows) {
+    const head = "<tr><th>Actividad</th><th>Estado</th><th>Participantes</th><th>Terminada</th><th></th></tr>";
+    const body = rows.map((a) => `<tr><td class="t"><div class="title">${title(a)}</div><div class="meta">${meta(a)}</div></td>`
+      + `<td><span class="st proc">■ Finalizada</span>${a.ai ? '<span class="ai">IA</span>' : ""}</td><td>${plural(a.stu, "participante", "participantes")}</td><td class="sub">${a.end}</td>`
+      + '<td class="acts"><span class="btn sm">📊 Reportes</span><span class="kebab">⋯</span></td></tr>').join("");
+    return `<table class="dt" data-role="finished"><thead>${head}</thead><tbody>${body}</tbody></table>`;
+  }
+
+  function compactList(rows, finished) {
+    const role = finished ? "finished" : "running";
+    return `<div class="cards" data-role="${role}">${rows.map((a) => `<div class="box card"><div class="row1"><span style="min-width:0"><div class="lbl">${title(a)}</div><div class="sub">${meta(a)}</div></span><span class="sub">${finished ? a.end : a.at}</span></div>
+      <div class="row2">${finished ? `<span class="st proc">■ Finalizada</span>${a.ai ? '<span class="ai">IA</span>' : ""}` : status(a)}<span class="sub">${a.stu ? plural(a.stu, "participante", "participantes") : "Nadie aún"}</span>${finished ? "" : code(a)}<span style="flex:1"></span>
+      <span class="btn sm">${finished ? "📊 Reportes" : "▶ Abrir panel"}</span><span class="kebab">⋯</span></div></div>`).join("")}</div>`;
+  }
+
+  const head = `<div class="home-head"><h3>🏠 Taller del Docente</h3><p>Diseña una nueva actividad para realizar con tu curso, o lanza una actividad basada en algún diseño. También puedes compartir una actividad con colegas y buscar actividades compartidas por otros.</p></div>`;
+  const launcher = (compact) => `<div class="box launcher${compact ? " compact" : ""}"><div class="tiles">${TILES.map((t) => `<div class="tile"><span class="cap">${t}</span></div>`).join("")}</div></div>`;
+
+  function sections({ one, menuRow }) {
+    const running = `<div class="sec" data-sec="running"><div class="sec-head"><h4>Actividades en curso</h4><span class="count"><a>53</a> · <a>Sin iniciar 9</a></span><span class="all sub">Más recientes primero</span></div>
+      ${one ? compactList(RUNNING, false) : runningTable(RUNNING, menuRow)}
+      <div class="foot"><span>Mostrando 5 de 53</span><a data-all="running">Ver las 53 en curso →</a></div></div>`;
+    const finished = `<div class="sec" data-sec="finished"><div class="sec-head"><h4>Terminadas recientemente</h4><span class="count"><a>18</a></span></div>
+      ${one ? compactList(FINISHED, true) : finishedTable(FINISHED)}
+      <div class="foot"><span>Mostrando 3 de 18</span><a data-all="finished">Ver las 18 terminadas →</a></div></div>`;
+    return running + finished;
+  }
+
+  const emptyBlock = `<div class="sec-head"><h4>Actividades en curso</h4></div><div class="box empty"><div class="lbl" style="font-size:19px">Todavía no has lanzado actividades</div>
+    <div class="sub">Una actividad es un diseño que lanzas con un grupo de participantes. Ellos se unen con un código.</div>
+    <div class="steps"><div class="box step"><div class="lbl">1. Prepara un diseño</div><div class="sub">Elige un caso y escribe las fases y preguntas.</div><div style="margin-top:8px"><span class="btn sm">+ Nuevo diseño</span></div></div>
+    <div class="box step"><div class="lbl">2. Lanza la actividad</div><div class="sub">Elige el diseño y entrega el código a tus participantes.</div><div style="margin-top:8px"><span class="btn sm primary">🚀 Lanzar actividad</span></div></div></div></div>`;
+
+  function frame(hostId, { width, height, page = height, appNav, one = false, compact = false, empty = false, menuRow = -1, notes = [] }) {
+    const host = document.getElementById(hostId);
+    const solo = new URLSearchParams(location.search).get("frame");
+    if (solo && solo !== hostId) return;
+    if (solo) { document.body.classList.add("solo"); host.classList.add("solo-host"); host.parentElement.appendChild(host); }
+
+    const wrap = document.createElement("div");
+    wrap.className = "frame-wrap";
+    const f = document.createElement("div");
+    f.className = "frame wf";
+    f.style.width = width + "px";
+    f.style.height = page + 40 + "px";
+    f.insertAdjacentHTML("beforeend", `<div class="appbar"><span style="font-size:26px">☰</span><span class="lbl" style="font-size:28px;color:var(--accent)">EthicApp</span><span style="flex:1"></span><span class="sub">Docente Demo</span></div>`);
+    if (appNav) {
+      f.insertAdjacentHTML("beforeend", `<div class="appnav"><div class="item on">Inicio</div><div class="item">Lanzar Actividad</div><div class="item">Actividades</div><div class="item">Diseños</div><div class="item">Casos</div></div>`);
+    }
+    const content = document.createElement("div");
+    content.className = "content";
+    content.style.left = (appNav ? 244 : 0) + "px";
+    content.innerHTML = `<div class="column">${head}${launcher(compact)}${empty ? emptyBlock : sections({ one, menuRow })}</div>`;
+    f.appendChild(content);
+
+    const fold = document.createElement("div");
+    fold.className = "fold";
+    fold.style.top = height + "px";
+    fold.dataset.label = `fold · ${width} × ${height}`;
+    f.appendChild(fold);
+    wrap.appendChild(f);
+    host.appendChild(wrap);
+
+    const scaleOf = () => (solo ? 1 : Math.min(1, wrap.clientWidth / width));
+    const place = () => {
+      const s = scaleOf();
+      f.style.transform = `scale(${s})`;
+      wrap.style.height = Math.round((page + 40) * s) + "px";
+      if (solo) wrap.style.width = width + "px";
+    };
+    place();
+    window.addEventListener("resize", place);
+    const s = scaleOf();
+    const origin = f.getBoundingClientRect();
+    const box = (el) => {
+      const r = el.getBoundingClientRect();
+      return { left: (r.left - origin.left) / s, top: (r.top - origin.top) / s, width: r.width / s, height: r.height / s };
+    };
+
+    // The open row menu, under its "⋯" button.
+    const kebab = f.querySelector('[data-menu="1"]');
+    if (kebab) {
+      const k = box(kebab);
+      f.insertAdjacentHTML("beforeend", `<div class="menu" style="left:${Math.round(k.left + k.width - 330)}px; top:${Math.round(k.top + k.height + 6)}px">
+        <div class="mi focus">⧉ Copiar código</div><div class="mi">📊 Reportes</div><hr><div class="mi">🖌 Ver diseño</div><div class="mi">📘 Ver caso</div></div>`);
+    }
+    for (const [selector, number, dx = 0] of notes) {
+      const el = f.querySelector(selector);
+      if (!el) continue;
+      const r = box(el);
+      const n = document.createElement("span");
+      n.className = "n";
+      n.textContent = number;
+      n.style.left = Math.max(0, r.left - 14 + dx) + "px";
+      n.style.top = Math.max(0, r.top - 14) + "px";
+      f.appendChild(n);
+    }
+
+    const out = document.querySelector(`[data-metrics="${hostId}"]`);
+    if (!out || empty) return;
+    const items = [...f.querySelectorAll('[data-role] tbody tr, [data-role] > .card')];
+    const inView = items.filter((r) => { const b = box(r); return b.top + b.height <= height; }).length;
+    const first = items[0] ? Math.round(box(items[0]).top) : 0;
+    const last = items.length ? Math.round(box(items[items.length - 1]).top + box(items[items.length - 1]).height) : 0;
+    const today = width >= 1920 ? "1 card" : "no card";
+    out.innerHTML = `First activity at <b>${first} px</b> (today: 792 px). <b>${inView} of ${items.length} activities</b> fully visible on the first screen (today: ${today}). The last one ends at <b>${last} px</b> (today: 2530 px).`;
+  }
+
+  document.getElementById("today-metrics").innerHTML =
+    "Measured with headless Chrome on the local stack, with a seeded teacher who has 75 activities: 9 not started, 44 in progress, 18 finished and 4 archived. The numbers are the same at 1920, 1366 and 1024 px wide, because the column is 1050 px (896 px at 1024) and does not grow. The title is at 120 px and the launcher's six tiles, 190 px each, take 402 px from 277 px. \"Actividades Recientes\" starts at <b>736 px</b> and its first card at <b>792 px</b>. The six cards are <b>273 px</b> tall each; the page is 2626 px long.";
+
+  frame("A", { width: 1920, height: 1080, page: 1500, appNav: true, menuRow: 1,
+    notes: [[".launcher", 1, -10], ['[data-sec="running"] .count', 2, 150], ['[data-role="running"] thead', 3], ['[data-role="running"] tbody tr:nth-child(1) .acts', 4, -10], ['[data-all="running"]', 5, -30], ['[data-sec="finished"] .sec-head', 6, -44]] });
+  frame("B", { width: 1366, height: 768, page: 1500, appNav: true,
+    notes: [['[data-sec="running"] .sec-head', 1, -10]] });
+  frame("C", { width: 1366, height: 768, page: 1200, appNav: true, compact: true,
+    notes: [[".launcher", 1, -10], ['[data-sec="running"] .sec-head', 2, -10]] });
+  frame("D", { width: 1024, height: 768, page: 1800, appNav: false, one: true,
+    notes: [['[data-role="running"] > .card:nth-child(1)', 1, -10]] });
+  frame("E", { width: 1366, height: 768, page: 1000, appNav: true, empty: true,
+    notes: [[".empty .steps", 1, -10]] });
+</script>
+</body>
+</html>
