@@ -327,14 +327,14 @@ function transactionQuery(client) {
 }
 
 /**
- * Gives the teacher a copy of a case, inside the caller's transaction. Unless
- * `options.forceNew` is set, a copy the teacher already has of the case (or of
- * its original) is reused. Returns null when the teacher may not copy the
- * case, and otherwise `{ caseId, copy }`: `copy` is
+ * Gives the teacher a copy of a case, inside the caller's transaction. A copy
+ * the teacher already has of the case (or of its original) is reused. Returns
+ * null when the teacher may not copy the case, and otherwise
+ * `{ caseId, copy }`: `copy` is
  * `{ sourceCaseId, copiedCase }` when a new copy was made, which holds the
  * source's ready analyses (#1038), and null when an existing one is reused.
  */
-async function copyCaseForUser(client, sourceCaseId, userId, visibility = PRIVATE_VISIBILITY, options = {}) {
+async function copyCaseForUser(client, sourceCaseId, userId, visibility = PRIVATE_VISIBILITY) {
     if (!sourceCaseId) {
         return null;
     }
@@ -372,7 +372,7 @@ async function copyCaseForUser(client, sourceCaseId, userId, visibility = PRIVAT
         ORDER BY CASE WHEN id = $2 THEN 0 ELSE 1 END, id DESC
         LIMIT 1;
     `, [userId, sourceCase.id, rootCaseId]);
-    if (!options.forceNew && existingResult.rows[0]?.id) {
+    if (existingResult.rows[0]?.id) {
         return { caseId: existingResult.rows[0].id, copy: null };
     }
 
@@ -943,8 +943,7 @@ router.patch("/designs/:id/toggle_public", async (req, res) => {
 
             const result = await client.query(`
                 SELECT d.id, d.creator, d.visibility, d.license_code, d.case_id,
-                       c.creator AS case_creator, c.visibility AS case_visibility,
-                       c.license_code AS case_license_code
+                       c.visibility AS case_visibility, c.license_code AS case_license_code
                 FROM designs d
                 LEFT JOIN ethical_cases c ON c.id = d.case_id
                 WHERE d.id = $1
@@ -958,8 +957,6 @@ router.patch("/designs/:id/toggle_public", async (req, res) => {
             }
 
             const nextVisibility = isPublicVisibility(design.visibility) ? PRIVATE_VISIBILITY : PUBLIC_VISIBILITY;
-            let nextCaseId = design.case_id;
-            let caseCopy = null;
 
             if (nextVisibility === PUBLIC_VISIBILITY) {
                 if (!design.license_code) {
@@ -973,62 +970,38 @@ router.patch("/designs/:id/toggle_public", async (req, res) => {
                         return res.status(400).json({ status: "err", message: "The associated case needs a license before the design can be published." });
                     }
 
+                    // The route never publishes the case: that is left to the
+                    // case endpoints and their rules, and the client publishes
+                    // the case there first (#1009).
                     if (!isPublicVisibility(design.case_visibility)) {
-                        if (
-                            req.body?.publishCase === true
-                            && sameId(design.case_creator, sessionUid)
-                        ) {
-                            await client.query(`
-                                UPDATE ethical_cases
-                                SET visibility = 'public',
-                                    updated_at = NOW()
-                                WHERE id = $1 AND creator = $2;
-                            `, [design.case_id, sessionUid]);
-                        } else if (req.body?.publishCaseCopy === true) {
-                            caseCopy = await copyCaseForUser(client, design.case_id, sessionUid, PUBLIC_VISIBILITY, { forceNew: true });
-                            nextCaseId = caseCopy?.caseId ?? null;
-                            if (!nextCaseId) {
-                                await client.query("ROLLBACK");
-                            return res.status(409).json({
-                                status:  "err",
-                                message: "The associated case cannot be copied publicly. Publish the design with a different public case.",
-                                code:    "CASE_COPY_RIGHTS_REQUIRED",
-                                });
-                            }
-                        } else {
-                            await client.query("ROLLBACK");
-                            return res.status(409).json({
-                                status:  "err",
-                                message: "The associated case must be public before publishing this design.",
-                                code:    "CASE_VISIBILITY_REQUIRED",
-                            });
-                        }
+                        await client.query("ROLLBACK");
+                        return res.status(409).json({
+                            status:  "err",
+                            message: "The associated case must be public before publishing this design.",
+                            code:    "CASE_VISIBILITY_REQUIRED",
+                        });
                     }
                 }
             }
 
+            // Only the design's visibility changes, never its case or content.
             await client.query(`
                 UPDATE designs
                 SET visibility = $1,
-                    public = $2,
-                    case_id = $3
-                WHERE id = $4;
-            `, [nextVisibility, nextVisibility === PUBLIC_VISIBILITY, nextCaseId, designId]);
+                    public = $2
+                WHERE id = $3;
+            `, [nextVisibility, nextVisibility === PUBLIC_VISIBILITY, designId]);
             await client.query("COMMIT");
 
-            const response = res.json({
+            return res.json({
                 status: "ok",
                 result: {
-                    id: designId,
+                    id:         designId,
                     visibility: nextVisibility,
-                    public: nextVisibility === PUBLIC_VISIBILITY,
-                    caseId: nextCaseId,
+                    public:     nextVisibility === PUBLIC_VISIBILITY,
+                    caseId:     design.case_id,
                 },
             });
-            if (caseCopy) {
-                scheduleCaseCopyFollowUp(caseCopy, sessionUid, "design_published");
-            }
-            return response;
         } catch (error) {
             await client.query("ROLLBACK");
             throw error;
