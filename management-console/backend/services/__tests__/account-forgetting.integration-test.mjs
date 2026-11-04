@@ -117,9 +117,6 @@ test('V31: forgetting a student anonymizes the account and its text and records 
   skip: SKIP_REASON
 }, async () => {
   const student = await insertUser();
-  // An account created before the RUT was retired (epic #1067); remove with
-  // users.rut in #1072.
-  await query("UPDATE users SET rut = '12.345.678-5' WHERE id = $1", [student.id]);
   const classmate = await insertUser();
   await insertStudentData(student.id, classmate.id);
 
@@ -133,7 +130,7 @@ test('V31: forgetting a student anonymizes the account and its text and records 
 
   const [user] = await query(
     `
-      SELECT name, mail, rut, active, password_bcrypt, session_version, anonymized_at,
+      SELECT name, mail, active, password_bcrypt, session_version, anonymized_at,
              anonymization_run_id
       FROM users WHERE id = $1
     `,
@@ -141,7 +138,6 @@ test('V31: forgetting a student anonymizes the account and its text and records 
   );
   assert.equal(user.name, `Anonymous Student ${student.id}`);
   assert.equal(user.mail, `anon-student-${student.id}@anonymous.invalid`);
-  assert.equal(user.rut, null);
   assert.equal(user.active, false);
   assert.equal(user.password_bcrypt, null);
   assert.equal(user.session_version, student.session_version + 1);
