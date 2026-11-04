@@ -40,9 +40,12 @@ function createPage({ activities = [], designs = [], loadDesigns } = {}) {
     // The notices' timer (#1052), which these tests never fire.
     const $timeout = Object.assign(fn => ({ fn }), { cancel() {} });
 
+    // The row actions (#1094), which these tests do not use.
+    const ActivityRowActionsService = { create: () => ({ busy: {}, notice: null }) };
+
     const vm = {};
     ActivitiesPageController.call(vm, $scope, $rootScope, $location, $translate, {},
-        ActivityCatalogService, $timeout, DesignCatalogService);
+        ActivityCatalogService, $timeout, DesignCatalogService, ActivityRowActionsService);
     return { vm, calls };
 }
 

@@ -1,0 +1,25 @@
+<!-- The `activity-action-notice` component (#1094), after an activity's row
+     action on the Activities page or the home (#1052): "Código copiado", "Se
+     archivó …" with "Deshacer" and "Ver Archivadas", "Se restauró …" with
+     "Ver en Terminadas", or why the action failed. `$ctrl.actions` is the
+     page's ActivityRowActionsService instance. The notice disappears after a
+     few seconds and can be dismissed. The message is bound as text, so an
+     activity's title cannot inject markup. The live region stays in the page
+     so screen readers announce each new notice. -->
+<div class="cases-notice-region activities-notice-region" role="status" aria-live="polite" aria-atomic="true">
+    <div class="alert cases-notice activities-notice" ng-if="$ctrl.actions.notice"
+        ng-class="$ctrl.actions.notice.tone === 'danger' ? 'alert-danger' : 'alert-success'">
+        <span class="cases-notice-message activities-notice-message" ng-bind="$ctrl.actions.noticeMessage()"></span>
+        <span class="cases-notice-links" ng-if="$ctrl.actions.notice.actions.length > 0">
+            <button type="button" class="btn btn-link cases-notice-link"
+                ng-repeat="action in $ctrl.actions.notice.actions track by action.id"
+                data-action="{{ action.id }}"
+                ng-click="$ctrl.actions.runNoticeAction(action)">{{ action.key | translate }}</button>
+        </span>
+        <button type="button" class="close cases-notice-dismiss"
+            aria-label="{{ 'activities_notice_dismiss' | translate }}"
+            ng-click="$ctrl.actions.dismissNotice()">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+</div>

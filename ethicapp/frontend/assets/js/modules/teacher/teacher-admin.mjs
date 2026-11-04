@@ -2,6 +2,8 @@ import 'angular-animate';
 import "angular-toggle-switch";
 import { ActivityStateService } from "../../services/activity-state.service.js";
 import { ActivityCatalogService } from "../../services/activity-catalog.service.js";
+// The row actions of an activity and their notices, on Activities and the home (#1094).
+import { ActivityRowActionsService } from "../../services/activity-row-actions.service.js";
 import { DesignStateService } from "../../services/design-state.service.js";
 import { DesignCatalogService } from "../../services/design-catalog.service.js";
 import { DesignPublicationService } from "../../services/design-publication.service.js";
@@ -47,6 +49,8 @@ app.factory("TeacherSocketService", ["SocketService", function (SocketService) {
 app.factory("ActivityStateService", ["$http", "TeacherSocketService", ActivityStateService])
     .factory("TeacherGroupChatService", ["$http", "TeacherSocketService", TeacherGroupChatService])
     .factory("ActivityCatalogService", ["$http", ActivityCatalogService])
+    .factory("ActivityRowActionsService", ["$rootScope", "$location", "$translate", "$window",
+        "$timeout", "ActivityCatalogService", ActivityRowActionsService])
     .factory("DesignCatalogService", ["$rootScope", "$http", DesignCatalogService])
     .factory("DesignPublicationService", ["$uibModal", "DesignCatalogService", "CasesCatalogService", DesignPublicationService])
     .factory("CaseVideoPickerService", ["$uibModal", CaseVideoPickerService])
@@ -181,7 +185,8 @@ app.controller("RecentActivitiesController",
     ["$scope", "ActivityCatalogService", RecentActivitiesController]);
 app.controller("ActivitiesPageController",
     ["$scope", "$rootScope", "$location", "$translate", "$window", "ActivityCatalogService",
-        "$timeout", "DesignCatalogService", ActivitiesPageController]);
+        "$timeout", "DesignCatalogService", "ActivityRowActionsService",
+        ActivitiesPageController]);
 app.controller("ActivityReportsController",
     ["$scope", "$routeParams", "$window", ActivityReportsController]);
 app.controller("DesignsPageController",
@@ -332,6 +337,8 @@ import tagSelectorComponent from "../../components/tag-selector.component.js";
 import phaseInstructionsEditComponent from "../../components/phase-instructions-edit.component.js";
 import teacherGroupChatComponent from "../../components/teacher-group-chat.component.js";
 import teacherToastComponent from "../../components/teacher-toast.component.js";
+// The notice after an activity's row action, on Activities and the home (#1094).
+import activityActionNoticeComponent from "../../components/activity-action-notice.component.js";
 
 app.component('activityDescription', activityDescriptionComponent);
 app.component("activityBar", activityBarComponent);
@@ -383,6 +390,7 @@ app.component("tagSelector", tagSelectorComponent);
 app.component("phaseInstructionsEdit", phaseInstructionsEditComponent);
 app.component("teacherGroupChat", teacherGroupChatComponent);
 app.component("toast", teacherToastComponent);
+app.component("activityActionNotice", activityActionNoticeComponent);
 
 import { userRolesFilter } from '../../filters/user-roles.filter.js';
 app.filter("roleTranslate", ["$translate", userRolesFilter]);
