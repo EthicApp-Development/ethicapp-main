@@ -7335,3 +7335,261 @@ button.launch-wizard-step-body:focus-visible .launch-wizard-step-name {
     padding: 4px 0 0;
     text-align: inherit;
 }
+
+/* The Activities page (#1050, epic #1046): it uses the Cases page's classes
+   for the head, the tabs, the table, the row menu and the footer, and these
+   for what only activities have: the status with its "IA" mark, the
+   participants, the access code and the dates. From 1200 px each activity is
+   a table row; below, a compact row: the title, its case and the date, then
+   the status, participants, code and actions on a second line (frame D). */
+.activities-filters-slot {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.activities-table-ongoing .activities-col-activity {
+    width: 36%;
+}
+
+.activities-table-ongoing .activities-col-status {
+    width: 19%;
+}
+
+.activities-table-ongoing .activities-col-participants {
+    width: 13%;
+}
+
+.activities-table-ongoing .activities-col-code {
+    width: 11%;
+}
+
+.activities-table-ongoing .activities-col-launched {
+    width: 10%;
+}
+
+.activities-table-finished .activities-col-activity {
+    width: 40%;
+}
+
+.activities-table-finished .activities-col-status {
+    width: 18%;
+}
+
+.activities-table-finished .activities-col-participants {
+    width: 15%;
+}
+
+.activities-table-finished .activities-col-finished {
+    width: 13%;
+}
+
+.activities-cell-activity {
+    max-width: 0;
+}
+
+.activities-row-description {
+    color: var(--cases-muted);
+    font-size: 13px;
+    font-weight: 400;
+}
+
+.activities-cell-status {
+    white-space: nowrap;
+}
+
+.activities-status .fa-square {
+    font-size: 9px;
+    vertical-align: 1px;
+}
+
+.activities-status-not-started .fa-circle {
+    color: var(--cases-muted);
+}
+
+.activities-status-in-progress {
+    color: var(--cases-ready);
+}
+
+.activities-status-finished {
+    color: var(--cases-muted);
+}
+
+.activities-ai-mark {
+    border: 1px solid var(--cases-line);
+    border-radius: 3px;
+    color: var(--cases-muted);
+    cursor: help;
+    font-size: 11px;
+    margin-left: 6px;
+    padding: 0 4px;
+    text-decoration: none;
+    vertical-align: 1px;
+}
+
+.activities-participants {
+    white-space: nowrap;
+}
+
+.activities-participants-none {
+    color: var(--cases-muted);
+    font-size: 13px;
+}
+
+.activities-code-group {
+    white-space: nowrap;
+}
+
+.activities-code {
+    background: #f0f2f7;
+    border-radius: 4px;
+    color: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 2px 6px;
+}
+
+.activities-copy-code {
+    color: var(--cases-muted);
+    padding: 0 4px;
+    vertical-align: baseline;
+}
+
+.activities-copy-code:hover,
+.activities-copy-code:focus {
+    color: var(--cases-accent);
+}
+
+.activities-cell-date {
+    color: var(--cases-muted);
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+@media (width < 1200px) {
+    .activities-page .activities-table-ongoing .activities-row {
+        grid-template-areas:
+            "activity activity activity activity date"
+            "status participants code actions actions";
+        grid-template-columns: auto auto auto minmax(0, 1fr) auto;
+    }
+
+    .activities-page .activities-table-finished .activities-row {
+        grid-template-areas:
+            "activity activity activity date"
+            "status participants actions actions";
+        grid-template-columns: auto auto minmax(0, 1fr) auto;
+    }
+
+    .activities-cell-activity {
+        grid-area: activity;
+        max-width: none;
+        min-width: 0;
+    }
+
+    .activities-cell-status {
+        align-self: center;
+        grid-area: status;
+    }
+
+    .activities-cell-participants {
+        align-self: center;
+        grid-area: participants;
+    }
+
+    .activities-cell-code {
+        align-self: center;
+        grid-area: code;
+    }
+
+    .activities-cell-date {
+        grid-area: date;
+        text-align: right;
+    }
+}
+
+@media (width < 768px) {
+    .activities-page .activities-table-ongoing .activities-row {
+        grid-template-areas:
+            "activity activity activity"
+            "date date date"
+            "status participants code"
+            "actions actions actions";
+        grid-template-columns: auto auto minmax(0, 1fr);
+    }
+
+    .activities-page .activities-table-finished .activities-row {
+        grid-template-areas:
+            "activity activity"
+            "date date"
+            "status participants"
+            "actions actions";
+        grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    .activities-cell-date {
+        text-align: left;
+    }
+}
+
+/* The page of a teacher with no activities (#1053, frame E): a centered box
+   with what an activity is, then one card per step, side by side, that wrap
+   under each other on a narrow screen. */
+.activities-empty-page {
+    border: 1px solid var(--cases-line);
+    border-radius: 6px;
+    margin-top: 16px;
+    padding: 32px 40px;
+    text-align: center;
+}
+
+.activities-empty-page-title {
+    font-size: 19px;
+    font-weight: 600;
+    margin: 0 0 6px;
+}
+
+.activities-empty-page-intro {
+    color: var(--cases-muted);
+    margin: 0;
+}
+
+.activities-empty-steps {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 18px;
+    justify-content: center;
+    list-style: none;
+    margin: 20px 0 4px;
+    padding: 0;
+    text-align: left;
+}
+
+.activities-empty-step {
+    border: 1px solid var(--cases-line);
+    border-radius: 6px;
+    flex: 0 1 300px;
+    min-width: 0;
+    padding: 14px 16px;
+}
+
+.activities-empty-step-title {
+    font-size: 15px;
+    font-weight: 600;
+    margin: 0 0 4px;
+}
+
+.activities-empty-step-hint {
+    color: var(--cases-muted);
+    font-size: 14px;
+    margin: 0 0 10px;
+}
+
+@media (width < 768px) {
+    .activities-empty-page {
+        padding: 24px 16px;
+    }
+
+    .activities-empty-step {
+        flex-basis: 100%;
+    }
+}

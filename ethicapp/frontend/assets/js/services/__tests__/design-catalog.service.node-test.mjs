@@ -193,3 +193,54 @@ describe("DesignCatalogService.duplicateDesign", () => {
         assert.equal(requests[0].method, "POST");
     });
 });
+
+describe("DesignCatalogService.loadDesigns", () => {
+    function serviceAnswering(get) {
+        const $http = async () => ({ data: { status: "ok" } });
+        $http.get = get;
+        const $rootScope = { $broadcast() {}, $emit() {}, $applyAsync(fn) { fn?.(); } };
+        return DesignCatalogService($rootScope, $http);
+    }
+
+    async function quietly(action) {
+        const originalError = console.error;
+        console.error = () => {};
+        try {
+            return await action();
+        } finally {
+            console.error = originalError;
+        }
+    }
+
+    it("resolves true and keeps the designs when the list loads (#1053)", async () => {
+        const service = serviceAnswering(async () => ({
+            data: { status: "ok", result: [{ id: 3 }] },
+        }));
+
+        assert.equal(await service.loadDesigns(), true);
+        assert.deepEqual(service.designs, [{ id: 3 }]);
+        assert.equal(service.hasLoadedDesigns, true);
+    });
+
+    it("resolves false, keeping the designs it had, when the request fails", async () => {
+        let fail = false;
+        const service = serviceAnswering(async () => {
+            if (fail) {
+                throw { status: 500 };
+            }
+            return { data: { status: "ok", result: [{ id: 3 }] } };
+        });
+        await service.loadDesigns();
+        fail = true;
+
+        assert.equal(await quietly(() => service.loadDesigns()), false);
+        assert.deepEqual(service.designs, [{ id: 3 }]);
+    });
+
+    it("resolves false when the API answers without ok", async () => {
+        const service = serviceAnswering(async () => ({ data: { status: "err" } }));
+
+        assert.equal(await quietly(() => service.loadDesigns()), false);
+        assert.equal(service.hasLoadedDesigns, false);
+    });
+});

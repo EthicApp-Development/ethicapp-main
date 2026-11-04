@@ -1,0 +1,26 @@
+<!-- The filter bar of the Activities page (#1051): the search, in every tab,
+     and the status chips of "En curso", beside the order, above a tab with
+     activities. Both live in the URL (`?q=`, `?status=`); switching tabs
+     clears them. -->
+<div class="cases-filters activities-filters">
+    <div class="search-field-wrapper cases-search activities-search">
+        <label for="activities-search" class="sr-only">{{ 'activities_search_label' | translate }}</label>
+        <input id="activities-search" class="form-control search-input search-decorated-input" type="search"
+            autocomplete="off"
+            placeholder="{{ 'activities_search_placeholder' | translate }}"
+            ng-model="ap.search"
+            ng-model-options="{ debounce: 250 }"
+            ng-change="ap.handleSearchChange()">
+        <i class="fa-solid fa-magnifying-glass search-field-icon" aria-hidden="true"></i>
+    </div>
+    <div class="cases-filter-chips activities-filter-chips" role="group"
+        aria-label="{{ 'activities_filter_label' | translate }}"
+        ng-if="ap.hasStatusFilter(ap.tab)">
+        <button type="button" class="cases-filter-chip" data-filter="{{ chip.id }}"
+            ng-repeat="chip in ap.getFilterChips(ap.tab) track by chip.id"
+            ng-class="{ 'is-active': chip.active }"
+            aria-pressed="{{ chip.active ? 'true' : 'false' }}"
+            ng-click="ap.selectStatusFilter(chip.id)">{{ chip.key | translate }}<span
+            class="cases-filter-chip-count" ng-if="chip.count !== null"> &middot; {{ chip.count }}</span></button>
+    </div>
+</div>

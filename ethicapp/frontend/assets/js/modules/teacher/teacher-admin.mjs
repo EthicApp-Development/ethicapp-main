@@ -79,7 +79,12 @@ app.config(["$httpProvider", function($httpProvider) {
 app.component("sessionExpiredNotice", sessionExpiredNoticeComponent);
 
 import { LocalesController } from "../../controllers/common/locales.controller.js";
-import { ActivityController } from "../../controllers/teacher/activity.controller.js";
+// The home's recent activities (#1055).
+import { RecentActivitiesController }
+    from "../../controllers/teacher/recent-activities.controller.js";
+// The Activities page (#1050, epic #1046).
+import { ActivitiesPageController }
+    from "../../controllers/teacher/activities-page.controller.js";
 import { ActivityReportsController } from "../../controllers/teacher/activity-reports.controller.js";
 // The Designs page (#975, epic #966).
 import { DesignsPageController } from "../../controllers/teacher/designs-page.controller.js";
@@ -172,8 +177,11 @@ app.run(["$translate", "UserProfileService", "LanguageCatalogService", function(
 // Inject controllers into application
 app.controller("LocalesController", 
     ["$translate", "$scope", "$rootScope", LocalesController]); 
-app.controller("ActivityController", 
-    ["$scope", "ActivityCatalogService", "$window", ActivityController]);
+app.controller("RecentActivitiesController",
+    ["$scope", "ActivityCatalogService", RecentActivitiesController]);
+app.controller("ActivitiesPageController",
+    ["$scope", "$rootScope", "$location", "$translate", "$window", "ActivityCatalogService",
+        "$timeout", "DesignCatalogService", ActivitiesPageController]);
 app.controller("ActivityReportsController",
     ["$scope", "$routeParams", "$window", ActivityReportsController]);
 app.controller("DesignsPageController",

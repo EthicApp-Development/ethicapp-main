@@ -1,0 +1,80 @@
+<!-- "En curso" (#1050): the activities that are not finished, started or
+     not, newest first. Each row has its status, participants, code and
+     launch, "Abrir panel" and a "⋯" menu. Below 1200 px the rows become
+     compact rows. -->
+<section class="cases-table-section activities-ongoing-tab">
+    <table class="cases-table activities-table activities-table-ongoing" ng-if="ap.getRows('ongoing').length > 0">
+        <caption class="sr-only">{{ 'activities_tab_ongoing' | translate }}</caption>
+        <thead>
+            <tr>
+                <th scope="col" class="cases-head-cell activities-col-{{ column.id }}"
+                    ng-repeat="column in ap.columns.ongoing track by column.id">{{ column.key | translate }}</th>
+                <th scope="col" class="cases-head-cell activities-col-actions"><span class="sr-only">{{ 'activities_col_actions' | translate }}</span></th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr class="cases-row activities-row" ng-repeat="row in ap.getVisibleRows('ongoing') track by row.id" data-session-id="{{ row.id }}">
+                <td class="cases-cell activities-cell-activity">
+                    <a class="cases-row-title activities-row-title" ng-href="#!/activities/{{ row.id }}"><span
+                        class="activities-row-name">{{ row.title.name }}</span><span
+                        class="activities-row-description" ng-if="row.title.description"><span
+                        ng-if="row.title.name"> &middot; </span>{{ row.title.description }}</span></a>
+                    <span class="cases-row-meta"><span ng-repeat="part in row.meta">{{ part.key | translate }}<span
+                        ng-if="part.text"> {{ part.text }}</span><span ng-if="!$last"> &middot; </span></span></span>
+                </td>
+                <td class="cases-cell activities-cell-status">
+                    <span class="cases-status activities-status" ng-class="'activities-status-' + row.status.id">
+                        <i class="fa-regular fa-circle" aria-hidden="true" ng-if="row.status.id === 'not-started'"></i>
+                        <i class="fa-solid fa-circle" aria-hidden="true" ng-if="row.status.id === 'in-progress'"></i>
+                        <i class="fa-solid fa-square" aria-hidden="true" ng-if="row.status.id === 'finished'"></i>
+                        {{ row.status.key | translate:{ number: row.status.params.number, total: row.status.params.total, mode: (row.status.modeKey ? (row.status.modeKey | translate) : '') } }}
+                    </span>
+                    <abbr class="activities-ai-mark" ng-if="row.status.ai"
+                        title="{{ 'activities_ai_mark_title' | translate }}">{{ 'activities_ai_mark' | translate }}</abbr>
+                </td>
+                <td class="cases-cell activities-cell-participants">
+                    <span class="activities-participants" ng-class="{ 'activities-participants-none': row.participants.none }">{{ row.participants.key | translate:row.participants.params }}</span>
+                </td>
+                <td class="cases-cell activities-cell-code">
+                    <span class="activities-code-group" ng-if="row.code">
+                        <code class="activities-code">{{ row.code }}</code>
+                        <button type="button" class="btn btn-link btn-xs activities-copy-code"
+                            title="{{ 'activities_action_copy_code' | translate }}"
+                            aria-label="{{ 'activities_action_copy_code' | translate }}: {{ row.code }}"
+                            ng-click="ap.copyCode(row)">
+                            <i class="fa-regular fa-copy" aria-hidden="true"></i>
+                        </button>
+                    </span>
+                </td>
+                <td class="cases-cell activities-cell-date" title="{{ row.launched.hint.text }}">
+                    {{ row.launched.label.key ? (row.launched.label.key | translate:row.launched.label.params) : row.launched.label.text }}
+                </td>
+                <td class="cases-cell cases-cell-actions activities-cell-actions">
+                    <button type="button" class="btn btn-default btn-sm cases-row-primary"
+                        data-action="{{ row.primary.id }}"
+                        ng-disabled="ap.busy[row.id]"
+                        ng-click="ap.runAction(row, row.primary)">
+                        <i ng-class="row.primary.icon" aria-hidden="true"></i> {{ row.primary.key | translate }}
+                    </button>
+                    <div class="cases-row-menu-slot" ng-include="'/assets/static/views/teacher/fragments/activities-row-menu.template.html'"></div>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="cases-table-footer" ng-if="ap.getRows('ongoing').length > 0">
+        <span>
+            {{ ap.getOngoingFooter().showingKey | translate:{ shown: ap.getVisibleRows('ongoing').length, total: ap.getRows('ongoing').length } }}
+            <span ng-if="ap.hasMoreRows('ongoing')">&middot;
+                <button type="button" class="btn btn-link cases-show-more" ng-click="ap.showMore('ongoing')">
+                    {{ 'activities_show_more' | translate }}
+                </button>
+            </span>
+        </span>
+        <span class="activities-tab-hint">{{ ap.getOngoingFooter().hintKey | translate }}</span>
+    </div>
+
+    <div class="alert alert-info" ng-if="ap.count('ongoing') === 0">
+        <span>{{ 'activities_empty_ongoing' | translate }}</span>
+    </div>
+</section>

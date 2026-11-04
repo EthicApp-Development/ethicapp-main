@@ -8,6 +8,7 @@ import * as StatusCodes from "../../../common/modules/session-status.js";
 import { requireRole } from "../../helpers/auth-helper.js";
 import { requireSessionOwnerOrParticipant } from "../../helpers/activity-owner-helper.js";
 import { sessionAiServicesEnabled } from "../../helpers/session-ai-services.js";
+import { designTitleOf } from "../../helpers/teacher-activity-list.js";
 
 const router = express.Router();
 
@@ -48,6 +49,7 @@ router.get("/activities/:session_id/descriptor", async (req, res) => {
                 sessions.type,
                 sessions.ai_services_enabled,
                 designs.id AS designId,
+                designs.design -> 'metainfo' ->> 'title' AS "designTitle",
                 designs.design
             FROM activity
             INNER JOIN sessions
@@ -69,6 +71,9 @@ router.get("/activities/:session_id/descriptor", async (req, res) => {
         const activityResult = result.rows[0];
         const designType = activityResult.design.type;
         const phases = await getPhasesForSessionByDesignType(session_id, designType);
+        // The design's title, as GET /activities gives it, for the
+        // dashboard's activity card (#1055).
+        const designTitle = designTitleOf(activityResult);
 
         const descriptor = {
             id: activityResult.id,
@@ -82,6 +87,7 @@ router.get("/activities/:session_id/descriptor", async (req, res) => {
             status: StatusCodes.getNameByCode(activityResult.status),
             type: activityResult.type,
             designId: activityResult.designid,
+            designTitle,
             design: activityResult.design,
             phases: phases || [],
             currentPhase: phases && phases.length > 0 ? phases[phases.length - 1] : null,

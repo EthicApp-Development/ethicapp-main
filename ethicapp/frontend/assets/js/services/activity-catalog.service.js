@@ -129,17 +129,12 @@ let ActivityCatalogService = ($http) => {
                     data: {}
                 });
                 
-                // Assign activities or an empty array if response is not as expected
-                service.activities = Array.isArray(response.data.activities) ? 
+                // Assign activities or an empty array if response is not as
+                // expected. Each activity carries its design's id and title
+                // (`designId`, `designTitle`), not the design document (#1055).
+                service.activities = Array.isArray(response.data.activities) ?
                     response.data.activities : [];
-                
-                // Map titles from design metadata if present
-                service.activities.forEach(activity => {
-                    if (activity.design?.metainfo?.title) {
-                        activity.title = activity.design.metainfo.title;
-                    }
-                });
-                
+
                 service.notifyListeners("onActivityCatalogUpdated", { 
                     response: null });
 
@@ -152,39 +147,30 @@ let ActivityCatalogService = ($http) => {
             }
         },
 
-        toggleArchived: async function(sessionId) {
-            try {
-                // Make a PATCH request to toggle the `archived` status of the session
-                const response = await $http({
-                    method: "PATCH",
-                    url: `/activities/${sessionId}/toggle_archived`,
-                });
-        
-                // Check if the response indicates success
-                if (response.data.status === "ok") {
-                    console.info(`Archived status toggled successfully for sessionId: ${sessionId}`);
-                    
-                    // Update the cached activity in the service's `activities` list
-                    const activity = this.activities.find(act => act.sessionId === sessionId);
-                    if (activity) {
-                        activity.archived = !activity.archived; // Toggle the `archived` attribute
-                        console.info(`Cached activity updated:`, activity);
-                    } else {
-                        console.warn(`Activity with sessionId ${sessionId} not found in cache.`);
-                    }
-                    
-                    service.notifyListeners("onActivityCatalogUpdated", { 
-                        response: null });
+        // Archives (`archived` true) or restores (false) the activity of
+        // session `sessionId` (#1048), and updates the cached activity with
+        // the flag the server answers. Resolves with `{ id, archived }`. A
+        // failure rejects with the $http rejection, whose status and
+        // `data.code` say why: 409 ACTIVITY_NOT_FINISHED for an activity that
+        // is not finished.
+        async setArchived(sessionId, archived) {
+            const response = await $http({
+                method: "PATCH",
+                url:    `/activities/${sessionId}/archive`,
+                data:   { archived: archived === true },
+            });
 
-                    return true; // Indicate success
-                } else {
-                    console.error(`Failed to toggle archived status for sessionId: ${sessionId}`);
-                    return false; // Indicate failure
-                }
-            } catch (error) {
-                console.error(`Error toggling archived status for sessionId: ${sessionId}`, error);
-                throw new Error("Failed to toggle archived status");
+            const result = response.data?.result;
+            const activity = service.activities
+                .find(act => Number(act.sessionId) === Number(sessionId));
+            if (activity) {
+                activity.archived = result?.archived === true;
             }
+
+            service.notifyListeners("onActivityCatalogUpdated", {
+                response: null });
+
+            return result;
         },
         
         registerListener: (eventName, callback) => {

@@ -11,8 +11,9 @@ import externalServicesRegistry from "../services/external-services.service.js";
  * endpoint that finishes every open activity of a teacher before the teacher
  * is forgotten (#877) share these steps, in this order:
  *
- * 1. the session becomes `finished` with no current phase, and the phase it
- *    was on is recorded in `activity_finalizations` (V30), in one statement;
+ * 1. the session becomes `finished` with no current phase and, on its first
+ *    finish, an end time (`finished_at`, V41), and the phase it was on is
+ *    recorded in `activity_finalizations` (V30), in one statement;
  * 2. the cached student activity descriptor is dropped, so students reload a
  *    descriptor without a current phase (#872);
  * 3. `phase-ended` is dispatched for the phase the activity was on, if any;
@@ -33,7 +34,11 @@ const FINISHED_STATUS = getStatusCode("finished");
 // Finishes the session and records its pending finalization with the phase it
 // was on, in one statement. With $3, a session already finished is left
 // alone. A finalization already pending keeps the phase it recorded, since
-// the session has no current phase by then.
+// the session has no current phase by then. The end time (V41, #1047) is set
+// when a session that is not finished becomes finished, and only then: a
+// repeated or resumed finish keeps it, and a session finished before V41,
+// whose end time is unknown, keeps NULL even when the teacher's route
+// finishes it again.
 export const FINISH_SESSION_SQL = `
     WITH previous AS (
         SELECT id, current_stage
@@ -44,7 +49,11 @@ export const FINISH_SESSION_SQL = `
     finished AS (
         UPDATE sessions s
         SET status = $1,
-            current_stage = NULL
+            current_stage = NULL,
+            finished_at = COALESCE(
+                s.finished_at,
+                CASE WHEN s.status IS DISTINCT FROM $1 THEN now() END
+            )
         FROM previous
         WHERE s.id = previous.id
           AND (NOT $3::boolean OR s.status IS DISTINCT FROM $1)

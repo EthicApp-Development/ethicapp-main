@@ -240,6 +240,16 @@ test("getUiTranslations: labels, descriptions and tab titles in both UI locales"
     }
 });
 
+test("getUiTranslations: the description says participants (#1055)", async () => {
+    const translations = await getUiTranslations();
+
+    assert.match(translations.es_CL.description, /\bparticipantes\b/u);
+    assert.match(translations.en_US.description, /\bparticipants\b/u);
+    for (const locale of ["es_CL", "en_US"]) {
+        assert.doesNotMatch(translations[locale].description, /estudiante|student/iu, locale);
+    }
+});
+
 // ─── case-created ────────────────────────────────────────────────────────────
 
 test("case-created: starts the generation, waits for the text and requests the inventory", async () => {
