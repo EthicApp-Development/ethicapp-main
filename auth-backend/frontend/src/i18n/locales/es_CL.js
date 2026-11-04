@@ -73,6 +73,7 @@ const esCL = {
     signInLink: 'Iniciar sesión',
     sent: {
       title: 'Revisa tu correo',
+      subtitle: 'Falta un paso para activar tu cuenta',
       sentTo: 'Tu cuenta está creada. Te enviamos un mensaje para confirmarla a:',
       openLink: 'Abre ese mensaje y sigue su enlace. No podrás iniciar sesión hasta confirmar tu cuenta.',
       checkSpam: 'Si no lo ves en unos minutos, revisa la carpeta de spam o de correo no deseado.',

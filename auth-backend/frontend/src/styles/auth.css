@@ -209,7 +209,7 @@
 }
 
 /* The notice that replaces the sign-up form once it is sent (#1090). */
-.register-sent-title:focus {
+.register-sent:focus {
   outline: none;
 }
 

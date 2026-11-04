@@ -73,6 +73,7 @@ const enUS = {
     signInLink: 'Sign in',
     sent: {
       title: 'Check your email',
+      subtitle: 'One more step to activate your account',
       sentTo: 'Your account is created. We sent a message to confirm it to:',
       openLink: 'Open that message and follow its link. You cannot sign in until your account is confirmed.',
       checkSpam: 'If you do not see it within a few minutes, check your spam or junk folder.',

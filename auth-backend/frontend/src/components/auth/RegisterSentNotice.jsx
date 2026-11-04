@@ -6,22 +6,27 @@ import { useI18n } from '../../app/i18n-context';
 // What a person sees right after signing up (#1090). It replaces the form, so
 // the next step cannot be missed: the address the confirmation message went
 // to, where to look for it, and what to do when the address is wrong or the
-// message does not arrive. Nothing redirects away from it.
+// message does not arrive. Nothing redirects away from it. The page heading
+// says "Revisa tu correo" meanwhile (RegisterPage), so the notice has none.
 function RegisterSentNotice({ email, onCorrectEmail }) {
   const { t } = useI18n();
-  const headingRef = useRef(null);
+  const noticeRef = useRef(null);
 
   useEffect(() => {
-    headingRef.current?.focus({ preventScroll: true });
-    headingRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    noticeRef.current?.focus({ preventScroll: true });
+    // Back to the top, where the page heading now says "Revisa tu correo".
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
   return (
-    <section className="register-sent" role="status" aria-labelledby="register-sent-title">
-      <h2 id="register-sent-title" className="register-sent-title h4" ref={headingRef} tabIndex="-1">
-        {t('register.sent.title')}
-      </h2>
-
+    <section
+      id="register-sent"
+      className="register-sent"
+      role="status"
+      aria-label={t('register.sent.title')}
+      ref={noticeRef}
+      tabIndex="-1"
+    >
       <p className="mb-1">{t('register.sent.sentTo')}</p>
       <p className="register-sent-email">{email}</p>
 

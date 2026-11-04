@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import PropTypes from 'prop-types';
 import { Link } from 'react-router-dom';
 import PasswordField from './PasswordField';
 import PasswordRules from './PasswordRules';
@@ -13,7 +14,7 @@ import { emptyRegisterDraft, useRegisterDraft } from '../../app/register-draft-c
 import { usePasswordPolicy } from '../../hooks/usePasswordPolicy';
 import { checkPassword } from '../../utils/passwordPolicy';
 
-function RegisterForm() {
+function RegisterForm({ onSentChange = () => {} }) {
   const { locale, t } = useI18n();
   const { draft, updateDraft, clearDraft } = useRegisterDraft();
 
@@ -139,6 +140,7 @@ function RegisterForm() {
         gender:    draft.gender
       });
       setSentEmail(draft.email.trim());
+      onSentChange(true);
       clearDraft();
     } catch (error) {
       const responseData = error?.response?.data || {};
@@ -163,6 +165,7 @@ function RegisterForm() {
     updateDraft(() => ({ ...emptyRegisterDraft, ...lastSubmission }));
     setErrors({});
     setSentEmail('');
+    onSentChange(false);
     window.requestAnimationFrame(() => document.getElementById('email')?.focus());
   }
 
@@ -332,5 +335,10 @@ function RegisterForm() {
     </form>
   );
 }
+
+RegisterForm.propTypes = {
+  // Told when the form is replaced by the "check your email" notice, and back.
+  onSentChange: PropTypes.func
+};
 
 export default RegisterForm;
