@@ -21,8 +21,11 @@ function TeacherRouter($routeProvider) {
         .when('/designs/:id/edit', {
             templateUrl: 'static/views/teacher/design.edit.html',
         })              
+        // The Activities page keeps its state when its tab changes in the
+        // URL (`?tab=finished`, #1050): a search change is a route update.
         .when('/activities', {
-            templateUrl: 'static/views/teacher/activity.index.html',
+            templateUrl:    'static/views/teacher/activity.index.html',
+            reloadOnSearch: false,
         })
         // The launch wizard keeps its state when its step changes in the
         // URL (`?step=2`, #971): a search change is a route update, not a

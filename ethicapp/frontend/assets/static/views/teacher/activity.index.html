@@ -1,71 +1,68 @@
-<div class="container" ng-controller="ActivityController as ac">
-    <div class="row">
-        <div class="col-md-12">
-            <h2><i class="fa-solid fa-drum"></i> {{'activities' | translate}}</h2>
-            <button type="button" class="btn btn-default btn-sm mb-2" ng-click="ac.goBack()">
-                <i class="fa fa-arrow-left" aria-hidden="true"></i> {{ 'go_back' | translate }}
-            </button>
-            <br>
-            <button class="btn btn-primary" ng-click="navigateTo('/activities/new')"
-                style="margin-bottom: 2rem; margin-top: 1rem;">
-                <i class="fa fa-rocket" aria-hidden="true"></i> {{'launch_activity' | translate}}
-            </button>
-            <div class="teacher-index-search">
-                <div class="search-field-wrapper">
-                    <input class="form-control search-input search-decorated-input" type="text"
-                        placeholder="{{'search_activities_placeholder' | translate}}" ng-model="ac.userSearch" ng-change="ac.setPage(1)">
-                    <i class="fa-solid fa-magnifying-glass search-field-icon" aria-hidden="true"></i>
-                </div>
-            </div>
+<!-- The Activities page (#1050, epic #1046). It shares the Cases page's
+     classes for the head, the tabs, the table, the row menu and the footer;
+     `activities-*` classes style what only activities have. -->
+<div class="cases-page activities-page" ng-controller="ActivitiesPageController as ap">
+    <header class="cases-page-head">
+        <div class="cases-page-intro">
+            <h2 class="cases-page-title">
+                <i class="fa-solid fa-drum" aria-hidden="true"></i> {{ 'activities_page_title' | translate }}
+            </h2>
+            <p class="cases-page-role">
+                {{ 'activities_page_role' | translate }}
+                <a href="#!/designs" class="cases-page-design-link activities-page-design-link">{{ 'activities_page_design_link' | translate }}&nbsp;<span aria-hidden="true">&rarr;</span></a>
+            </p>
         </div>
-    </div>
-    <div class="row">
-        <div class="col-md-12 teacher-index-tabs">
-            <ul class="nav nav-tabs">
-                <li ng-class="{'active': ac.dsgnMode === 0}">
-                    <a href="" ng-click="ac.setActivityMode(0)">{{'currentTab' | translate}}</a>
-                </li>
-                <li ng-class="{'active': ac.dsgnMode === 1}">
-                    <a href="" ng-click="ac.setActivityMode(1)">{{'finishedTab' | translate}}</a>
-                </li>
-                <li ng-class="{'active': ac.dsgnMode === 2}">
-                    <a href="" ng-click="ac.setActivityMode(2)">{{'archived' | translate}}</a>
-                </li>
-            </ul>
+        <div class="cases-page-actions">
+            <a href="#!/activities/new" class="btn btn-primary activities-launch">
+                <i class="fa fa-rocket" aria-hidden="true"></i> {{ 'activities_launch' | translate }}
+            </a>
         </div>
-    </div>
-    <div class="row teacher-index-content">
-        <div class="col-md-12">
-            <activity-description on-view="ac.handleView" ng-if="ac.dsgnMode === 0" ng-repeat="act in ac.getPaginatedActivities() track by act.sessionId" activity="act"></activity-description>
-            <activity-description on-view="ac.handleView" on-archive="ac.handleArchive" ng-if="ac.dsgnMode === 1" ng-repeat="act in ac.getPaginatedActivities() track by act.sessionId" activity="act"></activity-description>
-            <activity-description on-view="ac.handleView" on-unarchive="ac.handleUnarchive" ng-if="ac.dsgnMode === 2" ng-repeat="act in ac.getPaginatedActivities() track by act.sessionId" activity="act"></activity-description>
+    </header>
 
-            <div class="resource-pagination-controls" ng-if="ac.getTotalPages() > 1">
-                <button class="btn btn-default btn-sm" ng-click="ac.previousPage()" ng-disabled="ac.currentPage === 1">
-                    <i class="fa fa-chevron-left" aria-hidden="true"></i> {{ 'pagination_previous' | translate }}
-                </button>
-                <span class="resource-pagination-status">
-                    {{ 'pagination_page' | translate }} {{ ac.currentPage }} / {{ ac.getTotalPages() }}
-                </span>
-                <button class="btn btn-default btn-sm" ng-click="ac.nextPage()" ng-disabled="ac.currentPage === ac.getTotalPages()">
-                    {{ 'pagination_next' | translate }} <i class="fa fa-chevron-right" aria-hidden="true"></i>
-                </button>
-            </div>
+    <!-- The tabs are links: the tab lives in the URL (`?tab=`), so a reload and
+         the browser's Back keep it. -->
+    <nav class="cases-page-tabs" aria-label="{{ 'activities_tabs_label' | translate }}">
+        <ul class="nav nav-tabs">
+            <li class="activities-tab activities-tab-ongoing" ng-class="{ 'active': ap.tab === 'ongoing' }">
+                <a href="#!/activities" ng-attr-aria-current="{{ ap.tab === 'ongoing' ? 'page' : undefined }}">
+                    {{ 'activities_tab_ongoing' | translate }} <span class="cases-tab-count" ng-if="ap.loaded">{{ ap.count('ongoing') }}</span>
+                </a>
+            </li>
+            <li class="activities-tab activities-tab-finished" ng-class="{ 'active': ap.tab === 'finished' }">
+                <a href="#!/activities?tab=finished" ng-attr-aria-current="{{ ap.tab === 'finished' ? 'page' : undefined }}">
+                    {{ 'activities_tab_finished' | translate }} <span class="cases-tab-count" ng-if="ap.loaded">{{ ap.count('finished') }}</span>
+                </a>
+            </li>
+            <li class="activities-tab activities-tab-archived" ng-class="{ 'active': ap.tab === 'archived' }">
+                <a href="#!/activities?tab=archived" ng-attr-aria-current="{{ ap.tab === 'archived' ? 'page' : undefined }}">
+                    {{ 'activities_tab_archived' | translate }} <span class="cases-tab-count" ng-if="ap.loaded">{{ ap.count('archived') }}</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
 
-            <div class="alert alert-info" ng-if="ac.dsgnMode === 0 && ac.getFilteredActivities().length === 0">
-                <span>{{'empty_ongoing_activities_message' | translate}}</span>
-                <a href="" ng-click="navigateTo('/designs/new')">{{'empty_activities_create_design_link' | translate}}</a>.
-                <span>{{'empty_activities_then_launch_message' | translate}}</span>
-                <a href="" ng-click="navigateTo('/activities/new')">{{'empty_activities_launch_link' | translate}}</a>.
-            </div>
+    <div ng-include="'/assets/static/views/teacher/fragments/activities-action-notice.template.html'"></div>
 
-            <div class="alert alert-info" ng-if="ac.dsgnMode === 1 && ac.getFilteredActivities().length === 0">
-                <span>{{'empty_finished_activities_message' | translate}}</span>
-            </div>
+    <p class="text-muted" ng-if="!ap.loaded">{{ 'loading' | translate }}</p>
 
-            <div class="alert alert-info" ng-if="ac.dsgnMode === 2 && ac.getFilteredActivities().length === 0">
-                <span>{{'empty_archived_activities_message' | translate}}</span>
-            </div>
+    <div ng-if="ap.loaded">
+        <!-- The filter bar (#1051) and the order, above a tab with activities. -->
+        <div class="cases-table-tools activities-table-tools" ng-if="ap.count(ap.tab) > 0">
+            <div class="activities-filters-slot"
+                ng-include="'/assets/static/views/teacher/fragments/activities-filters.template.html'"></div>
+            <p class="cases-table-order">{{ 'activities_order_newest' | translate }}</p>
         </div>
+
+        <!-- One fragment per tab, so each tab's changes stay in its own file.
+             A teacher with no activities sees the empty page (#1053) instead
+             of "En curso". -->
+        <div ng-if="ap.tab === 'ongoing' && ap.hasNoActivities()"
+            ng-include="'/assets/static/views/teacher/fragments/activities-empty-page.template.html'"></div>
+        <div ng-if="ap.tab === 'ongoing' && !ap.hasNoActivities()"
+            ng-include="'/assets/static/views/teacher/fragments/activities-ongoing-tab.template.html'"></div>
+        <div ng-if="ap.tab === 'finished'"
+            ng-include="'/assets/static/views/teacher/fragments/activities-finished-tab.template.html'"></div>
+        <div ng-if="ap.tab === 'archived'"
+            ng-include="'/assets/static/views/teacher/fragments/activities-archived-tab.template.html'"></div>
     </div>
 </div>

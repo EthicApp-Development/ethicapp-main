@@ -1,0 +1,23 @@
+<!-- The "⋯" menu of an activity's row (#1050). Its entries come from
+     `helpers/activities-table.js`, by tab; an entry the activity cannot use
+     is disabled with its reason. -->
+<div class="btn-group cases-row-menu" uib-dropdown keyboard-nav>
+    <button type="button" class="btn btn-default btn-sm cases-row-menu-toggle" uib-dropdown-toggle
+        ng-disabled="ap.busy[row.id]"
+        aria-label="{{ 'activities_more_actions' | translate }}: {{ row.titleText }}">
+        <i class="fa-solid fa-ellipsis" aria-hidden="true"></i>
+    </button>
+    <ul class="dropdown-menu dropdown-menu-right cases-menu" uib-dropdown-menu role="menu">
+        <li role="none" ng-repeat="entry in row.menu track by entry.id"
+            data-action="{{ entry.id }}"
+            ng-class="{ 'disabled': entry.disabled }">
+            <a href="" role="menuitem" class="cases-menu-link"
+                ng-attr-aria-disabled="{{ entry.disabled ? 'true' : undefined }}"
+                ng-click="ap.runAction(row, entry)">
+                <i ng-class="entry.icon" aria-hidden="true"></i>
+                <span class="cases-menu-label">{{ entry.key | translate }}</span>
+                <span class="cases-menu-reason" ng-if="entry.reason">{{ entry.reason.key | translate }}</span>
+            </a>
+        </li>
+    </ul>
+</div>
