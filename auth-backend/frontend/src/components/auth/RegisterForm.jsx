@@ -249,6 +249,7 @@ function RegisterForm() {
         error={errors.email}
         autoComplete="email"
         required
+        helpText={t('register.emailHelpText')}
       />
 
       <SelectField

@@ -11,8 +11,11 @@ function TextField({
   placeholder = '',
   autoComplete = 'off',
   autoFocus = false,
-  required = false
+  required = false,
+  helpText = ''
 }) {
+  const helpTextId = helpText ? `${id}-help` : undefined;
+
   return (
     <div className="mb-3">
       <label htmlFor={id} className="form-label">
@@ -30,9 +33,11 @@ function TextField({
         autoComplete={autoComplete}
         autoFocus={autoFocus}
         required={required}
+        aria-describedby={helpTextId}
       />
 
       {error ? <div className="invalid-feedback">{error}</div> : null}
+      {helpText ? <div id={helpTextId} className="auth-form-text mt-2">{helpText}</div> : null}
     </div>
   );
 }
@@ -48,7 +53,8 @@ TextField.propTypes = {
   placeholder: PropTypes.string,
   autoComplete: PropTypes.string,
   autoFocus: PropTypes.bool,
-  required: PropTypes.bool
+  required: PropTypes.bool,
+  helpText: PropTypes.string
 };
 
 export default TextField;

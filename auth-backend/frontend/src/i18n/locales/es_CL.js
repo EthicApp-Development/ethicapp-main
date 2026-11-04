@@ -53,6 +53,7 @@ const esCL = {
       male: 'Masculino',
       other: 'Otro'
     },
+    emailHelpText: 'Revisa que tu correo esté bien escrito: te enviaremos de inmediato un mensaje para confirmar tu cuenta.',
     passwordRules: {
       helpText: 'Mínimo {{minLength}} caracteres y al menos {{minSymbols}} símbolos.',
       minLength: 'Mínimo {{minLength}} caracteres',

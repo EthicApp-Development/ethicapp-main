@@ -53,6 +53,7 @@ const enUS = {
       male: 'Male',
       other: 'Other'
     },
+    emailHelpText: 'Check that your email address is spelled correctly: we will send you a confirmation message right away.',
     passwordRules: {
       helpText: 'Minimum {{minLength}} characters and at least {{minSymbols}} symbols.',
       minLength: 'Minimum {{minLength}} characters',
