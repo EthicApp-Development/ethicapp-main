@@ -11,7 +11,9 @@ import { TEACHER_ACTIVITIES_SQL } from "../../../helpers/teacher-activity-list.j
 import { installFakePgPool, requestRouter } from "../../__tests__/fake-pg-pool.mjs";
 
 const TEACHER = Object.freeze({ uid: 5, role: "P" });
-const DESIGN = Object.freeze({ phases: [{}, {}] });
+// A row as PostgreSQL would answer it if the statement still selected the
+// design document: the route must not pass it on (#1055).
+const DESIGN = Object.freeze({ metainfo: { title: "Privacy" }, phases: [{}, {}] });
 
 const BASE_ROW = Object.freeze({
     creator:            5,
@@ -19,6 +21,7 @@ const BASE_ROW = Object.freeze({
     design:             DESIGN,
     type:               "T",
     designId:           7,
+    designTitle:        "Privacy",
     currentPhaseNumber: null,
     currentPhaseMode:   null,
     phaseCount:         2,
@@ -99,10 +102,10 @@ describe("GET /activities (#1049)", () => {
             time:              "2026-11-03T09:00:00.000Z",
             code:              "DEF456",
             archived:          false,
-            design:            DESIGN,
             status:            1,
             type:              "T",
             designId:          7,
+            designTitle:       "Privacy",
             currentPhase:      null,
             phaseCount:        2,
             participantCount:  0,
@@ -116,6 +119,15 @@ describe("GET /activities (#1049)", () => {
         assert.equal(body.activities[1].finishedAt, "2026-11-02T19:00:00.000Z");
         assert.equal(body.activities[1].participantCount, 18);
         assert.equal(body.activities[1].aiServicesEnabled, true);
+    });
+
+    it("does not return the design documents (#1055)", async () => {
+        const { body } = await getActivities();
+
+        for (const activity of body.activities) {
+            assert.equal(Object.hasOwn(activity, "design"), false);
+        }
+        assert.doesNotMatch(JSON.stringify(body), /"phases"/u);
     });
 
     it("answers an empty list for a teacher with no activities", async () => {

@@ -8,16 +8,11 @@ import {
     TEACHER_ACTIVITIES_SQL,
     activityCaseOf,
     currentPhaseOf,
+    designTitleOf,
     teacherActivityListItem,
 } from "../teacher-activity-list.js";
 
 const flatSql = TEACHER_ACTIVITIES_SQL.replace(/\s+/gu, " ");
-
-const DESIGN = Object.freeze({
-    type:     "semantic_differential",
-    metainfo: { title: "Privacy" },
-    phases:   [{ mode: "individual" }, { mode: "team" }, { mode: "individual" }],
-});
 
 function row(overrides = {}) {
     return {
@@ -29,10 +24,10 @@ function row(overrides = {}) {
         time:                "2026-11-02T18:01:00.000Z",
         code:                "ABC123",
         archived:            false,
-        design:              DESIGN,
         status:              2,
         type:                "T",
         designId:            7,
+        designTitle:         "Privacy in health apps",
         ai_services_enabled: true,
         finishedAt:          null,
         currentPhaseNumber:  2,
@@ -51,7 +46,7 @@ describe("TEACHER_ACTIVITIES_SQL (#1049)", () => {
             /WHERE sessions\.creator = \$1 ORDER BY sessions\.time DESC, sessions\.id DESC;/u);
     });
 
-    it("keeps every field the list returned before", () => {
+    it("keeps every field the list returned before, but the design document", () => {
         for (const column of [
             "activity.id AS id",
             "activity.session AS \"sessionId\"",
@@ -61,7 +56,6 @@ describe("TEACHER_ACTIVITIES_SQL (#1049)", () => {
             "sessions.time",
             "sessions.code",
             "sessions.archived",
-            "designs.design",
             "sessions.status",
             "sessions.type",
             "designs.id AS \"designId\"",
@@ -102,7 +96,12 @@ describe("TEACHER_ACTIVITIES_SQL (#1049)", () => {
             "LEFT JOIN ethical_cases AS associated_case ON associated_case.id = designs.case_id"));
         assert.ok(flatSql.includes("associated_case.id AS \"caseId\""));
         assert.ok(flatSql.includes("associated_case.title AS \"caseTitle\""));
-        assert.ok(flatSql.includes("designs.design,"), "the design document is kept");
+    });
+
+    it("selects the design's title, and not its document (#1055)", () => {
+        assert.ok(flatSql.includes("designs.design -> 'metainfo' ->> 'title' AS \"designTitle\""));
+        assert.doesNotMatch(flatSql, /designs\.design\s*,/u, "no design document column");
+        assert.doesNotMatch(flatSql, /designs\.design AS/u, "no design document column");
     });
 
     it("uses only the teacher's id as a parameter", () => {
@@ -145,10 +144,10 @@ describe("teacherActivityListItem (#1049)", () => {
             time:              "2026-11-02T18:01:00.000Z",
             code:              "ABC123",
             archived:          false,
-            design:            DESIGN,
             status:            2,
             type:              "T",
             designId:          7,
+            designTitle:       "Privacy in health apps",
             currentPhase:      { number: 2, mode: "team" },
             phaseCount:        3,
             participantCount:  24,
@@ -214,16 +213,18 @@ describe("teacherActivityListItem (#1049)", () => {
         }
     });
 
-    it("gives a null case for a design without one, whatever its document says", () => {
-        // `designs.case_id` NULL, with a stale `caseId` in the design document.
-        const item = teacherActivityListItem(row({
-            caseId:    null,
-            caseTitle: null,
-            design:    { ...DESIGN, caseId: "1" },
-        }));
+    it("gives a null case for a design without one", () => {
+        const item = teacherActivityListItem(row({ caseId: null, caseTitle: null }));
         assert.equal(item.caseId, null);
         assert.equal(item.caseTitle, null);
-        assert.equal(item.design.caseId, "1", "the design document is returned as stored");
+    });
+
+    it("does not return the design document, even when the row carries one (#1055)", () => {
+        const item = teacherActivityListItem(row({
+            design: { metainfo: { title: "Privacy" }, phases: [{}, {}], caseId: "1" },
+        }));
+        assert.equal(Object.hasOwn(item, "design"), false);
+        assert.equal(item.designTitle, "Privacy in health apps");
     });
 
     it("leaves the row's internal columns out", () => {
@@ -231,6 +232,19 @@ describe("teacherActivityListItem (#1049)", () => {
 
         for (const key of ["ai_services_enabled", "currentPhaseNumber", "currentPhaseMode"]) {
             assert.equal(Object.hasOwn(item, key), false, key);
+        }
+    });
+});
+
+describe("designTitleOf (#1055)", () => {
+    it("gives the design's trimmed title", () => {
+        assert.equal(designTitleOf({ designTitle: "  Privacy  " }), "Privacy");
+    });
+
+    it("is null for a design without a title", () => {
+        for (const value of [{ designTitle: null }, { designTitle: "  " }, { designTitle: 7 }, {},
+            undefined]) {
+            assert.equal(designTitleOf(value), null, JSON.stringify(value));
         }
     });
 });
