@@ -64,14 +64,14 @@
 
     <div class="cases-table-footer" ng-if="ap.getRows('ongoing').length > 0">
         <span>
-            {{ 'activities_showing' | translate:{ shown: ap.getVisibleRows('ongoing').length, total: ap.getRows('ongoing').length } }}
+            {{ ap.getOngoingFooter().showingKey | translate:{ shown: ap.getVisibleRows('ongoing').length, total: ap.getRows('ongoing').length } }}
             <span ng-if="ap.hasMoreRows('ongoing')">&middot;
                 <button type="button" class="btn btn-link cases-show-more" ng-click="ap.showMore('ongoing')">
                     {{ 'activities_show_more' | translate }}
                 </button>
             </span>
         </span>
-        <span class="activities-tab-hint">{{ 'activities_hint_ongoing' | translate }}</span>
+        <span class="activities-tab-hint">{{ ap.getOngoingFooter().hintKey | translate }}</span>
     </div>
 
     <div class="alert alert-info" ng-if="ap.count('ongoing') === 0">

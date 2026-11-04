@@ -11,8 +11,11 @@
 // browser's time zone and the UI language.
 //
 // Each part of the page has its own fragment, so later changes stay apart:
-// - the filter bar (`activities-filters.template.html`), filled by #1051,
-//   which filters the rows in `vm.getRows`;
+// - the filter bar (`activities-filters.template.html`, #1051): a search in
+//   every tab and, in "En curso", the status chips, both in the URL
+//   (`?q=`, `?status=not-started|in-progress`, `helpers/activities-filters.js`)
+//   and applied in `vm.getRows`. Switching tabs clears them, as the tabs'
+//   links do and as on the Cases page;
 // - the notice region (`activities-action-notice.template.html`), filled by
 //   #1052, which adds the notices of `setArchived` and `vm.copyCode`;
 // - the page of a teacher with no activities
@@ -37,9 +40,23 @@ import {
     tableColumns,
 } from "../../helpers/activities-table.js";
 import { createActivityDateFormatter } from "../../helpers/activity-dates.js";
+import {
+    filterActivityRows,
+    noMatchesKeys,
+    ongoingFooterKeys,
+    queryFromSearch,
+    querySearchValue,
+    statusFilterChips,
+    statusFilterFromSearch,
+    statusFilterSearchValue,
+    tabHasStatusFilter,
+} from "../../helpers/activities-filters.js";
 
 // The page's own URL search keys, which are not carried to the next page.
-const PAGE_SEARCH_KEYS = ["tab"];
+const PAGE_SEARCH_KEYS = ["tab", "status", "q"];
+
+// The filters' URL search keys.
+const FILTER_SEARCH_KEYS = ["status", "q"];
 
 function initialVisibleCounts() {
     return Object.fromEntries(ACTIVITY_TABS.map(tab => [tab, ACTIVITIES_PAGE_SIZE]));
@@ -54,6 +71,9 @@ export function ActivitiesPageController($scope, $rootScope, $location, $transla
     vm.loaded = false;
     vm.tables = { ongoing: [], finished: [], archived: [] };
     vm.visibleCounts = initialVisibleCounts();
+    // The search of the current tab and the status filter of "En curso".
+    vm.statusFilter = statusFilterFromSearch($location.search());
+    vm.search = queryFromSearch($location.search());
     // Each tab's columns, built once so the headers' repeat stays stable.
     vm.columns = Object.fromEntries(ACTIVITY_TABS.map(tab => [tab, tableColumns(tab)]));
     // Session id → true while an action on it is pending, so a second click
@@ -95,24 +115,28 @@ export function ActivitiesPageController($scope, $rootScope, $location, $transla
         return vm.loaded && ACTIVITY_TABS.every(tab => vm.count(tab) === 0);
     };
 
-    // A tab adds a history entry, as the tabs' links do.
+    // A tab adds a history entry and clears the filters, as the tabs' links
+    // do.
     vm.selectTab = function(tab) {
         if (tab === vm.tab || !ACTIVITY_TABS.includes(tab)) {
             return;
         }
         vm.tab = tab;
         $location.search("tab", tabSearchValue(tab));
+        vm.clearFilters();
     };
 
     vm.$onRouteUpdate = function() {
         vm.tab = tabFromSearch($location.search());
+        vm.syncFiltersFromUrl();
     };
 
     // "Show more"
 
-    // A tab's rows, newest first. The filters (#1051) apply here.
+    // A tab's rows, newest first, that pass the search and, in "En curso",
+    // the status filter.
     vm.getRows = function(tab) {
-        return vm.tables[tab] || [];
+        return filtered(tab).rows;
     };
 
     vm.getVisibleRows = function(tab) {
@@ -125,6 +149,97 @@ export function ActivitiesPageController($scope, $rootScope, $location, $transla
 
     vm.showMore = function(tab) {
         vm.visibleCounts[tab] += ACTIVITIES_PAGE_SIZE;
+    };
+
+    // Filters
+
+    // Each tab's filtered rows, computed again only when its table, the
+    // filter or the search change, not on every digest.
+    const filterCache = {};
+    function filtered(tab) {
+        const rows = vm.tables[tab] || [];
+        const cached = filterCache[tab];
+        if (cached && cached.source === rows && cached.status === vm.statusFilter
+            && cached.query === vm.search) {
+            return cached;
+        }
+        filterCache[tab] = {
+            source: rows,
+            status: vm.statusFilter,
+            query:  vm.search,
+            rows:   filterActivityRows(rows, tab, { status: vm.statusFilter, query: vm.search }),
+            chips:  tabHasStatusFilter(tab) ? statusFilterChips(rows, vm.statusFilter) : [],
+        };
+        return filterCache[tab];
+    }
+
+    function resetVisibleRows() {
+        vm.visibleCounts = initialVisibleCounts();
+    }
+
+    // The status chips of a tab: "En curso" only.
+    vm.getFilterChips = function(tab) {
+        return filtered(tab).chips;
+    };
+
+    vm.hasStatusFilter = tabHasStatusFilter;
+
+    // The footer's keys of "En curso", by status filter (frame C).
+    vm.getOngoingFooter = function() {
+        return ongoingFooterKeys(vm.statusFilter);
+    };
+
+    vm.getNoMatches = noMatchesKeys;
+
+    // The search or the filter leaves a tab with activities empty.
+    vm.hasNoMatches = function(tab) {
+        return vm.count(tab) > 0 && vm.getRows(tab).length === 0;
+    };
+
+    // A chip adds a history entry, as a tab does, so Back returns to the
+    // previous filter.
+    vm.selectStatusFilter = function(filter) {
+        if (filter === vm.statusFilter) {
+            return;
+        }
+        vm.statusFilter = filter;
+        resetVisibleRows();
+        $location.search("status", statusFilterSearchValue(filter));
+    };
+
+    // Typing replaces the history entry instead of adding one per word.
+    vm.handleSearchChange = function() {
+        resetVisibleRows();
+        $location.search("q", querySearchValue(vm.search)).replace();
+    };
+
+    // The filter back to "Todas" and no search, and out of the URL.
+    vm.clearFilters = function() {
+        vm.statusFilter = statusFilterFromSearch({});
+        vm.search = "";
+        resetVisibleRows();
+        const search = $location.search();
+        for (const key of FILTER_SEARCH_KEYS) {
+            if (search[key] !== undefined) {
+                $location.search(key, null);
+            }
+        }
+    };
+
+    vm.syncFiltersFromUrl = function() {
+        const search = $location.search();
+        const status = statusFilterFromSearch(search);
+        const query = queryFromSearch(search);
+        if (status !== vm.statusFilter) {
+            vm.statusFilter = status;
+            resetVisibleRows();
+        }
+        // The field keeps what is being typed (a trailing space) while it
+        // matches the URL's search.
+        if (query !== (querySearchValue(vm.search) ?? "")) {
+            vm.search = query;
+            resetVisibleRows();
+        }
     };
 
     // Row actions. Each one leaves the page or stays on its tab.

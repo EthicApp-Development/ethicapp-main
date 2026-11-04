@@ -53,6 +53,12 @@
             <p class="cases-table-order">{{ 'activities_order_newest' | translate }}</p>
         </div>
 
+        <!-- The search or the filter left the tab empty (#1051). -->
+        <div class="cases-no-matches activities-no-matches" role="status" ng-if="ap.hasNoMatches(ap.tab)">
+            <span>{{ ap.getNoMatches(ap.tab).messageKey | translate }}</span>
+            <button type="button" class="btn btn-default btn-sm cases-clear-filters" ng-click="ap.clearFilters()">{{ ap.getNoMatches(ap.tab).clearKey | translate }}</button>
+        </div>
+
         <!-- One fragment per tab, so each tab's changes stay in its own file.
              A teacher with no activities sees the empty page (#1053) instead
              of "En curso". -->
