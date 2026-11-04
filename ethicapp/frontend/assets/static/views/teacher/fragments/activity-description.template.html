@@ -6,27 +6,20 @@
     <div class="row">
       <div class="col-sm-12">
         <p ng-if="$ctrl.showStatusAndCode"><b><i class="fa-solid fa-chart-gantt"></i> {{ 'current_status_colon' | translate }}</b> <span ng-class="['finished', 'initiated'].includes($ctrl.getReadableStatus($ctrl.activity.status)) ? 'text' : 'text-success'">{{ $ctrl.getReadableStatus($ctrl.activity.status) | translate }}</span></p>
-        <p><b><i class="fa-solid fa-paint-brush" aria-hidden="true"></i> {{ 'design_used_colon' | translate }}</b> <a ng-href="#!/designs/{{$ctrl.activity.designId}}" ng-if="$ctrl.enableLink">{{ $ctrl.activity.design.metainfo.title }}</a><span ng-if="!$ctrl.enableLink">{{ $ctrl.activity.design.metainfo.title }}</span><span class="small"> ({{$ctrl.activity.type === "R" ? ('ranking_activity' | translate) : ('semantic_differential' | translate)}})</span></p>
-        <p ng-if="$ctrl.getAssociatedCase()"><b><i class="fa-solid fa-book" aria-hidden="true"></i> {{ 'design_associated_case_label' | translate }}:</b> <a ng-href="#!/cases/{{$ctrl.getAssociatedCase().id}}">{{$ctrl.formatCaseLabel($ctrl.getAssociatedCase())}}</a></p>
+        <!-- The design's title from the activity's own fields, with no design
+             type: designs are not told apart by type (#964, #1055). -->
+        <p ng-if="$ctrl.designTitle"><b><i class="fa-solid fa-paint-brush" aria-hidden="true"></i> {{ 'design_used_colon' | translate }}</b> <a ng-href="#!/designs/{{$ctrl.activity.designId}}" ng-if="$ctrl.enableLink && $ctrl.activity.designId">{{ $ctrl.designTitle }}</a><span ng-if="!$ctrl.enableLink || !$ctrl.activity.designId">{{ $ctrl.designTitle }}</span></p>
+        <p ng-if="$ctrl.caseItem"><b><i class="fa-solid fa-book" aria-hidden="true"></i> {{ 'design_associated_case_label' | translate }}:</b> <a ng-href="#!/cases/{{$ctrl.caseItem.id}}">{{ $ctrl.formatCaseLabel($ctrl.caseItem) }}</a></p>
         <p ng-if="$ctrl.showStatusAndCode"><b><i class="fa-solid fa-key" aria-hidden="true"></i> {{ 'access_code_colon' | translate }}</b> <span copy-to-clipboard class="fixed-width-font white-against-black-bg bold-text black-bg-rounded-corners copy-to-clipboard-parent">{{ $ctrl.activity.code }}</span></p>
-        <p><b><i class="fa-solid fa-calendar-alt" aria-hidden="true"></i> {{ 'launch_date_colon' | translate }}</b> {{ $ctrl.activity.time | date:'dd-MM-yyyy HH:mm' }} (UTC)</p>
+        <!-- In the browser's time zone and the UI language (#1055). -->
+        <p><b><i class="fa-solid fa-calendar-alt" aria-hidden="true"></i> {{ 'launch_date_colon' | translate }}</b> <time class="activity-item-launch-date" datetime="{{ $ctrl.activity.time }}" title="{{ $ctrl.launchDate.full }}">{{ $ctrl.launchDate.label.key ? ($ctrl.launchDate.label.key | translate:$ctrl.launchDate.label.params) : $ctrl.launchDate.label.text }}</time></p>
       </div>
     </div>
   </div>
-  <div class="panel-footer teacher-card-actions-footer activity-item-actions"
-       ng-if="$ctrl.isFunction($ctrl.onArchive) || $ctrl.isFunction($ctrl.onSelect) || $ctrl.isFunction($ctrl.onView) || $ctrl.isFunction($ctrl.onUnarchive)">
+  <div class="panel-footer teacher-card-actions-footer activity-item-actions" ng-if="$ctrl.isFunction($ctrl.onView)">
     <div class="teacher-card-action-buttons">
-      <button ng-show="$ctrl.isFunction($ctrl.onArchive)" class="btn btn-default btn-sm" ng-click="$ctrl.onArchive($ctrl.activity)">
-        <i class="fa-solid fa-inbox"></i> {{ 'archive_button_text' | translate }}
-      </button>
-      <button ng-show="$ctrl.isFunction($ctrl.onSelect)" class="btn btn-default btn-sm" ng-click="$ctrl.onSelect($ctrl.activity)">
-        <i class="fa-regular fa-hand-pointer"></i> {{ 'select_button_text' | translate }}
-      </button>
-      <button ng-show="$ctrl.isFunction($ctrl.onView)" class="btn btn-default btn-sm" ng-click="$ctrl.onView($ctrl.activity)">
-        <i class="fa fa-eye"></i> {{ 'view' | translate }}
-      </button>
-      <button ng-show="$ctrl.isFunction($ctrl.onUnarchive)" class="btn btn-default btn-sm" ng-click="$ctrl.onUnarchive($ctrl.activity)">
-        <i class="fa-regular fa-star"></i> {{ 'unarchive_button_text' | translate }}
+      <button type="button" class="btn btn-default btn-sm" ng-click="$ctrl.onView($ctrl.activity)">
+        <i class="fa fa-eye" aria-hidden="true"></i> {{ 'view' | translate }}
       </button>
     </div>
   </div>

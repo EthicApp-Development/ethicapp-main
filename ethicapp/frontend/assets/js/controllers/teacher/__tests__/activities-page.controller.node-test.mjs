@@ -21,7 +21,7 @@ function activity(sessionId, fields = {}) {
         archived:         false,
         status:           "in_progress",
         designId:         40 + sessionId,
-        design:           { metainfo: { title: `Activity ${sessionId}` } },
+        designTitle:      `Activity ${sessionId}`,
         caseId:           7,
         caseTitle:        "Case",
         currentPhase:     { number: 1, mode: "individual" },

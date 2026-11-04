@@ -42,7 +42,7 @@ function activity(sessionId, fields = {}) {
         archived:         false,
         status:           "in_progress",
         designId:         40 + sessionId,
-        design:           { metainfo: { title: `Activity ${sessionId}` } },
+        designTitle:      `Activity ${sessionId}`,
         caseId:           null,
         caseTitle:        null,
         currentPhase:     { number: 1, mode: "individual" },
@@ -58,7 +58,7 @@ function makeTables() {
         activity(1, {
             name:        "Privacidad en apps de salud",
             description: "Ética Profesional · Sección 3",
-            design:      { metainfo: { title: "Datos de pacientes" } },
+            designTitle: "Datos de pacientes",
             caseId:      7,
             caseTitle:   "El caso Núñez",
             code:        "QX7RT",

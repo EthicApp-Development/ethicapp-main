@@ -129,17 +129,12 @@ let ActivityCatalogService = ($http) => {
                     data: {}
                 });
                 
-                // Assign activities or an empty array if response is not as expected
-                service.activities = Array.isArray(response.data.activities) ? 
+                // Assign activities or an empty array if response is not as
+                // expected. Each activity carries its design's id and title
+                // (`designId`, `designTitle`), not the design document (#1055).
+                service.activities = Array.isArray(response.data.activities) ?
                     response.data.activities : [];
-                
-                // Map titles from design metadata if present
-                service.activities.forEach(activity => {
-                    if (activity.design?.metainfo?.title) {
-                        activity.title = activity.design.metainfo.title;
-                    }
-                });
-                
+
                 service.notifyListeners("onActivityCatalogUpdated", { 
                     response: null });
 

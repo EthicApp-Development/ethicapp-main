@@ -77,12 +77,12 @@
     </div>
 
     <div class="row">
-        <div class="col-md-12" ng-controller="ActivityController as ac">
+        <div class="col-md-12" ng-controller="RecentActivitiesController as ra">
             <div class="panel panel-default">
                 <div class="panel-heading">
                     {{ 'recent_activities_title_text'| translate }}
                 </div>
-                <div class="panel-body" ng-show="ac.activities.ongoing.length === 0 && ac.activities.finished.length === 0">
+                <div class="panel-body" ng-show="ra.isEmpty()">
                     <p>{{ 'no_recent_activities_text' | translate }}</p>
                     <button class="btn btn-default btn-sm" ng-click="navigateTo('/cases/new')">
                         <i class="fa fa-book" aria-hidden="true"></i> {{'ethical_cases_create' | translate}}
@@ -100,9 +100,9 @@
                         <i class="fa-brands fa-space-awesome" aria-hidden="true"></i> {{'launch_activity' | translate}}
                     </button>
                 </div>
-                <div class="panel-body" ng-show="ac.activities.ongoing.length > 0 || ac.activities.finished.length > 0">
-                    <activity-description on-view="ac.handleView" ng-repeat="act in ac.activities.ongoing | limitTo: 3" activity="act"></activity-description>
-                    <activity-description on-view="ac.handleView" ng-repeat="act in ac.activities.finished | limitTo: 3" activity="act"></activity-description>
+                <div class="panel-body" ng-show="!ra.isEmpty()">
+                    <activity-description on-view="ra.handleView" ng-repeat="act in ra.activities.ongoing" activity="act"></activity-description>
+                    <activity-description on-view="ra.handleView" ng-repeat="act in ra.activities.finished" activity="act"></activity-description>
                 </div>
             </div>
         </div>

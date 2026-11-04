@@ -198,14 +198,15 @@ function rowsFor(sql, params = []) {
     }
     if (/sessions\.code,[\s\S]*FROM activity\s+INNER JOIN sessions/u.test(sql)) {
         return [{
-            id:        50,
-            sessionid: first,
-            creator:   sessions.get(first).creator,
-            name:      "Activity",
-            code:      JOIN_CODE,
-            status:    2,
-            designid:  DESIGN_ID,
-            design:    SD_DESIGN,
+            id:          50,
+            sessionid:   first,
+            creator:     sessions.get(first).creator,
+            name:        "Activity",
+            code:        JOIN_CODE,
+            status:      2,
+            designid:    DESIGN_ID,
+            designTitle: " Privacy ",
+            design:      SD_DESIGN,
         }];
     }
     if (/SELECT id, type, number\s+FROM stages\s+WHERE sesid = \$1/u.test(sql)) {
@@ -666,6 +667,7 @@ describe("GET /activities/:session_id/descriptor", () => {
         assert.equal(body.descriptor.sessionId, SESSION_ID);
         assert.equal(body.descriptor.code, JOIN_CODE);
         assert.deepEqual(body.descriptor.design, SD_DESIGN);
+        assert.equal(body.descriptor.designTitle, "Privacy", "the design's title, trimmed");
         assert.equal(body.descriptor.status, "in_progress");
         assert.deepEqual(body.descriptor.phases.map(({ id }) => id), [PHASE_ID]);
     });

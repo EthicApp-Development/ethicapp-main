@@ -147,9 +147,13 @@ export function activityCaseOf(activity) {
     return id !== null && title ? { id, title } : null;
 }
 
-/** The title of the design the activity was launched from, "" if unknown. */
+/**
+ * The title of the design the activity was launched from, "" if unknown:
+ * the row's `designTitle`, which GET /activities and the activity's
+ * descriptor give in place of the design document (#1055).
+ */
 export function activityDesignTitle(activity) {
-    return cleanText(activity?.design?.metainfo?.title);
+    return cleanText(activity?.designTitle);
 }
 
 /**

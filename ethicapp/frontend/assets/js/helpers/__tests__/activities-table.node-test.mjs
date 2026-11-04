@@ -7,6 +7,7 @@ import { describe, it } from "node:test";
 import {
     ACTIVITIES_PAGE_SIZE,
     activityCaseOf,
+    activityDesignTitle,
     activityMetaParts,
     buildActivityRow,
     buildActivityTables,
@@ -40,7 +41,7 @@ function activity(sessionId, fields = {}) {
         archived:          false,
         status:            "initiated",
         designId:          40 + sessionId,
-        design:            { metainfo: { title: "Privacidad en apps de salud" } },
+        designTitle:       "Privacidad en apps de salud",
         // The design's case, from `designs.case_id`.
         caseId:            CASE.id,
         caseTitle:         CASE.title,
@@ -146,7 +147,7 @@ describe("activities table, the Actividad column", () => {
         const stale = activity(1, {
             caseId:    null,
             caseTitle: null,
-            design:    { metainfo: NOT_STARTED.design.metainfo, caseId: "1" },
+            design:    { metainfo: { title: NOT_STARTED.designTitle }, caseId: "1" },
         });
         assert.equal(activityCaseOf(stale), null);
         assert.deepEqual(activityMetaParts(stale),
@@ -179,13 +180,26 @@ describe("activities table, the Actividad column", () => {
             caseId:    null,
             caseTitle: null,
             design:    {
-                metainfo:       NOT_STARTED.design.metainfo,
+                metainfo:       { title: NOT_STARTED.designTitle },
                 caseId:         9,
                 associatedCase: { id: 9, title: "Old case" },
             },
         });
         assert.equal(activityCaseOf(fromDocument), null);
         assert.equal(buildActivityRow(fromDocument, dates).caseId, null);
+    });
+
+    it("reads the design's title from the row, not from a design document (#1055)", () => {
+        assert.equal(activityDesignTitle(activity(1, { designTitle: "  Datos  de pacientes " })),
+            "Datos de pacientes");
+        const fromDocument = activity(1, {
+            name:        "Dilema del examen",
+            designTitle: null,
+            design:      { metainfo: { title: "Old title" } },
+        });
+        assert.equal(activityDesignTitle(fromDocument), "");
+        assert.deepEqual(activityMetaParts(fromDocument),
+            [{ key: "activities_meta_case", text: CASE.title }]);
     });
 
     it("links Ver caso to the row's case", () => {

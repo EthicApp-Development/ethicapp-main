@@ -8,7 +8,20 @@ import {
     DATE_TODAY_KEY,
     DATE_YESTERDAY_KEY,
     createActivityDateFormatter,
+    uiLanguageOf,
 } from "../activity-dates.js";
+
+describe("uiLanguageOf (#1055)", () => {
+    it("gives the language in use, else the one loading, else English", () => {
+        const loading = proposed => ({ use: () => undefined, proposedLanguage: () => proposed });
+        assert.equal(uiLanguageOf({ use: () => "es_CL", proposedLanguage: () => "en_US" }),
+            "es_CL");
+        assert.equal(uiLanguageOf(loading("es_CL")), "es_CL");
+        assert.equal(uiLanguageOf(loading(undefined)), "en_US");
+        assert.equal(uiLanguageOf({ use: () => undefined }), "en_US");
+        assert.equal(uiLanguageOf(null), "en_US");
+    });
+});
 
 // 2026-11-03 15:00 in Santiago (UTC-3 in November).
 const NOW = new Date("2026-11-03T18:00:00Z");

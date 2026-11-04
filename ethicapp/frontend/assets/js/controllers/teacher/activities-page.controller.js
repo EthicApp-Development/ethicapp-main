@@ -39,7 +39,7 @@ import {
     tabSearchValue,
     tableColumns,
 } from "../../helpers/activities-table.js";
-import { createActivityDateFormatter } from "../../helpers/activity-dates.js";
+import { createActivityDateFormatter, uiLanguageOf } from "../../helpers/activity-dates.js";
 import {
     filterActivityRows,
     noMatchesKeys,
@@ -93,19 +93,12 @@ export function ActivitiesPageController($scope, $rootScope, $location, $transla
     // does not repeat it.
     vm.busy = {};
 
-    function uiLanguage() {
-        return (typeof $translate?.use === "function" && $translate.use())
-            || (typeof $translate?.proposedLanguage === "function"
-                && $translate.proposedLanguage())
-            || "en_US";
-    }
-
     // Lists
 
     // The rows again from the catalog, with "today" taken now and the dates
     // in the current language.
     vm.refresh = function() {
-        const dates = createActivityDateFormatter({ uiLanguage: uiLanguage() });
+        const dates = createActivityDateFormatter({ uiLanguage: uiLanguageOf($translate) });
         vm.tables = buildActivityTables(ActivityCatalogService.getActivities(), dates);
     };
 

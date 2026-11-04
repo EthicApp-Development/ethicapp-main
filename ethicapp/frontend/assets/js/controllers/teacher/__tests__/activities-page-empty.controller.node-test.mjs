@@ -126,12 +126,12 @@ describe("activities page, a teacher with no activities", () => {
     it("does not ask for designs when the teacher has activities", async () => {
         const { vm, calls } = createPage({
             activities: [{
-                sessionId: 1,
-                time:      "2026-10-20T12:00:00Z",
-                code:      "k1",
-                archived:  true,
-                status:    "finished",
-                design:    { metainfo: { title: "A" } },
+                sessionId:   1,
+                time:        "2026-10-20T12:00:00Z",
+                code:        "k1",
+                archived:    true,
+                status:      "finished",
+                designTitle: "A",
             }],
         });
         await vm.ready;

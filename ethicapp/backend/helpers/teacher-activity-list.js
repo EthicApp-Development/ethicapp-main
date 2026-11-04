@@ -1,8 +1,12 @@
 // The teacher's list of activities, `GET /activities` (#1049, epic #1046):
-// each activity with its session and design, plus what the activities table
-// shows about it: the current phase and its mode, the number of phases in the
-// design, how many participants joined, whether its AI services are on, when
-// it ended, and the design's case (#1050).
+// each activity with its session, its design's id and title, plus what the
+// activities table shows about it: the current phase and its mode, the number
+// of phases in the design, how many participants joined, whether its AI
+// services are on, when it ended, and the design's case (#1050).
+//
+// The design document itself is not returned (#1055): the list reads only its
+// title and its phase count, both taken in the statement. A teacher with many
+// activities launched from long designs no longer downloads every document.
 //
 // One statement for the whole list, so a teacher with many activities still
 // makes one request and one query:
@@ -40,10 +44,10 @@ export const TEACHER_ACTIVITIES_SQL = `
         sessions.time,
         sessions.code,
         sessions.archived,
-        designs.design,
         sessions.status,
         sessions.type,
         designs.id AS "designId",
+        designs.design -> 'metainfo' ->> 'title' AS "designTitle",
         sessions.ai_services_enabled,
         sessions.finished_at AS "finishedAt",
         associated_case.id AS "caseId",
@@ -107,6 +111,16 @@ export function currentPhaseOf(row) {
 }
 
 /**
+ * The design's title of a row, trimmed, or null when the design has none.
+ * @param {{ designTitle?: unknown }} row
+ * @returns {string|null}
+ */
+export function designTitleOf(row) {
+    const title = typeof row?.designTitle === "string" ? row.designTitle.trim() : "";
+    return title === "" ? null : title;
+}
+
+/**
  * The design's case of a row: its id and title, both null when the design has
  * no case or either is missing.
  * @param {{ caseId?: unknown, caseTitle?: unknown }} row
@@ -123,8 +137,8 @@ export function activityCaseOf(row) {
 
 /**
  * One activity of `GET /activities`, from a row of TEACHER_ACTIVITIES_SQL.
- * Every field the list returned before #1049 is kept as it was; the design
- * document is trimmed later (#1055).
+ * Every field the list returned before #1049 is kept as it was, except the
+ * design document, replaced by `designTitle` (#1055).
  * @param {object} row
  * @returns {object}
  */
@@ -138,10 +152,10 @@ export function teacherActivityListItem(row) {
         time:              row.time,
         code:              row.code,
         archived:          row.archived,
-        design:            row.design,
         status:            row.status,
         type:              row.type,
         designId:          row.designId,
+        designTitle:       designTitleOf(row),
         currentPhase:      currentPhaseOf(row),
         phaseCount:        countOf(row.phaseCount),
         participantCount:  countOf(row.participantCount),

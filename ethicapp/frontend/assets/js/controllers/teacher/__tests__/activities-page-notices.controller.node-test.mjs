@@ -29,7 +29,7 @@ function activity(sessionId, fields = {}) {
         archived:         false,
         status:           "finished",
         designId:         40 + sessionId,
-        design:           { metainfo: { title: `Activity ${sessionId}` } },
+        designTitle:      `Activity ${sessionId}`,
         caseId:           null,
         caseTitle:        null,
         currentPhase:     null,

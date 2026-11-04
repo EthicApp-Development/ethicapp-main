@@ -1,8 +1,8 @@
 // When an activity was launched or ended, as the teacher's pages say it
 // (#1050, epic #1046): in the browser's time zone, relative while recent
 // ("hoy, 18:01", "ayer, 09:05") and as a short date after that ("12 oct"),
-// with the full date and time for the hover title. The activities table uses
-// it, and the activity card can use it too (#1055).
+// with the full date and time for the hover title. The activities table and
+// the activity card (`activity-description`, #1055) use it.
 //
 // A formatter is made once per list and language: building the Intl
 // formatters is the costly part. "Today" and "yesterday" are translation keys
@@ -63,6 +63,18 @@ function calendarDaysBetween(dayFormat, time, now) {
         return Date.UTC(parts.year, parts.month - 1, parts.day);
     };
     return Math.round((dayOf(now) - dayOf(time)) / DAY_MS);
+}
+
+/**
+ * The UI language angular-translate is using, or the one it is loading, else
+ * "en_US". `translate` is the `$translate` service, or anything with its
+ * `use()` and `proposedLanguage()`.
+ * @returns {string}
+ */
+export function uiLanguageOf(translate) {
+    return (typeof translate?.use === "function" && translate.use())
+        || (typeof translate?.proposedLanguage === "function" && translate.proposedLanguage())
+        || "en_US";
 }
 
 /**
