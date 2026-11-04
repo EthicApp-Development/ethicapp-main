@@ -5,7 +5,7 @@
   <div class="panel-body">
     <div class="row">
       <div class="col-sm-12">
-        <p ng-if="$ctrl.showStatusAndCode"><b><i class="fa-solid fa-chart-gantt"></i> {{ 'current_status_colon' | translate }}</b> <span ng-class="['finished', 'initiated'].includes($ctrl.getReadableStatus($ctrl.activity.status)) ? 'text' : 'text-success'">{{ $ctrl.getReadableStatus($ctrl.activity.status) | translate }}</span></p>
+        <p ng-if="$ctrl.showStatusAndCode"><b><i class="fa-solid fa-chart-gantt" aria-hidden="true"></i> {{ 'current_status_colon' | translate }}</b> <span class="activity-description-status" ng-class="{ 'text-success': $ctrl.status.id === 'in-progress' }">{{ $ctrl.status.key | translate:{ number: $ctrl.status.params.number, total: $ctrl.status.params.total, mode: ($ctrl.status.modeKey ? ($ctrl.status.modeKey | translate) : '') } }}</span></p>
         <!-- The design's title from the activity's own fields, with no design
              type: designs are not told apart by type (#964, #1055). -->
         <p ng-if="$ctrl.designTitle"><b><i class="fa-solid fa-paint-brush" aria-hidden="true"></i> {{ 'design_used_colon' | translate }}</b> <a ng-href="#!/designs/{{$ctrl.activity.designId}}" ng-if="$ctrl.enableLink && $ctrl.activity.designId">{{ $ctrl.designTitle }}</a><span ng-if="!$ctrl.enableLink || !$ctrl.activity.designId">{{ $ctrl.designTitle }}</span></p>
