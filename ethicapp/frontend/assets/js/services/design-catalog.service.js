@@ -4,6 +4,8 @@ let DesignCatalogService = ($rootScope, $http) => {
         hasLoadedDesigns: false,
         listeners: {}, // Subscribed listeners
 
+        // Resolves true when the designs were loaded, and false when the
+        // request failed: the designs loaded before, if any, are kept.
         async loadDesigns() {
             try {
                 const response = await $http.get("/designs");
@@ -12,13 +14,13 @@ let DesignCatalogService = ($rootScope, $http) => {
                 if (response.data.status === "ok" && Array.isArray(response.data.result)) {
                     service.designs = response.data.result; // Assign the fetched designs
                     service.hasLoadedDesigns = true;
-                } else {
-                    console.error("Error: Unexpected response format", response.data);
-                    // Optional: Handle unexpected response formats (e.g., show an error to the user)
+                    return true;
                 }
+                console.error("Unexpected /designs response format", response.data);
             } catch (error) {
                 console.error("Error loading designs:", error);
             }
+            return false;
         },
 
         applyPrivateVisibilityToDesigns(designIds = []) {

@@ -132,8 +132,10 @@ function createPage({
     const $timeout = Object.assign(fn => ({ fn }), { cancel() {} });
 
     const vm = {};
+    // The empty page's designs (#1053): none, as for a new teacher.
+    const DesignCatalogService = { loadDesigns: async () => true, getDesigns: async () => [] };
     ActivitiesPageController.call(vm, $scope, $rootScope, $location, $translate, $window,
-        ActivityCatalogService, $timeout);
+        ActivityCatalogService, $timeout, DesignCatalogService);
 
     return {
         vm,

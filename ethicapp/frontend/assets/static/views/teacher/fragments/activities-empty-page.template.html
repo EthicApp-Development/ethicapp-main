@@ -1,8 +1,34 @@
 <!-- The Activities page of a teacher with no activities yet, in place of
-     "En curso". #1053 replaces this alert with the two steps of frame E. -->
-<div class="alert alert-info activities-empty-page">
-    <span>{{ 'empty_ongoing_activities_message' | translate }}</span>
-    <a href="#!/designs/new">{{ 'empty_activities_create_design_link' | translate }}</a>.
-    <span>{{ 'empty_activities_then_launch_message' | translate }}</span>
-    <a href="#!/activities/new">{{ 'empty_activities_launch_link' | translate }}</a>.
-</div>
+     "En curso" (#1053, frame E): what an activity is, then the steps to the
+     first one in the order a teacher follows them. "Prepara un diseño" is
+     left out when the teacher already has a design ready to launch
+     (`ap.showDesignStep`); the remaining step then has no number. -->
+<section class="activities-empty-page" aria-labelledby="activities-empty-page-title">
+    <h3 id="activities-empty-page-title" class="activities-empty-page-title">
+        {{ 'activities_empty_page_title' | translate }}
+    </h3>
+    <p class="activities-empty-page-intro">{{ 'activities_empty_page_intro' | translate }}</p>
+
+    <ol class="activities-empty-steps" aria-label="{{ 'activities_empty_page_steps_label' | translate }}">
+        <li class="activities-empty-step activities-empty-step-design" ng-if="ap.showDesignStep">
+            <h4 class="activities-empty-step-title">
+                <span class="activities-empty-step-number">1.</span>
+                {{ 'activities_empty_page_design_title' | translate }}
+            </h4>
+            <p class="activities-empty-step-hint">{{ 'activities_empty_page_design_hint' | translate }}</p>
+            <a href="#!/designs/new" class="btn btn-default btn-sm activities-empty-step-action">
+                <i class="fa fa-plus" aria-hidden="true"></i> {{ 'designs_new' | translate }}
+            </a>
+        </li>
+        <li class="activities-empty-step activities-empty-step-launch">
+            <h4 class="activities-empty-step-title">
+                <span class="activities-empty-step-number" ng-if="ap.showDesignStep">2.</span>
+                {{ 'activities_empty_page_launch_title' | translate }}
+            </h4>
+            <p class="activities-empty-step-hint">{{ 'activities_empty_page_launch_hint' | translate }}</p>
+            <a href="#!/activities/new" class="btn btn-primary btn-sm activities-empty-step-action">
+                <i class="fa fa-rocket" aria-hidden="true"></i> {{ 'activities_launch' | translate }}
+            </a>
+        </li>
+    </ol>
+</section>
