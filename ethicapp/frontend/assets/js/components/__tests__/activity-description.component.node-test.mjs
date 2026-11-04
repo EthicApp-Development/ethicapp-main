@@ -8,6 +8,7 @@ import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 
 import { activityDescriptionComponent } from "../activity-description.component.js";
+import { phaseModeKey } from "../../helpers/activity-bar.js";
 
 const template = readFileSync(new URL(
     "../../../static/views/teacher/fragments/activity-description.template.html", import.meta.url), "utf8");
@@ -175,5 +176,59 @@ describe("activity card, its actions", () => {
         ]);
         assert.doesNotMatch(template, /onArchive|onUnarchive|onSelect/);
         assert.match(template, /ng-click="\$ctrl\.onView\(\$ctrl\.activity\)"/);
+    });
+});
+
+// The card's status reads as the activity's row in Actividades (#1078): "Sin
+// iniciar" for an activity with no phase started, the phase for one in
+// progress, and "Finalizada".
+describe("activity card status", () => {
+    it("says an activity with no phase started is not started", () => {
+        const { vm } = createCard({ status: "initiated", currentPhase: null });
+        assert.equal(vm.status.id, "not-started");
+        assert.equal(vm.status.key, "activities_status_not_started");
+        assert.equal(vm.status.modeKey, null);
+    });
+
+    it("says the phase of an activity in progress, as the list does", () => {
+        const { vm } = createCard({
+            status: "in_progress", currentPhase: { number: 2, mode: "team" }, phaseCount: 3,
+        });
+        assert.equal(vm.status.id, "in-progress");
+        assert.equal(vm.status.key, "activity_bar_phase_label");
+        assert.deepEqual(vm.status.params, { number: 2, total: 3 });
+        assert.equal(vm.status.modeKey, phaseModeKey("team"));
+    });
+
+    it("says a finished activity is finished, by name or by code", () => {
+        for (const status of ["finished", 3]) {
+            const { vm } = createCard({ status, currentPhase: null });
+            assert.equal(vm.status.id, "finished");
+            assert.equal(vm.status.key, "finished");
+        }
+    });
+
+    it("keeps the same status while nothing changed, and follows a new phase", () => {
+        const activity = {
+            status: "in_progress", currentPhase: { number: 1, mode: "individual" }, phaseCount: 2,
+        };
+        const { vm } = createCard(activity);
+        const status = vm.status;
+        vm.$doCheck();
+        assert.equal(vm.status, status, "the same object, so watchers settle");
+
+        vm.activity = { ...activity, currentPhase: { number: 2, mode: "team" } };
+        vm.$doCheck();
+        assert.deepEqual(vm.status.params, { number: 2, total: 2 });
+        assert.equal(vm.status.modeKey, phaseModeKey("team"));
+    });
+
+    it("translates the status as the list's Estado column, with the generic names gone", () => {
+        assert.match(template,
+            /\$ctrl\.status\.key \| translate:\{ number: \$ctrl\.status\.params\.number/);
+        assert.match(template,
+            /mode: \(\$ctrl\.status\.modeKey \? \(\$ctrl\.status\.modeKey \| translate\) : ''\)/);
+        assert.match(template, /'text-success': \$ctrl\.status\.id === 'in-progress'/);
+        assert.doesNotMatch(template, /getReadableStatus/);
     });
 });

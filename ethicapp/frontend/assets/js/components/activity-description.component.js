@@ -1,5 +1,4 @@
-import * as StatusCode from "../../../../common/modules/session-status.js";
-import { activityCaseOf, activityDesignTitle } from "../helpers/activities-table.js";
+import { activityCaseOf, activityDesignTitle, statusCell } from "../helpers/activities-table.js";
 import { createActivityDateFormatter, uiLanguageOf } from "../helpers/activity-dates.js";
 import { activityTitleParts } from "../helpers/activity-title.js";
 
@@ -9,6 +8,8 @@ import { activityTitleParts } from "../helpers/activity-title.js";
 // (`designId`, `designTitle`) and the case (`caseId`, `caseTitle`), unless the
 // dashboard passes the case it loaded (`associatedCase`, with its author).
 // Designs are not told apart by type (#964), so the card does not name one.
+// Its status reads as the activity's row in Actividades (#1078): "Sin
+// iniciar", "Fase n de m · Grupal" or "Finalizada", from `statusCell`.
 // The launch date is in the browser's time zone and the UI language, and
 // follows a change of language.
 
@@ -19,6 +20,12 @@ function launchDateOf(activity, dates) {
         label: dates.label(activity?.time, { withTime: true }) || { text: "—" },
         full:  dates.full(activity?.time),
     };
+}
+
+function sameStatus(left, right) {
+    return Boolean(left) && Boolean(right)
+        && left.id === right.id && left.key === right.key && left.modeKey === right.modeKey
+        && left.params.number === right.params.number && left.params.total === right.params.total;
 }
 
 function sameCase(left, right) {
@@ -43,6 +50,7 @@ function ActivityDescriptionController($rootScope, $translate) {
     vm.designTitle = "";
     vm.caseItem = null;
     vm.launchDate = null;
+    vm.status = null;
 
     // Everything the card shows from the activity, again only for what
     // changed, so watchers settle.
@@ -52,6 +60,10 @@ function ActivityDescriptionController($rootScope, $translate) {
             vm.title = title;
         }
         vm.designTitle = activityDesignTitle(vm.activity);
+        const status = statusCell(vm.activity);
+        if (!sameStatus(status, vm.status)) {
+            vm.status = status;
+        }
         // The case the dashboard loaded is kept as given; the row's own case
         // is rebuilt on every check, and replaced only when it changed.
         const caseItem = vm.associatedCase || activityCaseOf(vm.activity);
@@ -88,12 +100,6 @@ function ActivityDescriptionController($rootScope, $translate) {
     vm.$onDestroy = function() {
         stopFollowingLanguage?.();
         stopFollowingLanguage = null;
-    };
-
-    vm.getReadableStatus = function(value) {
-        // Convert name to code if needed
-        const code = isNaN(value) ? StatusCode.getStatusCode(value) : value;
-        return StatusCode.getNameByCode(code);
     };
 
     vm.formatCaseLabel = function(caseItem) {
