@@ -11,7 +11,7 @@ const enUS = {
     subtitle: 'Access with your credentials',
     noAccount: "Don't have an account?",
     createAccount: 'Create account',
-    usernameLabel: 'Username',
+    emailLabel: 'Email address',
     passwordLabel: 'Password',
     forgotPassword: 'Forgot your password?',
     submit: 'Sign in',
@@ -23,7 +23,7 @@ const enUS = {
     continuePolicyConnector: 'and',
     continuePolicySuffix: '.',
     errors: {
-      usernameRequired: 'Username is required.',
+      emailRequired: 'Email is required.',
       passwordRequired: 'Password is required.',
       genericLoginError: 'We could not sign you in. Check your credentials.'
     },
@@ -40,14 +40,12 @@ const enUS = {
     fields: {
       firstname: 'First name',
       lastname: 'Last name',
-      dni: 'National ID',
       email: 'Email address',
       gender: 'Gender',
       password: 'Password',
       passwordConfirmation: 'Confirm password'
     },
     placeholders: {
-      dni: 'No dots, use hyphen',
       gender: 'Select an option'
     },
     genderOptions: {
@@ -79,7 +77,6 @@ const enUS = {
     errors: {
       firstnameRequired: 'First name is required.',
       lastnameRequired: 'Last name is required.',
-      dniRequired: 'Identifier is required.',
       emailRequired: 'Email is required.',
       emailInvalid: 'Enter a valid email address.',
       genderRequired: 'You must select an option.',

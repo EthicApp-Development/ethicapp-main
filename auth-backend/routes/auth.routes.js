@@ -331,11 +331,12 @@ router.post('/login', async (req, res, next) => {
       });
     }
 
+    // The email is the account identifier, and users_mail_lower_unique keeps
+    // at most one account per email, whatever the letter case.
     const userResult = await db.query(
       `
         SELECT
           id,
-          rut,
           mail,
           role,
           auth_provider,
@@ -346,7 +347,7 @@ router.post('/login', async (req, res, next) => {
         FROM users
         WHERE active = true
           AND email_confirmed = true
-          AND (lower(rut) = lower($1) OR lower(mail) = lower($1))
+          AND lower(mail) = lower($1)
         LIMIT 1
       `,
       [username]
@@ -868,21 +869,24 @@ router.delete('/admin/passkeys/:passkeyId', async (req, res) => {
  *
  * Expects:
  * {
- *   name,
+ *   firstname,
  *   lastname,
- *   dni,
  *   gender,
  *   email,
  *   password,
- *   password_confirmation
+ *   password_confirmation,
+ *   recaptcha_token,
+ *   preferred_locale (optional)
  * }
+ *
+ * The email identifies the account. The national ID is no longer collected
+ * (#1067): an older client that still sends it is not refused, and the value
+ * is ignored.
  */
 router.post('/register', async (req, res) => {
   try {
     const firstname = (req.body.firstname || '').trim();
-    const name = (req.body.name || '').trim();
     const lastname = (req.body.lastname || '').trim();
-    const dni = (req.body.dni || '').trim();
     const gender = (req.body.gender || '').trim();
     const email = (req.body.email || '').trim().toLowerCase();
     const password = req.body.password || '';
@@ -890,7 +894,7 @@ router.post('/register', async (req, res) => {
     const recaptchaToken = (req.body.recaptcha_token || '').trim();
     const preferredLocale = normalizePreferredLocale((req.body.preferred_locale || '').trim() || inferPreferredLocaleFromRequest(req));
 
-    if (!firstname || !lastname || !dni || !email || !gender || !password || !passwordConfirmation) {
+    if (!firstname || !lastname || !email || !gender || !password || !passwordConfirmation) {
       return res.status(400).json({
         error: t(req, 'requiredFieldsMissing')
       });
@@ -927,30 +931,20 @@ router.post('/register', async (req, res) => {
       });
     }
 
-
     const existingUserResult = await db.query(
       `
-        SELECT id, mail, rut
+        SELECT id
         FROM users
-        WHERE rut = $1
-           OR lower(mail) = $2
-        ORDER BY (lower(mail) = $2) DESC
+        WHERE lower(mail) = $1
         LIMIT 1
       `,
-      [dni, email]
+      [email]
     );
 
     // users_mail_lower_unique backs this check: a sign-up that commits between
     // it and the insert below makes the insert fail, answered the same way.
     if (existingUserResult.rowCount > 0) {
-      if (existingUserResult.rows[0].mail.toLowerCase() === email) {
-        return res.status(409).json(duplicateEmailResponse(req));
-      }
-
-      return res.status(409).json({
-        code: 'duplicate_user_identifier',
-        error: t(req, 'duplicateUserIdentifier')
-      });
+      return res.status(409).json(duplicateEmailResponse(req));
     }
 
     const passwordBcrypt = await bcrypt.hash(password, SALT_ROUNDS);
@@ -966,12 +960,12 @@ router.post('/register', async (req, res) => {
       insertResult = await db.query(
         `
             INSERT INTO users
-            (firstname, lastname, name, rut, sex, mail, role, preferred_locale, password_bcrypt, auth_provider, active, email_confirmed)
+            (firstname, lastname, name, sex, mail, role, preferred_locale, password_bcrypt, auth_provider, active, email_confirmed)
             VALUES
-            ($1, $2, $3, $4, $5, NULLIF($6, ''), $7, $8, $9, $10, false, false)
+            ($1, $2, $3, $4, $5, $6, $7, $8, $9, false, false)
             RETURNING id
         `,
-        [firstname, lastname, fullName, dni, gender, email, 'A', preferredLocale, passwordBcrypt, 'local']
+        [firstname, lastname, fullName, gender, email, 'A', preferredLocale, passwordBcrypt, 'local']
         );
 
       rawConfirmationToken = await createSingleUseTokenForEmail(email, 'account_confirmation');
@@ -1002,18 +996,13 @@ router.post('/register', async (req, res) => {
       user_id: insertResult.rows[0].id
     });
   } catch (err) {
-    console.error('REGISTER ERROR:', err);
-
+    // A sign-up with the same email that committed after the check above: an
+    // expected outcome, answered as the check and not logged as an error.
     if (isUniqueMailViolation(err)) {
       return res.status(409).json(duplicateEmailResponse(req));
     }
 
-    if (isUniqueViolation(err)) {
-      return res.status(409).json({
-        code: 'duplicate_user_identifier',
-        error: t(req, 'duplicateUserIdentifier')
-      });
-    }
+    console.error('REGISTER ERROR:', err);
 
     return res.status(500).json({
       error: t(req, 'internalServerError')
@@ -1090,12 +1079,15 @@ router.get(['/confirm-account', '/confirm-account/:token'], async (req, res) => 
  * {
  *   firstname,
  *   lastname,
- *   dni,
  *   gender,
  *   email,
  *   password,
  *   password_confirmation
  * }
+ *
+ * The email identifies the account. The national ID is no longer collected
+ * (#1067): an older client that still sends it is not refused, and the value
+ * is ignored.
  *
  * Legacy rule preserved:
  * - only role "S" can create professors
@@ -1120,14 +1112,12 @@ router.post('/register-prof', async (req, res) => {
     // - lastname se mantiene
     const firstname = (req.body.firstname || req.body.name || '').trim();
     const lastname = (req.body.lastname || '').trim();
-
-    const dni = (req.body.dni || '').trim();
     const gender = (req.body.gender || '').trim();
     const email = (req.body.email || '').trim().toLowerCase();
     const password = req.body.password || '';
     const passwordConfirmation = req.body.password_confirmation || '';
 
-    if (!firstname || !lastname || !dni || !gender || !password || !passwordConfirmation) {
+    if (!firstname || !lastname || !email || !gender || !password || !passwordConfirmation) {
       return respondRegisterProfError(req, res, 400, t(req, 'requiredFieldsMissing'));
     }
 
@@ -1152,11 +1142,10 @@ router.post('/register-prof', async (req, res) => {
       `
         SELECT id
         FROM users
-        WHERE rut = $1
-           OR ($2 <> '' AND lower(mail) = $2)
+        WHERE lower(mail) = $1
         LIMIT 1
       `,
-      [dni, email]
+      [email]
     );
 
     if (existingUserResult.rowCount > 0) {
@@ -1164,7 +1153,7 @@ router.post('/register-prof', async (req, res) => {
         req,
         res,
         409,
-        t(req, 'duplicateUserIdentifier')
+        t(req, 'emailAlreadyRegistered')
       );
     }
 
@@ -1174,12 +1163,12 @@ router.post('/register-prof', async (req, res) => {
     const insertResult = await db.query(
       `
         INSERT INTO users
-          (firstname, lastname, name, rut, sex, mail, role, password_bcrypt, auth_provider, active)
+          (firstname, lastname, name, sex, mail, role, password_bcrypt, auth_provider, active)
         VALUES
-          ($1, $2, $3, $4, $5, NULLIF($6, ''), $7, $8, $9, true)
+          ($1, $2, $3, $4, $5, $6, $7, $8, true)
         RETURNING id
       `,
-      [firstname, lastname, fullName, dni, gender, email, 'P', passwordBcrypt, 'local']
+      [firstname, lastname, fullName, gender, email, 'P', passwordBcrypt, 'local']
     );
 
     if (wantsHtmlRedirect(req)) {
@@ -1191,18 +1180,18 @@ router.post('/register-prof', async (req, res) => {
       user_id: insertResult.rows[0].id
     });
   } catch (err) {
-    console.error('REGISTER PROF ERROR:', err);
-
-    // Any unique violation, users_mail_lower_unique included (an account with
-    // the same email created after the check above), answers as the check.
-    if (isUniqueViolation(err)) {
+    // An account with the same email created after the check above: an
+    // expected outcome, answered as the check and not logged as an error.
+    if (isUniqueMailViolation(err)) {
       return respondRegisterProfError(
         req,
         res,
         409,
-        t(req, 'duplicateUserIdentifier')
+        t(req, 'emailAlreadyRegistered')
       );
     }
+
+    console.error('REGISTER PROF ERROR:', err);
 
     return respondRegisterProfError(
       req,

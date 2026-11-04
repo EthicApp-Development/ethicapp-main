@@ -102,10 +102,6 @@ function RegisterForm() {
       nextErrors.lastname = t('register.errors.lastnameRequired');
     }
 
-    if (!draft.dni.trim()) {
-      nextErrors.dni = t('register.errors.dniRequired');
-    }
-
     if (!draft.email.trim()) {
       nextErrors.email = t('register.errors.emailRequired');
     } else if (!isValidEmail(draft.email.trim())) {
@@ -159,7 +155,6 @@ function RegisterForm() {
       await register({
         firstname: draft.firstname.trim(),
         lastname: draft.lastname.trim(),
-        dni: draft.dni.trim(),
         email: draft.email.trim(),
         gender: draft.gender,
         password: draft.password,
@@ -241,17 +236,6 @@ function RegisterForm() {
         onChange={handleChange}
         error={errors.lastname}
         autoComplete="family-name"
-        required
-      />
-
-      <TextField
-        id="dni"
-        name="dni"
-        label={t('register.fields.dni')}
-        value={draft.dni}
-        onChange={handleChange}
-        error={errors.dni}
-        placeholder={t('register.placeholders.dni')}
         required
       />
 

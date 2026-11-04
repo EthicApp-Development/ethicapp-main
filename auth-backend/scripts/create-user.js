@@ -1,68 +1,34 @@
 import 'dotenv/config';
 
-import bcrypt from 'bcrypt';
-
 import db from '../config/database.js';
+import { CREATE_USER_USAGE, createUserIfMissing, parseCreateUserArgs } from './lib/bootstrap-accounts.js';
 
 async function main() {
-  const [
-    firstname,
-    lastname,
-    rut,
-    email,
-    password,
-    role = 'A',
-    sex = 'M'
-  ] = process.argv.slice(2);
+  const user = parseCreateUserArgs(process.argv.slice(2));
 
-  if (!firstname || !lastname || !rut || !email || !password) {
+  if (!user) {
     console.error(`
-Uso:
-node scripts/create-user.js <firstname> <lastname> <rut> <email> <password> [role] [sex]
+Usage:
+${CREATE_USER_USAGE}
 `);
     process.exit(1);
   }
 
-  const fullName = [firstname, lastname].filter(Boolean).join(' ').trim();
-  const normalizedEmail = email.trim().toLowerCase();
+  const result = await createUserIfMissing(db, user);
 
-  const existing = await db.query(
-    `
-      SELECT id
-      FROM users
-      WHERE mail = $1 OR rut = $2
-      LIMIT 1
-    `,
-    [normalizedEmail, rut]
-  );
-
-  if (existing.rowCount > 0) {
-    console.log(`✔ User already exists: ${normalizedEmail}`);
+  if (result.status === 'exists') {
+    const storedAs = result.existingMail && result.existingMail !== user.email
+      ? ` (stored as ${result.existingMail})`
+      : '';
+    console.log(`✔ User already exists with email ${user.email}${storedAs}; nothing changed`);
     process.exit(0);
   }
 
-  const hash = await bcrypt.hash(password, 12);
-
-  await db.query(
-    `
-      INSERT INTO users
-        (firstname, lastname, name, rut, mail, sex, role, password_bcrypt, auth_provider, active)
-      VALUES
-        ($1, $2, $3, $4, $5, $6, $7, $8, 'local', true)
-    `,
-    [firstname, lastname, fullName, rut, normalizedEmail, sex, role, hash]
-  );
-
-  console.log(`✔ User created: ${normalizedEmail}`);
+  console.log(`✔ User created: ${user.email}`);
   process.exit(0);
 }
 
 main().catch((err) => {
-  if (err.code === '23505') {
-    console.log('✔ User already exists');
-    process.exit(0);
-  }
-
   console.error(err);
   process.exit(1);
 });

@@ -55,7 +55,6 @@ app.use((err, req, res, next) => {
 function createUser(overrides = {}) {
   return {
     id: 1,
-    rut: 'testuser',
     mail: 'test@example.com',
     role: 'A',
     auth_provider: 'local',
@@ -70,12 +69,23 @@ function validRegistrationPayload(overrides = {}) {
   return {
     firstname: 'John',
     lastname: 'Doe',
-    dni: '12345678-9',
     gender: 'M',
     email: 'john@example.com',
     password: 'StrongPassword123!@',
     password_confirmation: 'StrongPassword123!@',
     recaptcha_token: 'valid_token',
+    ...overrides
+  };
+}
+
+function validProfessorPayload(overrides = {}) {
+  return {
+    firstname: 'Pat',
+    lastname: 'Teacher',
+    gender: 'F',
+    email: 'pat@example.com',
+    password: 'StrongPassword123!@',
+    password_confirmation: 'StrongPassword123!@',
     ...overrides
   };
 }
@@ -159,7 +169,7 @@ describe('Auth Routes', () => {
 
     const res = await supertest(app)
       .post('/login')
-      .send({ username: 'testuser', password: 'password123' });
+      .send({ username: 'test@example.com', password: 'password123' });
 
     assert.strictEqual(res.status, 401);
     assert.strictEqual(dbMock.query.mock.calls.length, 1);
@@ -174,7 +184,7 @@ describe('Auth Routes', () => {
 
     const res = await supertest(app)
       .post('/login')
-      .send({ username: 'testuser', password: 'password123' });
+      .send({ username: 'test@example.com', password: 'password123' });
 
     assert.strictEqual(res.status, 401);
     assert.strictEqual(dbMock.query.mock.calls.length, 1);
@@ -192,7 +202,7 @@ describe('Auth Routes', () => {
 
     const res = await supertest(app)
       .post('/login')
-      .send({ username: 'testuser', password: 'password123' });
+      .send({ username: 'test@example.com', password: 'password123' });
 
     assert.strictEqual(res.status, 200);
     assert.strictEqual(res.body.redirectTo, '/mng');
@@ -201,6 +211,44 @@ describe('Auth Routes', () => {
     const updateCall = dbMock.query.mock.calls[1];
     assert.match(updateCall.arguments[0], /UPDATE users\s+SET last_login_at = NOW\(\)\s+WHERE id = \$1/);
     assert.deepStrictEqual(updateCall.arguments[1], [1]);
+  });
+
+  // A fake users table that answers the login query as PostgreSQL would:
+  // the query must match the email only, ignoring letter case.
+  function mockLoginLookup(user) {
+    dbMock.query.mock.mockImplementation((sql, params) => {
+      if (sql.includes('FROM users') && sql.includes('email_confirmed = true')) {
+        assert.match(sql, /AND lower\(mail\) = lower\(\$1\)/);
+        assert.doesNotMatch(sql, /\brut\b/);
+        const matches = user.mail.toLowerCase() === String(params[0]).toLowerCase();
+        return Promise.resolve(matches ? { rowCount: 1, rows: [user] } : { rowCount: 0, rows: [] });
+      }
+      return Promise.resolve({ rowCount: 1, rows: [] });
+    });
+  }
+
+  test('POST /login - signs in by email, ignoring letter case', async () => {
+    mockLoginLookup(createUser({ password_bcrypt: await bcrypt.hash('password123', 1) }));
+
+    const res = await supertest(app)
+      .post('/login')
+      .send({ username: 'Test@Example.COM', password: 'password123' });
+
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.body.redirectTo, '/student');
+    assert.deepStrictEqual(dbMock.query.mock.calls[0].arguments[1], ['Test@Example.COM']);
+  });
+
+  test('POST /login - a national ID as username gets the wrong-credentials error', async () => {
+    mockLoginLookup(createUser({ password_bcrypt: await bcrypt.hash('password123', 1) }));
+
+    const res = await supertest(app)
+      .post('/login')
+      .send({ username: '12345678-9', password: 'password123' });
+
+    assert.strictEqual(res.status, 401);
+    assert.deepStrictEqual(res.body, { error: 'Incorrect credentials' });
+    assert.strictEqual(dbMock.query.mock.calls.length, 1);
   });
 
   for (const [role, destination] of [['A', '/student'], ['P', '/home'], ['S', '/mng']]) {
@@ -214,7 +262,7 @@ describe('Auth Routes', () => {
 
         const res = await supertest(app)
           .post('/login')
-          .send({ username: 'testuser', password: 'password123', returnTo });
+          .send({ username: 'test@example.com', password: 'password123', returnTo });
 
         assert.strictEqual(res.status, 200);
         assert.strictEqual(res.body.redirectTo, destination);
@@ -303,11 +351,7 @@ describe('Auth Routes', () => {
     recaptchaMock.verifyRecaptchaToken.mock.mockImplementationOnce(() => Promise.resolve(true));
     dbMock.query.mock.mockImplementationOnce(() => Promise.resolve({
       rowCount: 1,
-      rows: [{
-        id: 7,
-        mail: 'john@example.com',
-        rut: '11111111-1'
-      }]
+      rows: [{ id: 7 }]
     }));
 
     const res = await supertest(app)
@@ -326,11 +370,7 @@ describe('Auth Routes', () => {
     recaptchaMock.verifyRecaptchaToken.mock.mockImplementationOnce(() => Promise.resolve(true));
     dbMock.query.mock.mockImplementationOnce(() => Promise.resolve({
       rowCount: 1,
-      rows: [{
-        id: 7,
-        mail: 'John@Example.com',
-        rut: '11111111-1'
-      }]
+      rows: [{ id: 7 }]
     }));
 
     const res = await supertest(app)
@@ -341,8 +381,9 @@ describe('Auth Routes', () => {
     assert.strictEqual(res.body.code, 'email_already_registered');
 
     const [sql, params] = dbMock.query.mock.calls[0].arguments;
-    assert.match(sql, /OR lower\(mail\) = \$2/);
-    assert.deepStrictEqual(params, ['12345678-9', 'john@example.com']);
+    assert.match(sql, /WHERE lower\(mail\) = \$1/);
+    assert.doesNotMatch(sql, /\brut\b/);
+    assert.deepStrictEqual(params, ['john@example.com']);
   });
 
   // A sign-up with the same email commits between the duplicate check and
@@ -372,6 +413,8 @@ describe('Auth Routes', () => {
         code: 'email_already_registered',
         recovery_path: '/forgot'
       });
+      // An expected outcome: answered without logging an error.
+      assert.strictEqual(consoleError.mock.calls.length, 0);
       const statements = dbMock.query.mock.calls.map((call) => call.arguments[0].trim());
       assert.ok(statements.includes('ROLLBACK'));
       assert.strictEqual(mailMock.sendAccountConfirmationEmail.mock.calls.length, 0);
@@ -385,22 +428,57 @@ describe('Auth Routes', () => {
       .post('/register-prof')
       .set('X-Test-User-Id', '7')
       .set('X-Test-User-Role', 'S')
-      .send({
-        firstname: 'Pat',
-        lastname: 'Teacher',
-        dni: '1-9',
-        gender: 'F',
-        email: 'Pat@Example.com',
-        password: 'StrongPassword123!@',
-        password_confirmation: 'StrongPassword123!@'
-      });
+      .send(validProfessorPayload({ email: 'Pat@Example.com' }));
 
     assert.strictEqual(res.status, 409);
-    assert.strictEqual(res.body.error, 'A user with that identifier already exists');
+    assert.strictEqual(res.body.error, 'An account with that email already exists');
     const [sql, params] = dbMock.query.mock.calls[0].arguments;
-    assert.match(sql, /lower\(mail\) = \$2/);
-    assert.deepStrictEqual(params, ['1-9', 'pat@example.com']);
+    assert.match(sql, /WHERE lower\(mail\) = \$1/);
+    assert.doesNotMatch(sql, /\brut\b/);
+    assert.deepStrictEqual(params, ['pat@example.com']);
     assert.strictEqual(dbMock.query.mock.calls.length, 1);
+  });
+
+  test('POST /register-prof - requires the email', async () => {
+    const res = await supertest(app)
+      .post('/register-prof')
+      .set('X-Test-User-Id', '7')
+      .set('X-Test-User-Role', 'S')
+      .send(validProfessorPayload({ email: '  ' }));
+
+    assert.strictEqual(res.status, 400);
+    assert.strictEqual(res.body.error, 'Required fields are missing');
+    assert.strictEqual(dbMock.query.mock.calls.length, 0);
+  });
+
+  test('POST /register-prof - creates the professor without a national ID, ignoring one sent by an older client', async () => {
+    dbMock.query.mock.mockImplementation((queryStr) => {
+      if (queryStr.includes('INSERT INTO users')) {
+        return Promise.resolve({ rowCount: 1, rows: [{ id: 51 }] });
+      }
+      return Promise.resolve({ rowCount: 0, rows: [] });
+    });
+
+    const res = await supertest(app)
+      .post('/register-prof')
+      .set('X-Test-User-Id', '7')
+      .set('X-Test-User-Role', 'S')
+      .send(validProfessorPayload({ dni: '12345678-9' }));
+
+    assert.strictEqual(res.status, 201);
+    assert.strictEqual(res.body.user_id, 51);
+
+    const insertCall = dbMock.query.mock.calls.find((call) => call.arguments[0].includes('INSERT INTO users'));
+    assert.doesNotMatch(insertCall.arguments[0], /\brut\b/);
+    assert.ok(!insertCall.arguments[1].includes('12345678-9'));
+    assert.deepStrictEqual(insertCall.arguments[1].slice(0, 6), [
+      'Pat',
+      'Teacher',
+      'Pat Teacher',
+      'F',
+      'pat@example.com',
+      'P'
+    ]);
   });
 
   test('POST /register-prof - a unique violation on the email index answers as the duplicate check', async () => {
@@ -419,46 +497,61 @@ describe('Auth Routes', () => {
       .post('/register-prof')
       .set('X-Test-User-Id', '7')
       .set('X-Test-User-Role', 'S')
-      .send({
-        firstname: 'Pat',
-        lastname: 'Teacher',
-        dni: '1-9',
-        gender: 'F',
-        email: 'pat@example.com',
-        password: 'StrongPassword123!@',
-        password_confirmation: 'StrongPassword123!@'
-      });
+      .send(validProfessorPayload());
 
     consoleError.mock.restore();
     assert.strictEqual(res.status, 409);
-    assert.strictEqual(res.body.error, 'A user with that identifier already exists');
+    assert.strictEqual(res.body.error, 'An account with that email already exists');
+    assert.strictEqual(consoleError.mock.calls.length, 0);
   });
 
-  test('POST /register - duplicate identifier returns a stable error code', async () => {
+  test('POST /register - an unexpected database error is logged and answered 500', async () => {
+    const consoleError = mock.method(console, 'error', () => {});
     recaptchaMock.verifyRecaptchaToken.mock.mockImplementationOnce(() => Promise.resolve(true));
-    dbMock.query.mock.mockImplementationOnce(() => Promise.resolve({
-      rowCount: 1,
-      rows: [{
-        id: 7,
-        mail: 'other@example.com',
-        rut: '12345678-9'
-      }]
-    }));
+    dbMock.query.mock.mockImplementation((queryStr) => {
+      if (queryStr.includes('INSERT INTO users')) {
+        return Promise.reject(Object.assign(new Error('connection lost'), { code: '08006' }));
+      }
+      return Promise.resolve({ rowCount: 0, rows: [] });
+    });
 
     const res = await supertest(app)
       .post('/register')
       .send(validRegistrationPayload());
 
-    assert.strictEqual(res.status, 409);
-    assert.strictEqual(res.body.code, 'duplicate_user_identifier');
+    consoleError.mock.restore();
+    assert.strictEqual(res.status, 500);
+    assert.deepStrictEqual(res.body, { error: 'Internal server error' });
+    assert.strictEqual(consoleError.mock.calls.length, 1);
+    assert.strictEqual(consoleError.mock.calls[0].arguments[0], 'REGISTER ERROR:');
   });
 
-  test('POST /register - valid registration stores inactive pending account and sends confirmation mail', async () => {
+  test('POST /register - a national ID sent by an older client is ignored, not stored', async () => {
     recaptchaMock.verifyRecaptchaToken.mock.mockImplementationOnce(() => Promise.resolve(true));
     dbMock.query.mock.mockImplementation((queryStr) => {
-      if (queryStr.includes('SELECT id, mail, rut')) {
-        return Promise.resolve({ rowCount: 0, rows: [] });
+      if (queryStr.includes('INSERT INTO users')) {
+        return Promise.resolve({ rowCount: 1, rows: [{ id: 44 }] });
       }
+      return Promise.resolve({ rowCount: 0, rows: [] });
+    });
+    mailMock.sendAccountConfirmationEmail.mock.mockImplementationOnce(() => Promise.resolve());
+
+    const res = await supertest(app)
+      .post('/register')
+      .send(validRegistrationPayload({ dni: '12345678-9' }));
+
+    assert.strictEqual(res.status, 201);
+    assert.strictEqual(res.body.user_id, 44);
+
+    for (const call of dbMock.query.mock.calls) {
+      assert.doesNotMatch(call.arguments[0], /\brut\b/);
+      assert.ok(!(call.arguments[1] || []).includes('12345678-9'));
+    }
+  });
+
+  test('POST /register - valid registration without a national ID stores inactive pending account and sends confirmation mail', async () => {
+    recaptchaMock.verifyRecaptchaToken.mock.mockImplementationOnce(() => Promise.resolve(true));
+    dbMock.query.mock.mockImplementation((queryStr) => {
       if (queryStr.includes('INSERT INTO users')) {
         return Promise.resolve({ rowCount: 1, rows: [{ id: 42 }] });
       }
@@ -475,20 +568,20 @@ describe('Auth Routes', () => {
 
     const insertCall = dbMock.query.mock.calls.find((call) => call.arguments[0].includes('INSERT INTO users'));
     assert.ok(insertCall);
-    assert.deepStrictEqual(insertCall.arguments[1].slice(0, 8), [
+    assert.deepStrictEqual(insertCall.arguments[1].slice(0, 7), [
       'John',
       'Doe',
       'John Doe',
-      '12345678-9',
       'M',
       'john@example.com',
       'A',
       'es_CL'
     ]);
-    assert.strictEqual(await bcrypt.compare('StrongPassword123!@', insertCall.arguments[1][8]), true);
-    assert.strictEqual(insertCall.arguments[1][9], 'local');
+    assert.strictEqual(await bcrypt.compare('StrongPassword123!@', insertCall.arguments[1][7]), true);
+    assert.strictEqual(insertCall.arguments[1][8], 'local');
 
     const insertSql = insertCall.arguments[0];
+    assert.doesNotMatch(insertSql, /\brut\b/);
     assert.match(insertSql, /active,\s*email_confirmed/);
     assert.match(insertSql, /false,\s*false/);
 
@@ -507,9 +600,6 @@ describe('Auth Routes', () => {
     const consoleError = mock.method(console, 'error', () => {});
     recaptchaMock.verifyRecaptchaToken.mock.mockImplementationOnce(() => Promise.resolve(true));
     dbMock.query.mock.mockImplementation((queryStr) => {
-      if (queryStr.includes('SELECT id, mail, rut')) {
-        return Promise.resolve({ rowCount: 0, rows: [] });
-      }
       if (queryStr.includes('INSERT INTO users')) {
         return Promise.resolve({ rowCount: 1, rows: [{ id: 43 }] });
       }
@@ -922,15 +1012,7 @@ describe('Password policy (#889)', () => {
       name: 'POST /register-prof',
       path: '/register-prof',
       admin: true,
-      payload: (password) => ({
-        firstname: 'Pat',
-        lastname: 'Teacher',
-        dni: '1-9',
-        gender: 'F',
-        email: 'pat@example.com',
-        password,
-        password_confirmation: password
-      })
+      payload: (password) => validProfessorPayload({ password, password_confirmation: password })
     },
     {
       name: 'POST /reset-password',
