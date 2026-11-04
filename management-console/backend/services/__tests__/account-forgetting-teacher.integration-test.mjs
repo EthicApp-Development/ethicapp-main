@@ -74,12 +74,12 @@ async function insertUser({ role = 'P', active = true, anonymized = false, first
   const mail = `it-877-${randomUUID()}@example.com`;
   return one(
     `
-      INSERT INTO users (name, firstname, lastname, rut, mail, role, active, email_confirmed,
+      INSERT INTO users (name, firstname, lastname, mail, role, active, email_confirmed,
                          password_bcrypt, anonymized_at)
-      VALUES ($1 || ' ' || $2, $1, $2, $3, $4, $5, $6, true, 'bcrypt-hash', CASE WHEN $7 THEN NOW() END)
+      VALUES ($1 || ' ' || $2, $1, $2, $3, $4, $5, true, 'bcrypt-hash', CASE WHEN $6 THEN NOW() END)
       RETURNING id, mail, session_version
     `,
-    [firstname, lastname, randomUUID(), mail, role, active, anonymized]
+    [firstname, lastname, mail, role, active, anonymized]
   );
 }
 

@@ -32,10 +32,10 @@ async function query(sql, params = []) {
 async function createActivity() {
     const suffix = randomUUID();
     const [user] = await query(`
-        INSERT INTO users (name, rut, mail, role)
-        VALUES ('Integration teacher', $1, $2, 'P')
+        INSERT INTO users (name, mail, role)
+        VALUES ('Integration teacher', $1, 'P')
         RETURNING id;
-    `, [suffix, `${suffix}@integration.test`]);
+    `, [`${suffix}@integration.test`]);
     const [design] = await query(`
         INSERT INTO designs (creator, design)
         VALUES ($1, '{"phases": [{}, {}]}'::jsonb)
@@ -93,10 +93,10 @@ test("the descriptor of a finished activity has its design and no current phase"
 
 test("a session without an activity has no descriptor", { skip: SKIP_REASON }, async () => {
     const [user] = await query(`
-        INSERT INTO users (name, rut, mail, role)
-        VALUES ('Integration teacher', $1, $2, 'P')
+        INSERT INTO users (name, mail, role)
+        VALUES ('Integration teacher', $1, 'P')
         RETURNING id;
-    `, [randomUUID(), `${randomUUID()}@integration.test`]);
+    `, [`${randomUUID()}@integration.test`]);
     const [session] = await query(`
         INSERT INTO sessions (name, descr, creator, time, status, type)
         VALUES ('Integration session', '', $1, now(), 1, 'R')

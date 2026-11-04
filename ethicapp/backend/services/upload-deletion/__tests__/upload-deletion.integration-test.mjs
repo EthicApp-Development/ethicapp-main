@@ -78,10 +78,10 @@ async function requestsOf(userId) {
 
 async function insertTeacher() {
     const rows = await dbQuery(
-        `INSERT INTO users (name, rut, mail, role)
-         VALUES ('IT teacher', $1, $2, 'P')
+        `INSERT INTO users (name, mail, role)
+         VALUES ('IT teacher', $1, 'P')
          RETURNING id`,
-        [randomUUID(), `it-877-${randomUUID()}@example.com`]
+        [`it-877-${randomUUID()}@example.com`]
     );
     return rows[0].id;
 }

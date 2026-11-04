@@ -260,3 +260,55 @@ test('updateUserById reports an account deleted after its read as not found', as
 
   await assert.rejects(updateUserById(7, EDIT, { queryFn }), { message: 'USER_NOT_FOUND' });
 });
+
+const CURRENT_ACCOUNT = { id: 7, role: 'A', mail: 'ana@test', active: true, anonymized_at: null };
+
+test('updateUserById checks the email ignoring letter case', async () => {
+  const { calls, queryFn } = createFakeQuery(({ sql }) => {
+    if (sql.startsWith('SELECT id, role, mail, active, anonymized_at')) {
+      return { rowCount: 1, rows: [CURRENT_ACCOUNT] };
+    }
+    if (sql.startsWith('SELECT id FROM users WHERE lower(mail) = $1')) {
+      return { rowCount: 1, rows: [{ id: 8 }] };
+    }
+    return { rowCount: 0, rows: [] };
+  });
+
+  await assert.rejects(
+    updateUserById(7, { ...EDIT, email: 'Real@Test', email_confirmation: 'REAL@test' }, { queryFn }),
+    { message: 'EMAIL_ALREADY_EXISTS' }
+  );
+  assert.deepEqual(calls[1].params, ['real@test', 7]);
+  assert.equal(calls.some((call) => call.sql.startsWith('UPDATE users')), false);
+});
+
+// Another account takes the email between the duplicate check and the
+// UPDATE: the unique index refuses the UPDATE, answered as the check does.
+function editRefusedWith(failure) {
+  return createFakeQuery(({ sql }) => {
+    if (sql.startsWith('SELECT id, role, mail, active, anonymized_at')) {
+      return { rowCount: 1, rows: [CURRENT_ACCOUNT] };
+    }
+    if (sql.startsWith('UPDATE users')) {
+      throw failure;
+    }
+    return { rowCount: 0, rows: [] };
+  });
+}
+
+for (const constraint of ['users_mail_lower_unique', 'users_mail_unique']) {
+  test(`updateUserById reports a unique violation on ${constraint} as a duplicate email`, async () => {
+    const { queryFn } = editRefusedWith(
+      Object.assign(new Error('duplicate key value'), { code: '23505', constraint })
+    );
+
+    await assert.rejects(updateUserById(7, EDIT, { queryFn }), { message: 'EMAIL_ALREADY_EXISTS' });
+  });
+}
+
+test('updateUserById passes on other database errors from the update', async () => {
+  const failure = Object.assign(new Error('duplicate key value'), { code: '23505', constraint: 'other_unique' });
+  const { queryFn } = editRefusedWith(failure);
+
+  await assert.rejects(updateUserById(7, EDIT, { queryFn }), (error) => error === failure);
+});

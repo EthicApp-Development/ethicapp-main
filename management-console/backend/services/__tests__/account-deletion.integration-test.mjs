@@ -44,15 +44,15 @@ const NEVER_ACTIVATED = Object.freeze({ active: false, emailConfirmed: false });
 async function insertUser({ active, emailConfirmed, anonymized = false, signedIn = false }, mail = null) {
   const [row] = await query(
     `
-      INSERT INTO users (name, rut, mail, role, active, email_confirmed, anonymized_at, last_login_at)
+      INSERT INTO users (name, mail, role, active, email_confirmed, anonymized_at, last_login_at)
       VALUES (
-        'Integration Student', $1, $2, 'A', $3, $4,
-        CASE WHEN $5 THEN NOW() END,
-        CASE WHEN $6 THEN NOW() END
+        'Integration Student', $1, 'A', $2, $3,
+        CASE WHEN $4 THEN NOW() END,
+        CASE WHEN $5 THEN NOW() END
       )
       RETURNING id, mail
     `,
-    [randomUUID(), mail || `it-875-${randomUUID()}@example.com`, active, emailConfirmed, anonymized, signedIn]
+    [mail || `it-875-${randomUUID()}@example.com`, active, emailConfirmed, anonymized, signedIn]
   );
   return { id: row.id, mail: row.mail };
 }

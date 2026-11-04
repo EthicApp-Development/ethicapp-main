@@ -31,8 +31,8 @@ const MIGRATION_URL = new URL(
 // Same columns as the auth-backend sign-up insert, which leaves created_at to
 // the default like every other account-creation path.
 const INSERT_USER_SQL = `
-    INSERT INTO users (firstname, lastname, name, rut, mail, role, active, email_confirmed)
-    VALUES ('Integration', 'Student', 'Integration Student', $1, $2, 'A', false, false)
+    INSERT INTO users (firstname, lastname, name, mail, role, active, email_confirmed)
+    VALUES ('Integration', 'Student', 'Integration Student', $1, 'A', false, false)
 `;
 
 let pool = null;
@@ -43,8 +43,7 @@ function getPool() {
 }
 
 function userParams() {
-    const suffix = randomUUID();
-    return [suffix, `${suffix}@integration.test`];
+    return [`${randomUUID()}@integration.test`];
 }
 
 test.after(async () => {

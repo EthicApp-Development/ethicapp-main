@@ -45,10 +45,10 @@ test.after(async () => {
 async function insertUser(role) {
     const suffix = randomUUID();
     const [user] = await query(`
-        INSERT INTO users (name, rut, mail, role)
-        VALUES ('Integration user', $1, $2, $3)
+        INSERT INTO users (name, mail, role)
+        VALUES ('Integration user', $1, $2)
         RETURNING id;
-    `, [suffix, `${suffix}@integration.test`, role]);
+    `, [`${suffix}@integration.test`, role]);
     return Number(user.id);
 }
 

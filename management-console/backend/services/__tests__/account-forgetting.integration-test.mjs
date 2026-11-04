@@ -56,13 +56,13 @@ async function insertUser({ role = 'A', anonymized = false } = {}) {
   const mail = `it-876-${randomUUID()}@example.com`;
   const [row] = await query(
     `
-      INSERT INTO users (name, firstname, lastname, rut, mail, role, active, email_confirmed,
+      INSERT INTO users (name, firstname, lastname, mail, role, active, email_confirmed,
                          password_bcrypt, anonymized_at)
-      VALUES ('Ana Student', 'Ana', 'Student', $1, $2, $3, true, true, 'bcrypt-hash',
-              CASE WHEN $4 THEN NOW() END)
+      VALUES ('Ana Student', 'Ana', 'Student', $1, $2, true, true, 'bcrypt-hash',
+              CASE WHEN $3 THEN NOW() END)
       RETURNING id, mail, session_version
     `,
-    [randomUUID(), mail, role, anonymized]
+    [mail, role, anonymized]
   );
   return row;
 }

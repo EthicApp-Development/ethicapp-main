@@ -39,10 +39,10 @@ async function query(sql, params = []) {
 async function createFixture() {
     const suffix = randomUUID();
     const [user] = await query(`
-        INSERT INTO users (name, rut, mail, role)
-        VALUES ('Integration teacher', $1, $2, 'P')
+        INSERT INTO users (name, mail, role)
+        VALUES ('Integration teacher', $1, 'P')
         RETURNING id;
-    `, [suffix, `${suffix}@integration.test`]);
+    `, [`${suffix}@integration.test`]);
     const [design] = await query(`
         INSERT INTO designs (creator, design)
         VALUES ($1, '{}'::jsonb)

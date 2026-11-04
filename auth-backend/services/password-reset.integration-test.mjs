@@ -61,11 +61,11 @@ async function insertUser({ role = 'A', active = true, emailConfirmed = true } =
   const mail = `it-889r-${randomUUID()}@example.com`;
   const [row] = await query(
     `
-      INSERT INTO users (name, rut, mail, role, password_bcrypt, active, email_confirmed)
-      VALUES ('Integration User', $1, $2, $3, $4, $5, $6)
+      INSERT INTO users (name, mail, role, password_bcrypt, active, email_confirmed)
+      VALUES ('Integration User', $1, $2, $3, $4, $5)
       RETURNING id, mail
     `,
-    [randomUUID(), mail, role, OLD_HASH, active, emailConfirmed]
+    [mail, role, OLD_HASH, active, emailConfirmed]
   );
   return row;
 }

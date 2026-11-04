@@ -56,15 +56,23 @@ function isUniqueViolation(err) {
   return err && err.code === '23505';
 }
 
+// users_mail_lower_unique (V42) refuses two emails that differ only in letter
+// case. The other names come from schemas before V42.
+const USER_MAIL_UNIQUE_CONSTRAINTS = new Set([
+  'users_mail_lower_unique',
+  'users_mail_unique',
+  'users_mail_key'
+]);
+
 function isUniqueMailViolation(err) {
   if (!isUniqueViolation(err)) {
     return false;
   }
 
   return (
-    err.constraint === 'users_mail_key' ||
-    err.constraint === 'users_mail_unique' ||
-    (typeof err.detail === 'string' && err.detail.includes('(mail)='))
+    USER_MAIL_UNIQUE_CONSTRAINTS.has(err.constraint) ||
+    (typeof err.detail === 'string' &&
+      (err.detail.includes('(mail)=') || err.detail.includes('(lower(mail))=')))
   );
 }
 
@@ -925,15 +933,17 @@ router.post('/register', async (req, res) => {
         SELECT id, mail, rut
         FROM users
         WHERE rut = $1
-           OR mail = $2
-        ORDER BY (mail = $2) DESC
+           OR lower(mail) = $2
+        ORDER BY (lower(mail) = $2) DESC
         LIMIT 1
       `,
       [dni, email]
     );
 
+    // users_mail_lower_unique backs this check: a sign-up that commits between
+    // it and the insert below makes the insert fail, answered the same way.
     if (existingUserResult.rowCount > 0) {
-      if (existingUserResult.rows[0].mail === email) {
+      if (existingUserResult.rows[0].mail.toLowerCase() === email) {
         return res.status(409).json(duplicateEmailResponse(req));
       }
 
@@ -1143,7 +1153,7 @@ router.post('/register-prof', async (req, res) => {
         SELECT id
         FROM users
         WHERE rut = $1
-           OR ($2 <> '' AND mail = $2)
+           OR ($2 <> '' AND lower(mail) = $2)
         LIMIT 1
       `,
       [dni, email]
@@ -1183,7 +1193,9 @@ router.post('/register-prof', async (req, res) => {
   } catch (err) {
     console.error('REGISTER PROF ERROR:', err);
 
-    if (err.code === '23505') {
+    // Any unique violation, users_mail_lower_unique included (an account with
+    // the same email created after the check above), answers as the check.
+    if (isUniqueViolation(err)) {
       return respondRegisterProfError(
         req,
         res,
