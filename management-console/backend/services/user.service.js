@@ -41,7 +41,6 @@ export function buildListUsersFilter({ keywords = '', role = null, status = null
       OR lower(coalesce(lastname, '')) LIKE $${idx}
       OR lower(coalesce(mail, '')) LIKE $${idx}
       OR lower(coalesce(name, '')) LIKE $${idx}
-      OR lower(coalesce(rut, '')) LIKE $${idx}
     )`);
   }
 

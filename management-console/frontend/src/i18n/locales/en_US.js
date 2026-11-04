@@ -14,7 +14,7 @@ export default {
     expandSidebar: 'Expand navigation'
   },
   filters: {
-    keywords: 'Search by first name, last name, email, or identifier',
+    keywords: 'Search by first name, last name, or email',
     role: 'Filter by role',
     allRoles: 'All roles',
     status: 'Filter by status',
@@ -364,7 +364,7 @@ export default {
         title: 'Forget this student?',
         body: 'EthicApp will forget {{name}} ({{email}}). This cannot be undone.',
         detailAccount: 'The account is disabled at once: open sessions stop working and the old credentials no longer sign in.',
-        detailIdentity: 'The name, email, RUT and profile data are replaced with anonymous values.',
+        detailIdentity: 'The name, email and profile data are replaced with anonymous values.',
         detailResponses: 'Written responses and chat messages are replaced with a placeholder. Their rows are kept, so group chats stay consistent.',
         detailAiServices: 'The text kept with AI service work in EthicApp is erased, and the Argumentation Tutor and Polyadic Agents are asked to erase what they keep about the student, in the background.',
         confirm: 'Forget student'

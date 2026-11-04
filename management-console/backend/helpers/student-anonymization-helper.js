@@ -87,7 +87,6 @@ function buildAnonymousIdentity(role, userId) {
         firstname: labels.firstname,
         lastname: `${labels.lastname} ${normalizedUserId}`,
         email: `${labels.emailPrefix}-${normalizedUserId}@anonymous.invalid`,
-        rut: `ANON-${normalizedUserId}`,
     };
 }
 
@@ -352,6 +351,8 @@ async function anonymizeAccountInTransaction(client, runId, user, options) {
         [user.id]
     );
 
+    // The RUT is retired (epic #1067), so a forgotten account keeps none:
+    // `rut = NULL` goes when #1072 drops users.rut.
     await client.query(
         `
             UPDATE users
@@ -359,7 +360,7 @@ async function anonymizeAccountInTransaction(client, runId, user, options) {
                 firstname = $2,
                 lastname = $3,
                 mail = $4,
-                rut = $5,
+                rut = NULL,
                 sex = NULL,
                 pass = '',
                 password_bcrypt = NULL,
@@ -370,15 +371,14 @@ async function anonymizeAccountInTransaction(client, runId, user, options) {
                 profile_image_topbar_path = NULL,
                 session_version = session_version + 1,
                 anonymized_at = NOW(),
-                anonymization_run_id = $6
-            WHERE id = $7
+                anonymization_run_id = $5
+            WHERE id = $6
         `,
         [
             identity.name,
             identity.firstname,
             identity.lastname,
             identity.email,
-            identity.rut,
             runId,
             user.id,
         ]
