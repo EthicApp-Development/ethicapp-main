@@ -145,7 +145,8 @@ describe("activities page, the empty page's templates", () => {
     const page = read("activity.index.html");
 
     it("replaces En curso only, and keeps the other tabs' one-line messages", () => {
-        assert.match(page, /ap\.tab === 'ongoing' && ap\.hasNoActivities\(\)/u);
+        assert.ok(page.includes(
+            "<activities-empty-page ng-if=\"ap.tab === 'ongoing' && ap.hasNoActivities()\""));
         assert.match(read("fragments/activities-finished-tab.template.html"),
             /ng-if="ap\.count\('finished'\) === 0"[\s\S]*activities_empty_finished/u);
         assert.match(read("fragments/activities-archived-tab.template.html"),
@@ -156,7 +157,9 @@ describe("activities page, the empty page's templates", () => {
         assert.ok(fragment.includes('href="#!/designs/new"'));
         assert.ok(fragment.includes('href="#!/activities/new"'));
         assert.ok(fragment.includes('class="fa fa-rocket"'));
-        assert.equal(fragment.match(/ng-if="ap\.showDesignStep"/gu).length, 2);
+        // The component's binding (#1098), given by the page.
+        assert.equal(fragment.match(/ng-if="\$ctrl\.showDesignStep"/gu).length, 2);
+        assert.ok(page.includes('show-design-step="ap.showDesignStep"'));
     });
 
     it("translates every text in both locales", () => {

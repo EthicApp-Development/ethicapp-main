@@ -19,10 +19,8 @@
 //   links do and as on the Cases page;
 // - the notice region, the `activity-action-notice` component (#1052,
 //   #1094), bound to the page's ActivityRowActionsService instance;
-// - the page of a teacher with no activities
-//   (`activities-empty-page.template.html`), filled by #1053.
-//
-// The home and the dashboard keep the `activity-description` card.
+// - the page of a teacher with no activities, the `activities-empty-page`
+//   component (#1053, #1098), shared with the home.
 
 import {
     ACTIVITIES_PAGE_SIZE,
@@ -43,7 +41,7 @@ import {
     statusFilterSearchValue,
     tabHasStatusFilter,
 } from "../../helpers/activities-filters.js";
-import { launchableDesigns } from "../../helpers/launch-design-list.js";
+import { designStepNeeded } from "../../helpers/activities-empty-page.js";
 
 // The page's own URL search keys, which are not carried to the next page.
 const PAGE_SEARCH_KEYS = ["tab", "status", "q"];
@@ -105,25 +103,14 @@ export function ActivitiesPageController($scope, $rootScope, $location, $transla
     // Empty page
 
     // Whether the empty page shows step 1, "Prepara un diseño", before
-    // "Lanza la actividad". It is left out when the teacher already has a
-    // design the launch wizard would list (`launchableDesigns`: their own, not
-    // archived, without errors), and kept when the designs cannot be loaded.
+    // "Lanza la actividad" (`designStepNeeded`, shared with the home).
     vm.showDesignStep = true;
 
     // Loads the teacher's designs only for the empty page, so a teacher with
-    // activities makes no request for them. Like the wizard, it reloads them:
-    // a design edited since the last load may have become ready.
+    // activities makes no request for them.
     async function loadEmptyPage() {
-        if (!noActivityInAnyTab()) {
-            return;
-        }
-        try {
-            const loaded = await DesignCatalogService.loadDesigns();
-            const designs = loaded ? await DesignCatalogService.getDesigns() : [];
-            vm.showDesignStep = launchableDesigns(designs).length === 0;
-        } catch (error) {
-            console.error("[ActivitiesPageController] Could not load the designs.", error);
-            vm.showDesignStep = true;
+        if (noActivityInAnyTab()) {
+            vm.showDesignStep = await designStepNeeded(DesignCatalogService);
         }
     }
 

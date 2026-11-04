@@ -340,6 +340,8 @@ import teacherGroupChatComponent from "../../components/teacher-group-chat.compo
 import teacherToastComponent from "../../components/teacher-toast.component.js";
 // The notice after an activity's row action, on Activities and the home (#1094).
 import activityActionNoticeComponent from "../../components/activity-action-notice.component.js";
+// The page of a teacher with no activities, on Activities and the home (#1098).
+import activitiesEmptyPageComponent from "../../components/activities-empty-page.component.js";
 
 app.component('activityDescription', activityDescriptionComponent);
 app.component("activitiesTable", activitiesTableComponent);
@@ -393,6 +395,7 @@ app.component("phaseInstructionsEdit", phaseInstructionsEditComponent);
 app.component("teacherGroupChat", teacherGroupChatComponent);
 app.component("toast", teacherToastComponent);
 app.component("activityActionNotice", activityActionNoticeComponent);
+app.component("activitiesEmptyPage", activitiesEmptyPageComponent);
 
 import { userRolesFilter } from '../../filters/user-roles.filter.js';
 app.filter("roleTranslate", ["$translate", userRolesFilter]);
