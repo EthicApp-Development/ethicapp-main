@@ -76,35 +76,83 @@
         </div>
     </div>
 
+    <!-- The home's activities (#1098, epic #1093): "Actividades en curso" and
+         "Terminadas recientemente", in the tables of Actividades, with counts
+         and links to it. A teacher with no activities sees the empty page of
+         Actividades; one with activities but none in progress sees one line
+         with "Lanzar actividad". The rows are computed once per rebuild, so
+         the tables' `rows` bindings settle. -->
     <div class="row">
-        <div class="col-md-12" ng-controller="RecentActivitiesController as ra">
-            <div class="panel panel-default">
-                <div class="panel-heading">
-                    {{ 'recent_activities_title_text'| translate }}
+        <div class="col-md-12 home-activities" ng-controller="HomeActivitiesController as ha">
+            <section class="home-activities-section home-activities-ongoing" aria-labelledby="home-activities-ongoing-title">
+                <div class="home-activities-head">
+                    <h3 id="home-activities-ongoing-title" class="home-activities-title">{{ 'home_activities_ongoing_title' | translate }}</h3>
+                    <span class="home-activities-counts" ng-if="ha.loaded && ha.sections.ongoing.total > 0">
+                        <a class="home-activities-count" ng-href="{{ ha.links.ongoing }}"
+                            title="{{ ha.sections.ongoing.countTitleKey | translate:{ count: ha.sections.ongoing.total } }}"
+                            aria-label="{{ ha.sections.ongoing.countTitleKey | translate:{ count: ha.sections.ongoing.total } }}">{{ ha.sections.ongoing.total }}</a><span
+                            ng-if="ha.sections.ongoing.notStarted > 0"> &middot; <a class="home-activities-count home-activities-count-not-started"
+                            ng-href="{{ ha.links.notStarted }}">{{ 'activities_filter_not_started' | translate }} {{ ha.sections.ongoing.notStarted }}</a></span>
+                    </span>
+                    <p class="cases-table-order home-activities-order" ng-if="ha.loaded && ha.sections.ongoing.total > 0">{{ 'activities_order_newest' | translate }}</p>
                 </div>
-                <div class="panel-body" ng-show="ra.isEmpty()">
-                    <p>{{ 'no_recent_activities_text' | translate }}</p>
-                    <button class="btn btn-default btn-sm" ng-click="navigateTo('/cases/new')">
-                        <i class="fa fa-book" aria-hidden="true"></i> {{'ethical_cases_create' | translate}}
-                    </button>
-                    &nbsp;
-                    &nbsp;
-                    &nbsp;
-                    <button class="btn btn-default btn-sm" ng-click="navigateTo('/designs/new')">
-                        <i class="fa fa-paint-brush" aria-hidden="true"></i> {{'create_design' | translate}}
-                    </button>
-                    &nbsp;
-                    &nbsp;
-                    &nbsp;
-                    <button class="btn btn-default btn-sm" ng-click="navigateTo('/activities/new')">
-                        <i class="fa-brands fa-space-awesome" aria-hidden="true"></i> {{'launch_activity' | translate}}
-                    </button>
+
+                <p class="text-muted" ng-if="!ha.loaded">{{ 'loading' | translate }}</p>
+
+                <!-- A teacher with no activities in any tab of Actividades. -->
+                <activities-empty-page ng-if="ha.loaded && ha.sections.hasNoActivities"
+                    show-design-step="ha.showDesignStep"></activities-empty-page>
+
+                <!-- Activities, but none in progress: finished or archived only. -->
+                <div class="home-activities-none" ng-if="ha.loaded && !ha.sections.hasNoActivities && ha.sections.ongoing.total === 0">
+                    <span>{{ 'activities_empty_ongoing' | translate }}</span>
+                    <a href="#!/activities/new" class="btn btn-primary btn-sm">
+                        <i class="fa fa-rocket" aria-hidden="true"></i> {{ 'activities_launch' | translate }}
+                    </a>
                 </div>
-                <div class="panel-body" ng-show="!ra.isEmpty()">
-                    <activity-description on-view="ra.handleView" ng-repeat="act in ra.activities.ongoing" activity="act"></activity-description>
-                    <activity-description on-view="ra.handleView" ng-repeat="act in ra.activities.finished" activity="act"></activity-description>
+
+                <div ng-if="ha.loaded && ha.sections.ongoing.total > 0">
+                    <activities-table
+                        tab="ongoing"
+                        rows="ha.sections.ongoing.rows"
+                        limit="ha.limits.ongoing"
+                        busy="ha.actions.busy"
+                        caption="home_activities_ongoing_title"
+                        on-action="ha.actions.run(row, action)"
+                        on-copy-code="ha.actions.copyCode(row)"></activities-table>
+                    <div class="cases-table-footer">
+                        <span>{{ 'activities_showing' | translate:{ shown: ha.sections.ongoing.rows.length, total: ha.sections.ongoing.total } }}</span>
+                        <a class="home-activities-view-all" ng-href="{{ ha.links.ongoing }}">{{ ha.sections.ongoing.viewAllKey | translate:{ count: ha.sections.ongoing.total } }}&nbsp;<span aria-hidden="true">&rarr;</span></a>
+                    </div>
                 </div>
-            </div>
+            </section>
+
+            <!-- Left out when the teacher has no finished activities. -->
+            <section class="home-activities-section home-activities-finished" aria-labelledby="home-activities-finished-title"
+                ng-if="ha.loaded && ha.sections.finished.total > 0">
+                <div class="home-activities-head">
+                    <h3 id="home-activities-finished-title" class="home-activities-title">{{ 'home_activities_finished_title' | translate }}</h3>
+                    <span class="home-activities-counts">
+                        <a class="home-activities-count" ng-href="{{ ha.links.finished }}"
+                            title="{{ ha.sections.finished.viewAllKey | translate:{ count: ha.sections.finished.total } }}"
+                            aria-label="{{ ha.sections.finished.viewAllKey | translate:{ count: ha.sections.finished.total } }}">{{ ha.sections.finished.total }}</a>
+                    </span>
+                </div>
+                <activities-table
+                    tab="finished"
+                    rows="ha.sections.finished.rows"
+                    limit="ha.limits.finished"
+                    busy="ha.actions.busy"
+                    caption="home_activities_finished_title"
+                    on-action="ha.actions.run(row, action)"
+                    on-copy-code="ha.actions.copyCode(row)"></activities-table>
+                <div class="cases-table-footer">
+                    <span>{{ 'activities_showing' | translate:{ shown: ha.sections.finished.rows.length, total: ha.sections.finished.total } }}</span>
+                    <a class="home-activities-view-all" ng-href="{{ ha.links.finished }}">{{ ha.sections.finished.viewAllKey | translate:{ count: ha.sections.finished.total } }}&nbsp;<span aria-hidden="true">&rarr;</span></a>
+                </div>
+            </section>
+
+            <activity-action-notice actions="ha.actions"></activity-action-notice>
         </div>
     </div>
 </div>
