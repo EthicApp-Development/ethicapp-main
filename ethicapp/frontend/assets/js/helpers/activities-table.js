@@ -306,9 +306,9 @@ export function buildActivityRow(activity, dates) {
 }
 
 /**
- * The rows of the three tabs, newest first, as the home's recent activities
- * (#918). Activities without a session id are left out: no row action could
- * reach them.
+ * The rows of the three tabs, newest first (#918), for the Activities page
+ * and the home (`helpers/home-activities.js`). Activities without a session
+ * id are left out: no row action could reach them.
  * @param {object[]} activities the rows of GET /activities
  * @param {ReturnType<import("./activity-dates.js").createActivityDateFormatter>} dates
  * @returns {{ ongoing: object[], finished: object[], archived: object[] }}
