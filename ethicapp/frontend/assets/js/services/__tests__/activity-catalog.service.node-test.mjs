@@ -144,3 +144,35 @@ describe("ActivityCatalogService.setArchived", () => {
         assert.equal(service.getActivities()[0].archived, false);
     });
 });
+
+describe("ActivityCatalogService.loadActivities (#1055)", () => {
+    const ROW = Object.freeze({
+        sessionId: 41, designId: 7, designTitle: "Privacidad", caseId: null, caseTitle: null,
+    });
+
+    it("keeps the activities as GET /activities sends them", async () => {
+        const { service, requests } = createService({
+            "/activities": { data: { status: "ok", activities: [{ ...ROW }] } },
+        });
+        const updates = [];
+        service.registerListener("onActivityCatalogUpdated", update => updates.push(update));
+
+        assert.deepEqual(await service.loadActivities(), [ROW]);
+        assert.deepEqual(requests.map(request => [request.method, request.url]),
+            [["GET", "/activities"]]);
+        assert.equal(Object.hasOwn(service.getActivities()[0], "title"), false,
+            "no title copied from a design document");
+        assert.equal(updates.length, 1);
+    });
+
+    it("answers an empty list when the request fails", async () => {
+        const { service } = createService({ "/activities": new Error("500") });
+        const errors = console.error;
+        console.error = () => {};
+        try {
+            assert.deepEqual(await service.loadActivities(), []);
+        } finally {
+            console.error = errors;
+        }
+    });
+});
