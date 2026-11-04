@@ -8,11 +8,24 @@ import {
     claimTypeFromExternalResult,
     createAtsSession,
     differentialQuestionText,
+    getUiTranslations,
     phaseInstructionsText,
     questionTextFromPhaseDesign,
     tutorEvaluationFromExternalResult,
 } from "../ats-feedback.utils.js";
 import { sessionTutorMode } from "../ats-feedback.adapter.js";
+
+// ─── getUiTranslations ────────────────────────────────────────────────────────
+
+test("getUiTranslations: the description says participants (#1055)", async () => {
+    const translations = await getUiTranslations();
+
+    assert.match(translations.es_CL.description, /\bparticipante\b/u);
+    assert.match(translations.en_US.description, /\bparticipant's\b/u);
+    for (const locale of ["es_CL", "en_US"]) {
+        assert.doesNotMatch(translations[locale].description, /estudiante|student/iu, locale);
+    }
+});
 
 // ─── buildArgumentClientContext ───────────────────────────────────────────────
 

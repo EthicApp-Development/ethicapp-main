@@ -10,11 +10,11 @@ export { ARGUMENTATION_TUTOR_SERVICE_ID };
 const UI_TRANSLATIONS = {
     es_CL: {
         label:       "Tutor de argumentación",
-        description: "Analiza los argumentos de cada estudiante y le entrega retroalimentación.",
+        description: "Analiza los argumentos de cada participante y le entrega retroalimentación.",
     },
     en_US: {
         label:       "Argumentation tutor",
-        description: "Analyzes each student's arguments and gives them feedback.",
+        description: "Analyzes each participant's arguments and gives them feedback.",
     },
 };
 

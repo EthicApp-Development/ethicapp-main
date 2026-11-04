@@ -48,10 +48,10 @@ const MAX_CASE_TEXT_LENGTH  = 200000;
 
 // Case Analyst does not publish translated texts yet, so this adapter
 // provides them until the service does.
-const DESCRIPTION_ES_CL = "Lista los hechos del caso que los estudiantes pueden usar como "
+const DESCRIPTION_ES_CL = "Lista los hechos del caso que los participantes pueden usar como "
     + "evidencia, cada uno con su cita literal, y las afirmaciones verosímiles que el caso no "
     + "hace. Revisas y editas el borrador.";
-const DESCRIPTION_EN_US = "Lists the facts of the case that students may invoke as evidence, "
+const DESCRIPTION_EN_US = "Lists the facts of the case that participants may invoke as evidence, "
     + "each with its literal quote, and plausible statements the case does not make. You review "
     + "and edit the draft.";
 
