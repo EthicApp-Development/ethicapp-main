@@ -6,6 +6,7 @@ import { describe, it } from "node:test";
 
 import {
     TEACHER_ACTIVITIES_SQL,
+    activityCaseOf,
     currentPhaseOf,
     teacherActivityListItem,
 } from "../teacher-activity-list.js";
@@ -38,6 +39,8 @@ function row(overrides = {}) {
         currentPhaseMode:    "team",
         phaseCount:          3,
         participantCount:    24,
+        caseId:              31,
+        caseTitle:           "Datos de pacientes",
         ...overrides,
     };
 }
@@ -94,6 +97,14 @@ describe("TEACHER_ACTIVITIES_SQL (#1049)", () => {
         assert.ok(flatSql.includes("sessions.finished_at AS \"finishedAt\""));
     });
 
+    it("joins the design's case by designs.case_id, keeping designs without one (#1050)", () => {
+        assert.ok(flatSql.includes(
+            "LEFT JOIN ethical_cases AS associated_case ON associated_case.id = designs.case_id"));
+        assert.ok(flatSql.includes("associated_case.id AS \"caseId\""));
+        assert.ok(flatSql.includes("associated_case.title AS \"caseTitle\""));
+        assert.ok(flatSql.includes("designs.design,"), "the design document is kept");
+    });
+
     it("uses only the teacher's id as a parameter", () => {
         assert.deepEqual([...new Set(TEACHER_ACTIVITIES_SQL.match(/\$\d+/gu))], ["$1"]);
     });
@@ -143,6 +154,8 @@ describe("teacherActivityListItem (#1049)", () => {
             participantCount:  24,
             aiServicesEnabled: true,
             finishedAt:        null,
+            caseId:            31,
+            caseTitle:         "Datos de pacientes",
         });
     });
 
@@ -201,11 +214,45 @@ describe("teacherActivityListItem (#1049)", () => {
         }
     });
 
+    it("gives a null case for a design without one, whatever its document says", () => {
+        // `designs.case_id` NULL, with a stale `caseId` in the design document.
+        const item = teacherActivityListItem(row({
+            caseId:    null,
+            caseTitle: null,
+            design:    { ...DESIGN, caseId: "1" },
+        }));
+        assert.equal(item.caseId, null);
+        assert.equal(item.caseTitle, null);
+        assert.equal(item.design.caseId, "1", "the design document is returned as stored");
+    });
+
     it("leaves the row's internal columns out", () => {
         const item = teacherActivityListItem(row());
 
         for (const key of ["ai_services_enabled", "currentPhaseNumber", "currentPhaseMode"]) {
             assert.equal(Object.hasOwn(item, key), false, key);
+        }
+    });
+});
+
+describe("activityCaseOf (#1050)", () => {
+    it("gives the case's id and trimmed title", () => {
+        assert.deepEqual(activityCaseOf({ caseId: "31", caseTitle: " Datos " }),
+            { caseId: 31, caseTitle: "Datos" });
+    });
+
+    it("gives no case unless both the id and the title are set", () => {
+        for (const value of [
+            { caseId: null, caseTitle: null },
+            { caseId: 31, caseTitle: null },
+            { caseId: 31, caseTitle: "   " },
+            { caseId: null, caseTitle: "Datos" },
+            { caseId: "x", caseTitle: "Datos" },
+            {},
+            undefined,
+        ]) {
+            assert.deepEqual(activityCaseOf(value), { caseId: null, caseTitle: null },
+                JSON.stringify(value));
         }
     });
 });

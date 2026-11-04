@@ -36,6 +36,8 @@ const NOT_STARTED_ROW = Object.freeze({
     ai_services_enabled: false,
     finishedAt:          null,
     participantCount:    0,
+    caseId:              null,
+    caseTitle:           null,
 });
 
 const FINISHED_ROW = Object.freeze({
@@ -50,6 +52,8 @@ const FINISHED_ROW = Object.freeze({
     ai_services_enabled: true,
     finishedAt:          "2026-11-02T19:00:00.000Z",
     participantCount:    18,
+    caseId:              31,
+    caseTitle:           "Datos de pacientes",
 });
 
 let rows = [];
@@ -104,7 +108,11 @@ describe("GET /activities (#1049)", () => {
             participantCount:  0,
             aiServicesEnabled: false,
             finishedAt:        null,
+            caseId:            null,
+            caseTitle:         null,
         });
+        assert.equal(body.activities[1].caseId, 31);
+        assert.equal(body.activities[1].caseTitle, "Datos de pacientes");
         assert.equal(body.activities[1].finishedAt, "2026-11-02T19:00:00.000Z");
         assert.equal(body.activities[1].participantCount, 18);
         assert.equal(body.activities[1].aiServicesEnabled, true);
