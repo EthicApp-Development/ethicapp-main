@@ -5,9 +5,10 @@ import session from 'express-session';
 
 import { createStudentSessionStore, resolveStudentSessionTtlSeconds } from './config/session-store.js';
 import studentRoutes from './routes/student.routes.js';
+import { createStudentPagesRouter } from './routes/student-pages.routes.js';
 import studentMessages from './i18n/messages/student-messages.js';
 import { translateMessage } from './i18n/locale.js';
-import { exposeLegacySession, hydrateLegacySession, requireLegacyAuth } from './middleware/index.js';
+import { exposeLegacySession, hydrateLegacySession } from './middleware/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -55,12 +56,7 @@ app.get('/student/health', (req, res) => {
   res.status(200).json({ ok: true });
 });
 
-app.use('/student/assets', express.static(path.join(__dirname, '../frontend/dist/assets')));
-app.use('/student', express.static(path.join(__dirname, '../frontend/dist')));
-
-app.get('/student/*splat', requireLegacyAuth, (req, res) => {
-  res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
-});
+app.use('/student', createStudentPagesRouter({ frontendDist: path.join(__dirname, '../frontend/dist') }));
 
 app.use((err, req, res, next) => {
   console.error(err);

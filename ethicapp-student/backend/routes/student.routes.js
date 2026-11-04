@@ -2,9 +2,12 @@ import { Router } from 'express';
 import { query } from '../config/database.js';
 import { createSessionJoinRouter } from './session-join.routes.js';
 import { ensureStudentSession } from './student-route-helpers.js';
+import { requireStudentRole } from '../middleware/index.js';
 
 const router = Router();
 
+// Answers for every authenticated role: the frontend reads the role to send
+// professors and administrators to their own home.
 router.get('/session', (req, res) => {
   res.json({
     uid: req.session?.uid ?? null,
@@ -13,6 +16,9 @@ router.get('/session', (req, res) => {
     impersonating: !!req.session?.impersonating
   });
 });
+
+// Every route below requires a student session.
+router.use(requireStudentRole);
 
 router.get('/sessions', async (req, res, next) => {
   const uid = ensureStudentSession(req, res);
