@@ -38,9 +38,23 @@ test('buildListUsersFilter combines anonymized, keyword, and role filters', () =
   assert.match(filter.whereSql, /lower\(coalesce\(lastname, ''\)\) LIKE \$1/);
   assert.match(filter.whereSql, /lower\(coalesce\(mail, ''\)\) LIKE \$1/);
   assert.match(filter.whereSql, /lower\(coalesce\(name, ''\)\) LIKE \$1/);
-  assert.match(filter.whereSql, /lower\(coalesce\(rut, ''\)\) LIKE \$1/);
   assert.match(filter.whereSql, /role = \$2$/);
   assert.deepEqual(filter.params, ['%ana profesora%', 'P']);
+});
+
+test('listUsers does not match a RUT: it searches names and email only (#1070)', async () => {
+  const { calls, queryFn } = createFakeQuery((call) => (
+    call.sql.startsWith('SELECT count(*)') ? { rows: [{ total: 0 }] } : { rows: [] }
+  ));
+
+  await listUsers({ keywords: '12.345.678-5' }, { queryFn });
+
+  for (const call of calls) {
+    assert.doesNotMatch(call.sql, /\brut\b/i);
+  }
+  const searched = [...calls[0].sql.matchAll(/lower\(coalesce\((\w+), ''\)\) LIKE \$1/g)].map((match) => match[1]);
+  assert.deepEqual(searched, ['firstname', 'lastname', 'mail', 'name']);
+  assert.deepEqual(calls[0].params, ['%12.345.678-5%']);
 });
 
 test('buildListUsersFilter ignores invalid role filters while preserving anonymized filter', () => {

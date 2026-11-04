@@ -78,7 +78,6 @@ test("buildAnonymousStudentIdentity creates stable reusable-safe account values"
         firstname: "Anonymous",
         lastname:  "Student 42",
         email:     "anon-student-42@anonymous.invalid",
-        rut:       "ANON-42",
     });
 });
 
@@ -162,10 +161,10 @@ test("runStudentAnonymization anonymizes account, free-text data, session device
         "Anonymous",
         "Student 5",
         "anon-student-5@anonymous.invalid",
-        "ANON-5",
         77,
         5,
     ]);
+    assert.match(userUpdate.sql, /rut = NULL/);
     assert.match(userUpdate.sql, /active = false/);
     assert.match(userUpdate.sql, /email_confirmed = false/);
     assert.match(userUpdate.sql, /sex = NULL/);
@@ -276,7 +275,6 @@ test("buildAnonymousTeacherIdentity names a former teacher (#877)", () => {
         firstname: "Former",
         lastname:  "Teacher 42",
         email:     "anon-teacher-42@anonymous.invalid",
-        rut:       "ANON-42",
     });
     assert.deepEqual(buildAnonymousIdentity("A", 42), buildAnonymousStudentIdentity(42));
     assert.throws(() => buildAnonymousIdentity("S", 42), /cannot be anonymized/);
@@ -342,9 +340,10 @@ test("anonymizeAccountInTransaction anonymizes a teacher as a teacher, in a run 
     const lock = client.calls.find(call => call.sql.includes("FROM users WHERE id = $1 AND role = $2"));
     assert.deepEqual(lock.params, [8, "P"]);
     const userUpdate = client.calls.find(call => call.sql.includes("UPDATE users SET"));
-    assert.deepEqual(userUpdate.params.slice(0, 5), [
-        "Former Teacher 8", "Former", "Teacher 8", "anon-teacher-8@anonymous.invalid", "ANON-8",
+    assert.deepEqual(userUpdate.params.slice(0, 4), [
+        "Former Teacher 8", "Former", "Teacher 8", "anon-teacher-8@anonymous.invalid",
     ]);
+    assert.match(userUpdate.sql, /rut = NULL/);
     assert.ok(client.calls.some(call => call.sql.includes("UPDATE chat SET content = $1")));
 });
 

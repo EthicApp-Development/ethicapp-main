@@ -67,7 +67,8 @@ existing data model.
 The current job anonymizes or clears:
 
 - Account identity fields: `users.name`, `users.firstname`, `users.lastname`,
-  `users.mail`, `users.rut`.
+  `users.mail`. The retired `users.rut` is cleared (set to NULL) until #1072
+  drops the column (epic #1067).
 - Account access fields: `users.pass`, `users.password_bcrypt`,
   `users.active`, `users.email_confirmed`, `users.session_version`,
   `users.anonymized_at`, `users.anonymization_run_id`.

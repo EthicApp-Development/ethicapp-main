@@ -255,6 +255,9 @@ test('V32: forgetting a teacher deletes, keeps and erases as decided, in one tra
   skip: SKIP_REASON
 }, async () => {
   const m = await teacherWithMaterials();
+  // An account created before the RUT was retired (epic #1067); remove with
+  // users.rut in #1072.
+  await query("UPDATE users SET rut = '12.345.678-5' WHERE id = $1", [m.teacher.id]);
   const openActivity = await insertActivity(m.teacher.id, m.usedDesign, { status: 2 });
 
   const result = await forget(m.teacher, { expectedEmail: m.teacher.mail.toUpperCase() });
@@ -344,6 +347,7 @@ test('V32: forgetting a teacher deletes, keeps and erases as decided, in one tra
   );
   assert.equal(user.name, `Former Teacher ${m.teacher.id}`);
   assert.equal(user.mail, anonymousEmail);
+  assert.equal(user.rut, null);
   assert.equal(user.active, false);
   assert.equal(user.password_bcrypt, null);
   assert.equal(user.session_version, m.teacher.session_version + 1);

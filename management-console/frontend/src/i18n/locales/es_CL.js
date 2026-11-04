@@ -14,7 +14,7 @@ export default {
     expandSidebar: 'Expandir navegación'
   },
   filters: {
-    keywords: 'Buscar por nombre, apellido, email o identificador',
+    keywords: 'Buscar por nombre, apellido o email',
     role: 'Filtrar por rol',
     allRoles: 'Todos los roles',
     status: 'Filtrar por estado',
@@ -364,7 +364,7 @@ export default {
         title: '¿Olvidar a este estudiante?',
         body: 'EthicApp olvidará a {{name}} ({{email}}). Esta acción no se puede deshacer.',
         detailAccount: 'La cuenta se desactiva de inmediato: las sesiones abiertas dejan de funcionar y las credenciales anteriores ya no permiten ingresar.',
-        detailIdentity: 'El nombre, el correo, el RUT y los datos de perfil se reemplazan por valores anónimos.',
+        detailIdentity: 'El nombre, el correo y los datos de perfil se reemplazan por valores anónimos.',
         detailResponses: 'Las respuestas escritas y los mensajes de chat se reemplazan por un texto de relleno. Sus filas se conservan, para que los chats grupales sigan siendo coherentes.',
         detailAiServices: 'Se borra el texto que EthicApp guarda con el trabajo de los servicios de IA, y se pide al Tutor de Argumentación y a Polyadic Agents que borren lo que guardan del estudiante, en segundo plano.',
         confirm: 'Olvidar estudiante'
