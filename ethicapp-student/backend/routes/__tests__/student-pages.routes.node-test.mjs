@@ -48,12 +48,26 @@ test('a student session gets the SPA, its assets and its client routes', async (
   });
 });
 
-test('professor and administrator sessions get 403 for every page and asset', async () => {
-  for (const role of ['P', 'S']) {
+test('professor and administrator sessions are redirected home from every page and asset', async () => {
+  for (const [role, home] of [['P', '/home'], ['S', '/mng']]) {
     await withApp({ uid: 7, role }, async (get) => {
       for (const pagePath of GATED_PATHS) {
-        assert.equal((await get(pagePath)).status, 403, `${role} ${pagePath}`);
+        const response = await get(pagePath);
+
+        assert.equal(response.status, 302, `${role} ${pagePath}`);
+        assert.equal(response.headers.get('location'), home, `${role} ${pagePath}`);
       }
+    });
+  }
+});
+
+test('a session whose role has no home gets 403', async () => {
+  for (const role of ['X', null]) {
+    await withApp({ uid: 7, role }, async (get) => {
+      const response = await get('/student/');
+
+      assert.equal(response.status, 403, String(role));
+      assert.deepEqual(await response.json(), { error: 'User does not have student permissions' });
     });
   }
 });
