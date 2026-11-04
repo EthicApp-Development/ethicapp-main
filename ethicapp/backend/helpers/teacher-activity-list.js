@@ -1,8 +1,8 @@
 // The teacher's list of activities, `GET /activities` (#1049, epic #1046):
 // each activity with its session and design, plus what the activities table
 // shows about it: the current phase and its mode, the number of phases in the
-// design, how many participants joined, whether its AI services are on and
-// when it ended.
+// design, how many participants joined, whether its AI services are on, when
+// it ended, and the design's case (#1050).
 //
 // One statement for the whole list, so a teacher with many activities still
 // makes one request and one query:
@@ -14,6 +14,10 @@
 // - The participants are counted once for all of the teacher's sessions, in a
 //   grouped subquery joined by session id, instead of a subquery per row:
 //   `sesusers` has no index that starts with the session id.
+// - The case is the design's `case_id`, joined to `ethical_cases` by its
+//   primary key. `designs.case_id` is the source of truth (ON DELETE SET
+//   NULL); the design document's `caseId` and `associatedCase` can be stale
+//   or missing.
 
 import { sessionAiServicesEnabled } from "./session-ai-services.js";
 
@@ -42,6 +46,8 @@ export const TEACHER_ACTIVITIES_SQL = `
         designs.id AS "designId",
         sessions.ai_services_enabled,
         sessions.finished_at AS "finishedAt",
+        associated_case.id AS "caseId",
+        associated_case.title AS "caseTitle",
         current_phase.number AS "currentPhaseNumber",
         current_phase.type AS "currentPhaseMode",
         CASE
@@ -55,6 +61,8 @@ export const TEACHER_ACTIVITIES_SQL = `
         ON activity.session = sessions.id
     INNER JOIN designs
         ON activity.design = designs.id
+    LEFT JOIN ethical_cases AS associated_case
+        ON associated_case.id = designs.case_id
     LEFT JOIN stages AS current_phase
         ON current_phase.id = sessions.current_stage
     LEFT JOIN (
@@ -99,6 +107,21 @@ export function currentPhaseOf(row) {
 }
 
 /**
+ * The design's case of a row: its id and title, both null when the design has
+ * no case or either is missing.
+ * @param {{ caseId?: unknown, caseTitle?: unknown }} row
+ * @returns {{ caseId: number|null, caseTitle: string|null }}
+ */
+export function activityCaseOf(row) {
+    const caseId = countOf(row?.caseId);
+    const caseTitle = typeof row?.caseTitle === "string" ? row.caseTitle.trim() : "";
+    if (caseId === 0 || caseTitle === "") {
+        return { caseId: null, caseTitle: null };
+    }
+    return { caseId, caseTitle };
+}
+
+/**
  * One activity of `GET /activities`, from a row of TEACHER_ACTIVITIES_SQL.
  * Every field the list returned before #1049 is kept as it was; the design
  * document is trimmed later (#1055).
@@ -124,5 +147,6 @@ export function teacherActivityListItem(row) {
         participantCount:  countOf(row.participantCount),
         aiServicesEnabled: sessionAiServicesEnabled(row),
         finishedAt:        row.finishedAt ?? null,
+        ...activityCaseOf(row),
     };
 }

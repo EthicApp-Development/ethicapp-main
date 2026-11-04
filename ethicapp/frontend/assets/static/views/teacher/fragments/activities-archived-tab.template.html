@@ -1,0 +1,22 @@
+<!-- "Archivadas" (#1050): the archived activities, newest first, in the
+     Terminadas table, with "Restaurar" as each row's visible action. -->
+<section class="cases-table-section activities-archived-tab">
+    <div ng-if="ap.getRows('archived').length > 0"
+        ng-include="'/assets/static/views/teacher/fragments/activities-finished-table.template.html'"></div>
+
+    <div class="cases-table-footer" ng-if="ap.getRows('archived').length > 0">
+        <span>
+            {{ 'activities_showing' | translate:{ shown: ap.getVisibleRows('archived').length, total: ap.getRows('archived').length } }}
+            <span ng-if="ap.hasMoreRows('archived')">&middot;
+                <button type="button" class="btn btn-link cases-show-more" ng-click="ap.showMore('archived')">
+                    {{ 'activities_show_more' | translate }}
+                </button>
+            </span>
+        </span>
+        <span class="activities-tab-hint">{{ 'activities_hint_archived' | translate }}</span>
+    </div>
+
+    <div class="alert alert-info" ng-if="ap.count('archived') === 0">
+        <span>{{ 'activities_empty_archived' | translate }}</span>
+    </div>
+</section>

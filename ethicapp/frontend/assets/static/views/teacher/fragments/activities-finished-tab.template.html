@@ -1,0 +1,22 @@
+<!-- "Terminadas" (#1050): the finished activities that are not archived,
+     newest first, with "Reportes" as each row's visible action. -->
+<section class="cases-table-section activities-finished-tab">
+    <div ng-if="ap.getRows('finished').length > 0"
+        ng-include="'/assets/static/views/teacher/fragments/activities-finished-table.template.html'"></div>
+
+    <div class="cases-table-footer" ng-if="ap.getRows('finished').length > 0">
+        <span>
+            {{ 'activities_showing' | translate:{ shown: ap.getVisibleRows('finished').length, total: ap.getRows('finished').length } }}
+            <span ng-if="ap.hasMoreRows('finished')">&middot;
+                <button type="button" class="btn btn-link cases-show-more" ng-click="ap.showMore('finished')">
+                    {{ 'activities_show_more' | translate }}
+                </button>
+            </span>
+        </span>
+        <span class="activities-tab-hint">{{ 'activities_hint_finished' | translate }}</span>
+    </div>
+
+    <div class="alert alert-info" ng-if="ap.count('finished') === 0">
+        <span>{{ 'activities_empty_finished' | translate }}</span>
+    </div>
+</section>
