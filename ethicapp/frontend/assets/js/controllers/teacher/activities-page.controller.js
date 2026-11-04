@@ -63,6 +63,7 @@ import {
     restoreNotice,
 } from "../../helpers/activity-action-feedback.js";
 import { translatePlainText } from "../../helpers/plain-text-translation.js";
+import { launchableDesigns } from "../../helpers/launch-design-list.js";
 
 // The page's own URL search keys, which are not carried to the next page.
 const PAGE_SEARCH_KEYS = ["tab", "status", "q"];
@@ -75,7 +76,7 @@ function initialVisibleCounts() {
 }
 
 export function ActivitiesPageController($scope, $rootScope, $location, $translate, $window,
-    ActivityCatalogService, $timeout) {
+    ActivityCatalogService, $timeout, DesignCatalogService) {
 
     const vm = this;
 
@@ -112,6 +113,7 @@ export function ActivitiesPageController($scope, $rootScope, $location, $transla
         // The catalog answers an empty list when the request fails.
         await ActivityCatalogService.loadActivities();
         vm.refresh();
+        await loadEmptyPage();
         vm.loaded = true;
         $scope.$applyAsync();
     };
@@ -122,10 +124,40 @@ export function ActivitiesPageController($scope, $rootScope, $location, $transla
         return vm.tables[tab]?.length || 0;
     };
 
-    // The teacher has launched no activity yet (#1053 shows its own page).
+    function noActivityInAnyTab() {
+        return ACTIVITY_TABS.every(tab => vm.count(tab) === 0);
+    }
+
+    // The teacher has launched no activity yet: the empty page replaces
+    // "En curso" (#1053).
     vm.hasNoActivities = function() {
-        return vm.loaded && ACTIVITY_TABS.every(tab => vm.count(tab) === 0);
+        return vm.loaded && noActivityInAnyTab();
     };
+
+    // Empty page
+
+    // Whether the empty page shows step 1, "Prepara un diseño", before
+    // "Lanza la actividad". It is left out when the teacher already has a
+    // design the launch wizard would list (`launchableDesigns`: their own, not
+    // archived, without errors), and kept when the designs cannot be loaded.
+    vm.showDesignStep = true;
+
+    // Loads the teacher's designs only for the empty page, so a teacher with
+    // activities makes no request for them. Like the wizard, it reloads them:
+    // a design edited since the last load may have become ready.
+    async function loadEmptyPage() {
+        if (!noActivityInAnyTab()) {
+            return;
+        }
+        try {
+            const loaded = await DesignCatalogService.loadDesigns();
+            const designs = loaded ? await DesignCatalogService.getDesigns() : [];
+            vm.showDesignStep = launchableDesigns(designs).length === 0;
+        } catch (error) {
+            console.error("[ActivitiesPageController] Could not load the designs.", error);
+            vm.showDesignStep = true;
+        }
+    }
 
     // A tab adds a history entry and clears the filters, as the tabs' links
     // do.

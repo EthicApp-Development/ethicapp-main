@@ -179,7 +179,7 @@ app.controller("ActivityController",
     ["$scope", "ActivityCatalogService", "$window", ActivityController]);
 app.controller("ActivitiesPageController",
     ["$scope", "$rootScope", "$location", "$translate", "$window", "ActivityCatalogService",
-        "$timeout", ActivitiesPageController]);
+        "$timeout", "DesignCatalogService", ActivitiesPageController]);
 app.controller("ActivityReportsController",
     ["$scope", "$routeParams", "$window", ActivityReportsController]);
 app.controller("DesignsPageController",
