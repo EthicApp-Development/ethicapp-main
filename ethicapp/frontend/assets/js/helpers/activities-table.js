@@ -135,17 +135,15 @@ export function tableColumns(tab) {
 }
 
 /**
- * The activity's case, from the design document's `associatedCase`, only
- * when it has both an id and a title. Otherwise null, read as "Sin caso".
- * The document's bare `caseId` is not trusted: it can outlive the design's
- * case (`designs.case_id` NULL with a stale `caseId` in the JSON). #1055
- * returns the case from the database instead.
+ * The activity's case, from the row's `caseId` and `caseTitle`, which GET
+ * /activities reads from `designs.case_id`. Present only when both are set;
+ * otherwise null, read as "Sin caso". The design document's `caseId` and
+ * `associatedCase` are not read: they can be stale or missing.
  * @returns {{ id: number, title: string }|null}
  */
 export function activityCaseOf(activity) {
-    const associated = activity?.design?.associatedCase;
-    const id = idOf(associated?.id);
-    const title = cleanText(associated?.title);
+    const id = idOf(activity?.caseId);
+    const title = cleanText(activity?.caseTitle);
     return id !== null && title ? { id, title } : null;
 }
 

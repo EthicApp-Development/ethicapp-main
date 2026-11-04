@@ -31,19 +31,19 @@ const CASE = { id: 7, title: "Datos de pacientes en la nube" };
 
 function activity(sessionId, fields = {}) {
     return {
-        id:          sessionId + 100,
+        id:                sessionId + 100,
         sessionId,
-        name:        "Privacidad en apps de salud",
-        description: "Sección 2, martes",
-        time:        "2026-11-03T21:01:00Z",
-        code:        `k00${sessionId}c`,
-        archived:    false,
-        status:      "initiated",
-        designId:    40 + sessionId,
-        design:      {
-            metainfo:       { title: "Privacidad en apps de salud" },
-            associatedCase: CASE,
-        },
+        name:              "Privacidad en apps de salud",
+        description:       "Sección 2, martes",
+        time:              "2026-11-03T21:01:00Z",
+        code:              `k00${sessionId}c`,
+        archived:          false,
+        status:            "initiated",
+        designId:          40 + sessionId,
+        design:            { metainfo: { title: "Privacidad en apps de salud" } },
+        // The design's case, from `designs.case_id`.
+        caseId:            CASE.id,
+        caseTitle:         CASE.title,
         currentPhase:      null,
         phaseCount:        3,
         participantCount:  0,
@@ -134,16 +134,19 @@ describe("activities table, the Actividad column", () => {
     });
 
     it("says Sin caso when the design has no case", () => {
-        const noCase = activity(1, { design: { metainfo: NOT_STARTED.design.metainfo } });
+        const noCase = activity(1, { caseId: null, caseTitle: null });
         assert.equal(activityCaseOf(noCase), null);
         assert.deepEqual(activityMetaParts(noCase),
             [{ key: "activities_meta_no_case", text: "" }]);
     });
 
-    it("says Sin caso and disables Ver caso for a stale caseId without associatedCase", () => {
-        // `designs.case_id` NULL, with a leftover `caseId` in the document.
+    it("says Sin caso and disables Ver caso when case_id is NULL and the JSON is stale", () => {
+        // `designs.case_id` NULL, with a leftover `caseId` in the document,
+        // as the activity on design 213.
         const stale = activity(1, {
-            design: { metainfo: NOT_STARTED.design.metainfo, caseId: "1" },
+            caseId:    null,
+            caseTitle: null,
+            design:    { metainfo: NOT_STARTED.design.metainfo, caseId: "1" },
         });
         assert.equal(activityCaseOf(stale), null);
         assert.deepEqual(activityMetaParts(stale),
@@ -159,19 +162,36 @@ describe("activities table, the Actividad column", () => {
         });
     });
 
-    it("needs both the id and the title of associatedCase", () => {
-        const metainfo = NOT_STARTED.design.metainfo;
-        const without = associatedCase => activity(1, {
-            design: { metainfo, associatedCase, caseId: 7 },
-        });
-        for (const associatedCase of [{ id: 7 }, { title: "Case" }, { id: "x", title: "Case" },
-            { id: 7, title: "   " }, null]) {
-            assert.equal(activityCaseOf(without(associatedCase)), null,
-                JSON.stringify(associatedCase));
-            assert.equal(buildActivityRow(without(associatedCase), dates).caseId, null);
+    it("needs both the row's caseId and caseTitle", () => {
+        for (const fields of [
+            { caseId: 7, caseTitle: null }, { caseId: null, caseTitle: "Case" },
+            { caseId: "x", caseTitle: "Case" }, { caseId: 7, caseTitle: "   " },
+        ]) {
+            assert.equal(activityCaseOf(activity(1, fields)), null, JSON.stringify(fields));
+            assert.equal(buildActivityRow(activity(1, fields), dates).caseId, null);
         }
-        assert.deepEqual(activityCaseOf(without({ id: "7", title: " Case " })),
+        assert.deepEqual(activityCaseOf(activity(1, { caseId: "7", caseTitle: " Case " })),
             { id: 7, title: "Case" });
+    });
+
+    it("does not read the case from the design document", () => {
+        const fromDocument = activity(1, {
+            caseId:    null,
+            caseTitle: null,
+            design:    {
+                metainfo:       NOT_STARTED.design.metainfo,
+                caseId:         9,
+                associatedCase: { id: 9, title: "Old case" },
+            },
+        });
+        assert.equal(activityCaseOf(fromDocument), null);
+        assert.equal(buildActivityRow(fromDocument, dates).caseId, null);
+    });
+
+    it("links Ver caso to the row's case", () => {
+        const row = buildActivityRow(activity(1, { caseId: 38, caseTitle: "Caso" }), dates);
+        assert.equal(row.caseId, 38);
+        assert.equal(row.menu.find(entry => entry.id === "view-case").disabled, false);
     });
 
     it("gives the row the name and the description apart, and the title as one line", () => {
