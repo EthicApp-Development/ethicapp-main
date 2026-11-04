@@ -6713,15 +6713,20 @@ button.launch-wizard-step-body:focus-visible .launch-wizard-step-name {
    with counts, and the "My cases" and "Archived" tables, after the Designs
    page. From 1200 px each case is a table row; below, the same rows become
    compact rows: the title and its details, then the status, designs, sharing
-   and actions on a second line. */
-.cases-page {
+   and actions on a second line. The activities table (#1095) carries the
+   same colours, so it keeps them on a page without `.cases-page`, such as
+   the home. */
+.cases-page,
+.activities-table {
     --cases-accent: var(--teacher-link-color, #2649ec);
     --cases-line: #d9dde8;
     --cases-muted: #5f6577;
     --cases-ready: #2f7d32;
     --cases-error: #c62828;
     --cases-in-use: #8a6100;
+}
 
+.cases-page {
     padding: 8px 12px 48px;
 }
 
@@ -7355,7 +7360,10 @@ button.launch-wizard-step-body:focus-visible .launch-wizard-step-name {
    for what only activities have: the status with its "IA" mark, the
    participants, the access code and the dates. From 1200 px each activity is
    a table row; below, a compact row: the title, its case and the date, then
-   the status, participants, code and actions on a second line (frame D). */
+   the status, participants, code and actions on a second line (frame D).
+   The table is the `activities-table` component (#1095): its rules do not
+   depend on `.activities-page`, so the home can show it too, and
+   `.activities-table-ongoing .activities-row` still wins over `.cases-row`. */
 .activities-filters-slot {
     flex: 1 1 auto;
     min-width: 0;
@@ -7480,14 +7488,14 @@ button.launch-wizard-step-body:focus-visible .launch-wizard-step-name {
 }
 
 @media (width < 1200px) {
-    .activities-page .activities-table-ongoing .activities-row {
+    .activities-table-ongoing .activities-row {
         grid-template-areas:
             "activity activity activity activity date"
             "status participants code actions actions";
         grid-template-columns: auto auto auto minmax(0, 1fr) auto;
     }
 
-    .activities-page .activities-table-finished .activities-row {
+    .activities-table-finished .activities-row {
         grid-template-areas:
             "activity activity activity date"
             "status participants actions actions";
@@ -7522,7 +7530,7 @@ button.launch-wizard-step-body:focus-visible .launch-wizard-step-name {
 }
 
 @media (width < 768px) {
-    .activities-page .activities-table-ongoing .activities-row {
+    .activities-table-ongoing .activities-row {
         grid-template-areas:
             "activity activity activity"
             "date date date"
@@ -7531,7 +7539,7 @@ button.launch-wizard-step-body:focus-visible .launch-wizard-step-name {
         grid-template-columns: auto auto minmax(0, 1fr);
     }
 
-    .activities-page .activities-table-finished .activities-row {
+    .activities-table-finished .activities-row {
         grid-template-areas:
             "activity activity"
             "date date"

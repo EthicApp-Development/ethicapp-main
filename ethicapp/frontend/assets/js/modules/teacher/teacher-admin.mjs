@@ -184,9 +184,8 @@ app.controller("LocalesController",
 app.controller("RecentActivitiesController",
     ["$scope", "ActivityCatalogService", RecentActivitiesController]);
 app.controller("ActivitiesPageController",
-    ["$scope", "$rootScope", "$location", "$translate", "$window", "ActivityCatalogService",
-        "$timeout", "DesignCatalogService", "ActivityRowActionsService",
-        ActivitiesPageController]);
+    ["$scope", "$rootScope", "$location", "$translate", "ActivityCatalogService",
+        "DesignCatalogService", "ActivityRowActionsService", ActivitiesPageController]);
 app.controller("ActivityReportsController",
     ["$scope", "$routeParams", "$window", ActivityReportsController]);
 app.controller("DesignsPageController",
@@ -276,6 +275,8 @@ app.controller("ConnectedUsersDirectiveController", ["$scope", "ActivityStateSer
     ConnectedUsersDirectiveController]);
 
 import { activityDescriptionComponent } from "../../components/activity-description.component.js";
+// The En curso, Terminadas and Archivadas tables of Actividades (#1095).
+import { activitiesTableComponent } from "../../components/activities-table.component.js";
 // The sticky bar of the activity dashboard (#893).
 import activityBarComponent from "../../components/activity-bar.component.js";
 // The phase navigator in the activity dashboard's rail (#894).
@@ -341,6 +342,7 @@ import teacherToastComponent from "../../components/teacher-toast.component.js";
 import activityActionNoticeComponent from "../../components/activity-action-notice.component.js";
 
 app.component('activityDescription', activityDescriptionComponent);
+app.component("activitiesTable", activitiesTableComponent);
 app.component("activityBar", activityBarComponent);
 app.component("phaseNavigator", phaseNavigatorComponent);
 app.component("responseDetailPanel", responseDetailPanelComponent);

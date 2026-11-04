@@ -142,8 +142,8 @@ function createPage({
     // The row actions (#1094), with the same fakes.
     const ActivityRowActionsServiceInstance = ActivityRowActionsService($rootScope, $location,
         $translate, $window, $timeout, ActivityCatalogService);
-    ActivitiesPageController.call(vm, $scope, $rootScope, $location, $translate, $window,
-        ActivityCatalogService, $timeout, DesignCatalogService, ActivityRowActionsServiceInstance);
+    ActivitiesPageController.call(vm, $scope, $rootScope, $location, $translate,
+        ActivityCatalogService, DesignCatalogService, ActivityRowActionsServiceInstance);
 
     return {
         vm,
@@ -222,15 +222,6 @@ describe("activities page, tabs", () => {
         await vm.ready;
         leave();
         assert.deepEqual(calls.replaces, [{}]);
-    });
-
-    it("gives each tab its columns", async () => {
-        const { vm } = createPage();
-        await vm.ready;
-        assert.deepEqual(vm.columns.ongoing.map(column => column.id),
-            ["activity", "status", "participants", "code", "launched"]);
-        assert.deepEqual(vm.columns.archived.map(column => column.id),
-            ["activity", "status", "participants", "finished"]);
     });
 
     it("tells a teacher with no activities", async () => {
@@ -399,14 +390,22 @@ describe("activities page, templates", () => {
         assert.ok(page.includes('href="#!/activities?tab=archived"'));
     });
 
-    it("shares the Terminadas table and the row menu between tabs", () => {
-        for (const tab of ["finished", "archived"]) {
-            assert.ok(read(`fragments/activities-${tab}-tab.template.html`)
-                .includes("fragments/activities-finished-table.template.html"));
+    // The tabs show the activities-table component (#1095), bound to the
+    // cached rows (`getRows`) and cut by `limit`: a binding to
+    // `getVisibleRows`, a new slice on each call, would never settle.
+    it("shows each tab in the activities-table component", () => {
+        for (const tab of ["ongoing", "finished", "archived"]) {
+            const fragment = read(`fragments/activities-${tab}-tab.template.html`);
+            assert.ok(fragment.includes("<activities-table"), tab);
+            assert.ok(fragment.includes(`tab="${tab}"`), tab);
+            assert.ok(fragment.includes(`rows="ap.getRows('${tab}')"`), tab);
+            assert.ok(fragment.includes(`limit="ap.visibleCounts.${tab}"`), tab);
+            assert.ok(fragment.includes('busy="ap.busy"'), tab);
+            assert.ok(fragment.includes('on-action="ap.runAction(row, action)"'), tab);
+            assert.doesNotMatch(fragment, /<table|rows="ap\.getVisibleRows/, tab);
         }
-        for (const table of ["activities-ongoing-tab", "activities-finished-table"]) {
-            assert.ok(read(`fragments/${table}.template.html`)
-                .includes("fragments/activities-row-menu.template.html"));
-        }
+        assert.ok(read("fragments/activities-ongoing-tab.template.html")
+            .includes('on-copy-code="ap.copyCode(row)"'));
+        assert.ok(!existsSync(new URL("fragments/activities-finished-table.template.html", VIEWS)));
     });
 });
