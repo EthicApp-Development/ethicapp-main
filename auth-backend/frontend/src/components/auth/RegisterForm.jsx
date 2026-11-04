@@ -1,31 +1,34 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import PasswordField from './PasswordField';
 import PasswordRules from './PasswordRules';
+import RegisterSentNotice from './RegisterSentNotice';
 import TextField from '../common/TextField';
 import SelectField from '../common/SelectField';
 import { register } from '../../api/authApi';
 import RecaptchaField from '../common/RecaptchaField';
 import { recaptchaProvider, recaptchaSiteKey } from '../../config/env';
 import { useI18n } from '../../app/i18n-context';
-import { useRegisterDraft } from '../../app/register-draft-context';
+import { emptyRegisterDraft, useRegisterDraft } from '../../app/register-draft-context';
 import { usePasswordPolicy } from '../../hooks/usePasswordPolicy';
 import { checkPassword } from '../../utils/passwordPolicy';
 
 function RegisterForm() {
   const { locale, t } = useI18n();
   const { draft, updateDraft, clearDraft } = useRegisterDraft();
-  const navigate = useNavigate();
 
   const [recaptchaToken, setRecaptchaToken] = useState('');
   const [errors, setErrors] = useState({});
   const [serverError, setServerError] = useState('');
   const [showPasswordRecoveryLink, setShowPasswordRecoveryLink] = useState(false);
-  const [successMessage, setSuccessMessage] = useState('');
-  const [redirectCountdown, setRedirectCountdown] = useState(null);
+  // The address the confirmation message went to; set, it replaces the form
+  // with RegisterSentNotice (#1090).
+  const [sentEmail, setSentEmail] = useState('');
+  // The name and gender of the last sign-up, kept so "Corregir mi correo"
+  // brings the person back with only the email and passwords to fill again.
+  const [lastSubmission, setLastSubmission] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [recaptchaResetCounter, setRecaptchaResetCounter] = useState(0);
-  const successAlertRef = useRef(null);
 
   const genderOptions = [
     { value: 'F', label: t('register.genderOptions.female') },
@@ -38,35 +41,6 @@ function RegisterForm() {
     () => checkPassword(draft.password, passwordPolicy),
     [draft.password, passwordPolicy]
   );
-
-  useEffect(() => {
-    if (!successMessage || !successAlertRef.current) {
-      return;
-    }
-
-    successAlertRef.current.focus({ preventScroll: true });
-    successAlertRef.current.scrollIntoView({
-      behavior: 'smooth',
-      block: 'start'
-    });
-  }, [successMessage]);
-
-  useEffect(() => {
-    if (redirectCountdown === null) {
-      return undefined;
-    }
-
-    if (redirectCountdown <= 0) {
-      navigate('/login', { replace: true });
-      return undefined;
-    }
-
-    const countdownTimer = window.setTimeout(() => {
-      setRedirectCountdown((current) => (current === null ? null : current - 1));
-    }, 1000);
-
-    return () => window.clearTimeout(countdownTimer);
-  }, [navigate, redirectCountdown]);
 
   function handleChange(event) {
     const { name, type, value, checked } = event.target;
@@ -83,8 +57,6 @@ function RegisterForm() {
 
     setServerError('');
     setShowPasswordRecoveryLink(false);
-    setSuccessMessage('');
-    setRedirectCountdown(null);
   }
 
   function isValidEmail(email) {
@@ -142,8 +114,6 @@ function RegisterForm() {
     setErrors(validationErrors);
     setServerError('');
     setShowPasswordRecoveryLink(false);
-    setSuccessMessage('');
-    setRedirectCountdown(null);
 
     if (Object.keys(validationErrors).length > 0) {
       return;
@@ -163,9 +133,13 @@ function RegisterForm() {
         preferred_locale: locale
       });
 
+      setLastSubmission({
+        firstname: draft.firstname,
+        lastname:  draft.lastname,
+        gender:    draft.gender
+      });
+      setSentEmail(draft.email.trim());
       clearDraft();
-      setSuccessMessage(t('register.successMessage'));
-      setRedirectCountdown(10);
     } catch (error) {
       const responseData = error?.response?.data || {};
       const isEmailAlreadyRegistered = responseData.code === 'email_already_registered';
@@ -182,6 +156,20 @@ function RegisterForm() {
     }
   }
 
+  // Back to the form with the name and gender kept, and the email, passwords
+  // and privacy acceptance to give again. The account with the wrong address
+  // stays unconfirmed, and nothing can sign in to it.
+  function handleCorrectEmail() {
+    updateDraft(() => ({ ...emptyRegisterDraft, ...lastSubmission }));
+    setErrors({});
+    setSentEmail('');
+    window.requestAnimationFrame(() => document.getElementById('email')?.focus());
+  }
+
+  if (sentEmail) {
+    return <RegisterSentNotice email={sentEmail} onCorrectEmail={handleCorrectEmail} />;
+  }
+
   return (
     <form noValidate onSubmit={handleSubmit}>
       {serverError ? (
@@ -194,24 +182,6 @@ function RegisterForm() {
                 {t('register.recoverPasswordLink')}
               </Link>
             </>
-          ) : null}
-        </div>
-      ) : null}
-
-      {successMessage ? (
-        <div
-          ref={successAlertRef}
-          className="alert alert-success auth-alert"
-          role="alert"
-          tabIndex="-1"
-        >
-          <p className="mb-1">{successMessage}</p>
-          {redirectCountdown !== null ? (
-            <p className="mb-0">
-              {t('register.redirectingToLoginPrefix')}
-              {redirectCountdown}
-              {t('register.redirectingToLoginSuffix')}
-            </p>
           ) : null}
         </div>
       ) : null}
@@ -307,7 +277,7 @@ function RegisterForm() {
         <button
           type="submit"
           className="btn btn-primary btn-lg auth-btn-block"
-          disabled={isSubmitting || redirectCountdown !== null}
+          disabled={isSubmitting}
         >
           {isSubmitting ? (
             <span className="auth-spinner-gap">
