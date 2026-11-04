@@ -12,9 +12,7 @@ import {
     DEFAULT_LANGUAGE_CODE,
     PRIVATE_VISIBILITY,
     PUBLIC_VISIBILITY,
-    buildAttributionText,
     buildLocalizedCopyTitle,
-    getCaseAuthorName,
     hasValidCaseSharingFieldTypes,
     normalizeCaseSharingFields,
     normalizeLicenseCode,
@@ -40,6 +38,7 @@ import {
     insertRequestedCaseAnalyses,
 } from "../helpers/case-analyses-helper.js";
 import { associableCaseSql } from "../helpers/design-case-association.js";
+import { buildCaseCopyInsert, CASE_COPY_SOURCE_COLUMNS_SQL } from "../helpers/case-copy.js";
 import { applyCaseVisibility, countDesignsKeepingCaseAccess } from "../helpers/case-visibility.js";
 import {
     caseOwnDesignsJsonSql,
@@ -1248,10 +1247,7 @@ router.post("/cases/:id/import", async (req, res) => {
     try {
         await client.query("BEGIN");
         const sourceResult = await client.query(`
-            SELECT id, title, author_firstname, author_lastname, author_email, pdf_path, creator,
-                   visibility, license_code, attribution_text, original_case_id,
-                   rights_status, license_notes, permission_statement, commercial_source,
-                   language_code
+            SELECT ${CASE_COPY_SOURCE_COLUMNS_SQL}
             FROM ethical_cases
             WHERE id = $1
               AND creator <> $2
@@ -1274,9 +1270,6 @@ router.post("/cases/:id/import", async (req, res) => {
         const importedCaseId = Number(nextIdResult.rows[0].id);
         const destinationPdfPath = `/uploads/cases/${importedCaseId}/case.pdf`;
         const pdfCopied = await copyCasePdfIfPresent(sourceCase.pdf_path, destinationPdfPath);
-        const sourceAuthor = getCaseAuthorName(sourceCase);
-        const sourceLicenseCode = sourceCase.license_code || CASE_DEFAULT_LICENSE;
-        const rootCaseId = sourceCase.original_case_id || sourceCase.id;
         const importedTitle = await getUniqueCaseCopyTitle(
             client,
             req.session.uid,
@@ -1284,44 +1277,15 @@ router.post("/cases/:id/import", async (req, res) => {
             sourceCase.language_code
         );
 
-        await client.query(`
-            INSERT INTO ethical_cases
-                (id, title, author_firstname, author_lastname, author_email, pdf_path, creator,
-                 visibility, license_code, attribution_text, original_case_id, imported_from_case_id,
-                 source_case_title, source_case_author, source_case_license_code, is_editable_copy,
-                 rights_status, license_notes, permission_statement, commercial_source, language_code)
-            VALUES
-                ($1, $2, $3, $4, $5, $6, $7,
-                 'private', $8, COALESCE($9, $10), $11, $12,
-                 $13, $14, $15, true,
-                 $16, $17, $18, $19,
-                 $20);
-        `, [
-            importedCaseId,
-            importedTitle,
-            sourceCase.author_firstname,
-            sourceCase.author_lastname,
-            sourceCase.author_email,
-            pdfCopied ? destinationPdfPath : sourceCase.pdf_path,
-            req.session.uid,
-            sourceLicenseCode,
-            sourceCase.attribution_text,
-            buildAttributionText({
-                title:       sourceCase.title,
-                author:      sourceAuthor,
-                licenseCode: sourceLicenseCode,
-            }),
-            rootCaseId,
-            sourceCase.id,
-            sourceCase.title,
-            sourceAuthor,
-            sourceLicenseCode,
-            sourceCase.rights_status,
-            sourceCase.license_notes,
-            sourceCase.permission_statement,
-            sourceCase.commercial_source,
-            normalizeLanguageCode(sourceCase.language_code),
-        ]);
+        const caseInsert = buildCaseCopyInsert({
+            caseId:     importedCaseId,
+            sourceCase,
+            title:      importedTitle,
+            pdfPath:    pdfCopied ? destinationPdfPath : sourceCase.pdf_path,
+            creator:    req.session.uid,
+            visibility: PRIVATE_VISIBILITY,
+        });
+        await client.query(caseInsert.sql, caseInsert.params);
 
         await client.query(`
             INSERT INTO ethical_cases_authors (case_id, author_id, user_id, author_order, is_primary)
@@ -1406,10 +1370,7 @@ router.post("/cases/:id/duplicate", async (req, res) => {
     try {
         await client.query("BEGIN");
         const sourceResult = await client.query(`
-            SELECT id, title, author_firstname, author_lastname, author_email, pdf_path, creator,
-                   visibility, license_code, attribution_text, original_case_id,
-                   rights_status, license_notes, permission_statement, commercial_source,
-                   language_code
+            SELECT ${CASE_COPY_SOURCE_COLUMNS_SQL}
             FROM ethical_cases
             WHERE id = $1
               AND creator = $2
@@ -1426,9 +1387,6 @@ router.post("/cases/:id/duplicate", async (req, res) => {
         const duplicatedCaseId = Number(nextIdResult.rows[0].id);
         const destinationPdfPath = `/uploads/cases/${duplicatedCaseId}/case.pdf`;
         const pdfCopied = await copyCasePdfIfPresent(sourceCase.pdf_path, destinationPdfPath);
-        const sourceAuthor = getCaseAuthorName(sourceCase);
-        const sourceLicenseCode = sourceCase.license_code || CASE_DEFAULT_LICENSE;
-        const rootCaseId = sourceCase.original_case_id || sourceCase.id;
         const duplicatedTitle = await getUniqueCaseCopyTitle(
             client,
             req.session.uid,
@@ -1436,45 +1394,15 @@ router.post("/cases/:id/duplicate", async (req, res) => {
             sourceCase.language_code
         );
 
-        await client.query(`
-            INSERT INTO ethical_cases
-                (id, title, author_firstname, author_lastname, author_email, pdf_path, creator,
-                 visibility, license_code, attribution_text, original_case_id, imported_from_case_id,
-                 source_case_title, source_case_author, source_case_license_code, is_editable_copy,
-                 rights_status, license_notes, permission_statement, commercial_source, language_code,
-                 archived)
-            VALUES
-                ($1, $2, $3, $4, $5, $6, $7,
-                 'private', $8, COALESCE($9, $10), $11, $12,
-                 $13, $14, $15, true,
-                 $16, $17, $18, $19, $20,
-                 false);
-        `, [
-            duplicatedCaseId,
-            duplicatedTitle,
-            sourceCase.author_firstname,
-            sourceCase.author_lastname,
-            sourceCase.author_email,
-            pdfCopied ? destinationPdfPath : sourceCase.pdf_path,
-            req.session.uid,
-            sourceLicenseCode,
-            sourceCase.attribution_text,
-            buildAttributionText({
-                title:       sourceCase.title,
-                author:      sourceAuthor,
-                licenseCode: sourceLicenseCode,
-            }),
-            rootCaseId,
-            sourceCase.id,
-            sourceCase.title,
-            sourceAuthor,
-            sourceLicenseCode,
-            sourceCase.rights_status,
-            sourceCase.license_notes,
-            sourceCase.permission_statement,
-            sourceCase.commercial_source,
-            normalizeLanguageCode(sourceCase.language_code),
-        ]);
+        const caseInsert = buildCaseCopyInsert({
+            caseId:     duplicatedCaseId,
+            sourceCase,
+            title:      duplicatedTitle,
+            pdfPath:    pdfCopied ? destinationPdfPath : sourceCase.pdf_path,
+            creator:    req.session.uid,
+            visibility: PRIVATE_VISIBILITY,
+        });
+        await client.query(caseInsert.sql, caseInsert.params);
 
         await client.query(`
             INSERT INTO ethical_cases_authors (case_id, author_id, user_id, author_order, is_primary)
