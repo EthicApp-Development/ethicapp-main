@@ -99,9 +99,12 @@ function createPage({ search = {} } = {}) {
         unregisterListener: () => {},
     };
 
+    // The row actions (#1094), which these tests do not use.
+    const ActivityRowActionsService = { create: () => ({ busy: {}, notice: null }) };
+
     const vm = {};
     ActivitiesPageController.call(vm, $scope, $rootScope, $location, $translate, $window,
-        ActivityCatalogService);
+        ActivityCatalogService, null, null, ActivityRowActionsService);
 
     return {
         vm,

@@ -41,7 +41,7 @@
         </ul>
     </nav>
 
-    <div ng-include="'/assets/static/views/teacher/fragments/activities-action-notice.template.html'"></div>
+    <activity-action-notice actions="ap.actions"></activity-action-notice>
 
     <p class="text-muted" ng-if="!ap.loaded">{{ 'loading' | translate }}</p>
 
