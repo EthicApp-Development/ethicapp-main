@@ -178,7 +178,7 @@ app.controller("LocalesController",
 app.controller("ActivityController", 
     ["$scope", "ActivityCatalogService", "$window", ActivityController]);
 app.controller("ActivitiesPageController",
-    ["$scope", "$location", "$translate", "$window", "ActivityCatalogService",
+    ["$scope", "$rootScope", "$location", "$translate", "$window", "ActivityCatalogService",
         ActivitiesPageController]);
 app.controller("ActivityReportsController",
     ["$scope", "$routeParams", "$window", ActivityReportsController]);

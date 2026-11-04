@@ -43,7 +43,9 @@ function makeActivities() {
     ];
 }
 
-function createPage({ search = {}, catalog = {}, clipboard = null, language = "es_CL" } = {}) {
+function createPage({
+    search = {}, catalog = {}, clipboard = null, language: initialLanguage = "es_CL",
+} = {}) {
     const scopeHandlers = {};
     const calls = { navigated: [], pushes: [], replaces: [], archived: [], loads: 0, copied: [] };
     let current = { ...search };
@@ -82,7 +84,18 @@ function createPage({ search = {}, catalog = {}, clipboard = null, language = "e
             };
         },
     };
+    let language = initialLanguage;
     const $translate = { use: () => language };
+    // angular-translate emits its events on $rootScope, not on the page's scope.
+    const rootHandlers = {};
+    const $rootScope = {
+        $on(name, handler) {
+            (rootHandlers[name] ||= []).push(handler);
+            return () => {
+                rootHandlers[name] = rootHandlers[name].filter(item => item !== handler);
+            };
+        },
+    };
     const $window = {
         navigator: {
             clipboard: clipboard || {
@@ -117,13 +130,19 @@ function createPage({ search = {}, catalog = {}, clipboard = null, language = "e
     };
 
     const vm = {};
-    ActivitiesPageController.call(vm, $scope, $location, $translate, $window,
+    ActivitiesPageController.call(vm, $scope, $rootScope, $location, $translate, $window,
         ActivityCatalogService);
 
     return {
         vm,
         calls,
         listeners,
+        rootHandlers,
+        // The run block switching to the profile's language.
+        switchLanguage(next) {
+            language = next;
+            (rootHandlers.$translateChangeSuccess || []).forEach(handler => handler());
+        },
         setActivities(next) {
             activities = next;
         },
@@ -244,21 +263,49 @@ describe("activities page, rows", () => {
         assert.equal(vm.count("finished"), 0);
     });
 
-    it("says the dates in the language in use, again when it changes", async () => {
-        const page = createPage({ language: "en_US" });
+    it("says every date in the UI language, again when the profile's loads", async () => {
+        // Finished a minute ago: "today" and the time.
+        const now = new Date(Date.now() - 60 * 1000).toISOString();
+        const page = createPage({
+            language: "en_US",
+            catalog:  {
+                getActivities: () => [
+                    activity(1, { status: "finished", currentPhase: null, finishedAt: now }),
+                    activity(3, {
+                        status: "finished", currentPhase: null, finishedAt: "2026-10-20T12:00:00Z",
+                    }),
+                ],
+            },
+        });
         await page.vm.ready;
-        assert.match(rowOf(page.vm, 3, "finished").finished.label.text, /^Oct 20/);
-        page.vm.tables.finished = [];
-        page.emit("$translateChangeSuccess");
-        assert.equal(page.vm.count("finished"), 2);
+        const cells = () => ({
+            today: rowOf(page.vm, 1, "finished").finished.label,
+            older: rowOf(page.vm, 3, "finished").finished.label.text,
+            hint:  rowOf(page.vm, 3, "finished").finished.hint.text,
+        });
+
+        // The browser's language until the profile loads.
+        // "Yesterday" just after midnight; either way it carries the time.
+        assert.ok(["activity_date_today", "activity_date_yesterday"]
+            .includes(cells().today.key));
+        assert.match(cells().today.params.time, /^\d{1,2}:\d{2}\s[AP]M$/);
+        assert.match(cells().older, /^Oct 20(, 2026)?, \d{1,2}:\d{2}\s[AP]M$/);
+        assert.match(cells().hint, /October 20, 2026/);
+
+        page.switchLanguage("es_CL");
+        assert.match(cells().today.params.time, /^\d{2}:\d{2}$/);
+        assert.match(cells().older, /^20 oct\.?( 2026)?,? \d{2}:\d{2}$/);
+        assert.match(cells().hint, /20 de octubre de 2026/);
     });
 
-    it("stops following the catalog when the page goes away", async () => {
-        const { vm, listeners, emit } = createPage();
+    it("stops following the catalog and the language when the page goes away", async () => {
+        const { vm, listeners, rootHandlers, emit } = createPage();
         await vm.ready;
         assert.equal(listeners.onActivityCatalogUpdated.length, 1);
+        assert.equal(rootHandlers.$translateChangeSuccess.length, 1);
         emit("$destroy");
         assert.equal(listeners.onActivityCatalogUpdated.length, 0);
+        assert.equal(rootHandlers.$translateChangeSuccess.length, 0);
     });
 });
 

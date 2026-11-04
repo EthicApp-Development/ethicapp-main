@@ -45,7 +45,7 @@ function initialVisibleCounts() {
     return Object.fromEntries(ACTIVITY_TABS.map(tab => [tab, ACTIVITIES_PAGE_SIZE]));
 }
 
-export function ActivitiesPageController($scope, $location, $translate, $window,
+export function ActivitiesPageController($scope, $rootScope, $location, $translate, $window,
     ActivityCatalogService) {
 
     const vm = this;
@@ -200,13 +200,18 @@ export function ActivitiesPageController($scope, $location, $translate, $window,
             $scope.$applyAsync();
         };
         ActivityCatalogService.registerListener("onActivityCatalogUpdated", onCatalogUpdated);
+        // The run block switches to the profile's language after the
+        // profile loads, often after the activities: the rows are built again
+        // so every date and time follows the UI language. angular-translate
+        // emits the event on $rootScope, so a scope listener would not hear it.
+        const stopFollowingLanguage = $rootScope.$on("$translateChangeSuccess", () => {
+            vm.refresh();
+            $scope.$applyAsync();
+        });
         $scope.$on("$destroy", () => {
             ActivityCatalogService.unregisterListener("onActivityCatalogUpdated",
                 onCatalogUpdated);
-        });
-        // The profile's language may load after the page: the dates follow.
-        $scope.$on("$translateChangeSuccess", () => {
-            vm.refresh();
+            stopFollowingLanguage();
         });
 
         // The route does not reload on a search change (`?tab=`), so Back and
