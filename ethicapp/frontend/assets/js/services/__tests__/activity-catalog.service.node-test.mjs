@@ -77,3 +77,70 @@ describe("ActivityCatalogService.createActivity", () => {
         });
     });
 });
+
+// ActivityCatalogService.setArchived (#1048, epic #1046): the explicit archive
+// route, and the cached activity updated from its answer.
+describe("ActivityCatalogService.setArchived", () => {
+    function createArchiveService(respond) {
+        const requests = [];
+        const $http = async (request) => {
+            requests.push(request);
+            return respond(request);
+        };
+        const service = ActivityCatalogService($http);
+        service.activities = [
+            { sessionId: 41, archived: false },
+            { sessionId: 42, archived: true },
+        ];
+        return { service, requests };
+    }
+
+    const answerAsked = request => ({
+        data: { status: "ok", result: { id: 41, archived: request.data.archived } },
+    });
+
+    it("sends the flag it is asked for and caches the server's answer", async () => {
+        const { service, requests } = createArchiveService(answerAsked);
+        const updates = [];
+        service.registerListener("onActivityCatalogUpdated", update => updates.push(update));
+
+        assert.deepEqual(await service.setArchived(41, true), { id: 41, archived: true });
+        assert.deepEqual(requests, [{
+            method: "PATCH", url: "/activities/41/archive", data: { archived: true },
+        }]);
+        assert.equal(service.getActivities()[0].archived, true);
+        assert.equal(updates.length, 1);
+    });
+
+    it("restores an activity, whatever form its session id has", async () => {
+        const { service, requests } = createArchiveService(() => ({
+            data: { status: "ok", result: { id: 42, archived: false } },
+        }));
+
+        await service.setArchived("42", false);
+
+        assert.deepEqual(requests[0].data, { archived: false });
+        assert.equal(service.getActivities()[1].archived, false);
+    });
+
+    it("leaves the flag as asked when the same request is sent twice", async () => {
+        const { service } = createArchiveService(answerAsked);
+
+        await service.setArchived(41, true);
+        await service.setArchived(41, true);
+
+        assert.equal(service.getActivities()[0].archived, true);
+    });
+
+    it("rejects with the server's refusal and leaves the cache as it was", async () => {
+        const refusal = Object.assign(new Error("409"), {
+            status: 409, data: { status: "err", code: "ACTIVITY_NOT_FINISHED" },
+        });
+        const { service } = createArchiveService(() => {
+            throw refusal;
+        });
+
+        await assert.rejects(service.setArchived(41, true), refusal);
+        assert.equal(service.getActivities()[0].archived, false);
+    });
+});

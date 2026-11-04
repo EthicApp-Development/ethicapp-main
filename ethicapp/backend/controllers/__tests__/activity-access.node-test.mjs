@@ -231,8 +231,11 @@ beforeEach(() => {
     db.reset();
 });
 
+// A write, alone or inside a WITH statement (the archive route's).
+const WRITE_SQL = /^\s*(?:WITH\b[\s\S]*\b)?(INSERT|UPDATE|DELETE)\b/u;
+
 function writes() {
-    return db.queries.filter(({ sql }) => /^\s*(INSERT|UPDATE|DELETE)\b/u.test(sql));
+    return db.queries.filter(({ sql }) => WRITE_SQL.test(sql));
 }
 
 // --- Shared expectations ---------------------------------------------------
@@ -343,25 +346,19 @@ describe("POST /activities", () => {
     });
 });
 
-describe("PATCH /activities/:session_id/toggle_archived", () => {
-    function toggle(session, sessionId = SESSION_ID) {
+// The archive route's own outcomes are covered in
+// activities/__tests__/activity-archive-route.node-test.mjs.
+describe("PATCH /activities/:session_id/archive", () => {
+    function archive(session, sessionId = SESSION_ID) {
         return requestRouter(activitiesTeacherRouter, {
             method: "PATCH",
-            path:   `/activities/${sessionId}/toggle_archived`,
+            path:   `/activities/${sessionId}/archive`,
+            body:   { archived: true },
             session,
         });
     }
 
-    ownerOnlyCases(toggle, { notFound: "Session not found.", otherId: OTHER_SESSION_ID });
-
-    it("toggles the owner's activity", async () => {
-        const { status } = await toggle(OWNER);
-
-        assert.equal(status, 200);
-        const [update] = writes();
-        assert.match(update.sql, /SET archived = NOT archived/u);
-        assert.deepEqual(update.params.map(Number), [SESSION_ID]);
-    });
+    ownerOnlyCases(archive, { notFound: "Session not found.", otherId: OTHER_SESSION_ID });
 });
 
 describe("GET /sessions/:id/users", () => {

@@ -148,8 +148,20 @@ export function ActivityController($scope, ActivityCatalogService, $window) {
         $scope.navigateTo(`/activities/${activity.sessionId}`);
     };
 
-    vm.handleArchive = async function(activity) {
-        await ActivityCatalogService.toggleArchived(activity.sessionId);
+    const setArchived = async function(activity, archived) {
+        try {
+            await ActivityCatalogService.setArchived(activity.sessionId, archived);
+        } catch (error) {
+            console.error("[ActivityController::setArchived] The archive request failed.", error);
+        }
+    };
+
+    vm.handleArchive = function(activity) {
+        return setArchived(activity, true);
+    };
+
+    vm.handleUnarchive = function(activity) {
+        return setArchived(activity, false);
     };
 
     vm.init();
