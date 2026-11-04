@@ -21,6 +21,7 @@ import {
     normalizeCaseDocumentSummaries,
 } from "../helpers/case-documents.js";
 import { copyReadyCaseAnalyses } from "../helpers/case-analyses-helper.js";
+import { buildCaseCopyInsert, CASE_COPY_SOURCE_COLUMNS_SQL } from "../helpers/case-copy.js";
 import { requestCaseCopyAnalyses } from "../helpers/case-lifecycle-helper.js";
 import { copyReadyDesignAnalyses } from "../helpers/design-analyses-helper.js";
 import { checkDesignCase } from "../helpers/design-case-association.js";
@@ -48,7 +49,6 @@ import {
     PUBLIC_VISIBILITY,
     buildAttributionText,
     buildLocalizedCopyTitle,
-    getCaseAuthorName,
     getDesignAuthorName,
     getDesignTitle,
     isPublicVisibility,
@@ -340,9 +340,7 @@ async function copyCaseForUser(client, sourceCaseId, userId, visibility = PRIVAT
     }
 
     const sourceResult = await client.query(`
-        SELECT id, title, author_firstname, author_lastname, author_email, pdf_path, creator,
-               visibility, license_code, attribution_text, original_case_id, archived,
-               language_code
+        SELECT ${CASE_COPY_SOURCE_COLUMNS_SQL}, archived
         FROM ethical_cases
         WHERE id = $1
           AND (
@@ -380,41 +378,17 @@ async function copyCaseForUser(client, sourceCaseId, userId, visibility = PRIVAT
     const caseId = Number(nextIdResult.rows[0].id);
     const destinationPdfPath = `/uploads/cases/${caseId}/case.pdf`;
     const pdfCopied = await copyCasePdfIfPresent(sourceCase.pdf_path, destinationPdfPath);
-    const sourceAuthor = getCaseAuthorName(sourceCase);
-    const sourceLicenseCode = sourceCase.license_code || CASE_DEFAULT_LICENSE;
-
-    const inserted = await client.query(`
-        INSERT INTO ethical_cases
-            (id, title, author_firstname, author_lastname, author_email, pdf_path, creator,
-             visibility, license_code, attribution_text, original_case_id, imported_from_case_id,
-             source_case_title, source_case_author, source_case_license_code, is_editable_copy,
-             language_code)
-        VALUES
-            ($1, $2, $3, $4, $5, $6, $7, $8, $9, COALESCE($10, $11), $12, $13, $14, $15, $16, true, $17)
-        RETURNING id, case_uuid, title, pdf_path, language_code, visibility;
-    `, [
+    // The copy keeps the source's license and rights details, as an import
+    // from Casos does (#1085).
+    const caseInsert = buildCaseCopyInsert({
         caseId,
-        sourceCase.title,
-        sourceCase.author_firstname,
-        sourceCase.author_lastname,
-        sourceCase.author_email,
-        pdfCopied ? destinationPdfPath : sourceCase.pdf_path,
-        userId,
-        normalizeVisibility(visibility),
-        CASE_DEFAULT_LICENSE,
-        sourceCase.attribution_text,
-        buildAttributionText({
-            title:       sourceCase.title,
-            author:      sourceAuthor,
-            licenseCode: sourceLicenseCode,
-        }),
-        rootCaseId,
-        sourceCase.id,
-        sourceCase.title,
-        sourceAuthor,
-        sourceLicenseCode,
-        normalizeLanguageCode(sourceCase.language_code),
-    ]);
+        sourceCase,
+        title:   sourceCase.title,
+        pdfPath: pdfCopied ? destinationPdfPath : sourceCase.pdf_path,
+        creator: userId,
+        visibility,
+    });
+    const inserted = await client.query(caseInsert.sql, caseInsert.params);
 
     await client.query(`
         INSERT INTO ethical_cases_authors (case_id, author_id, user_id, author_order, is_primary)
