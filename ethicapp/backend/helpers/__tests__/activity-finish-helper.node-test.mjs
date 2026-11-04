@@ -96,6 +96,36 @@ function fakeWorld(sessions = {}, { failOn = {}, pending: pendingRows = {} } = {
     return { rows, pending, effects, errors, dependencies };
 }
 
+// The fake world above answers FINISH_SESSION_SQL by its meaning, so the end
+// time's rule (V41, #1047) is checked on the statement's text here, and
+// against PostgreSQL in activity-finish.integration-test.mjs.
+describe("FINISH_SESSION_SQL", () => {
+    const sql = FINISH_SESSION_SQL
+        .replace(/\s+/g, " ")
+        .replace(/\( /g, "(")
+        .replace(/ \)/g, ")");
+    const update = sql.match(/UPDATE sessions s SET (.*?) FROM previous/);
+
+    it("sets the end time in the update that finishes the session", () => {
+        assert.ok(update, "the statement updates sessions");
+        // COALESCE keeps the first finish's time on a repeated or resumed
+        // finish. The CASE gives no time to a session that was already
+        // finished, such as one finished before V41 that the teacher's
+        // unguarded route finishes again.
+        assert.deepEqual(update[1].split(/, (?=\w+ = )/), [
+            "status = $1",
+            "current_stage = NULL",
+            "finished_at = COALESCE(s.finished_at, "
+                + "CASE WHEN s.status IS DISTINCT FROM $1 THEN now() END)",
+        ]);
+    });
+
+    it("writes the end time only in that update", () => {
+        assert.equal(sql.match(/finished_at =/g).length, 1);
+        assert.doesNotMatch(sql.slice(sql.indexOf("INSERT INTO")), /finished_at/);
+    });
+});
+
 describe("finishActivity", () => {
     it("finishes the session, then invalidates, ends the phase, notifies and broadcasts, in that order", async () => {
         const world = fakeWorld({ 7: { status: 2, current_stage: 21, creator: 5 } });
