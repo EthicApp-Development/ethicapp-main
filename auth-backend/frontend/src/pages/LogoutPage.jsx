@@ -26,7 +26,10 @@ function LogoutPage() {
     };
   }, []);
 
-  return <LoginPage />;
+  // The form shows while the session is ended; asking whether a session
+  // exists now would send the user home before it is gone. The login page
+  // this replaces itself with asks once the logout has completed.
+  return <LoginPage checkSession={false} />;
 }
 
 export default LogoutPage;

@@ -130,6 +130,25 @@
   gap: 0.5rem;
 }
 
+/* Shown while the sign-in page asks whether a session exists. It appears
+   only after a short delay, so a quick check shows no spinner at all. */
+.auth-session-check {
+  display: flex;
+  justify-content: center;
+  padding: 2rem 0;
+  animation: auth-session-check-reveal 0s linear 300ms both;
+}
+
+@keyframes auth-session-check-reveal {
+  from {
+    visibility: hidden;
+  }
+
+  to {
+    visibility: visible;
+  }
+}
+
 @media (max-width: 575.98px) {
   .auth-page {
     padding: 1rem;

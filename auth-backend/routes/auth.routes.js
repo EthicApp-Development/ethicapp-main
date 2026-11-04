@@ -36,11 +36,20 @@ function generateResetToken() {
   return crypto.randomBytes(32).toString('hex');
 }
 
+// Where each role lands after signing in, and when a signed-in user opens
+// the sign-in page.
+const ROLE_HOMES = Object.freeze({
+  A: '/student',
+  P: '/home',
+  S: '/mng'
+});
+
+function getRoleHome(role) {
+  return Object.hasOwn(ROLE_HOMES, role) ? ROLE_HOMES[role] : null;
+}
+
 function getPostLoginRedirect(role) {
-  if (role === 'A') return '/student';
-  if (role === 'P') return '/home';
-  if (role === 'S') return '/mng';
-  return '/login';
+  return getRoleHome(role) || '/login';
 }
 
 function isUniqueViolation(err) {
@@ -1206,6 +1215,35 @@ function respondRegisterProfError(req, res, statusCode, message) {
     error: message
   });
 }
+
+/**
+ * GET /session
+ *
+ * Tells the sign-in page whether the browser already has a session, and
+ * where its role lands, so that a signed-in user who opens the page goes to
+ * their home as a successful login does. It answers 200 either way:
+ * { authenticated: false }, or { authenticated: true, role, redirectTo }.
+ * redirectTo is null for a role without a home, and the page then shows the
+ * form. The session policy runs before this route (the path is not public),
+ * so an expired or invalidated session is answered 401 without reaching it.
+ */
+router.get('/session', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+
+  const authenticated = Boolean(req.isAuthenticated?.() && req.user);
+
+  if (!authenticated) {
+    return res.status(200).json({ authenticated: false });
+  }
+
+  const role = String(req.user.role || '');
+
+  return res.status(200).json({
+    authenticated: true,
+    role,
+    redirectTo: getRoleHome(role)
+  });
+});
 
 /**
  * GET /auth/session
