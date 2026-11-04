@@ -30,7 +30,6 @@ function responseRow(id, overrides = {}) {
         user_id:                    30 + id,
         team_id:                    4,
         name:                       `Student ${id}`,
-        rut:                        `1111111${id}-1`,
         gender:                     "F",
         question_number:            1,
         question_text:              "**Should Ana report it?**",
@@ -56,7 +55,6 @@ function chatRow(id, time, overrides = {}) {
         team_id:                    4,
         author_role:                "A",
         name:                       "Student 1",
-        rut:                        "11111111-1",
         gender:                     "F",
         external_service_id:        null,
         question_number:            1,
@@ -277,7 +275,6 @@ test("completed contributions add their columns after the report's, in service o
     ]);
     // The report's own fields are unchanged, with plain question text.
     assert.equal(report.rows[0].question_text, "Should Ana report it?");
-    assert.equal(report.rows[0].rut, "11111111-1");
 
     assert.deepEqual(report.contributions, [
         { serviceId: "tutor-service", status: "completed", columns: 2, values: 2, rows: 0 },
@@ -445,7 +442,6 @@ test("contributed chat rows are attributed to their service and ordered by time"
     assert.deepEqual({
         id:                  between.id,
         user_id:             between.user_id,
-        rut:                 between.rut,
         gender:              between.gender,
         reply_to:            between.reply_to,
         author_role:         between.author_role,
@@ -461,7 +457,6 @@ test("contributed chat rows are attributed to their service and ordered by time"
     }, {
         id:                  null,
         user_id:             null,
-        rut:                 null,
         gender:              null,
         reply_to:            null,
         author_role:         "external_service",
@@ -486,7 +481,7 @@ test("contributed chat rows are attributed to their service and ordered by time"
     const fields = parseCsvLine(lines[2]);
     assert.deepEqual(header, [...SEMANTIC_DIFFERENTIAL_CHAT_COLUMNS, "chat_shown"]);
     assert.equal(fields[header.indexOf("id")], "");
-    assert.equal(fields[header.indexOf("rut")], "");
+    assert.equal(header.includes("rut"), false);
     assert.equal(fields[header.indexOf("time")], "2026-10-01T10:01:00.000Z");
 
     assert.deepEqual(report.contributions, [

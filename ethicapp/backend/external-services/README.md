@@ -791,7 +791,7 @@ reports still answer 501.
   `external_agent_id` come from the service's `external_service_agents` row
   (the service id when it has none), the question columns from `questionId`,
   `team_id` from `groupId`, and `phase_number` from `phaseId`. `id`, `user_id`,
-  `rut`, `gender` and `reply_to` stay empty.
+  `gender` and `reply_to` stay empty.
 - Contributed rows are placed in the transcript's order (phase, question,
   group, time, NULLs last). The report's own rows keep their order; a
   contributed row that ties one of them goes after it, and ties between

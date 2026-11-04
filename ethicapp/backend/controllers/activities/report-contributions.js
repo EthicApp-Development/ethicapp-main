@@ -116,7 +116,7 @@ function sessionScopeProblems(rows, scope) {
 
 // A contributed chat row in the transcript's columns. The generator, not the
 // service, fills the identity columns: the row is the service's, with no chat
-// message, user, RUT or gender.
+// message, user or gender.
 function attributedChatRow(row, { serviceId, agent, scope }) {
     const phase = scope.phases.get(row.phaseId);
     const question = row.questionId === null ? null : phase.questions.get(row.questionId);
@@ -127,7 +127,6 @@ function attributedChatRow(row, { serviceId, agent, scope }) {
         team_id:                    row.groupId,
         author_role:                "external_service",
         name:                       agent?.display_name ?? serviceId,
-        rut:                        null,
         gender:                     null,
         external_service_id:        serviceId,
         question_number:            question?.question_number ?? null,

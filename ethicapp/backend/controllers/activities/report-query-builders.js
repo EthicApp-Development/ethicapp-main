@@ -5,7 +5,6 @@ export const SEMANTIC_DIFFERENTIAL_RESPONSE_COLUMNS = Object.freeze([
     "user_id",
     "team_id",
     "name",
-    "rut",
     "gender",
     "question_number",
     "question_text",
@@ -25,7 +24,6 @@ export const SEMANTIC_DIFFERENTIAL_CHAT_COLUMNS = Object.freeze([
     "team_id",
     "author_role",
     "name",
-    "rut",
     "gender",
     "external_service_id",
     "question_number",
@@ -55,7 +53,6 @@ export function buildSemanticDifferentialResponsesReportSql() {
                 LIMIT 1
             ) AS team_id,
             u.name,
-            u.rut,
             u.sex AS gender,
             d.orden AS question_number,
             d.title AS question_text,
@@ -103,7 +100,6 @@ export function buildSemanticDifferentialChatTranscriptSql() {
                 ELSE u.role
             END AS author_role,
             COALESCE(esa.display_name, u.name) AS name,
-            u.rut,
             u.sex AS gender,
             esa.service_id AS external_service_id,
             d.orden AS question_number,
