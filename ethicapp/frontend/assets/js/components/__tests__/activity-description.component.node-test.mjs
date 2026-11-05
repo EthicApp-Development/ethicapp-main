@@ -1,17 +1,43 @@
-// The activity card of the home page and the dashboard (#973, epic #965): its
+// The activity card of the dashboard's context panel (#973, epic #965): its
 // heading is the activity's name followed by its description, instead of a
 // separate "Description:" line. Since #1055 it reads the activity's own
 // fields (the design's title and the case), names no design type, and says
-// the launch date in the browser's time zone and the UI language.
+// the launch date in the browser's time zone and the UI language. Since the
+// home stopped using it (#1098), it keeps only what the dashboard shows
+// (#1099): no status, access code, design link or actions.
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
 import { describe, it } from "node:test";
 
 import { activityDescriptionComponent } from "../activity-description.component.js";
-import { phaseModeKey } from "../../helpers/activity-bar.js";
 
-const template = readFileSync(new URL(
-    "../../../static/views/teacher/fragments/activity-description.template.html", import.meta.url), "utf8");
+const ASSETS = new URL("../../../", import.meta.url);
+const VIEWS = new URL("static/views/teacher/", ASSETS);
+const template = readFileSync(
+    new URL("fragments/activity-description.template.html", VIEWS), "utf8");
+const dashboardContext = readFileSync(
+    new URL("fragments/activity-dashboard-context.template.html", VIEWS), "utf8");
+const locale = name => JSON.parse(readFileSync(new URL(`locales/${name}.json`, ASSETS), "utf8"));
+
+// The teacher app's sources, without the bundle and the tests.
+function teacherSources() {
+    const sources = [];
+    const walk = (url) => {
+        for (const entry of readdirSync(url)) {
+            const child = new URL(entry, url);
+            if (statSync(child).isDirectory()) {
+                if (entry !== "dist" && entry !== "__tests__") {
+                    walk(new URL(`${entry}/`, url));
+                }
+            } else if (/\.(html|js|mjs)$/u.test(entry)) {
+                sources.push({ path: child.pathname, text: readFileSync(child, "utf8") });
+            }
+        }
+    };
+    walk(new URL("js/", ASSETS));
+    walk(VIEWS);
+    return sources;
+}
 
 function fakeRootScope() {
     const listeners = {};
@@ -169,66 +195,74 @@ describe("activity card, the launch date (#1055)", () => {
     });
 });
 
-describe("activity card, its actions", () => {
-    it("offers only Ver, the one action its pages use", () => {
-        assert.deepEqual(Object.keys(activityDescriptionComponent.bindings).sort(), [
-            "activity", "associatedCase", "enableLink", "onView", "showStatusAndCode",
-        ]);
-        assert.doesNotMatch(template, /onArchive|onUnarchive|onSelect/);
-        assert.match(template, /ng-click="\$ctrl\.onView\(\$ctrl\.activity\)"/);
-    });
-});
-
-// The card's status reads as the activity's row in Actividades (#1078): "Sin
-// iniciar" for an activity with no phase started, the phase for one in
-// progress, and "Finalizada".
-describe("activity card status", () => {
-    it("says an activity with no phase started is not started", () => {
-        const { vm } = createCard({ status: "initiated", currentPhase: null });
-        assert.equal(vm.status.id, "not-started");
-        assert.equal(vm.status.key, "activities_status_not_started");
-        assert.equal(vm.status.modeKey, null);
+// The dashboard's activity bar shows the status and the access code (#893),
+// and the card has no actions there: what only the home's cards used is gone
+// (#1099).
+describe("activity card, what the dashboard uses", () => {
+    it("binds only the activity and the dashboard's case", () => {
+        assert.deepEqual(Object.keys(activityDescriptionComponent.bindings).sort(),
+            ["activity", "associatedCase"]);
     });
 
-    it("says the phase of an activity in progress, as the list does", () => {
-        const { vm } = createCard({
-            status: "in_progress", currentPhase: { number: 2, mode: "team" }, phaseCount: 3,
-        });
-        assert.equal(vm.status.id, "in-progress");
-        assert.equal(vm.status.key, "activity_bar_phase_label");
-        assert.deepEqual(vm.status.params, { number: 2, total: 3 });
-        assert.equal(vm.status.modeKey, phaseModeKey("team"));
+    it("is used by the dashboard's context panel alone, with those bindings only", () => {
+        const usage = dashboardContext.match(/<activity-description\b[^>]*>/u)?.[0];
+        assert.ok(usage, "the context panel shows the card");
+        assert.match(usage, /activity="dc\.activityState\.descriptor"/u);
+        assert.match(usage, /associated-case="dc\.associatedCase"/u);
+        assert.doesNotMatch(usage, /enable-link|show-status-and-code|on-view/u);
+
+        const users = teacherSources().filter(({ text }) => /<activity-description\b/u.test(text));
+        assert.deepEqual(users.map(({ path }) => path.split("/").pop()),
+            ["activity-dashboard-context.template.html"]);
     });
 
-    it("says a finished activity is finished, by name or by code", () => {
-        for (const status of ["finished", 3]) {
-            const { vm } = createCard({ status, currentPhase: null });
-            assert.equal(vm.status.id, "finished");
-            assert.equal(vm.status.key, "finished");
+    it("shows the design's title as plain text, with no link to the design", () => {
+        assert.ok(template.includes(
+            "{{ 'design_used_colon' | translate }}</b> <span>{{ $ctrl.designTitle }}</span>"));
+        assert.doesNotMatch(template, /#!\/designs\//u);
+    });
+
+    it("shows no status, access code or actions", () => {
+        assert.doesNotMatch(template, /enableLink|showStatusAndCode|onView|isFunction/u);
+        assert.doesNotMatch(template, /\$ctrl\.status|activity\.code|copy-to-clipboard/u);
+        assert.doesNotMatch(template, /panel-footer|teacher-card-actions-footer|<button/u);
+        const { vm } = createCard({ status: "in_progress", code: "abc123" });
+        assert.equal(vm.status, undefined);
+        assert.equal(vm.isFunction, undefined);
+    });
+
+    it("keeps the case link and the launch date", () => {
+        assert.match(template, /<a ng-href="#!\/cases\/\{\{\$ctrl\.caseItem\.id\}\}">/u);
+        assert.match(template, /<time class="activity-item-launch-date"/u);
+    });
+
+    it("translates every text in both locales", () => {
+        const keys = [...template.matchAll(/'([a-z_]+)'\s*\|\s*translate/gu)]
+            .map(match => match[1]);
+        assert.deepEqual(keys,
+            ["design_used_colon", "design_associated_case_label", "launch_date_colon"]);
+        for (const name of ["es_CL", "en_US"]) {
+            for (const key of keys) {
+                assert.equal(typeof locale(name)[key], "string", `${name}: ${key}`);
+            }
         }
     });
 
-    it("keeps the same status while nothing changed, and follows a new phase", () => {
-        const activity = {
-            status: "in_progress", currentPhase: { number: 1, mode: "individual" }, phaseCount: 2,
-        };
-        const { vm } = createCard(activity);
-        const status = vm.status;
-        vm.$doCheck();
-        assert.equal(vm.status, status, "the same object, so watchers settle");
-
-        vm.activity = { ...activity, currentPhase: { number: 2, mode: "team" } };
-        vm.$doCheck();
-        assert.deepEqual(vm.status.params, { number: 2, total: 2 });
-        assert.equal(vm.status.modeKey, phaseModeKey("team"));
-    });
-
-    it("translates the status as the list's Estado column, with the generic names gone", () => {
-        assert.match(template,
-            /\$ctrl\.status\.key \| translate:\{ number: \$ctrl\.status\.params\.number/);
-        assert.match(template,
-            /mode: \(\$ctrl\.status\.modeKey \? \(\$ctrl\.status\.modeKey \| translate\) : ''\)/);
-        assert.match(template, /'text-success': \$ctrl\.status\.id === 'in-progress'/);
-        assert.doesNotMatch(template, /getReadableStatus/);
+    it("retires the status and access code keys, and keeps those other pages use", () => {
+        const retired = ["current_status_colon", "access_code_colon"];
+        for (const name of ["es_CL", "en_US"]) {
+            for (const key of retired) {
+                assert.equal(locale(name)[key], undefined, `${name}: ${key}`);
+            }
+            for (const key of ["design_used_colon", "launch_date_colon", "view"]) {
+                assert.equal(typeof locale(name)[key], "string", `${name}: ${key}`);
+            }
+        }
+        const sources = teacherSources();
+        for (const key of retired) {
+            const used = new RegExp(`['"]${key}['"]`, "u");
+            assert.ok(sources.every(({ text }) => !used.test(text)), key);
+        }
     });
 });
+

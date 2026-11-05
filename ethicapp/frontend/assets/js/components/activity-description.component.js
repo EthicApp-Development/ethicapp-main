@@ -1,15 +1,14 @@
-import { activityCaseOf, activityDesignTitle, statusCell } from "../helpers/activities-table.js";
+import { activityCaseOf, activityDesignTitle } from "../helpers/activities-table.js";
 import { createActivityDateFormatter, uiLanguageOf } from "../helpers/activity-dates.js";
 import { activityTitleParts } from "../helpers/activity-title.js";
 
-// The activity card of the home's recent activities and the dashboard's
-// context panel. It reads the activity's own fields, as GET /activities and
-// the activity's descriptor give them (#1055): the design's id and title
-// (`designId`, `designTitle`) and the case (`caseId`, `caseTitle`), unless the
-// dashboard passes the case it loaded (`associatedCase`, with its author).
+// The activity's details in the dashboard's context panel, inside its
+// collapsed "Actividad" card: the design used, the case and the launch date.
+// The activity bar shows the status and the access code instead (#893). The
+// card reads the activity's descriptor (#1055): the design's title
+// (`designTitle`), as plain text, and the case (`caseId`, `caseTitle`), unless
+// the dashboard passes the case it loaded (`associatedCase`, with its author).
 // Designs are not told apart by type (#964), so the card does not name one.
-// Its status reads as the activity's row in Actividades (#1078): "Sin
-// iniciar", "Fase n de m · Grupal" or "Finalizada", from `statusCell`.
 // The launch date is in the browser's time zone and the UI language, and
 // follows a change of language.
 
@@ -20,12 +19,6 @@ function launchDateOf(activity, dates) {
         label: dates.label(activity?.time, { withTime: true }) || { text: "—" },
         full:  dates.full(activity?.time),
     };
-}
-
-function sameStatus(left, right) {
-    return Boolean(left) && Boolean(right)
-        && left.id === right.id && left.key === right.key && left.modeKey === right.modeKey
-        && left.params.number === right.params.number && left.params.total === right.params.total;
 }
 
 function sameCase(left, right) {
@@ -50,7 +43,6 @@ function ActivityDescriptionController($rootScope, $translate) {
     vm.designTitle = "";
     vm.caseItem = null;
     vm.launchDate = null;
-    vm.status = null;
 
     // Everything the card shows from the activity, again only for what
     // changed, so watchers settle.
@@ -60,12 +52,9 @@ function ActivityDescriptionController($rootScope, $translate) {
             vm.title = title;
         }
         vm.designTitle = activityDesignTitle(vm.activity);
-        const status = statusCell(vm.activity);
-        if (!sameStatus(status, vm.status)) {
-            vm.status = status;
-        }
-        // The case the dashboard loaded is kept as given; the row's own case
-        // is rebuilt on every check, and replaced only when it changed.
+        // The case the dashboard loaded is kept as given; the descriptor's
+        // own case is rebuilt on every check, and replaced only when it
+        // changed.
         const caseItem = vm.associatedCase || activityCaseOf(vm.activity);
         if (vm.associatedCase ? caseItem !== vm.caseItem : !sameCase(caseItem, vm.caseItem)) {
             vm.caseItem = caseItem;
@@ -80,12 +69,6 @@ function ActivityDescriptionController($rootScope, $translate) {
     let stopFollowingLanguage = null;
 
     vm.$onInit = function() {
-        if (vm.enableLink === undefined) {
-            vm.enableLink = true;
-        }
-        if (vm.showStatusAndCode === undefined) {
-            vm.showStatusAndCode = true;
-        }
         // The run block switches to the profile's language after the profile
         // loads, often after the card is shown: the date follows it.
         // angular-translate emits the event on $rootScope.
@@ -112,21 +95,12 @@ function ActivityDescriptionController($rootScope, $translate) {
             .join(" ");
         return author ? `${caseItem.title} (${author})` : caseItem.title;
     };
-
-    vm.isFunction = function(variable) {
-        return typeof variable === "function";
-    };
 }
 
 const activityDescriptionComponent = {
-    // `showStatusAndCode` is false where the dashboard's activity bar shows
-    // them instead (#893).
     bindings: {
-        activity:          "<",
-        associatedCase:    "<?",
-        enableLink:        "<",
-        onView:            "<?",
-        showStatusAndCode: "<?",
+        activity:       "<",
+        associatedCase: "<?",
     },
     templateUrl: "/assets/static/views/teacher/fragments/activity-description.template.html",
     controller:  ["$rootScope", "$translate", ActivityDescriptionController],
