@@ -2,7 +2,7 @@
 
 This is a low-fidelity proposal for the activities on the teacher's home in legacy EthicApp: AngularJS, route `#!/`, template `ethicapp/frontend/assets/static/views/teacher/home.html`, shown after sign-in and from "Inicio" in the side menu.
 
-The home has three parts: the title "Taller del Docente" with an intro, a launcher of six photo tiles, and the "Actividades Recientes" panel. The proposal changes the panel. It replaces its `activity-description` cards with two short tables in the design language of Actividades ([`../activities-index`](../activities-index/README.md), epic #1046): the newest activities in progress, then the newest finished ones. Rows, statuses, actions and menus are those of the Actividades tabs. The title and the launcher stay, and one open question asks whether the launcher should shrink.
+The home has three parts: the title "Taller del Docente" with an intro, a launcher of six photo tiles, and the "Actividades Recientes" panel. The proposal changes the panel. It replaces its `activity-description` cards with two short tables in the design language of Actividades ([`../activities-index`](../activities-index/README.md), epic #1046): the newest activities in progress, then the newest finished ones. Rows, statuses, actions and menus are those of the Actividades tabs. The title stays, and the launcher's six tiles go into one row (see Decisions).
 
 Files:
 
@@ -55,8 +55,8 @@ The page was measured with headless Chrome. The numbers are the same at 1920, 13
 
 ### Head and launcher (frames A, B)
 
-- The title, the intro and the six photo tiles stay as they are, in today's 1050 px column.
-- With them, the list starts at 799 px, below the first screen at 1366 × 768. Frame C draws the alternative (see Open questions).
+- The title and the intro stay as they are, in today's 1050 px column.
+- With today's launcher, the list would start at 799 px, below the first screen at 1366 × 768. The launcher therefore goes into one row (frame C, see below).
 
 ### Actividades en curso (frame A)
 
@@ -90,7 +90,7 @@ The empty page of Actividades replaces both sections: "Todavía no has lanzado a
 - **From 1200 px:** tables.
 - **Below 1200 px:** the app's menu folds, and both tables become the compact rows of Actividades.
 
-### Option: a one-row launcher (frame C)
+### One-row launcher (frame C)
 
 - The six tiles go into one row, 96 px tall, with the same photos cropped, the same captions, order and targets.
 - The list then starts at 453 px. At 1366 × 768, five of the eight rows are on the first screen, against none with today's launcher.
@@ -136,16 +136,17 @@ The empty page of Actividades replaces both sections: "Todavía no has lanzado a
 
 **Translations.** New keys in `es_CL` and `en_US` for the two headings, the counts, the footers and the one-line empty message. `recent_activities_title_text` and `no_recent_activities_text` are retired if nothing else uses them.
 
-## Open questions
+## Decisions
 
-1. **The launcher.** Do the six tiles stay as they are (frames A, B), or go into one row of smaller tiles (frame C)? With today's tiles, no activity is visible on the first screen at 1366 × 768.
-2. **Finished activities.** Does the home keep "Terminadas recientemente", or show only the activities in progress? Today it shows both. The finished rows are the shortest way to a report.
-3. **How many rows.** Five in progress and three finished, as drawn, or three and three as today?
-4. **The title.** "Taller del Docente" and its intro predate the role lines of Diseños, Casos and Actividades. Do they stay, or does the home get a role line too?
+- **2026-11-04: the launcher goes into one row** of six 96 px tiles (frame C), so the list starts on the first screen at 1366 × 768. Frames A, B, D and E still draw today's launcher.
+- **2026-11-04: the home keeps both sections,** "Actividades en curso" and "Terminadas recientemente". The finished rows are the shortest way to a report.
+- **2026-11-04: five rows in progress and three finished.**
+- **2026-11-04: the title "Taller del Docente" and its intro stay.** A role line for the home can be proposed separately.
 
 ## Out of scope
 
-- The launcher's photos, captions and targets, except for its size (open question 1).
+- The launcher's photos, captions and targets; only its layout changes.
+- The home's title and intro.
 - The side menu and the top bar.
 - Filters and search on the home; they stay in Actividades.
 - The activity dashboard, the reports page and the launch wizard.
