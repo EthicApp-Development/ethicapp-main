@@ -21,34 +21,47 @@ hr{
     background: #000;
 }
 
+/* The teacher home (#1097, epic #1093). Its column is capped at the main
+   area's width: the 1050 px `.container` of 1200 px and up would otherwise
+   pass the main area while the side menu is open, up to about 1306 px. The
+   home's template is the only one with the launcher panel. */
+.teacher-main-inner .container:has(.teacher-workbench-panel) {
+    max-width: 100%;
+}
+
+/* The launcher: six photo tiles in one row from 992 px, three below it and
+   two below 481 px. */
 .teacher-workbench-panel {
-    padding: 20px;
+    padding: 4px 20px;
 }
 
 .home-card-grid {
     display: grid;
-    gap: 22px;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
 }
 
 .home-card {
     position: relative;
     width: 100%;
-    height: 190px;
+    height: 96px;
     padding: 0;
     overflow: hidden;
     cursor: pointer;
     background: #fff;
     border: 1px solid #ddd;
     border-radius: 6px;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
+    box-shadow: 0 4px 12px rgb(0 0 0 / 18%);
     transition: transform 220ms ease, box-shadow 220ms ease, filter 220ms ease;
 }
 
+/* `img-responsive` sets `height: auto`; the tile's height wins here. */
 .home-card img {
+    display: block;
     width: 100%;
     height: 100%;
     object-fit: cover;
+    object-position: center 30%;
     transition: filter 220ms ease;
 }
 
@@ -57,31 +70,44 @@ hr{
     left: 0;
     right: 0;
     bottom: 0;
-    min-height: 42px;
-    padding: 9px 12px;
-    background: rgba(0, 0, 0, 0.82);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 34px;
+    padding: 0 6px;
+    background: rgb(0 0 0 / 82%);
     color: white;
     text-align: center;
+    font-size: 13px;
     font-weight: 600;
+    line-height: 1.15;
+    overflow-wrap: anywhere;
     transition: color 220ms ease;
 }
 
-.home-card:hover,
+/* A mouse click leaves no ring; keyboard focus shows one. */
 .home-card:focus {
-    box-shadow: 0 14px 28px rgba(0, 0, 0, 0.24);
-    transform: translateX(2px);
     outline: none;
 }
 
+.home-card:focus-visible {
+    outline: 3px solid #2649ec;
+    outline-offset: 2px;
+}
+
+.home-card:hover,
+.home-card:focus-visible {
+    box-shadow: 0 8px 18px rgb(0 0 0 / 24%);
+    transform: translateX(2px);
+}
+
 .home-card:hover img,
-.home-card:focus img {
+.home-card:focus-visible img {
     filter: brightness(1.12) saturate(1.18);
 }
 
 .home-card:hover .home-card-caption,
-.home-card:focus .home-card-caption,
-.home-card-caption:hover,
-.home-card-caption:focus {
+.home-card:focus-visible .home-card-caption {
     color: #b5c2fd;
 }
 
@@ -92,28 +118,67 @@ hr{
     }
 }
 
-@media (max-width: 900px) {
+@media (width < 992px) {
     .home-card-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .home-card img {
-        object-position: center 40%;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 }
 
-@media (max-width: 768px) {
-    .home-card {
-        height: 174px;
-    }
-
+@media (width < 481px) {
     .home-card-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
+}
 
-    .home-card img {
-        object-position: center 30%;
-    }
+/* The home's activities (#1098, epic #1093), below the launcher:
+   "Actividades en curso" and "Terminadas recientemente", each a heading with
+   its counts as links, the order on the right, the table of Actividades
+   (`activities-table`, with its compact rows below 1200 px) and its footer.
+   The colours are those of the Cases page (`--cases-*`), and the empty page
+   is the one of Actividades. */
+.home-activities-section {
+    margin-bottom: 22px;
+}
+
+.home-activities-head {
+    align-items: baseline;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 14px;
+    margin: 4px 0 8px;
+}
+
+.home-activities-title {
+    font-size: 20px;
+    margin: 0;
+}
+
+.home-activities-counts {
+    color: var(--cases-muted);
+    font-size: 15px;
+}
+
+.home-activities-count,
+.home-activities-view-all {
+    color: var(--cases-accent);
+    font-weight: 600;
+}
+
+/* Wins over `.cases-table-order`, which comes later and sets no margin. */
+.home-activities-head .home-activities-order {
+    margin-left: auto;
+}
+
+/* Activities, but none in progress: one line with "Lanzar actividad". */
+.home-activities-none {
+    align-items: center;
+    border: 1px solid var(--cases-line);
+    border-radius: 6px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    justify-content: space-between;
+    padding: 10px 16px;
 }
 
 ::-webkit-scrollbar-track {
@@ -3871,7 +3936,6 @@ h2{
     margin-bottom: 10px;
 }
 
-.activity-item-panel .btn, 
 .design-item-panel .btn {
     margin-left: 0;
 }
@@ -6699,15 +6763,21 @@ button.launch-wizard-step-body:focus-visible .launch-wizard-step-name {
    with counts, and the "My cases" and "Archived" tables, after the Designs
    page. From 1200 px each case is a table row; below, the same rows become
    compact rows: the title and its details, then the status, designs, sharing
-   and actions on a second line. */
-.cases-page {
+   and actions on a second line. The activities table (#1095) and the
+   home's activities (#1098) carry the same colours, so they keep them on a
+   page without `.cases-page`. */
+.cases-page,
+.activities-table,
+.home-activities {
     --cases-accent: var(--teacher-link-color, #2649ec);
     --cases-line: #d9dde8;
     --cases-muted: #5f6577;
     --cases-ready: #2f7d32;
     --cases-error: #c62828;
     --cases-in-use: #8a6100;
+}
 
+.cases-page {
     padding: 8px 12px 48px;
 }
 
@@ -7341,7 +7411,10 @@ button.launch-wizard-step-body:focus-visible .launch-wizard-step-name {
    for what only activities have: the status with its "IA" mark, the
    participants, the access code and the dates. From 1200 px each activity is
    a table row; below, a compact row: the title, its case and the date, then
-   the status, participants, code and actions on a second line (frame D). */
+   the status, participants, code and actions on a second line (frame D).
+   The table is the `activities-table` component (#1095): its rules do not
+   depend on `.activities-page`, so the home can show it too, and
+   `.activities-table-ongoing .activities-row` still wins over `.cases-row`. */
 .activities-filters-slot {
     flex: 1 1 auto;
     min-width: 0;
@@ -7466,14 +7539,14 @@ button.launch-wizard-step-body:focus-visible .launch-wizard-step-name {
 }
 
 @media (width < 1200px) {
-    .activities-page .activities-table-ongoing .activities-row {
+    .activities-table-ongoing .activities-row {
         grid-template-areas:
             "activity activity activity activity date"
             "status participants code actions actions";
         grid-template-columns: auto auto auto minmax(0, 1fr) auto;
     }
 
-    .activities-page .activities-table-finished .activities-row {
+    .activities-table-finished .activities-row {
         grid-template-areas:
             "activity activity activity date"
             "status participants actions actions";
@@ -7508,7 +7581,7 @@ button.launch-wizard-step-body:focus-visible .launch-wizard-step-name {
 }
 
 @media (width < 768px) {
-    .activities-page .activities-table-ongoing .activities-row {
+    .activities-table-ongoing .activities-row {
         grid-template-areas:
             "activity activity activity"
             "date date date"
@@ -7517,7 +7590,7 @@ button.launch-wizard-step-body:focus-visible .launch-wizard-step-name {
         grid-template-columns: auto auto minmax(0, 1fr);
     }
 
-    .activities-page .activities-table-finished .activities-row {
+    .activities-table-finished .activities-row {
         grid-template-areas:
             "activity activity"
             "date date"

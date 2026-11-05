@@ -1,8 +1,9 @@
 // When an activity was launched or ended, as the teacher's pages say it
 // (#1050, epic #1046): in the browser's time zone, relative while recent
 // ("hoy, 18:01", "ayer, 09:05") and as a short date after that ("12 oct"),
-// with the full date and time for the hover title. The activities table and
-// the activity card (`activity-description`, #1055) use it.
+// with the full date and time for the hover title. The activities tables, on
+// the Activities page and the home (#1098), and the dashboard's activity card
+// (`activity-description`, #1055) use it.
 //
 // A formatter is made once per list and language: building the Intl
 // formatters is the costly part. "Today" and "yesterday" are translation keys

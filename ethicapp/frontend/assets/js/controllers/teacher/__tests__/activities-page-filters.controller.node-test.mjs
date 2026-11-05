@@ -91,7 +91,6 @@ function createPage({ search = {} } = {}) {
     };
     const $rootScope = { $on: () => () => {} };
     const $translate = { use: () => "es_CL" };
-    const $window = { navigator: {} };
     const ActivityCatalogService = {
         getActivities:      () => activities,
         loadActivities:     async () => activities,
@@ -99,9 +98,12 @@ function createPage({ search = {} } = {}) {
         unregisterListener: () => {},
     };
 
+    // The row actions (#1094), which these tests do not use.
+    const ActivityRowActionsService = { create: () => ({ busy: {}, notice: null }) };
+
     const vm = {};
-    ActivitiesPageController.call(vm, $scope, $rootScope, $location, $translate, $window,
-        ActivityCatalogService);
+    ActivitiesPageController.call(vm, $scope, $rootScope, $location, $translate,
+        ActivityCatalogService, null, ActivityRowActionsService);
 
     return {
         vm,

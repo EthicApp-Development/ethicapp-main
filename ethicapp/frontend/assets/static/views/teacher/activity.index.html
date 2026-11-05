@@ -41,7 +41,7 @@
         </ul>
     </nav>
 
-    <div ng-include="'/assets/static/views/teacher/fragments/activities-action-notice.template.html'"></div>
+    <activity-action-notice actions="ap.actions"></activity-action-notice>
 
     <p class="text-muted" ng-if="!ap.loaded">{{ 'loading' | translate }}</p>
 
@@ -60,10 +60,10 @@
         </div>
 
         <!-- One fragment per tab, so each tab's changes stay in its own file.
-             A teacher with no activities sees the empty page (#1053) instead
-             of "En curso". -->
-        <div ng-if="ap.tab === 'ongoing' && ap.hasNoActivities()"
-            ng-include="'/assets/static/views/teacher/fragments/activities-empty-page.template.html'"></div>
+             A teacher with no activities sees the empty page (#1053), a
+             component shared with the home (#1098), instead of "En curso". -->
+        <activities-empty-page ng-if="ap.tab === 'ongoing' && ap.hasNoActivities()"
+            show-design-step="ap.showDesignStep"></activities-empty-page>
         <div ng-if="ap.tab === 'ongoing' && !ap.hasNoActivities()"
             ng-include="'/assets/static/views/teacher/fragments/activities-ongoing-tab.template.html'"></div>
         <div ng-if="ap.tab === 'finished'"

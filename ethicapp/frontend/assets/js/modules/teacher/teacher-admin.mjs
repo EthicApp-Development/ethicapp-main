@@ -2,6 +2,8 @@ import 'angular-animate';
 import "angular-toggle-switch";
 import { ActivityStateService } from "../../services/activity-state.service.js";
 import { ActivityCatalogService } from "../../services/activity-catalog.service.js";
+// The row actions of an activity and their notices, on Activities and the home (#1094).
+import { ActivityRowActionsService } from "../../services/activity-row-actions.service.js";
 import { DesignStateService } from "../../services/design-state.service.js";
 import { DesignCatalogService } from "../../services/design-catalog.service.js";
 import { DesignPublicationService } from "../../services/design-publication.service.js";
@@ -47,6 +49,8 @@ app.factory("TeacherSocketService", ["SocketService", function (SocketService) {
 app.factory("ActivityStateService", ["$http", "TeacherSocketService", ActivityStateService])
     .factory("TeacherGroupChatService", ["$http", "TeacherSocketService", TeacherGroupChatService])
     .factory("ActivityCatalogService", ["$http", ActivityCatalogService])
+    .factory("ActivityRowActionsService", ["$rootScope", "$location", "$translate", "$window",
+        "$timeout", "ActivityCatalogService", ActivityRowActionsService])
     .factory("DesignCatalogService", ["$rootScope", "$http", DesignCatalogService])
     .factory("DesignPublicationService", ["$uibModal", "DesignCatalogService", "CasesCatalogService", DesignPublicationService])
     .factory("CaseVideoPickerService", ["$uibModal", CaseVideoPickerService])
@@ -79,9 +83,9 @@ app.config(["$httpProvider", function($httpProvider) {
 app.component("sessionExpiredNotice", sessionExpiredNoticeComponent);
 
 import { LocalesController } from "../../controllers/common/locales.controller.js";
-// The home's recent activities (#1055).
-import { RecentActivitiesController }
-    from "../../controllers/teacher/recent-activities.controller.js";
+// The home's activities in progress and recently finished (#1098).
+import { HomeActivitiesController }
+    from "../../controllers/teacher/home-activities.controller.js";
 // The Activities page (#1050, epic #1046).
 import { ActivitiesPageController }
     from "../../controllers/teacher/activities-page.controller.js";
@@ -177,11 +181,12 @@ app.run(["$translate", "UserProfileService", "LanguageCatalogService", function(
 // Inject controllers into application
 app.controller("LocalesController", 
     ["$translate", "$scope", "$rootScope", LocalesController]); 
-app.controller("RecentActivitiesController",
-    ["$scope", "ActivityCatalogService", RecentActivitiesController]);
+app.controller("HomeActivitiesController",
+    ["$scope", "$rootScope", "$translate", "ActivityCatalogService", "DesignCatalogService",
+        "ActivityRowActionsService", HomeActivitiesController]);
 app.controller("ActivitiesPageController",
-    ["$scope", "$rootScope", "$location", "$translate", "$window", "ActivityCatalogService",
-        "$timeout", "DesignCatalogService", ActivitiesPageController]);
+    ["$scope", "$rootScope", "$location", "$translate", "ActivityCatalogService",
+        "DesignCatalogService", "ActivityRowActionsService", ActivitiesPageController]);
 app.controller("ActivityReportsController",
     ["$scope", "$routeParams", "$window", ActivityReportsController]);
 app.controller("DesignsPageController",
@@ -271,6 +276,8 @@ app.controller("ConnectedUsersDirectiveController", ["$scope", "ActivityStateSer
     ConnectedUsersDirectiveController]);
 
 import { activityDescriptionComponent } from "../../components/activity-description.component.js";
+// The En curso, Terminadas and Archivadas tables of Actividades (#1095).
+import { activitiesTableComponent } from "../../components/activities-table.component.js";
 // The sticky bar of the activity dashboard (#893).
 import activityBarComponent from "../../components/activity-bar.component.js";
 // The phase navigator in the activity dashboard's rail (#894).
@@ -332,8 +339,13 @@ import tagSelectorComponent from "../../components/tag-selector.component.js";
 import phaseInstructionsEditComponent from "../../components/phase-instructions-edit.component.js";
 import teacherGroupChatComponent from "../../components/teacher-group-chat.component.js";
 import teacherToastComponent from "../../components/teacher-toast.component.js";
+// The notice after an activity's row action, on Activities and the home (#1094).
+import activityActionNoticeComponent from "../../components/activity-action-notice.component.js";
+// The page of a teacher with no activities, on Activities and the home (#1098).
+import activitiesEmptyPageComponent from "../../components/activities-empty-page.component.js";
 
 app.component('activityDescription', activityDescriptionComponent);
+app.component("activitiesTable", activitiesTableComponent);
 app.component("activityBar", activityBarComponent);
 app.component("phaseNavigator", phaseNavigatorComponent);
 app.component("responseDetailPanel", responseDetailPanelComponent);
@@ -383,6 +395,8 @@ app.component("tagSelector", tagSelectorComponent);
 app.component("phaseInstructionsEdit", phaseInstructionsEditComponent);
 app.component("teacherGroupChat", teacherGroupChatComponent);
 app.component("toast", teacherToastComponent);
+app.component("activityActionNotice", activityActionNoticeComponent);
+app.component("activitiesEmptyPage", activitiesEmptyPageComponent);
 
 import { userRolesFilter } from '../../filters/user-roles.filter.js';
 app.filter("roleTranslate", ["$translate", userRolesFilter]);

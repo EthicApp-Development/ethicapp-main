@@ -1,12 +1,14 @@
 // The Activities page (#1050, epic #1046): the tab lives in the URL and
 // survives a reload and Back, rows come from the activity catalog and follow
-// it, each action leaves for its page or archives through the catalog, and
+// it, the row actions and their notices go through ActivityRowActionsService
+// (#1094, tested in `services/__tests__/activity-row-actions.service`), and
 // each part of the page has its own fragment. AngularJS services are fakes.
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 
 import { ActivitiesPageController } from "../activities-page.controller.js";
+import { ActivityRowActionsService } from "../../../services/activity-row-actions.service.js";
 
 const VIEWS = new URL("../../../../static/views/teacher/", import.meta.url);
 const read = path => readFileSync(new URL(path, VIEWS), "utf8");
@@ -58,9 +60,6 @@ function createPage({
         $applyAsync(fn) {
             fn?.();
         },
-        navigateTo(path) {
-            calls.navigated.push(path);
-        },
     };
     const $location = {
         search(key, value) {
@@ -84,7 +83,7 @@ function createPage({
         },
     };
     let language = initialLanguage;
-    const $translate = { use: () => language };
+    const $translate = { use: () => language, instant: key => key };
     // angular-translate emits its events on $rootScope, not on the page's scope.
     const rootHandlers = {};
     const $rootScope = {
@@ -93,6 +92,12 @@ function createPage({
             return () => {
                 rootHandlers[name] = rootHandlers[name].filter(item => item !== handler);
             };
+        },
+        $applyAsync(fn) {
+            fn?.();
+        },
+        navigateTo(path) {
+            calls.navigated.push(path);
         },
     };
     const $window = {
@@ -134,8 +139,11 @@ function createPage({
     const vm = {};
     // The empty page's designs (#1053): none, as for a new teacher.
     const DesignCatalogService = { loadDesigns: async () => true, getDesigns: async () => [] };
-    ActivitiesPageController.call(vm, $scope, $rootScope, $location, $translate, $window,
-        ActivityCatalogService, $timeout, DesignCatalogService);
+    // The row actions (#1094), with the same fakes.
+    const ActivityRowActionsServiceInstance = ActivityRowActionsService($rootScope, $location,
+        $translate, $window, $timeout, ActivityCatalogService);
+    ActivitiesPageController.call(vm, $scope, $rootScope, $location, $translate,
+        ActivityCatalogService, DesignCatalogService, ActivityRowActionsServiceInstance);
 
     return {
         vm,
@@ -168,16 +176,6 @@ function createPage({
 const rowIds = (vm, tab) => vm.getRows(tab).map(row => row.id);
 const rowOf = (vm, id, tab) => vm.getRows(tab).find(row => row.id === id);
 const entryOf = (row, id) => row.menu.find(entry => entry.id === id);
-
-function quietly(run) {
-    const { error, warn } = console;
-    console.error = () => {};
-    console.warn = () => {};
-    return Promise.resolve(run()).finally(() => {
-        console.error = error;
-        console.warn = warn;
-    });
-}
 
 describe("activities page, tabs", () => {
     it("opens En curso by default, newest first, and counts each tab", async () => {
@@ -224,15 +222,6 @@ describe("activities page, tabs", () => {
         await vm.ready;
         leave();
         assert.deepEqual(calls.replaces, [{}]);
-    });
-
-    it("gives each tab its columns", async () => {
-        const { vm } = createPage();
-        await vm.ready;
-        assert.deepEqual(vm.columns.ongoing.map(column => column.id),
-            ["activity", "status", "participants", "code", "launched"]);
-        assert.deepEqual(vm.columns.archived.map(column => column.id),
-            ["activity", "status", "participants", "finished"]);
     });
 
     it("tells a teacher with no activities", async () => {
@@ -314,102 +303,72 @@ describe("activities page, rows", () => {
 });
 
 describe("activities page, row actions", () => {
-    it("opens the dashboard, the reports, the design, the case and the wizard", async () => {
+    it("runs a row's actions through its own row actions instance", async () => {
         const { vm, calls } = createPage();
         await vm.ready;
         const ongoing = rowOf(vm, 2, "ongoing");
         await vm.runAction(ongoing, ongoing.primary);
-        await vm.runAction(ongoing, entryOf(ongoing, "reports"));
-        await vm.runAction(ongoing, entryOf(ongoing, "view-design"));
         await vm.runAction(ongoing, entryOf(ongoing, "view-case"));
-        const finished = rowOf(vm, 4, "finished");
-        await vm.runAction(finished, finished.primary);
-        await vm.runAction(finished, entryOf(finished, "launch-again"));
-        assert.deepEqual(calls.navigated, [
-            "/activities/2", "/activities/2/reports", "/designs/42", "/cases/7",
-            "/activities/4/reports", "/activities/new/44",
-        ]);
-    });
+        assert.deepEqual(calls.navigated, ["/activities/2", "/cases/7"]);
 
-    it("copies the code, from the menu or its button", async () => {
-        const { vm, calls } = createPage();
-        await vm.ready;
-        const row = rowOf(vm, 2, "ongoing");
-        await vm.runAction(row, entryOf(row, "copy-code"));
-        assert.equal(await vm.copyCode(row), true);
-        assert.deepEqual(calls.copied, ["k2", "k2"]);
-    });
-
-    it("answers false when the code cannot be copied", async () => {
-        await quietly(async () => {
-            const { vm } = createPage({
-                clipboard: { writeText: async () => { throw new Error("denied"); } },
-            });
-            await vm.ready;
-            assert.equal(await vm.copyCode(rowOf(vm, 2, "ongoing")), false);
-            assert.equal(await vm.copyCode({ code: "" }), false);
-        });
-    });
-
-    it("archives a finished activity and restores an archived one", async () => {
-        const { vm, calls } = createPage();
-        await vm.ready;
         const finished = rowOf(vm, 4, "finished");
         await vm.runAction(finished, entryOf(finished, "archive"));
+        assert.deepEqual(calls.archived, [[4, true]]);
         assert.deepEqual(rowIds(vm, "archived"), [5, 4]);
-        const archived = rowOf(vm, 5, "archived");
-        await vm.runAction(archived, archived.primary);
-        assert.deepEqual(calls.archived, [[4, true], [5, false]]);
-        assert.deepEqual(rowIds(vm, "finished"), [5, 3]);
         assert.equal(vm.tab, "ongoing");
     });
 
-    it("reloads the activities when the server refuses to archive", async () => {
-        await quietly(async () => {
-            const { vm, calls } = createPage({
-                catalog: {
-                    setArchived: async () => {
-                        throw { status: 409, data: { code: "ACTIVITY_NOT_FINISHED" } };
-                    },
-                },
-            });
-            await vm.ready;
-            const loadsBefore = calls.loads;
-            const row = rowOf(vm, 4, "finished");
-            await vm.runAction(row, entryOf(row, "archive"));
-            assert.equal(calls.loads, loadsBefore + 1);
-            assert.deepEqual(vm.busy, {});
-        });
-    });
-
-    it("does not reload after another failure", async () => {
-        await quietly(async () => {
-            const { vm, calls } = createPage({
-                catalog: { setArchived: async () => { throw { status: 500 }; } },
-            });
-            await vm.ready;
-            const loadsBefore = calls.loads;
-            const row = rowOf(vm, 5, "archived");
-            await vm.runAction(row, row.primary);
-            assert.equal(calls.loads, loadsBefore);
-        });
-    });
-
-    it("ignores a disabled entry and a second click while busy", async () => {
+    it("copies the code from its button", async () => {
         const { vm, calls } = createPage();
         await vm.ready;
+        assert.equal(await vm.copyCode(rowOf(vm, 2, "ongoing")), true);
+        assert.deepEqual(calls.copied, ["k2"]);
+        assert.equal(vm.notice.messageKey, "activities_notice_code_copied");
+    });
+
+    it("shares the instance's busy rows with the tables", async () => {
+        const { vm, calls } = createPage();
+        await vm.ready;
+        assert.equal(vm.busy, vm.actions.busy);
         const row = rowOf(vm, 2, "ongoing");
-        await vm.runAction(row, { ...entryOf(row, "view-case"), disabled: true });
         vm.busy[row.id] = true;
         await vm.runAction(row, row.primary);
         assert.deepEqual(calls.navigated, []);
     });
+
+    it("follows the instance's notice and dismisses it", async () => {
+        const { vm } = createPage();
+        await vm.ready;
+        assert.equal(vm.notice, null);
+        await vm.copyCode(rowOf(vm, 2, "ongoing"));
+        assert.equal(vm.notice, vm.actions.notice);
+        vm.dismissNotice();
+        assert.equal(vm.notice, null);
+        assert.equal(vm.actions.notice, null);
+    });
+
+    it("opens Archivadas in place from the notice, and offers it only off Archivadas",
+        async () => {
+            const { vm, calls } = createPage({ search: { tab: "finished" } });
+            await vm.ready;
+            const finished = rowOf(vm, 4, "finished");
+            await vm.runAction(finished, entryOf(finished, "archive"));
+            const showArchived = vm.notice.actions.find(action => action.id === "show-archived");
+            await vm.runNoticeAction(showArchived);
+            assert.equal(vm.tab, "archived");
+            assert.deepEqual(calls.pushes, [{ tab: "archived" }]);
+            assert.equal(vm.notice, null);
+
+            const archived = rowOf(vm, 3, "finished");
+            await vm.runAction(archived, entryOf(archived, "archive"));
+            assert.deepEqual(vm.notice.actions.map(action => action.id), ["undo-archive"]);
+        });
 });
 
 describe("activities page, templates", () => {
     const page = read("activity.index.html");
     const fragments = [
-        "activities-filters", "activities-action-notice", "activities-empty-page",
+        "activities-filters",
         "activities-ongoing-tab", "activities-finished-tab", "activities-archived-tab",
     ];
 
@@ -419,6 +378,12 @@ describe("activities page, templates", () => {
             assert.ok(page.includes(`fragments/${name}.template.html`), name);
             assert.ok(existsSync(new URL(`fragments/${name}.template.html`, VIEWS)), name);
         }
+        // The empty page is a component shared with the home (#1098).
+        assert.ok(page.includes("<activities-empty-page "));
+    });
+
+    it("shows the notices with the shared component, bound to the page's instance", () => {
+        assert.ok(page.includes('<activity-action-notice actions="ap.actions">'));
     });
 
     it("links the tabs to the URL", () => {
@@ -427,14 +392,22 @@ describe("activities page, templates", () => {
         assert.ok(page.includes('href="#!/activities?tab=archived"'));
     });
 
-    it("shares the Terminadas table and the row menu between tabs", () => {
-        for (const tab of ["finished", "archived"]) {
-            assert.ok(read(`fragments/activities-${tab}-tab.template.html`)
-                .includes("fragments/activities-finished-table.template.html"));
+    // The tabs show the activities-table component (#1095), bound to the
+    // cached rows (`getRows`) and cut by `limit`: a binding to
+    // `getVisibleRows`, a new slice on each call, would never settle.
+    it("shows each tab in the activities-table component", () => {
+        for (const tab of ["ongoing", "finished", "archived"]) {
+            const fragment = read(`fragments/activities-${tab}-tab.template.html`);
+            assert.ok(fragment.includes("<activities-table"), tab);
+            assert.ok(fragment.includes(`tab="${tab}"`), tab);
+            assert.ok(fragment.includes(`rows="ap.getRows('${tab}')"`), tab);
+            assert.ok(fragment.includes(`limit="ap.visibleCounts.${tab}"`), tab);
+            assert.ok(fragment.includes('busy="ap.busy"'), tab);
+            assert.ok(fragment.includes('on-action="ap.runAction(row, action)"'), tab);
+            assert.doesNotMatch(fragment, /<table|rows="ap\.getVisibleRows/, tab);
         }
-        for (const table of ["activities-ongoing-tab", "activities-finished-table"]) {
-            assert.ok(read(`fragments/${table}.template.html`)
-                .includes("fragments/activities-row-menu.template.html"));
-        }
+        assert.ok(read("fragments/activities-ongoing-tab.template.html")
+            .includes('on-copy-code="ap.copyCode(row)"'));
+        assert.ok(!existsSync(new URL("fragments/activities-finished-table.template.html", VIEWS)));
     });
 });

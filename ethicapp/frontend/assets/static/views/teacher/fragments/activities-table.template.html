@@ -1,18 +1,20 @@
-<!-- The table of "Terminadas" and "Archivadas" (#1050): a row per activity
-     with its status, participants and end, one visible action ("Reportes",
-     or "Restaurar" in "Archivadas") and a "⋯" menu. The code goes away. Below
-     1200 px the rows become compact rows. -->
-<table class="cases-table activities-table activities-table-finished">
-    <caption class="sr-only">{{ (ap.tab === 'archived' ? 'activities_tab_archived' : 'activities_tab_finished') | translate }}</caption>
+<!-- The table of a tab of Actividades (#1095), `activities-table`: a row per
+     activity with its status, participants, the code in "En curso" only,
+     the launch or the end, one visible action ("Abrir panel", "Reportes" or
+     "Restaurar") and a "⋯" menu. "Terminadas" and "Archivadas" share one
+     layout. Below 1200 px the rows become compact rows. -->
+<table class="cases-table activities-table"
+    ng-class="{ 'activities-table-ongoing': $ctrl.layout === 'ongoing', 'activities-table-finished': $ctrl.layout === 'finished' }">
+    <caption class="sr-only">{{ ($ctrl.caption || $ctrl.defaultCaption) | translate }}</caption>
     <thead>
         <tr>
             <th scope="col" class="cases-head-cell activities-col-{{ column.id }}"
-                ng-repeat="column in ap.columns[ap.tab] track by column.id">{{ column.key | translate }}</th>
+                ng-repeat="column in $ctrl.columns track by column.id">{{ column.key | translate }}</th>
             <th scope="col" class="cases-head-cell activities-col-actions"><span class="sr-only">{{ 'activities_col_actions' | translate }}</span></th>
         </tr>
     </thead>
     <tbody>
-        <tr class="cases-row activities-row" ng-repeat="row in ap.getVisibleRows(ap.tab) track by row.id" data-session-id="{{ row.id }}">
+        <tr class="cases-row activities-row" ng-repeat="row in $ctrl.rows | limitTo:$ctrl.limit track by row.id" data-session-id="{{ row.id }}">
             <td class="cases-cell activities-cell-activity">
                 <a class="cases-row-title activities-row-title" ng-href="#!/activities/{{ row.id }}"><span
                     class="activities-row-name">{{ row.title.name }}</span><span
@@ -34,15 +36,26 @@
             <td class="cases-cell activities-cell-participants">
                 <span class="activities-participants" ng-class="{ 'activities-participants-none': row.participants.none }">{{ row.participants.key | translate:row.participants.params }}</span>
             </td>
+            <td class="cases-cell activities-cell-code" ng-if="$ctrl.showCode">
+                <span class="activities-code-group" ng-if="row.code">
+                    <code class="activities-code">{{ row.code }}</code>
+                    <button type="button" class="btn btn-link btn-xs activities-copy-code"
+                        title="{{ 'activities_action_copy_code' | translate }}"
+                        aria-label="{{ 'activities_action_copy_code' | translate }}: {{ row.code }}"
+                        ng-click="$ctrl.copyCode(row)">
+                        <i class="fa-regular fa-copy" aria-hidden="true"></i>
+                    </button>
+                </span>
+            </td>
             <td class="cases-cell activities-cell-date"
-                title="{{ row.finished.hint.key ? (row.finished.hint.key | translate:row.finished.hint.params) : row.finished.hint.text }}">
-                {{ row.finished.label.key ? (row.finished.label.key | translate:row.finished.label.params) : row.finished.label.text }}
+                title="{{ row[$ctrl.dateField].hint.key ? (row[$ctrl.dateField].hint.key | translate:row[$ctrl.dateField].hint.params) : row[$ctrl.dateField].hint.text }}">
+                {{ row[$ctrl.dateField].label.key ? (row[$ctrl.dateField].label.key | translate:row[$ctrl.dateField].label.params) : row[$ctrl.dateField].label.text }}
             </td>
             <td class="cases-cell cases-cell-actions activities-cell-actions">
                 <button type="button" class="btn btn-default btn-sm cases-row-primary"
                     data-action="{{ row.primary.id }}"
-                    ng-disabled="ap.busy[row.id]"
-                    ng-click="ap.runAction(row, row.primary)">
+                    ng-disabled="$ctrl.isBusy(row)"
+                    ng-click="$ctrl.runAction(row, row.primary)">
                     <i ng-class="row.primary.icon" aria-hidden="true"></i> {{ row.primary.key | translate }}
                 </button>
                 <div class="cases-row-menu-slot" ng-include="'/assets/static/views/teacher/fragments/activities-row-menu.template.html'"></div>
