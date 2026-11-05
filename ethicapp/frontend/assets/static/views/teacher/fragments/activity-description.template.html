@@ -5,22 +5,13 @@
   <div class="panel-body">
     <div class="row">
       <div class="col-sm-12">
-        <p ng-if="$ctrl.showStatusAndCode"><b><i class="fa-solid fa-chart-gantt" aria-hidden="true"></i> {{ 'current_status_colon' | translate }}</b> <span class="activity-description-status" ng-class="{ 'text-success': $ctrl.status.id === 'in-progress' }">{{ $ctrl.status.key | translate:{ number: $ctrl.status.params.number, total: $ctrl.status.params.total, mode: ($ctrl.status.modeKey ? ($ctrl.status.modeKey | translate) : '') } }}</span></p>
         <!-- The design's title from the activity's own fields, with no design
              type: designs are not told apart by type (#964, #1055). -->
-        <p ng-if="$ctrl.designTitle"><b><i class="fa-solid fa-paint-brush" aria-hidden="true"></i> {{ 'design_used_colon' | translate }}</b> <a ng-href="#!/designs/{{$ctrl.activity.designId}}" ng-if="$ctrl.enableLink && $ctrl.activity.designId">{{ $ctrl.designTitle }}</a><span ng-if="!$ctrl.enableLink || !$ctrl.activity.designId">{{ $ctrl.designTitle }}</span></p>
+        <p ng-if="$ctrl.designTitle"><b><i class="fa-solid fa-paint-brush" aria-hidden="true"></i> {{ 'design_used_colon' | translate }}</b> <span>{{ $ctrl.designTitle }}</span></p>
         <p ng-if="$ctrl.caseItem"><b><i class="fa-solid fa-book" aria-hidden="true"></i> {{ 'design_associated_case_label' | translate }}:</b> <a ng-href="#!/cases/{{$ctrl.caseItem.id}}">{{ $ctrl.formatCaseLabel($ctrl.caseItem) }}</a></p>
-        <p ng-if="$ctrl.showStatusAndCode"><b><i class="fa-solid fa-key" aria-hidden="true"></i> {{ 'access_code_colon' | translate }}</b> <span copy-to-clipboard class="fixed-width-font white-against-black-bg bold-text black-bg-rounded-corners copy-to-clipboard-parent">{{ $ctrl.activity.code }}</span></p>
         <!-- In the browser's time zone and the UI language (#1055). -->
         <p><b><i class="fa-solid fa-calendar-alt" aria-hidden="true"></i> {{ 'launch_date_colon' | translate }}</b> <time class="activity-item-launch-date" datetime="{{ $ctrl.activity.time }}" title="{{ $ctrl.launchDate.full }}">{{ $ctrl.launchDate.label.key ? ($ctrl.launchDate.label.key | translate:$ctrl.launchDate.label.params) : $ctrl.launchDate.label.text }}</time></p>
       </div>
-    </div>
-  </div>
-  <div class="panel-footer teacher-card-actions-footer activity-item-actions" ng-if="$ctrl.isFunction($ctrl.onView)">
-    <div class="teacher-card-action-buttons">
-      <button type="button" class="btn btn-default btn-sm" ng-click="$ctrl.onView($ctrl.activity)">
-        <i class="fa fa-eye" aria-hidden="true"></i> {{ 'view' | translate }}
-      </button>
     </div>
   </div>
 </div>
