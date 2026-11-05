@@ -83,9 +83,9 @@ app.config(["$httpProvider", function($httpProvider) {
 app.component("sessionExpiredNotice", sessionExpiredNoticeComponent);
 
 import { LocalesController } from "../../controllers/common/locales.controller.js";
-// The home's recent activities (#1055).
-import { RecentActivitiesController }
-    from "../../controllers/teacher/recent-activities.controller.js";
+// The home's activities in progress and recently finished (#1098).
+import { HomeActivitiesController }
+    from "../../controllers/teacher/home-activities.controller.js";
 // The Activities page (#1050, epic #1046).
 import { ActivitiesPageController }
     from "../../controllers/teacher/activities-page.controller.js";
@@ -181,8 +181,9 @@ app.run(["$translate", "UserProfileService", "LanguageCatalogService", function(
 // Inject controllers into application
 app.controller("LocalesController", 
     ["$translate", "$scope", "$rootScope", LocalesController]); 
-app.controller("RecentActivitiesController",
-    ["$scope", "ActivityCatalogService", RecentActivitiesController]);
+app.controller("HomeActivitiesController",
+    ["$scope", "$rootScope", "$translate", "ActivityCatalogService", "DesignCatalogService",
+        "ActivityRowActionsService", HomeActivitiesController]);
 app.controller("ActivitiesPageController",
     ["$scope", "$rootScope", "$location", "$translate", "ActivityCatalogService",
         "DesignCatalogService", "ActivityRowActionsService", ActivitiesPageController]);
@@ -340,6 +341,8 @@ import teacherGroupChatComponent from "../../components/teacher-group-chat.compo
 import teacherToastComponent from "../../components/teacher-toast.component.js";
 // The notice after an activity's row action, on Activities and the home (#1094).
 import activityActionNoticeComponent from "../../components/activity-action-notice.component.js";
+// The page of a teacher with no activities, on Activities and the home (#1098).
+import activitiesEmptyPageComponent from "../../components/activities-empty-page.component.js";
 
 app.component('activityDescription', activityDescriptionComponent);
 app.component("activitiesTable", activitiesTableComponent);
@@ -393,6 +396,7 @@ app.component("phaseInstructionsEdit", phaseInstructionsEditComponent);
 app.component("teacherGroupChat", teacherGroupChatComponent);
 app.component("toast", teacherToastComponent);
 app.component("activityActionNotice", activityActionNoticeComponent);
+app.component("activitiesEmptyPage", activitiesEmptyPageComponent);
 
 import { userRolesFilter } from '../../filters/user-roles.filter.js';
 app.filter("roleTranslate", ["$translate", userRolesFilter]);

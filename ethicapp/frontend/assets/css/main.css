@@ -130,6 +130,57 @@ hr{
     }
 }
 
+/* The home's activities (#1098, epic #1093), below the launcher:
+   "Actividades en curso" and "Terminadas recientemente", each a heading with
+   its counts as links, the order on the right, the table of Actividades
+   (`activities-table`, with its compact rows below 1200 px) and its footer.
+   The colours are those of the Cases page (`--cases-*`), and the empty page
+   is the one of Actividades. */
+.home-activities-section {
+    margin-bottom: 22px;
+}
+
+.home-activities-head {
+    align-items: baseline;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 14px;
+    margin: 4px 0 8px;
+}
+
+.home-activities-title {
+    font-size: 20px;
+    margin: 0;
+}
+
+.home-activities-counts {
+    color: var(--cases-muted);
+    font-size: 15px;
+}
+
+.home-activities-count,
+.home-activities-view-all {
+    color: var(--cases-accent);
+    font-weight: 600;
+}
+
+/* Wins over `.cases-table-order`, which comes later and sets no margin. */
+.home-activities-head .home-activities-order {
+    margin-left: auto;
+}
+
+/* Activities, but none in progress: one line with "Lanzar actividad". */
+.home-activities-none {
+    align-items: center;
+    border: 1px solid var(--cases-line);
+    border-radius: 6px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    justify-content: space-between;
+    padding: 10px 16px;
+}
+
 ::-webkit-scrollbar-track {
     background-color: rgb(0 0 0 /0%);
 }
@@ -6713,11 +6764,12 @@ button.launch-wizard-step-body:focus-visible .launch-wizard-step-name {
    with counts, and the "My cases" and "Archived" tables, after the Designs
    page. From 1200 px each case is a table row; below, the same rows become
    compact rows: the title and its details, then the status, designs, sharing
-   and actions on a second line. The activities table (#1095) carries the
-   same colours, so it keeps them on a page without `.cases-page`, such as
-   the home. */
+   and actions on a second line. The activities table (#1095) and the
+   home's activities (#1098) carry the same colours, so they keep them on a
+   page without `.cases-page`. */
 .cases-page,
-.activities-table {
+.activities-table,
+.home-activities {
     --cases-accent: var(--teacher-link-color, #2649ec);
     --cases-line: #d9dde8;
     --cases-muted: #5f6577;

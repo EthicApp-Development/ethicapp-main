@@ -1,5 +1,5 @@
 // The order of the teacher's activities (#918): the newest first, in the
-// activity lists and in the home's "Recent Activities". An activity launched
+// Activities page and in the home's activities sections. An activity launched
 // in this tab is appended to the catalog, so the order is applied here and not
 // left to the order the server sent.
 

@@ -368,7 +368,7 @@ describe("activities page, row actions", () => {
 describe("activities page, templates", () => {
     const page = read("activity.index.html");
     const fragments = [
-        "activities-filters", "activities-empty-page",
+        "activities-filters",
         "activities-ongoing-tab", "activities-finished-tab", "activities-archived-tab",
     ];
 
@@ -378,6 +378,8 @@ describe("activities page, templates", () => {
             assert.ok(page.includes(`fragments/${name}.template.html`), name);
             assert.ok(existsSync(new URL(`fragments/${name}.template.html`, VIEWS)), name);
         }
+        // The empty page is a component shared with the home (#1098).
+        assert.ok(page.includes("<activities-empty-page "));
     });
 
     it("shows the notices with the shared component, bound to the page's instance", () => {
