@@ -9,6 +9,7 @@ import SessionMetadata from '../components/session-detail/SessionMetadata.jsx';
 import WaitingStatePanel from '../components/session-detail/WaitingStatePanel.jsx';
 import { CaseVideosProvider } from '../context/CaseVideosContext.jsx';
 import { useStudentActivityState } from '../context/StudentActivityStateContext.jsx';
+import { errorLogDetails } from '../utils/logDetails.js';
 import { useActivityRealtimeSync } from './session-detail/hooks/useActivityRealtimeSync.js';
 import { usePhaseResponseSubmission } from './session-detail/hooks/usePhaseResponseSubmission.js';
 import {
@@ -298,10 +299,11 @@ export default function ActivityPage() {
     fetchResults: (target) => fetchStudentExternalResults(legacyUserApi, target),
     applyResults: (results) => showExternalResultsRef.current(loadedExternalResults(results)),
     reportFailure: (error, target) => {
-      // Ids and the status only: an answer can quote the student.
+      // Ids, and the error's name, code and status: an answer can quote the
+      // student (#1139).
       console.debug('[student] could not load external service results', {
         sessionId: target.sessionId,
-        status: error?.response?.status ?? null
+        ...errorLogDetails(error)
       });
     }
   }));
