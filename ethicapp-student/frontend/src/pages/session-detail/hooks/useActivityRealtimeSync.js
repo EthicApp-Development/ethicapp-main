@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { legacyUserApi, studentApi } from '../../../api/studentApi.js';
 import { createRealtimeConnectionMonitor } from '../../../services/realtimeConnectionMonitor.js';
 import { getStudentSocket } from '../../../services/studentSocket.js';
+import { createReconnectTracker } from '../externalResultsLoading.js';
 
 export function useActivityRealtimeSync({
   session,
@@ -15,9 +16,17 @@ export function useActivityRealtimeSync({
   activityCurrentPhaseId,
   setGroupIdByPhaseId,
   setGroupContextByPhaseId,
-  onExternalServiceResult
+  onExternalServiceResult,
+  onReconnect
 }) {
   const [realtimeIssue, setRealtimeIssue] = useState(null);
+  // Read through a ref, so a new callback never makes the socket leave and
+  // rejoin its rooms.
+  const onReconnectRef = useRef(onReconnect);
+
+  useEffect(() => {
+    onReconnectRef.current = onReconnect;
+  }, [onReconnect]);
 
   useEffect(() => {
     if (!session.isAuthenticated || !selectedSession) {
@@ -26,6 +35,7 @@ export function useActivityRealtimeSync({
 
     let isUnmounted = false;
     let socket = null;
+    let reconnectTracker = null;
     const activeSessionId = Number(selectedSession.id);
     const connectionMonitor = createRealtimeConnectionMonitor({
       checkSession: () => studentApi.get('session'),
@@ -41,6 +51,12 @@ export function useActivityRealtimeSync({
     };
     const handleConnect = () => {
       connectionMonitor.handleConnect();
+
+      // A connect after the first: whatever was published while the socket
+      // was down was not replayed (#1128).
+      if (reconnectTracker?.handleConnect()) {
+        onReconnectRef.current?.();
+      }
     };
 
     const handlePhaseTransition = (...payload) => {
@@ -84,6 +100,7 @@ export function useActivityRealtimeSync({
         if (isUnmounted) return;
 
         socket = instance;
+        reconnectTracker = createReconnectTracker({ connected: socket.connected });
         socket.on('connect_error', handleConnectError);
         socket.on('connect', handleConnect);
         socket.emit('joinSession', activeSessionId);

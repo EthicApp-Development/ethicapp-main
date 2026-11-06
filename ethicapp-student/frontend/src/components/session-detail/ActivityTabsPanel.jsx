@@ -20,8 +20,10 @@ export default function ActivityTabsPanel({
   chatRefreshTokenByPhaseId,
   externalResponseProcessingByPhaseId,
   externalResultsByPhaseId,
-  onDismissExternalResult,
+  expandedExternalResultKeys,
+  onToggleExternalResult,
   userId,
+  locale,
   t
 }) {
   const [semanticDraftByPhaseId, setSemanticDraftByPhaseId] = useState({});
@@ -123,7 +125,9 @@ export default function ActivityTabsPanel({
         {activeTab !== 'case' && activePhase ? (
           <ExternalServiceResultPanel
             results={externalResultsByPhaseId?.[activePhaseId] ?? []}
-            onDismiss={onDismissExternalResult}
+            expandedKeys={expandedExternalResultKeys}
+            onToggle={onToggleExternalResult}
+            locale={locale}
             t={t}
           />
         ) : null}
