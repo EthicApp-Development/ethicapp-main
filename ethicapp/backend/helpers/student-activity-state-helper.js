@@ -1,13 +1,13 @@
 import * as config from "../config/database.config.js";
-import * as rpg2 from "../db/rest-pg-2.js"
+import * as rpg2 from "../db/rest-pg-2.js";
 import redisClient from "../db/redis.js";
 import { responseFactories } from  "../../common/modules/design-types.js";
 import {
     phaseInstructions,
     resolveTextContentType,
 } from "../../common/modules/text-content-types.js";
-import * as DesignsHelper from "../helpers/designs-helper.js"
-import * as ActivitiesHelper from "../helpers/activities-helper.js"
+import * as DesignsHelper from "../helpers/designs-helper.js";
+import * as ActivitiesHelper from "../helpers/activities-helper.js";
 import externalServicesRegistry from "../services/external-services.service.js";
 import {
     STUDENT_ACTIVITY_DESCRIPTOR_SQL,
@@ -36,19 +36,18 @@ export const buildInitialPhaseState = async function (phaseId) {
 
         return {
             phase: {
-                id: phaseId,
-                number: phaseNumber,
+                id:       phaseId,
+                number:   phaseNumber,
                 ...phaseInstructions(phaseDesign, phaseDesign?.question),
                 features: {
-                    chat: phaseDesign.chat,
-                    anonymity: phaseDesign.anonymous,
+                    chat:              phaseDesign.chat,
+                    anonymity:         phaseDesign.anonymous,
                     previousResponses: phaseDesign.prevPhasesResponse || []
                 },
-                tasks: tasksObj.tasks,
-                responses: responses,
+                tasks:         tasksObj.tasks,
+                responses:     responses,
                 peerResponses: [],
-                group: [],
-                groupMessages: {}
+                group:         []
             }
         };
     } catch (error) {
@@ -81,9 +80,9 @@ export async function getStudentActivityDescriptor(sessionId) {
 
     try {
         const descriptorResult = await rpg2.execSQL({
-            dbcon: config.dbconnString,
-            sql: STUDENT_ACTIVITY_DESCRIPTOR_SQL,
-            sqlParams: [rpg2.param('plain', Number(sessionId))], // Correct usage of rpg2.param
+            dbcon:     config.dbconnString,
+            sql:       STUDENT_ACTIVITY_DESCRIPTOR_SQL,
+            sqlParams: [rpg2.param("plain", Number(sessionId))], // Correct usage of rpg2.param
         });
 
         if (descriptorResult.length === 0) {
@@ -96,7 +95,7 @@ export async function getStudentActivityDescriptor(sessionId) {
             design, 
             currentphasenumber: currentPhaseNumber,
             currentphaseid: currentPhaseId
-         } = descriptorResult[0];
+        } = descriptorResult[0];
 
         return {
             descriptor: {
@@ -155,7 +154,7 @@ export async function getCachedStudentActivityPhases(sessionId, invalidate = fal
 
         // Cache the result
         if (phases) {
-            await redisClient.set(cacheKey, JSON.stringify({ phases }), 'EX', 300);
+            await redisClient.set(cacheKey, JSON.stringify({ phases }), "EX", 300);
         }
 
         return { phases };
@@ -182,9 +181,9 @@ export async function getStudentActivityPhases(sessionId) {
         `;
 
         const designResult = await rpg2.singleSQL({
-            dbcon: config.dbconnString,
-            sql: designQuery,
-            sqlParams: [rpg2.param('plain', Number(sessionId))],
+            dbcon:     config.dbconnString,
+            sql:       designQuery,
+            sqlParams: [rpg2.param("plain", Number(sessionId))],
         });
 
         const designPhases = Array.isArray(designResult?.design?.phases) ? designResult.design.phases : [];
@@ -205,9 +204,9 @@ export async function getStudentActivityPhases(sessionId) {
         `;
 
         const phasesResult = await rpg2.execSQL({
-            dbcon: config.dbconnString,
-            sql: phasesQuery,
-            sqlParams: [rpg2.param('plain', Number(sessionId))],
+            dbcon:     config.dbconnString,
+            sql:       phasesQuery,
+            sqlParams: [rpg2.param("plain", Number(sessionId))],
         });
 
         // Transform phases into the desired format
@@ -215,22 +214,21 @@ export async function getStudentActivityPhases(sessionId) {
             const phaseDesign = designPhases[Number(phase.number) - 1] || {};
 
             return {
-                id: phase.id,
-                number: phase.number,
+                id:       phase.id,
+                number:   phase.number,
                 ...phaseInstructions(phaseDesign, phase.instructions),
                 features: {
-                    mode: phase.mode,
-                    chat: phase.chat,
-                    anonymity: phase.anon,
+                    mode:              phase.mode,
+                    chat:              phase.chat,
+                    anonymity:         phase.anon,
                     previousResponses: Array.isArray(phaseDesign.prevPhasesResponse)
                         ? phaseDesign.prevPhasesResponse
                         : [],
                 },
-                tasks: [], // Placeholder: Add query to retrieve tasks
-                responses: [], // Placeholder: Add query to retrieve responses
+                tasks:         [], // Placeholder: Add query to retrieve tasks
+                responses:     [], // Placeholder: Add query to retrieve responses
                 peerResponses: [], // Placeholder: Add query to retrieve peer responses
-                group: {}, // Placeholder: Add query to retrieve group info
-                groupMessages: [], // Placeholder: Add query to retrieve group messages
+                group:         {}, // Placeholder: Add query to retrieve group info
             };
         });
 
@@ -291,7 +289,7 @@ export async function getCachedStudentActivityGroups(sessionId, userId, phases, 
         });
 
         // Cache the result in Redis
-        await redisClient.set(cacheKey, JSON.stringify(groupsByPhase), 'EX', 3600); // Expiration: 1 hour
+        await redisClient.set(cacheKey, JSON.stringify(groupsByPhase), "EX", 3600); // Expiration: 1 hour
 
         return updatedPhases;
     } catch (error) {
@@ -329,11 +327,11 @@ export async function getStudentActivityGroups(sessionId, userId, phases) {
         `;
 
         const groupsResult = await rpg2.execSQL({
-            dbcon: config.dbconnString,
-            sql: groupsQuery,
+            dbcon:     config.dbconnString,
+            sql:       groupsQuery,
             sqlParams: [
-                rpg2.param('plain', Number(sessionId)),
-                rpg2.param('plain', Number(userId))
+                rpg2.param("plain", Number(sessionId)),
+                rpg2.param("plain", Number(userId))
             ],
         });
 
@@ -350,8 +348,8 @@ export async function getStudentActivityGroups(sessionId, userId, phases) {
             }
 
             group.peers.push({
-                id: row.user_id,
-                name: row.user_name,
+                id:       row.user_id,
+                name:     row.user_name,
                 anonMask: row.anonymity_mask,
             });
         });
@@ -371,17 +369,17 @@ export async function getStudentActivityGroups(sessionId, userId, phases) {
 
 const studentActivityTaskGetters = {
     semantic_differential: getStudentActivityTasks_semanticDifferential,
-    ranking: getStudentActivityTasks_ranking
-}
+    ranking:               getStudentActivityTasks_ranking
+};
 
 export async function getCachedStudentActivityTasks(designType, sessionId, phases, invalidate = false) {
     if (!Array.isArray(phases) || phases.length === 0) {
-        console.error(`Invalid or empty phases array:`, phases);
+        console.error("Invalid or empty phases array:", phases);
         return phases;
     }
 
     // Create a unique cache key using concatenated phase numbers
-    const phaseNumbers = phases.map(phase => phase.number).sort().join(',');
+    const phaseNumbers = phases.map(phase => phase.number).sort().join(",");
     const cacheKey = `tasks:${sessionId}:phases:${phaseNumbers}`;
 
     try {
@@ -416,7 +414,7 @@ export async function getCachedStudentActivityTasks(designType, sessionId, phase
         }, {});
 
         // Cache the result in Redis
-        await redisClient.set(cacheKey, JSON.stringify(tasksByPhase), 'EX', 300); // Expiration: 5 minutes
+        await redisClient.set(cacheKey, JSON.stringify(tasksByPhase), "EX", 300); // Expiration: 5 minutes
 
         return updatedPhases;
     } catch (error) {
@@ -466,7 +464,7 @@ export async function getStudentActivityTasksForPhase(phaseId) {
         // Step 1: Fetch the session ID, stage number, and design type
         const phaseResult = await rpg2.execSQL({
             dbcon: config.dbconnString,
-            sql: `
+            sql:   `
                 SELECT
                     st.sesid AS session_id,
                     st.number AS phase_number,
@@ -476,7 +474,7 @@ export async function getStudentActivityTasksForPhase(phaseId) {
                 JOIN designs d ON d.id = a.design
                 WHERE st.id = $1
             `,
-            sqlParams: [rpg2.param('plain', phaseId)],
+            sqlParams: [rpg2.param("plain", phaseId)],
         });
 
         if (!phaseResult) {
@@ -549,8 +547,8 @@ export async function getStudentActivityTasks_semanticDifferential(sessionId, ph
 
     try {
         const results = await rpg2.execSQL({
-            dbcon: config.dbconnString,
-            sql: query,
+            dbcon:     config.dbconnString,
+            sql:       query,
             sqlParams: [rpg2.param("plain", Number(sessionId))],
         });
 
@@ -612,8 +610,8 @@ export async function getStudentActivityTasks_ranking(sessionId, phases) {
 
     try {
         const results = await rpg2.execSQL({
-            dbcon: config.dbconnString,
-            sql: query,
+            dbcon:     config.dbconnString,
+            sql:       query,
             sqlParams: [rpg2.param("plain", Number(sessionId))],
         });
 
@@ -624,11 +622,11 @@ export async function getStudentActivityTasks_ranking(sessionId, phases) {
             }
 
             tasksByPhase[actor.phase_number].push({
-                id: actor.item_id,
-                name: actor.item_name,
-                justifyOrder: actor.justify_order,
+                id:                    actor.item_id,
+                name:                  actor.item_name,
+                justifyOrder:          actor.justify_order,
                 requiresJustification: actor.justify_item,
-                minWordCount: actor.min_word_count,
+                minWordCount:          actor.min_word_count,
             });
         });
 
@@ -645,7 +643,7 @@ export async function getStudentActivityTasks_ranking(sessionId, phases) {
 
 const studentActivityResponseGetters = {
     semantic_differential: getStudentActivityResponses_semanticDifferential,
-    ranking: getStudentActivityResponses_ranking,
+    ranking:               getStudentActivityResponses_ranking,
 };
 
 export async function getCachedStudentActivityResponses(designType, sessionId, userId, phases, invalidate = false) {
@@ -695,7 +693,7 @@ export async function getCachedStudentActivityResponses(designType, sessionId, u
         }, {});
 
         // Cache the normalized map of phaseNumber -> responses
-        await redisClient.set(cacheKey, JSON.stringify(responsesByPhase), 'EX', 300); // Expiration: 5 minutes
+        await redisClient.set(cacheKey, JSON.stringify(responsesByPhase), "EX", 300); // Expiration: 5 minutes
 
         // Attach responses to the corresponding phases
         phases.forEach(phase => {
@@ -767,8 +765,8 @@ export async function getStudentActivityResponses_semanticDifferential(sessionId
 
     try {
         const results = await rpg2.execSQL({
-            dbcon: config.dbconnString,
-            sql: query,
+            dbcon:     config.dbconnString,
+            sql:       query,
             sqlParams: [
                 rpg2.param("plain", Number(userId)),
                 rpg2.param("plain", Number(sessionId)),
@@ -782,10 +780,10 @@ export async function getStudentActivityResponses_semanticDifferential(sessionId
             }
 
             responsesByPhase[response.phase_number].push({
-                taskId: response.task_id,
-                selection: response.selection,
+                taskId:        response.task_id,
+                selection:     response.selection,
                 justification: response.justification,
-                timestamp: response.timestamp,
+                timestamp:     response.timestamp,
             });
         });
 
@@ -831,8 +829,8 @@ export async function getStudentActivityResponses_ranking(sessionId, userId, pha
 
     try {
         const results = await rpg2.execSQL({
-            dbcon: config.dbconnString,
-            sql: query,
+            dbcon:     config.dbconnString,
+            sql:       query,
             sqlParams: [
                 rpg2.param("plain", Number(userId)),
                 rpg2.param("plain", Number(sessionId)),
@@ -846,10 +844,10 @@ export async function getStudentActivityResponses_ranking(sessionId, userId, pha
             }
 
             responsesByPhase[response.phase_number].push({
-                actorId: response.actor_id,
-                order: response.order,
+                actorId:     response.actor_id,
+                order:       response.order,
                 description: response.description,
-                timestamp: response.timestamp,
+                timestamp:   response.timestamp,
             });
         });
 
@@ -866,7 +864,7 @@ export async function getStudentActivityResponses_ranking(sessionId, userId, pha
 
 const studentActivityPeerResponseGetters = {
     semantic_differential: getStudentActivityPeerResponses_semanticDifferential,
-    ranking: getStudentActivityPeerResponses_ranking,
+    ranking:               getStudentActivityPeerResponses_ranking,
 };
 
 function normalizePhaseNumberList(phaseNumbers) {
@@ -884,7 +882,7 @@ function normalizePhaseNumberList(phaseNumbers) {
 async function getCurrentPhaseGroupContext(phaseId, userId) {
     const groupRows = await rpg2.execSQL({
         dbcon: config.dbconnString,
-        sql: `
+        sql:   `
             SELECT t.id AS team_id,
                    t.stageid AS phase_id,
                    st.sesid AS session_id,
@@ -899,8 +897,8 @@ async function getCurrentPhaseGroupContext(phaseId, userId) {
             LIMIT 1
         `,
         sqlParams: [
-            rpg2.param('plain', Number(phaseId)),
-            rpg2.param('plain', Number(userId)),
+            rpg2.param("plain", Number(phaseId)),
+            rpg2.param("plain", Number(userId)),
         ],
     });
 
@@ -911,7 +909,7 @@ async function getCurrentPhaseGroupContext(phaseId, userId) {
     const group = groupRows[0];
     const participantRows = await rpg2.execSQL({
         dbcon: config.dbconnString,
-        sql: `
+        sql:   `
             SELECT tu.uid AS user_id,
                    tu.anon_mask,
                    u.firstname,
@@ -923,20 +921,20 @@ async function getCurrentPhaseGroupContext(phaseId, userId) {
             WHERE tu.tmid = $1
             ORDER BY tu.uid
         `,
-        sqlParams: [rpg2.param('plain', group.team_id)],
+        sqlParams: [rpg2.param("plain", group.team_id)],
     });
 
     return {
-        groupId: Number(group.team_id),
-        phaseId: Number(group.phase_id),
-        sessionId: Number(group.session_id),
+        groupId:        Number(group.team_id),
+        phaseId:        Number(group.phase_id),
+        sessionId:      Number(group.session_id),
         phaseAnonymous: Boolean(group.phase_anonymous),
-        participants: participantRows.map(row => ({
-            userId: Number(row.user_id),
-            anonMask: row.anon_mask,
+        participants:   participantRows.map(row => ({
+            userId:    Number(row.user_id),
+            anonMask:  row.anon_mask,
             firstname: row.firstname,
-            lastname: row.lastname,
-            name: row.name,
+            lastname:  row.lastname,
+            name:      row.name,
         })),
     };
 }
@@ -949,10 +947,10 @@ function buildParticipantLookup(participants, userId) {
         const fullName = `${firstname} ${lastname}`.trim();
 
         acc[participantUserId] = {
-            userId: participantUserId,
-            name: fullName || participant.name || `User ${participantUserId}`,
+            userId:   participantUserId,
+            name:     fullName || participant.name || `User ${participantUserId}`,
             anonMask: participant.anonMask || "",
-            isSelf: participantUserId === Number(userId),
+            isSelf:   participantUserId === Number(userId),
         };
         return acc;
     }, {});
@@ -983,9 +981,9 @@ function markPreviousGroupResponsesForUser(responsePayload, userId) {
 function attachResponsesToTasks(phaseRows, taskRows, responseRows, participantsByUserId, designType) {
     const phasesByNumber = phaseRows.reduce((acc, row) => {
         acc[Number(row.phase_number)] = {
-            phaseId: Number(row.phase_id),
+            phaseId:     Number(row.phase_id),
             phaseNumber: Number(row.phase_number),
-            tasks: [],
+            tasks:       [],
         };
         return acc;
     }, {});
@@ -1010,9 +1008,9 @@ function attachResponsesToTasks(phaseRows, taskRows, responseRows, participantsB
                 responses:        [],
             }
             : {
-                taskId: Number(row.task_id),
-                order: Number(row.task_order),
-                name: row.task_name,
+                taskId:    Number(row.task_id),
+                order:     Number(row.task_order),
+                name:      row.task_name,
                 responses: [],
             };
 
@@ -1028,22 +1026,22 @@ function attachResponsesToTasks(phaseRows, taskRows, responseRows, participantsB
         }
 
         const baseResponse = {
-            userId: Number(row.user_id),
+            userId:     Number(row.user_id),
             authorName: author.name,
-            anonMask: author.anonMask,
-            isSelf: author.isSelf,
-            timestamp: row.timestamp,
+            anonMask:   author.anonMask,
+            isSelf:     author.isSelf,
+            timestamp:  row.timestamp,
         };
 
         task.responses.push(designType === "semantic_differential"
             ? {
                 ...baseResponse,
-                selection: row.selection,
+                selection:     row.selection,
                 justification: row.justification || "",
             }
             : {
                 ...baseResponse,
-                rankOrder: row.rank_order,
+                rankOrder:     row.rank_order,
                 justification: row.justification || "",
             });
     });
@@ -1061,17 +1059,17 @@ const previousGroupResponseHandlers = {
         const phasePlaceholders = phaseNumbers.map((_, index) => `$${index + 2}`).join(", ");
         const participantPlaceholders = participantIds.map((_, index) => `$${index + phaseNumbers.length + 2}`).join(", ");
         const phaseSqlParams = [
-            rpg2.param('plain', Number(sessionId)),
-            ...phaseNumbers.map(number => rpg2.param('plain', number)),
+            rpg2.param("plain", Number(sessionId)),
+            ...phaseNumbers.map(number => rpg2.param("plain", number)),
         ];
         const responseSqlParams = [
             ...phaseSqlParams,
-            ...participantIds.map(id => rpg2.param('plain', id)),
+            ...participantIds.map(id => rpg2.param("plain", id)),
         ];
 
         const phaseRows = await rpg2.execSQL({
             dbcon: config.dbconnString,
-            sql: `
+            sql:   `
                 SELECT id AS phase_id,
                        number AS phase_number
                 FROM stages
@@ -1084,7 +1082,7 @@ const previousGroupResponseHandlers = {
 
         const taskRows = await rpg2.execSQL({
             dbcon: config.dbconnString,
-            sql: `
+            sql:   `
                 SELECT st.number AS phase_number,
                        d.id AS task_id,
                        d.title AS task_title,
@@ -1105,7 +1103,7 @@ const previousGroupResponseHandlers = {
 
         const responseRows = await rpg2.execSQL({
             dbcon: config.dbconnString,
-            sql: `
+            sql:   `
                 SELECT st.number AS phase_number,
                        ds.uid AS user_id,
                        ds.did AS task_id,
@@ -1132,17 +1130,17 @@ const previousGroupResponseHandlers = {
         const phasePlaceholders = phaseNumbers.map((_, index) => `$${index + 2}`).join(", ");
         const participantPlaceholders = participantIds.map((_, index) => `$${index + phaseNumbers.length + 2}`).join(", ");
         const phaseSqlParams = [
-            rpg2.param('plain', Number(sessionId)),
-            ...phaseNumbers.map(number => rpg2.param('plain', number)),
+            rpg2.param("plain", Number(sessionId)),
+            ...phaseNumbers.map(number => rpg2.param("plain", number)),
         ];
         const responseSqlParams = [
             ...phaseSqlParams,
-            ...participantIds.map(id => rpg2.param('plain', id)),
+            ...participantIds.map(id => rpg2.param("plain", id)),
         ];
 
         const phaseRows = await rpg2.execSQL({
             dbcon: config.dbconnString,
-            sql: `
+            sql:   `
                 SELECT id AS phase_id,
                        number AS phase_number
                 FROM stages
@@ -1155,7 +1153,7 @@ const previousGroupResponseHandlers = {
 
         const taskRows = await rpg2.execSQL({
             dbcon: config.dbconnString,
-            sql: `
+            sql:   `
                 SELECT st.number AS phase_number,
                        a.id AS task_id,
                        a.name AS task_name,
@@ -1172,7 +1170,7 @@ const previousGroupResponseHandlers = {
 
         const responseRows = await rpg2.execSQL({
             dbcon: config.dbconnString,
-            sql: `
+            sql:   `
                 SELECT st.number AS phase_number,
                        asel.uid AS user_id,
                        asel.actorid AS task_id,
@@ -1201,8 +1199,8 @@ export async function getCachedPreviousGroupResponses(phaseId, userId, phaseNumb
     if (!phaseId || isNaN(Number(phaseId)) || !userId || isNaN(Number(userId)) || normalizedPhaseNumbers.length === 0) {
         return {
             phaseAnonymous: false,
-            participants: [],
-            phases: [],
+            participants:   [],
+            phases:         [],
         };
     }
 
@@ -1210,8 +1208,8 @@ export async function getCachedPreviousGroupResponses(phaseId, userId, phaseNumb
     if (!groupContext || groupContext.participants.length === 0) {
         return {
             phaseAnonymous: false,
-            participants: [],
-            phases: [],
+            participants:   [],
+            phases:         [],
         };
     }
 
@@ -1240,13 +1238,13 @@ export async function getCachedPreviousGroupResponses(phaseId, userId, phaseNumb
     );
 
     const responsePayload = {
-        groupId: groupContext.groupId,
+        groupId:        groupContext.groupId,
         phaseAnonymous: groupContext.phaseAnonymous,
-        participants: Object.values(participantsByUserId),
+        participants:   Object.values(participantsByUserId),
         phases,
     };
 
-    await redisClient.set(cacheKey, JSON.stringify(responsePayload), 'EX', 300);
+    await redisClient.set(cacheKey, JSON.stringify(responsePayload), "EX", 300);
     return markPreviousGroupResponsesForUser(responsePayload, userId);
 }
 
@@ -1292,7 +1290,7 @@ export async function getCachedStudentActivityPeerResponses(designType, sessionI
         const peerResponsesByPhase = await studentActivityPeerResponseGetters[designType](sessionId, userId);
 
         // Cache the result
-        await redisClient.set(cacheKey, JSON.stringify(peerResponsesByPhase), 'EX', 300);
+        await redisClient.set(cacheKey, JSON.stringify(peerResponsesByPhase), "EX", 300);
 
         // Attach responses to the corresponding phases
         phases.forEach(phase => {
@@ -1381,11 +1379,11 @@ export async function getStudentActivityPeerResponses_semanticDifferential(sessi
         `;
 
         const results = await rpg2.execSQL({
-            dbcon: config.dbconnString,
-            sql: query,
+            dbcon:     config.dbconnString,
+            sql:       query,
             sqlParams: [
-                rpg2.param('plain', Number(sessionId)),
-                rpg2.param('plain', Number(userId)),
+                rpg2.param("plain", Number(sessionId)),
+                rpg2.param("plain", Number(userId)),
             ],
         });
 
@@ -1396,13 +1394,13 @@ export async function getStudentActivityPeerResponses_semanticDifferential(sessi
             }
 
             peerResponsesByPhase[row.phase_number].push({
-                taskId: row.task_id,
-                selection: row.selection,
+                taskId:        row.task_id,
+                selection:     row.selection,
                 justification: row.justification,
-                timestamp: row.timestamp,
-                peer: {
-                    id: row.peer_id,
-                    name: row.peer_name,
+                timestamp:     row.timestamp,
+                peer:          {
+                    id:       row.peer_id,
+                    name:     row.peer_name,
                     anonMask: row.peer_anonymity,
                 },
             });
@@ -1454,11 +1452,11 @@ export async function getStudentActivityPeerResponses_ranking(sessionId, userId)
         `;
 
         const results = await rpg2.execSQL({
-            dbcon: config.dbconnString,
-            sql: query,
+            dbcon:     config.dbconnString,
+            sql:       query,
             sqlParams: [
-                rpg2.param('plain', Number(sessionId)),
-                rpg2.param('plain', Number(userId)),
+                rpg2.param("plain", Number(sessionId)),
+                rpg2.param("plain", Number(userId)),
             ],
         });
 
@@ -1469,13 +1467,13 @@ export async function getStudentActivityPeerResponses_ranking(sessionId, userId)
             }
 
             peerResponsesByPhase[row.phase_number].push({
-                taskId: row.task_id,
-                rankOrder: row.rank_order,
+                taskId:        row.task_id,
+                rankOrder:     row.rank_order,
                 justification: row.justification,
-                timestamp: row.timestamp,
-                peer: {
-                    id: row.peer_id,
-                    name: row.peer_name,
+                timestamp:     row.timestamp,
+                peer:          {
+                    id:       row.peer_id,
+                    name:     row.peer_name,
                     anonMask: row.peer_anonymity,
                 },
             });
@@ -1485,89 +1483,6 @@ export async function getStudentActivityPeerResponses_ranking(sessionId, userId)
     } catch (error) {
         console.error("Failed to retrieve peer responses for ranking:", error);
         return {};
-    }
-}
-
-const studentActivityGroupMessageGetters = {
-    semantic_differential: getStudentActivityGroupMessages_semanticDifferential,
-    ranking: getStudentActivityGroupMessages_ranking
-};
-
-/**
- * Retrieve cached group messages for the specified phases and group.
- * @param {string} designType - The type of instructional design.
- * @param {number} sessionId - The session ID.
- * @param {Array} phases - The list of phases (each with a number).
- * @param {number} groupId - The group ID.
- * @param {boolean} invalidate - Whether to invalidate the cache.
- * @returns {Promise<Array>} The updated phases with group messages.
- */
-export async function getCachedStudentActivityGroupMessages(designType, sessionId, userId, phases, invalidate = false) {
-    if (!sessionId || isNaN(Number(sessionId)) || !userId || isNaN(Number(userId))) {
-        console.error("Invalid sessionId or userId:", { sessionId, userId });
-        return phases;
-    }
-
-    const cacheKey = `chatMessages:${sessionId}:${userId}`;
-    
-    try {
-        // Invalidate cache if necessary
-        if (invalidate) {
-            console.debug(`Invalidating cache for chat messages: sessionId=${sessionId}, userId=${userId}`);
-            await redisClient.del(cacheKey);
-        } else {
-            // Check Redis cache
-            const cachedData = await redisClient.get(cacheKey);
-            if (cachedData) {
-                console.debug(`Cache hit for chat messages: sessionId=${sessionId}, userId=${userId}`);
-                const messagesByPhase = JSON.parse(cachedData);
-                phases.forEach(phase => {
-                    phase.groupMessages = messagesByPhase[phase.number] || [];
-                });
-                return phases;
-            }
-        }
-
-        // Fetch messages from the database
-        console.debug(`Cache miss for chat messages: sessionId=${sessionId}, userId=${userId}`);
-        const messagesByPhase = await studentActivityGroupMessageGetters[designType](sessionId, userId, phases);
-
-        // Cache the result
-        await redisClient.set(cacheKey, JSON.stringify(messagesByPhase), 'EX', 300);
-
-        // Attach messages to phases
-        phases.forEach(phase => {
-            phase.groupMessages = messagesByPhase[phase.number] || [];
-        });
-
-        return phases;
-    } catch (error) {
-        console.error(`Error in getCachedStudentActivityGroupMessages: sessionId=${sessionId}, userId=${userId}, designType=${designType}`, error);
-        return phases;
-    }
-}
-
-/**
- * Retrieve group messages for the specified phases and design type.
- * @param {string} designType - The type of instructional design.
- * @param {number} sessionId - The session ID.
- * @param {number} groupId - The group ID.
- * @param {Array} phases - The list of phases (each with a number).
- * @returns {Promise<Array>} The updated phases with group messages.
- */
-export async function getStudentActivityGroupMessages(designType, sessionId, groupId, phases) {
-    const groupMessageGetter = studentActivityGroupMessageGetters[designType];
-    if (!groupMessageGetter) {
-        console.error(`No group message getter defined for design type: ${designType}`);
-        return phases;
-    }
-
-    try {
-        // Attach messages to each phase
-        return await groupMessageGetter(sessionId, groupId, phases);
-    } catch (error) {
-        console.error(`Failed to get group messages for design type ${designType}:`, error);
-        return phases;
     }
 }
 
@@ -1587,7 +1502,7 @@ export async function getDesignTypeBySessionId(sessionId) {
 
         const result = await rpg2.execSQL({
             dbcon: config.dbconnString,
-            sql: `
+            sql:   `
                 SELECT d.design AS design
                 FROM activity a
                 JOIN designs d ON d.id = a.design
@@ -1595,7 +1510,7 @@ export async function getDesignTypeBySessionId(sessionId) {
                 ORDER BY a.id DESC
                 LIMIT 1;
             `,
-            sqlParams: [rpg2.param('plain', Number(sessionId))],
+            sqlParams: [rpg2.param("plain", Number(sessionId))],
         });
 
         if (!Array.isArray(result) || result.length === 0) {
@@ -1607,7 +1522,7 @@ export async function getDesignTypeBySessionId(sessionId) {
         const designType = design?.type ?? null;
 
         if (designType) {
-            await redisClient.set(cacheKey, designType, 'EX', 3600);
+            await redisClient.set(cacheKey, designType, "EX", 3600);
         }
 
         return designType;
@@ -1617,168 +1532,10 @@ export async function getDesignTypeBySessionId(sessionId) {
     }
 }
 
-/**
- * Retrieve group messages for semantic differential design based on user ID.
- * @param {number} sessionId - The session ID.
- * @param {number} userId - The user ID.
- * @param {Array} phases - The phases to attach messages to.
- * @returns {Promise<Array>} The updated phases with group messages.
- */
-export async function getStudentActivityGroupMessages_semanticDifferential(sessionId, userId, phases) {
-    try {
-        const messagesQuery = `
-            SELECT
-                st.number AS phase_number,
-                dc.did AS task_id,
-                dc.id AS message_id,
-                dc.uid AS peer_id,
-                dc.content AS message,
-                dc.parent_id
-            FROM 
-                differential_chat dc
-            JOIN 
-                differential d ON dc.did = d.id
-            JOIN 
-                stages st ON d.stageid = st.id
-            JOIN 
-                teams t ON st.id = t.stageid
-            JOIN 
-                teamusers tu ON t.id = tu.tmid
-            WHERE 
-                st.sesid = $1
-                AND tu.uid = $2
-            ORDER BY 
-                st.number, dc.did, dc.id;
-        `;
-
-        const messagesResult = await rpg2.execSQL({
-            dbcon: config.dbconnString,
-            sql: messagesQuery,
-            sqlParams: [
-                rpg2.param('plain', Number(sessionId)),
-                rpg2.param('plain', Number(userId))
-            ],
-        });
-
-        // Group messages by phase and task
-        const messagesByPhaseAndTask = {};
-        messagesResult.forEach(row => {
-            if (!messagesByPhaseAndTask[row.phase_number]) {
-                messagesByPhaseAndTask[row.phase_number] = {};
-            }
-            if (!messagesByPhaseAndTask[row.phase_number][row.task_id]) {
-                messagesByPhaseAndTask[row.phase_number][row.task_id] = [];
-            }
-            messagesByPhaseAndTask[row.phase_number][row.task_id].push({
-                peerId: row.peer_id,
-                messageId: row.message_id,
-                message: row.message,
-                parentId: row.parent_id
-            });
-        });
-
-        // Attach messages to corresponding phases
-        phases.forEach(phase => {
-            phase.groupMessages = [];
-            const phaseMessages = messagesByPhaseAndTask[phase.number] || {};
-            phase.tasks.forEach(task => {
-                const taskMessages = phaseMessages[task.id] || [];
-                phase.groupMessages.push({
-                    taskId: task.id,
-                    messages: taskMessages
-                });
-            });
-        });
-
-        return phases;
-    } catch (error) {
-        console.error("Failed to retrieve semantic differential group messages:", error);
-        return phases;
-    }
-}
-
-/**
- * Retrieve group messages for ranking design based on user ID.
- * @param {number} sessionId - The session ID.
- * @param {number} userId - The user ID.
- * @param {Array} phases - The phases to attach messages to.
- * @returns {Promise<Array>} The updated phases with group messages.
- */
-export async function getStudentActivityGroupMessages_ranking(sessionId, userId, phases) {
-    try {
-        const messagesQuery = `
-            SELECT 
-                st.number AS phase_number,
-                c.stageid AS phase_id,
-                c.id AS message_id,
-                c.uid AS peer_id,
-                c.content AS message,
-                c.parent_id
-            FROM 
-                chat c
-            JOIN 
-                stages st ON c.stageid = st.id
-            JOIN 
-                teams t ON st.id = t.stageid
-            JOIN 
-                teamusers tu ON t.id = tu.tmid
-            WHERE 
-                st.sesid = $1
-                AND tu.uid = $2
-            ORDER BY 
-                st.number, c.stageid, c.id;
-        `;
-
-        const messagesResult = await rpg2.execSQL({
-            dbcon: config.dbconnString,
-            sql: messagesQuery,
-            sqlParams: [
-                rpg2.param('plain', Number(sessionId)),
-                rpg2.param('plain', Number(userId))
-            ],
-        });
-
-        // Group messages by phase and task
-        const messagesByPhaseAndTask = {};
-        messagesResult.forEach(row => {
-            if (!messagesByPhaseAndTask[row.phase_number]) {
-                messagesByPhaseAndTask[row.phase_number] = {};
-            }
-            if (!messagesByPhaseAndTask[row.phase_number][row.phase_id]) {
-                messagesByPhaseAndTask[row.phase_number][row.phase_id] = [];
-            }
-            messagesByPhaseAndTask[row.phase_number][row.phase_id].push({
-                peerId: row.peer_id,
-                messageId: row.message_id,
-                message: row.message,
-                parentId: row.parent_id
-            });
-        });
-
-        // Attach messages to corresponding phases
-        phases.forEach(phase => {
-            phase.groupMessages = [];
-            const phaseMessages = messagesByPhaseAndTask[phase.number] || {};
-            phase.tasks.forEach(task => {
-                const taskMessages = phaseMessages[task.id] || [];
-                phase.groupMessages.push({
-                    taskId: task.id,
-                    messages: taskMessages
-                });
-            });
-        });
-
-        return phases;
-    } catch (error) {
-        console.error("Failed to retrieve ranking group messages:", error);
-        return phases;
-    }
-};
-
 export const getPhaseTaskGetters = {
     semantic_differential: getTasksForPhase_semanticDifferential,
-    ranking: getTasksForPhase_ranking
-}
+    ranking:               getTasksForPhase_ranking
+};
 
 /**
  * Retrieve tasks for a specific phase with caching, deducing the design type from the phaseId.
@@ -1796,7 +1553,7 @@ export async function getCachedPhaseTasks(phaseId, invalidate = false) {
         // Step 1: Retrieve the design type and sessionId associated with the phaseId
         const phaseResult = await rpg2.execSQL({
             dbcon: config.dbconnString,
-            sql: `
+            sql:   `
                 SELECT
                     st.sesid AS session_id,
                     d.design AS design_json
@@ -1805,7 +1562,7 @@ export async function getCachedPhaseTasks(phaseId, invalidate = false) {
                 JOIN designs d ON d.id = a.design
                 WHERE st.id = $1
             `,
-            sqlParams: [rpg2.param('plain', phaseId)],
+            sqlParams: [rpg2.param("plain", phaseId)],
         });
 
         if (!phaseResult) {
@@ -1847,7 +1604,7 @@ export async function getCachedPhaseTasks(phaseId, invalidate = false) {
         const result = await taskGetter(phaseId);
 
         // Cache the result in Redis
-        await redisClient.set(cacheKey, JSON.stringify(result), 'EX', 300);
+        await redisClient.set(cacheKey, JSON.stringify(result), "EX", 300);
 
         return result;
     } catch (error) {
@@ -1902,8 +1659,8 @@ export async function getTasksForPhase_semanticDifferential(phaseId) {
 
     try {
         const results = await rpg2.execSQL({
-            dbcon: config.dbconnString,
-            sql: query,
+            dbcon:     config.dbconnString,
+            sql:       query,
             sqlParams: [rpg2.param("plain", Number(phaseId))],
         });
 
@@ -1948,18 +1705,18 @@ export async function getTasksForPhase_ranking(phaseId) {
 
     try {
         const results = await rpg2.execSQL({
-            dbcon: config.dbconnString,
-            sql: query,
+            dbcon:     config.dbconnString,
+            sql:       query,
             sqlParams: [rpg2.param("plain", Number(phaseId))],
         });
 
         // Transform the results into a list of tasks
         const tasks = results.map(actor => ({
-            id: actor.actor_id,
-            name: actor.actor_name,
-            isOrdered: actor.is_ordered,
+            id:                    actor.actor_id,
+            name:                  actor.actor_name,
+            isOrdered:             actor.is_ordered,
             requiresJustification: actor.requires_justification,
-            minWordCount: actor.min_word_count,
+            minWordCount:          actor.min_word_count,
         }));
 
         return { tasks };

@@ -132,18 +132,11 @@ router.get("/activities/:id/users/:user_id/full_state", async (req, res) => {
             invalidate
         );
 
-        const phasesWithGroupMessages = await StudentActivityStatusHelper.
-            getCachedStudentActivityGroupMessages(
-                designType,
-                sessionId,
-                userId,
-                phasesWithGroups,
-                invalidate
-            );
-
+        // No chat message is part of the state: the student's chat reads its
+        // own group's messages through the group chat route (#1122).
         const state = {
             descriptor,
-            phases: phasesWithGroupMessages
+            phases: phasesWithGroups
         };
 
         return res.status(200).json({ state });
