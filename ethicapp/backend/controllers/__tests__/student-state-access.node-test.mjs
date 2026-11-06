@@ -63,8 +63,8 @@ function sessionAccessRow(sessionId, requesterId) {
 }
 
 // What the endpoints read once the check lets them through, for the one phase
-// of SESSION_ID. Anything else (tasks, responses, groups, messages, the AI
-// service policy) is answered with no rows.
+// of SESSION_ID. Anything else (tasks, responses, groups, the AI service
+// policy) is answered with no rows.
 function rowsFor(sql, params = []) {
     const [first, second] = params.map(Number);
 
@@ -238,6 +238,8 @@ describe("GET /activities/:session_id/current_phase_state", () => {
         assert.equal(status, 200);
         assert.equal(body.phase.id, PHASE_ID);
         assert.equal(body.phase.number, 1);
+        // Chat messages are read through the group chat route (#1122).
+        assert.ok(!Object.hasOwn(body.phase, "groupMessages"));
         assert.equal(db.queries[0].sql, SESSION_ACCESS_SQL);
         assert.deepEqual(flushedKeys(), []);
     });
@@ -272,6 +274,8 @@ describe("GET /activities/:id/users/:user_id/full_state", () => {
         assert.equal(status, 200);
         assert.equal(body.state.descriptor.currentPhaseId, PHASE_ID);
         assert.deepEqual(body.state.phases.map(({ id }) => id), [PHASE_ID]);
+        // Chat messages are read through the group chat route (#1122).
+        assert.ok(!Object.hasOwn(body.state.phases[0], "groupMessages"));
         assert.equal(db.queries[0].sql, SESSION_ACCESS_SQL);
         assert.deepEqual(flushedKeys(), []);
     });
@@ -282,7 +286,6 @@ describe("GET /activities/:id/users/:user_id/full_state", () => {
         assert.equal(status, 200);
         assert.equal(db.queries[0].sql, SESSION_ACCESS_SQL);
         assert.deepEqual(flushedKeys(), [
-            `chatMessages:${SESSION_ID}:${STUDENT.uid}`,
             `descriptor:${SESSION_ID}:v2`,
             `responses:${SESSION_ID}:${STUDENT.uid}:1`,
             `session:${SESSION_ID}:phases:v2`,

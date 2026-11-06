@@ -47,8 +47,7 @@ export const buildInitialPhaseState = async function (phaseId) {
                 tasks: tasksObj.tasks,
                 responses: responses,
                 peerResponses: [],
-                group: [],
-                groupMessages: {}
+                group: []
             }
         };
     } catch (error) {
@@ -230,7 +229,6 @@ export async function getStudentActivityPhases(sessionId) {
                 responses: [], // Placeholder: Add query to retrieve responses
                 peerResponses: [], // Placeholder: Add query to retrieve peer responses
                 group: {}, // Placeholder: Add query to retrieve group info
-                groupMessages: [], // Placeholder: Add query to retrieve group messages
             };
         });
 
@@ -1488,89 +1486,6 @@ export async function getStudentActivityPeerResponses_ranking(sessionId, userId)
     }
 }
 
-const studentActivityGroupMessageGetters = {
-    semantic_differential: getStudentActivityGroupMessages_semanticDifferential,
-    ranking: getStudentActivityGroupMessages_ranking
-};
-
-/**
- * Retrieve cached group messages for the specified phases and group.
- * @param {string} designType - The type of instructional design.
- * @param {number} sessionId - The session ID.
- * @param {Array} phases - The list of phases (each with a number).
- * @param {number} groupId - The group ID.
- * @param {boolean} invalidate - Whether to invalidate the cache.
- * @returns {Promise<Array>} The updated phases with group messages.
- */
-export async function getCachedStudentActivityGroupMessages(designType, sessionId, userId, phases, invalidate = false) {
-    if (!sessionId || isNaN(Number(sessionId)) || !userId || isNaN(Number(userId))) {
-        console.error("Invalid sessionId or userId:", { sessionId, userId });
-        return phases;
-    }
-
-    const cacheKey = `chatMessages:${sessionId}:${userId}`;
-    
-    try {
-        // Invalidate cache if necessary
-        if (invalidate) {
-            console.debug(`Invalidating cache for chat messages: sessionId=${sessionId}, userId=${userId}`);
-            await redisClient.del(cacheKey);
-        } else {
-            // Check Redis cache
-            const cachedData = await redisClient.get(cacheKey);
-            if (cachedData) {
-                console.debug(`Cache hit for chat messages: sessionId=${sessionId}, userId=${userId}`);
-                const messagesByPhase = JSON.parse(cachedData);
-                phases.forEach(phase => {
-                    phase.groupMessages = messagesByPhase[phase.number] || [];
-                });
-                return phases;
-            }
-        }
-
-        // Fetch messages from the database
-        console.debug(`Cache miss for chat messages: sessionId=${sessionId}, userId=${userId}`);
-        const messagesByPhase = await studentActivityGroupMessageGetters[designType](sessionId, userId, phases);
-
-        // Cache the result
-        await redisClient.set(cacheKey, JSON.stringify(messagesByPhase), 'EX', 300);
-
-        // Attach messages to phases
-        phases.forEach(phase => {
-            phase.groupMessages = messagesByPhase[phase.number] || [];
-        });
-
-        return phases;
-    } catch (error) {
-        console.error(`Error in getCachedStudentActivityGroupMessages: sessionId=${sessionId}, userId=${userId}, designType=${designType}`, error);
-        return phases;
-    }
-}
-
-/**
- * Retrieve group messages for the specified phases and design type.
- * @param {string} designType - The type of instructional design.
- * @param {number} sessionId - The session ID.
- * @param {number} groupId - The group ID.
- * @param {Array} phases - The list of phases (each with a number).
- * @returns {Promise<Array>} The updated phases with group messages.
- */
-export async function getStudentActivityGroupMessages(designType, sessionId, groupId, phases) {
-    const groupMessageGetter = studentActivityGroupMessageGetters[designType];
-    if (!groupMessageGetter) {
-        console.error(`No group message getter defined for design type: ${designType}`);
-        return phases;
-    }
-
-    try {
-        // Attach messages to each phase
-        return await groupMessageGetter(sessionId, groupId, phases);
-    } catch (error) {
-        console.error(`Failed to get group messages for design type ${designType}:`, error);
-        return phases;
-    }
-}
-
 export async function getDesignTypeBySessionId(sessionId) {
     if (!sessionId || isNaN(Number(sessionId))) {
         console.error("Invalid sessionId:", sessionId);
@@ -1616,164 +1531,6 @@ export async function getDesignTypeBySessionId(sessionId) {
         return null;
     }
 }
-
-/**
- * Retrieve group messages for semantic differential design based on user ID.
- * @param {number} sessionId - The session ID.
- * @param {number} userId - The user ID.
- * @param {Array} phases - The phases to attach messages to.
- * @returns {Promise<Array>} The updated phases with group messages.
- */
-export async function getStudentActivityGroupMessages_semanticDifferential(sessionId, userId, phases) {
-    try {
-        const messagesQuery = `
-            SELECT
-                st.number AS phase_number,
-                dc.did AS task_id,
-                dc.id AS message_id,
-                dc.uid AS peer_id,
-                dc.content AS message,
-                dc.parent_id
-            FROM 
-                differential_chat dc
-            JOIN 
-                differential d ON dc.did = d.id
-            JOIN 
-                stages st ON d.stageid = st.id
-            JOIN 
-                teams t ON st.id = t.stageid
-            JOIN 
-                teamusers tu ON t.id = tu.tmid
-            WHERE 
-                st.sesid = $1
-                AND tu.uid = $2
-            ORDER BY 
-                st.number, dc.did, dc.id;
-        `;
-
-        const messagesResult = await rpg2.execSQL({
-            dbcon: config.dbconnString,
-            sql: messagesQuery,
-            sqlParams: [
-                rpg2.param('plain', Number(sessionId)),
-                rpg2.param('plain', Number(userId))
-            ],
-        });
-
-        // Group messages by phase and task
-        const messagesByPhaseAndTask = {};
-        messagesResult.forEach(row => {
-            if (!messagesByPhaseAndTask[row.phase_number]) {
-                messagesByPhaseAndTask[row.phase_number] = {};
-            }
-            if (!messagesByPhaseAndTask[row.phase_number][row.task_id]) {
-                messagesByPhaseAndTask[row.phase_number][row.task_id] = [];
-            }
-            messagesByPhaseAndTask[row.phase_number][row.task_id].push({
-                peerId: row.peer_id,
-                messageId: row.message_id,
-                message: row.message,
-                parentId: row.parent_id
-            });
-        });
-
-        // Attach messages to corresponding phases
-        phases.forEach(phase => {
-            phase.groupMessages = [];
-            const phaseMessages = messagesByPhaseAndTask[phase.number] || {};
-            phase.tasks.forEach(task => {
-                const taskMessages = phaseMessages[task.id] || [];
-                phase.groupMessages.push({
-                    taskId: task.id,
-                    messages: taskMessages
-                });
-            });
-        });
-
-        return phases;
-    } catch (error) {
-        console.error("Failed to retrieve semantic differential group messages:", error);
-        return phases;
-    }
-}
-
-/**
- * Retrieve group messages for ranking design based on user ID.
- * @param {number} sessionId - The session ID.
- * @param {number} userId - The user ID.
- * @param {Array} phases - The phases to attach messages to.
- * @returns {Promise<Array>} The updated phases with group messages.
- */
-export async function getStudentActivityGroupMessages_ranking(sessionId, userId, phases) {
-    try {
-        const messagesQuery = `
-            SELECT 
-                st.number AS phase_number,
-                c.stageid AS phase_id,
-                c.id AS message_id,
-                c.uid AS peer_id,
-                c.content AS message,
-                c.parent_id
-            FROM 
-                chat c
-            JOIN 
-                stages st ON c.stageid = st.id
-            JOIN 
-                teams t ON st.id = t.stageid
-            JOIN 
-                teamusers tu ON t.id = tu.tmid
-            WHERE 
-                st.sesid = $1
-                AND tu.uid = $2
-            ORDER BY 
-                st.number, c.stageid, c.id;
-        `;
-
-        const messagesResult = await rpg2.execSQL({
-            dbcon: config.dbconnString,
-            sql: messagesQuery,
-            sqlParams: [
-                rpg2.param('plain', Number(sessionId)),
-                rpg2.param('plain', Number(userId))
-            ],
-        });
-
-        // Group messages by phase and task
-        const messagesByPhaseAndTask = {};
-        messagesResult.forEach(row => {
-            if (!messagesByPhaseAndTask[row.phase_number]) {
-                messagesByPhaseAndTask[row.phase_number] = {};
-            }
-            if (!messagesByPhaseAndTask[row.phase_number][row.phase_id]) {
-                messagesByPhaseAndTask[row.phase_number][row.phase_id] = [];
-            }
-            messagesByPhaseAndTask[row.phase_number][row.phase_id].push({
-                peerId: row.peer_id,
-                messageId: row.message_id,
-                message: row.message,
-                parentId: row.parent_id
-            });
-        });
-
-        // Attach messages to corresponding phases
-        phases.forEach(phase => {
-            phase.groupMessages = [];
-            const phaseMessages = messagesByPhaseAndTask[phase.number] || {};
-            phase.tasks.forEach(task => {
-                const taskMessages = phaseMessages[task.id] || [];
-                phase.groupMessages.push({
-                    taskId: task.id,
-                    messages: taskMessages
-                });
-            });
-        });
-
-        return phases;
-    } catch (error) {
-        console.error("Failed to retrieve ranking group messages:", error);
-        return phases;
-    }
-};
 
 export const getPhaseTaskGetters = {
     semantic_differential: getTasksForPhase_semanticDifferential,
