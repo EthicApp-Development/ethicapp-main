@@ -11,6 +11,8 @@ COPY canonical-schemas/rich-text /canonical-schemas/rich-text
 COPY canonical-schemas/ai-additions-connection /canonical-schemas/ai-additions-connection
 # Student result schema copies (#1131), read at runtime as well; see below.
 COPY canonical-schemas/ai-additions /canonical-schemas/ai-additions
+# The development mock's document builder (#1134), checked against those copies.
+COPY external-mock-service/student-result.js /external-mock-service/student-result.js
 RUN npm test && touch /tmp/backend-tests-passed
 
 FROM node:24
