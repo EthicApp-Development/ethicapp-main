@@ -959,8 +959,9 @@ the paths inside the document, as in
 The tutor adapter subscribes (#1126, handler in
 `adapters/ats-feedback.student-results.js`). It rebuilds the `completed`
 results whose stored outcome, `adapterResult.payload.publishedToUserId`, names
-the student. The development mocks publish without storing a result and stay
-live-only.
+the student, as the `student-result/v1` documents it publishes (#1133, see
+"The tutor's student feedback"). The development mocks publish without
+storing a result and stay live-only.
 
 **Student route.** The student app reads the results with
 `GET /activities/:id/users/:user_id/external_service_results`
@@ -2238,6 +2239,71 @@ It reads only its stored `student-response-submitted` results, whose
   claim type's rationale are not exported; the report's `comment` column
   already holds the response. A field the result does not report is empty.
 - Results of a forgotten user are redacted as stored (V31) and appear so.
+
+### The tutor's student feedback
+
+The tutor adapter publishes each evaluation to its student as a
+`student-result/v1` document (epic #1124, #1133), through the document form
+of `publishStudentResult` (see "Student result documents"), and rebuilds the
+same document through `student-results-reading`. The tutor declares the
+schema for the `response` scope in its descriptor's `student_outputs`
+(ethicapp-ai-additions#233). The code is `buildStudentFeedback()` in
+`adapters/ats-feedback.utils.js`, which both paths call.
+
+**The activity's locale.** Every tutor session is created with a `locale`
+session input, the language the tutor writes the student's feedback in. It
+comes from the activity's design, `designs.language_code`, by the canonical
+rule (`activityLocale()`): Spanish (`es`, `es_*`) is `es_CL`, any other
+language `en_US`, and a design without a language `es_CL`, the column
+default. The Polyadic bridge reads the same column for its own `locale`. The
+locale is derived for each session and never stored in a design. The tutor
+reports it back as a BCP 47 tag, which the instantiation report keeps as
+`locale`. A tutor that predates ethicapp-ai-additions#233 reports the key as
+an unsupported setting (`degraded: true`). A tutor that refuses it with
+`400 {"error": "Invalid locale"}` gets the session again without it, and the
+report holds its answer as `localeRejection`.
+
+**The document.** For each callback:
+
+- When the payload carries `studentResult` and the document passes the
+  schema checks of `validateStudentResultDocument()`, it is published
+  unchanged, as `{ documentSchema: "student-result/v1", document }`, with its
+  criterion descriptions and overview.
+- Otherwise, as for callbacks stored before ethicapp-ai-additions#235, the
+  legacy keys (`summary`, `criteria`, `bullets`, `argumentPreview`,
+  `comparison`) are mapped to a document by `legacyStudentDocument()`. The
+  mapping follows the tutor's own builder: its titles, section titles,
+  labels (`Afirmación`, `Evidencia`, `Garantía`, `Calificador` in `es-CL`;
+  `Claim`, `Evidence`, `Warrant`, `Qualifier` in `en-US`) and values
+  (`A favor`, `2 de 3`, `No disponible`), in the activity's locale, without
+  descriptions or overview. A score outside 1 to 3 reads as not available and
+  makes the document `partial`; a payload with no criteria is `unavailable`.
+  The tutor's English placeholder summary is left out. Summaries and bullets
+  are the model's text, in whatever language the model wrote. A
+  `studentResult` that fails the checks is logged as
+  `The tutor's student document fails EthicApp's checks` with codes and
+  paths only.
+
+The event's `message` is a fixed text in the document's locale. The
+teacher-only keys of the payload (`claimTypeId`, `claimTypeRationale`,
+`tutorMode`, `requestedMode`, `evidenceFactIds`, `unsupportedClaims`) are
+read only into the stored outcome; the document schema is closed and the
+registry emits only the document and its ids.
+
+**Live and rebuilt.** The callback's stored outcome records
+`studentDocument: { source, locale }` (`source` is `tutor` or `legacy`) next to
+`feedbackTitle`, which is now the document's title. The rebuild maps a legacy
+payload in that recorded locale, so it equals the document published live
+even if the design's language changes later. Callbacks processed before
+#1133 have no recorded locale and were never published as documents; the
+rebuild maps them in the activity's locale, read once per student read
+(`loadActivityLocale`), or `es-CL` when it cannot be read. A tutor document
+needs no locale and no read.
+
+**Release order.** The tutor release with ethicapp-ai-additions#235 is
+deployed before this adapter: EthicApp sends a document only when the
+service declares its schema, and an older tutor declares none, so its
+documents (mapped or not) would be refused.
 
 ### Recording results from an adapter
 
