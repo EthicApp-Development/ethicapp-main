@@ -5,7 +5,7 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --omit=dev
 
-COPY server.js ./
+COPY server.js student-result.js ./
 
 EXPOSE 8510
 
