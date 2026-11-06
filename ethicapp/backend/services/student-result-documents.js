@@ -46,7 +46,9 @@ export const DOCUMENT_PROBLEM_CODES = Object.freeze({
 export const DECLARATION_STATUS = Object.freeze({
     // The service's student outputs are known.
     KNOWN:         "known",
-    // The service links no capability descriptor, so it declares nothing.
+    // The service links no capability descriptor and, for a development
+    // adapter, its catalog entry declares no `studentOutputs` (#1134), so it
+    // declares nothing.
     NO_DESCRIPTOR: "no_descriptor",
     // The service links one, but no descriptor of it has been fetched.
     UNAVAILABLE:   "unavailable",

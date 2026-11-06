@@ -579,6 +579,14 @@ which receive `(context, { results, signal })` (see "Report building" and
   `callback-received`). It is read from the design when the hook fires and is
   a copy, so changing it has no effect. Adapters map it into the AI service's
   payload; unset keys mean "service default".
+- `context.locale` (#1124) is the activity's locale, `es_CL` or `en_US`, from
+  its design's `designs.language_code` by the rule in
+  `helpers/activity-locale.js` (Spanish is `es_CL`, any other language
+  `en_US`, none `es_CL`). Phase hooks carry it when the phase's services could
+  be read (`dispatchPhaseHook()` takes it from the same query that reads them),
+  and `student-results-reading` always carries it, `null` when it could not be
+  read. Adapters write students' texts in that language or send it to their
+  service; a hook without a phase has none.
 - `callback(result)` records the adapter outcome against the job (see
   "Jobs and `callback(result)`" below).
 - `reportInstantiation(report)` stores what an AI service reported when the
@@ -882,7 +890,9 @@ which of the student's phases to show; the student route below keeps the
 phases of the session.
 
 **Context and reader.** The handler's `context` is frozen:
-`{ serviceId, sessionId, userId }`. The second argument is
+`{ serviceId, sessionId, userId, locale }`, where `locale` is the activity's
+locale (`es_CL`, `en_US`), read once per call by the registry, or `null` when
+it could not be read (logged with the session id only). The second argument is
 `{ results, signal }`; `signal` is aborted when the timeout expires. `results`
 is the only data access the handler gets
 (`createStudentResultsReader()` in
@@ -914,7 +924,7 @@ emits plus the id of the stored result each one was rebuilt from:
     questionId:  30,              // or null
     component:   { documentSchema: "student-result/v1" },
     payload:     { schemaVersion: "student-result/v1", locale: "en-US", /* ... */ },
-    message:     "Your argument tutor feedback is now available.", // or null
+    message:     "Feedback on your argument is now available.", // or null
     status:      "completed",
     publishedAt: "2026-11-05T10:00:00.000Z",
 }]
@@ -1301,10 +1311,11 @@ announced. Ignoring the key with a warning would leave an entry that reads as
 a declaration and has no effect, which a startup log line easily hides.
 
 **Legacy form.** `{ userId, component: { componentId, ... }, payload, ... }` is
-emitted as passed, with no descriptor request, until the tutor adapter
-(#1133) publishes documents. The development mock publishes documents
-(#1134). Rebuilt legacy entries keep the checks listed in "Student results
-reading".
+emitted as passed, with no descriptor request. No adapter in this repository
+uses it any longer: the tutor (#1133) and the development mock (#1134)
+publish documents. It stays for adapters outside the repository and is
+removed together with the student app's legacy component registry. Rebuilt
+legacy entries keep the checks listed in "Student results reading".
 
 **Adding a schema.** A new document schema is copied into
 `canonical-schemas/ai-additions/` (see its README) and added to
@@ -2336,9 +2347,9 @@ registry emits only the document and its ids.
 payload in that recorded locale, so it equals the document published live
 even if the design's language changes later. Callbacks processed before
 #1133 have no recorded locale and were never published as documents; the
-rebuild maps them in the activity's locale, read once per student read
-(`loadActivityLocale`), or `es-CL` when it cannot be read. A tutor document
-needs no locale and no read.
+rebuild maps them in the activity's locale, which the registry passes as
+`context.locale`, or `es-CL` when it could not be read. The handler reads
+nothing but its stored results. A tutor document needs no locale.
 
 **Release order.** The tutor release with ethicapp-ai-additions#235 is
 deployed before this adapter: EthicApp sends a document only when the

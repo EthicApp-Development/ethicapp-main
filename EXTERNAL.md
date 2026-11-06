@@ -422,6 +422,11 @@ when there are none or the hook has no phase. Adapters pass these values to
 the AI service when they create rooms or sessions; a key that is not set means
 the service default.
 
+Phase hooks and `student-results-reading` also carry `context.locale` (#1124):
+the activity's locale, `es_CL` or `en_US`, from the design's
+`designs.language_code` (`helpers/activity-locale.js`). Services write the
+texts they show students in that language.
+
 `case-created` follows the same rule for cases: it reaches only the services the
 teacher chose when creating the case (`analysisServiceIds` in `POST /cases`).
 They store their results in `case_analyses`, which the case creator reads,
@@ -485,8 +490,8 @@ student-facing result without requiring a real asynchronous provider (#1134).
 It sends the submitted free-text response to the mock service, publishes the
 `student-result/v1` document the service returns to the student who submitted
 the response through `publishStudentResult(...)`, and records counts in the
-job's callback result. The document is in `es-CL`, EthicApp's default
-activity language, because the hook context does not carry the activity's
+job's callback result. The document is in the activity's language
+(`context.locale`, `es-CL` or `en-US`), and in `es-CL` when the hook carries no
 locale. When the mock service does not answer, the adapter publishes a
 document with `status: "unavailable"`. Its catalog entry declares the
 document's schema (see "Student output declaration").
