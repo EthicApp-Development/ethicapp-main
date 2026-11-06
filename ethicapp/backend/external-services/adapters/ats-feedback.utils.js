@@ -241,6 +241,63 @@ export function buildFeedbackPayloadFromExternalResult(requestPayload, fallbackC
     };
 }
 
+// The component the tutor's feedback is published in, and the notice sent
+// with it.
+export const ATS_FEEDBACK_COMPONENT_ID = "argument-tutor-chat-feedback";
+const ATS_FEEDBACK_COMPONENT_TITLE = "Argument Tutor Feedback";
+const ATS_FEEDBACK_MESSAGE = "Your argument tutor feedback is now available.";
+
+/**
+ * What the adapter publishes to the student for one tutor callback: built
+ * live when the callback arrives, and rebuilt from the stored callback when
+ * the student loads the activity (`student-results-reading`, #1126). Both
+ * paths call it, so the rebuilt result is the one published live.
+ *
+ * `destination` is the callback's trusted destination (`sessionId`,
+ * `phaseId`, `questionId`, `userId`): the job's when the callback arrives,
+ * the stored result's ids, which the result took from the same job, when it
+ * is rebuilt. The ids the callback payload names come first; the registry
+ * refuses a callback whose ids differ from its job's (#815).
+ *
+ * @param {Object} requestPayload - The callback payload, as stored in
+ *     `external_service_results.raw_payload`.
+ * @param {{sessionId, phaseId, questionId, userId}} destination
+ * @returns {{fallbackContext: Object, feedbackPayload: Object, studentResult:
+ *     {phaseId: number|null, questionId: number|null, component: Object,
+ *     payload: {feedback: Object}, message: string, status: string}}}
+ */
+export function buildStudentFeedback(requestPayload, destination) {
+    const payloadRoot = requestPayload && typeof requestPayload === "object" ? requestPayload : {};
+    const fallbackContext = {
+        sessionId:  Number(payloadRoot.sessionId) || destination?.sessionId,
+        phaseId:    Number(payloadRoot.phaseId) || destination?.phaseId,
+        questionId: Number(payloadRoot.questionId) || destination?.questionId,
+        userId:     Number(payloadRoot.userId) || destination?.userId,
+    };
+
+    // The student's feedback is unchanged: the matched claim type (#850),
+    // the evaluation's mode and its evidence (#865) are for teachers, and are
+    // only recorded with the result.
+    const feedbackPayload = buildFeedbackPayloadFromExternalResult(requestPayload, fallbackContext);
+    return {
+        fallbackContext,
+        feedbackPayload,
+        studentResult: {
+            phaseId:    Number(fallbackContext.phaseId) || null,
+            questionId: Number(fallbackContext.questionId) || null,
+            component:  {
+                componentId: ATS_FEEDBACK_COMPONENT_ID,
+                title:       ATS_FEEDBACK_COMPONENT_TITLE,
+            },
+            payload: {
+                feedback: feedbackPayload,
+            },
+            message: ATS_FEEDBACK_MESSAGE,
+            status:  normalizeText(payloadRoot.status) || "completed",
+        },
+    };
+}
+
 /** The phase's instructions as the tutor receives them: plain text (#768). */
 export function phaseInstructionsText(phaseDesign) {
     const { instructions, instructionsContentType } = phaseDesign ?? {};
