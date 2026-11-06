@@ -51,8 +51,11 @@ test('a criteria section keeps label, value, meter and description of each crite
     ['qualifier', 'Calificador', '2 de 3']
   ]);
   assert.equal(criteria.items[0].meter, null, 'a criterion without score has no meter');
-  assert.deepEqual(criteria.items[1].meter, { score: 2, min: 1, max: 3, fraction: 0.5 });
-  assert.equal(criteria.items[2].meter.fraction, 0);
+  assert.deepEqual(criteria.items[1].meter, { score: 2, min: 1, max: 3, fraction: 2 / 3 });
+  assert.equal(
+    criteria.items[2].meter.fraction, 1 / 3,
+    'the lowest score of a 1-3 scale fills a third'
+  );
   criteria.items.forEach((item, index) => {
     assert.equal(item.description, example.sections[0].items[index].description);
   });
@@ -201,6 +204,12 @@ test('criterionMeter needs a score inside its range', () => {
     criterionMeter({ score: 3, minScore: 1, maxScore: 3 }),
     { score: 3, min: 1, max: 3, fraction: 1 }
   );
+  assert.deepEqual(
+    criterionMeter({ score: -1, minScore: -2, maxScore: 2 }),
+    { score: -1, min: -2, max: 2, fraction: 0.25 },
+    'a negative minimum spans the range'
+  );
+  assert.equal(criterionMeter({ score: 0, maxScore: 3 }).fraction, 0);
   assert.equal(criterionMeter({ score: 2 }), null);
   assert.equal(criterionMeter({ score: 5, maxScore: 4 }), null);
   assert.equal(criterionMeter({ score: 0, minScore: 1, maxScore: 3 }), null);

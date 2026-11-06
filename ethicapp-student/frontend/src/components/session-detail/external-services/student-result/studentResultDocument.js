@@ -42,9 +42,10 @@ function finiteOrNull(value) {
 }
 
 /**
- * Where a criterion's score sits between its minimum and maximum, for a
- * meter, or null when the criterion has no usable score. The minimum is 0
- * when omitted.
+ * How much of a criterion's meter to fill, or null when the criterion has no
+ * usable score. The minimum is 0 when omitted. With a minimum of 0 or more the
+ * meter fills in proportion to the maximum, so the lowest score of a 1-3 scale
+ * shows a third of the meter; with a negative minimum it spans the range.
  * @param {{ score?: number, minScore?: number, maxScore?: number }} criterion
  * @returns {{ score: number, min: number, max: number, fraction: number }|null}
  */
@@ -57,7 +58,8 @@ export function criterionMeter(criterion) {
     return null;
   }
 
-  return { score, min, max, fraction: (score - min) / (max - min) };
+  const fraction = min >= 0 ? score / max : (score - min) / (max - min);
+  return { score, min, max, fraction };
 }
 
 function normalizeCriterion(item) {
