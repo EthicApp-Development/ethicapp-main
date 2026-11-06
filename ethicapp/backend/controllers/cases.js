@@ -22,6 +22,7 @@ import {
 } from "../helpers/sharing-policy-helper.js";
 import {
     enqueueCasePdfRenderJob,
+    ensureCasePdfRenderJob,
     normalizePdfRenderJob,
     pdfRenderJobJoinSql,
     pdfRenderJobSelectSql,
@@ -81,9 +82,10 @@ const caseVideoServices = {
 export const caseDocumentServices = {
     availabilityService: googleDocumentAvailability,
 };
-// What a copy of a case requests once it is committed (#1038). Tests replace
-// it with a fake.
+// What a copy of a case requests once it is committed: its render (#1088) and
+// the analyses it did not inherit (#1038). Tests replace them with fakes.
 export const caseCopyServices = {
+    ensureRenderJob:     ensureCasePdfRenderJob,
     requestCopyAnalyses: requestCaseCopyAnalyses,
 };
 const uploadsRoot = path.resolve(process.cwd(), uploadsPath);
@@ -1213,6 +1215,26 @@ function transactionQuery(client) {
     return ({ sql, sqlParams }) => client.query(sql, sqlParams).then(({ rows }) => rows);
 }
 
+// After a copy of a case is committed (#1088): the copy gets a render job when
+// it has a PDF path and no job yet, whether its PDF file was copied or the copy
+// kept the source's path because the file could not be copied. A design import
+// follows the same rule (scheduleCaseCopyFollowUp in designs.js). The answer
+// waits for it, so it carries the job and the case view shows the render as in
+// progress. A failure to queue it is logged and does not fail the copy.
+async function ensureCaseCopyRenderSafely(caseObj, reason) {
+    try {
+        return await caseCopyServices.ensureRenderJob(caseObj.id, {
+            metadata: { reason, caseUuid: caseObj.case_uuid },
+        });
+    } catch (error) {
+        console.error("Unable to queue PDF render job for a case copy:", {
+            caseId: caseObj?.id,
+            error,
+        });
+        return null;
+    }
+}
+
 // After a copy of a case is committed and its render queued: requests, in the
 // background, the analyses the source chose that the copy did not inherit
 // (#1038). Nothing it does affects the answer.
@@ -1337,10 +1359,7 @@ router.post("/cases/:id/import", async (req, res) => {
         await client.query("COMMIT");
 
         const caseObj = importedCase.rows[0];
-        if (pdfCopied) {
-            const renderJob = await enqueueCaseRenderSafely(caseObj);
-            Object.assign(caseObj, renderJob);
-        }
+        Object.assign(caseObj, await ensureCaseCopyRenderSafely(caseObj, "case_imported"));
 
         const response = res.status(201).json({ status: "ok", result: normalizeCase(caseObj) });
         scheduleCaseCopyAnalyses(sourceCase.id, caseObj, req.session.uid);
@@ -1454,10 +1473,7 @@ router.post("/cases/:id/duplicate", async (req, res) => {
         await client.query("COMMIT");
 
         const caseObj = duplicatedCase.rows[0];
-        if (pdfCopied) {
-            const renderJob = await enqueueCaseRenderSafely(caseObj);
-            Object.assign(caseObj, renderJob);
-        }
+        Object.assign(caseObj, await ensureCaseCopyRenderSafely(caseObj, "case_duplicated"));
 
         const response = res.status(201).json({ status: "ok", result: normalizeCase(caseObj) });
         scheduleCaseCopyAnalyses(sourceCase.id, caseObj, req.session.uid);

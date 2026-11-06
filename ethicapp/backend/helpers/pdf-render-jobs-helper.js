@@ -191,8 +191,12 @@ export async function enqueueCasePdfRenderJob({ caseId, pdfPath, metadata = {} }
 
 /**
  * Queues the render of a case's PDF unless the case has no PDF or already has
- * a render job. Copying a design copies its case and its PDF (#848), so the
- * copy needs its own render for its text and page images.
+ * a render job. It is the one rule for the render of a copied case (#1088):
+ * importing or duplicating a case from Casos and importing a design, which
+ * copies its case (#848), all call it once the copy is committed. A copy needs
+ * its own render for its text and page images, also when its PDF file could
+ * not be copied and it kept the source's path, and a design import that reuses
+ * a copy with a render queues no second one.
  *
  * @returns {Promise<Object|null>} The queued job, or null when none was needed.
  */
