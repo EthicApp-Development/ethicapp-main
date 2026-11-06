@@ -155,7 +155,7 @@ const enUS = {
     },
     externalResponseProcessing: 'An external service is processing your response...',
     externalResponseProcessingButton: 'Waiting for external feedback...',
-    externalResultTitle: 'External service result',
+    externalResultTitle: 'Feedback',
     externalResultService: 'Service',
     externalResultLoadError: 'This result could not be shown.',
     externalResultsLabel: 'Feedback on your responses',

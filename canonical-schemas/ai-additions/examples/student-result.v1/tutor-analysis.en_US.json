@@ -22,7 +22,7 @@
           "score": 2,
           "minScore": 1,
           "maxScore": 3,
-          "description": "**Evidence** is the facts of the case you use to support your claim: what the people involved do or say, and the circumstances they act in.\n\nIt counts for more when you cite *specific* elements of the case, such as names, decisions or quotes, and for less when you only offer general ideas."
+          "description": "**Evidence** is the facts of the case you use to support your claim: what the people involved do or say, and the circumstances they act in.\n\nIt counts for more when you cite *specific* elements of the case, such as names, decisions or quotes, and for less when you only offer general ideas.\n\nIt is scored from 1 to 3: 3 when you use several specific elements of the case, 2 when you mention some, and 1 when you do not refer to the case."
         },
         {
           "key": "warrant",
@@ -31,7 +31,7 @@
           "score": 1,
           "minScore": 1,
           "maxScore": 3,
-          "description": "The **warrant** is the reasoning that explains why your evidence supports your claim. It is often left unstated; writing it out makes your argument easier to follow.\n\nTo find it, ask yourself which principle or value connects the facts you cite to your position."
+          "description": "The **warrant** is the reasoning that explains why your evidence supports your claim. It is often left unstated; writing it out makes your argument easier to follow.\n\nTo find it, ask yourself which principle or value connects the facts you cite to your position.\n\nIt is scored from 1 to 3: 3 when you clearly explain how the facts lead to your position, 2 when you try even if the explanation is incomplete, and 1 when you give no justification."
         },
         {
           "key": "qualifier",
@@ -40,13 +40,13 @@
           "score": 2,
           "minScore": 1,
           "maxScore": 3,
-          "description": "The **qualifier** shows how certain you are of your claim, through expressions such as *without a doubt*, *probably* or *in most cases*.\n\nIt can also come through in the tone of your argument, even without those words."
+          "description": "The **qualifier** shows how certain you are of your claim, through expressions such as *without a doubt*, *probably* or *in most cases*.\n\nIt can also come through in the tone of your argument, even without those words.\n\nIt is scored from 1 to 3: 3 when you express your certainty with nuance and reflection, 2 when you show some reflection or conviction, and 1 when there is no nuance."
         }
       ]
     },
     {
       "kind": "bullets",
-      "title": "Suggestions",
+      "title": "Comments",
       "items": [
         "You cite a specific fact of the case: what Sebastián's parents told him about earning things.",
         "Explain in your own words why taking an exam for someone else goes against that value.",
