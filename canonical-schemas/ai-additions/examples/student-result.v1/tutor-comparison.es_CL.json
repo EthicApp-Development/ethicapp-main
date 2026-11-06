@@ -1,0 +1,99 @@
+{
+  "schemaVersion": "student-result/v1",
+  "locale": "es-CL",
+  "title": "Retroalimentación sobre tu argumento revisado",
+  "summary": "Tu argumento revisado mantiene la misma postura y ahora explica por qué la honestidad que enseñaron los padres de Sebastián importa en esta decisión. La evidencia y la garantía mejoraron.",
+  "overview": "Revisamos tu argumento con una versión simplificada del modelo de Toulmin, que distingue cuatro partes:\n\n- **Afirmación**: la postura que tomas frente a la pregunta.\n- **Evidencia**: los hechos del caso en los que te apoyas.\n- **Garantía**: el razonamiento que une esos hechos con tu postura.\n- **Calificador**: el grado de certeza con que sostienes tu afirmación.\n\nAbre cada criterio para ver qué significa y cómo se evaluó. Puedes usar esta retroalimentación para mejorar tu argumento.",
+  "sections": [
+    {
+      "kind": "comparison",
+      "title": "Cambios respecto de tu argumento anterior",
+      "items": [
+        {
+          "key": "claim",
+          "label": "Afirmación",
+          "before": "En contra",
+          "after": "En contra"
+        },
+        {
+          "key": "evidence",
+          "label": "Evidencia",
+          "before": "2 de 3",
+          "after": "3 de 3",
+          "trend": "improved"
+        },
+        {
+          "key": "warrant",
+          "label": "Garantía",
+          "before": "1 de 3",
+          "after": "2 de 3",
+          "trend": "improved"
+        },
+        {
+          "key": "qualifier",
+          "label": "Calificador",
+          "before": "2 de 3",
+          "after": "2 de 3",
+          "trend": "unchanged"
+        }
+      ]
+    },
+    {
+      "kind": "criteria",
+      "title": "Criterios de tu argumento revisado",
+      "items": [
+        {
+          "key": "claim",
+          "label": "Afirmación",
+          "value": "En contra",
+          "description": "La **afirmación** es tu respuesta a la pregunta: si estás *a favor*, *en contra* o si todavía no tomas una postura clara.\n\nEste criterio solo identifica tu postura. Ninguna postura vale más que otra."
+        },
+        {
+          "key": "evidence",
+          "label": "Evidencia",
+          "value": "3 de 3",
+          "score": 3,
+          "minScore": 1,
+          "maxScore": 3,
+          "description": "La **evidencia** son los hechos del caso que usas para apoyar tu afirmación: lo que hacen o dicen las personas involucradas y las circunstancias en que actúan.\n\nSe valora más cuando citas elementos *concretos* del caso, como nombres, decisiones o frases, y menos cuando solo das ideas generales.\n\nSe evalúa de 1 a 3: 3 si usas varios elementos concretos del caso, 2 si mencionas alguno y 1 si no te refieres al caso."
+        },
+        {
+          "key": "warrant",
+          "label": "Garantía",
+          "value": "2 de 3",
+          "score": 2,
+          "minScore": 1,
+          "maxScore": 3,
+          "description": "La **garantía** es el razonamiento que explica por qué tu evidencia apoya tu afirmación. A menudo queda implícita; escribirla hace que tu argumento sea más fácil de seguir.\n\nPara encontrarla, pregúntate qué principio o valor conecta los hechos que citas con tu postura.\n\nSe evalúa de 1 a 3: 3 si explicas con claridad cómo los hechos llevan a tu postura, 2 si lo intentas aunque la explicación quede incompleta y 1 si no das ninguna justificación."
+        },
+        {
+          "key": "qualifier",
+          "label": "Calificador",
+          "value": "2 de 3",
+          "score": 2,
+          "minScore": 1,
+          "maxScore": 3,
+          "description": "El **calificador** indica el grado de certeza con que sostienes tu afirmación, con expresiones como *sin duda*, *probablemente* o *en la mayoría de los casos*.\n\nTambién puede notarse en el tono de tu argumento, aunque no uses esas palabras.\n\nSe evalúa de 1 a 3: 3 si expresas tu certeza con matices y reflexión, 2 si muestras alguna reflexión o convicción y 1 si no hay matices."
+        }
+      ]
+    },
+    {
+      "kind": "bullets",
+      "title": "Comentarios",
+      "items": [
+        "Ahora relacionas el engaño con dos hechos del caso: el consejo de los padres y la confianza de la universidad.",
+        "Para seguir mejorando, considera qué perdería Sebastián si reprueba y por qué aun así sostienes tu postura."
+      ]
+    },
+    {
+      "kind": "text",
+      "title": "Tu argumento anterior",
+      "text": "Creo que su amigo no debería dar el examen por Sebastián, porque sus padres le dijeron que en esa familia las cosas se ganan con esfuerzo.\nSi lo hace, los dos estarían engañando a la universidad."
+    },
+    {
+      "kind": "text",
+      "title": "Tu argumento revisado",
+      "text": "Creo que su amigo no debería dar el examen por Sebastián. Sus padres le dijeron que «en esta familia nos ganamos las cosas», y aprobar con el trabajo de otro sería justo lo contrario.\nAdemás, la universidad confía en que cada examen muestra lo que sabe quien lo firma; si lo hacen, los dos romperían esa confianza."
+    }
+  ]
+}

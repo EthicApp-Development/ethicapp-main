@@ -32,7 +32,7 @@ Examples of appropriate guardrail assertions:
 
 These tests are intentionally not a substitute for database integration coverage.
 
-Canonical schemas (`canonical-schemas/`) have their own guardrail tests at the repository root: `npm run test:schemas` validates example and seed documents against the JSON Schemas with `@cfworker/json-schema`. They run on the host, not during image builds, because no image ships the schemas.
+Canonical schemas (`canonical-schemas/`) have their own guardrail tests at the repository root: `npm run test:schemas` validates example and seed documents against the JSON Schemas with `@cfworker/json-schema`, including the examples of the `student-result/v1` schema copied from ethicapp-ai-additions (`canonical-schemas/ai-additions/`). They run on the host, outside image builds. The `ethicapp` image ships only `canonical-schemas/ai-additions/`, which the backend reads at runtime to validate the documents published to students (#1131), and its backend tests validate those examples too.
 
 ### 1.2. Integration Regression Tests
 

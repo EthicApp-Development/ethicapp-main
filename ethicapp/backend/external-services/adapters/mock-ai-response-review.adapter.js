@@ -28,21 +28,78 @@ async function postExternalMock(path, payload) {
     return response.json();
 }
 
-async function reverseResponseText(responseText) {
-    try {
-        return await postExternalMock("/response-review/reverse", { text: responseText });
-    } catch (error) {
-        console.warn("[external-services] Falling back to local mock response review.", error);
-        const reversedText = Array.from(responseText).reverse().join("");
+// The schema of the documents this adapter publishes to students, declared in
+// its catalog entry's `studentOutputs` (#1134).
+export const MOCK_DOCUMENT_SCHEMA = "student-result/v1";
 
+// The language of the mock's documents when the hook context carries no
+// activity locale: EthicApp's default activity language
+// (`designs.language_code`).
+export const MOCK_DOCUMENT_LOCALE = "es-CL";
+
+/**
+ * The language of the mock's document for a hook context: the activity's
+ * locale (`context.locale`, `es_CL` or `en_US`; #1124) as the document's
+ * BCP 47 tag, or MOCK_DOCUMENT_LOCALE without one.
+ */
+export function mockDocumentLocale(context) {
+    return context?.locale === "en_US" ? "en-US" : MOCK_DOCUMENT_LOCALE;
+}
+
+const UNAVAILABLE_REVIEW_TEXTS = Object.freeze({
+    "es-CL": Object.freeze({
+        title:   "Revisión de prueba de tu respuesta",
+        summary: "El servicio de prueba no respondió, así que esta revisión no está disponible.",
+    }),
+    "en-US": Object.freeze({
+        title:   "Mock review of your response",
+        summary: "The mock service did not answer, so this review is not available.",
+    }),
+});
+
+// The document published when external-mock-service does not answer: the
+// contract's way of saying that the result could not be produced.
+export function unavailableReviewDocument(locale = MOCK_DOCUMENT_LOCALE) {
+    const documentLocale = Object.hasOwn(UNAVAILABLE_REVIEW_TEXTS, locale)
+        ? locale
+        : MOCK_DOCUMENT_LOCALE;
+    const texts = UNAVAILABLE_REVIEW_TEXTS[documentLocale];
+    return {
+        schemaVersion: MOCK_DOCUMENT_SCHEMA,
+        locale:        documentLocale,
+        title:         texts.title,
+        summary:       texts.summary,
+        status:        "unavailable",
+        sections:      [],
+    };
+}
+
+// Asks external-mock-service for its review of `responseText`: a
+// student-result/v1 document with every section kind (#1134).
+async function reviewResponseText(responseText, locale) {
+    try {
+        const review = await postExternalMock("/response-review/student-result", {
+            text: responseText,
+            locale,
+        });
         return {
-            status:  "completed",
-            summary: reversedText || "No text was provided.",
-            payload: {
-                originalText: responseText,
-                reversedText,
-                characterCount: responseText.length,
-            },
+            status:         review?.status || "completed",
+            documentSchema: review?.documentSchema,
+            document:       review?.document,
+            available:      true,
+        };
+    } catch (error) {
+        // The error only: the request carried the student's text.
+        console.warn(
+            "[external-services] The external mock service did not review a response; "
+            + "publishing an unavailable review.",
+            error?.message
+        );
+        return {
+            status:         "completed",
+            documentSchema: MOCK_DOCUMENT_SCHEMA,
+            document:       unavailableReviewDocument(locale),
+            available:      false,
         };
     }
 }
@@ -71,30 +128,27 @@ export function getCallbackTarget(requestPayload) {
     return { sessionId, phaseId, questionId, userId };
 }
 
+// A callback posted for this adapter, reduced to what it may publish: the
+// destination, a status and message, and a document (#1134). It carries no
+// legacy `component`: the mock publishes documents only.
 function sanitizeExternalResultPayload(payload) {
     const input = payload && typeof payload === "object" ? payload : {};
     const status = typeof input.status === "string" && input.status.trim()
         ? input.status.trim()
         : "received";
-    const resultPayload = input.payload && typeof input.payload === "object" ? input.payload : {};
-    const component = input.component && typeof input.component === "object"
-        ? input.component
-        : {
-            componentId: "argument-tutor-report",
-            propsPath:   "payload",
-        };
+    const document = input.document && typeof input.document === "object" ? input.document : null;
 
     return {
-        serviceId:  input.serviceId,
-        sessionId:  Number(input.sessionId) || null,
-        phaseId:    Number(input.phaseId) || null,
-        questionId: Number(input.questionId) || null,
-        userId:     Number(input.userId) || null,
-        status:     status,
-        component,
-        payload:    resultPayload,
-        message:    typeof input.message === "string" ? input.message.trim() : "",
-        receivedAt: new Date().toISOString(),
+        serviceId:      input.serviceId,
+        sessionId:      Number(input.sessionId) || null,
+        phaseId:        Number(input.phaseId) || null,
+        questionId:     Number(input.questionId) || null,
+        userId:         Number(input.userId) || null,
+        status:         status,
+        documentSchema: typeof input.documentSchema === "string" ? input.documentSchema : null,
+        document,
+        message:        typeof input.message === "string" ? input.message.trim() : "",
+        receivedAt:     new Date().toISOString(),
     };
 }
 
@@ -158,60 +212,39 @@ export async function register({ service, subscribe, publishStudentResult }) {
     subscribe("student-response-submitted", async (context, { callback }) => {
         const responseText = extractResponseText(context);
         const wordCount = responseText ? responseText.split(/\s+/u).length : 0;
-        const review = await reverseResponseText(responseText);
-        const hasFreeText = responseText.length > 0;
-        const characterCount = review.payload?.characterCount ?? responseText.length;
-        const reviewPayload = {
-            title: "Argument tutor mock report",
-            summary: review.summary,
-            score: hasFreeText ? Math.min(1, Math.max(0.25, wordCount / 80)) : 0,
-            strengths: hasFreeText
-                ? [
-                    `The response includes ${wordCount} word(s).`,
-                    "The mock external service processed the submitted text.",
-                ]
-                : [],
-            suggestions: hasFreeText
-                ? [
-                    "Review whether the justification states a clear ethical criterion.",
-                    `The reversed mock output has ${characterCount} character(s).`,
-                ]
-                : [
-                    "Add a written justification so the argument tutor can review it.",
-                ],
-            externalMock: review.payload,
-        };
+        const review = await reviewResponseText(responseText, mockDocumentLocale(context));
 
-        if (context.userId) {
-            await publishStudentResult({
-                userId: context.userId,
-                sessionId: context.sessionId,
-                phaseId: context.phaseId,
-                questionId: context.questionId,
-                component: {
-                    componentId: "argument-tutor-report",
-                    title: "Argument tutor mock report",
-                },
-                payload: reviewPayload,
-                message: "A mock argument tutor report is available for your response.",
-                status: review.status || "completed",
-            });
-        }
+        // The registry checks the document against the schema copy and the
+        // catalog entry's declaration, and logs a refusal with codes only.
+        const published = context.userId
+            ? await publishStudentResult({
+                userId:         context.userId,
+                sessionId:      context.sessionId,
+                phaseId:        context.phaseId,
+                questionId:     context.questionId,
+                message:        "A mock review is available for your response.",
+                status:         review.status,
+                documentSchema: review.documentSchema,
+                document:       review.document,
+            })
+            : false;
 
+        // Ids and counts only: the job result is not for students' text.
         await callback({
             serviceId: service.id,
             hook:      "student-response-submitted",
             status:    "completed",
             payload:   {
-                sessionId: context.sessionId,
-                phaseId:   context.phaseId,
-                userId:    context.userId,
+                sessionId:  context.sessionId,
+                phaseId:    context.phaseId,
+                userId:     context.userId,
                 questionId: context.questionId,
-                summary:   reviewPayload.summary,
-                analysis: {
+                summary:    `Mock review of ${wordCount} word(s).`,
+                analysis:   {
                     wordCount,
-                    hasFreeText,
-                    externalMock: review.payload,
+                    hasFreeText:     responseText.length > 0,
+                    reviewAvailable: review.available,
+                    published:       published === true,
                 },
             },
         });
@@ -228,16 +261,18 @@ export async function register({ service, subscribe, publishStudentResult }) {
     subscribe("callback-received", async (context, { callback }) => {
         const payload = sanitizeExternalResultPayload(context.requestPayload);
 
-        if (payload.userId) {
+        // A callback publishes only a document; anything else is recorded.
+        if (payload.userId && payload.document) {
             await publishStudentResult({
-                userId: payload.userId,
-                sessionId: payload.sessionId,
-                phaseId: payload.phaseId,
-                questionId: payload.questionId,
-                component: payload.component,
-                payload: payload.payload,
-                message: payload.message,
-                status: payload.status,
+                userId:         payload.userId,
+                sessionId:      payload.sessionId,
+                phaseId:        payload.phaseId,
+                questionId:     payload.questionId,
+                resultId:       context.resultId,
+                message:        payload.message,
+                status:         payload.status,
+                documentSchema: payload.documentSchema,
+                document:       payload.document,
             });
         }
 

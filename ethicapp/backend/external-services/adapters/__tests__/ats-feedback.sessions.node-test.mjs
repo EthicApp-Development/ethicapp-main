@@ -66,7 +66,7 @@ const INVENTORY = Object.freeze({
 const INVENTORY_ID = "case-analyst-evidence-inventory";
 const TYPOLOGY_ID = "case-analyst-claim-typology";
 
-function fakeTutor({ rejectContext = false, ignoreContext = false } = {}) {
+function fakeTutor({ rejectContext = false, ignoreContext = false, rejectLocale = false } = {}) {
     const requests = [];
     let sessions = 0;
     let tasks = 0;
@@ -92,8 +92,18 @@ function fakeTutor({ rejectContext = false, ignoreContext = false } = {}) {
                         errors: { evaluation_mode: "basic never uses a case context" },
                     });
                 }
+                if (rejectLocale && body.locale) {
+                    throw badRequest({
+                        error:  "Invalid locale",
+                        errors: { locale: "locale must be one of es-CL, en-US" },
+                    });
+                }
                 sessions += 1;
                 const session = { session_id: `ats-${sessions}`, warnings: [], degraded: false };
+                if (body.locale) {
+                    // ethicapp-ai-additions#233 reports the BCP 47 tag.
+                    session.locale = body.locale.replace("_", "-");
+                }
                 if (body.evaluation_mode) {
                     // ethicapp-ai-additions#211: the requested mode narrows the
                     // mode the context selects.
@@ -172,6 +182,7 @@ async function registerAdapter({
     inventoryRow = { status: "ready", document: INVENTORY },
     registry = fakeRegistry(),
     now = () => 0,
+    languageCode = "es_CL",
 }) {
     const subscribers = new Map();
     const published = [];
@@ -189,10 +200,12 @@ async function registerAdapter({
                 sessionDescription: "",
                 designId:           12,
                 design:             DESIGN,
+                languageCode,
                 caseId:             34,
                 caseText:           "Case text.",
             }),
             resolveQuestionText: async context => `Runtime question ${context.questionId}`,
+            loadActivityLocale:  async () => "es_CL",
             loadTutorModeInputs: args => loadTutorModeInputs(args, {
                 registry,
                 getDesignAnalysisRow: async () => (typologyDocument
@@ -379,7 +392,7 @@ test("each missing or failed input opens a basic session with its reason", async
 
         const [creation] = sessionCreations(tutor.requests);
         assert.deepEqual(Object.keys(creation.body).sort(),
-            ["case_id", "case_text", "case_title", "question"], name);
+            ["case_id", "case_text", "case_title", "locale", "question"], name);
         assert.equal(reports[0].tutorMode, "basic", name);
         assert.equal(reports[0].tutorModeReason, reason, name);
     }
@@ -653,7 +666,7 @@ test("a phase set to enhanced keeps every fallback reason of #869", async () => 
 
         const [creation] = sessionCreations(tutor.requests);
         assert.deepEqual(Object.keys(creation.body).sort(),
-            ["case_id", "case_text", "case_title", "evaluation_mode", "question"], reason);
+            ["case_id", "case_text", "case_title", "evaluation_mode", "locale", "question"], reason);
         assert.equal(creation.body.evaluation_mode, "enhanced", reason);
         assert.equal(reports[0].tutorMode, "basic", reason);
         assert.equal(reports[0].tutorModeReason, reason, reason);
@@ -725,4 +738,86 @@ test("the evaluation's requested mode is recorded with the result", async () => 
 
     assert.equal(callbacks[0].payload.tutorMode, "basic");
     assert.equal(callbacks[0].payload.requestedMode, "basic");
+});
+
+// ─── The activity's locale (#1133) ──────────────────────────────────────────
+
+test("each tutor session is created with the activity's locale", async () => {
+    const cases = [
+        { languageCode: "es_CL", locale: "es_CL", reported: "es-CL" },
+        { languageCode: "en_US", locale: "en_US", reported: "en-US" },
+        // The canonical rule: Spanish is es_CL, anything else en_US.
+        { languageCode: "es_AR", locale: "es_CL", reported: "es-CL" },
+        { languageCode: "en_GB", locale: "en_US", reported: "en-US" },
+        // A design without a language takes the column default.
+        { languageCode: null, locale: "es_CL", reported: "es-CL" },
+    ];
+
+    for (const { languageCode, locale, reported } of cases) {
+        const tutor = fakeTutor();
+        const { dispatch } = await registerAdapter({ tutor, typologyDocument: null, languageCode });
+
+        const { reports } = await dispatch("student-response-submitted", response(101, 1, "Q1."));
+        await dispatch("student-response-submitted", response(102, 1, "Q2."));
+
+        const creations = sessionCreations(tutor.requests);
+        assert.equal(creations.length, 2, String(languageCode));
+        assert.ok(creations.every(creation => creation.body.locale === locale),
+            String(languageCode));
+        assert.equal(reports[0].locale, reported, String(languageCode));
+        assert.equal(Object.hasOwn(reports[0], "localeRejection"), false);
+    }
+});
+
+test("the locale is kept when the tutor rejects the configured settings", async () => {
+    const tutor = fakeTutor();
+    const rejectingTier = {
+        ...tutor.client,
+        requestJson: async (pathname, options) => {
+            if (pathname === "/sessions" && options.body.llm_tier) {
+                tutor.requests.push({ pathname, ...options });
+                throw badRequest({
+                    error: "Invalid configuration", errors: { llm_tier: "unknown" },
+                });
+            }
+            return tutor.client.requestJson(pathname, options);
+        },
+    };
+    const { dispatch } = await registerAdapter({
+        tutor: { ...tutor, client: rejectingTier }, typologyDocument: null, languageCode: "en_US",
+    });
+
+    const { result: { reports } } = await quietly(() => dispatch(
+        "student-response-submitted", response(101, 1, "Q1.", { llm_tier: "unknown" })
+    ));
+
+    const creations = sessionCreations(tutor.requests);
+    assert.deepEqual(creations.map(creation => [creation.body.llm_tier, creation.body.locale]),
+        [["unknown", "en_US"], [undefined, "en_US"]]);
+    assert.equal(reports[0].configurationRejected, true);
+    assert.equal(reports[0].locale, "en-US");
+});
+
+test("a locale the tutor refuses is dropped, and the session created without it", async () => {
+    const tutor = fakeTutor({ rejectLocale: true });
+    const { dispatch } = await registerAdapter({ tutor, languageCode: "en_US" });
+
+    const { result: { reports }, warnings } = await quietly(() => dispatch(
+        "student-response-submitted", response(101, 1, "Q1.")
+    ));
+
+    const creations = sessionCreations(tutor.requests);
+    assert.equal(creations.length, 2);
+    assert.equal(creations[0].body.locale, "en_US");
+    assert.equal(Object.hasOwn(creations[1].body, "locale"), false);
+    // The case context and the tier are not what the tutor refused.
+    assert.ok(creations[1].body.case_context, "the case context is kept");
+    assert.equal(reports[0].tutorMode, "enhanced");
+    assert.equal(reports[0].configurationRejected, false);
+    assert.deepEqual(reports[0].localeRejection, {
+        error:  "Invalid locale",
+        errors: { locale: "locale must be one of es-CL, en-US" },
+    });
+    assert.equal(Object.hasOwn(reports[0], "locale"), false);
+    assert.equal(warnings.length, 1);
 });

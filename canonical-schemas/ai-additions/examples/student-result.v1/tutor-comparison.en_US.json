@@ -1,0 +1,99 @@
+{
+  "schemaVersion": "student-result/v1",
+  "locale": "en-US",
+  "title": "Feedback on your revised argument",
+  "summary": "Your revised argument keeps the same position and now explains why the honesty Sebastián's parents taught him matters in this decision. Your evidence and warrant improved.",
+  "overview": "We reviewed your argument with a simplified version of the Toulmin model, which looks at four parts:\n\n- **Claim**: the position you take on the question.\n- **Evidence**: the facts of the case you rely on.\n- **Warrant**: the reasoning that links those facts to your position.\n- **Qualifier**: how certain you are of your claim.\n\nOpen each criterion to see what it means and how it was evaluated. You can use this feedback to improve your argument.",
+  "sections": [
+    {
+      "kind": "comparison",
+      "title": "Changes from your previous argument",
+      "items": [
+        {
+          "key": "claim",
+          "label": "Claim",
+          "before": "Against",
+          "after": "Against"
+        },
+        {
+          "key": "evidence",
+          "label": "Evidence",
+          "before": "2 of 3",
+          "after": "3 of 3",
+          "trend": "improved"
+        },
+        {
+          "key": "warrant",
+          "label": "Warrant",
+          "before": "1 of 3",
+          "after": "2 of 3",
+          "trend": "improved"
+        },
+        {
+          "key": "qualifier",
+          "label": "Qualifier",
+          "before": "2 of 3",
+          "after": "2 of 3",
+          "trend": "unchanged"
+        }
+      ]
+    },
+    {
+      "kind": "criteria",
+      "title": "Criteria of your revised argument",
+      "items": [
+        {
+          "key": "claim",
+          "label": "Claim",
+          "value": "Against",
+          "description": "Your **claim** is your answer to the question: whether you are *in favor*, *against*, or have not yet taken a clear position.\n\nThis criterion only identifies your position. No position is worth more than another."
+        },
+        {
+          "key": "evidence",
+          "label": "Evidence",
+          "value": "3 of 3",
+          "score": 3,
+          "minScore": 1,
+          "maxScore": 3,
+          "description": "**Evidence** is the facts of the case you use to support your claim: what the people involved do or say, and the circumstances they act in.\n\nIt counts for more when you cite *specific* elements of the case, such as names, decisions or quotes, and for less when you only offer general ideas.\n\nIt is scored from 1 to 3: 3 when you use several specific elements of the case, 2 when you mention some, and 1 when you do not refer to the case."
+        },
+        {
+          "key": "warrant",
+          "label": "Warrant",
+          "value": "2 of 3",
+          "score": 2,
+          "minScore": 1,
+          "maxScore": 3,
+          "description": "The **warrant** is the reasoning that explains why your evidence supports your claim. It is often left unstated; writing it out makes your argument easier to follow.\n\nTo find it, ask yourself which principle or value connects the facts you cite to your position.\n\nIt is scored from 1 to 3: 3 when you clearly explain how the facts lead to your position, 2 when you try even if the explanation is incomplete, and 1 when you give no justification."
+        },
+        {
+          "key": "qualifier",
+          "label": "Qualifier",
+          "value": "2 of 3",
+          "score": 2,
+          "minScore": 1,
+          "maxScore": 3,
+          "description": "The **qualifier** shows how certain you are of your claim, through expressions such as *without a doubt*, *probably* or *in most cases*.\n\nIt can also come through in the tone of your argument, even without those words.\n\nIt is scored from 1 to 3: 3 when you express your certainty with nuance and reflection, 2 when you show some reflection or conviction, and 1 when there is no nuance."
+        }
+      ]
+    },
+    {
+      "kind": "bullets",
+      "title": "Comments",
+      "items": [
+        "You now link the deception to two facts of the case: his parents' advice and the university's trust.",
+        "To keep improving, consider what Sebastián would lose by failing and why you still hold your position."
+      ]
+    },
+    {
+      "kind": "text",
+      "title": "Your previous argument",
+      "text": "I think his friend should not take the exam for Sebastián, because his parents told him that in their family you earn things through effort.\nIf he does it, they would both be deceiving the university."
+    },
+    {
+      "kind": "text",
+      "title": "Your revised argument",
+      "text": "I think his friend should not take the exam for Sebastián. His parents told him that \"in this family we earn things\", and passing with someone else's work would be the exact opposite.\nBesides, the university trusts that each exam shows what the person who signs it knows; if they do it, they would both break that trust."
+    }
+  ]
+}

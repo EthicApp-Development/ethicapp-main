@@ -6,6 +6,7 @@ import {
     CapabilityDescriptorsClient,
     descriptorLocale,
     normalizeDescriptor,
+    normalizeStudentOutputs,
 } from "../capability-descriptors.service.js";
 
 const LINK = Object.freeze({ serviceId: "polyadic-agent", path: "/polyadic-agent/api/capabilities" });
@@ -256,6 +257,89 @@ test("normalizeDescriptor: drops unusable and repeated fields with warnings", ()
     ]);
 });
 
+// ─── student_outputs (#1131) ─────────────────────────────────────────────────
+
+// The tutor's declaration (ethicapp-ai-additions argumentation-tutor/backend/
+// modules/capabilities.py, #233).
+function argumentFeedbackOutput(overrides = {}) {
+    return {
+        id:              "argument-feedback",
+        document_schema: "student-result/v1",
+        scopes:          ["response"],
+        display:         {
+            label:       "Argument feedback",
+            description: "Feedback on each argument a student submits.",
+        },
+        ...overrides,
+    };
+}
+
+test("normalizeDescriptor: normalizes the declared student outputs next to the fields", () => {
+    const raw = makeDescriptor({
+        student_outputs: [argumentFeedbackOutput({ x_preview: true })],
+    });
+    raw.student_outputs[0].display.icon = "comment";
+
+    const result = normalizeDescriptor(raw, "polyadic-agent");
+
+    assert.equal(result.ok, true);
+    assert.deepEqual(result.warnings, []);
+    assert.equal(result.descriptor.fields.length, 3);
+    assert.deepEqual(result.descriptor.studentOutputs, [{
+        id:             "argument-feedback",
+        documentSchema: "student-result/v1",
+        scopes:         ["response"],
+        label:          "Argument feedback",
+        description:    "Feedback on each argument a student submits.",
+    }]);
+});
+
+test("normalizeDescriptor: a descriptor without student_outputs declares none", () => {
+    for (const studentOutputs of [undefined, null]) {
+        const result = normalizeDescriptor(makeDescriptor({ student_outputs: studentOutputs }), "polyadic-agent");
+        assert.equal(result.ok, true);
+        assert.deepEqual(result.descriptor.studentOutputs, []);
+        assert.deepEqual(result.warnings, []);
+    }
+});
+
+test("normalizeDescriptor: unusable student outputs are dropped with warnings, and the fields kept", () => {
+    const raw = makeDescriptor({
+        student_outputs: [
+            argumentFeedbackOutput({ scopes: ["chat", "response", "case"] }),
+            argumentFeedbackOutput(),
+            argumentFeedbackOutput({ id: "Argument Feedback" }),
+            argumentFeedbackOutput({ id: "other-a", document_schema: "student-result" }),
+            argumentFeedbackOutput({ id: "other-b", scopes: ["case", "design"] }),
+            argumentFeedbackOutput({ id: "other-c", scopes: "response" }),
+            argumentFeedbackOutput({ id: "other-d", display: { label: "No description" } }),
+            "not-an-output",
+        ],
+    });
+
+    const result = normalizeDescriptor(raw, "polyadic-agent");
+
+    assert.equal(result.ok, true);
+    assert.equal(result.descriptor.fields.length, 3);
+    assert.deepEqual(result.descriptor.studentOutputs.map(output => [output.id, output.scopes]),
+        [["argument-feedback", ["response", "chat"]]]);
+    assert.deepEqual(result.warnings, [
+        "student output \"argument-feedback\" has 1 unknown scope(s)",
+        "student output \"argument-feedback\" is repeated",
+        "student output #2 has no valid id",
+        "student output #3 has no valid document_schema",
+        "student output #4 declares no student scope (response or chat)",
+        "student output #5 has no scopes",
+        "student output #6 has no display label and description",
+        "student output #7 is not an object",
+    ]);
+});
+
+test("normalizeStudentOutputs: a value that is not a list declares none, with a warning", () => {
+    assert.deepEqual(normalizeStudentOutputs({ id: "argument-feedback" }),
+        { studentOutputs: [], warnings: ["student_outputs is not a list"] });
+});
+
 // ─── CapabilityDescriptorsClient ─────────────────────────────────────────────
 
 test("getInstanceConfiguration: null when the service declares no descriptor", async () => {
@@ -374,6 +458,69 @@ test("getInstanceConfiguration: keeps the last good descriptor, marked stale, af
     assert.equal(refreshed.stale, false);
 });
 
+test("getInstanceConfiguration: returns the student outputs next to the fields", async () => {
+    const { client } = makeClient({
+        responses: [makeDescriptor({ student_outputs: [argumentFeedbackOutput()] })],
+    });
+
+    const configuration = await client.getInstanceConfiguration("svc-described", "en_US");
+
+    assert.equal(configuration.fields.length, 3);
+    assert.deepEqual(configuration.studentOutputs.map(output => output.id), ["argument-feedback"]);
+});
+
+test("knownStudentOutputs: none before a fetch, and it makes no request", async () => {
+    const { client, requests } = makeClient({
+        responses: [makeDescriptor({ student_outputs: [argumentFeedbackOutput()] })],
+    });
+
+    assert.equal(client.knownStudentOutputs("svc-described"), null);
+    assert.equal(requests.length, 0);
+});
+
+test("knownStudentOutputs: the last successful fetch in any locale, stale after the TTL", async () => {
+    const { client, requests, advance } = makeClient({
+        responses: [makeDescriptor({ student_outputs: [argumentFeedbackOutput()] })],
+    });
+
+    await client.getInstanceConfiguration("svc-described", "es_CL");
+    const known = client.knownStudentOutputs("svc-described");
+    assert.deepEqual(known.studentOutputs.map(output => output.id), ["argument-feedback"]);
+    assert.equal(known.stale, false);
+
+    advance(1000);
+    assert.equal(client.knownStudentOutputs("svc-described").stale, true);
+    assert.equal(requests.length, 1);
+});
+
+test("knownStudentOutputs: kept after a failed fetch, and replaced by a newer successful one", async () => {
+    const { client, requests, advance } = makeClient({
+        responses: [
+            makeDescriptor({ student_outputs: [argumentFeedbackOutput()] }),
+            httpError(502),
+            makeDescriptor({ student_outputs: [] }),
+        ],
+    });
+
+    assert.equal((await client.refreshStudentOutputs("svc-described")).studentOutputs.length, 1);
+    advance(1000);
+    const afterFailure = await client.refreshStudentOutputs("svc-described");
+    assert.equal(requests.length, 2);
+    assert.equal(afterFailure.studentOutputs.length, 1, "kept while the service is down");
+    assert.equal(afterFailure.stale, true);
+
+    advance(100);
+    const replaced = await client.refreshStudentOutputs("svc-described");
+    assert.equal(requests.length, 3);
+    assert.deepEqual(replaced, { studentOutputs: [], stale: false });
+});
+
+test("refreshStudentOutputs: null when no descriptor has been fetched, and never throws", async () => {
+    const { client } = makeClient({ responses: [httpError(503)] });
+    assert.equal(await client.refreshStudentOutputs("svc-described"), null);
+    assert.equal(await client.refreshStudentOutputs("svc-plain"), null);
+});
+
 test("getInstanceConfiguration: logs dropped fields once per fetch", async () => {
     const raw = makeDescriptor();
     raw.instance_configuration.fields.push({ key: "broken" });
@@ -461,6 +608,26 @@ test("through AiAdditionsClient: a changed or removed connection drops cached de
     connection = { baseUrl: "http://second.local" };
     assert.equal((await descriptors.getInstanceConfiguration("svc", "en_US")).available, true);
     assert.equal(serviceCalls.length, 3, "the cache was emptied when the connection was removed");
+});
+
+test("through AiAdditionsClient: the student outputs survive a removed connection", async () => {
+    let connection = { baseUrl: "http://first.local" };
+    const aiAdditions = makeAiAdditionsClient(async (url) => {
+        if (url.includes("/protocol/openid-connect/token")) {
+            return jsonResponse({ access_token: "token", expires_in: 300 });
+        }
+        return jsonResponse(makeDescriptor({ student_outputs: [argumentFeedbackOutput()] }));
+    }, { getConnection: async () => connection });
+    const descriptors = clientOver(aiAdditions);
+
+    await descriptors.getInstanceConfiguration("svc", "en_US");
+    connection = null;
+    assert.deepEqual(await descriptors.getInstanceConfiguration("svc", "en_US"),
+        { available: false, reason: "not_configured" });
+
+    // Results published under that declaration are still checked against it.
+    assert.deepEqual(descriptors.knownStudentOutputs("svc").studentOutputs.map(output => output.id),
+        ["argument-feedback"]);
 });
 
 test("an unreadable connection reports the descriptor unreachable", async () => {

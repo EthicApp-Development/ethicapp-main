@@ -27,7 +27,9 @@ invalid catalog stops startup (and the image build, through
   `external-mock-service` or run in process, require no AI Additions service
   (`requires: []`), and register only when
   `EXTERNAL_SERVICES_DEVELOPMENT_ADAPTERS=true`. Only the root
-  `docker-compose.yml` sets it.
+  `docker-compose.yml` sets it. Since they link no capability descriptor,
+  they declare the documents they publish to students in their entry
+  (`studentOutputs`, see "Student result documents").
 
 Registering only subscribes handlers: it makes no outbound call
 (`__tests__/registration.node-test.mjs`). Whether a registered adapter
@@ -288,6 +290,7 @@ Each manifest entry describes one service:
 | `descriptor` | no | `{ path }`: the capability descriptor the service's AI backend publishes (#687). Its id (`service.id` in the descriptor) is the one AI Additions service in `requires`, so an adapter with a descriptor requires exactly one service; `descriptor.serviceId` is no longer accepted (#812). That id may differ from `id`: ids are mapped, not renamed, so stored designs, chat agents and jobs keep the manifest id. `path` is the descriptor route relative to the AI Additions connection's `base_url`, for example `/polyadic-agent/api/capabilities`; it must be an absolute path without host, query or `..` segments. An invalid path is dropped with a warning. `GET /external-services` exposes `descriptor.serviceId` and a summary (see "Listing services"); the route stays internal (`getServiceDescriptor()`). |
 | `capabilities` | — | Removed (#726). Entries that still declare it log a deprecation warning and the key is ignored. A service that processes student responses declares the `response` scope instead; the student app shows the processing state for those services. |
 | `enabled` | — | Removed (#812). An entry that declares it rejects the catalog; usability is decided at dispatch (see "Usability"). |
+| `studentOutputs` | no | Development adapters only (#1134): the documents the adapter publishes to students, as `[{ id, documentSchema, scopes, label, description }]`, the shape a capability descriptor's `student_outputs` takes once normalized. Each entry goes through the descriptor's normalizer, and its scopes must be among the entry's `scopes`. The key on a production adapter, a malformed list or entry, an unknown key or scope, or a repeated id rejects the catalog. Absent means none. See "Student result documents". |
 | `report` | no | `{ columnPrefix }`: the prefix of every column the adapter adds to activity reports (see "Report building"), lowercase letters and digits ending in `_`, such as `ats_`. Required when `hooks` lists `report-building`; two entries cannot declare the same prefix. A malformed declaration, or `report-building` without one, rejects the catalog. |
 | `callbackAuth` | no | Inbound callback authorization. See below. |
 
@@ -310,7 +313,7 @@ warning and never receive hooks.
 export async function register({
     service,                 // normalized manifest entry (id, description, hooks, globalHooks, scopes, ui, descriptor, requires, report, development, adapter, callbackAuth)
     subscribe,               // (hookName, handler) => void
-    publishStudentResult,    // (payload) => Promise<boolean>
+    publishStudentResult,    // (payload) => Promise<boolean>; see "Student result documents"
     publishGroupChatMessage, // (payload) => Promise<{ savedMessage, notificationPayload } | null>
     aiAdditionsClient,       // shared AI Additions HTTP client
     caseAnalyses,            // markProcessing/complete/fail for this service's case analyses
@@ -384,7 +387,7 @@ const configuration = await externalServicesRegistry
 
 - **Result.** `null` for unknown or disabled services and for services without a
   descriptor. Otherwise `{ available: true, stale, descriptorServiceId, name,
-  usesLlm, locale, fields }`, or `{ available: false, reason }` with `reason`
+  usesLlm, locale, fields, studentOutputs }`, or `{ available: false, reason }` with `reason`
   `not_configured` (no AI Additions connection is stored; nothing is requested),
   `unreachable` (network error, timeout, HTTP error, or the connection cannot be
   read), `invalid_descriptor`, `unsupported_contract_version` or
@@ -409,11 +412,24 @@ const configuration = await externalServicesRegistry
   `integer` and `number`, `{ maxLength, pattern, multiline }` for `text`, and
   `{}` for `boolean`. Deprecated fields and entries are kept, so stored values
   can still be shown.
+- **Student outputs.** The optional `student_outputs` (epic #1124, #1131) are
+  normalized to `studentOutputs`, next to `fields`: one
+  `{ id, documentSchema, scopes, label, description }` per declared output,
+  where `scopes` keeps `response` and `chat` only. An absent list declares no
+  output. An entry without a kebab-case `id`, a `<name>/v<major>`
+  `document_schema`, a student scope or both display texts, and a repeated
+  `id`, are dropped with a warning, and the descriptor stays usable. See
+  "Student result documents" for how they are used.
 - **Cache.** In memory, per process, keyed by service and descriptor locale.
   A valid descriptor is kept for ten minutes. After a failure the result is
   kept for a minute before asking again; if an earlier fetch succeeded, its
   fields are served meanwhile with `stale: true`. Concurrent calls share one
-  request. Nothing is stored in Redis.
+  request. Nothing is stored in Redis. The student outputs of the last
+  descriptor fetched successfully for each service, in any locale, are kept
+  apart (`knownStudentOutputs(serviceId)`, no request): failed fetches and a
+  changed or removed connection keep them, and only a newer successful fetch
+  replaces them. `refreshStudentOutputs(serviceId)` fetches when the cache
+  has nothing in date and returns them.
 
 ### Listing services
 
@@ -563,6 +579,14 @@ which receive `(context, { results, signal })` (see "Report building" and
   `callback-received`). It is read from the design when the hook fires and is
   a copy, so changing it has no effect. Adapters map it into the AI service's
   payload; unset keys mean "service default".
+- `context.locale` (#1124) is the activity's locale, `es_CL` or `en_US`, from
+  its design's `designs.language_code` by the rule in
+  `helpers/activity-locale.js` (Spanish is `es_CL`, any other language
+  `en_US`, none `es_CL`). Phase hooks carry it when the phase's services could
+  be read (`dispatchPhaseHook()` takes it from the same query that reads them),
+  and `student-results-reading` always carries it, `null` when it could not be
+  read. Adapters write students' texts in that language or send it to their
+  service; a hook without a phase has none.
 - `callback(result)` records the adapter outcome against the job (see
   "Jobs and `callback(result)`" below).
 - `reportInstantiation(report)` stores what an AI service reported when the
@@ -866,7 +890,9 @@ which of the student's phases to show; the student route below keeps the
 phases of the session.
 
 **Context and reader.** The handler's `context` is frozen:
-`{ serviceId, sessionId, userId }`. The second argument is
+`{ serviceId, sessionId, userId, locale }`, where `locale` is the activity's
+locale (`es_CL`, `en_US`), read once per call by the registry, or `null` when
+it could not be read (logged with the session id only). The second argument is
 `{ results, signal }`; `signal` is aborted when the timeout expires. `results`
 is the only data access the handler gets
 (`createStudentResultsReader()` in
@@ -896,9 +922,9 @@ emits plus the id of the stored result each one was rebuilt from:
     resultId:    "<external_service_results.id>",
     phaseId:     20,
     questionId:  30,              // or null
-    component:   { componentId: "argument-tutor-chat-feedback", title: "Argument Tutor Feedback" },
-    payload:     { feedback: { /* ... */ } },
-    message:     "Your argument tutor feedback is now available.", // or null
+    component:   { documentSchema: "student-result/v1" },
+    payload:     { schemaVersion: "student-result/v1", locale: "en-US", /* ... */ },
+    message:     "Feedback on your argument is now available.", // or null
     status:      "completed",
     publishedAt: "2026-11-05T10:00:00.000Z",
 }]
@@ -914,9 +940,14 @@ the others are kept:
   `null`; each must equal its result's `phaseId` or `questionId` when the
   result has one. The stored result keeps its callback's trusted destination,
   and an entry cannot move it to another phase or question.
-- `component` is plain data with a non-empty `componentId`, and `payload` a
-  plain data object. Both are copied and frozen, and are returned unchanged
-  (epic #1124 defines how they are described and rendered).
+- `component` is plain data and `payload` a plain data object. Both are
+  copied and frozen, and are returned unchanged.
+- A document (#1131) is `component: { documentSchema }`, with no other key in
+  `component`, and the document as `payload`, as `publishStudentResult`
+  emits it. It is kept only when it passes the checks of a published
+  document, against the declaration this process already knows (see
+  "Student result documents"). Any other `component` is a legacy result
+  descriptor and needs a non-empty `componentId`.
 - `message` is a string or `null`, `status` a non-empty string, and
   `publishedAt` a date, normalized to ISO 8601. The adapter usually takes it
   from the result's `receivedAt`.
@@ -934,13 +965,16 @@ line holding `serviceId`, `sessionId` and `status` (`failed`, `timed_out`,
 and `errorCode` for `failed`, `timeoutMs` for `timed_out` and `problems` for
 `invalid` and dropped entries. Problems name entry paths only; an adapter's
 error message and its entries are never logged, since they can quote a
-student's text.
+student's text. A refused document adds its schema, the problem codes and
+the paths inside the document, as in
+`entries[1].payload (student-result/v1) is refused: schema_violation (not_allowed) at claimTypeId`.
 
 The tutor adapter subscribes (#1126, handler in
 `adapters/ats-feedback.student-results.js`). It rebuilds the `completed`
 results whose stored outcome, `adapterResult.payload.publishedToUserId`, names
-the student. The development mocks publish without storing a result and stay
-live-only.
+the student, as the `student-result/v1` documents it publishes (#1133, see
+"The tutor's student feedback"). The development mocks publish without
+storing a result and stay live-only.
 
 **Student route.** The student app reads the results with
 `GET /activities/:id/users/:user_id/external_service_results`
@@ -1119,7 +1153,10 @@ The registry provides two helper publishers to adapters:
 - `publishStudentResult(payload)`: sends a socket notification to a student.
   The payload must include a valid positive integer `userId`; the registry adds
   `serviceId` and `receivedAt`. Returns `true` when the notification was sent,
-  `false` otherwise. Nothing is stored and a socket that is down misses it, so
+  `false` otherwise. A result for students is a document,
+  `{ userId, documentSchema, document }`, checked as described in "Student
+  result documents" below; the legacy `{ component, payload }` form is kept
+  for the adapters that have not moved yet. Nothing is stored and a socket that is down misses it, so
   an adapter that publishes from a callback also subscribes to
   `student-results-reading` (see "Student results reading") to rebuild what it
   published from the stored callback when the student loads the activity.
@@ -1147,6 +1184,143 @@ The registry provides two helper publishers to adapters:
   `resultId` that is not a uuid, is saved with no link (the invalid id is
   logged). Students' and teachers' messages never carry one. Deleting a
   result sets the link to `NULL` and keeps the message.
+
+### Student result documents
+
+A result shown to a student is a document of a schema that ethicapp-ai-additions
+defines, today `student-result/v1` (epic #1124; contract in `EXTERNAL.md`,
+"Student result documents"). The adapter publishes it with:
+
+```js
+await publishStudentResult({
+    userId,
+    sessionId,                          // optional, like every key below
+    phaseId,
+    questionId,
+    resultId:       context.resultId,   // the stored callback it came from
+    message:        "Your feedback is ready.",
+    status:         "completed",
+    documentSchema: "student-result/v1",
+    document,                           // the document, as the service wrote it
+});
+```
+
+The student receives `component: { documentSchema }` with the document as
+`payload`, the keys above, `serviceId` and `receivedAt`. Any other key the
+adapter passes is left out of the event, so a teacher-only value cannot
+travel next to the document.
+
+**Checks.** `services/student-result-documents.js` checks every document,
+published or rebuilt, in two ways:
+
+- Schema. The document must validate against EthicApp's verbatim copy of its
+  schema in `canonical-schemas/ai-additions/`, compiled with
+  `@cfworker/json-schema` (draft 2020-12, the validator of
+  `npm run test:schemas`), and pass the two integrity rules JSON Schema cannot
+  express: criterion keys unique within a section
+  (`duplicate_criterion_key`) and scores within their bounds
+  (`score_out_of_range`), as ethicapp-ai-additions'
+  `validate_student_result()` checks them. The JSON form of the document is
+  checked, since that is what the student receives: a key set to
+  `undefined` is left out. A schema EthicApp has no copy of is
+  `unknown_document_schema`; a copy that cannot be read refuses all its
+  documents (`schema_unavailable`) and is logged once.
+- Declaration. The service must declare the schema, in its capability
+  descriptor's `student_outputs`, for the scope the document reaches the
+  student in (`undeclared_document_schema`). A development adapter, which
+  links no descriptor, declares in its catalog entry instead (see "Catalog
+  declarations of development adapters" below). Any other service whose
+  catalog entry links no descriptor declares nothing (`no_descriptor`).
+
+A document that fails a check is not sent. `publishStudentResult` returns
+`false` and logs `[external-services] Refused a student result document.`
+with `serviceId`, `userId`, `resultId` (when it is a uuid), `documentSchema`
+(when it is a schema name), `scope`, the declaration status and the problems
+(`code`, `path` and, for a schema violation, the JSON Schema `keyword`).
+Neither the document nor the validator's messages are logged, since they
+quote the student. A publication that mixes the two forms (`documentSchema`
+or `document` together with `component` or `payload`) is refused as
+`ambiguous_result`, and a legacy `component` that names a `documentSchema` as
+`document_in_component`: a document always takes the document form.
+
+**Scope.** `publishStudentResult` and the `student-results-reading` hook
+carry a result for one student about the response they submitted, so their
+documents are checked against the `response` scope (`STUDENT_RESULT_SCOPE`).
+The descriptor's other student scope, `chat`, is for documents shown to
+students in a group chat. No publisher emits them yet; the chat publisher
+that does will check its documents against `chat`. A service that declares an
+output for `chat` only cannot publish it through `publishStudentResult`.
+
+**Where the declaration comes from.** Both paths read the declaration from
+the descriptor service (see "Capability descriptors"), and neither waits for
+a service that is down:
+
+- Live publication. When the declaration this process knows is missing or
+  older than the descriptor TTL (ten minutes), the registry refreshes it
+  first, through the cached descriptor request with its 5 s timeout. The
+  service has just called back, so it is normally reachable. When the request
+  fails, the last declaration fetched since the process started is used.
+  With none, the document is refused as `declaration_unavailable`.
+- Rebuilt results. A student waits for the rebuild (3 s) and the service may
+  be down, so the check makes no request and reads no connection: it uses the
+  last declaration fetched since the process started, kept while the service
+  is down and when the AI Additions connection changes or is removed. When
+  there is none, or it is older than the TTL, a refresh starts in the
+  background and serves later reads; the current read does not wait for it.
+  With no declaration at all, the rebuilt documents are dropped as
+  `declaration_unavailable` (legacy entries are unaffected).
+
+The last case is a process that has not fetched the service's descriptor once
+since it started, while the service is unreachable: rebuilt documents stay
+hidden until a fetch succeeds. A fetch starts on the first read that
+rebuilds a document, on a live publication and when teachers list services
+or open the design editor, so the window closes once the service answers.
+
+**Catalog declarations of development adapters.** A development adapter
+requires no AI Additions service, so it cannot link a capability descriptor,
+and nothing would declare its documents. It declares them in its
+`manifest.json` entry instead (#1134), in the shape of a normalized
+`student_outputs` entry:
+
+```json
+"studentOutputs": [
+  {
+    "id": "mock-review",
+    "documentSchema": "student-result/v1",
+    "scopes": ["response"],
+    "label": "Mock review",
+    "description": "Development review of each response a student submits."
+  }
+]
+```
+
+`catalog.js` (`manifestStudentOutputs()`) normalizes each entry with the
+descriptor's `normalizeStudentOutput()`, so both declarations follow the same
+rules. What the descriptor path drops with a warning rejects the catalog
+here, since the catalog is shipped code: an unknown key or scope, a repeated
+id, or a scope the entry does not list in `scopes`. When the service links no
+descriptor, both the live and the rebuild checks read this declaration, with
+no request; it ships with the catalog, so it is always known. A service with
+a descriptor link is judged by its descriptor alone.
+
+A production adapter that declares `studentOutputs` rejects the catalog,
+which stops startup and the image build. Its declaration belongs to the
+service, in the descriptor the service publishes: a catalog entry that
+declared for it would let EthicApp accept documents the service never
+announced. Ignoring the key with a warning would leave an entry that reads as
+a declaration and has no effect, which a startup log line easily hides.
+
+**Legacy form.** `{ userId, component: { componentId, ... }, payload, ... }` is
+emitted as passed, with no descriptor request. No adapter in this repository
+uses it any longer: the tutor (#1133) and the development mock (#1134)
+publish documents. It stays for adapters outside the repository and is
+removed together with the student app's legacy component registry. Rebuilt
+legacy entries keep the checks listed in "Student results reading".
+
+**Adding a schema.** A new document schema is copied into
+`canonical-schemas/ai-additions/` (see its README) and added to
+`DOCUMENT_SCHEMAS` in `services/student-result-documents.js`, with its
+integrity rules, before any service declares it.
 
 ## Case Analyses
 
@@ -2117,6 +2291,71 @@ It reads only its stored `student-response-submitted` results, whose
   already holds the response. A field the result does not report is empty.
 - Results of a forgotten user are redacted as stored (V31) and appear so.
 
+### The tutor's student feedback
+
+The tutor adapter publishes each evaluation to its student as a
+`student-result/v1` document (epic #1124, #1133), through the document form
+of `publishStudentResult` (see "Student result documents"), and rebuilds the
+same document through `student-results-reading`. The tutor declares the
+schema for the `response` scope in its descriptor's `student_outputs`
+(ethicapp-ai-additions#233). The code is `buildStudentFeedback()` in
+`adapters/ats-feedback.utils.js`, which both paths call.
+
+**The activity's locale.** Every tutor session is created with a `locale`
+session input, the language the tutor writes the student's feedback in. It
+comes from the activity's design, `designs.language_code`, by the canonical
+rule (`activityLocale()`): Spanish (`es`, `es_*`) is `es_CL`, any other
+language `en_US`, and a design without a language `es_CL`, the column
+default. The Polyadic bridge reads the same column for its own `locale`. The
+locale is derived for each session and never stored in a design. The tutor
+reports it back as a BCP 47 tag, which the instantiation report keeps as
+`locale`. A tutor that predates ethicapp-ai-additions#233 reports the key as
+an unsupported setting (`degraded: true`). A tutor that refuses it with
+`400 {"error": "Invalid locale"}` gets the session again without it, and the
+report holds its answer as `localeRejection`.
+
+**The document.** For each callback:
+
+- When the payload carries `studentResult` and the document passes the
+  schema checks of `validateStudentResultDocument()`, it is published
+  unchanged, as `{ documentSchema: "student-result/v1", document }`, with its
+  criterion descriptions and overview.
+- Otherwise, as for callbacks stored before ethicapp-ai-additions#235, the
+  legacy keys (`summary`, `criteria`, `bullets`, `argumentPreview`,
+  `comparison`) are mapped to a document by `legacyStudentDocument()`. The
+  mapping follows the tutor's own builder: its titles, section titles,
+  labels (`Afirmación`, `Evidencia`, `Garantía`, `Calificador` in `es-CL`;
+  `Claim`, `Evidence`, `Warrant`, `Qualifier` in `en-US`) and values
+  (`A favor`, `2 de 3`, `No disponible`), in the activity's locale, without
+  descriptions or overview. A score outside 1 to 3 reads as not available and
+  makes the document `partial`; a payload with no criteria is `unavailable`.
+  The tutor's English placeholder summary is left out. Summaries and bullets
+  are the model's text, in whatever language the model wrote. A
+  `studentResult` that fails the checks is logged as
+  `The tutor's student document fails EthicApp's checks` with codes and
+  paths only.
+
+The event's `message` is a fixed text in the document's locale. The
+teacher-only keys of the payload (`claimTypeId`, `claimTypeRationale`,
+`tutorMode`, `requestedMode`, `evidenceFactIds`, `unsupportedClaims`) are
+read only into the stored outcome; the document schema is closed and the
+registry emits only the document and its ids.
+
+**Live and rebuilt.** The callback's stored outcome records
+`studentDocument: { source, locale }` (`source` is `tutor` or `legacy`) next to
+`feedbackTitle`, which is now the document's title. The rebuild maps a legacy
+payload in that recorded locale, so it equals the document published live
+even if the design's language changes later. Callbacks processed before
+#1133 have no recorded locale and were never published as documents; the
+rebuild maps them in the activity's locale, which the registry passes as
+`context.locale`, or `es-CL` when it could not be read. The handler reads
+nothing but its stored results. A tutor document needs no locale.
+
+**Release order.** The tutor release with ethicapp-ai-additions#235 is
+deployed before this adapter: EthicApp sends a document only when the
+service declares its schema, and an older tutor declares none, so its
+documents (mapped or not) would be refused.
+
 ### Recording results from an adapter
 
 `register()` receives `designAnalyses`, bound to the adapter's own service, with
@@ -2372,7 +2611,8 @@ When implementing a new adapter:
    `requires` (add a new AI Additions service id to `AI_ADDITIONS_SERVICE_IDS`
    in `catalog.js` first), and the `response` scope if the service processes
    student responses. Mark a mock with `development: true` and `requires: []`
-   (see "The adapter catalog").
+   (see "The adapter catalog"), and declare the documents it publishes to
+   students in `studentOutputs` (see "Student result documents").
 4. Use `aiAdditionsClient.requestJson()` for AI Additions HTTP calls and forward
    `context.correlationId` in outbound requests.
 5. Pass the service's API path as `basePath`; never read a URL from the

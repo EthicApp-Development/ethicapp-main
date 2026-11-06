@@ -40,6 +40,8 @@ services:
     volumes:
       - ./ethicapp:/app
       - ./database/seeds:/database/seeds
+      # Student result schema copies (#1131), as the image places them.
+      - ./canonical-schemas/ai-additions:/canonical-schemas/ai-additions:ro
       - ethicapp_backend_node_modules:/app/backend/node_modules
       - ethicapp_frontend_node_modules:/app/frontend/node_modules
       - uploads:/app/backend/uploads

@@ -1,6 +1,11 @@
+import { activityLocale, DEFAULT_ACTIVITY_LOCALE } from "../../helpers/activity-locale.js";
 import { plainTextOf } from "../../helpers/rich-text-helper.js";
 import { describeError } from "../../helpers/log-safety.js";
 import { ARGUMENTATION_TUTOR_SERVICE_ID } from "../../helpers/tutor-mode.js";
+import {
+    STUDENT_RESULT_DOCUMENT_SCHEMA,
+    validateStudentResultDocument,
+} from "../../services/student-result-documents.js";
 
 // The tutor's catalog id, which design phases enable.
 export { ARGUMENTATION_TUTOR_SERVICE_ID };
@@ -241,17 +246,346 @@ export function buildFeedbackPayloadFromExternalResult(requestPayload, fallbackC
     };
 }
 
-// The component the tutor's feedback is published in, and the notice sent
-// with it.
-export const ATS_FEEDBACK_COMPONENT_ID = "argument-tutor-chat-feedback";
-const ATS_FEEDBACK_COMPONENT_TITLE = "Argument Tutor Feedback";
-const ATS_FEEDBACK_MESSAGE = "Your argument tutor feedback is now available.";
+// ─── The activity's locale (#1133) ──────────────────────────────────────────
+
+// The rule lives in helpers/activity-locale.js, which the registry also uses
+// to pass the locale to handlers as `context.locale`.
+export { activityLocale, DEFAULT_ACTIVITY_LOCALE };
+
+// student-result/v1 names its locales as BCP 47 tags.
+const DOCUMENT_LOCALES = Object.freeze({ es_CL: "es-CL", en_US: "en-US" });
+const DEFAULT_DOCUMENT_LOCALE = DOCUMENT_LOCALES[DEFAULT_ACTIVITY_LOCALE];
+
+/** The BCP 47 tag of an EthicApp or BCP 47 locale (`en_US`, `en-US`), or null. */
+export function documentLocaleOf(locale) {
+    const code = normalizeText(locale).replace("-", "_").toLowerCase();
+    const match = Object.keys(DOCUMENT_LOCALES)
+        .find(candidate => candidate.toLowerCase() === code);
+    return match ? DOCUMENT_LOCALES[match] : null;
+}
+
+// ─── The student's document (epic #1124, #1133) ─────────────────────────────
+
+function isPlainObject(value) {
+    return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+// The fixed texts the adapter writes into a document, per locale. Titles,
+// section titles, labels and values are the tutor's own
+// (ethicapp-ai-additions `argumentation-tutor/backend/modules/student_result/messages.py`),
+// so a mapped document reads like the tutor's, without its descriptions and
+// overview. `message` goes with the document in the student's event.
+const DOCUMENT_TEXTS = Object.freeze({
+    "es-CL": {
+        title: {
+            analysis:   "Retroalimentación sobre tu argumento",
+            comparison: "Retroalimentación sobre tu argumento revisado",
+        },
+        unavailableSummary: "No pudimos preparar la retroalimentación de tu argumento.",
+        sections:           {
+            criteria:         "Criterios",
+            revisedCriteria:  "Criterios de tu argumento revisado",
+            comparison:       "Cambios respecto de tu argumento anterior",
+            bullets:          "Comentarios",
+            argument:         "Tu argumento",
+            previousArgument: "Tu argumento anterior",
+            revisedArgument:  "Tu argumento revisado",
+        },
+        labels: {
+            claim:     "Afirmación",
+            evidence:  "Evidencia",
+            warrant:   "Garantía",
+            qualifier: "Calificador",
+        },
+        values: {
+            inFavor:      "A favor",
+            against:      "En contra",
+            noPosition:   "Sin postura clara",
+            score:        (score, maxScore) => `${score} de ${maxScore}`,
+            notAvailable: "No disponible",
+        },
+        message: "Ya está disponible la retroalimentación sobre tu argumento.",
+    },
+    "en-US": {
+        title: {
+            analysis:   "Feedback on your argument",
+            comparison: "Feedback on your revised argument",
+        },
+        unavailableSummary: "We could not prepare feedback on your argument.",
+        sections:           {
+            criteria:         "Criteria",
+            revisedCriteria:  "Criteria of your revised argument",
+            comparison:       "Changes from your previous argument",
+            bullets:          "Comments",
+            argument:         "Your argument",
+            previousArgument: "Your previous argument",
+            revisedArgument:  "Your revised argument",
+        },
+        labels: {
+            claim:     "Claim",
+            evidence:  "Evidence",
+            warrant:   "Warrant",
+            qualifier: "Qualifier",
+        },
+        values: {
+            inFavor:      "In favor",
+            against:      "Against",
+            noPosition:   "No clear position",
+            score:        (score, maxScore) => `${score} of ${maxScore}`,
+            notAvailable: "Not available",
+        },
+        message: "Feedback on your argument is now available.",
+    },
+});
+
+// The tutor's scale and limits (`document.py` in the tutor), which the
+// mapping follows so that its documents validate as the tutor's do.
+const CRITERION_KEYS = Object.freeze(["claim", "evidence", "warrant", "qualifier"]);
+const MIN_SCORE = 1;
+const MAX_SCORE = 3;
+const CLAIM_POSITIONS = new Map([[1, "inFavor"], [-1, "against"], [0, "noPosition"]]);
+const MAX_BULLETS = 5;
+const SUMMARY_MAX = 2000;
+const BULLET_MAX = 1000;
+const TEXT_MAX = 10000;
+const ELLIPSIS = "…";
+
+// The summary a tutor without `studentResult` sends when the model wrote no
+// analysis, which is the usual case for an analysis; it is English whatever
+// the activity's language, and says nothing the document does not.
+const LEGACY_PLACEHOLDER_SUMMARY = "Argument feedback is now available.";
+
+// A plain-text field: trimmed, cut to `limit` characters with an ellipsis,
+// or null when blank.
+function clippedText(value, limit) {
+    if (typeof value !== "string") {
+        return null;
+    }
+    const text = value.trim();
+    if (!text) {
+        return null;
+    }
+    return text.length <= limit
+        ? text
+        : `${text.slice(0, limit - ELLIPSIS.length).trimEnd()}${ELLIPSIS}`;
+}
+
+function scaleScore(value) {
+    return Number.isInteger(value) && value >= MIN_SCORE && value <= MAX_SCORE ? value : null;
+}
+
+// `{ value, score, available }` of one criterion, as the tutor writes it: the
+// claim is a position without a score; the others read `2 of 3` with their
+// score, or `Not available` outside the scale.
+function criterionResult(key, raw, texts) {
+    const { values } = texts;
+    if (key === "claim") {
+        const position = Number.isInteger(raw) ? CLAIM_POSITIONS.get(raw) : undefined;
+        return position
+            ? { value: values[position], score: null, available: true }
+            : { value: values.notAvailable, score: null, available: false };
+    }
+    const score = scaleScore(raw);
+    return score === null
+        ? { value: values.notAvailable, score: null, available: false }
+        : { value: values.score(score, MAX_SCORE), score, available: true };
+}
+
+function criteriaItems(scores, texts) {
+    let complete = true;
+    const items = CRITERION_KEYS.map(key => {
+        const { value, score, available } = criterionResult(key, scores.get(key), texts);
+        complete = complete && available;
+        const item = { key, label: texts.labels[key], value };
+        if (score !== null) {
+            Object.assign(item, { score, minScore: MIN_SCORE, maxScore: MAX_SCORE });
+        }
+        return item;
+    });
+    return { items, complete };
+}
+
+function trendOf(key, before, after) {
+    const initial = scaleScore(before);
+    const revised = scaleScore(after);
+    if (key === "claim" || initial === null || revised === null) {
+        return null;
+    }
+    if (revised > initial) {
+        return "improved";
+    }
+    return revised < initial ? "declined" : "unchanged";
+}
+
+function comparisonItems(pairs, texts) {
+    return CRITERION_KEYS.map(key => {
+        const pair = isPlainObject(pairs[key]) ? pairs[key] : {};
+        const item = {
+            key,
+            label:  texts.labels[key],
+            before: criterionResult(key, pair.initial, texts).value,
+            after:  criterionResult(key, pair.revised, texts).value,
+        };
+        const trend = trendOf(key, pair.initial, pair.revised);
+        if (trend) {
+            item.trend = trend;
+        }
+        return item;
+    });
+}
+
+// The scores of the legacy `criteria` list, by criterion key.
+function legacyCriterionScores(criteria) {
+    const scores = new Map();
+    for (const item of Array.isArray(criteria) ? criteria : []) {
+        const key = normalizeText(item?.key || item?.label).toLowerCase();
+        if (CRITERION_KEYS.includes(key) && !scores.has(key)) {
+            scores.set(key, item?.score);
+        }
+    }
+    return scores;
+}
+
+function textSection(title, value) {
+    const text = clippedText(value, TEXT_MAX);
+    return text ? [{ kind: "text", title, text }] : [];
+}
+
+// The feedback object of a callback payload, where the legacy reader looks
+// for it (buildFeedbackPayloadFromExternalResult()).
+function legacyFeedbackSource(requestPayload) {
+    const root = isPlainObject(requestPayload) ? requestPayload : {};
+    const source = root.payload?.feedback || root.payload || root;
+    return isPlainObject(source) ? source : {};
+}
+
+/**
+ * The `student-result/v1` document of a callback payload that carries no
+ * `studentResult`: from a tutor that predates ethicapp-ai-additions#233, or
+ * whose document failed the tutor's own validation. It is built from the
+ * legacy keys (`summary`, `criteria`, `bullets`, `argumentPreview`,
+ * `comparison`) as the tutor builds its own document, in `locale` (EthicApp
+ * or BCP 47 spelling; `es-CL` when unknown), with the tutor's titles, labels
+ * and values and without criterion descriptions or overview. No
+ * teacher-only key is read.
+ *
+ * - The placeholder summary of an analysis without model text is left out,
+ *   and so are bullets that repeat the summary.
+ * - A score outside 1..3 reads `Not available`, carries no score and makes
+ *   the document `partial`.
+ * - A payload with neither criteria nor a comparison is `unavailable`.
+ *
+ * @returns {Object} A document that validateStudentResultDocument() accepts.
+ */
+export function legacyStudentDocument(requestPayload, locale) {
+    const documentLocale = documentLocaleOf(locale) ?? DEFAULT_DOCUMENT_LOCALE;
+    const texts = DOCUMENT_TEXTS[documentLocale];
+    const input = legacyFeedbackSource(requestPayload);
+    const document = { schemaVersion: STUDENT_RESULT_DOCUMENT_SCHEMA, locale: documentLocale };
+
+    const scores = legacyCriterionScores(input.criteria);
+    const comparison = isPlainObject(input.comparison) && isPlainObject(input.comparison.scores)
+        ? input.comparison
+        : null;
+    const argument = input.argumentPreview || input.submitted_argument;
+
+    if (!comparison && scores.size === 0) {
+        return {
+            ...document,
+            title:    texts.title.analysis,
+            summary:  texts.unavailableSummary,
+            status:   "unavailable",
+            sections: textSection(texts.sections.argument, argument),
+        };
+    }
+
+    document.title = texts.title[comparison ? "comparison" : "analysis"];
+    const summary = clippedText(input.summary, SUMMARY_MAX);
+    if (summary && summary !== LEGACY_PLACEHOLDER_SUMMARY) {
+        document.summary = summary;
+    }
+
+    const sections = [];
+    if (comparison) {
+        sections.push({
+            kind:  "comparison",
+            title: texts.sections.comparison,
+            items: comparisonItems(comparison.scores, texts),
+        });
+    }
+    const criteria = criteriaItems(scores, texts);
+    sections.push({
+        kind:  "criteria",
+        title: texts.sections[comparison ? "revisedCriteria" : "criteria"],
+        items: criteria.items,
+    });
+
+    const bullets = (Array.isArray(input.bullets) ? input.bullets : [])
+        .map(bullet => clippedText(bullet, BULLET_MAX))
+        .filter(bullet => bullet && bullet !== LEGACY_PLACEHOLDER_SUMMARY
+            && bullet !== document.summary)
+        .slice(0, MAX_BULLETS);
+    if (bullets.length > 0) {
+        sections.push({ kind: "bullets", title: texts.sections.bullets, items: bullets });
+    }
+
+    if (comparison) {
+        sections.push(
+            ...textSection(texts.sections.previousArgument, comparison.initialArgument),
+            ...textSection(texts.sections.revisedArgument, argument || comparison.revisedArgument)
+        );
+    } else {
+        sections.push(...textSection(texts.sections.argument, argument));
+    }
+
+    if (!criteria.complete) {
+        document.status = "partial";
+    }
+    document.sections = sections;
+    return document;
+}
+
+/**
+ * The tutor's own document (ethicapp-ai-additions#233): the callback
+ * payload's `studentResult`, read at its top level as the tutor sends it, or
+ * in a nested feedback object as the legacy keys are read.
+ *
+ * `document` is that object, unchanged, when it passes EthicApp's checks of
+ * the schema (validateStudentResultDocument()), and null otherwise.
+ * `problems` are the checks' problems (codes and paths, which may be logged)
+ * when the payload carries a `studentResult` that fails them, and null when
+ * it carries none or a valid one.
+ *
+ * @returns {{document: Object|null, problems: Object[]|null}}
+ */
+export function tutorStudentDocument(requestPayload) {
+    const root = isPlainObject(requestPayload) ? requestPayload : {};
+    const carrier = [root, root.payload?.feedback, root.payload]
+        .find(candidate => isPlainObject(candidate) && Object.hasOwn(candidate, "studentResult"));
+    if (!carrier) {
+        return { document: null, problems: null };
+    }
+
+    const candidate = carrier.studentResult;
+    const { valid, problems } = validateStudentResultDocument(
+        STUDENT_RESULT_DOCUMENT_SCHEMA, candidate
+    );
+    return valid ? { document: candidate, problems: null } : { document: null, problems };
+}
 
 /**
  * What the adapter publishes to the student for one tutor callback: built
  * live when the callback arrives, and rebuilt from the stored callback when
  * the student loads the activity (`student-results-reading`, #1126). Both
  * paths call it, so the rebuilt result is the one published live.
+ *
+ * The result is a `student-result/v1` document (epic #1124): the tutor's
+ * `studentResult`, unchanged, when it carries a valid one
+ * (tutorStudentDocument()), and otherwise the legacy keys mapped by
+ * legacyStudentDocument() in the locale `resolveLocale()` gives, which is
+ * called only then. The teacher-only keys of the payload (the claim type of
+ * #850, the mode and evidence of #865) are never read into it; they are only
+ * recorded with the result.
  *
  * `destination` is the callback's trusted destination (`sessionId`,
  * `phaseId`, `questionId`, `userId`): the job's when the callback arrives,
@@ -262,12 +596,20 @@ const ATS_FEEDBACK_MESSAGE = "Your argument tutor feedback is now available.";
  * @param {Object} requestPayload - The callback payload, as stored in
  *     `external_service_results.raw_payload`.
  * @param {{sessionId, phaseId, questionId, userId}} destination
- * @returns {{fallbackContext: Object, feedbackPayload: Object, studentResult:
- *     {phaseId: number|null, questionId: number|null, component: Object,
- *     payload: {feedback: Object}, message: string, status: string}}}
+ * @param {Object} [options]
+ * @param {() => Promise<string|null>} [options.resolveLocale] - The
+ *     activity's locale for a mapped document; null gives `es-CL`.
+ * @returns {Promise<{fallbackContext: Object, source: "tutor"|"legacy",
+ *     tutorDocumentProblems: Object[]|null, studentResult: {phaseId:
+ *     number|null, questionId: number|null, documentSchema: string,
+ *     document: Object, message: string, status: string}}>}
+ *     `studentResult` is the publishStudentResult() payload without
+ *     `userId`, `sessionId` and `resultId`.
  */
-export function buildStudentFeedback(requestPayload, destination) {
-    const payloadRoot = requestPayload && typeof requestPayload === "object" ? requestPayload : {};
+export async function buildStudentFeedback(requestPayload, destination, {
+    resolveLocale = async () => null,
+} = {}) {
+    const payloadRoot = isPlainObject(requestPayload) ? requestPayload : {};
     const fallbackContext = {
         sessionId:  Number(payloadRoot.sessionId) || destination?.sessionId,
         phaseId:    Number(payloadRoot.phaseId) || destination?.phaseId,
@@ -275,25 +617,21 @@ export function buildStudentFeedback(requestPayload, destination) {
         userId:     Number(payloadRoot.userId) || destination?.userId,
     };
 
-    // The student's feedback is unchanged: the matched claim type (#850),
-    // the evaluation's mode and its evidence (#865) are for teachers, and are
-    // only recorded with the result.
-    const feedbackPayload = buildFeedbackPayloadFromExternalResult(requestPayload, fallbackContext);
+    const tutor = tutorStudentDocument(requestPayload);
+    const document = tutor.document
+        ?? legacyStudentDocument(requestPayload, await resolveLocale());
     return {
         fallbackContext,
-        feedbackPayload,
-        studentResult: {
-            phaseId:    Number(fallbackContext.phaseId) || null,
-            questionId: Number(fallbackContext.questionId) || null,
-            component:  {
-                componentId: ATS_FEEDBACK_COMPONENT_ID,
-                title:       ATS_FEEDBACK_COMPONENT_TITLE,
-            },
-            payload: {
-                feedback: feedbackPayload,
-            },
-            message: ATS_FEEDBACK_MESSAGE,
-            status:  normalizeText(payloadRoot.status) || "completed",
+        source:                tutor.document ? "tutor" : "legacy",
+        tutorDocumentProblems: tutor.problems,
+        studentResult:         {
+            phaseId:        Number(fallbackContext.phaseId) || null,
+            questionId:     Number(fallbackContext.questionId) || null,
+            documentSchema: STUDENT_RESULT_DOCUMENT_SCHEMA,
+            document,
+            message:        DOCUMENT_TEXTS[document.locale]?.message
+                ?? DOCUMENT_TEXTS[DEFAULT_DOCUMENT_LOCALE].message,
+            status: normalizeText(payloadRoot.status) || "completed",
         },
     };
 }
@@ -337,12 +675,18 @@ export function differentialQuestionText(row) {
  * requests, decided by helpers/tutor-mode.js and given only when the tutor's
  * descriptor declares the field; null leaves `evaluation_mode` out. The
  * stored configuration's own `evaluation_mode` is never copied as is.
+ *
+ * `locale` (#1133, ethicapp-ai-additions#233) is the activity's locale
+ * (activityLocale()), the language the tutor writes the student's feedback
+ * in. It is a session input, like `case_context`, never a teacher setting;
+ * null leaves it out.
  */
 export function buildAtsSessionPayload(
     metadata,
     serviceConfiguration = {},
     caseContext = null,
-    evaluationMode = null
+    evaluationMode = null,
+    locale = null
 ) {
     const body = {
         case_id:    metadata.caseId,
@@ -360,6 +704,9 @@ export function buildAtsSessionPayload(
     }
     if (caseContext) {
         body.case_context = caseContext;
+    }
+    if (locale) {
+        body.locale = locale;
     }
     return body;
 }
@@ -381,16 +728,25 @@ const TUTOR_SESSION_MODES = new Set(["enhanced", "basic"]);
 // How the tutor names the context when it refuses one: `400 {"error":
 // "Invalid case context", "errors": [...]}` (ethicapp-ai-additions#209).
 const CASE_CONTEXT_NAME = /case[ _]context/iu;
+// And the locale: `400 {"error": "Invalid locale", "errors": {"locale":
+// "..."}}` (ethicapp-ai-additions#233).
+const LOCALE_NAME = /\blocale\b/iu;
 
 /**
  * Which optional part of a session body the tutor refused with a 400, so it
- * can be left out: `case_context` when the error names it, or when it is the
- * only optional part sent, otherwise `llm_tier`. null when the body has no
- * optional part left.
+ * can be left out: `case_context` when the error names it, `locale` when the
+ * error names it, `case_context` when it is the only other optional part
+ * sent, otherwise `llm_tier`. null when the body has no optional part left.
  */
 function rejectedOptionalField(error, body) {
-    const named = CASE_CONTEXT_NAME.test(JSON.stringify(error?.responseBody ?? null));
-    if (body.case_context && (named || !body.llm_tier)) {
+    const answer = JSON.stringify(error?.responseBody ?? null);
+    if (body.case_context && CASE_CONTEXT_NAME.test(answer)) {
+        return "case_context";
+    }
+    if (body.locale && LOCALE_NAME.test(answer)) {
+        return "locale";
+    }
+    if (body.case_context && !body.llm_tier) {
         return "case_context";
     }
     return body.llm_tier ? "llm_tier" : null;
@@ -427,6 +783,14 @@ function caseContextOutcome(response, rejection) {
  * chose, not a tutor default. `creation.tutorRequestedMode` is the
  * `requestedMode` the tutor reports back, when it reports one.
  *
+ * `locale` is sent as `locale` (#1133) and kept when the configured
+ * settings are rejected. `creation.locale` is the locale the tutor reports
+ * back, which a tutor that predates ethicapp-ai-additions#233 does not (it
+ * reports the key as unsupported, `degraded: true`). A locale the tutor
+ * refuses with a 400 is dropped and the session created again without it,
+ * in the tutor's default language; `creation.localeRejection` holds the
+ * tutor's answer.
+ *
  * @param {(body: object) => Promise<object>} request POST /sessions
  */
 export async function createAtsSession({
@@ -434,17 +798,22 @@ export async function createAtsSession({
     serviceConfiguration = {},
     caseContext = null,
     evaluationMode = null,
+    locale = null,
     request,
 }) {
     let configuration = serviceConfiguration;
     let context = caseContext;
+    let sessionLocale = locale;
     let configurationRejected = false;
     let rejection = null;
     let caseContextRejection;
+    let localeRejection;
     let response;
 
     for (;;) {
-        const body = buildAtsSessionPayload(metadata, configuration, context, evaluationMode);
+        const body = buildAtsSessionPayload(
+            metadata, configuration, context, evaluationMode, sessionLocale
+        );
         try {
             response = await request(body);
             break;
@@ -459,6 +828,14 @@ export async function createAtsSession({
             if (field === "case_context") {
                 context = null;
                 caseContextRejection = error.responseBody ?? null;
+                continue;
+            }
+
+            if (field === "locale") {
+                console.warn("[ats-feedback] The tutor rejected the activity's locale; "
+                    + "creating the session without it.", describeError(error));
+                sessionLocale = null;
+                localeRejection = error.responseBody ?? null;
                 continue;
             }
 
@@ -484,6 +861,14 @@ export async function createAtsSession({
         configurationRejected,
         ...(configurationRejected ? { rejection } : {}),
     };
+
+    const reportedLocale = documentLocaleOf(response?.locale);
+    if (reportedLocale) {
+        creation.locale = reportedLocale;
+    }
+    if (localeRejection !== undefined) {
+        creation.localeRejection = localeRejection;
+    }
 
     if (TUTOR_SESSION_MODES.has(response?.mode)) {
         creation.tutorMode = response.mode;

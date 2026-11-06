@@ -8,7 +8,9 @@ const FINALIZING_HOOKS = new Set(["phase-ended"]);
 /**
  * Dispatches a phase hook to the services the phase enables, each with the
  * configuration the design stores for it in that phase (#734). The design is
- * read now, so handlers see what it holds when the hook fires.
+ * read now, so handlers see what it holds when the hook fires. Handlers also
+ * receive the activity's locale as `context.locale` (`es_CL`, `en_US`; #1124)
+ * when the phase's services could be read.
  * @param {string} hookName
  * @param {object} context hook context; `context.phaseId` selects the phase
  * @returns {Promise<PromiseSettledResult[]>} one outcome per handler run
@@ -30,12 +32,13 @@ export async function dispatchPhaseHook(hookName, context, {
         phaseServices = { enabledServiceIds: [], configurations: {} };
     }
 
-    const { enabledServiceIds, configurations } = phaseServices;
+    const { enabledServiceIds, configurations, locale } = phaseServices;
     if (enabledServiceIds.length === 0 && !finalizing) {
         return [];
     }
 
-    return registry.dispatchHook(hookName, context, {
+    const hookContext = locale ? { ...context, locale } : context;
+    return registry.dispatchHook(hookName, hookContext, {
         enabledServiceIds,
         serviceConfigurations: configurations,
     });

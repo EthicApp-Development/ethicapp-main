@@ -41,7 +41,9 @@ const phases = new Map([[PHASE_ON, SESSION_ON], [PHASE_OFF, SESSION_OFF]]);
 const db = installFakePgPool((sql, params = []) => {
     const id = Number(params[0]);
     if (sql === PHASE_SESSION_AI_SERVICES_SQL) {
-        return phases.has(id) ? [{ ai_services_enabled: switches.get(phases.get(id)) }] : [];
+        return phases.has(id)
+            ? [{ ai_services_enabled: switches.get(phases.get(id)), language_code: "en" }]
+            : [];
     }
     if (sql === SESSION_ACTIVITY_DESIGN_SQL) {
         return switches.has(id) ? [{ design: DESIGN_ID, ai_services_enabled: switches.get(id) }] : [];
@@ -98,6 +100,7 @@ describe("getPhaseExternalServices", () => {
         assert.deepEqual(await getPhaseExternalServices(PHASE_ON), {
             enabledServiceIds: ["reviewer"],
             configurations:    { reviewer: { tone: "kind" } },
+            locale:            "en_US",
         });
     });
 
@@ -152,6 +155,16 @@ describe("dispatchPhaseHook through the session's switch", () => {
 
         assert.equal(registry.calls.length, 1);
         assert.deepEqual(registry.calls[0].options.enabledServiceIds, ["reviewer"]);
+    });
+
+    it("passes the activity's locale to the handlers as context.locale (#1124)", async () => {
+        const registry = fakeRegistry();
+        const context = { sessionId: SESSION_ON, phaseId: PHASE_ON };
+
+        await dispatchPhaseHook("student-response-submitted", context, { registry });
+
+        assert.deepEqual(registry.calls[0].context, { ...context, locale: "en_US" });
+        assert.equal(context.locale, undefined, "the caller's context is not changed");
     });
 });
 

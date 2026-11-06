@@ -1,5 +1,6 @@
 import * as config from "../../config/database.config.js";
 import * as rpg2 from "../../db/rest-pg-2.js";
+import { loadSessionActivityLocale } from "../../helpers/activity-locale.js";
 import { findQuestionUnit, questionUnitId } from "../../helpers/design-analysis-units.js";
 import {
     decideTutorMode,
@@ -12,6 +13,7 @@ import {
 } from "../../helpers/tutor-mode.js";
 import defaultAiAdditionsClient from "../../services/ai-additions-client.service.js";
 import {
+    activityLocale,
     ARGUMENTATION_TUTOR_SERVICE_ID,
     buildArgumentClientContext,
     buildFeedbackPayloadFromExternalResult,
@@ -320,14 +322,15 @@ async function loadCaseText(caseId) {
 
 /**
  * What a tutor session is built from: the EthicApp session's name and
- * description, the activity's design (id, document and case) and the case
- * text.
+ * description, the activity's design (id, document, case and language) and
+ * the case text.
  */
 async function loadSessionContext(context) {
     const row = await rpg2.singleSQL({
         dbcon: config.dbconnString,
         sql:   `
-            SELECT s.name, s.descr, ds.id AS design_id, ds.design, ds.case_id
+            SELECT s.name, s.descr, ds.id AS design_id, ds.design, ds.case_id,
+                   ds.language_code
             FROM sessions AS s
             LEFT JOIN activity AS a
                 ON a.session = s.id
@@ -345,6 +348,7 @@ async function loadSessionContext(context) {
         sessionDescription: normalizeText(row?.descr),
         designId:           positiveIdOrNull(row?.design_id),
         design:             row?.design ?? null,
+        languageCode:       normalizeText(row?.language_code) || null,
         caseId,
         caseText:           await loadCaseText(caseId),
     };
@@ -400,9 +404,10 @@ function createDependencies(overrides = {}) {
         resolveGroupId,
         resolveQuestionPosition,
         loadSessionContext,
+        loadActivityLocale: loadSessionActivityLocale,
         resolveQuestionText,
         loadTutorModeInputs,
-        now: () => Date.now(),
+        now:                () => Date.now(),
         ...overrides,
     };
 }
@@ -416,9 +421,11 @@ function isMissingPreviousAnalysisError(error) {
     return responseError.includes("no previous analysis") || responseError.includes("no previous argument");
 }
 
-// Publishes one tutor callback's feedback to its student, with the id of the
-// stored result it came from (#1126), so the student app can match it with
-// the same result rebuilt through `student-results-reading`.
+// Publishes one tutor callback's feedback to its student, as a document
+// (#1133), with the id of the stored result it came from (#1126), so the
+// student app can match it with the same result rebuilt through
+// `student-results-reading`. The registry sends the document only when it
+// passes its checks (README, "Student result documents").
 async function publishFeedbackToStudent({
     fallbackContext, studentResult, resultId, publishStudentResult,
 }) {
@@ -528,6 +535,8 @@ function createAtsFeedbackHandlers({ dependencies, publishStudentResult }) {
             serviceConfiguration: context.serviceConfiguration,
             caseContext:          offered ? decision.caseContext : null,
             evaluationMode:       decision.evaluationMode,
+            // The language of the student's feedback (#1133).
+            locale:               activityLocale(sessionContext?.languageCode),
             request:              body => requestAtsJson("/sessions", { method: "POST", body }),
         });
         noteContextOutcome(created.creation, questionKey);
@@ -763,6 +772,21 @@ function createAtsFeedbackHandlers({ dependencies, publishStudentResult }) {
         });
     }
 
+    // The activity's locale, or null (the mapping's default) when it cannot
+    // be read: a failed read never fails the callback.
+    async function activityLocaleOrNull(sessionId) {
+        try {
+            return await dependencies.loadActivityLocale(sessionId);
+        } catch (error) {
+            console.warn("[external-services][ats] Unable to read the activity's locale; "
+                + "the feedback is mapped in the default locale.", {
+                sessionId: Number(sessionId) || null,
+                error:     normalizeText(error?.message) || "Unknown error",
+            });
+            return null;
+        }
+    }
+
     async function processExternalResult({ context, callback }) {
         const requestPayload = context?.requestPayload && typeof context.requestPayload === "object"
             ? context.requestPayload
@@ -775,10 +799,22 @@ function createAtsFeedbackHandlers({ dependencies, publishStudentResult }) {
                 userId:  Number(requestPayload?.userId) || context.userId,
             });
 
-        // `context` holds the callback's trusted destination, the job's.
-        const { fallbackContext, feedbackPayload, studentResult } = buildStudentFeedback(
-            requestPayload, context
-        );
+        // `context` holds the callback's trusted destination, the job's. A
+        // callback without the tutor's document is mapped in the activity's
+        // locale, which is recorded so the rebuild maps it the same way.
+        const {
+            fallbackContext, source, tutorDocumentProblems, studentResult,
+        } = await buildStudentFeedback(requestPayload, context, {
+            resolveLocale: () => activityLocaleOrNull(context.sessionId),
+        });
+        if (tutorDocumentProblems) {
+            // Codes and paths only: the document quotes the student.
+            console.warn("[external-services][ats] The tutor's student document fails "
+                + "EthicApp's checks; its legacy keys are published instead.", JSON.stringify({
+                resultId: context?.resultId ?? null,
+                problems: tutorDocumentProblems.slice(0, 10),
+            }));
+        }
         await publishFeedbackToStudent({
             fallbackContext,
             studentResult,
@@ -792,14 +828,20 @@ function createAtsFeedbackHandlers({ dependencies, publishStudentResult }) {
             payload: {
                 groupId,
                 publishedToUserId: Number(fallbackContext.userId) || null,
-                feedbackTitle:     feedbackPayload.title,
+                feedbackTitle:     studentResult.document.title,
+                studentDocument:   { source, locale: studentResult.document.locale },
                 ...claimTypeFromExternalResult(requestPayload),
                 ...tutorEvaluationFromExternalResult(requestPayload),
             },
         });
     }
 
-    return { processStudentResponse, processPhaseEnded, processExternalResult };
+    return {
+        processStudentResponse,
+        processPhaseEnded,
+        processExternalResult,
+        activityLocaleOrNull,
+    };
 }
 
 /**
@@ -894,6 +936,9 @@ export async function register({
 
     // The feedback published to a student, rebuilt from the stored callbacks
     // when the student loads the activity (#1126): the tutor is not called.
+    // A callback stored without the tutor's document and without the locale
+    // it was mapped in (one processed before #1133) is mapped in the
+    // activity's locale, which the registry passes as `context.locale`.
     subscribe("student-results-reading", readStudentResults);
 
     subscribe("phase-ended", async (context, { callback }) => {

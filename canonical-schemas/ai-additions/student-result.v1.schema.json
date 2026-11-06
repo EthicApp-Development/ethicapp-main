@@ -1,0 +1,260 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/EthicApp-Development/ethicapp-ai-additions/schemas/student-result/v1",
+  "title": "EthicApp Student Result Document",
+  "description": "A result that an AI service publishes to one student, rendered by the EthicApp student app without code from the service. See the root README, section 'Student Result Document', for semantics. Every text is written by the service in the language named by locale. Text fields are plain text unless their description says they use the Markdown subset of the contract. Rules that JSON Schema cannot express, checked by the shared Python validator (ethicapp_ai_capabilities.validate_student_result) and by the service before publishing: criterion keys are unique within a criteria section, and a criterion with maxScore has minScore (0 when omitted) < maxScore and minScore <= score <= maxScore. EthicApp keeps a verbatim copy of this file (ethicapp-main canonical-schemas/ai-additions/); change both together.",
+  "type": "object",
+  "required": ["schemaVersion", "locale", "title", "sections"],
+  "properties": {
+    "schemaVersion": {
+      "const": "student-result/v1"
+    },
+    "locale": {
+      "description": "Language of every text in the document, as a BCP 47 tag. EthicApp's es_CL and en_US.",
+      "enum": ["es-CL", "en-US"]
+    },
+    "title": {
+      "description": "Heading of the result. Single-line plain text. It must not name the service.",
+      "$ref": "#/$defs/singleLineText",
+      "type": "string",
+      "maxLength": 120
+    },
+    "summary": {
+      "description": "Short message shown under the title. Plain text; line breaks are kept.",
+      "$ref": "#/$defs/plainText",
+      "type": "string",
+      "maxLength": 2000
+    },
+    "overview": {
+      "description": "How the service evaluated the student's work, shown as help above the sections. Markdown subset.",
+      "$ref": "#/$defs/markdownText",
+      "type": "string",
+      "maxLength": 4000
+    },
+    "status": {
+      "description": "complete (the default when omitted): the document holds the whole result. partial: some parts could not be produced, and the texts say which. unavailable: the service could not produce the result, and summary says so.",
+      "enum": ["complete", "partial", "unavailable"]
+    },
+    "sections": {
+      "description": "Body of the result, rendered in order. Renderers skip sections of a kind they do not know.",
+      "type": "array",
+      "maxItems": 20,
+      "items": { "$ref": "#/$defs/section" }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "plainText": {
+      "description": "Plain text: renderers show its characters as they are and interpret no markup. A line feed is shown as a line break.",
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S"
+    },
+    "singleLineText": {
+      "description": "Plain text on one line: no carriage return or line feed.",
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S",
+      "not": { "type": "string", "pattern": "[\\r\\n]" }
+    },
+    "markdownText": {
+      "description": "Markdown subset of student-result/v1: paragraphs (separated by a blank line), line breaks (a single line feed inside a paragraph), **bold**, *italics*, bulleted lists (lines starting with '- ') and numbered lists (lines starting with '1. '), and backslash escapes of ASCII punctuation. Renderers show everything else as plain text: headings, links, autolinks, images, code, blockquotes, tables, horizontal rules, HTML tags and entities.",
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S"
+    },
+    "sectionTitle": {
+      "description": "Optional heading of a section. Single-line plain text.",
+      "$ref": "#/$defs/singleLineText",
+      "type": "string",
+      "maxLength": 120
+    },
+    "itemKey": {
+      "description": "Stable machine identifier, never shown to the student.",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]*$",
+      "not": { "type": "string", "pattern": "\\n" },
+      "maxLength": 64
+    },
+    "sectionKind": {
+      "description": "Kebab case. The 'not' rule rejects a trailing line feed, which a Python '$' would accept.",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$",
+      "not": { "type": "string", "pattern": "\\n" },
+      "maxLength": 64
+    },
+    "section": {
+      "description": "A section of a known kind must match that kind's definition exactly. A section of any other kind needs only a kind in kebab case; renderers skip it, so later versions of the contract can add kinds without breaking older renderers.",
+      "type": "object",
+      "required": ["kind"],
+      "properties": {
+        "kind": { "$ref": "#/$defs/sectionKind" }
+      },
+      "allOf": [
+        {
+          "if": { "type": "object", "required": ["kind"], "properties": { "kind": { "const": "criteria" } } },
+          "then": { "$ref": "#/$defs/criteriaSection" }
+        },
+        {
+          "if": { "type": "object", "required": ["kind"], "properties": { "kind": { "const": "bullets" } } },
+          "then": { "$ref": "#/$defs/bulletsSection" }
+        },
+        {
+          "if": { "type": "object", "required": ["kind"], "properties": { "kind": { "const": "text" } } },
+          "then": { "$ref": "#/$defs/textSection" }
+        },
+        {
+          "if": { "type": "object", "required": ["kind"], "properties": { "kind": { "const": "comparison" } } },
+          "then": { "$ref": "#/$defs/comparisonSection" }
+        }
+      ]
+    },
+    "criteriaSection": {
+      "description": "The criteria the student's work was evaluated on, each with its result.",
+      "type": "object",
+      "required": ["kind", "items"],
+      "properties": {
+        "kind": { "const": "criteria" },
+        "title": { "$ref": "#/$defs/sectionTitle" },
+        "items": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 12,
+          "items": { "$ref": "#/$defs/criterion" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "criterion": {
+      "type": "object",
+      "required": ["key", "label", "value"],
+      "properties": {
+        "key": {
+          "description": "Unique within the section.",
+          "$ref": "#/$defs/itemKey"
+        },
+        "label": {
+          "description": "Name of the criterion. Single-line plain text.",
+          "$ref": "#/$defs/singleLineText",
+          "type": "string",
+          "maxLength": 80
+        },
+        "value": {
+          "description": "Result on the criterion as the student reads it, such as '2 of 3' or 'In favor'. Renderers always show it; it must make sense without score. Single-line plain text.",
+          "$ref": "#/$defs/singleLineText",
+          "type": "string",
+          "maxLength": 120
+        },
+        "score": {
+          "description": "Optional numeric result, for a visual such as a meter. Renderers use it only together with maxScore.",
+          "type": "number"
+        },
+        "minScore": {
+          "description": "Lowest possible score; 0 when omitted. Requires maxScore.",
+          "type": "number"
+        },
+        "maxScore": {
+          "description": "Highest possible score, greater than minScore. Requires score.",
+          "type": "number"
+        },
+        "description": {
+          "description": "What the criterion means and how it was evaluated, shown when the student opens it. Markdown subset.",
+          "$ref": "#/$defs/markdownText",
+          "type": "string",
+          "maxLength": 2000
+        }
+      },
+      "dependentRequired": {
+        "minScore": ["maxScore"],
+        "maxScore": ["score"]
+      },
+      "additionalProperties": false
+    },
+    "bulletsSection": {
+      "description": "A list of short points, such as suggestions.",
+      "type": "object",
+      "required": ["kind", "items"],
+      "properties": {
+        "kind": { "const": "bullets" },
+        "title": { "$ref": "#/$defs/sectionTitle" },
+        "items": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 12,
+          "items": {
+            "description": "Plain text; line breaks are kept.",
+            "$ref": "#/$defs/plainText",
+            "type": "string",
+            "maxLength": 1000
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "textSection": {
+      "description": "A block of text, such as the student's own answer.",
+      "type": "object",
+      "required": ["kind", "text"],
+      "properties": {
+        "kind": { "const": "text" },
+        "title": { "$ref": "#/$defs/sectionTitle" },
+        "text": {
+          "description": "Plain text; line breaks are kept.",
+          "$ref": "#/$defs/plainText",
+          "type": "string",
+          "maxLength": 10000
+        }
+      },
+      "additionalProperties": false
+    },
+    "comparisonSection": {
+      "description": "How results changed between two versions of the student's work.",
+      "type": "object",
+      "required": ["kind", "items"],
+      "properties": {
+        "kind": { "const": "comparison" },
+        "title": { "$ref": "#/$defs/sectionTitle" },
+        "items": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 12,
+          "items": { "$ref": "#/$defs/comparisonItem" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "comparisonItem": {
+      "type": "object",
+      "required": ["label", "before", "after"],
+      "properties": {
+        "key": {
+          "description": "Optional; when a criteria section of the same document has an item for the same thing, the same key.",
+          "$ref": "#/$defs/itemKey"
+        },
+        "label": {
+          "description": "What is compared. Single-line plain text.",
+          "$ref": "#/$defs/singleLineText",
+          "type": "string",
+          "maxLength": 80
+        },
+        "before": {
+          "description": "Result of the earlier version. Plain text; line breaks are kept.",
+          "$ref": "#/$defs/plainText",
+          "type": "string",
+          "maxLength": 500
+        },
+        "after": {
+          "description": "Result of the later version. Plain text; line breaks are kept.",
+          "$ref": "#/$defs/plainText",
+          "type": "string",
+          "maxLength": 500
+        },
+        "trend": {
+          "description": "Optional direction of the change, for styling: improved, unchanged or declined. Omitted when the change is neither better nor worse, such as a change of position.",
+          "enum": ["improved", "unchanged", "declined"]
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

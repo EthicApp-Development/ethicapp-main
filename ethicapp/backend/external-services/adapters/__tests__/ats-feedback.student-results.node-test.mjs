@@ -1,7 +1,9 @@
 // The argumentation tutor's student-results-reading handler (epic #1123,
 // #1126): the feedback it published to a student, rebuilt from the stored
 // callbacks, equals what it published live, and the live payload carries the
-// stored result's id.
+// stored result's id. Since #1133 both are student-result/v1 documents: the
+// tutor's own when the callback carries one, otherwise the legacy keys
+// mapped in the activity's locale.
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import { fileURLToPath } from "node:url";
@@ -15,6 +17,12 @@ import {
     STUDENT_RESULTS_READING_HOOK,
     validateStudentResults,
 } from "../../../services/external-service-student-results.js";
+import {
+    checkStudentResultDocument,
+    DECLARATION_STATUS,
+    STUDENT_RESULT_SCOPE,
+    validateStudentResultDocument,
+} from "../../../services/student-result-documents.js";
 
 const SERVICE_ID = "argumentation-tutor-system";
 const manifestUrl = new URL("../../manifest.json", import.meta.url);
@@ -28,6 +36,38 @@ const STUDENT_ID = 31;
 const OTHER_STUDENT_ID = 32;
 
 const ARGUMENT = "The company should disclose the defect because people trust it.";
+
+const examplesUrl = new URL(
+    "../../../../../canonical-schemas/ai-additions/examples/student-result.v1/", import.meta.url
+);
+async function example(name) {
+    return JSON.parse(await fs.readFile(new URL(`${name}.json`, examplesUrl), "utf8"));
+}
+
+// The keys the tutor sends for teachers only (#850, #865, #870).
+const TEACHER_KEYS = Object.freeze([
+    "claimTypeId", "claimTypeRationale", "tutorMode", "requestedMode",
+    "evidenceFactIds", "unsupportedClaims",
+]);
+
+// The tutor's declaration of its document, as the descriptor service
+// normalizes it.
+const STUDENT_OUTPUTS = Object.freeze([{
+    id:             "argument-feedback",
+    documentSchema: "student-result/v1",
+    scopes:         [STUDENT_RESULT_SCOPE],
+}]);
+
+// The registry's check of a rebuilt document, with the tutor's declaration.
+function checkDocument({ documentSchema, document }) {
+    return checkStudentResultDocument({
+        documentSchema,
+        document,
+        scope:            STUDENT_RESULT_SCOPE,
+        declaration:      { status: DECLARATION_STATUS.KNOWN, studentOutputs: STUDENT_OUTPUTS },
+        validateDocument: validateStudentResultDocument,
+    });
+}
 
 // The callback payload the tutor sends for a first analysis
 // (ethicapp-ai-additions, ethicapp_callback.py).
@@ -108,9 +148,11 @@ async function publishLive(requestPayload, {
     id = resultId(),
     userId = STUDENT_ID,
     publishStudentResult = null,
+    loadActivityLocale = async () => "es_CL",
 } = {}) {
     const handlers = new Map();
     const published = [];
+    const localeReads = [];
     await register({
         subscribe:            (hookName, handler) => handlers.set(hookName, handler),
         publishStudentResult: async payload => {
@@ -120,7 +162,13 @@ async function publishLive(requestPayload, {
             published.push(payload);
             return true;
         },
-        atsFeedbackDependencies: { resolveGroupId: async () => 7 },
+        atsFeedbackDependencies: {
+            resolveGroupId:     async () => 7,
+            loadActivityLocale: async sessionId => {
+                localeReads.push(sessionId);
+                return loadActivityLocale(sessionId);
+            },
+        },
     });
 
     const callbacks = [];
@@ -136,7 +184,7 @@ async function publishLive(requestPayload, {
         resultId:   id,
     }, { callback: async result => { callbacks.push(result); } });
 
-    return { id, published, callback: callbacks[0], handlers };
+    return { id, published, callback: callbacks[0], handlers, localeReads };
 }
 
 // The stored result of a callback, as the student results reader returns it.
@@ -171,20 +219,42 @@ function readerOf(stored) {
     };
 }
 
-function context(userId = STUDENT_ID) {
-    return Object.freeze({ serviceId: SERVICE_ID, sessionId: SESSION_ID, userId });
+// The handler's context as the registry passes it, with the activity's
+// locale it read (null when it could not).
+function context(userId = STUDENT_ID, locale = null) {
+    return Object.freeze({ serviceId: SERVICE_ID, sessionId: SESSION_ID, userId, locale });
 }
 
-// What publishStudentResult received, without the keys an entry does not
-// carry (the student, who is the reader's, and the session, which is the
-// route's).
+// What publishStudentResult received, as the registry emits a document
+// (`component: { documentSchema }` with the document as `payload`), without
+// the keys an entry does not carry (the student, who is the reader's, and the
+// session, which is the route's).
 function publishedEntry(payload) {
     assert.equal(payload.userId, STUDENT_ID);
     assert.equal(payload.sessionId, SESSION_ID);
-    const entry = { ...payload };
-    delete entry.userId;
-    delete entry.sessionId;
-    return entry;
+    const { userId, sessionId, documentSchema, document, ...entry } = payload;
+    assert.ok(userId && sessionId);
+    return { ...entry, component: { documentSchema }, payload: document };
+}
+
+// Every key of every object in `value`, at any depth.
+function allKeys(value, keys = new Set()) {
+    if (Array.isArray(value)) {
+        value.forEach(item => allKeys(item, keys));
+    } else if (value !== null && typeof value === "object") {
+        for (const [key, nested] of Object.entries(value)) {
+            keys.add(key);
+            allKeys(nested, keys);
+        }
+    }
+    return keys;
+}
+
+function assertNoTeacherKey(value, label) {
+    const keys = allKeys(value);
+    for (const key of TEACHER_KEYS) {
+        assert.equal(keys.has(key), false, `${label}: ${key}`);
+    }
 }
 
 function withoutPublishedAt(entry) {
@@ -195,7 +265,7 @@ function withoutPublishedAt(entry) {
 
 // ─── The live payload ───────────────────────────────────────────────────────
 
-test("the feedback published live carries the stored result's id", async () => {
+test("the feedback published live is a document with the stored result's id", async () => {
     const { id, published, callback } = await publishLive(analysisPayload());
 
     assert.equal(published.length, 1);
@@ -203,19 +273,67 @@ test("the feedback published live carries the stored result's id", async () => {
     assert.equal(callback.status, "completed");
     assert.equal(callback.payload.publishedToUserId, STUDENT_ID);
     assert.deepEqual(published[0], {
-        userId:     STUDENT_ID,
-        sessionId:  SESSION_ID,
-        resultId:   id,
-        phaseId:    PHASE_ID,
-        questionId: QUESTION_ID,
-        component:  {
-            componentId: "argument-tutor-chat-feedback",
-            title:       "Argument Tutor Feedback",
-        },
-        payload: { feedback: published[0].payload.feedback },
-        message: "Your argument tutor feedback is now available.",
-        status:  "completed",
+        userId:         STUDENT_ID,
+        sessionId:      SESSION_ID,
+        resultId:       id,
+        phaseId:        PHASE_ID,
+        questionId:     QUESTION_ID,
+        documentSchema: "student-result/v1",
+        document:       published[0].document,
+        message:        "Ya está disponible la retroalimentación sobre tu argumento.",
+        status:         "completed",
     });
+    assert.deepEqual(checkDocument(published[0]).problems, []);
+    // What the callback recorded: the teacher-only keys, and how the
+    // document was made.
+    assert.equal(callback.payload.claimTypeId, "AF2");
+    assert.equal(callback.payload.tutorMode, "enhanced");
+    assert.equal(callback.payload.feedbackTitle, "Retroalimentación sobre tu argumento");
+    assert.deepEqual(callback.payload.studentDocument, { source: "legacy", locale: "es-CL" });
+});
+
+test("the tutor's document is published unchanged, with no teacher-only key", async () => {
+    for (const name of ["tutor-analysis.en_US", "tutor-comparison.es_CL"]) {
+        const document = await example(name);
+        const { published, callback, localeReads } = await publishLive(
+            analysisPayload({ studentResult: document })
+        );
+
+        assert.equal(published.length, 1, name);
+        assert.equal(published[0].documentSchema, "student-result/v1");
+        assert.equal(published[0].document, document, `${name}: the same object`);
+        assert.deepEqual(published[0].document, await example(name), `${name}: unchanged`);
+        assert.equal(published[0].message, document.locale === "en-US"
+            ? "Feedback on your argument is now available."
+            : "Ya está disponible la retroalimentación sobre tu argumento.");
+        assert.deepEqual(localeReads, [], `${name}: the activity's locale is not read`);
+        assertNoTeacherKey(published[0], name);
+        assert.deepEqual(callback.payload.studentDocument,
+            { source: "tutor", locale: document.locale }, name);
+        assert.equal(callback.payload.feedbackTitle, document.title, name);
+    }
+});
+
+test("a callback without the tutor's document is mapped in the activity's locale", async () => {
+    const english = await publishLive(analysisPayload(), {
+        loadActivityLocale: async () => "en_US",
+    });
+    assert.deepEqual(english.localeReads, [SESSION_ID]);
+    assert.equal(english.published[0].document.locale, "en-US");
+    assert.equal(english.published[0].document.title, "Feedback on your argument");
+    assert.deepEqual(english.published[0].document.sections[0].items.map(item => item.label),
+        ["Claim", "Evidence", "Warrant", "Qualifier"]);
+    assert.equal(english.published[0].message, "Feedback on your argument is now available.");
+    assertNoTeacherKey(english.published[0], "legacy");
+
+    // A failed read does not fail the callback: the default locale is used.
+    const unreadable = await publishLive(analysisPayload(), {
+        loadActivityLocale: async () => { throw new Error("database down"); },
+    });
+    assert.equal(unreadable.callback.status, "completed");
+    assert.equal(unreadable.published[0].document.locale, "es-CL");
+    assert.deepEqual(unreadable.callback.payload.studentDocument,
+        { source: "legacy", locale: "es-CL" });
 });
 
 test("a callback without a stored result publishes a null result id", async () => {
@@ -229,8 +347,15 @@ test("a callback without a stored result publishes a null result id", async () =
 test("the manifest lists student-results-reading and the adapter subscribes to it", async () => {
     assert.ok(tutorEntry.hooks.includes(STUDENT_RESULTS_READING_HOOK));
 
-    const { handlers } = await publishLive(analysisPayload());
-    assert.equal(handlers.get(STUDENT_RESULTS_READING_HOOK), readStudentResults);
+    const live = await publishLive(analysisPayload());
+    const handler = live.handlers.get(STUDENT_RESULTS_READING_HOOK);
+    assert.equal(typeof handler, "function");
+
+    const stored = [storedResult({
+        id: live.id, requestPayload: analysisPayload(), callback: live.callback,
+    })];
+    const rebuilt = await handler(context(), readerOf(stored));
+    assert.deepEqual(withoutPublishedAt(rebuilt[0]), publishedEntry(live.published[0]));
 });
 
 test("a rebuilt analysis and comparison equal the feedback published live", async () => {
@@ -260,16 +385,84 @@ test("a rebuilt analysis and comparison equal the feedback published live", asyn
         assert.deepEqual(withoutPublishedAt(rebuilt[index]), publishedEntry(live.published[0]));
         assert.equal(rebuilt[index].publishedAt, stored[index].receivedAt);
     }
-    assert.equal(rebuilt[0].payload.feedback.mode, "analysis");
-    assert.equal(rebuilt[1].payload.feedback.mode, "comparison");
-    assert.deepEqual(rebuilt[1].payload.feedback.comparison, comparisonPayload().comparison);
+    assert.deepEqual(rebuilt[0].component, { documentSchema: "student-result/v1" });
+    assert.equal(rebuilt[0].payload.title, "Retroalimentación sobre tu argumento");
+    assert.equal(rebuilt[1].payload.title, "Retroalimentación sobre tu argumento revisado");
+    assert.deepEqual(rebuilt[1].payload.sections.map(section => section.kind),
+        ["comparison", "criteria", "bullets", "text", "text"]);
 
     // The registry keeps every entry, unchanged.
     const { entries, problems } = validateStudentResults(rebuilt, {
         readResults: new Map(stored.map(result => [result.id, result])),
+        checkDocument,
     });
     assert.deepEqual(problems, []);
     assert.deepEqual(entries, rebuilt);
+});
+
+test("a rebuilt tutor document equals the one published live, unchanged", async () => {
+    const stored = [];
+    const lives = [];
+    for (const name of ["tutor-analysis.es_CL", "tutor-comparison.en_US"]) {
+        const requestPayload = analysisPayload({ studentResult: await example(name) });
+        const live = await publishLive(requestPayload);
+        lives.push(live);
+        stored.push(storedResult({ id: live.id, requestPayload, callback: live.callback }));
+    }
+    // The tutor's document keeps its own locale, whatever the activity's.
+    const rebuilt = await readStudentResults(context(STUDENT_ID, "en_US"), readerOf(stored));
+
+    for (const [index, live] of lives.entries()) {
+        assert.deepEqual(withoutPublishedAt(rebuilt[index]), publishedEntry(live.published[0]));
+        assertNoTeacherKey(rebuilt[index], `entry ${index}`);
+    }
+    assert.deepEqual(rebuilt.map(entry => entry.payload),
+        [await example("tutor-analysis.es_CL"), await example("tutor-comparison.en_US")]);
+    const { entries, problems } = validateStudentResults(rebuilt, {
+        readResults: new Map(stored.map(result => [result.id, result])),
+        checkDocument,
+    });
+    assert.deepEqual(problems, []);
+    assert.equal(entries.length, 2);
+});
+
+test("a mapped document is rebuilt in the locale it was published in", async () => {
+    const live = await publishLive(analysisPayload(), { loadActivityLocale: async () => "en_US" });
+    const stored = [storedResult({
+        id: live.id, requestPayload: analysisPayload(), callback: live.callback,
+    })];
+    // The activity's language changed since: the recorded locale wins.
+    const rebuilt = await readStudentResults(context(STUDENT_ID, "es_CL"), readerOf(stored));
+
+    assert.equal(rebuilt[0].payload.locale, "en-US");
+    assert.deepEqual(withoutPublishedAt(rebuilt[0]), publishedEntry(live.published[0]));
+});
+
+test("callbacks processed before #1133 are mapped in the activity's locale", async () => {
+    // What the adapter recorded before it published documents.
+    const before1133 = { hook:    "callback-received", status:  "completed", payload: {
+        groupId: 7, publishedToUserId: STUDENT_ID, feedbackTitle: "Argument Tutor Feedback",
+    } };
+    const stored = [
+        storedResult({ id: resultId(), requestPayload: analysisPayload(), callback: before1133 }),
+        storedResult({ id: resultId(), requestPayload: comparisonPayload(), callback: before1133 }),
+    ];
+    // The registry passes the activity's locale as `context.locale`.
+    const rebuilt = await readStudentResults(context(STUDENT_ID, "en_US"), readerOf(stored));
+
+    assert.deepEqual(rebuilt.map(entry => entry.payload.locale), ["en-US", "en-US"]);
+    assert.deepEqual(rebuilt.map(entry => entry.message),
+        Array(2).fill("Feedback on your argument is now available."));
+    for (const entry of rebuilt) {
+        assertNoTeacherKey(entry, entry.resultId);
+        assert.deepEqual(checkDocument({
+            documentSchema: entry.component.documentSchema, document: entry.payload,
+        }).problems, []);
+    }
+
+    // Without the activity's locale (it could not be read), the default one.
+    const withoutLocale = await readStudentResults(context(), readerOf(stored));
+    assert.deepEqual(withoutLocale.map(entry => entry.payload.locale), ["es-CL", "es-CL"]);
 });
 
 test("a callback that names no ids is rebuilt with its stored ids, as published live", async () => {
@@ -281,9 +474,8 @@ test("a callback that names no ids is rebuilt with its stored ids, as published 
 
     const rebuilt = await readStudentResults(context(), readerOf(stored));
 
-    assert.deepEqual(live.published[0].payload.feedback.meta, {
-        sessionId: SESSION_ID, phaseId: PHASE_ID, questionId: QUESTION_ID, userId: STUDENT_ID,
-    });
+    assert.equal(live.published[0].phaseId, PHASE_ID);
+    assert.equal(live.published[0].questionId, QUESTION_ID);
     assert.deepEqual(withoutPublishedAt(rebuilt[0]), publishedEntry(live.published[0]));
 });
 
@@ -475,6 +667,32 @@ async function quietly(run) {
     }
 }
 
+// The tutor adapter as the registry loads it, with the activity's locale
+// read from `activityLocale` instead of the database.
+function importAdapterWithLocale(activityLocale) {
+    return async href => {
+        const adapterModule = await import(href);
+        if (!href.includes("ats-feedback.adapter.js")) {
+            return adapterModule;
+        }
+        return {
+            ...adapterModule,
+            register: args => adapterModule.register({
+                ...args,
+                atsFeedbackDependencies: { loadActivityLocale: async () => activityLocale },
+            }),
+        };
+    };
+}
+
+// What the registry emitted to the student, as an entry of the student
+// route carries it.
+function emittedEntry(event) {
+    const { userId, sessionId, receivedAt, ...entry } = event;
+    assert.ok(userId && sessionId && receivedAt);
+    return entry;
+}
+
 test("through the registry, the student reads back the live feedback by its id", async () => {
     const jobs = [
         studentJob("job-first", STUDENT_ID),
@@ -483,6 +701,7 @@ test("through the registry, the student reads back the live feedback by its id",
         studentJob("job-refused", STUDENT_ID),
     ];
     const store = memoryStore(jobs);
+    const events = [];
     const registry = new ExternalServicesRegistry({
         jobsService:     store,
         roomJobsService: {
@@ -492,6 +711,7 @@ test("through the registry, the student reads back the live feedback by its id",
         reportResultsStore:    store,
         developmentAdapters:   false,
         loadSessionServiceIds: async () => [SERVICE_ID],
+        loadSessionLocale:     async () => "en_US",
         aiServicePolicy:       {
             getSessionPolicyVersionId: async () => 4,
             getPolicyVersion:          async () => ({
@@ -499,12 +719,17 @@ test("through the registry, the student reads back the live feedback by its id",
             }),
         },
         isAiAdditionsConfigured: async () => true,
+        importAdapter:           importAdapterWithLocale("en_US"),
+        // A tutor with ethicapp-ai-additions#233, which declares its document.
+        capabilityDescriptors:   {
+            knownStudentOutputs:   () => ({ studentOutputs: STUDENT_OUTPUTS, stale: false }),
+            refreshStudentOutputs: async () => assert.fail("the declaration is known"),
+        },
+        notifyStudentResult: (userId, event) => {
+            events.push(event);
+            return true;
+        },
     });
-    const events = [];
-    registry.publishStudentResult = async (serviceId, payload) => {
-        events.push({ ...payload, serviceId, receivedAt: new Date().toISOString() });
-        return true;
-    };
     await quietly(() => registry.initialize(fileURLToPath(manifestUrl)));
     assert.ok((registry.hookSubscribers.get(STUDENT_RESULTS_READING_HOOK) ?? [])
         .some(subscriber => subscriber.serviceId === SERVICE_ID),
@@ -519,19 +744,33 @@ test("through the registry, the student reads back the live feedback by its id",
             requestPayload: payload,
         })
         .catch(error => error));
-    await callback("job-first", analysisPayload());
-    await callback("job-second", comparisonPayload());
+    const tutorDocument = await example("tutor-comparison.en_US");
+    // An older tutor's analysis, and a comparison with the tutor's document.
+    const first = await callback("job-first", analysisPayload());
+    const second = await callback("job-second",
+        comparisonPayload({ studentResult: tutorDocument }));
     await callback("job-other", analysisPayload({ userId: OTHER_STUDENT_ID }));
     // Names another phase than its job's: refused, nothing published.
     const refused = await callback("job-refused", analysisPayload({ phaseId: PHASE_ID + 1 }));
     assert.equal(refused.result.statusCode, 409);
 
+    assert.deepEqual([...first.output, ...second.output]
+        .filter(line => line.includes("Refused a student result document")), [],
+    "the registry sends both documents");
     assert.deepEqual(store.rows.map(row => row.status),
         ["completed", "completed", "completed", "failed"]);
     const studentEvents = events.filter(event => event.userId === STUDENT_ID);
     assert.equal(studentEvents.length, 2);
     assert.deepEqual(studentEvents.map(event => event.resultId),
         store.rows.slice(0, 2).map(row => row.id));
+    assert.deepEqual(studentEvents.map(event => event.component),
+        [{ documentSchema: "student-result/v1" }, { documentSchema: "student-result/v1" }]);
+    assert.equal(studentEvents[0].payload.locale, "en-US");
+    assert.equal(studentEvents[0].payload.title, "Feedback on your argument");
+    assert.deepEqual(studentEvents[1].payload, tutorDocument);
+    for (const event of studentEvents) {
+        assertNoTeacherKey(event, event.resultId);
+    }
 
     const { result: entries, output } = await quietly(() => registry.collectStudentResults({
         sessionId: SESSION_ID,
@@ -542,10 +781,9 @@ test("through the registry, the student reads back the live feedback by its id",
         "no entry is dropped by the registry");
     assert.equal(entries.length, 2);
     for (const [index, event] of studentEvents.entries()) {
-        const live = { ...event };
-        delete live.receivedAt;
-        assert.deepEqual(withoutPublishedAt(entries[index]), publishedEntry(live));
+        assert.deepEqual(withoutPublishedAt(entries[index]), emittedEntry(event));
         assert.equal(entries[index].publishedAt, store.rows[index].received_at.toISOString());
+        assertNoTeacherKey(entries[index], `entry ${index}`);
     }
     assert.ok(output.every(line => !line.includes(ARGUMENT)), "no student text is logged");
 

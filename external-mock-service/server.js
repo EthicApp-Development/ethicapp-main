@@ -1,4 +1,5 @@
 import express from "express";
+import { buildMockReview, DOCUMENT_SCHEMA } from "./student-result.js";
 
 const app = express();
 const port = Number(process.env.PORT || 8510);
@@ -13,18 +14,19 @@ app.get("/health", (req, res) => {
     res.json({ status: "ok", service: "ethicapp-external-mock-service" });
 });
 
-app.post("/response-review/reverse", (req, res) => {
-    const text = normalizeText(req.body?.text);
-    const reversedText = Array.from(text).reverse().join("");
+// The mock review of a student response, as a student-result/v1 document in
+// `locale` (es-CL or en-US; anything else gives es-CL). See student-result.js.
+app.post("/response-review/student-result", (req, res) => {
+    const { document, analysis } = buildMockReview({
+        text:   normalizeText(req.body?.text),
+        locale: req.body?.locale,
+    });
 
     res.json({
-        status: "completed",
-        summary: reversedText || "No text was provided.",
-        payload: {
-            originalText: text,
-            reversedText,
-            characterCount: text.length,
-        },
+        status:         "completed",
+        documentSchema: DOCUMENT_SCHEMA,
+        document,
+        analysis,
     });
 });
 
@@ -34,7 +36,7 @@ app.post("/chat-agent/respond", (req, res) => {
     const characterCount = content.length;
 
     res.json({
-        status: "completed",
+        status:  "completed",
         message: `${processedMessage} (${characterCount})`,
         payload: {
             processedMessage,

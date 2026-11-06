@@ -29,6 +29,7 @@ import {
     assertValidCatalog,
     catalogWarnings,
     developmentAdaptersEnabled,
+    manifestStudentOutputs,
     validateCatalog,
     validateCatalogEntry,
 } from "../external-services/catalog.js";
@@ -55,12 +56,22 @@ import {
     REPORT_CONTRIBUTION_TIMEOUT_MS,
 } from "./external-service-report-contributions.js";
 import { externalServiceReportResultsService } from "./external-service-report-results.service.js";
+import { errorClassification } from "./external-service-handler-run.js";
 import {
     collectStudentResults,
     STUDENT_RESULTS_READING_HOOK,
     STUDENT_RESULTS_TIMEOUT_MS,
 } from "./external-service-student-results.js";
+import {
+    checkStudentResultDocument,
+    DECLARATION_STATUS,
+    jsonData,
+    loggableDocumentSchema,
+    STUDENT_RESULT_SCOPE,
+    validateStudentResultDocument,
+} from "./student-result-documents.js";
 import { getEnabledExternalServiceIdsBySessionId } from "../helpers/designs-helper.js";
+import { loadSessionActivityLocale } from "../helpers/activity-locale.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -283,6 +294,32 @@ function normalizeUiTranslations(translations) {
     return normalized;
 }
 
+function isPlainObject(value) {
+    return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+// The keys a document publication emits next to the document (#1131); any
+// other key the adapter passes stays out of the student's event.
+const STUDENT_DOCUMENT_EVENT_KEYS = Object.freeze([
+    "sessionId", "phaseId", "questionId", "resultId", "message", "status",
+]);
+
+// A publishStudentResult() payload in the document form (#1131).
+function isDocumentPublication(payload) {
+    return Object.hasOwn(payload, "documentSchema") || Object.hasOwn(payload, "document");
+}
+
+// A result id may be logged when it is a uuid.
+function loggableResultId(value) {
+    return normalizeExternalServiceResultId(value);
+}
+
+// Ids, the document schema, codes and paths only: a document quotes the
+// student and the service.
+function logRefusedStudentResultDocument(details) {
+    console.warn("[external-services] Refused a student result document.", JSON.stringify(details));
+}
+
 function withTimeout(promise, timeoutMs) {
     let timeoutId;
     const timeout = new Promise((resolve, reject) => {
@@ -503,6 +540,15 @@ export class ExternalServicesRegistry {
         callbackDestinationLookups = {},
         notifyServiceInstantiated = (sessionId, payload) =>
             teacherNotifications?.serviceInstantiated?.(sessionId, payload),
+        notifyStudentResult = (userId, event) => {
+            if (!studentNotifications?.externalServiceResult) {
+                return false;
+            }
+            studentNotifications.externalServiceResult(userId, event);
+            return true;
+        },
+        validateDocument = validateStudentResultDocument,
+        loadSessionLocale = loadSessionActivityLocale,
         saveChatMessage: saveMessage = saveChatMessage,
     } = {}) {
         this.initialized      = false;
@@ -559,6 +605,15 @@ export class ExternalServicesRegistry {
         // Tells the session's teachers that a service reported an
         // instantiation (#865), so their activity view can read it again.
         this._notifyServiceInstantiated = notifyServiceInstantiated;
+        // Sends a result to a student's socket; false when the student socket
+        // service is not initialized. Replaced in tests.
+        this._notifyStudentResult = notifyStudentResult;
+        // Validates documents published to students against the schema
+        // copies (#1131); replaced in tests.
+        this._validateDocument = validateDocument;
+        // Reads the locale of a session's activity for student-results-reading
+        // (helpers/activity-locale.js); replaced in tests.
+        this._loadSessionLocale = loadSessionLocale;
         // Stores the chat messages adapters publish; replaced in tests.
         this._saveChatMessage = saveMessage;
 
@@ -631,26 +686,31 @@ export class ExternalServicesRegistry {
         }
 
         const normalizedService = {
-            id:           service.id,
-            description:  service.description || "",
+            id:             service.id,
+            description:    service.description || "",
             hooks,
-            globalHooks:  normalizeGlobalHooks(service.globalHooks, hooks, service.id),
-            scopes:       normalizeScopes(service.scopes, service.id),
-            ui:           normalizeUi(service.ui, service.id),
-            descriptor:   normalizeDescriptor(service.descriptor, service.requires, service.id),
+            globalHooks:    normalizeGlobalHooks(service.globalHooks, hooks, service.id),
+            scopes:         normalizeScopes(service.scopes, service.id),
+            ui:             normalizeUi(service.ui, service.id),
+            descriptor:     normalizeDescriptor(service.descriptor, service.requires, service.id),
             // The AI Additions services the adapter talks to (#812). The
             // service policy (#815) allows an adapter only when it allows all.
-            requires:     [...service.requires],
+            requires:       [...service.requires],
             // The design analyses the adapter produces and needs (#863), as
             // `{ documentSchema, unit }`. See getDesignAnalysisConsumerIds().
-            produces:     designAnalysisDeclaration(service.produces),
-            consumes:     designAnalysisDeclaration(service.consumes),
+            produces:       designAnalysisDeclaration(service.produces),
+            consumes:       designAnalysisDeclaration(service.consumes),
             // `{ columnPrefix }`: the prefix of the columns the adapter adds
             // to reports (report-building, #944), or null.
-            report:       service.report?.columnPrefix ? { columnPrefix: service.report.columnPrefix } : null,
+            report:         service.report?.columnPrefix ? { columnPrefix: service.report.columnPrefix } : null,
+            // The student outputs a development adapter declares in its
+            // catalog entry (#1134), normalized like a descriptor's, or null.
+            // Read only when the service links no descriptor (see
+            // _manifestDeclaration()); production adapters cannot declare.
+            studentOutputs: manifestStudentOutputs(service).studentOutputs,
             development,
-            adapter:      service.adapter,
-            callbackAuth: service.callbackAuth && typeof service.callbackAuth === "object"
+            adapter:        service.adapter,
+            callbackAuth:   service.callbackAuth && typeof service.callbackAuth === "object"
                 ? {
                     allowedClientIds: Array.isArray(service.callbackAuth.allowedClientIds)
                         ? service.callbackAuth.allowedClientIds.filter(id => typeof id === "string" && id.trim())
@@ -1489,7 +1549,9 @@ export class ExternalServicesRegistry {
      * asked are those registered and subscribed to the hook that
      * studentResultsServiceIds() finds enabled for the session. Each handler
      * is awaited under a timeout and receives `({ serviceId, sessionId,
-     * userId }, { results, signal })`; no job or result row is created, no
+     * userId, locale }, { results, signal })`, where `locale` is the
+     * activity's locale (`es_CL`, `en_US`) or null, read once per call so
+     * handlers need no database access; no job or result row is created, no
      * `callback` is passed and no remote service is called. See
      * external-service-student-results.js.
      *
@@ -1526,11 +1588,20 @@ export class ExternalServicesRegistry {
             return Object.freeze([]);
         }
 
+        const locale = await this._sessionLocaleOrNull(sessionId);
+        const declarations = new Map();
         return collectStudentResults({
-            context:      { sessionId, userId },
-            subscribers:  asked,
-            resultsStore: this._reportResultsStore,
-            timeoutMs:    this._studentResultsTimeoutMs,
+            context:       { sessionId, userId, locale },
+            subscribers:   asked,
+            resultsStore:  this._reportResultsStore,
+            timeoutMs:     this._studentResultsTimeoutMs,
+            checkDocument: (serviceId, document) => {
+                // Looked up once per service and read.
+                if (!declarations.has(serviceId)) {
+                    declarations.set(serviceId, this._rebuildDeclaration(serviceId));
+                }
+                return this._checkRebuiltDocument(document, declarations.get(serviceId));
+            },
         });
     }
 
@@ -1841,6 +1912,48 @@ export class ExternalServicesRegistry {
         return entry;
     }
 
+    /**
+     * The locale of a session's activity, passed to student-results-reading
+     * handlers as `context.locale` so they need no database access: `es_CL`,
+     * `en_US`, or null when the session has no activity design or the read
+     * fails (logged with the session id only). Never throws.
+     */
+    async _sessionLocaleOrNull(sessionId) {
+        try {
+            return await this._loadSessionLocale(sessionId);
+        } catch (error) {
+            console.warn(
+                "[external-services] Could not read the activity's locale for student results.",
+                JSON.stringify({ sessionId, ...errorClassification(error) })
+            );
+            return null;
+        }
+    }
+
+    /**
+     * Sends a result to one student's socket. Adapters receive it bound to
+     * their service id. It takes two forms:
+     *
+     * - A document (epic #1124, #1131): `{ userId, documentSchema, document }`
+     *   with the optional `sessionId`, `phaseId`, `questionId`, `resultId`,
+     *   `message` and `status`. The document is emitted as
+     *   `component: { documentSchema }` with the document as `payload`, and
+     *   only those keys go with it. It is sent only when it validates against
+     *   EthicApp's copy of its schema and the service declares the schema for
+     *   the `response` scope (STUDENT_RESULT_SCOPE) in its capability
+     *   descriptor, or, for a development adapter that links none, in its
+     *   catalog entry's `studentOutputs` (#1134); a descriptor's declaration
+     *   is refreshed first when the cached one is older than the descriptor
+     *   TTL (see _publishDeclaration()). Otherwise it is logged and not sent.
+     * - A legacy result descriptor: `{ userId, component: { componentId },
+     *   payload, ... }`, emitted as passed, until the tutor adapter (#1133)
+     *   publishes documents. A `component` that names a `documentSchema` is
+     *   refused: documents take the first form.
+     *
+     * A document form that also passes `component` or `payload` is refused.
+     *
+     * @returns {Promise<boolean>} Whether the result was sent.
+     */
     async publishStudentResult(serviceId, payload) {
         const userId = Number(payload?.userId);
 
@@ -1849,18 +1962,177 @@ export class ExternalServicesRegistry {
             return false;
         }
 
-        if (!studentNotifications?.externalServiceResult) {
+        let event;
+        if (isDocumentPublication(payload)) {
+            event = await this._studentResultDocumentEvent(serviceId, userId, payload);
+        } else if (isPlainObject(payload.component)
+            && Object.hasOwn(payload.component, "documentSchema")) {
+            logRefusedStudentResultDocument({
+                serviceId,
+                userId,
+                resultId:       loggableResultId(payload.resultId),
+                documentSchema: loggableDocumentSchema(payload.component.documentSchema),
+                scope:          STUDENT_RESULT_SCOPE,
+                problems:       [{ code: "document_in_component" }],
+            });
+            event = null;
+        } else {
+            event = { ...payload };
+        }
+
+        if (!event) {
+            return false;
+        }
+
+        const sent = this._notifyStudentResult(userId, {
+            ...event,
+            serviceId,
+            receivedAt: new Date().toISOString(),
+        });
+        if (!sent) {
             console.warn("[external-services] Student socket notification service is not initialized.");
             return false;
         }
 
-        studentNotifications.externalServiceResult(userId, {
-            ...payload,
+        return true;
+    }
+
+    // The event of a document publication, or null when the document is
+    // refused (logged with ids, codes and paths only).
+    async _studentResultDocumentEvent(serviceId, userId, payload) {
+        const { documentSchema, document } = payload;
+        const refused = details => logRefusedStudentResultDocument({
             serviceId,
-            receivedAt: new Date().toISOString(),
+            userId,
+            resultId:       loggableResultId(payload.resultId),
+            documentSchema: loggableDocumentSchema(documentSchema),
+            scope:          STUDENT_RESULT_SCOPE,
+            ...details,
         });
 
-        return true;
+        // One form or the other: a document never travels as `payload`.
+        if (Object.hasOwn(payload, "component") || Object.hasOwn(payload, "payload")) {
+            refused({ problems: [{ code: "ambiguous_result" }] });
+            return null;
+        }
+
+        const declaration = await this._publishDeclaration(serviceId);
+        const { ok, problems } = checkStudentResultDocument({
+            documentSchema,
+            document,
+            scope:            STUDENT_RESULT_SCOPE,
+            declaration,
+            validateDocument: this._validateDocument,
+        });
+        if (!ok) {
+            refused({ declaration: declaration.status, problems });
+            return null;
+        }
+
+        const event = { userId };
+        for (const key of STUDENT_DOCUMENT_EVENT_KEYS) {
+            if (payload[key] !== undefined) {
+                event[key] = payload[key];
+            }
+        }
+        // The JSON form that was checked (jsonData()), a copy the adapter
+        // cannot change.
+        event.component = { documentSchema };
+        event.payload   = jsonData(document).value;
+        return event;
+    }
+
+    /**
+     * The declaration a document published live is checked against (#1131):
+     * the service's student outputs, refreshed first when the cached ones are
+     * missing or older than the descriptor TTL. The refresh is a cached,
+     * timed descriptor request; the service has just called back, so it is
+     * normally reachable. When it fails, the last declaration fetched since
+     * the process started is used. Never throws.
+     *
+     * @returns {Promise<{ status: string, studentOutputs?: Object[] }>}
+     *     DECLARATION_STATUS: `known` with the outputs, `no_descriptor` when
+     *     the service links no capability descriptor and its catalog entry
+     *     declares nothing (_manifestDeclaration()), `unavailable` when none
+     *     of its descriptors has been fetched.
+     */
+    async _publishDeclaration(serviceId) {
+        if (!this.getServiceDescriptor(serviceId)) {
+            return this._manifestDeclaration(serviceId);
+        }
+        let known = this._capabilityDescriptors.knownStudentOutputs(serviceId);
+        if (!known || known.stale) {
+            try {
+                known = await this._capabilityDescriptors.refreshStudentOutputs(serviceId);
+            } catch (error) {
+                console.warn(
+                    "[external-services] Could not refresh the student outputs of a service.",
+                    JSON.stringify({ serviceId, ...errorClassification(error) })
+                );
+                known = this._capabilityDescriptors.knownStudentOutputs(serviceId);
+            }
+        }
+        return known
+            ? { status: DECLARATION_STATUS.KNOWN, studentOutputs: known.studentOutputs }
+            : { status: DECLARATION_STATUS.UNAVAILABLE };
+    }
+
+    /**
+     * The declaration a rebuilt document is checked against (#1131), read
+     * without any request: the student app waits for the rebuild, and the
+     * service may be down. It is the last declaration fetched since the
+     * process started, kept while the service is down and when the AI
+     * Additions connection changes. When none has been fetched, or it is
+     * older than the descriptor TTL, a refresh starts in the background and
+     * serves later reads; this read does not wait for it, and with no
+     * declaration its documents are refused.
+     *
+     * @returns {{ status: string, studentOutputs?: Object[] }}
+     */
+    _rebuildDeclaration(serviceId) {
+        if (!this.getServiceDescriptor(serviceId)) {
+            return this._manifestDeclaration(serviceId);
+        }
+        const known = this._capabilityDescriptors.knownStudentOutputs(serviceId);
+        if (!known || known.stale) {
+            Promise.resolve()
+                .then(() => this._capabilityDescriptors.refreshStudentOutputs(serviceId))
+                .catch(error => console.warn(
+                    "[external-services] Could not refresh the student outputs of a service.",
+                    JSON.stringify({ serviceId, ...errorClassification(error) })
+                ));
+        }
+        return known
+            ? { status: DECLARATION_STATUS.KNOWN, studentOutputs: known.studentOutputs }
+            : { status: DECLARATION_STATUS.UNAVAILABLE };
+    }
+
+    /**
+     * The declaration of a service that links no capability descriptor: the
+     * `studentOutputs` of its catalog entry, which only development adapters
+     * may have (#1134), or `no_descriptor` when it has none. It is shipped
+     * with the catalog, so it is always known and never refreshed.
+     *
+     * @returns {{ status: string, studentOutputs?: Object[] }}
+     */
+    _manifestDeclaration(serviceId) {
+        const service = this.services.get(serviceId);
+        return service?.development === true && Array.isArray(service.studentOutputs)
+            ? { status: DECLARATION_STATUS.KNOWN, studentOutputs: service.studentOutputs }
+            : { status: DECLARATION_STATUS.NO_DESCRIPTOR };
+    }
+
+    // Checks a document an adapter rebuilt through student-results-reading
+    // against `declaration` (_rebuildDeclaration()), as publishStudentResult()
+    // checks a published one.
+    _checkRebuiltDocument({ documentSchema, document }, declaration) {
+        return checkStudentResultDocument({
+            documentSchema,
+            document,
+            scope:            STUDENT_RESULT_SCOPE,
+            declaration,
+            validateDocument: this._validateDocument,
+        });
     }
 
     async publishGroupChatMessage(serviceId, payload) {
