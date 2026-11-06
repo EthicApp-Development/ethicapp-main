@@ -256,7 +256,12 @@ async function collectOne({ context, serviceId, handler, resultsStore, timeoutMs
     let returned;
     try {
         returned = await runHandlerWithTimeout(handler, [
-            Object.freeze({ serviceId, sessionId: context.sessionId, userId: context.userId }),
+            Object.freeze({
+                serviceId,
+                sessionId: context.sessionId,
+                userId:    context.userId,
+                locale:    context.locale ?? null,
+            }),
             { results, signal: controller.signal },
         ], timeoutMs, controller);
     } catch (error) {
@@ -300,7 +305,9 @@ async function collectOne({ context, serviceId, handler, resultsStore, timeoutMs
  * of a session, and merges the valid entries.
  *
  * @param {Object} options
- * @param {{ sessionId: number, userId: number }} options.context
+ * @param {{ sessionId: number, userId: number, locale?: string|null }}
+ *     options.context - `locale` is the activity's locale (`es_CL`, `en_US`)
+ *     or null, passed to each handler (helpers/activity-locale.js).
  * @param {Array<{ serviceId, handler }>} options.subscribers - The services to
  *     ask, in subscription order, already selected by the registry.
  * @param {Object} options.resultsStore - An ExternalServiceReportResultsService.

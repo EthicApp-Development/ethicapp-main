@@ -162,6 +162,38 @@ test("a submitted response is reviewed and published as the service's document",
     assert.doesNotMatch(output.join("\n"), /private student/u);
 });
 
+test("an en_US activity gets the mock's review in English (context.locale, #1124)", async () => {
+    const { sent, run } = await mockWithRegistry();
+    const context = { ...CONTEXT, locale: "en_US" };
+
+    const { output, requests } = await withMockService(() => quietly(
+        () => run("student-response-submitted", context)
+    ));
+
+    assert.deepEqual(requests[0].body.locale, "en-US");
+    assert.equal(sent.length, 1, output.join("\n"));
+    assert.deepEqual(
+        sent[0].event.payload,
+        buildMockReview({ text: CONTEXT.requestPayload.justification, locale: "en-US" }).document
+    );
+});
+
+test("without the mock service, an en_US activity gets the unavailable review in English", async () => {
+    const { sent, run } = await mockWithRegistry();
+
+    await withMockService(
+        () => quietly(() => run("student-response-submitted", { ...CONTEXT, locale: "en_US" })),
+        { failure: new TypeError("fetch failed") }
+    );
+
+    assert.deepEqual(sent[0].event.payload, unavailableReviewDocument("en-US"));
+    assert.equal(sent[0].event.payload.locale, "en-US");
+    assert.deepEqual(
+        validateStudentResultDocument("student-result/v1", unavailableReviewDocument("en-US")),
+        { valid: true, problems: [] }
+    );
+});
+
 test("the documents of both locales and of an empty response validate", () => {
     for (const locale of ["es-CL", "en-US"]) {
         for (const text of ["", "One word", "a ".repeat(6000)]) {

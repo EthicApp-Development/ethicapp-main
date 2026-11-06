@@ -104,14 +104,22 @@ function makeRegistry({
     disabledAdapterIds = [],
     timeoutMs,
     developmentAdapters = true,
+    locale = "es_CL",
 } = {}) {
-    const reads = { sessions: [], pins: [] };
+    const reads = { sessions: [], pins: [], locales: [] };
     const registry = new ExternalServicesRegistry({
         jobsService:             forbiddenJobsService,
         roomJobsService:         { closeRoomJobs: async () => 0 },
         reportResultsStore:      resultsStore,
         studentResultsTimeoutMs: timeoutMs,
         developmentAdapters,
+        loadSessionLocale:       async sessionId => {
+            reads.locales.push(sessionId);
+            if (locale instanceof Error) {
+                throw locale;
+            }
+            return locale;
+        },
         loadSessionServiceIds:   async sessionId => {
             reads.sessions.push(sessionId);
             if (sessionServiceIds instanceof Error) {
@@ -218,7 +226,7 @@ test("only the subscribed services the session's design enables and its pinned p
 
     assert.deepEqual(results, []);
     assert.deepEqual(asked.sort(), ["mock", "tutor"]);
-    assert.deepEqual(reads, { sessions: [SESSION_ID], pins: [SESSION_ID] });
+    assert.deepEqual(reads, { sessions: [SESSION_ID], pins: [SESSION_ID], locales: [SESSION_ID] });
 });
 
 test("a session launched with its AI services off enables no service, so none is asked", async () => {
@@ -260,7 +268,7 @@ test("no subscriber means no database read", async () => {
     const { registry, reads } = makeRegistry({ services: [serviceEntry("tutor")], resultsStore });
 
     assert.deepEqual(await registry.collectStudentResults({ sessionId: SESSION_ID, userId: USER_ID }), []);
-    assert.deepEqual(reads, { sessions: [], pins: [] });
+    assert.deepEqual(reads, { sessions: [], pins: [], locales: [] });
     assert.deepEqual(resultsStore.calls, []);
 });
 
@@ -294,7 +302,9 @@ test("a handler receives a frozen context, a results reader and a signal, and no
     await registry.collectStudentResults({ sessionId: SESSION_ID, userId: USER_ID, extra: "dropped" });
 
     const { context, tools } = received;
-    assert.deepEqual(context, { serviceId: "tutor", sessionId: SESSION_ID, userId: USER_ID });
+    assert.deepEqual(context, {
+        serviceId: "tutor", sessionId: SESSION_ID, userId: USER_ID, locale: "es_CL",
+    });
     assert.ok(Object.isFrozen(context));
     assert.deepEqual(Object.keys(tools).sort(), ["results", "signal"]);
     assert.ok(Object.isFrozen(tools.results));
@@ -642,4 +652,56 @@ test("a reader that fails makes only its own handler fail", async () => {
 test("the hook is student-results-reading and its default timeout is three seconds", () => {
     assert.equal(STUDENT_RESULTS_READING_HOOK, "student-results-reading");
     assert.equal(STUDENT_RESULTS_TIMEOUT_MS, 3000);
+});
+
+test("the activity's locale is read once per call and passed to every handler (#1124)", async () => {
+    const { registry, reads } = makeRegistry({
+        services: [serviceEntry("tutor"), serviceEntry("polyadic-agent")],
+        locale:   "en_US",
+    });
+    const locales = [];
+    for (const serviceId of ["tutor", "polyadic-agent"]) {
+        registry.subscribe(serviceId, STUDENT_RESULTS_READING_HOOK, async context => {
+            locales.push(context.locale);
+            return [];
+        });
+    }
+
+    await registry.collectStudentResults({ sessionId: SESSION_ID, userId: USER_ID });
+
+    assert.deepEqual(locales, ["en_US", "en_US"]);
+    assert.deepEqual(reads.locales, [SESSION_ID]);
+});
+
+test("a locale that cannot be read is null, logged with the session id only", async () => {
+    const { registry } = makeRegistry({
+        services: [serviceEntry("tutor")],
+        locale:   new Error("connection refused for student text"),
+    });
+    let received;
+    registry.subscribe("tutor", STUDENT_RESULTS_READING_HOOK, async context => {
+        received = context.locale;
+        return [];
+    });
+
+    const warnings = [];
+    const originalWarn = console.warn;
+    console.warn = (...args) => warnings.push(args.join(" "));
+    try {
+        await registry.collectStudentResults({ sessionId: SESSION_ID, userId: USER_ID });
+    } finally {
+        console.warn = originalWarn;
+    }
+
+    assert.equal(received, null);
+    assert.equal(warnings.length, 1);
+    assert.match(warnings[0], /Could not read the activity's locale/u);
+    assert.doesNotMatch(warnings[0], /student text/u);
+});
+
+test("no locale is read when no service is asked", async () => {
+    const { registry, reads } = makeRegistry({ services: [] });
+
+    assert.deepEqual(await registry.collectStudentResults({ sessionId: SESSION_ID, userId: USER_ID }), []);
+    assert.deepEqual(reads.locales, []);
 });

@@ -32,20 +32,43 @@ async function postExternalMock(path, payload) {
 // its catalog entry's `studentOutputs` (#1134).
 export const MOCK_DOCUMENT_SCHEMA = "student-result/v1";
 
-// The language of the mock's documents. The hook context does not carry the
-// activity's locale, so the mock writes in EthicApp's default activity
-// language (`designs.language_code`). external-mock-service also writes
-// `en-US` when asked.
+// The language of the mock's documents when the hook context carries no
+// activity locale: EthicApp's default activity language
+// (`designs.language_code`).
 export const MOCK_DOCUMENT_LOCALE = "es-CL";
+
+/**
+ * The language of the mock's document for a hook context: the activity's
+ * locale (`context.locale`, `es_CL` or `en_US`; #1124) as the document's
+ * BCP 47 tag, or MOCK_DOCUMENT_LOCALE without one.
+ */
+export function mockDocumentLocale(context) {
+    return context?.locale === "en_US" ? "en-US" : MOCK_DOCUMENT_LOCALE;
+}
+
+const UNAVAILABLE_REVIEW_TEXTS = Object.freeze({
+    "es-CL": Object.freeze({
+        title:   "Revisión de prueba de tu respuesta",
+        summary: "El servicio de prueba no respondió, así que esta revisión no está disponible.",
+    }),
+    "en-US": Object.freeze({
+        title:   "Mock review of your response",
+        summary: "The mock service did not answer, so this review is not available.",
+    }),
+});
 
 // The document published when external-mock-service does not answer: the
 // contract's way of saying that the result could not be produced.
-export function unavailableReviewDocument() {
+export function unavailableReviewDocument(locale = MOCK_DOCUMENT_LOCALE) {
+    const documentLocale = Object.hasOwn(UNAVAILABLE_REVIEW_TEXTS, locale)
+        ? locale
+        : MOCK_DOCUMENT_LOCALE;
+    const texts = UNAVAILABLE_REVIEW_TEXTS[documentLocale];
     return {
         schemaVersion: MOCK_DOCUMENT_SCHEMA,
-        locale:        MOCK_DOCUMENT_LOCALE,
-        title:         "Revisión de prueba de tu respuesta",
-        summary:       "El servicio de prueba no respondió, así que esta revisión no está disponible.",
+        locale:        documentLocale,
+        title:         texts.title,
+        summary:       texts.summary,
         status:        "unavailable",
         sections:      [],
     };
@@ -53,11 +76,11 @@ export function unavailableReviewDocument() {
 
 // Asks external-mock-service for its review of `responseText`: a
 // student-result/v1 document with every section kind (#1134).
-async function reviewResponseText(responseText) {
+async function reviewResponseText(responseText, locale) {
     try {
         const review = await postExternalMock("/response-review/student-result", {
-            text:   responseText,
-            locale: MOCK_DOCUMENT_LOCALE,
+            text: responseText,
+            locale,
         });
         return {
             status:         review?.status || "completed",
@@ -75,7 +98,7 @@ async function reviewResponseText(responseText) {
         return {
             status:         "completed",
             documentSchema: MOCK_DOCUMENT_SCHEMA,
-            document:       unavailableReviewDocument(),
+            document:       unavailableReviewDocument(locale),
             available:      false,
         };
     }
@@ -189,7 +212,7 @@ export async function register({ service, subscribe, publishStudentResult }) {
     subscribe("student-response-submitted", async (context, { callback }) => {
         const responseText = extractResponseText(context);
         const wordCount = responseText ? responseText.split(/\s+/u).length : 0;
-        const review = await reviewResponseText(responseText);
+        const review = await reviewResponseText(responseText, mockDocumentLocale(context));
 
         // The registry checks the document against the schema copy and the
         // catalog entry's declaration, and logs a refusal with codes only.

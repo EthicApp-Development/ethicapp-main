@@ -159,6 +159,7 @@ function makeRegistry({ responses = [tutorDescriptor()], storedResults = [], han
             get: (target, name) => async () => assert.fail(`no job write expected (${String(name)})`),
         }),
         roomJobsService:    { closeRoomJobs: async () => 0 },
+        loadSessionLocale:  async () => "es_CL",
         reportResultsStore: {
             async listSessionServiceIds() {
                 assert.fail("student results do not depend on the session's jobs");

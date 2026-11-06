@@ -28,8 +28,9 @@ import { buildStudentFeedback, documentLocaleOf } from "./ats-feedback.utils.js"
  * A callback without the tutor's `studentResult` is mapped in the locale the
  * live path recorded (`adapter_result.payload.studentDocument.locale`). A
  * callback processed before #1133 has none, and was never published as a
- * document: it is mapped in the activity's locale, read once per call with
- * `loadActivityLocale`, and only when such a callback is rebuilt.
+ * document: it is mapped in the activity's locale, which the registry passes
+ * as `context.locale` (#1124); the handler reads nothing but the stored
+ * results.
  */
 
 const PUBLISHED_STATUS = "completed";
@@ -51,25 +52,16 @@ function recordedLocale(result) {
 }
 
 /**
- * @param {{serviceId: string, sessionId: number, userId: number}} context
+ * @param {{serviceId: string, sessionId: number, userId: number,
+ *     locale?: string|null}} context - `locale` is the activity's locale, or
+ *     null when it could not be read; callbacks with no recorded locale are
+ *     then mapped in the default locale.
  * @param {{results: {list: Function}}} reader - The student results reader.
- * @param {Object} [dependencies]
- * @param {(sessionId: number) => Promise<string|null>} [dependencies.loadActivityLocale]
- *     - The activity's locale, or null; never rejects. Without it, callbacks
- *     with no recorded locale are mapped in the default locale.
  * @returns {Promise<Object[]>} `{ resultId, phaseId, questionId, component,
  *     payload, message, status, publishedAt }`, oldest first.
  */
-export async function readStudentResults(context, { results }, {
-    loadActivityLocale = async () => null,
-} = {}) {
+export async function readStudentResults(context, { results }) {
     const stored = await results.list();
-
-    let sessionLocale = null;
-    const activityLocale = () => {
-        sessionLocale ??= loadActivityLocale(context.sessionId);
-        return sessionLocale;
-    };
 
     const published = stored.filter(result => result.status === PUBLISHED_STATUS
         && publishedToUserId(result) === context.userId);
@@ -80,7 +72,7 @@ export async function readStudentResults(context, { results }, {
             questionId: result.questionId,
             userId:     result.userId,
         }, {
-            resolveLocale: async () => recordedLocale(result) ?? activityLocale(),
+            resolveLocale: async () => recordedLocale(result) ?? context.locale ?? null,
         });
         const { documentSchema, document, ...rest } = studentResult;
         return {
