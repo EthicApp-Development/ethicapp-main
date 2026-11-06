@@ -870,6 +870,25 @@ Received results are shown by:
 ethicapp-student/frontend/src/components/session-detail/external-services/ExternalServiceResultPanel.jsx
 ```
 
+The activity page also loads the published results from the student route
+(see "Student results reading" in `ethicapp/backend/external-services/README.md`):
+when the activity opens, after a phase transition and after the socket
+reconnects (#1128). It merges them with the socket events by `resultId`, so a
+result shows once whichever source brings it first; an event without
+`resultId` keeps an id made in the browser. A load never removes a result
+already shown, the answer of an older load never replaces a newer one, and a
+failed load leaves the page as it was. A response whose result was loaded
+before its event shows no processing state. The pure logic lives next to the
+page, under `ethicapp-student/frontend/src/pages/session-detail/`:
+`externalServiceResults.js` (merge), `externalResultsLoading.js` (load
+triggers and ordering) and `externalResultsExpansion.js` (collapsing).
+
+Each phase tab shows its own results, newest first. The newest result of the
+current phase is expanded and the others are collapsed; the student can
+expand or collapse any of them with its header button. Results cannot be
+dismissed, and the expanded state is page state only, so a reload starts
+from the defaults again.
+
 The result descriptor supports a local component id:
 
 ```json
