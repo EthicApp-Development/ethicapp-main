@@ -158,6 +158,12 @@ in the `student-response-submitted` handler's result as `sessionCreation`. If
 the tutor rejects the configured tier (400), the session is created with its
 defaults and reported with `configurationRejected: true`.
 
+Its `callback-received` handler publishes the tutor's feedback to the student
+with the id of the stored callback as `resultId` (#1126). Its
+`student-results-reading` handler rebuilds that feedback from the stored
+callbacks when the student loads the activity (see "Student results
+reading").
+
 Current Polyadic Agents bridge adapter:
 
 ```text
@@ -573,6 +579,15 @@ question, then adds `serviceId` and orders the merged list by `publishedAt`. A
 handler that fails, times out or returns something other than a list
 contributes nothing and is logged; the others still answer.
 
+The Argumentation Tutor subscribes (#1126). Its handler returns the student's
+`completed` results whose `adapter_result` records the student as
+`publishedToUserId`, each rebuilt from its `raw_payload` and its ids with the
+function the live path publishes with, so an entry holds the `component`,
+`payload`, `message` and `status` of the socket event, the event's
+`resultId`, and the result's `receivedAt` as `publishedAt`. Failed results,
+results whose handler never finished and results published to another
+student are left out.
+
 The contract and the reader are described in
 `ethicapp/backend/external-services/README.md`, "Student results reading".
 
@@ -669,6 +684,8 @@ export async function register({ service, subscribe, publishStudentResult }) {
       sessionId: 10,
       phaseId: 20,
       questionId: 30,
+      // The stored callback this result comes from (#1126).
+      resultId: context.resultId,
       component: {
         componentId: "argument-tutor-report"
       },
@@ -686,6 +703,15 @@ The backend sends this payload to the student namespace through the
 named `user-{uid}`. The event is not stored or replayed: an adapter that
 publishes from a callback rebuilds the result from the stored callback through
 the `student-results-reading` hook (see "Student results reading").
+
+An adapter that publishes from a `callback-received` handler adds
+`resultId: context.resultId`, the id of the stored callback in
+`external_service_results`, to its payload, and the event carries it
+unchanged. The `student-results-reading` entries rebuilt from that callback
+carry the same id, so the student app can show each result once whether it
+arrived by the event or was loaded with the activity (#1128). The tutor
+adapter sends it (#1126). The development mocks publish without a stored
+callback and send none.
 
 Adapters can publish a chat message back into EthicApp through
 `publishGroupChatMessage(...)`. This helper saves the message using the same chat
