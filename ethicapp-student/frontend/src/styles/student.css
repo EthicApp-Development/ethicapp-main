@@ -441,6 +441,58 @@ body {
   background: #f8fbff;
 }
 
+/* The whole header is the collapse control: a large target at 360 px. */
+.external-service-result__toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 44px;
+  padding: 0.75rem 1rem;
+  border: 0;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+.external-service-result__toggle:hover {
+  background: rgba(13, 110, 253, 0.05);
+}
+
+.external-service-result__toggle:focus-visible {
+  outline: 2px solid #0d6efd;
+  outline-offset: -2px;
+}
+
+.external-service-result__chevron {
+  flex: 0 0 auto;
+  margin-top: 0.2rem;
+  color: #6c757d;
+}
+
+.external-service-result__heading {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.external-service-result__title {
+  overflow-wrap: anywhere;
+}
+
+.external-service-result__time {
+  color: #6c757d;
+  font-size: 0.8125rem;
+  font-weight: 400;
+}
+
+.external-service-result__content {
+  padding: 0 1rem 1rem;
+}
+
 .external-service-result__body {
   font-size: 0.95rem;
 }

@@ -1,4 +1,5 @@
-import { Component, Suspense, lazy, useMemo } from 'react';
+import { Component, Suspense, lazy } from 'react';
+import { formatSessionDate } from '../../../utils/sessionFormat.js';
 import ArgumentTutorReport from './ArgumentTutorReport.jsx';
 import ArgumentTutorChatFeedback from './ArgumentTutorChatFeedback.jsx';
 
@@ -57,51 +58,81 @@ class ExternalResultErrorBoundary extends Component {
   }
 }
 
-export default function ExternalServiceResultPanel({ results, t, onDismiss }) {
-  const orderedResults = useMemo(() => {
-    return [...results].sort((left, right) => {
-      return String(right.receivedAt || '').localeCompare(String(left.receivedAt || ''));
-    });
-  }, [results]);
+function resultDomId(resultKey) {
+  return `external-service-result-${String(resultKey).replace(/[^A-Za-z0-9_-]/g, '-')}`;
+}
 
-  if (orderedResults.length === 0) {
+function formatResultTime(result, locale, t) {
+  const value = result.publishedAt || result.receivedAt;
+  return value && !Number.isNaN(Date.parse(value)) ? formatSessionDate(value, locale, t) : '';
+}
+
+/**
+ * The results of one phase, newest first, each collapsible. Collapsing only
+ * hides a result's body: the student can always expand it again (#1128).
+ */
+export default function ExternalServiceResultPanel({ results, expandedKeys, onToggle, locale, t }) {
+  if (!Array.isArray(results) || results.length === 0) {
     return null;
   }
 
   return (
-    <aside className="external-service-results mt-3" aria-live="polite">
-      {orderedResults.map((result) => {
+    <aside
+      className="external-service-results mt-3"
+      aria-label={t('sessionDetail.externalResultsLabel')}
+      aria-live="polite"
+    >
+      {results.map((result) => {
         const Component = resolveComponent(result.component);
         const localizedTitleKey = localizedComponentTitleKeys[result.component?.componentId];
         const resultTitle = localizedTitleKey
           ? t(localizedTitleKey)
           : result.component?.title || t('sessionDetail.externalResultTitle');
+        const resultTime = formatResultTime(result, locale, t);
+        const isExpanded = Boolean(expandedKeys?.has(result.key));
+        const bodyId = `${resultDomId(result.key)}-body`;
+        const chevronClass = isExpanded ? 'fa-chevron-up' : 'fa-chevron-down';
+        const loadingFallback = (
+          <p className="text-muted mb-0">{t('sessionDetail.externalResultLoading')}</p>
+        );
 
         return (
-          <article className="external-service-result border rounded-2 p-3 mb-3" key={result.id}>
-            <div className="d-flex justify-content-between gap-3 align-items-start mb-2">
-              <div>
-                <h2 className="h6 mb-1">{resultTitle}</h2>
-              </div>
+          <article className="external-service-result border rounded-2 mb-3" key={result.key}>
+            <h2 className="h6 mb-0">
               <button
-                className="btn btn-outline-secondary btn-sm"
                 type="button"
-                onClick={() => onDismiss(result.id)}
+                className="external-service-result__toggle"
+                aria-expanded={isExpanded}
+                aria-controls={bodyId}
+                onClick={() => onToggle?.(result.key)}
               >
-                {t('sessionDetail.externalResultDismiss')}
-              </button>
-            </div>
-            <ExternalResultErrorBoundary fallback={t('sessionDetail.externalResultLoadError')}>
-              <Suspense fallback={<p className="text-muted mb-0">{t('sessionDetail.externalResultLoading')}</p>}>
-                <Component
-                  payload={result.payload}
-                  message={result.message}
-                  status={result.status}
-                  result={result}
-                  t={t}
+                <i
+                  className={`fa-solid ${chevronClass} external-service-result__chevron`}
+                  aria-hidden="true"
                 />
-              </Suspense>
-            </ExternalResultErrorBoundary>
+                <span className="external-service-result__heading">
+                  <span className="external-service-result__title">{resultTitle}</span>
+                  {resultTime ? (
+                    <span className="external-service-result__time">
+                      {t('sessionDetail.externalResultPublishedAt', { time: resultTime })}
+                    </span>
+                  ) : null}
+                </span>
+              </button>
+            </h2>
+            <div id={bodyId} className="external-service-result__content" hidden={!isExpanded}>
+              <ExternalResultErrorBoundary fallback={t('sessionDetail.externalResultLoadError')}>
+                <Suspense fallback={loadingFallback}>
+                  <Component
+                    payload={result.payload}
+                    message={result.message}
+                    status={result.status}
+                    result={result}
+                    t={t}
+                  />
+                </Suspense>
+              </ExternalResultErrorBoundary>
+            </div>
           </article>
         );
       })}

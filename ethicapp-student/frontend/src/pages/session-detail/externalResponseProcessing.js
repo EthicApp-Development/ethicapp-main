@@ -126,3 +126,31 @@ export function buildResponseProcessingByPhase(pendingByPhaseId) {
 
   return processingByPhaseId;
 }
+
+/**
+ * The processing states that newly shown results end: one per result whose
+ * service processes responses in the result's phase. The page passes only
+ * results it had not shown yet, whether they arrived by the socket event or
+ * by a load (#1128), so a response whose result was loaded first shows no
+ * processing state, and the event that follows ends nothing more.
+ * @param {object[]} results
+ * @param {Record<number, string[]>} servicesByPhaseId
+ * @returns {Array<{ phaseId: number, serviceId: string }>}
+ */
+export function processingResolvedByResults(results, servicesByPhaseId) {
+  if (!Array.isArray(results)) {
+    return [];
+  }
+
+  return results.flatMap((result) => {
+    const phaseId = Number(result?.phaseId);
+    const serviceId = normalizeServiceId(result?.serviceId);
+    const phaseServiceIds = servicesByPhaseId?.[phaseId] ?? [];
+
+    if (!Number.isInteger(phaseId) || phaseId <= 0 || !phaseServiceIds.includes(serviceId)) {
+      return [];
+    }
+
+    return serviceId ? [{ phaseId, serviceId }] : [];
+  });
+}
