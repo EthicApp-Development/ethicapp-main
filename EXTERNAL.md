@@ -1123,10 +1123,11 @@ To add a renderer for a new document schema, such as `<name>/v1`:
    `canonical-schemas/__tests__/student-result-v1.schema.node-test.mjs`.
 3. Teach the backend validation of #1131 the new schema, so its documents are
    checked against the copy and are not refused as unknown.
-4. Write the renderer component in the student app and add an entry for the
-   schema to the allowlist that the result panel
-   (`ethicapp-student/frontend/src/components/session-detail/external-services/ExternalServiceResultPanel.jsx`)
-   resolves renderers through. The renderer treats every text as plain text
+4. Write the renderer component in the student app, add an entry for the
+   schema to the allowlist in
+   `ethicapp-student/frontend/src/components/session-detail/external-services/resultRenderers.js`,
+   and map the renderer id to the component in `ExternalServiceResultPanel.jsx`
+   next to it. The renderer treats every text as plain text
    except the fields its schema marks as Markdown, which go through the
    restricted `markdown-it` setup; it sets `lang` from the document's
    `locale`, writes its interface text through the student app's locales, and
