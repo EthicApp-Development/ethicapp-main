@@ -59,9 +59,11 @@ import {
 
 const router = express.Router();
 const uploadsRoot = path.resolve(process.cwd(), uploadsPath);
-// What a case copied with a design requests once it is committed (#1038).
-// Tests replace it with a fake.
+// What a case copied with a design requests once it is committed: its render
+// (#1088) and the analyses it did not inherit (#1038). Tests replace them with
+// fakes.
 export const designCaseCopyServices = {
+    ensureRenderJob:     ensureCasePdfRenderJob,
     requestCopyAnalyses: requestCaseCopyAnalyses,
 };
 const MAX_SEMANTIC_TAGS = 5;
@@ -453,14 +455,18 @@ function designInUseResponse(res) {
 
 /**
  * After a case copied with a design is committed (`caseCopy` from
- * copyCaseForUser): the case is rendered when it has no render yet, so
- * analyses and screens get its text, and a new copy then requests the case
- * analyses it did not inherit (#1038). It runs in the background, after the
- * answer.
+ * copyCaseForUser): the case is rendered when it has a PDF path and no render
+ * yet, so analyses and screens get its text, and a new copy then requests the
+ * case analyses it did not inherit (#1038). A reused copy that already has a
+ * render gets no second one. A case imported or duplicated from Casos follows
+ * the same rule (#1088), but the case routes wait for it before answering;
+ * this runs in the background, after the answer, since the answer is the
+ * design.
  */
 function scheduleCaseCopyFollowUp(caseCopy, userId, reason) {
     const { caseId, copy } = caseCopy;
-    ensureCasePdfRenderJob(caseId, { metadata: { reason } })
+    Promise.resolve()
+        .then(() => designCaseCopyServices.ensureRenderJob(caseId, { metadata: { reason } }))
         .catch(error => {
             console.error("Unable to queue PDF render job for a copied case:", { caseId, error });
             return null;

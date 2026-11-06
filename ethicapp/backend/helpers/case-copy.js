@@ -8,7 +8,9 @@
 // the rights details, the attribution, the language and the provenance.
 //
 // Each route keeps its own rules: which sources it may copy, whether an
-// existing copy is reused, the copy's title and its visibility.
+// existing copy is reused, the copy's title and its visibility. Once the copy
+// is committed, all three queue its render by one rule, ensureCasePdfRenderJob
+// in pdf-render-jobs-helper.js (#1088).
 
 import {
     CASE_DEFAULT_LICENSE,
