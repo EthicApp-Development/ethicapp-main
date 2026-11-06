@@ -15,6 +15,7 @@ import {
     ARGUMENTATION_TUTOR_SERVICE_ID,
     buildArgumentClientContext,
     buildFeedbackPayloadFromExternalResult,
+    buildStudentFeedback,
     CASE_CONTEXT_OUTCOMES,
     claimTypeFromExternalResult,
     createAtsSession,
@@ -414,26 +415,22 @@ function isMissingPreviousAnalysisError(error) {
     return responseError.includes("no previous analysis") || responseError.includes("no previous argument");
 }
 
-async function publishFeedbackToStudent({ context, feedbackPayload, status, publishStudentResult }) {
-    const userId = Number(context?.userId);
+// Publishes one tutor callback's feedback to its student, with the id of the
+// stored result it came from (#1126), so the student app can match it with
+// the same result rebuilt through `student-results-reading`.
+async function publishFeedbackToStudent({
+    fallbackContext, studentResult, resultId, publishStudentResult,
+}) {
+    const userId = Number(fallbackContext?.userId);
     if (!Number.isInteger(userId) || userId <= 0) {
         throw new Error("Cannot publish ATS feedback without a valid userId.");
     }
 
     await publishStudentResult({
         userId,
-        sessionId:  Number(context.sessionId) || null,
-        phaseId:    Number(context.phaseId) || null,
-        questionId: Number(context.questionId) || null,
-        component:  {
-            componentId: "argument-tutor-chat-feedback",
-            title:       "Argument Tutor Feedback",
-        },
-        payload: {
-            feedback: feedbackPayload,
-        },
-        message: "Your argument tutor feedback is now available.",
-        status:  status || "completed",
+        sessionId: Number(fallbackContext.sessionId) || null,
+        resultId:  resultId ?? null,
+        ...studentResult,
     });
 }
 
@@ -777,23 +774,14 @@ function createAtsFeedbackHandlers({ dependencies, publishStudentResult }) {
                 userId:  Number(requestPayload?.userId) || context.userId,
             });
 
-        const fallbackContext = {
-            sessionId:  Number(requestPayload?.sessionId) || context.sessionId,
-            phaseId:    Number(requestPayload?.phaseId) || context.phaseId,
-            questionId: Number(requestPayload?.questionId) || context.questionId,
-            userId:     Number(requestPayload?.userId) || context.userId,
-        };
-
-        // The student's feedback is unchanged: the matched claim type (#850),
-        // the evaluation's mode and its evidence (#865) are for teachers, and
-        // are only recorded with the result.
-        const feedbackPayload = buildFeedbackPayloadFromExternalResult(
-            requestPayload, fallbackContext
+        // `context` holds the callback's trusted destination, the job's.
+        const { fallbackContext, feedbackPayload, studentResult } = buildStudentFeedback(
+            requestPayload, context
         );
         await publishFeedbackToStudent({
-            context: fallbackContext,
-            feedbackPayload,
-            status:  normalizeText(requestPayload?.status) || "completed",
+            fallbackContext,
+            studentResult,
+            resultId: context?.resultId,
             publishStudentResult,
         });
 
