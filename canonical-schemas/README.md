@@ -7,11 +7,12 @@ This directory currently contains JSON Schemas for portable EthicApp objects.
 - `rich-text/`: how teacher-written texts (phase instructions and semantic differential questions) are interpreted. It holds the content types, the CommonMark subset, the normalized tree renderers produce, and shared conformance fixtures. See [`rich-text/README.md`](rich-text/README.md).
 - `events/`: domain-event envelope and per-event payload contracts for one-way notifications between services over the application Redis. See [`events/README.md`](events/README.md).
 - `ai-additions-connection/url-cases.json`: boundary cases of the AI Additions connection URL rule (#834), each with its expected outcome and a reason. ethicapp (`isValidAiAdditionsUrl`) and the management console (`normalizeConnectionUrl`) both run every case. The console image cannot see this directory, so the console keeps a byte-identical copy in `management-console/backend/services/__tests__/fixtures/`, and a console test fails when the copies differ.
+- `ai-additions/`: verbatim copies of contracts that ethicapp-ai-additions owns, starting with `student-result/v1`, the document an AI service publishes to show a result to a student (#1130). They change only to match the source; see [`ai-additions/README.md`](ai-additions/README.md).
 - `tag-taxonomy-v1.schema.json`: portable controlled taxonomy for semantic tags used by ethical cases and activity designs, including domain-specific translations outside UI locale catalogs.
 
 ## Tests
 
-`npm run test:schemas` (repository root) validates documents against these schemas. `__tests__/ethicapp-v1.schema.node-test.mjs` checks every canonical seed design in `database/seeds/canonical-activities/manifest.json`, plus the external service `configurations` rules and the text content types. `__tests__/rich-text.node-test.mjs` checks that the rich text fixtures are well formed and normalized, and that their trees match `rich-text/rich-text-tree-v2.schema.json`. Run them whenever a schema, a seed or a fixture changes.
+`npm run test:schemas` (repository root) validates documents against these schemas. `__tests__/ethicapp-v1.schema.node-test.mjs` checks every canonical seed design in `database/seeds/canonical-activities/manifest.json`, plus the external service `configurations` rules and the text content types. `__tests__/rich-text.node-test.mjs` checks that the rich text fixtures are well formed and normalized, and that their trees match `rich-text/rich-text-tree-v2.schema.json`. `__tests__/student-result-v1.schema.node-test.mjs` checks the examples of the `student-result/v1` copy against it, along with documents it must reject and the unknown section kinds it must accept. Run them whenever a schema, a seed or a fixture changes.
 
 ## Design Notes
 
