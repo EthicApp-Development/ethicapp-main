@@ -1,5 +1,6 @@
 import * as config from "../../config/database.config.js";
 import * as rpg2 from "../../db/rest-pg-2.js";
+import { loadSessionActivityLocale } from "../../helpers/activity-locale.js";
 import { findQuestionUnit, questionUnitId } from "../../helpers/design-analysis-units.js";
 import {
     decideTutorMode,
@@ -353,29 +354,6 @@ async function loadSessionContext(context) {
     };
 }
 
-/**
- * The activity's locale (#1133): `es_CL` or `en_US`, from the language of the
- * session's design (`designs.language_code`, activityLocale()), or null when
- * the session has no activity design. The Polyadic bridge reads the same
- * column for its `locale`.
- */
-async function loadActivityLocale(sessionId) {
-    const row = await rpg2.singleSQL({
-        dbcon: config.dbconnString,
-        sql:   `
-            SELECT ds.language_code
-            FROM activity AS a
-            INNER JOIN designs AS ds
-                ON ds.id = a.design
-            WHERE a.session = $1
-            LIMIT 1
-        `,
-        sqlParams: [rpg2.param("plain", Number(sessionId))],
-    });
-
-    return row ? activityLocale(row.language_code) : null;
-}
-
 async function resolveQuestionText(context) {
     const questionId = Number(context?.questionId);
     const phaseId = Number(context?.phaseId);
@@ -426,10 +404,10 @@ function createDependencies(overrides = {}) {
         resolveGroupId,
         resolveQuestionPosition,
         loadSessionContext,
-        loadActivityLocale,
+        loadActivityLocale: loadSessionActivityLocale,
         resolveQuestionText,
         loadTutorModeInputs,
-        now: () => Date.now(),
+        now:                () => Date.now(),
         ...overrides,
     };
 }
@@ -960,10 +938,8 @@ export async function register({
     // when the student loads the activity (#1126): the tutor is not called.
     // A callback stored without the tutor's document and without the locale
     // it was mapped in (one processed before #1133) is mapped in the
-    // activity's locale.
-    subscribe("student-results-reading", (context, tools) => readStudentResults(context, tools, {
-        loadActivityLocale: handlers.activityLocaleOrNull,
-    }));
+    // activity's locale, which the registry passes as `context.locale`.
+    subscribe("student-results-reading", readStudentResults);
 
     subscribe("phase-ended", async (context, { callback }) => {
         try {

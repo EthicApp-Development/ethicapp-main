@@ -71,6 +71,7 @@ import {
     validateStudentResultDocument,
 } from "./student-result-documents.js";
 import { getEnabledExternalServiceIdsBySessionId } from "../helpers/designs-helper.js";
+import { loadSessionActivityLocale } from "../helpers/activity-locale.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -547,6 +548,7 @@ export class ExternalServicesRegistry {
             return true;
         },
         validateDocument = validateStudentResultDocument,
+        loadSessionLocale = loadSessionActivityLocale,
         saveChatMessage: saveMessage = saveChatMessage,
     } = {}) {
         this.initialized      = false;
@@ -609,6 +611,9 @@ export class ExternalServicesRegistry {
         // Validates documents published to students against the schema
         // copies (#1131); replaced in tests.
         this._validateDocument = validateDocument;
+        // Reads the locale of a session's activity for student-results-reading
+        // (helpers/activity-locale.js); replaced in tests.
+        this._loadSessionLocale = loadSessionLocale;
         // Stores the chat messages adapters publish; replaced in tests.
         this._saveChatMessage = saveMessage;
 
@@ -1544,7 +1549,9 @@ export class ExternalServicesRegistry {
      * asked are those registered and subscribed to the hook that
      * studentResultsServiceIds() finds enabled for the session. Each handler
      * is awaited under a timeout and receives `({ serviceId, sessionId,
-     * userId }, { results, signal })`; no job or result row is created, no
+     * userId, locale }, { results, signal })`, where `locale` is the
+     * activity's locale (`es_CL`, `en_US`) or null, read once per call so
+     * handlers need no database access; no job or result row is created, no
      * `callback` is passed and no remote service is called. See
      * external-service-student-results.js.
      *
@@ -1581,9 +1588,10 @@ export class ExternalServicesRegistry {
             return Object.freeze([]);
         }
 
+        const locale = await this._sessionLocaleOrNull(sessionId);
         const declarations = new Map();
         return collectStudentResults({
-            context:       { sessionId, userId },
+            context:       { sessionId, userId, locale },
             subscribers:   asked,
             resultsStore:  this._reportResultsStore,
             timeoutMs:     this._studentResultsTimeoutMs,
@@ -1902,6 +1910,24 @@ export class ExternalServicesRegistry {
             JSON.stringify(summarizeCallbackResult({ serviceId, hookName, result, context }))
         );
         return entry;
+    }
+
+    /**
+     * The locale of a session's activity, passed to student-results-reading
+     * handlers as `context.locale` so they need no database access: `es_CL`,
+     * `en_US`, or null when the session has no activity design or the read
+     * fails (logged with the session id only). Never throws.
+     */
+    async _sessionLocaleOrNull(sessionId) {
+        try {
+            return await this._loadSessionLocale(sessionId);
+        } catch (error) {
+            console.warn(
+                "[external-services] Could not read the activity's locale for student results.",
+                JSON.stringify({ sessionId, ...errorClassification(error) })
+            );
+            return null;
+        }
     }
 
     /**

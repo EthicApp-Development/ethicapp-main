@@ -219,8 +219,10 @@ function readerOf(stored) {
     };
 }
 
-function context(userId = STUDENT_ID) {
-    return Object.freeze({ serviceId: SERVICE_ID, sessionId: SESSION_ID, userId });
+// The handler's context as the registry passes it, with the activity's
+// locale it read (null when it could not).
+function context(userId = STUDENT_ID, locale = null) {
+    return Object.freeze({ serviceId: SERVICE_ID, sessionId: SESSION_ID, userId, locale });
 }
 
 // What publishStudentResult received, as the registry emits a document
@@ -407,13 +409,9 @@ test("a rebuilt tutor document equals the one published live, unchanged", async 
         lives.push(live);
         stored.push(storedResult({ id: live.id, requestPayload, callback: live.callback }));
     }
-    let localeReads = 0;
+    // The tutor's document keeps its own locale, whatever the activity's.
+    const rebuilt = await readStudentResults(context(STUDENT_ID, "en_US"), readerOf(stored));
 
-    const rebuilt = await readStudentResults(context(), readerOf(stored), {
-        loadActivityLocale: async () => { localeReads += 1; return "en_US"; },
-    });
-
-    assert.equal(localeReads, 0, "a tutor document needs no locale");
     for (const [index, live] of lives.entries()) {
         assert.deepEqual(withoutPublishedAt(rebuilt[index]), publishedEntry(live.published[0]));
         assertNoTeacherKey(rebuilt[index], `entry ${index}`);
@@ -433,14 +431,9 @@ test("a mapped document is rebuilt in the locale it was published in", async () 
     const stored = [storedResult({
         id: live.id, requestPayload: analysisPayload(), callback: live.callback,
     })];
-    let localeReads = 0;
-
     // The activity's language changed since: the recorded locale wins.
-    const rebuilt = await readStudentResults(context(), readerOf(stored), {
-        loadActivityLocale: async () => { localeReads += 1; return "es_CL"; },
-    });
+    const rebuilt = await readStudentResults(context(STUDENT_ID, "es_CL"), readerOf(stored));
 
-    assert.equal(localeReads, 0);
     assert.equal(rebuilt[0].payload.locale, "en-US");
     assert.deepEqual(withoutPublishedAt(rebuilt[0]), publishedEntry(live.published[0]));
 });
@@ -454,13 +447,9 @@ test("callbacks processed before #1133 are mapped in the activity's locale", asy
         storedResult({ id: resultId(), requestPayload: analysisPayload(), callback: before1133 }),
         storedResult({ id: resultId(), requestPayload: comparisonPayload(), callback: before1133 }),
     ];
-    const reads = [];
+    // The registry passes the activity's locale as `context.locale`.
+    const rebuilt = await readStudentResults(context(STUDENT_ID, "en_US"), readerOf(stored));
 
-    const rebuilt = await readStudentResults(context(), readerOf(stored), {
-        loadActivityLocale: async sessionId => { reads.push(sessionId); return "en_US"; },
-    });
-
-    assert.deepEqual(reads, [SESSION_ID]);
     assert.deepEqual(rebuilt.map(entry => entry.payload.locale), ["en-US", "en-US"]);
     assert.deepEqual(rebuilt.map(entry => entry.message),
         Array(2).fill("Feedback on your argument is now available."));
@@ -471,7 +460,7 @@ test("callbacks processed before #1133 are mapped in the activity's locale", asy
         }).problems, []);
     }
 
-    // Without a reader of the locale, the default one.
+    // Without the activity's locale (it could not be read), the default one.
     const withoutLocale = await readStudentResults(context(), readerOf(stored));
     assert.deepEqual(withoutLocale.map(entry => entry.payload.locale), ["es-CL", "es-CL"]);
 });
@@ -722,6 +711,7 @@ test("through the registry, the student reads back the live feedback by its id",
         reportResultsStore:    store,
         developmentAdapters:   false,
         loadSessionServiceIds: async () => [SERVICE_ID],
+        loadSessionLocale:     async () => "en_US",
         aiServicePolicy:       {
             getSessionPolicyVersionId: async () => 4,
             getPolicyVersion:          async () => ({

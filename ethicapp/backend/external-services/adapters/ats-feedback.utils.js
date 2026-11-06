@@ -1,3 +1,4 @@
+import { activityLocale, DEFAULT_ACTIVITY_LOCALE } from "../../helpers/activity-locale.js";
 import { plainTextOf } from "../../helpers/rich-text-helper.js";
 import { describeError } from "../../helpers/log-safety.js";
 import { ARGUMENTATION_TUTOR_SERVICE_ID } from "../../helpers/tutor-mode.js";
@@ -247,24 +248,9 @@ export function buildFeedbackPayloadFromExternalResult(requestPayload, fallbackC
 
 // ─── The activity's locale (#1133) ──────────────────────────────────────────
 
-// The locale of an activity whose design has no language, the column default
-// of `designs.language_code`.
-export const DEFAULT_ACTIVITY_LOCALE = "es_CL";
-
-/**
- * The activity's locale, `es_CL` or `en_US`, from its design's
- * `designs.language_code` by the canonical rule: Spanish (`es`, `es_*`,
- * `es-*`) is `es_CL`, anything else `en_US`, and no language is `es_CL`.
- * The tutor accepts EthicApp's spelling as its `locale` session input
- * (ethicapp-ai-additions#233).
- */
-export function activityLocale(languageCode) {
-    const code = normalizeText(languageCode);
-    if (!code) {
-        return DEFAULT_ACTIVITY_LOCALE;
-    }
-    return /^es(?:[-_]|$)/iu.test(code) ? "es_CL" : "en_US";
-}
+// The rule lives in helpers/activity-locale.js, which the registry also uses
+// to pass the locale to handlers as `context.locale`.
+export { activityLocale, DEFAULT_ACTIVITY_LOCALE };
 
 // student-result/v1 names its locales as BCP 47 tags.
 const DOCUMENT_LOCALES = Object.freeze({ es_CL: "es-CL", en_US: "en-US" });

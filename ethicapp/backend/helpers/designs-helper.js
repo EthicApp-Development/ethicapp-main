@@ -2,6 +2,7 @@ import * as config from "../config/database.config.js";
 import * as rpg2 from "../db/rest-pg-2.js";
 import { phaseExternalServices, unionEnabledServiceIds } from "./phase-external-services.js";
 import { noPhaseExternalServices, sessionAiServicesEnabled } from "./session-ai-services.js";
+import { activityLocale } from "./activity-locale.js";
 
 // The design of a session's activity and the session's AI services switch
 // (#970).
@@ -16,11 +17,16 @@ export const SESSION_ACTIVITY_DESIGN_SQL = `
 // The AI services switch of the session a phase belongs to (#970). An unknown
 // phase answers no row, and the design read that follows reports it.
 export const PHASE_SESSION_AI_SERVICES_SQL = `
-    SELECT s.ai_services_enabled
+    SELECT s.ai_services_enabled, ds.language_code
     FROM stages AS st
     INNER JOIN sessions AS s
         ON s.id = st.sesid
+    LEFT JOIN activity AS a
+        ON a.session = s.id
+    LEFT JOIN designs AS ds
+        ON ds.id = a.design
     WHERE st.id = $1
+    LIMIT 1
 `;
 
 /**
@@ -239,9 +245,12 @@ export async function getEnabledExternalServiceIdsBySessionId(sessionId) {
  * read from the activity's design when the hook is dispatched (#734). None
  * when the phase's session was launched with its AI services turned off
  * (#970): this is the gate of every phase hook dispatch and of the
- * destination check of a callback without a job.
+ * destination check of a callback without a job. With services, `locale` is
+ * the activity's locale (helpers/activity-locale.js), read by the same query,
+ * which phase hooks pass to handlers as `context.locale` (#1124).
  * @param {number} phaseId
- * @returns {Promise<{ enabledServiceIds: string[], configurations: Object<string, object> }>}
+ * @returns {Promise<{ enabledServiceIds: string[], configurations: Object<string, object>,
+ *     locale?: "es_CL"|"en_US" }>}
  */
 export async function getPhaseExternalServices(phaseId) {
     const session = await rpg2.singleSQL({
@@ -252,5 +261,8 @@ export async function getPhaseExternalServices(phaseId) {
     if (!sessionAiServicesEnabled(session)) {
         return noPhaseExternalServices();
     }
-    return phaseExternalServices(await getPhaseDesignByPhaseId(phaseId));
+    return {
+        ...phaseExternalServices(await getPhaseDesignByPhaseId(phaseId)),
+        locale: activityLocale(session.language_code),
+    };
 }
