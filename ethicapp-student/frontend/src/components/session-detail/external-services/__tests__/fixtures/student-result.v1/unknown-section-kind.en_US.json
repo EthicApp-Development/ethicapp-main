@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "student-result/v1",
+  "locale": "en-US",
+  "title": "Feedback on your response",
+  "summary": "A renderer shows the text section and skips the section whose kind it does not know.",
+  "sections": [
+    {
+      "kind": "text",
+      "title": "Your response",
+      "text": "Honesty matters more than a grade."
+    },
+    {
+      "kind": "score-chart",
+      "title": "Scores",
+      "series": [
+        {
+          "label": "Evidence",
+          "value": 2
+        }
+      ]
+    }
+  ]
+}
