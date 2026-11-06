@@ -552,6 +552,30 @@ correlation id (#833). Messages published before #947 get no values.
 The contract, the reader and the catalog's `report.columnPrefix` are described
 in `ethicapp/backend/external-services/README.md`, "Report building".
 
+### Student results reading
+
+`student-results-reading` (epic #1123, #1125) is the second collecting hook,
+dispatched by `registry.collectStudentResults({ sessionId, userId })` when a
+student loads an activity. `publishStudentResult` only emits a socket event,
+so each adapter rebuilds, from its stored callbacks, the results it published
+to that student in that session. No copy of a published result is stored.
+
+It asks the subscribed services that the session's design enables in any
+phase (none when the activity was launched with its AI services off) and
+that the session's pinned policy version allows; the AI Additions connection
+is not required, since no service is called. Each handler is awaited under a
+3-second timeout with `{ serviceId, sessionId, userId }` and a reader limited
+to its own service, the session and that student. It returns
+`[{ resultId, phaseId, questionId, component, payload, message, status,
+publishedAt }]`. The registry drops each entry that is malformed, that cites a
+result its reader did not return, or that moves a result to another phase or
+question, then adds `serviceId` and orders the merged list by `publishedAt`. A
+handler that fails, times out or returns something other than a list
+contributes nothing and is logged; the others still answer.
+
+The contract and the reader are described in
+`ethicapp/backend/external-services/README.md`, "Student results reading".
+
 ## External Result Callback
 
 External AI services call the unified callback endpoint:
@@ -659,7 +683,9 @@ export async function register({ service, subscribe, publishStudentResult }) {
 
 The backend sends this payload to the student namespace through the
 `onExternalServiceResult` websocket event. The current PoC targets a user room
-named `user-{uid}`.
+named `user-{uid}`. The event is not stored or replayed: an adapter that
+publishes from a callback rebuilds the result from the stored callback through
+the `student-results-reading` hook (see "Student results reading").
 
 Adapters can publish a chat message back into EthicApp through
 `publishGroupChatMessage(...)`. This helper saves the message using the same chat
