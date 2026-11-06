@@ -1,10 +1,14 @@
 import { normalizeJobSource, poolQuery, RESULT_STATUS } from "./external-service-jobs.service.js";
 
 /**
- * What the `report-building` hook (epic #620, #944) reads from EthicApp's
- * database: which services worked in a session, and each service's stored
- * results for it. It only reads; the collecting dispatch creates no job or
- * result rows.
+ * What the collecting hooks read from EthicApp's database: which services
+ * worked in a session, and each service's stored results for it. It only
+ * reads; the collecting dispatches create no job or result rows.
+ *
+ * - `report-building` (epic #620, #944) reads a service's results for the
+ *   report's session (createReportResultsReader());
+ * - `student-results-reading` (epic #1123, #1125) reads them for one student
+ *   of the session (createStudentResultsReader()).
  */
 
 // The filters a results reader accepts, mapped to the columns they compare.
@@ -22,7 +26,10 @@ function isPositiveInteger(value) {
     return Number.isInteger(value) && value > 0;
 }
 
-function validFilters(filters) {
+// The filters of a student results reader: its user is part of its scope.
+const STUDENT_RESULT_FILTERS = Object.freeze(["hookName", "phaseId", "questionId"]);
+
+function validFilters(filters, allowedKeys = Object.keys(RESULT_FILTER_COLUMNS)) {
     if (filters === undefined || filters === null) {
         return {};
     }
@@ -30,7 +37,7 @@ function validFilters(filters) {
         throw new TypeError("Result filters must be an object.");
     }
 
-    const unknown = Object.keys(filters).filter(key => !Object.hasOwn(RESULT_FILTER_COLUMNS, key));
+    const unknown = Object.keys(filters).filter(key => !allowedKeys.includes(key));
     if (unknown.length > 0) {
         throw new TypeError(`Unknown result filters: ${unknown.join(", ")}.`);
     }
@@ -151,6 +158,47 @@ export function createReportResultsReader(store, { serviceId, sessionId }) {
             return rows
                 .filter(row => row.service_id === serviceId && Number(row.session_id) === sessionId)
                 .map(resultFromRow);
+        },
+    });
+}
+
+/**
+ * The results reader a `student-results-reading` handler receives (#1125):
+ * the only data access it gets, bound to its own service, the session and
+ * one student, the user the results' jobs were dispatched for.
+ *
+ * `list({ hookName?, phaseId?, questionId? })` resolves to the same frozen
+ * results as createReportResultsReader(), oldest first, `pending` ones left
+ * out. `userId` and `groupId` are not filters: the user is fixed and a
+ * group's results are not the student's. Unknown or malformed filters reject
+ * with a TypeError.
+ *
+ * `onRead(result)` is called with every result the reader returns; the
+ * collecting dispatch uses it to accept only entries that cite one of them.
+ */
+export function createStudentResultsReader(
+    store,
+    { serviceId, sessionId, userId },
+    { onRead } = {}
+) {
+    return Object.freeze({
+        async list(filters) {
+            const rows = await store.listResults({
+                serviceId,
+                sessionId,
+                filters: { ...validFilters(filters, STUDENT_RESULT_FILTERS), userId },
+            });
+            // The query is already scoped; this guards the scope against a
+            // store that is not.
+            const results = rows
+                .filter(row => row.service_id === serviceId
+                    && Number(row.session_id) === sessionId
+                    && Number(row.user_id) === userId)
+                .map(resultFromRow);
+            for (const result of results) {
+                onRead?.(result);
+            }
+            return results;
         },
     });
 }
