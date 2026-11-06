@@ -3,6 +3,7 @@ import { legacyUserApi, studentApi } from '../../../api/studentApi.js';
 import { createRealtimeConnectionMonitor } from '../../../services/realtimeConnectionMonitor.js';
 import { getStudentSocket } from '../../../services/studentSocket.js';
 import { createReconnectTracker } from '../externalResultsLoading.js';
+import { errorLogDetails, socketEventLogDetails } from '../../../utils/logDetails.js';
 
 export function useActivityRealtimeSync({
   session,
@@ -59,20 +60,21 @@ export function useActivityRealtimeSync({
       }
     };
 
-    const handlePhaseTransition = (...payload) => {
-      console.debug('[student socket] onPhaseTransition', { sessionId: activeSessionId, payload });
+    // Socket payloads can quote students: only their ids are logged (#1139).
+    const handlePhaseTransition = () => {
+      console.debug('[student socket] onPhaseTransition', socketEventLogDetails(activeSessionId));
 
       dispatch({ type: 'ACTIVITY_FORCE_IN_PROGRESS' });
       loadCurrentPhaseState({ sessionId: activeSessionId }).catch(() => {});
       loadFullState({ sessionId: activeSessionId, userId: session.uid, invalidate: true }).catch(() => {});
     };
 
-    const handleShareResponse = (payload) => {
-      console.debug('[student socket] onShareResponse', { sessionId: activeSessionId, payload });
+    const handleShareResponse = () => {
+      console.debug('[student socket] onShareResponse', socketEventLogDetails(activeSessionId));
     };
 
-    const handleEndSession = (payload) => {
-      console.debug('[student socket] onEndSession', { sessionId: activeSessionId, payload });
+    const handleEndSession = () => {
+      console.debug('[student socket] onEndSession', socketEventLogDetails(activeSessionId));
       dispatch({ type: 'ACTIVITY_FORCE_FINISHED' });
     };
 
@@ -85,7 +87,7 @@ export function useActivityRealtimeSync({
     };
 
     const handleExternalServiceResult = (payload) => {
-      console.debug('[student socket] onExternalServiceResult', { sessionId: activeSessionId, payload });
+      console.debug('[student socket] onExternalServiceResult', socketEventLogDetails(activeSessionId, payload));
 
       const payloadSessionId = Number(payload?.sessionId);
       if (Number.isInteger(payloadSessionId) && payloadSessionId > 0 && payloadSessionId !== activeSessionId) {
@@ -112,7 +114,10 @@ export function useActivityRealtimeSync({
         socket.on('onExternalServiceResult', handleExternalServiceResult);
       })
       .catch((error) => {
-        console.debug('[student socket] could not initialize websocket client', { sessionId: activeSessionId, error });
+        console.debug('[student socket] could not initialize websocket client', {
+          sessionId: activeSessionId,
+          ...errorLogDetails(error)
+        });
         // Loading the client script from /socket.io/ fails the same way as a refused handshake.
         handleConnectError();
       });
@@ -218,7 +223,7 @@ export function useActivityRealtimeSync({
           console.debug('[student socket] failed to resolve group for current phase', {
             sessionId: Number(selectedSession.id),
             phaseId,
-            error
+            ...errorLogDetails(error)
           });
         }
       })
