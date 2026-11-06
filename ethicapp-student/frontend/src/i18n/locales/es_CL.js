@@ -156,7 +156,7 @@ const esCL = {
     },
     externalResponseProcessing: 'Un servicio externo está procesando tu respuesta...',
     externalResponseProcessingButton: 'Esperando retroalimentación externa...',
-    externalResultTitle: 'Resultado del servicio externo',
+    externalResultTitle: 'Retroalimentación',
     externalResultService: 'Servicio',
     externalResultLoadError: 'No fue posible mostrar este resultado.',
     externalResultsLabel: 'Retroalimentación de tus respuestas',
