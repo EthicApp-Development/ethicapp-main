@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "student-result/v1",
+  "locale": "en-US",
+  "title": "Feedback on your response",
+  "sections": [
+    {
+      "kind": "text",
+      "text": "Your response was received and reviewed."
+    }
+  ]
+}
