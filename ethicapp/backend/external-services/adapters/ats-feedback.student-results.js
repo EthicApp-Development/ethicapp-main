@@ -1,4 +1,4 @@
-import { buildStudentFeedback } from "./ats-feedback.utils.js";
+import { buildStudentFeedback, documentLocaleOf } from "./ats-feedback.utils.js";
 
 /**
  * The argumentation tutor's `student-results-reading` handler (epic #1123,
@@ -20,8 +20,16 @@ import { buildStudentFeedback } from "./ats-feedback.utils.js";
  * path publishes with, from its `raw_payload` and its ids, which are the ids
  * of the job the live path took as the callback's destination. The rebuilt
  * entry is therefore the result published live, with the stored result's id
- * and its `receivedAt` as `publishedAt`. A forgotten student's payloads are
- * redacted as stored (#876) and are rebuilt as such.
+ * and its `receivedAt` as `publishedAt`, as the registry emits a document:
+ * `component: { documentSchema }` with the document as `payload` (#1133). A
+ * forgotten student's payloads are redacted as stored (#876) and are rebuilt
+ * as such.
+ *
+ * A callback without the tutor's `studentResult` is mapped in the locale the
+ * live path recorded (`adapter_result.payload.studentDocument.locale`). A
+ * callback processed before #1133 has none, and was never published as a
+ * document: it is mapped in the activity's locale, read once per call with
+ * `loadActivityLocale`, and only when such a callback is rebuilt.
  */
 
 const PUBLISHED_STATUS = "completed";
@@ -37,29 +45,50 @@ function publishedToUserId(result) {
     return positiveIdOrNull(result?.adapterResult?.payload?.publishedToUserId);
 }
 
+// The locale the live path mapped the callback in, when it recorded one.
+function recordedLocale(result) {
+    return documentLocaleOf(result?.adapterResult?.payload?.studentDocument?.locale);
+}
+
 /**
  * @param {{serviceId: string, sessionId: number, userId: number}} context
  * @param {{results: {list: Function}}} reader - The student results reader.
+ * @param {Object} [dependencies]
+ * @param {(sessionId: number) => Promise<string|null>} [dependencies.loadActivityLocale]
+ *     - The activity's locale, or null; never rejects. Without it, callbacks
+ *     with no recorded locale are mapped in the default locale.
  * @returns {Promise<Object[]>} `{ resultId, phaseId, questionId, component,
  *     payload, message, status, publishedAt }`, oldest first.
  */
-export async function readStudentResults(context, { results }) {
+export async function readStudentResults(context, { results }, {
+    loadActivityLocale = async () => null,
+} = {}) {
     const stored = await results.list();
 
-    return stored
-        .filter(result => result.status === PUBLISHED_STATUS
-            && publishedToUserId(result) === context.userId)
-        .map(result => {
-            const { studentResult } = buildStudentFeedback(result.rawPayload, {
-                sessionId:  context.sessionId,
-                phaseId:    result.phaseId,
-                questionId: result.questionId,
-                userId:     result.userId,
-            });
-            return {
-                resultId:    result.id,
-                ...studentResult,
-                publishedAt: result.receivedAt,
-            };
+    let sessionLocale = null;
+    const activityLocale = () => {
+        sessionLocale ??= loadActivityLocale(context.sessionId);
+        return sessionLocale;
+    };
+
+    const published = stored.filter(result => result.status === PUBLISHED_STATUS
+        && publishedToUserId(result) === context.userId);
+    return Promise.all(published.map(async result => {
+        const { studentResult } = await buildStudentFeedback(result.rawPayload, {
+            sessionId:  context.sessionId,
+            phaseId:    result.phaseId,
+            questionId: result.questionId,
+            userId:     result.userId,
+        }, {
+            resolveLocale: async () => recordedLocale(result) ?? activityLocale(),
         });
+        const { documentSchema, document, ...rest } = studentResult;
+        return {
+            resultId:    result.id,
+            ...rest,
+            component:   { documentSchema },
+            payload:     document,
+            publishedAt: result.receivedAt,
+        };
+    }));
 }
