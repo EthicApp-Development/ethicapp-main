@@ -29,6 +29,7 @@ import {
     assertValidCatalog,
     catalogWarnings,
     developmentAdaptersEnabled,
+    manifestStudentOutputs,
     validateCatalog,
     validateCatalogEntry,
 } from "../external-services/catalog.js";
@@ -680,26 +681,31 @@ export class ExternalServicesRegistry {
         }
 
         const normalizedService = {
-            id:           service.id,
-            description:  service.description || "",
+            id:             service.id,
+            description:    service.description || "",
             hooks,
-            globalHooks:  normalizeGlobalHooks(service.globalHooks, hooks, service.id),
-            scopes:       normalizeScopes(service.scopes, service.id),
-            ui:           normalizeUi(service.ui, service.id),
-            descriptor:   normalizeDescriptor(service.descriptor, service.requires, service.id),
+            globalHooks:    normalizeGlobalHooks(service.globalHooks, hooks, service.id),
+            scopes:         normalizeScopes(service.scopes, service.id),
+            ui:             normalizeUi(service.ui, service.id),
+            descriptor:     normalizeDescriptor(service.descriptor, service.requires, service.id),
             // The AI Additions services the adapter talks to (#812). The
             // service policy (#815) allows an adapter only when it allows all.
-            requires:     [...service.requires],
+            requires:       [...service.requires],
             // The design analyses the adapter produces and needs (#863), as
             // `{ documentSchema, unit }`. See getDesignAnalysisConsumerIds().
-            produces:     designAnalysisDeclaration(service.produces),
-            consumes:     designAnalysisDeclaration(service.consumes),
+            produces:       designAnalysisDeclaration(service.produces),
+            consumes:       designAnalysisDeclaration(service.consumes),
             // `{ columnPrefix }`: the prefix of the columns the adapter adds
             // to reports (report-building, #944), or null.
-            report:       service.report?.columnPrefix ? { columnPrefix: service.report.columnPrefix } : null,
+            report:         service.report?.columnPrefix ? { columnPrefix: service.report.columnPrefix } : null,
+            // The student outputs a development adapter declares in its
+            // catalog entry (#1134), normalized like a descriptor's, or null.
+            // Read only when the service links no descriptor (see
+            // _manifestDeclaration()); production adapters cannot declare.
+            studentOutputs: manifestStudentOutputs(service).studentOutputs,
             development,
-            adapter:      service.adapter,
-            callbackAuth: service.callbackAuth && typeof service.callbackAuth === "object"
+            adapter:        service.adapter,
+            callbackAuth:   service.callbackAuth && typeof service.callbackAuth === "object"
                 ? {
                     allowedClientIds: Array.isArray(service.callbackAuth.allowedClientIds)
                         ? service.callbackAuth.allowedClientIds.filter(id => typeof id === "string" && id.trim())
@@ -1909,13 +1915,14 @@ export class ExternalServicesRegistry {
      *   only those keys go with it. It is sent only when it validates against
      *   EthicApp's copy of its schema and the service declares the schema for
      *   the `response` scope (STUDENT_RESULT_SCOPE) in its capability
-     *   descriptor; the declaration is refreshed first when the cached one is
-     *   older than the descriptor TTL (see _publishDeclaration()). Otherwise
-     *   it is logged and not sent.
+     *   descriptor, or, for a development adapter that links none, in its
+     *   catalog entry's `studentOutputs` (#1134); a descriptor's declaration
+     *   is refreshed first when the cached one is older than the descriptor
+     *   TTL (see _publishDeclaration()). Otherwise it is logged and not sent.
      * - A legacy result descriptor: `{ userId, component: { componentId },
-     *   payload, ... }`, emitted as passed, until the tutor (#1133) and the
-     *   development mock (#1134) publish documents. A `component` that names
-     *   a `documentSchema` is refused: documents take the first form.
+     *   payload, ... }`, emitted as passed, until the tutor adapter (#1133)
+     *   publishes documents. A `component` that names a `documentSchema` is
+     *   refused: documents take the first form.
      *
      * A document form that also passes `component` or `payload` is refused.
      *
@@ -2019,12 +2026,13 @@ export class ExternalServicesRegistry {
      *
      * @returns {Promise<{ status: string, studentOutputs?: Object[] }>}
      *     DECLARATION_STATUS: `known` with the outputs, `no_descriptor` when
-     *     the service links no capability descriptor, `unavailable` when none
+     *     the service links no capability descriptor and its catalog entry
+     *     declares nothing (_manifestDeclaration()), `unavailable` when none
      *     of its descriptors has been fetched.
      */
     async _publishDeclaration(serviceId) {
         if (!this.getServiceDescriptor(serviceId)) {
-            return { status: DECLARATION_STATUS.NO_DESCRIPTOR };
+            return this._manifestDeclaration(serviceId);
         }
         let known = this._capabilityDescriptors.knownStudentOutputs(serviceId);
         if (!known || known.stale) {
@@ -2057,7 +2065,7 @@ export class ExternalServicesRegistry {
      */
     _rebuildDeclaration(serviceId) {
         if (!this.getServiceDescriptor(serviceId)) {
-            return { status: DECLARATION_STATUS.NO_DESCRIPTOR };
+            return this._manifestDeclaration(serviceId);
         }
         const known = this._capabilityDescriptors.knownStudentOutputs(serviceId);
         if (!known || known.stale) {
@@ -2071,6 +2079,21 @@ export class ExternalServicesRegistry {
         return known
             ? { status: DECLARATION_STATUS.KNOWN, studentOutputs: known.studentOutputs }
             : { status: DECLARATION_STATUS.UNAVAILABLE };
+    }
+
+    /**
+     * The declaration of a service that links no capability descriptor: the
+     * `studentOutputs` of its catalog entry, which only development adapters
+     * may have (#1134), or `no_descriptor` when it has none. It is shipped
+     * with the catalog, so it is always known and never refreshed.
+     *
+     * @returns {{ status: string, studentOutputs?: Object[] }}
+     */
+    _manifestDeclaration(serviceId) {
+        const service = this.services.get(serviceId);
+        return service?.development === true && Array.isArray(service.studentOutputs)
+            ? { status: DECLARATION_STATUS.KNOWN, studentOutputs: service.studentOutputs }
+            : { status: DECLARATION_STATUS.NO_DESCRIPTOR };
     }
 
     // Checks a document an adapter rebuilt through student-results-reading

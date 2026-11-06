@@ -27,7 +27,9 @@ invalid catalog stops startup (and the image build, through
   `external-mock-service` or run in process, require no AI Additions service
   (`requires: []`), and register only when
   `EXTERNAL_SERVICES_DEVELOPMENT_ADAPTERS=true`. Only the root
-  `docker-compose.yml` sets it.
+  `docker-compose.yml` sets it. Since they link no capability descriptor,
+  they declare the documents they publish to students in their entry
+  (`studentOutputs`, see "Student result documents").
 
 Registering only subscribes handlers: it makes no outbound call
 (`__tests__/registration.node-test.mjs`). Whether a registered adapter
@@ -288,6 +290,7 @@ Each manifest entry describes one service:
 | `descriptor` | no | `{ path }`: the capability descriptor the service's AI backend publishes (#687). Its id (`service.id` in the descriptor) is the one AI Additions service in `requires`, so an adapter with a descriptor requires exactly one service; `descriptor.serviceId` is no longer accepted (#812). That id may differ from `id`: ids are mapped, not renamed, so stored designs, chat agents and jobs keep the manifest id. `path` is the descriptor route relative to the AI Additions connection's `base_url`, for example `/polyadic-agent/api/capabilities`; it must be an absolute path without host, query or `..` segments. An invalid path is dropped with a warning. `GET /external-services` exposes `descriptor.serviceId` and a summary (see "Listing services"); the route stays internal (`getServiceDescriptor()`). |
 | `capabilities` | — | Removed (#726). Entries that still declare it log a deprecation warning and the key is ignored. A service that processes student responses declares the `response` scope instead; the student app shows the processing state for those services. |
 | `enabled` | — | Removed (#812). An entry that declares it rejects the catalog; usability is decided at dispatch (see "Usability"). |
+| `studentOutputs` | no | Development adapters only (#1134): the documents the adapter publishes to students, as `[{ id, documentSchema, scopes, label, description }]`, the shape a capability descriptor's `student_outputs` takes once normalized. Each entry goes through the descriptor's normalizer, and its scopes must be among the entry's `scopes`. The key on a production adapter, a malformed list or entry, an unknown key or scope, or a repeated id rejects the catalog. Absent means none. See "Student result documents". |
 | `report` | no | `{ columnPrefix }`: the prefix of every column the adapter adds to activity reports (see "Report building"), lowercase letters and digits ending in `_`, such as `ats_`. Required when `hooks` lists `report-building`; two entries cannot declare the same prefix. A malformed declaration, or `report-building` without one, rejects the catalog. |
 | `callbackAuth` | no | Inbound callback authorization. See below. |
 
@@ -1213,8 +1216,10 @@ published or rebuilt, in two ways:
   documents (`schema_unavailable`) and is logged once.
 - Declaration. The service must declare the schema, in its capability
   descriptor's `student_outputs`, for the scope the document reaches the
-  student in (`undeclared_document_schema`). A service whose catalog entry
-  links no descriptor declares nothing.
+  student in (`undeclared_document_schema`). A development adapter, which
+  links no descriptor, declares in its catalog entry instead (see "Catalog
+  declarations of development adapters" below). Any other service whose
+  catalog entry links no descriptor declares nothing (`no_descriptor`).
 
 A document that fails a check is not sent. `publishStudentResult` returns
 `false` and logs `[external-services] Refused a student result document.`
@@ -1260,10 +1265,45 @@ hidden until a fetch succeeds. A fetch starts on the first read that
 rebuilds a document, on a live publication and when teachers list services
 or open the design editor, so the window closes once the service answers.
 
+**Catalog declarations of development adapters.** A development adapter
+requires no AI Additions service, so it cannot link a capability descriptor,
+and nothing would declare its documents. It declares them in its
+`manifest.json` entry instead (#1134), in the shape of a normalized
+`student_outputs` entry:
+
+```json
+"studentOutputs": [
+  {
+    "id": "mock-review",
+    "documentSchema": "student-result/v1",
+    "scopes": ["response"],
+    "label": "Mock review",
+    "description": "Development review of each response a student submits."
+  }
+]
+```
+
+`catalog.js` (`manifestStudentOutputs()`) normalizes each entry with the
+descriptor's `normalizeStudentOutput()`, so both declarations follow the same
+rules. What the descriptor path drops with a warning rejects the catalog
+here, since the catalog is shipped code: an unknown key or scope, a repeated
+id, or a scope the entry does not list in `scopes`. When the service links no
+descriptor, both the live and the rebuild checks read this declaration, with
+no request; it ships with the catalog, so it is always known. A service with
+a descriptor link is judged by its descriptor alone.
+
+A production adapter that declares `studentOutputs` rejects the catalog,
+which stops startup and the image build. Its declaration belongs to the
+service, in the descriptor the service publishes: a catalog entry that
+declared for it would let EthicApp accept documents the service never
+announced. Ignoring the key with a warning would leave an entry that reads as
+a declaration and has no effect, which a startup log line easily hides.
+
 **Legacy form.** `{ userId, component: { componentId, ... }, payload, ... }` is
 emitted as passed, with no descriptor request, until the tutor adapter
-(#1133) and the development mock (#1134) publish documents. Rebuilt legacy
-entries keep the checks listed in "Student results reading".
+(#1133) publishes documents. The development mock publishes documents
+(#1134). Rebuilt legacy entries keep the checks listed in "Student results
+reading".
 
 **Adding a schema.** A new document schema is copied into
 `canonical-schemas/ai-additions/` (see its README) and added to
@@ -2494,7 +2534,8 @@ When implementing a new adapter:
    `requires` (add a new AI Additions service id to `AI_ADDITIONS_SERVICE_IDS`
    in `catalog.js` first), and the `response` scope if the service processes
    student responses. Mark a mock with `development: true` and `requires: []`
-   (see "The adapter catalog").
+   (see "The adapter catalog"), and declare the documents it publishes to
+   students in `studentOutputs` (see "Student result documents").
 4. Use `aiAdditionsClient.requestJson()` for AI Additions HTTP calls and forward
    `context.correlationId` in outbound requests.
 5. Pass the service's API path as `basePath`; never read a URL from the

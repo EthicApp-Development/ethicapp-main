@@ -376,7 +376,12 @@ EthicApp reaches it through `EXTERNAL_MOCK_SERVICE_URL`, which defaults to
 outside Compose and the mock service locally, set
 `EXTERNAL_MOCK_SERVICE_URL=http://localhost:8510`. The current endpoints are:
 
-- `POST /response-review/reverse`: receives response text and returns it reversed.
+- `POST /response-review/student-result`: receives response text and a
+  `locale` (`es-CL` or `en-US`; anything else gives `es-CL`) and returns a
+  mock review of it as a `student-result/v1` document
+  (`external-mock-service/student-result.js`): an overview, criteria with
+  descriptions, bullets, the text backwards, a comparison, and a section of a
+  kind v1 does not define, which renderers skip.
 - `POST /chat-agent/respond`: receives a chat message and returns a processed
   chat-agent reply containing the processed message followed by its character
   count.
@@ -476,10 +481,15 @@ POST /activities/:id/response
 ```
 
 The `mock-ai-response-review` adapter uses this hook to demonstrate a
-student-facing result without requiring a real asynchronous provider. It sends
-the submitted free-text response to the mock service, records the callback result
-for inspection, and publishes an `argument-tutor-report` payload to the student
-who submitted the response through `publishStudentResult(...)`.
+student-facing result without requiring a real asynchronous provider (#1134).
+It sends the submitted free-text response to the mock service, publishes the
+`student-result/v1` document the service returns to the student who submitted
+the response through `publishStudentResult(...)`, and records counts in the
+job's callback result. The document is in `es-CL`, EthicApp's default
+activity language, because the hook context does not carry the activity's
+locale. When the mock service does not answer, the adapter publishes a
+document with `status: "unavailable"`. Its catalog entry declares the
+document's schema (see "Student output declaration").
 
 The chat message hook is dispatched from:
 
@@ -686,12 +696,15 @@ export async function register({ service, subscribe, publishStudentResult }) {
       questionId: 30,
       // The stored callback this result comes from (#1126).
       resultId: context.resultId,
-      component: {
-        componentId: "argument-tutor-report"
-      },
-      payload: {
-        summary: "Your argument has a clear claim and one supporting reason.",
-        suggestions: ["Add evidence for the main claim."]
+      documentSchema: "student-result/v1",
+      document: {
+        schemaVersion: "student-result/v1",
+        locale: "en-US",
+        title: "Feedback on your argument",
+        sections: [{
+          kind: "bullets",
+          items: ["Your argument has a clear claim and one supporting reason."]
+        }]
       }
     });
   });
@@ -704,9 +717,8 @@ named `user-{uid}`. The event is not stored or replayed: an adapter that
 publishes from a callback rebuilds the result from the stored callback through
 the `student-results-reading` hook (see "Student results reading").
 
-This example uses the legacy `component` form. A result for a student is
-published as a `student-result/v1` document, which #1131 makes
-`publishStudentResult` accept and check; see "Student result documents".
+`publishStudentResult` checks the document against its schema and the
+service's declaration before it sends it; see "Student result documents".
 
 An adapter that publishes from a `callback-received` handler adds
 `resultId: context.resultId`, the id of the stored callback in
@@ -893,25 +905,13 @@ expand or collapse any of them with its header button. Results cannot be
 dismissed, and the expanded state is page state only, so a reload starts
 from the defaults again.
 
-Each result names the view that shows it in its `component`. A
-`student-result/v1` document carries `{ "documentSchema": "student-result/v1" }`
-and is rendered by the student app's generic renderer (see "Student result
-documents"). The legacy result descriptor names a local component by id, with
-a payload that only that component understands:
-
-```json
-{
-  "component": {
-    "componentId": "argument-tutor-report"
-  }
-}
-```
-
-The panel resolves `componentId` only during the transition, until the tutor
-adapter (#1133) and the development mock (#1134) publish documents. Remote
-components, which the descriptor used to request with `component.url` and
-`exportName`, are removed by #1132: the student app loads no code from a
-payload.
+Each result names its document schema in its `component`, as
+`{ "documentSchema": "student-result/v1" }`, and the student app renders it
+with its own renderer for that schema, the generic one for
+`student-result/v1` (see "Student result documents"). The student app loads
+no code from a service. Until the tutor adapter publishes documents (#1133),
+the panel also resolves the tutor's legacy `componentId` against a local
+registry.
 
 ## Student result documents
 
@@ -1045,6 +1045,29 @@ schema the service did not declare for the scope it is published in. A
 descriptor without `student_outputs` declares no output. Unknown keys inside
 an entry are ignored, as elsewhere in the descriptor.
 
+A development adapter (`development: true` in
+`ethicapp/backend/external-services/manifest.json`) requires no AI Additions
+service and links no descriptor, so it declares its outputs in its catalog
+entry (#1134), in the normalized form of the entries above:
+
+```json
+"studentOutputs": [
+  {
+    "id": "mock-review",
+    "documentSchema": "student-result/v1",
+    "scopes": ["response"],
+    "label": "Mock review",
+    "description": "Development review of each response a student submits."
+  }
+]
+```
+
+EthicApp reads that declaration only for a service that links no
+descriptor. A production adapter that declares `studentOutputs` rejects the
+catalog at startup: a production service's declaration is the one its
+descriptor publishes. `ethicapp/backend/external-services/README.md`,
+"Student result documents", has the validation rules.
+
 ### Publishing a document
 
 An adapter publishes a document through `publishStudentResult(...)`, which
@@ -1084,10 +1107,11 @@ The backend enforces this contract (#1131):
   change of the AI Additions connection, and refreshes it in the background.
   Until the process has fetched the service's descriptor once, its documents
   are refused;
+- a development adapter, which links no descriptor, is checked against the
+  `studentOutputs` of its catalog entry (see "Student output declaration");
+  the development mock publishes its documents that way (#1134);
 - the `component` path of the legacy result descriptor keeps working until
-  #1133 (the tutor adapter) and #1134 (the development mock) publish
-  documents. A development adapter links no descriptor, so the mock needs a
-  declaration of its own before its documents can pass (#1134).
+  the tutor adapter publishes documents (#1133).
 
 `ethicapp/backend/external-services/README.md`, "Student result documents",
 describes the argument, the checks and their log lines.

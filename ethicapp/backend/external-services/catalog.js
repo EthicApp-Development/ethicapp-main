@@ -4,6 +4,8 @@
 // dispatch by the AI service policy gate (`effectiveServiceIds()` in the
 // registry, #815).
 
+import { normalizeStudentOutput } from "../services/capability-descriptors.service.js";
+
 // The AI Additions services an adapter may require, by their AI Additions id
 // (the id their capability descriptor and the AI Additions catalog use). This
 // is the one list of them in EthicApp.
@@ -139,6 +141,102 @@ function validateReportDeclaration(entry) {
     return problems;
 }
 
+// The keys of a `studentOutputs` entry (#1134): the shape of a declaration
+// normalized from a capability descriptor's `student_outputs`.
+const STUDENT_OUTPUT_KEYS = Object.freeze(["id", "documentSchema", "scopes", "label", "description"]);
+
+/**
+ * The student outputs a development adapter declares in its catalog entry
+ * (`studentOutputs`, #1134), and the problems of that declaration.
+ *
+ * A development adapter links no capability descriptor (it requires no AI
+ * Additions service), so the documents it publishes to students are declared
+ * here instead, in the shape of the normalized descriptor declaration:
+ * `[{ id, documentSchema, scopes, label, description }]`. Each entry goes
+ * through the descriptor's normalizer (normalizeStudentOutput()), so both
+ * declarations follow the same rules. The catalog is shipped code, so what
+ * the normalizer drops with a warning in a descriptor is a problem here: an
+ * unknown key or scope, a repeated id, or a scope the adapter does not
+ * declare in `scopes`.
+ *
+ * A production adapter declares its student outputs in its capability
+ * descriptor, which the service publishes, so the key is a problem on it.
+ * Absent is valid and declares nothing.
+ *
+ * @param {Object} entry - One element of `manifest.services`.
+ * @returns {{ studentOutputs: Object[] | null, problems: string[] }}
+ *     `studentOutputs` is null when the entry has no declaration, and holds
+ *     the usable entries otherwise.
+ */
+export function manifestStudentOutputs(entry) {
+    const declaration = isPlainObject(entry) ? entry.studentOutputs : undefined;
+    if (declaration === undefined) {
+        return { studentOutputs: null, problems: [] };
+    }
+    if (entry.development !== true) {
+        return {
+            studentOutputs: null,
+            problems:       [
+                "`studentOutputs` is only for development adapters: a production adapter "
+                + "declares its student outputs in its capability descriptor (`student_outputs`)",
+            ],
+        };
+    }
+    if (!Array.isArray(declaration)) {
+        return {
+            studentOutputs: null,
+            problems:       ["`studentOutputs` must be a list of { id, documentSchema, scopes, label, description }"],
+        };
+    }
+
+    const adapterScopes = Array.isArray(entry.scopes) ? entry.scopes : [];
+    const studentOutputs = [];
+    const problems = [];
+    const seenIds = new Set();
+    declaration.forEach((item, index) => {
+        const label = `\`studentOutputs[${index}]\``;
+        if (!isPlainObject(item)) {
+            problems.push(`${label} must be an object { id, documentSchema, scopes, label, description }`);
+            return;
+        }
+
+        const unknownKeys = Object.keys(item).filter(name => !STUDENT_OUTPUT_KEYS.includes(name));
+        if (unknownKeys.length > 0) {
+            problems.push(`${label} has unknown keys (${unknownKeys.join(", ")})`);
+        }
+
+        const { output, droppedScopes, error } = normalizeStudentOutput({
+            id:              item.id,
+            document_schema: item.documentSchema,
+            scopes:          item.scopes,
+            display:         { label: item.label, description: item.description },
+        });
+        if (error) {
+            // In the descriptor's terms; the manifest names the keys as normalized.
+            problems.push(`${label} ${error
+                .replace("document_schema", "documentSchema")
+                .replace("display label and description", "label and description")}`);
+            return;
+        }
+        if (droppedScopes > 0) {
+            problems.push(`${label} has scopes other than response and chat`);
+        }
+        const undeclaredScopes = output.scopes.filter(scope => !adapterScopes.includes(scope));
+        if (undeclaredScopes.length > 0) {
+            problems.push(`${label} uses scopes the adapter does not declare (${undeclaredScopes.join(", ")})`);
+        }
+        if (seenIds.has(output.id)) {
+            problems.push(`${label} repeats the id ${output.id}`);
+            return;
+        }
+
+        seenIds.add(output.id);
+        studentOutputs.push(output);
+    });
+
+    return { studentOutputs, problems };
+}
+
 /**
  * Validates one catalog entry and returns the problems found, or [] when it
  * is valid.
@@ -161,6 +259,8 @@ function validateReportDeclaration(entry) {
  *   REPORT_BUILDING_HOOK in `hooks`. Prefixes are unique in the catalog
  *   (validateCatalog()), and end at their only `_`, so the columns of two
  *   services never collide.
+ * - `studentOutputs` (#1134), only on a development adapter, declares the
+ *   documents it publishes to students (see manifestStudentOutputs()).
  *
  * @param {Object} entry - One element of `manifest.services`.
  * @returns {string[]} Problems, in English, without the entry id.
@@ -193,6 +293,7 @@ export function validateCatalogEntry(entry) {
     problems.push(...validateDesignAnalysisDeclaration(entry.produces, "produces"));
     problems.push(...validateDesignAnalysisDeclaration(entry.consumes, "consumes"));
     problems.push(...validateReportDeclaration(entry));
+    problems.push(...manifestStudentOutputs(entry).problems);
     // What an adapter produces is stored as its design analysis.
     const declaresProduction = Array.isArray(entry.produces) && entry.produces.length > 0;
     const hasDesignScope = Array.isArray(entry.scopes) && entry.scopes.includes("design");

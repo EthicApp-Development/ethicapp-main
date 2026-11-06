@@ -8,6 +8,7 @@ import {
     catalogWarnings,
     DESIGN_ANALYSIS_UNITS,
     developmentAdaptersEnabled,
+    manifestStudentOutputs,
     REPORT_BUILDING_HOOK,
     validateCatalog,
     validateCatalogEntry,
@@ -229,6 +230,125 @@ test("initialize: a malformed produces rejects the catalog", async () => {
     } finally {
         await fs.rm(directory, { recursive: true, force: true });
     }
+});
+
+// ─── studentOutputs of development adapters (#1134) ──────────────────────────
+
+function mockReviewOutput(overrides = {}) {
+    return {
+        id:             "mock-review",
+        documentSchema: "student-result/v1",
+        scopes:         ["response"],
+        label:          "Mock review",
+        description:    "Development review of each response.",
+        ...overrides,
+    };
+}
+
+test("manifestStudentOutputs: a development adapter declares its student outputs, normalized", () => {
+    const entry = developmentEntry({ scopes: ["response", "chat"], studentOutputs: [mockReviewOutput()] });
+
+    assert.deepEqual(validateCatalogEntry(entry), []);
+    assert.deepEqual(manifestStudentOutputs(entry), {
+        studentOutputs: [mockReviewOutput()],
+        problems:       [],
+    });
+    assert.deepEqual(manifestStudentOutputs(developmentEntry()), { studentOutputs: null, problems: [] });
+    assert.deepEqual(
+        manifestStudentOutputs(developmentEntry({ scopes: ["response"], studentOutputs: [] })),
+        { studentOutputs: [], problems: [] }
+    );
+});
+
+test("validateCatalogEntry: a production adapter cannot declare student outputs in the catalog", () => {
+    for (const entry of [
+        productionEntry({ scopes: ["response"], studentOutputs: [mockReviewOutput()] }),
+        productionEntry({ scopes: ["response"], development: false, studentOutputs: [] }),
+        productionEntry({
+            requires:       ["argumentation-tutor"],
+            scopes:         ["response"],
+            descriptor:     { path: "/argumentation-tutor/api/capabilities" },
+            studentOutputs: [mockReviewOutput()],
+        }),
+    ]) {
+        assertProblem(entry, "`studentOutputs` is only for development adapters");
+        assert.equal(manifestStudentOutputs(entry).studentOutputs, null);
+    }
+});
+
+test("validateCatalogEntry: rejects malformed student outputs of a development adapter", () => {
+    const entry = studentOutputs => developmentEntry({ scopes: ["response"], studentOutputs });
+
+    assertProblem(entry({ id: "mock-review" }), "`studentOutputs` must be a list");
+    assertProblem(entry(["mock-review"]), "`studentOutputs[0]` must be an object");
+    assertProblem(entry([mockReviewOutput({ display: {} })]), "`studentOutputs[0]` has unknown keys (display)");
+    assertProblem(entry([mockReviewOutput({ id: "Mock Review" })]), "`studentOutputs[0]` has no valid id");
+    assertProblem(
+        entry([mockReviewOutput({ documentSchema: "student-result" })]),
+        "`studentOutputs[0]` has no valid documentSchema"
+    );
+    assertProblem(entry([mockReviewOutput({ scopes: ["case"] })]), "declares no student scope");
+    assertProblem(
+        entry([mockReviewOutput({ scopes: ["response", "case"] })]),
+        "`studentOutputs[0]` has scopes other than response and chat"
+    );
+    assertProblem(entry([mockReviewOutput({ label: " " })]), "`studentOutputs[0]` has no label and description");
+    assertProblem(
+        entry([mockReviewOutput({ scopes: ["response", "chat"] })]),
+        "`studentOutputs[0]` uses scopes the adapter does not declare (chat)"
+    );
+    assertProblem(
+        entry([mockReviewOutput(), mockReviewOutput()]),
+        "`studentOutputs[1]` repeats the id mock-review"
+    );
+});
+
+test("initialize: a production adapter that declares student outputs rejects the catalog", async () => {
+    const directory = await fs.mkdtemp(path.join(os.tmpdir(), "ethicapp-catalog-"));
+    const manifestPath = path.join(directory, "manifest.json");
+
+    try {
+        await fs.writeFile(manifestPath, JSON.stringify({
+            services: [productionEntry({ scopes: ["response"], studentOutputs: [mockReviewOutput()] })],
+        }));
+        const registry = new ExternalServicesRegistry({
+            jobsService:   {},
+            importAdapter: async () => assert.fail("nothing is imported from an invalid catalog"),
+        });
+
+        await assert.rejects(
+            () => registry.initialize(manifestPath),
+            /svc-production: `studentOutputs` is only for development adapters/
+        );
+        assert.equal(registry.initialized, false);
+    } finally {
+        await fs.rm(directory, { recursive: true, force: true });
+    }
+});
+
+test("registerService: a development adapter keeps its normalized student outputs", async () => {
+    const registry = new ExternalServicesRegistry({
+        jobsService:         {},
+        developmentAdapters: true,
+        importAdapter:       async () => ({ register: async () => {} }),
+    });
+    const originalInfo = console.info;
+    console.info = () => {};
+    try {
+        await registry.registerService(
+            developmentEntry({ scopes: ["response"], studentOutputs: [mockReviewOutput()] }),
+            "/catalog/manifest.json"
+        );
+        await registry.registerService(
+            { ...developmentEntry({ scopes: ["response"] }), id: "svc-silent" },
+            "/catalog/manifest.json"
+        );
+    } finally {
+        console.info = originalInfo;
+    }
+
+    assert.deepEqual(registry.services.get("svc-development").studentOutputs, [mockReviewOutput()]);
+    assert.equal(registry.services.get("svc-silent").studentOutputs, null);
 });
 
 // ─── validateCatalog ─────────────────────────────────────────────────────────

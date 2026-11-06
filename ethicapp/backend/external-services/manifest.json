@@ -15,6 +15,15 @@
         "report-building"
       ],
       "scopes": ["response", "chat"],
+      "studentOutputs": [
+        {
+          "id": "mock-review",
+          "documentSchema": "student-result/v1",
+          "scopes": ["response"],
+          "label": "Mock review",
+          "description": "Development review of each response a student submits: its word and character counts and its text backwards."
+        }
+      ],
       "report": { "columnPrefix": "mockreview_" },
       "callbackAuth": {
         "allowedClientIds": ["ethicapp-external-mock"],

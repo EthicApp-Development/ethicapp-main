@@ -155,7 +155,7 @@ function makeRegistry({ responses = [tutorDescriptor()], storedResults = [], han
     });
 
     registry = new ExternalServicesRegistry({
-        jobsService:     new Proxy({}, {
+        jobsService: new Proxy({}, {
             get: (target, name) => async () => assert.fail(`no job write expected (${String(name)})`),
         }),
         roomJobsService:    { closeRoomJobs: async () => 0 },
@@ -338,7 +338,7 @@ test("a valid document of a schema the service did not declare for the response 
     }
 });
 
-test("a service without a capability descriptor declares nothing, so its documents are refused", async () => {
+test("a service without a capability descriptor or a catalog declaration declares nothing, so its documents are refused", async () => {
     const { registry, sent, requests } = makeRegistry();
 
     const { result, output } = await captureConsole(() => publishDocument(registry, {}, PLAIN_SERVICE_ID));
@@ -348,6 +348,84 @@ test("a service without a capability descriptor declares nothing, so its documen
     assert.deepEqual(requests, []);
     const [refusal] = refusals(output);
     assert.equal(refusal.declaration, "no_descriptor");
+    assert.deepEqual(refusal.problems, [{ code: "undeclared_document_schema", path: "<root>" }]);
+});
+
+// ─── Declarations in the catalog entry of a development adapter (#1134) ─────
+
+// The normalized declaration a development adapter's catalog entry holds.
+function manifestOutput(scopes = ["response"]) {
+    return {
+        id:             "mock-review",
+        documentSchema: "student-result/v1",
+        scopes,
+        label:          "Mock review",
+        description:    "Development review of each response.",
+    };
+}
+
+function declareInCatalog(registry, serviceId, studentOutputs) {
+    registry.services.set(serviceId, { ...registry.services.get(serviceId), studentOutputs });
+}
+
+test("a development adapter's catalog declaration lets its documents through, with no descriptor request", async () => {
+    const { registry, sent, requests } = makeRegistry();
+    declareInCatalog(registry, PLAIN_SERVICE_ID, [manifestOutput()]);
+
+    const { result, output } = await captureConsole(() => publishDocument(registry, {}, PLAIN_SERVICE_ID));
+
+    assert.equal(result, true, output.join("\n"));
+    assert.deepEqual(requests, []);
+    assert.equal(sent.length, 1);
+    assert.deepEqual(sent[0].event.component, { documentSchema: "student-result/v1" });
+    assert.deepEqual(sent[0].event.payload, studentDocument());
+    assert.equal(sent[0].event.serviceId, PLAIN_SERVICE_ID);
+});
+
+test("a development adapter's documents are refused when its catalog declaration does not cover them", async () => {
+    for (const studentOutputs of [[], [manifestOutput(["chat"])]]) {
+        const { registry, sent } = makeRegistry();
+        declareInCatalog(registry, PLAIN_SERVICE_ID, studentOutputs);
+
+        const { result, output } = await captureConsole(() => publishDocument(registry, {}, PLAIN_SERVICE_ID));
+
+        assert.equal(result, false);
+        assert.deepEqual(sent, []);
+        const [refusal] = refusals(output);
+        assert.equal(refusal.declaration, "known");
+        assert.deepEqual(refusal.problems, [{ code: "undeclared_document_schema", path: "<root>" }]);
+        assertNoStudentText(output);
+    }
+});
+
+test("a catalog declaration counts only on a development adapter without a descriptor link", async () => {
+    // A production entry is rejected by the catalog when it declares there
+    // (catalog.node-test.mjs); the registry ignores such a value anyway.
+    const { registry, sent } = makeRegistry();
+    registry.services.set(PLAIN_SERVICE_ID, {
+        ...registry.services.get(PLAIN_SERVICE_ID),
+        development:    false,
+        studentOutputs: [manifestOutput()],
+    });
+
+    const { result, output } = await captureConsole(() => publishDocument(registry, {}, PLAIN_SERVICE_ID));
+
+    assert.equal(result, false);
+    assert.deepEqual(sent, []);
+    assert.equal(refusals(output)[0].declaration, "no_descriptor");
+});
+
+test("a service with a descriptor link is judged by its descriptor only", async () => {
+    const { registry, sent, requests } = makeRegistry({ responses: [withoutStudentOutputs()] });
+    declareInCatalog(registry, SERVICE_ID, [manifestOutput()]);
+
+    const { result, output } = await captureConsole(() => publishDocument(registry));
+
+    assert.equal(result, false);
+    assert.deepEqual(sent, []);
+    assert.deepEqual(requests, [DESCRIPTOR_LINK.path]);
+    const [refusal] = refusals(output);
+    assert.equal(refusal.declaration, "known");
     assert.deepEqual(refusal.problems, [{ code: "undeclared_document_schema", path: "<root>" }]);
 });
 
@@ -591,6 +669,30 @@ test("rebuilt documents of a service without a descriptor are dropped, its legac
     assert.deepEqual(requests, []);
     assert.deepEqual(leftOut(output)[0].problems, [
         "entries[0].payload (student-result/v1) is refused: undeclared_document_schema at <root>",
+    ]);
+    assertNoStudentText(output);
+});
+
+test("rebuilt documents of a development adapter are checked against its catalog declaration", async () => {
+    const { registry, requests } = makeRegistry({
+        storedResults: STORED,
+        handlers:      {
+            [PLAIN_SERVICE_ID]: tutorHandler(() => [
+                rebuiltEntry(RESULT_ID),
+                rebuiltEntry(OTHER_RESULT_ID, { payload: studentDocument({ claimTypeId: "AF1" }) }),
+            ]),
+        },
+    });
+    declareInCatalog(registry, PLAIN_SERVICE_ID, [manifestOutput()]);
+
+    const { result, output } = await captureConsole(() => registry.collectStudentResults({
+        sessionId: SESSION_ID, userId: USER_ID,
+    }));
+
+    assert.deepEqual(result.map(entry => [entry.serviceId, entry.resultId]), [[PLAIN_SERVICE_ID, RESULT_ID]]);
+    assert.deepEqual(requests, []);
+    assert.deepEqual(leftOut(output)[0].problems, [
+        "entries[1].payload (student-result/v1) is refused: schema_violation (not_allowed) at claimTypeId",
     ]);
     assertNoStudentText(output);
 });
