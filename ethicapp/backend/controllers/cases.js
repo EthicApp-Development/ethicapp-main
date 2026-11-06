@@ -1,10 +1,7 @@
 "use strict";
 
 import express from "express";
-import fs from "fs/promises";
-import path from "path";
 import * as config from "../config/database.config.js";
-import { uploadsPath } from "../config/uploads.config.js";
 import * as rpg2 from "../db/rest-pg-2.js";
 import { requireRole } from "../helpers/auth-helper.js";
 import {
@@ -39,7 +36,12 @@ import {
     insertRequestedCaseAnalyses,
 } from "../helpers/case-analyses-helper.js";
 import { associableCaseSql } from "../helpers/design-case-association.js";
-import { buildCaseCopyInsert, CASE_COPY_SOURCE_COLUMNS_SQL } from "../helpers/case-copy.js";
+import {
+    buildCaseCopyInsert,
+    CASE_COPY_SOURCE_COLUMNS_SQL,
+    copyCasePdfIfPresent,
+    copyCaseRelatedRows,
+} from "../helpers/case-copy.js";
 import { applyCaseVisibility, countDesignsKeepingCaseAccess } from "../helpers/case-visibility.js";
 import {
     caseOwnDesignsJsonSql,
@@ -51,7 +53,6 @@ import { removeCaseUploadDirectory } from "../helpers/case-upload-directory.js";
 import {
     caseVideoSummariesFromIds,
     caseVideosJsonSql,
-    copyCaseVideos,
     listCaseVideoIds,
     normalizeCaseVideoSummaries,
     parseCaseVideoIds,
@@ -62,7 +63,6 @@ import {
 import {
     caseDocumentSummariesFromDocuments,
     caseDocumentsJsonSql,
-    copyCaseDocuments,
     listCaseDocuments,
     normalizeCaseDocumentSummaries,
     parseCaseDocuments,
@@ -88,7 +88,6 @@ export const caseCopyServices = {
     ensureRenderJob:     ensureCasePdfRenderJob,
     requestCopyAnalyses: requestCaseCopyAnalyses,
 };
-const uploadsRoot = path.resolve(process.cwd(), uploadsPath);
 const MAX_SEMANTIC_TAGS = 5;
 
 const launchedActivityByCaseSql = `
@@ -517,42 +516,6 @@ async function enqueueCaseRenderSafely(caseObj) {
             error,
         });
         return null;
-    }
-}
-
-function uploadPublicPathToAbsolute(publicPath) {
-    const normalized = String(publicPath || "").replaceAll("\\", "/").replace(/^\/+/, "");
-    const relativePath = normalized.startsWith("uploads/")
-        ? normalized.slice("uploads/".length)
-        : normalized.startsWith("assets/uploads/")
-            ? normalized.slice("assets/uploads/".length)
-            : normalized;
-
-    if (!relativePath || relativePath.startsWith("../") || relativePath.includes("/../")) {
-        return null;
-    }
-
-    return path.resolve(uploadsRoot, relativePath);
-}
-
-async function copyCasePdfIfPresent(sourcePdfPath, destinationPdfPath) {
-    const sourcePath = uploadPublicPathToAbsolute(sourcePdfPath);
-    const destinationPath = uploadPublicPathToAbsolute(destinationPdfPath);
-    if (!sourcePath || !destinationPath) {
-        return false;
-    }
-
-    try {
-        await fs.mkdir(path.dirname(destinationPath), { recursive: true });
-        await fs.copyFile(sourcePath, destinationPath);
-        return true;
-    } catch (error) {
-        console.warn("Unable to copy imported case PDF; retaining source PDF path.", {
-            sourcePdfPath,
-            destinationPdfPath,
-            error: error.message,
-        });
-        return false;
     }
 }
 
@@ -1309,37 +1272,11 @@ router.post("/cases/:id/import", async (req, res) => {
         });
         await client.query(caseInsert.sql, caseInsert.params);
 
-        await client.query(`
-            INSERT INTO ethical_cases_authors (case_id, author_id, user_id, author_order, is_primary)
-            SELECT $1,
-                   ca.author_id,
-                   u.id,
-                   ca.author_order,
-                   ca.is_primary
-            FROM ethical_cases_authors ca
-            INNER JOIN ethical_case_author a
-                ON a.id = ca.author_id
-            LEFT JOIN users u
-                ON LOWER(u.mail) = LOWER(a.author_email)
-            WHERE ca.case_id = $2
-            ON CONFLICT (case_id, author_id) DO UPDATE
-            SET user_id = EXCLUDED.user_id,
-                author_order = EXCLUDED.author_order,
-                is_primary = EXCLUDED.is_primary,
-                updated_at = NOW();
-        `, [importedCaseId, sourceCase.id]);
-
-        await client.query(`
-            INSERT INTO ethical_cases_tags (case_id, tag_id, assigned_by)
-            SELECT $1, ect.tag_id, $3
-            FROM ethical_cases_tags ect
-            WHERE ect.case_id = $2
-            ON CONFLICT (case_id, tag_id) DO UPDATE
-            SET assigned_by = EXCLUDED.assigned_by;
-        `, [importedCaseId, sourceCase.id, req.session.uid]);
-
-        await copyCaseVideos(client, sourceCase.id, importedCaseId);
-        await copyCaseDocuments(client, sourceCase.id, importedCaseId);
+        await copyCaseRelatedRows(client, {
+            sourceCaseId: sourceCase.id,
+            targetCaseId: importedCaseId,
+            assignedBy:   req.session.uid,
+        });
         // The copy keeps the source's ready analyses (#1038).
         await copyReadyCaseAnalyses(
             { sourceCaseId: sourceCase.id, targetCaseId: importedCaseId },
@@ -1423,37 +1360,11 @@ router.post("/cases/:id/duplicate", async (req, res) => {
         });
         await client.query(caseInsert.sql, caseInsert.params);
 
-        await client.query(`
-            INSERT INTO ethical_cases_authors (case_id, author_id, user_id, author_order, is_primary)
-            SELECT $1,
-                   ca.author_id,
-                   u.id,
-                   ca.author_order,
-                   ca.is_primary
-            FROM ethical_cases_authors ca
-            INNER JOIN ethical_case_author a
-                ON a.id = ca.author_id
-            LEFT JOIN users u
-                ON LOWER(u.mail) = LOWER(a.author_email)
-            WHERE ca.case_id = $2
-            ON CONFLICT (case_id, author_id) DO UPDATE
-            SET user_id = EXCLUDED.user_id,
-                author_order = EXCLUDED.author_order,
-                is_primary = EXCLUDED.is_primary,
-                updated_at = NOW();
-        `, [duplicatedCaseId, sourceCase.id]);
-
-        await client.query(`
-            INSERT INTO ethical_cases_tags (case_id, tag_id, assigned_by)
-            SELECT $1, ect.tag_id, $3
-            FROM ethical_cases_tags ect
-            WHERE ect.case_id = $2
-            ON CONFLICT (case_id, tag_id) DO UPDATE
-            SET assigned_by = EXCLUDED.assigned_by;
-        `, [duplicatedCaseId, sourceCase.id, req.session.uid]);
-
-        await copyCaseVideos(client, sourceCase.id, duplicatedCaseId);
-        await copyCaseDocuments(client, sourceCase.id, duplicatedCaseId);
+        await copyCaseRelatedRows(client, {
+            sourceCaseId: sourceCase.id,
+            targetCaseId: duplicatedCaseId,
+            assignedBy:   req.session.uid,
+        });
         // The copy keeps the source's ready analyses (#1038).
         await copyReadyCaseAnalyses(
             { sourceCaseId: sourceCase.id, targetCaseId: duplicatedCaseId },

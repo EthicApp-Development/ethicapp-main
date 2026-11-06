@@ -1,12 +1,23 @@
-// The row of a copy of a case (#1085), shared by the case import, the case
-// duplicate and the design import: the copy keeps the source's license and
-// rights details, and falls back to the default license when the source has
-// none.
+// The copy of a case, shared by the case import, the case duplicate and the
+// design import: the copy's row keeps the source's license and rights details
+// and falls back to the default license when the source has none (#1085); the
+// PDF file is copied under the uploads root; and the authors, tags, videos and
+// documents are copied by one function (#1089). The file tests use a
+// temporary uploads root, and the related rows a recording client.
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { after, before, describe, it } from "node:test";
 
 import { insertedRow } from "../../controllers/__tests__/inserted-row.mjs";
-import { buildCaseCopyInsert, CASE_COPY_SOURCE_COLUMNS_SQL } from "../case-copy.js";
+import {
+    buildCaseCopyInsert,
+    CASE_COPY_SOURCE_COLUMNS_SQL,
+    copyCasePdfIfPresent,
+    copyCaseRelatedRows,
+    uploadPublicPathToAbsolute,
+} from "../case-copy.js";
 import { CASE_DEFAULT_LICENSE } from "../sharing-policy-helper.js";
 
 const SOURCE_CASE = Object.freeze({
@@ -143,5 +154,122 @@ describe("buildCaseCopyInsert", () => {
         // visibility for their access rules.
         const unread = selected.filter(column => !read.has(column));
         assert.deepEqual(unread, ["pdf_path", "creator", "visibility"]);
+    });
+});
+
+describe("uploadPublicPathToAbsolute (#1089)", () => {
+    const root = path.resolve("/srv/uploads");
+
+    it("maps /uploads and assets/uploads paths under the uploads root", () => {
+        assert.equal(
+            uploadPublicPathToAbsolute("/uploads/cases/41/case.pdf", root),
+            path.join(root, "cases/41/case.pdf")
+        );
+        assert.equal(
+            uploadPublicPathToAbsolute("assets/uploads/cases/41/case.pdf", root),
+            path.join(root, "cases/41/case.pdf")
+        );
+        assert.equal(
+            uploadPublicPathToAbsolute("\\uploads\\cases\\41\\case.pdf", root),
+            path.join(root, "cases/41/case.pdf"),
+            "backslashes are read as slashes"
+        );
+    });
+
+    it("refuses an empty path and one that climbs out of the root", () => {
+        assert.equal(uploadPublicPathToAbsolute(null, root), null);
+        assert.equal(uploadPublicPathToAbsolute("/uploads/", root), null);
+        assert.equal(uploadPublicPathToAbsolute("/uploads/../secrets.txt", root), null);
+        assert.equal(uploadPublicPathToAbsolute("/uploads/cases/../../secrets.txt", root), null);
+    });
+});
+
+describe("copyCasePdfIfPresent (#1089)", () => {
+    let root;
+
+    before(async () => {
+        root = await mkdtemp(path.join(tmpdir(), "case-copy-pdf-"));
+        await mkdir(path.join(root, "cases", "41"), { recursive: true });
+        await writeFile(path.join(root, "cases", "41", "case.pdf"), "%PDF-1.4 source");
+    });
+
+    after(async () => {
+        await rm(root, { recursive: true, force: true });
+    });
+
+    it("copies the file into the copy's directory, which it creates", async () => {
+        const copied = await copyCasePdfIfPresent(
+            "/uploads/cases/41/case.pdf",
+            "/uploads/cases/99/case.pdf",
+            root
+        );
+
+        assert.equal(copied, true);
+        const copy = await readFile(path.join(root, "cases", "99", "case.pdf"), "utf8");
+        assert.equal(copy, "%PDF-1.4 source");
+    });
+
+    it("answers false without a PDF, for a missing file or a path out of the root", async () => {
+        assert.equal(await copyCasePdfIfPresent(null, "/uploads/cases/98/case.pdf", root), false);
+        assert.equal(
+            await copyCasePdfIfPresent(
+                "/uploads/cases/41/missing.pdf",
+                "/uploads/cases/97/case.pdf",
+                root
+            ),
+            false
+        );
+        assert.equal(
+            await copyCasePdfIfPresent("/uploads/../outside.pdf", "/uploads/cases/96/x.pdf", root),
+            false
+        );
+    });
+});
+
+describe("copyCaseRelatedRows (#1089)", () => {
+    const normalize = sql => sql.replace(/\s+/gu, " ").trim();
+
+    async function recordedStatements() {
+        const statements = [];
+        const client = {
+            query: async (sql, params) => {
+                statements.push({ sql: normalize(sql), params });
+                return { rows: [] };
+            },
+        };
+        await copyCaseRelatedRows(client, { sourceCaseId: 41, targetCaseId: 99, assignedBy: 8 });
+        return statements;
+    }
+
+    it("copies the authors, tags, videos and documents, in order, on the client", async () => {
+        const statements = await recordedStatements();
+
+        assert.deepEqual(
+            statements.map(({ sql }) => /^INSERT INTO (\w+)/u.exec(sql)?.[1]),
+            [
+                "ethical_cases_authors",
+                "ethical_cases_tags",
+                "ethical_case_videos",
+                "ethical_case_documents",
+            ]
+        );
+    });
+
+    it("gives each statement the copy, the source and the copying teacher", async () => {
+        const [authors, tags, videos, documents] = await recordedStatements();
+
+        assert.deepEqual(authors.params, [99, 41]);
+        assert.match(authors.sql, /SELECT \$1, ca\.author_id, u\.id, .* WHERE ca\.case_id = \$2/u);
+        assert.match(
+            authors.sql,
+            /LEFT JOIN users u ON LOWER\(u\.mail\) = LOWER\(a\.author_email\)/u
+        );
+        assert.deepEqual(tags.params, [99, 41, 8]);
+        assert.match(
+            tags.sql,
+            /SELECT \$1, ect\.tag_id, \$3 FROM ethical_cases_tags ect WHERE ect\.case_id = \$2/u
+        );
+        assert.deepEqual(videos.params, [41, 99]);
+        assert.deepEqual(documents.params, [41, 99]);
     });
 });

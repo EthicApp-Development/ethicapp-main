@@ -1,10 +1,7 @@
 "use strict";
 
 import express from "express";
-import fs from "fs/promises";
-import path from "path";
 import * as config from "../config/database.config.js";
-import { uploadsPath } from "../config/uploads.config.js";
 import * as rpg2 from "../db/rest-pg-2.js";
 import { requireLaunchableDesign } from "../helpers/activity-owner-helper.js";
 import { checkDesignServicesBeforeLaunch } from "../helpers/ai-service-launch-notice.js";
@@ -12,16 +9,19 @@ import { requireRole } from "../helpers/auth-helper.js";
 import { buildDesignCopyDocument } from "../helpers/design-copy.js";
 import {
     caseVideosJsonSql,
-    copyCaseVideos,
     normalizeCaseVideoSummaries,
 } from "../helpers/case-videos.js";
 import {
     caseDocumentsJsonSql,
-    copyCaseDocuments,
     normalizeCaseDocumentSummaries,
 } from "../helpers/case-documents.js";
 import { copyReadyCaseAnalyses } from "../helpers/case-analyses-helper.js";
-import { buildCaseCopyInsert, CASE_COPY_SOURCE_COLUMNS_SQL } from "../helpers/case-copy.js";
+import {
+    buildCaseCopyInsert,
+    CASE_COPY_SOURCE_COLUMNS_SQL,
+    copyCasePdfIfPresent,
+    copyCaseRelatedRows,
+} from "../helpers/case-copy.js";
 import { requestCaseCopyAnalyses } from "../helpers/case-lifecycle-helper.js";
 import { copyReadyDesignAnalyses } from "../helpers/design-analyses-helper.js";
 import { checkDesignCase } from "../helpers/design-case-association.js";
@@ -58,7 +58,6 @@ import {
 } from "../helpers/sharing-policy-helper.js";
 
 const router = express.Router();
-const uploadsRoot = path.resolve(process.cwd(), uploadsPath);
 // What a case copied with a design requests once it is committed: its render
 // (#1088) and the analyses it did not inherit (#1038). Tests replace them with
 // fakes.
@@ -268,42 +267,6 @@ function normalizeDesignRow(row) {
     return design;
 }
 
-function uploadPublicPathToAbsolute(publicPath) {
-    const normalized = String(publicPath || "").replaceAll("\\", "/").replace(/^\/+/, "");
-    const relativePath = normalized.startsWith("uploads/")
-        ? normalized.slice("uploads/".length)
-        : normalized.startsWith("assets/uploads/")
-            ? normalized.slice("assets/uploads/".length)
-            : normalized;
-
-    if (!relativePath || relativePath.startsWith("../") || relativePath.includes("/../")) {
-        return null;
-    }
-
-    return path.resolve(uploadsRoot, relativePath);
-}
-
-async function copyCasePdfIfPresent(sourcePdfPath, destinationPdfPath) {
-    const sourcePath = uploadPublicPathToAbsolute(sourcePdfPath);
-    const destinationPath = uploadPublicPathToAbsolute(destinationPdfPath);
-    if (!sourcePath || !destinationPath) {
-        return false;
-    }
-
-    try {
-        await fs.mkdir(path.dirname(destinationPath), { recursive: true });
-        await fs.copyFile(sourcePath, destinationPath);
-        return true;
-    } catch (error) {
-        console.warn("Unable to copy imported case PDF; retaining source PDF path.", {
-            sourcePdfPath,
-            destinationPdfPath,
-            error: error.message,
-        });
-        return false;
-    }
-}
-
 async function getUniqueDesignCopyTitle(client, userId, baseTitle, languageCode) {
     for (let copyIndex = 0; copyIndex < 1000; copyIndex += 1) {
         const candidateTitle = buildLocalizedCopyTitle(baseTitle, languageCode, copyIndex);
@@ -392,37 +355,11 @@ async function copyCaseForUser(client, sourceCaseId, userId, visibility = PRIVAT
     });
     const inserted = await client.query(caseInsert.sql, caseInsert.params);
 
-    await client.query(`
-        INSERT INTO ethical_cases_authors (case_id, author_id, user_id, author_order, is_primary)
-        SELECT $1,
-               ca.author_id,
-               u.id,
-               ca.author_order,
-               ca.is_primary
-        FROM ethical_cases_authors ca
-        INNER JOIN ethical_case_author a
-            ON a.id = ca.author_id
-        LEFT JOIN users u
-            ON LOWER(u.mail) = LOWER(a.author_email)
-        WHERE ca.case_id = $2
-        ON CONFLICT (case_id, author_id) DO UPDATE
-        SET user_id = EXCLUDED.user_id,
-            author_order = EXCLUDED.author_order,
-            is_primary = EXCLUDED.is_primary,
-            updated_at = NOW();
-    `, [caseId, sourceCase.id]);
-
-    await client.query(`
-        INSERT INTO ethical_cases_tags (case_id, tag_id, assigned_by)
-        SELECT $1, ect.tag_id, $3
-        FROM ethical_cases_tags ect
-        WHERE ect.case_id = $2
-        ON CONFLICT (case_id, tag_id) DO UPDATE
-        SET assigned_by = EXCLUDED.assigned_by;
-    `, [caseId, sourceCase.id, userId]);
-
-    await copyCaseVideos(client, sourceCase.id, caseId);
-    await copyCaseDocuments(client, sourceCase.id, caseId);
+    await copyCaseRelatedRows(client, {
+        sourceCaseId: sourceCase.id,
+        targetCaseId: caseId,
+        assignedBy:   userId,
+    });
     // The copy keeps the source's ready analyses (#1038).
     await copyReadyCaseAnalyses(
         { sourceCaseId: sourceCase.id, targetCaseId: caseId },
