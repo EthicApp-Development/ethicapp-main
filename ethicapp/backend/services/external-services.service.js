@@ -55,6 +55,12 @@ import {
     REPORT_CONTRIBUTION_TIMEOUT_MS,
 } from "./external-service-report-contributions.js";
 import { externalServiceReportResultsService } from "./external-service-report-results.service.js";
+import {
+    collectStudentResults,
+    STUDENT_RESULTS_READING_HOOK,
+    STUDENT_RESULTS_TIMEOUT_MS,
+} from "./external-service-student-results.js";
+import { getEnabledExternalServiceIdsBySessionId } from "../helpers/designs-helper.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -88,6 +94,13 @@ export const NON_SESSION_HOOKS = Object.freeze([
 // a usable AI Additions connection is stored.
 export const ERASURE_HOOKS = Object.freeze([
     "user-forgotten",
+]);
+
+// Hooks with their own collecting dispatch, which dispatchHook() ignores:
+// their handlers return data and create no job (#944, #1125).
+export const COLLECTING_HOOKS = Object.freeze([
+    REPORT_BUILDING_HOOK,
+    STUDENT_RESULTS_READING_HOOK,
 ]);
 
 const DEFAULT_AI_SERVICE_POLICY = Object.freeze({
@@ -475,6 +488,8 @@ export class ExternalServicesRegistry {
         roomJobsService,
         reportResultsStore,
         reportContributionTimeoutMs = REPORT_CONTRIBUTION_TIMEOUT_MS,
+        studentResultsTimeoutMs = STUDENT_RESULTS_TIMEOUT_MS,
+        loadSessionServiceIds = getEnabledExternalServiceIdsBySessionId,
         caseAnalysesStore = DEFAULT_CASE_ANALYSES_STORE,
         designAnalysesStore = DEFAULT_DESIGN_ANALYSES_STORE,
         now = () => Date.now(),
@@ -496,10 +511,14 @@ export class ExternalServicesRegistry {
         this._jobsService     = jobsService ?? externalServiceJobsService;
         // Room-scoped jobs (#833), handed to adapters as `roomJobs`.
         this._roomJobsService = roomJobsService ?? externalServiceRoomJobsService;
-        // What the report-building hook reads (#944), and how long each
-        // adapter is given to contribute.
+        // What the report-building (#944) and student-results-reading
+        // (#1125) hooks read, and how long each adapter is given to answer.
         this._reportResultsStore          = reportResultsStore ?? externalServiceReportResultsService;
         this._reportContributionTimeoutMs = reportContributionTimeoutMs;
+        this._studentResultsTimeoutMs     = studentResultsTimeoutMs;
+        // The services a session's design enables in any phase, none when it
+        // was launched with its AI services off (#970); replaced in tests.
+        this._loadSessionServiceIds       = loadSessionServiceIds;
 
         // Whether development adapters are registered (and usable). Read from
         // EXTERNAL_SERVICES_DEVELOPMENT_ADAPTERS unless a test injects it.
@@ -743,6 +762,11 @@ export class ExternalServicesRegistry {
             return;
         }
 
+        if (hookName === STUDENT_RESULTS_READING_HOOK
+            && !this._acceptsStudentResultsReadingHandler(serviceId)) {
+            return;
+        }
+
         if (!this.hookSubscribers.has(hookName)) {
             this.hookSubscribers.set(hookName, []);
         }
@@ -762,14 +786,34 @@ export class ExternalServicesRegistry {
             );
             return false;
         }
-        const subscribers = this.hookSubscribers.get(REPORT_BUILDING_HOOK) || [];
-        if (subscribers.some(subscriber => subscriber.serviceId === serviceId)) {
+        return !this._hasCollectingHandler(serviceId, REPORT_BUILDING_HOOK);
+    }
+
+    // A student-results-reading handler (#1125) is accepted only from a
+    // service whose catalog entry lists the hook, and only once per service.
+    _acceptsStudentResultsReadingHandler(serviceId) {
+        const service = this.services.get(serviceId);
+        if (!service?.hooks.includes(STUDENT_RESULTS_READING_HOOK)) {
             console.warn(
-                `[external-services] Ignoring a second ${REPORT_BUILDING_HOOK} handler of ${serviceId}.`
+                `[external-services] Ignoring the ${STUDENT_RESULTS_READING_HOOK} handler of `
+                + `${serviceId}: its catalog entry must list the hook.`
             );
             return false;
         }
-        return true;
+        return !this._hasCollectingHandler(serviceId, STUDENT_RESULTS_READING_HOOK);
+    }
+
+    // Whether `serviceId` already has a handler for a collecting hook, which
+    // takes one per service; a second one is ignored with a warning.
+    _hasCollectingHandler(serviceId, hookName) {
+        const subscribers = this.hookSubscribers.get(hookName) || [];
+        if (subscribers.some(subscriber => subscriber.serviceId === serviceId)) {
+            console.warn(
+                `[external-services] Ignoring a second ${hookName} handler of ${serviceId}.`
+            );
+            return true;
+        }
+        return false;
     }
 
     listServices() {
@@ -871,6 +915,10 @@ export class ExternalServicesRegistry {
     // it. Callbacks are the one exception: one that matches a job goes to the
     // job's destination whatever the policy; one that matches no job is checked
     // against its destination session's pinned version (dispatchServiceHook).
+    // The collecting hooks deliver no event and keep their own rules:
+    // report-building skips the policy (collectReportContributions), and
+    // student-results-reading follows the session's pin without requiring
+    // the connection (studentResultsServiceIds).
     //
     // - A production adapter passes when every AI Additions service in its
     //   `requires` is in `policyVersion.allowedServiceIds`, its own id is not
@@ -1273,10 +1321,11 @@ export class ExternalServicesRegistry {
     // phase-ended and activity-finished first close the room jobs they end
     // (closeRoomJobsForHook), before and regardless of the gate.
     async dispatchHook(hookName, context, options = {}) {
-        // report-building has its own collecting dispatch
-        // (collectReportContributions), which creates no jobs.
-        if (hookName === REPORT_BUILDING_HOOK) {
-            console.warn(`[external-services] ${REPORT_BUILDING_HOOK} is not dispatched through dispatchHook().`);
+        // report-building and student-results-reading have their own
+        // collecting dispatches (collectReportContributions,
+        // collectStudentResults), which create no jobs.
+        if (COLLECTING_HOOKS.includes(hookName)) {
+            console.warn(`[external-services] ${hookName} is not dispatched through dispatchHook().`);
             return [];
         }
 
@@ -1431,6 +1480,81 @@ export class ExternalServicesRegistry {
             timeoutMs:    this._reportContributionTimeoutMs,
             reservedColumnIds,
         });
+    }
+
+    /**
+     * Collects the results the services enabled for a session published to
+     * one of its students, rebuilt by their adapters from the stored
+     * callbacks (student-results-reading, epic #1123, #1125). The services
+     * asked are those registered and subscribed to the hook that
+     * studentResultsServiceIds() finds enabled for the session. Each handler
+     * is awaited under a timeout and receives `({ serviceId, sessionId,
+     * userId }, { results, signal })`; no job or result row is created, no
+     * `callback` is passed and no remote service is called. See
+     * external-service-student-results.js.
+     *
+     * @param {{ sessionId: number, userId: number }} context
+     * @returns {Promise<ReadonlyArray<Object>>} The merged, validated entries,
+     *     oldest `publishedAt` first, each with its `serviceId`. Rejects for a
+     *     context without positive integer ids, or when the session's services
+     *     cannot be read.
+     */
+    async collectStudentResults(context) {
+        const sessionId = context?.sessionId;
+        const userId = context?.userId;
+        if (!Number.isSafeInteger(sessionId) || sessionId <= 0
+            || !Number.isSafeInteger(userId) || userId <= 0) {
+            throw new TypeError("Student results need a positive integer sessionId and userId.");
+        }
+
+        if (!this.initialized) {
+            await this.initialize();
+        }
+
+        const subscribed = (this.hookSubscribers.get(STUDENT_RESULTS_READING_HOOK) || [])
+            .filter(({ serviceId }) => this.services.has(serviceId));
+        if (subscribed.length === 0) {
+            return Object.freeze([]);
+        }
+
+        const enabled = new Set(await this.studentResultsServiceIds(
+            sessionId,
+            subscribed.map(({ serviceId }) => serviceId)
+        ));
+        const asked = subscribed.filter(({ serviceId }) => enabled.has(serviceId));
+        if (asked.length === 0) {
+            return Object.freeze([]);
+        }
+
+        return collectStudentResults({
+            context:      { sessionId, userId },
+            subscribers:  asked,
+            resultsStore: this._reportResultsStore,
+            timeoutMs:    this._studentResultsTimeoutMs,
+        });
+    }
+
+    /**
+     * The ids among `serviceIds` enabled for a session, for
+     * student-results-reading (#1125): those its activity design enables in
+     * any phase (none when it was launched with its AI services off, #970)
+     * that its pinned AI service policy version allows (#815). A session's pin
+     * never changes, so this is the policy its results were published under.
+     * The AI Additions connection is not required: the handlers read stored
+     * results and call no service, and a student's results must not vanish
+     * with it. A pin that cannot be read allows no production adapter.
+     *
+     * @param {number} sessionId
+     * @param {string[]} serviceIds - Registered service ids.
+     * @returns {Promise<string[]>} In the order of `serviceIds`.
+     */
+    async studentResultsServiceIds(sessionId, serviceIds) {
+        const designIds = new Set(await this._loadSessionServiceIds(sessionId));
+        const ids = serviceIds.filter(serviceId => designIds.has(serviceId));
+        const needsPolicy = ids.some(serviceId => !this.services.get(serviceId).development);
+        const policyVersion = needsPolicy ? await this.getSessionPolicyVersion(sessionId) : null;
+        return ids.filter(serviceId =>
+            this.isAllowedByPolicy(this.services.get(serviceId), policyVersion));
     }
 
     // Delivers an inbound callback to its adapter (#815). The destination is

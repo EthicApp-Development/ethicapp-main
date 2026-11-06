@@ -158,6 +158,12 @@ in the `student-response-submitted` handler's result as `sessionCreation`. If
 the tutor rejects the configured tier (400), the session is created with its
 defaults and reported with `configurationRejected: true`.
 
+Its `callback-received` handler publishes the tutor's feedback to the student
+with the id of the stored callback as `resultId` (#1126). Its
+`student-results-reading` handler rebuilds that feedback from the stored
+callbacks when the student loads the activity (see "Student results
+reading").
+
 Current Polyadic Agents bridge adapter:
 
 ```text
@@ -552,6 +558,39 @@ correlation id (#833). Messages published before #947 get no values.
 The contract, the reader and the catalog's `report.columnPrefix` are described
 in `ethicapp/backend/external-services/README.md`, "Report building".
 
+### Student results reading
+
+`student-results-reading` (epic #1123, #1125) is the second collecting hook,
+dispatched by `registry.collectStudentResults({ sessionId, userId })` when a
+student loads an activity. `publishStudentResult` only emits a socket event,
+so each adapter rebuilds, from its stored callbacks, the results it published
+to that student in that session. No copy of a published result is stored.
+
+It asks the subscribed services that the session's design enables in any
+phase (none when the activity was launched with its AI services off) and
+that the session's pinned policy version allows; the AI Additions connection
+is not required, since no service is called. Each handler is awaited under a
+3-second timeout with `{ serviceId, sessionId, userId }` and a reader limited
+to its own service, the session and that student. It returns
+`[{ resultId, phaseId, questionId, component, payload, message, status,
+publishedAt }]`. The registry drops each entry that is malformed, that cites a
+result its reader did not return, or that moves a result to another phase or
+question, then adds `serviceId` and orders the merged list by `publishedAt`. A
+handler that fails, times out or returns something other than a list
+contributes nothing and is logged; the others still answer.
+
+The Argumentation Tutor subscribes (#1126). Its handler returns the student's
+`completed` results whose `adapter_result` records the student as
+`publishedToUserId`, each rebuilt from its `raw_payload` and its ids with the
+function the live path publishes with, so an entry holds the `component`,
+`payload`, `message` and `status` of the socket event, the event's
+`resultId`, and the result's `receivedAt` as `publishedAt`. Failed results,
+results whose handler never finished and results published to another
+student are left out.
+
+The contract and the reader are described in
+`ethicapp/backend/external-services/README.md`, "Student results reading".
+
 ## External Result Callback
 
 External AI services call the unified callback endpoint:
@@ -645,6 +684,8 @@ export async function register({ service, subscribe, publishStudentResult }) {
       sessionId: 10,
       phaseId: 20,
       questionId: 30,
+      // The stored callback this result comes from (#1126).
+      resultId: context.resultId,
       component: {
         componentId: "argument-tutor-report"
       },
@@ -659,7 +700,18 @@ export async function register({ service, subscribe, publishStudentResult }) {
 
 The backend sends this payload to the student namespace through the
 `onExternalServiceResult` websocket event. The current PoC targets a user room
-named `user-{uid}`.
+named `user-{uid}`. The event is not stored or replayed: an adapter that
+publishes from a callback rebuilds the result from the stored callback through
+the `student-results-reading` hook (see "Student results reading").
+
+An adapter that publishes from a `callback-received` handler adds
+`resultId: context.resultId`, the id of the stored callback in
+`external_service_results`, to its payload, and the event carries it
+unchanged. The `student-results-reading` entries rebuilt from that callback
+carry the same id, so the student app can show each result once whether it
+arrived by the event or was loaded with the activity (#1128). The tutor
+adapter sends it (#1126). The development mocks publish without a stored
+callback and send none.
 
 Adapters can publish a chat message back into EthicApp through
 `publishGroupChatMessage(...)`. This helper saves the message using the same chat
@@ -817,6 +869,25 @@ Received results are shown by:
 ```text
 ethicapp-student/frontend/src/components/session-detail/external-services/ExternalServiceResultPanel.jsx
 ```
+
+The activity page also loads the published results from the student route
+(see "Student results reading" in `ethicapp/backend/external-services/README.md`):
+when the activity opens, after a phase transition and after the socket
+reconnects (#1128). It merges them with the socket events by `resultId`, so a
+result shows once whichever source brings it first; an event without
+`resultId` keeps an id made in the browser. A load never removes a result
+already shown, the answer of an older load never replaces a newer one, and a
+failed load leaves the page as it was. A response whose result was loaded
+before its event shows no processing state. The pure logic lives next to the
+page, under `ethicapp-student/frontend/src/pages/session-detail/`:
+`externalServiceResults.js` (merge), `externalResultsLoading.js` (load
+triggers and ordering) and `externalResultsExpansion.js` (collapsing).
+
+Each phase tab shows its own results, newest first. The newest result of the
+current phase is expanded and the others are collapsed; the student can
+expand or collapse any of them with its header button. Results cannot be
+dismissed, and the expanded state is page state only, so a reload starts
+from the defaults again.
 
 The result descriptor supports a local component id:
 

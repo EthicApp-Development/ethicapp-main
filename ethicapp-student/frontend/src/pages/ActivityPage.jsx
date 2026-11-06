@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'r
 import { Link, useOutletContext, useParams } from 'react-router-dom';
 import { describeApiError, withReference } from '../api/apiErrors.js';
 import { studentApi, legacyUserApi } from '../api/studentApi.js';
+import { fetchStudentExternalResults } from '../api/studentExternalResults.js';
 import { useI18n } from '../app/providers.jsx';
 import ActivityTabsPanel from '../components/session-detail/ActivityTabsPanel.jsx';
 import SessionMetadata from '../components/session-detail/SessionMetadata.jsx';
@@ -14,8 +15,22 @@ import {
   EXTERNAL_RESPONSE_PROCESSING_TIMEOUT_MS,
   applyResponseProcessingDelta,
   buildResponseProcessingByPhase,
-  buildResponseProcessingServicesByPhase
+  buildResponseProcessingServicesByPhase,
+  processingResolvedByResults
 } from './session-detail/externalResponseProcessing.js';
+import {
+  defaultExpandedResultKey,
+  isExternalResultExpanded,
+  toggleExternalResult
+} from './session-detail/externalResultsExpansion.js';
+import { createExternalResultsLoader } from './session-detail/externalResultsLoading.js';
+import {
+  groupExternalResultsByPhase,
+  liveExternalResult,
+  loadedExternalResults,
+  mergeExternalResults,
+  unseenExternalResults
+} from './session-detail/externalServiceResults.js';
 import {
   initialSessionDetailState,
   normalizeStatusCode,
@@ -62,6 +77,7 @@ export default function ActivityPage() {
   const [localState, dispatch] = useReducer(sessionDetailReducer, initialSessionDetailState);
   const [chatRefreshTokenByPhaseId, setChatRefreshTokenByPhaseId] = useState({});
   const [externalServiceResults, setExternalServiceResults] = useState([]);
+  const [externalResultToggles, setExternalResultToggles] = useState({});
   const [groupIdByPhaseId, setGroupIdByPhaseId] = useState({});
   const [groupContextByPhaseId, setGroupContextByPhaseId] = useState({});
   const [pendingExternalResponseProcessingByPhaseId, setPendingExternalResponseProcessingByPhaseId] = useState({});
@@ -70,6 +86,8 @@ export default function ActivityPage() {
   const currentPhaseIdRef = useRef(null);
   const responseProcessingTimeoutsByKeyRef = useRef(new Map());
   const responseProcessingServiceIdsByPhaseIdRef = useRef({});
+  const shownExternalResultKeysRef = useRef(new Set());
+  const showExternalResultsRef = useRef(() => {});
   const {
     stateBySession,
     loadingBySession,
@@ -247,48 +265,76 @@ export default function ActivityPage() {
   const shouldLoadActivityData = activityStatusCode >= SESSION_STATUS.inProgress;
   const isSessionFinished = activityStatusCode === SESSION_STATUS.finished;
 
-  const handleExternalServiceResult = useCallback((payload) => {
-    const serviceId = String(payload?.serviceId || '').trim();
-    const payloadPhaseId = Number(payload?.phaseId);
-    const responseProcessingServiceIds = responseProcessingServiceIdsByPhaseIdRef.current[payloadPhaseId] ?? [];
+  // Shows results from either source once each, by result key. A result not
+  // shown before ends its response's processing state, whichever source
+  // brought it first.
+  const showExternalResults = useCallback((entries) => {
+    const unseen = unseenExternalResults(shownExternalResultKeysRef.current, entries);
 
-    if (
-      serviceId
-      && Number.isInteger(payloadPhaseId)
-      && payloadPhaseId > 0
-      && responseProcessingServiceIds.includes(serviceId)
-    ) {
-      resolveExternalResponseProcessing({ phaseId: payloadPhaseId, serviceId });
-    }
+    unseen.forEach((entry) => shownExternalResultKeysRef.current.add(entry.key));
+    processingResolvedByResults(unseen, responseProcessingServiceIdsByPhaseIdRef.current)
+      .forEach(resolveExternalResponseProcessing);
 
-    setExternalServiceResults((previousResults) => [
-      {
-        id: payload?.id || `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-        ...payload
-      },
-      ...previousResults
-    ]);
+    setExternalServiceResults((previousResults) => mergeExternalResults(previousResults, entries));
   }, [resolveExternalResponseProcessing]);
 
-  const externalResultsByPhaseId = useMemo(() => {
-    const byPhaseId = {};
+  const handleExternalServiceResult = useCallback((payload) => {
+    const entry = liveExternalResult(payload);
 
-    externalServiceResults.forEach((result) => {
-      const phaseId = Number(result?.phaseId);
-      if (!Number.isInteger(phaseId) || phaseId <= 0) {
-        // Session-level results are intentionally not shown in phase tabs.
-        return;
-      }
+    if (entry) {
+      showExternalResults([entry]);
+    }
+  }, [showExternalResults]);
 
-      (byPhaseId[phaseId] ??= []).push(result);
+  useEffect(() => {
+    showExternalResultsRef.current = showExternalResults;
+  }, [showExternalResults]);
+
+  // Loads the results published to the student when the activity opens,
+  // after a phase transition and after a socket reconnect. Only the answer
+  // of the latest load applied is kept, and a failed load leaves the shown
+  // results as they are.
+  const [externalResultsLoader] = useState(() => createExternalResultsLoader({
+    fetchResults: (target) => fetchStudentExternalResults(legacyUserApi, target),
+    applyResults: (results) => showExternalResultsRef.current(loadedExternalResults(results)),
+    reportFailure: (error, target) => {
+      // Ids and the status only: an answer can quote the student.
+      console.debug('[student] could not load external service results', {
+        sessionId: target.sessionId,
+        status: error?.response?.status ?? null
+      });
+    }
+  }));
+
+  // Another activity starts from nothing.
+  useEffect(() => {
+    shownExternalResultKeysRef.current = new Set();
+    setExternalServiceResults([]);
+    setExternalResultToggles({});
+  }, [selectedSessionId]);
+
+  const resultsSessionId = Number(selectedSession?.id) || null;
+  const resultsUserId = Number(session.uid) || null;
+  const canLoadExternalResults = Boolean(
+    session.isAuthenticated && resultsSessionId && resultsUserId && shouldLoadActivityData
+  );
+
+  useEffect(() => {
+    externalResultsLoader.open(
+      canLoadExternalResults ? { sessionId: resultsSessionId, userId: resultsUserId } : null
+    );
+  }, [canLoadExternalResults, externalResultsLoader, resultsSessionId, resultsUserId]);
+
+  useEffect(() => {
+    externalResultsLoader.phaseChanged({
+      sessionId: selectedSessionId,
+      phaseId: activityState?.descriptor?.currentPhaseId
     });
+  }, [activityState?.descriptor?.currentPhaseId, externalResultsLoader, selectedSessionId]);
 
-    return byPhaseId;
-  }, [externalServiceResults]);
-
-  const onDismissExternalResult = useCallback((resultId) => {
-    setExternalServiceResults((previousResults) => previousResults.filter((result) => result.id !== resultId));
-  }, []);
+  const externalResultsByPhaseId = useMemo(() => (
+    groupExternalResultsByPhase(externalServiceResults)
+  ), [externalServiceResults]);
 
   useEffect(() => {
     if (!session.isAuthenticated || !selectedSession || !session.uid || !shouldLoadActivityData) {
@@ -412,7 +458,9 @@ export default function ActivityPage() {
     activityCurrentPhaseId: activityState?.descriptor?.currentPhaseId,
     setGroupIdByPhaseId,
     setGroupContextByPhaseId,
-    onExternalServiceResult: handleExternalServiceResult
+    onExternalServiceResult: handleExternalServiceResult,
+    // After a reconnect (after #1108, the socket has rejoined its rooms).
+    onReconnect: externalResultsLoader.reconnected
   });
 
   const phaseTabs = useMemo(() => {
@@ -466,6 +514,27 @@ export default function ActivityPage() {
 
   const currentPhaseNumber = activityState?.descriptor?.currentPhaseNumber ?? null;
   const currentPhaseId = activityState?.descriptor?.currentPhaseId ?? null;
+
+  // The newest result of the current phase is expanded, the others
+  // collapsed, until the student toggles them (page state only).
+  const defaultExpandedKey = useMemo(() => (
+    defaultExpandedResultKey(externalResultsByPhaseId, currentPhaseId)
+  ), [currentPhaseId, externalResultsByPhaseId]);
+
+  const expandedExternalResultKeys = useMemo(() => new Set(
+    externalServiceResults
+      .filter((result) => (
+        isExternalResultExpanded(externalResultToggles, result.key, defaultExpandedKey)
+      ))
+      .map((result) => result.key)
+  ), [defaultExpandedKey, externalResultToggles, externalServiceResults]);
+
+  const onToggleExternalResult = useCallback((resultKey) => {
+    setExternalResultToggles((previousToggles) => (
+      toggleExternalResult(previousToggles, resultKey, defaultExpandedKey)
+    ));
+  }, [defaultExpandedKey]);
+
   const designType = activityState?.descriptor?.design?.type ?? localState.activityDescriptor?.design?.type ?? '';
   const hasCaseTab = localState.caseDocumentUrl.trim().length > 0 || Boolean(localState.caseDocument);
 
@@ -636,7 +705,9 @@ export default function ActivityPage() {
                     chatRefreshTokenByPhaseId={chatRefreshTokenByPhaseId}
                     externalResponseProcessingByPhaseId={externalResponseProcessingByPhaseId}
                     externalResultsByPhaseId={externalResultsByPhaseId}
-                    onDismissExternalResult={onDismissExternalResult}
+                    expandedExternalResultKeys={expandedExternalResultKeys}
+                    onToggleExternalResult={onToggleExternalResult}
+                    locale={locale}
                     userId={session.uid}
                   />
                 </CaseVideosProvider>

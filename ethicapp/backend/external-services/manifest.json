@@ -73,7 +73,8 @@
         "phase-ended",
         "callback-received",
         "user-forgotten",
-        "report-building"
+        "report-building",
+        "student-results-reading"
       ],
       "globalHooks": ["user-forgotten"],
       "scopes": ["response"],
