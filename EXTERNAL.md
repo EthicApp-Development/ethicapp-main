@@ -962,8 +962,10 @@ a renderer draw a meter: `maxScore` requires `score`, `minScore` requires
 `maxScore` and defaults to `0`. Two rules are beyond JSON Schema: criterion
 keys are unique within a section, and a criterion with `maxScore` has
 `minScore < maxScore` and `minScore <= score <= maxScore`. Services check them
-with `ethicapp_ai_capabilities.validate_student_result()` before publishing;
-the schema copy in EthicApp does not express them.
+with `ethicapp_ai_capabilities.validate_student_result()` before publishing.
+The schema copy in EthicApp does not express them, so the backend checks them
+next to the schema, with the same codes (`duplicate_criterion_key`,
+`score_out_of_range`), and both sides refuse the same documents.
 
 ### Text formats
 
@@ -1063,22 +1065,32 @@ with the document as `payload`. The socket event and the entries the
 }
 ```
 
-#1131 enforces this contract in the backend:
+The backend enforces this contract (#1131):
 
 - `publishStudentResult` accepts `{ documentSchema, document }` next to the
-  ids, and emits the pair above;
+  ids, and emits the pair above with those ids only;
 - the document must validate against the copy in
-  `canonical-schemas/ai-additions/`, and the service must declare its schema in
-  `student_outputs` for the scope the document is published in;
-- a document that fails either check is logged and not published, and results
-  rebuilt through `student-results-reading` go through the same checks;
+  `canonical-schemas/ai-additions/` and its two integrity rules, and the
+  service must declare its schema in `student_outputs` for the scope the
+  document is published in. `publishStudentResult` and the
+  `student-results-reading` hook publish in the `response` scope; `chat` is
+  reserved for documents shown in a group chat, which no publisher emits yet;
+- a document that fails either check is logged, with ids, codes and paths
+  only, and not published, and results rebuilt through
+  `student-results-reading` go through the same checks;
+- a live publication refreshes the service's declaration when the cached one
+  is older than ten minutes. A rebuild never waits for the service: it uses
+  the last declaration the process fetched, which survives an outage and a
+  change of the AI Additions connection, and refreshes it in the background.
+  Until the process has fetched the service's descriptor once, its documents
+  are refused;
 - the `component` path of the legacy result descriptor keeps working until
   #1133 (the tutor adapter) and #1134 (the development mock) publish
-  documents. `ethicapp/backend/external-services/README.md` documents the new
-  argument.
+  documents. A development adapter links no descriptor, so the mock needs a
+  declaration of its own before its documents can pass (#1134).
 
-Until #1131 is merged, `publishStudentResult` emits whatever the adapter
-passes.
+`ethicapp/backend/external-services/README.md`, "Student result documents",
+describes the argument, the checks and their log lines.
 
 ### Rendering in the student app
 
@@ -1121,8 +1133,10 @@ To add a renderer for a new document schema, such as `<name>/v1`:
 2. Copy the schema and its examples into `canonical-schemas/ai-additions/`
    with the steps of its README, and add a schema test like
    `canonical-schemas/__tests__/student-result-v1.schema.node-test.mjs`.
-3. Teach the backend validation of #1131 the new schema, so its documents are
-   checked against the copy and are not refused as unknown.
+3. Add the schema to `DOCUMENT_SCHEMAS` in
+   `ethicapp/backend/services/student-result-documents.js`, with its
+   integrity rules, so its documents are checked against the copy and are not
+   refused as unknown.
 4. Write the renderer component in the student app, add an entry for the
    schema to the allowlist in
    `ethicapp-student/frontend/src/components/session-detail/external-services/resultRenderers.js`,
