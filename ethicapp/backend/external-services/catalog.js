@@ -30,6 +30,12 @@ const DESIGN_ANALYSIS_DECLARATION_KEYS = Object.freeze(["documentSchema", "unit"
 export const REPORT_BUILDING_HOOK = "report-building";
 export const REPORT_COLUMN_PREFIX_PATTERN = /^[a-z][a-z0-9]*_$/u;
 
+// The hook through which adapters rebuild, from their stored callbacks, the
+// results they published to one student in one activity (epic #1123, #1125).
+// An adapter that subscribes to it lists it in `hooks`; it needs no other
+// declaration.
+export const STUDENT_RESULTS_READING_HOOK = "student-results-reading";
+
 // Keys the catalog no longer accepts, with the reason given to whoever adds one.
 const REMOVED_KEYS = Object.freeze({
     enabled: "is removed (#812): adapters are listed, not enabled; usability is decided at dispatch",

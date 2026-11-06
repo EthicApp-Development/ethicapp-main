@@ -544,8 +544,9 @@ shows the `errors` of a `400` next to their fields.
 ### Handler signature
 
 Every hook handler receives `(context, { callback, reportInstantiation })`,
-except `report-building`, which receives `(context, { results, signal })` (see
-"Report building"):
+except the collecting hooks `report-building` and `student-results-reading`,
+which receive `(context, { results, signal })` (see "Report building" and
+"Student results reading"):
 
 - `context` is the object built by the dispatch site plus registry-injected
   fields. For hooks dispatched through `dispatchHook()` the registry adds
@@ -593,6 +594,7 @@ failures are isolated from teacher and student requests.
 | `design-updated` | After `PATCH /designs/:id` answers (`trigger: "updated"`), and from `POST /designs/:id/analyses/:serviceId/generate` with the current design (`trigger: "generate"`) (`helpers/design-analyses-lifecycle-helper.js`) | As for `design-created` | As for `design-created`, with `trigger` `"updated"` or `"generate"` |
 | `callback-received` | `POST /external-services/callbacks` | Only the service named in the callback body | `serviceId`, `eventType`, `correlationId`, `eventId`, `requestPayload`, `rawBody`, `auth` |
 | `report-building` | `registry.collectReportContributions(reportType, context)`, while an activity report is built (#944; the reports call it from #945) | The registered services subscribed to it with at least one job in the session, whatever the policy. Not dispatched through `dispatchHook()` (see "Report building") | `reportType`, `serviceId`, `sessionId`, `designType`, `rows` |
+| `student-results-reading` | `registry.collectStudentResults({ sessionId, userId })`, when a student loads an activity (#1125; the student route calls it from #1127) | The registered services subscribed to it that the session's design enables in any phase and its pinned policy version allows; the AI Additions connection is not required. Not dispatched through `dispatchHook()` (see "Student results reading") | `serviceId`, `sessionId`, `userId` |
 | `user-forgotten` | The user erasure processor (`services/user-erasure/`), for each pending request in `user_erasure_requests`, of a forgotten student (#876) or teacher (#877) | Global (`globalHooks`), one AI Additions service at a time: the adapters that declare it and require the request's service. An erasure hook: it skips the policy (see "Erasure hooks") | `userId` (the forgotten account), `erasureRequestId` |
 
 ### Hook enablement
@@ -819,6 +821,124 @@ callbacks store no results:
   chat transcript: `true` on its own messages and `false` on one summary row
   per group it spoke in, placed a second after its last message there.
 
+### Student results reading
+
+`student-results-reading` (epic #1123, #1125) lets an adapter rebuild the
+results it published to one student in one activity with
+`publishStudentResult`, so the student app can show them again after a
+reload, a new login or a socket that was down when they arrived. The
+published results are not copied anywhere: the adapter rebuilds them from
+its stored callbacks (`external_service_results.raw_payload`), as its report
+contribution does. Erasure and redaction of those payloads (#580, #876)
+therefore reach the rebuilt results too.
+
+An adapter subscribes with `subscribe("student-results-reading", handler)`.
+The registry accepts the handler only when the catalog entry lists the hook
+in `hooks`, and only one handler per service. No other catalog declaration is
+needed.
+
+**Collecting dispatch.** The hook is never dispatched through `dispatchHook()`,
+which ignores it. The caller (the student route of #1127) calls
+`registry.collectStudentResults({ sessionId, userId })`
+(`services/external-service-student-results.js`), which:
+
+- asks the services that are registered, subscribed to the hook and enabled
+  for the session (`studentResultsServiceIds()`): the services the session's
+  activity design enables in any phase
+  (`getEnabledExternalServiceIdsBySessionId()`, none when the activity was
+  launched with its AI services off, #970) that the session's pinned AI
+  service policy version allows (`isAllowedByPolicy()`, #815). A session's
+  pin never changes, so this is the policy its results were published under.
+  The AI Additions connection is not required, since the handlers call no
+  service. A pin that cannot be read allows no production adapter;
+  development adapters need no pin;
+- runs the handlers concurrently and awaits each one under its own timeout,
+  `STUDENT_RESULTS_TIMEOUT_MS` (3 s, no environment variable; the student
+  waits for it);
+- creates no job or result row, passes no `callback` and calls no remote
+  service; the adapter must not call its AI service either;
+- resolves to one merged, frozen list (below). A handler that throws, rejects,
+  times out or returns something other than a list contributes nothing; the
+  others are unaffected.
+
+It rejects only for a context without positive integer `sessionId` and
+`userId`, or when the session's services cannot be read. The caller decides
+which of the student's phases to show.
+
+**Context and reader.** The handler's `context` is frozen:
+`{ serviceId, sessionId, userId }`. The second argument is
+`{ results, signal }`; `signal` is aborted when the timeout expires. `results`
+is the only data access the handler gets
+(`createStudentResultsReader()` in
+`services/external-service-report-results.service.js`):
+
+```js
+const stored = await results.list({ hookName, phaseId, questionId }); // all optional
+// [{ id, jobId, hookName, status, phaseId, questionId, groupId, userId,
+//    source, rawPayload, adapterResult, receivedAt }], oldest first
+```
+
+It returns this service's `external_service_results` for the session whose
+`user_id` is the student's, the user its job was dispatched for. Its rows
+have the same shape as the report reader's, and `pending` results are left
+out. `userId`, `groupId`, `serviceId` and `sessionId` are not filters, so the
+scope cannot be widened; unknown or malformed filters reject with a
+`TypeError`. Results of other statuses are returned with their `status`: the
+adapter decides which ones it published (the tutor's report, for example,
+ignores `failed` results).
+
+**Return contract.** The handler resolves to `undefined`/`null` (nothing) or
+to a list of the results it published, in the shape `publishStudentResult`
+emits plus the id of the stored result each one was rebuilt from:
+
+```js
+[{
+    resultId:    "<external_service_results.id>",
+    phaseId:     20,
+    questionId:  30,              // or null
+    component:   { componentId: "argument-tutor-chat-feedback", title: "Argument Tutor Feedback" },
+    payload:     { feedback: { /* ... */ } },
+    message:     "Your argument tutor feedback is now available.", // or null
+    status:      "completed",
+    publishedAt: "2026-11-05T10:00:00.000Z",
+}]
+```
+
+Each entry is checked on its own; an entry that fails a check is dropped and
+the others are kept:
+
+- `resultId` is the id of a result this handler's own reader returned during
+  this call, once at most. An entry that cites another service's result, or a
+  result the reader never returned, is dropped.
+- `phaseId` is a positive integer and `questionId` a positive integer or
+  `null`; each must equal its result's `phaseId` or `questionId` when the
+  result has one. The stored result keeps its callback's trusted destination,
+  and an entry cannot move it to another phase or question.
+- `component` is plain data with a non-empty `componentId`, and `payload` a
+  plain data object. Both are copied and frozen, and are returned unchanged
+  (epic #1124 defines how they are described and rendered).
+- `message` is a string or `null`, `status` a non-empty string, and
+  `publishedAt` a date, normalized to ISO 8601. The adapter usually takes it
+  from the result's `receivedAt`.
+- No other key is accepted.
+
+The registry adds each entry's `serviceId` and orders the merged list by
+`publishedAt`, oldest first; ties keep the subscription order and then each
+handler's order. `resultId` lets the student app merge these entries with
+the socket events (#1128).
+
+**Logging.** A handler left out, and a handler some of whose entries were
+dropped, is logged as one `[external-services] Left out student results.`
+line holding `serviceId`, `sessionId` and `status` (`failed`, `timed_out`,
+`invalid`, or `completed` with `kept` and `dropped` counts), plus `errorName`
+and `errorCode` for `failed`, `timeoutMs` for `timed_out` and `problems` for
+`invalid` and dropped entries. Problems name entry paths only; an adapter's
+error message and its entries are never logged, since they can quote a
+student's text.
+
+No adapter subscribes yet. The tutor adapter's handler is #1126; the
+development mocks publish without storing a result and stay live-only.
+
 ### Adding a new hook
 
 1. Choose a kebab-case name and add it to the Hook Catalog above with its
@@ -964,7 +1084,10 @@ The registry provides two helper publishers to adapters:
 - `publishStudentResult(payload)`: sends a socket notification to a student.
   The payload must include a valid positive integer `userId`; the registry adds
   `serviceId` and `receivedAt`. Returns `true` when the notification was sent,
-  `false` otherwise.
+  `false` otherwise. Nothing is stored and a socket that is down misses it, so
+  an adapter that publishes from a callback also subscribes to
+  `student-results-reading` (see "Student results reading") to rebuild what it
+  published from the stored callback when the student loads the activity.
 - `publishGroupChatMessage(payload)`: saves a message authored by the external
   service and publishes chat notifications to the group and the teacher. The
   payload must include `content`, `phaseId`, `questionId`, and `groupId`;

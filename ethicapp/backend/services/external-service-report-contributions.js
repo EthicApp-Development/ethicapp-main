@@ -1,5 +1,10 @@
 import { REPORT_BUILDING_HOOK } from "../external-services/catalog.js";
 import { createReportResultsReader } from "./external-service-report-results.service.js";
+import {
+    errorClassification,
+    runHandlerWithTimeout,
+    TIMED_OUT,
+} from "./external-service-handler-run.js";
 
 /**
  * The `report-building` hook (epic #620, #944): while a report is built, the
@@ -326,42 +331,6 @@ function handlerContext(reportType, context, serviceId) {
     });
 }
 
-const TIMED_OUT = Symbol("timed out");
-
-// A handler that outlives its timeout cannot be stopped; its `signal` is
-// aborted so it can stop by itself, and what it returns later is ignored.
-async function runHandler(handler, handlerArgs, timeoutMs, controller) {
-    let timeoutId;
-    const timeout = new Promise(resolve => {
-        timeoutId = setTimeout(() => {
-            controller.abort();
-            resolve(TIMED_OUT);
-        }, timeoutMs);
-    });
-    try {
-        return await Promise.race([
-            Promise.resolve().then(() => handler(...handlerArgs)),
-            timeout,
-        ]);
-    } finally {
-        clearTimeout(timeoutId);
-    }
-}
-
-// An error's name and code, when they look like identifiers. Its message and
-// stack are never kept: an adapter's error can quote a stored result, and
-// with it a student's text.
-const ERROR_IDENTIFIER_PATTERN = /^[A-Za-z][A-Za-z0-9_.-]{0,63}$/u;
-
-function errorClassification(error) {
-    const name = error?.name;
-    const code = typeof error?.code === "number" ? String(error.code) : error?.code;
-    return {
-        errorName: typeof name === "string" && ERROR_IDENTIFIER_PATTERN.test(name) ? name : null,
-        errorCode: typeof code === "string" && ERROR_IDENTIFIER_PATTERN.test(code) ? code : null,
-    };
-}
-
 // Every contribution left out is logged as one line of identifiers and a
 // classification, never with text from the handler or its data.
 function logLeftOut({ serviceId, reportType, sessionId, status, ...details }) {
@@ -387,7 +356,7 @@ async function collectOne({
     const controller = new AbortController();
     let returned;
     try {
-        returned = await runHandler(handler, [
+        returned = await runHandlerWithTimeout(handler, [
             handlerContext(reportType, context, serviceId),
             {
                 results: createReportResultsReader(resultsStore, { serviceId, sessionId: context.sessionId }),
