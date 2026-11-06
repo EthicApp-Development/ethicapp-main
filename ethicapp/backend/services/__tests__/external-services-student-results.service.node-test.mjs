@@ -528,6 +528,50 @@ test("malformed entries are dropped one by one, and their problems name paths on
     assert.deepEqual(validateStudentResults({ entries: [] }, { readResults }).valid, false);
 });
 
+test("a document entry is kept only when checkDocument accepts it (#1131)", () => {
+    const result = Object.freeze({ id: RESULT_IDS.tutorFirst, phaseId: 1, questionId: 7 });
+    const readResults = new Map([[result.id, result]]);
+    const document = { schemaVersion: "student-result/v1", title: PRIVATE_MARKER };
+    const entry = {
+        resultId:    result.id,
+        phaseId:     1,
+        questionId:  7,
+        component:   { documentSchema: "student-result/v1" },
+        payload:     document,
+        message:     null,
+        status:      "completed",
+        publishedAt: "2026-11-05T10:00:00Z",
+    };
+
+    // Without a check, no document passes.
+    assert.deepEqual(validateStudentResults([entry], { readResults }).problems,
+        ["entries[0].payload is refused: no document check"]);
+
+    const checks = [];
+    const accepted = validateStudentResults([entry], {
+        readResults,
+        checkDocument: input => {
+            checks.push(input);
+            return { ok: true, problems: [] };
+        },
+    });
+    assert.deepEqual(accepted.problems, []);
+    assert.deepEqual(accepted.entries[0].component, { documentSchema: "student-result/v1" });
+    assert.deepEqual(checks, [{ documentSchema: "student-result/v1", document }]);
+
+    const refused = validateStudentResults([{ ...entry, component: { documentSchema: PRIVATE_MARKER } }], {
+        readResults,
+        checkDocument: () => ({
+            ok:       false,
+            problems: [{ code: "unknown_document_schema", path: "<root>" }],
+        }),
+    });
+    assert.deepEqual(refused.entries, []);
+    assert.deepEqual(refused.problems, [
+        "entries[0].payload (invalid document schema) is refused: unknown_document_schema at <root>",
+    ]);
+});
+
 test("a failing, slow or non-list handler contributes nothing and the others still answer", async () => {
     const services = ["valid", "throws", "slow", "not-a-list"].map(id => serviceEntry(id));
     const resultsStore = fakeResultsStore({ valid: [resultRow(RESULT_IDS.tutorFirst, "valid")] });
