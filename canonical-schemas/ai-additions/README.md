@@ -92,5 +92,9 @@ npm run test:schemas
 `schemaVersion` constant, rejects malformed documents and accepts a section of
 an unknown kind. The schema's two integrity rules that JSON Schema cannot
 express (unique criterion keys within a section, scores within their bounds)
-are outside those tests; ethicapp-ai-additions checks them with
-`ethicapp_ai_capabilities.validate_student_result()`.
+are outside those tests. ethicapp-ai-additions checks them with
+`ethicapp_ai_capabilities.validate_student_result()`, and the EthicApp backend
+with the same problem codes (`duplicate_criterion_key`, `score_out_of_range`)
+in `ethicapp/backend/services/student-result-documents.js` (#1131), which
+validates every document published or rebuilt for a student against this
+copy.
