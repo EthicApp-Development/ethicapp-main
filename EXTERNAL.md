@@ -704,6 +704,10 @@ named `user-{uid}`. The event is not stored or replayed: an adapter that
 publishes from a callback rebuilds the result from the stored callback through
 the `student-results-reading` hook (see "Student results reading").
 
+This example uses the legacy `component` form. A result for a student is
+published as a `student-result/v1` document, which #1131 makes
+`publishStudentResult` accept and check; see "Student result documents".
+
 An adapter that publishes from a `callback-received` handler adds
 `resultId: context.resultId`, the id of the stored callback in
 `external_service_results`, to its payload, and the event carries it
@@ -889,7 +893,11 @@ expand or collapse any of them with its header button. Results cannot be
 dismissed, and the expanded state is page state only, so a reload starts
 from the defaults again.
 
-The result descriptor supports a local component id:
+Each result names the view that shows it in its `component`. A
+`student-result/v1` document carries `{ "documentSchema": "student-result/v1" }`
+and is rendered by the student app's generic renderer (see "Student result
+documents"). The legacy result descriptor names a local component by id, with
+a payload that only that component understands:
 
 ```json
 {
@@ -899,19 +907,239 @@ The result descriptor supports a local component id:
 }
 ```
 
-For experiments, it can also request a remote ESM React component:
+The panel resolves `componentId` only during the transition, until the tutor
+adapter (#1133) and the development mock (#1134) publish documents. Remote
+components, which the descriptor used to request with `component.url` and
+`exportName`, are removed by #1132: the student app loads no code from a
+payload.
+
+## Student result documents
+
+A result that an AI service shows to a student is a `student-result/v1`
+document (epic #1124). The service writes it, EthicApp checks it against the
+schema and against the service's declaration, and the student app renders it
+with its own code, chosen by the document's schema. A new service with output
+for students therefore needs no change in the student app, and the student
+app loads no code from services.
+
+ethicapp-ai-additions owns the contract: the schema is
+`shared/schemas/student-result.v1.schema.json` in that repository (JSON Schema
+draft 2020-12, `$id`
+`https://github.com/EthicApp-Development/ethicapp-ai-additions/schemas/student-result/v1`),
+and its `README.md` explains it in the "Student Result Document" section.
+EthicApp keeps a verbatim copy of the schema and its examples in
+[`canonical-schemas/ai-additions/`](canonical-schemas/ai-additions/README.md),
+whose README names the commit it was copied from and how to update it.
+`npm run test:schemas` validates the examples against the copy. The examples
+include the Argumentation Tutor's analysis and comparison in both locales, a
+minimal document and a document with a section of an unknown kind.
+
+### Document fields
+
+| Key | Required | Format | Meaning |
+| --- | --- | --- | --- |
+| `schemaVersion` | yes | `"student-result/v1"` | The schema of the document. |
+| `locale` | yes | `es-CL` or `en-US` | Language of every text in the document. |
+| `title` | yes | single-line plain text, up to 120 characters | Heading of the result. It never names the service (#591). |
+| `summary` | no | plain text, up to 2,000 characters | Short message under the title. |
+| `overview` | no | Markdown subset, up to 4,000 characters | How the service evaluated the student's work, shown as help above the sections. |
+| `status` | no | `complete`, `partial` or `unavailable` | `complete` (the default) when the document holds the whole result; `partial` when some parts could not be produced and the texts say which; `unavailable` when the service could not produce the result and `summary` says so. |
+| `sections` | yes | up to 20 sections | The body, rendered in order. It may be empty. |
+
+Each section has a `kind`, an optional `title` (single-line plain text, up to
+120 characters) and the fields of its kind:
+
+| Kind | Fields | Rendering |
+| --- | --- | --- |
+| `criteria` | `items`: 1 to 12 criteria, each with `key` (`^[a-z][a-z0-9_-]*$`, up to 64 characters, unique in the section, never shown), `label` (single line, up to 80), `value` (single line, up to 120) and optionally `score`, `minScore`, `maxScore` (numbers) and `description` (Markdown subset, up to 2,000). | The label and value of each criterion. A criterion with a `description` opens it on demand. |
+| `bullets` | `items`: 1 to 12 plain-text strings, up to 1,000 characters each. | A bulleted list. |
+| `text` | `text`: plain text, up to 10,000 characters. | A block of text, such as the student's own answer. |
+| `comparison` | `items`: 1 to 12 items, each with `label` (single line, up to 80), `before` and `after` (plain text, up to 500 each), and optionally `key` (the key of the criterion it compares) and `trend` (`improved`, `unchanged` or `declined`). | Each label with its earlier and later result, styled by `trend` when present. |
+
+A criterion's `value`, such as `2 of 3` or `Against`, is what the student
+always sees, and it makes sense alone. `score`, `minScore` and `maxScore` let
+a renderer draw a meter: `maxScore` requires `score`, `minScore` requires
+`maxScore` and defaults to `0`. Two rules are beyond JSON Schema: criterion
+keys are unique within a section, and a criterion with `maxScore` has
+`minScore < maxScore` and `minScore <= score <= maxScore`. Services check them
+with `ethicapp_ai_capabilities.validate_student_result()` before publishing;
+the schema copy in EthicApp does not express them.
+
+### Text formats
+
+Every text is plain text except `overview` and a criterion's `description`,
+which use a Markdown subset.
+
+- **Plain text:** shown character for character, with no markup interpreted,
+  so `**`, `<b>` or `&amp;` appear literally. A line feed is a line break.
+  Required texts contain at least one character other than whitespace.
+- **Single-line plain text** (`title`, section titles, labels, criterion
+  values): plain text without carriage returns or line feeds.
+- **Markdown subset:** paragraphs separated by a blank line, a single line
+  feed as a line break, `**bold**` and `*italics*`, bulleted lists (`- `) and
+  numbered lists (`1. `) one level deep, and backslash escapes of ASCII
+  punctuation. Headings, links, autolinks, images, code, blockquotes, tables,
+  horizontal rules, HTML tags and entities show as plain text. In the student
+  app, which already depends on `markdown-it`, the subset is
+  `markdownit('zero', { breaks: true }).enable(['list', 'emphasis', 'newline', 'escape'])`,
+  with `html`, `linkify` and `typographer` off.
+
+The service writes every text in the activity's language: EthicApp sends the
+activity's locale with each request, and `locale` records the language of the
+answer (`es-CL` for EthicApp's `es_CL`, `en-US` for `en_US`). Renderers mark
+the document with that language (the HTML `lang` attribute) and write their
+own interface text, such as the label of the control that opens a
+description, in the student app's language.
+
+### Strict objects and the extension point
+
+The document, the sections of the four known kinds and their items are
+closed (`additionalProperties: false`). A key the schema does not define makes
+the document invalid. This catches misspelled keys and keeps data meant for
+teachers, such as the tutor's `claimTypeId`, `tutorMode` or `evidenceFactIds`,
+out of the student's browser.
+
+A section of any other kind needs only a `kind` in kebab case
+(`^[a-z][a-z0-9]*(-[a-z0-9]+)*$`): the schema accepts it with any other fields
+and renderers skip it. Unknown section kinds are the only extension point of
+v1. A later revision of the schema can add a kind, and older renderers keep
+showing the rest of the document. Every other addition (a key, a locale, a
+`status` value, a looser limit) is a schema change that reaches EthicApp's
+copy before a service emits it, and a change that makes a valid v1 document
+invalid needs `student-result/v2`.
+
+### Student output declaration
+
+A service declares the documents it publishes to students in the optional
+`student_outputs` array of its capability descriptor
+(`shared/schemas/capability-descriptor.v1.schema.json` in
+ethicapp-ai-additions; the descriptor's `contract_version` stays `"1"`):
+
+```json
+"student_outputs": [
+  {
+    "id": "argument-feedback",
+    "document_schema": "student-result/v1",
+    "scopes": ["response"],
+    "display": {
+      "label": "Argument feedback",
+      "description": "Feedback on each argument a student submits."
+    }
+  }
+]
+```
+
+- `id`: stable identifier in kebab case, up to 64 characters, unique in the
+  descriptor.
+- `document_schema`: the schema of the documents, `student-result/v1`.
+- `scopes`: the manifest scopes in which the documents reach students, one or
+  more of `response` and `chat`. The `case` and `design` scopes serve teachers
+  and are outside the declaration.
+- `display.label` and `display.description`: text for teachers and operators,
+  localized like field labels.
+
+The declaration is a validation contract: EthicApp refuses a document whose
+schema the service did not declare for the scope it is published in. A
+descriptor without `student_outputs` declares no output. Unknown keys inside
+an entry are ignored, as elsewhere in the descriptor.
+
+### Publishing a document
+
+An adapter publishes a document through `publishStudentResult(...)`, which
+emits it to the student as `component: { documentSchema: "student-result/v1" }`
+with the document as `payload`. The socket event and the entries the
+`student-results-reading` hook rebuilds carry the same pair:
 
 ```json
 {
-  "component": {
-    "url": "https://example.test/argument-tutor-report.js",
-    "exportName": "default"
+  "resultId": "3f0c9a52-6b1e-4d2a-9c4e-2f5b8e7d1a90",
+  "component": { "documentSchema": "student-result/v1" },
+  "payload": {
+    "schemaVersion": "student-result/v1",
+    "locale": "en-US",
+    "title": "Feedback on your response",
+    "sections": [{ "kind": "text", "text": "Your response was received and reviewed." }]
   }
 }
 ```
 
-Remote component loading is intentionally experimental and should be constrained
-by an allowlist or signed component bundle policy before production use.
+#1131 enforces this contract in the backend:
+
+- `publishStudentResult` accepts `{ documentSchema, document }` next to the
+  ids, and emits the pair above;
+- the document must validate against the copy in
+  `canonical-schemas/ai-additions/`, and the service must declare its schema in
+  `student_outputs` for the scope the document is published in;
+- a document that fails either check is logged and not published, and results
+  rebuilt through `student-results-reading` go through the same checks;
+- the `component` path of the legacy result descriptor keeps working until
+  #1133 (the tutor adapter) and #1134 (the development mock) publish
+  documents. `ethicapp/backend/external-services/README.md` documents the new
+  argument.
+
+Until #1131 is merged, `publishStudentResult` emits whatever the adapter
+passes.
+
+### Rendering in the student app
+
+The student app (#1132) renders `student-result/v1` with one generic
+renderer: the title, summary and status, the overview above the sections, and
+each known section kind in order. Sections of an unknown kind are skipped. A
+criterion with a `description` has a help control that opens the description
+next to the criterion on a tap, a click, Enter or Space, and closes it with
+the same control or Escape; it works without hover at 360 px and announces
+its state to screen readers. The overview and descriptions go through the
+restricted `markdown-it` setup above, and every other field is rendered as
+text.
+
+The result panel resolves the renderer from `component.documentSchema`
+through an allowlist in the student app's code, where `student-result/v1`
+maps to the generic renderer. During the transition it then tries the legacy
+`componentId` registry. A result whose schema is not in the allowlist shows a
+neutral notice. The renderer is chosen by the document's schema alone, so the
+student cannot tell which service produced a result (#591).
+
+### Adding a specialized renderer
+
+A service whose results need a view that the generic renderer cannot give
+gets a renderer in the student app's allowlist, keyed by a document schema.
+The student app never loads code from a service, so the renderer is student
+app code, reviewed and released with EthicApp.
+
+First check whether a new section kind of `student-result/v1` is enough. A
+kind is added to the schema in ethicapp-ai-additions, copied here, and taught
+to the generic renderer; older renderers skip it, so every service can use
+it. A separate document schema is for results whose shape differs from a
+titled list of sections.
+
+To add a renderer for a new document schema, such as `<name>/v1`:
+
+1. Define the schema and its examples in ethicapp-ai-additions
+   `shared/schemas/`, explain it in that repository's README, and add the
+   schema's name to the `document_schema` values that
+   `capability-descriptor.v1.schema.json` accepts in `student_outputs`.
+2. Copy the schema and its examples into `canonical-schemas/ai-additions/`
+   with the steps of its README, and add a schema test like
+   `canonical-schemas/__tests__/student-result-v1.schema.node-test.mjs`.
+3. Teach the backend validation of #1131 the new schema, so its documents are
+   checked against the copy and are not refused as unknown.
+4. Write the renderer component in the student app, add an entry for the
+   schema to the allowlist in
+   `ethicapp-student/frontend/src/components/session-detail/external-services/resultRenderers.js`,
+   and map the renderer id to the component in `ExternalServiceResultPanel.jsx`
+   next to it. The renderer treats every text as plain text
+   except the fields its schema marks as Markdown, which go through the
+   restricted `markdown-it` setup; it sets `lang` from the document's
+   `locale`, writes its interface text through the student app's locales, and
+   inserts no HTML from the document.
+5. Cover the renderer with node tests that render the copied examples,
+   including their Markdown and their unknown parts, and add screenshots at
+   360 px and 1366 px in both locales to the pull request.
+6. Declare the schema in the service's `student_outputs`, and only then
+   publish documents of it.
+
+Removing a renderer from the allowlist makes the results of that schema show
+the neutral notice, including results rebuilt from earlier callbacks.
 
 ## Design Schema
 
@@ -981,7 +1209,6 @@ Additions and Keycloak"). Without a connection, callbacks are rejected with
 
 - Student websocket targeting currently relies on a PoC user room joined from the
   frontend client.
-- Remote React component loading is not production-hardened.
 - Adapter payload sanitization is service-specific and intentionally minimal in
   the mock adapter.
 
