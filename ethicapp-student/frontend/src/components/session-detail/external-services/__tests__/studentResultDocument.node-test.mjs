@@ -45,7 +45,7 @@ test('a criteria section keeps label, value, meter and description of each crite
   const [criteria] = normalized.sections;
   assert.equal(criteria.title, 'Criterios');
   assert.deepEqual(criteria.items.map((item) => [item.key, item.label, item.value]), [
-    ['claim', 'Tesis', 'En contra'],
+    ['claim', 'Afirmación', 'En contra'],
     ['evidence', 'Evidencia', '2 de 3'],
     ['warrant', 'Garantía', '1 de 3'],
     ['qualifier', 'Calificador', '2 de 3']
@@ -64,7 +64,7 @@ test('bullets and text sections keep their plain text as it is, line breaks incl
 
   assert.deepEqual(
     bullets,
-    { kind: 'bullets', title: 'Suggestions', items: example.sections[1].items }
+    { kind: 'bullets', title: 'Comments', items: example.sections[1].items }
   );
   assert.deepEqual(text, { kind: 'text', title: 'Your argument', text: example.sections[2].text });
   assert.match(text.text, /\n/);

@@ -11,8 +11,10 @@ them here: the copy changes only to match the source.
 | `examples/student-result.v1/*.json` | `shared/schemas/examples/student-result.v1/*.json` |
 
 Copied from commit
-[`ce32b4e`](https://github.com/EthicApp-Development/ethicapp-ai-additions/commit/ce32b4e)
-(ethicapp-ai-additions PR #234, issue #232), byte for byte. The folder keeps
+[`3b292d1`](https://github.com/EthicApp-Development/ethicapp-ai-additions/commit/3b292d1)
+byte for byte. The schema comes from ethicapp-ai-additions PR #234 (issue
+#232); the tutor examples were regenerated from the tutor's own output by PR
+#235 (issue #233). The folder keeps
 the layout of the source's `shared/schemas/`, so the examples sit next to the
 schema as they do there.
 

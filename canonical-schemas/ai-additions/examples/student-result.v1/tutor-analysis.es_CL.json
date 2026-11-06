@@ -3,7 +3,7 @@
   "locale": "es-CL",
   "title": "Retroalimentación sobre tu argumento",
   "summary": "Tomas una postura clara y la apoyas en lo que los padres de Sebastián le enseñaron. Puedes fortalecer tu argumento explicando por qué ese valor familiar pesa más que la presión que siente Sebastián por aprobar.",
-  "overview": "Revisamos tu argumento con una versión simplificada del modelo de Toulmin, que distingue cuatro partes:\n\n- **Tesis**: la postura que tomas frente a la pregunta.\n- **Evidencia**: los hechos del caso en los que te apoyas.\n- **Garantía**: el razonamiento que une esos hechos con tu postura.\n- **Calificador**: el grado de certeza con que sostienes tu tesis.\n\nAbre cada criterio para ver qué significa y cómo se evaluó. Puedes usar esta retroalimentación para mejorar tu argumento.",
+  "overview": "Revisamos tu argumento con una versión simplificada del modelo de Toulmin, que distingue cuatro partes:\n\n- **Afirmación**: la postura que tomas frente a la pregunta.\n- **Evidencia**: los hechos del caso en los que te apoyas.\n- **Garantía**: el razonamiento que une esos hechos con tu postura.\n- **Calificador**: el grado de certeza con que sostienes tu afirmación.\n\nAbre cada criterio para ver qué significa y cómo se evaluó. Puedes usar esta retroalimentación para mejorar tu argumento.",
   "sections": [
     {
       "kind": "criteria",
@@ -11,9 +11,9 @@
       "items": [
         {
           "key": "claim",
-          "label": "Tesis",
+          "label": "Afirmación",
           "value": "En contra",
-          "description": "La **tesis** es tu respuesta a la pregunta: si estás *a favor*, *en contra* o si todavía no tomas una postura clara.\n\nEste criterio solo identifica tu postura. Ninguna postura vale más que otra."
+          "description": "La **afirmación** es tu respuesta a la pregunta: si estás *a favor*, *en contra* o si todavía no tomas una postura clara.\n\nEste criterio solo identifica tu postura. Ninguna postura vale más que otra."
         },
         {
           "key": "evidence",
@@ -22,7 +22,7 @@
           "score": 2,
           "minScore": 1,
           "maxScore": 3,
-          "description": "La **evidencia** son los hechos del caso que usas para apoyar tu tesis: lo que hacen o dicen las personas involucradas y las circunstancias en que actúan.\n\nSe valora más cuando citas elementos *concretos* del caso, como nombres, decisiones o frases, y menos cuando solo das ideas generales."
+          "description": "La **evidencia** son los hechos del caso que usas para apoyar tu afirmación: lo que hacen o dicen las personas involucradas y las circunstancias en que actúan.\n\nSe valora más cuando citas elementos *concretos* del caso, como nombres, decisiones o frases, y menos cuando solo das ideas generales.\n\nSe evalúa de 1 a 3: 3 si usas varios elementos concretos del caso, 2 si mencionas alguno y 1 si no te refieres al caso."
         },
         {
           "key": "warrant",
@@ -31,7 +31,7 @@
           "score": 1,
           "minScore": 1,
           "maxScore": 3,
-          "description": "La **garantía** es el razonamiento que explica por qué tu evidencia apoya tu tesis. A menudo queda implícita; escribirla hace que tu argumento sea más fácil de seguir.\n\nPara encontrarla, pregúntate qué principio o valor conecta los hechos que citas con tu postura."
+          "description": "La **garantía** es el razonamiento que explica por qué tu evidencia apoya tu afirmación. A menudo queda implícita; escribirla hace que tu argumento sea más fácil de seguir.\n\nPara encontrarla, pregúntate qué principio o valor conecta los hechos que citas con tu postura.\n\nSe evalúa de 1 a 3: 3 si explicas con claridad cómo los hechos llevan a tu postura, 2 si lo intentas aunque la explicación quede incompleta y 1 si no das ninguna justificación."
         },
         {
           "key": "qualifier",
@@ -40,13 +40,13 @@
           "score": 2,
           "minScore": 1,
           "maxScore": 3,
-          "description": "El **calificador** indica el grado de certeza con que sostienes tu tesis, con expresiones como *sin duda*, *probablemente* o *en la mayoría de los casos*.\n\nTambién puede notarse en el tono de tu argumento, aunque no uses esas palabras."
+          "description": "El **calificador** indica el grado de certeza con que sostienes tu afirmación, con expresiones como *sin duda*, *probablemente* o *en la mayoría de los casos*.\n\nTambién puede notarse en el tono de tu argumento, aunque no uses esas palabras.\n\nSe evalúa de 1 a 3: 3 si expresas tu certeza con matices y reflexión, 2 si muestras alguna reflexión o convicción y 1 si no hay matices."
         }
       ]
     },
     {
       "kind": "bullets",
-      "title": "Sugerencias",
+      "title": "Comentarios",
       "items": [
         "Citas un hecho concreto del caso: lo que los padres de Sebastián le dijeron sobre ganarse las cosas.",
         "Explica con tus palabras por qué dar el examen por otra persona contradice ese valor.",
