@@ -9,6 +9,8 @@ COPY ethicapp/common /app/common
 COPY canonical-schemas/rich-text /canonical-schemas/rich-text
 # AI Additions connection URL cases (#834), shared with the management console.
 COPY canonical-schemas/ai-additions-connection /canonical-schemas/ai-additions-connection
+# Student result schema copies (#1131), read at runtime as well; see below.
+COPY canonical-schemas/ai-additions /canonical-schemas/ai-additions
 RUN npm test && touch /tmp/backend-tests-passed
 
 FROM node:24
@@ -31,6 +33,11 @@ COPY ethicapp/common /app/common
 COPY ethicapp/frontend /app/frontend
 COPY ethicapp/scripts /app/scripts
 COPY database/seeds /database/seeds
+# The copies of ethicapp-ai-additions' student result schemas, against which
+# documents published to students are validated (#1131). The backend reads
+# them at ../../../canonical-schemas/ai-additions from its services folder,
+# the same path as in the repository.
+COPY canonical-schemas/ai-additions /canonical-schemas/ai-additions
 
 # Entrypoint script
 COPY ethicapp/entrypoint.sh /app/entrypoint.sh

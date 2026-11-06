@@ -310,7 +310,7 @@ warning and never receive hooks.
 export async function register({
     service,                 // normalized manifest entry (id, description, hooks, globalHooks, scopes, ui, descriptor, requires, report, development, adapter, callbackAuth)
     subscribe,               // (hookName, handler) => void
-    publishStudentResult,    // (payload) => Promise<boolean>
+    publishStudentResult,    // (payload) => Promise<boolean>; see "Student result documents"
     publishGroupChatMessage, // (payload) => Promise<{ savedMessage, notificationPayload } | null>
     aiAdditionsClient,       // shared AI Additions HTTP client
     caseAnalyses,            // markProcessing/complete/fail for this service's case analyses
@@ -384,7 +384,7 @@ const configuration = await externalServicesRegistry
 
 - **Result.** `null` for unknown or disabled services and for services without a
   descriptor. Otherwise `{ available: true, stale, descriptorServiceId, name,
-  usesLlm, locale, fields }`, or `{ available: false, reason }` with `reason`
+  usesLlm, locale, fields, studentOutputs }`, or `{ available: false, reason }` with `reason`
   `not_configured` (no AI Additions connection is stored; nothing is requested),
   `unreachable` (network error, timeout, HTTP error, or the connection cannot be
   read), `invalid_descriptor`, `unsupported_contract_version` or
@@ -409,11 +409,24 @@ const configuration = await externalServicesRegistry
   `integer` and `number`, `{ maxLength, pattern, multiline }` for `text`, and
   `{}` for `boolean`. Deprecated fields and entries are kept, so stored values
   can still be shown.
+- **Student outputs.** The optional `student_outputs` (epic #1124, #1131) are
+  normalized to `studentOutputs`, next to `fields`: one
+  `{ id, documentSchema, scopes, label, description }` per declared output,
+  where `scopes` keeps `response` and `chat` only. An absent list declares no
+  output. An entry without a kebab-case `id`, a `<name>/v<major>`
+  `document_schema`, a student scope or both display texts, and a repeated
+  `id`, are dropped with a warning, and the descriptor stays usable. See
+  "Student result documents" for how they are used.
 - **Cache.** In memory, per process, keyed by service and descriptor locale.
   A valid descriptor is kept for ten minutes. After a failure the result is
   kept for a minute before asking again; if an earlier fetch succeeded, its
   fields are served meanwhile with `stale: true`. Concurrent calls share one
-  request. Nothing is stored in Redis.
+  request. Nothing is stored in Redis. The student outputs of the last
+  descriptor fetched successfully for each service, in any locale, are kept
+  apart (`knownStudentOutputs(serviceId)`, no request): failed fetches and a
+  changed or removed connection keep them, and only a newer successful fetch
+  replaces them. `refreshStudentOutputs(serviceId)` fetches when the cache
+  has nothing in date and returns them.
 
 ### Listing services
 
@@ -896,8 +909,8 @@ emits plus the id of the stored result each one was rebuilt from:
     resultId:    "<external_service_results.id>",
     phaseId:     20,
     questionId:  30,              // or null
-    component:   { componentId: "argument-tutor-chat-feedback", title: "Argument Tutor Feedback" },
-    payload:     { feedback: { /* ... */ } },
+    component:   { documentSchema: "student-result/v1" },
+    payload:     { schemaVersion: "student-result/v1", locale: "en-US", /* ... */ },
     message:     "Your argument tutor feedback is now available.", // or null
     status:      "completed",
     publishedAt: "2026-11-05T10:00:00.000Z",
@@ -914,9 +927,14 @@ the others are kept:
   `null`; each must equal its result's `phaseId` or `questionId` when the
   result has one. The stored result keeps its callback's trusted destination,
   and an entry cannot move it to another phase or question.
-- `component` is plain data with a non-empty `componentId`, and `payload` a
-  plain data object. Both are copied and frozen, and are returned unchanged
-  (epic #1124 defines how they are described and rendered).
+- `component` is plain data and `payload` a plain data object. Both are
+  copied and frozen, and are returned unchanged.
+- A document (#1131) is `component: { documentSchema }`, with no other key in
+  `component`, and the document as `payload`, as `publishStudentResult`
+  emits it. It is kept only when it passes the checks of a published
+  document, against the declaration this process already knows (see
+  "Student result documents"). Any other `component` is a legacy result
+  descriptor and needs a non-empty `componentId`.
 - `message` is a string or `null`, `status` a non-empty string, and
   `publishedAt` a date, normalized to ISO 8601. The adapter usually takes it
   from the result's `receivedAt`.
@@ -934,7 +952,9 @@ line holding `serviceId`, `sessionId` and `status` (`failed`, `timed_out`,
 and `errorCode` for `failed`, `timeoutMs` for `timed_out` and `problems` for
 `invalid` and dropped entries. Problems name entry paths only; an adapter's
 error message and its entries are never logged, since they can quote a
-student's text.
+student's text. A refused document adds its schema, the problem codes and
+the paths inside the document, as in
+`entries[1].payload (student-result/v1) is refused: schema_violation (not_allowed) at claimTypeId`.
 
 The tutor adapter subscribes (#1126, handler in
 `adapters/ats-feedback.student-results.js`). It rebuilds the `completed`
@@ -1119,7 +1139,10 @@ The registry provides two helper publishers to adapters:
 - `publishStudentResult(payload)`: sends a socket notification to a student.
   The payload must include a valid positive integer `userId`; the registry adds
   `serviceId` and `receivedAt`. Returns `true` when the notification was sent,
-  `false` otherwise. Nothing is stored and a socket that is down misses it, so
+  `false` otherwise. A result for students is a document,
+  `{ userId, documentSchema, document }`, checked as described in "Student
+  result documents" below; the legacy `{ component, payload }` form is kept
+  for the adapters that have not moved yet. Nothing is stored and a socket that is down misses it, so
   an adapter that publishes from a callback also subscribes to
   `student-results-reading` (see "Student results reading") to rebuild what it
   published from the stored callback when the student loads the activity.
@@ -1147,6 +1170,105 @@ The registry provides two helper publishers to adapters:
   `resultId` that is not a uuid, is saved with no link (the invalid id is
   logged). Students' and teachers' messages never carry one. Deleting a
   result sets the link to `NULL` and keeps the message.
+
+### Student result documents
+
+A result shown to a student is a document of a schema that ethicapp-ai-additions
+defines, today `student-result/v1` (epic #1124; contract in `EXTERNAL.md`,
+"Student result documents"). The adapter publishes it with:
+
+```js
+await publishStudentResult({
+    userId,
+    sessionId,                          // optional, like every key below
+    phaseId,
+    questionId,
+    resultId:       context.resultId,   // the stored callback it came from
+    message:        "Your feedback is ready.",
+    status:         "completed",
+    documentSchema: "student-result/v1",
+    document,                           // the document, as the service wrote it
+});
+```
+
+The student receives `component: { documentSchema }` with the document as
+`payload`, the keys above, `serviceId` and `receivedAt`. Any other key the
+adapter passes is left out of the event, so a teacher-only value cannot
+travel next to the document.
+
+**Checks.** `services/student-result-documents.js` checks every document,
+published or rebuilt, in two ways:
+
+- Schema. The document must validate against EthicApp's verbatim copy of its
+  schema in `canonical-schemas/ai-additions/`, compiled with
+  `@cfworker/json-schema` (draft 2020-12, the validator of
+  `npm run test:schemas`), and pass the two integrity rules JSON Schema cannot
+  express: criterion keys unique within a section
+  (`duplicate_criterion_key`) and scores within their bounds
+  (`score_out_of_range`), as ethicapp-ai-additions'
+  `validate_student_result()` checks them. The JSON form of the document is
+  checked, since that is what the student receives: a key set to
+  `undefined` is left out. A schema EthicApp has no copy of is
+  `unknown_document_schema`; a copy that cannot be read refuses all its
+  documents (`schema_unavailable`) and is logged once.
+- Declaration. The service must declare the schema, in its capability
+  descriptor's `student_outputs`, for the scope the document reaches the
+  student in (`undeclared_document_schema`). A service whose catalog entry
+  links no descriptor declares nothing.
+
+A document that fails a check is not sent. `publishStudentResult` returns
+`false` and logs `[external-services] Refused a student result document.`
+with `serviceId`, `userId`, `resultId` (when it is a uuid), `documentSchema`
+(when it is a schema name), `scope`, the declaration status and the problems
+(`code`, `path` and, for a schema violation, the JSON Schema `keyword`).
+Neither the document nor the validator's messages are logged, since they
+quote the student. A publication that mixes the two forms (`documentSchema`
+or `document` together with `component` or `payload`) is refused as
+`ambiguous_result`, and a legacy `component` that names a `documentSchema` as
+`document_in_component`: a document always takes the document form.
+
+**Scope.** `publishStudentResult` and the `student-results-reading` hook
+carry a result for one student about the response they submitted, so their
+documents are checked against the `response` scope (`STUDENT_RESULT_SCOPE`).
+The descriptor's other student scope, `chat`, is for documents shown to
+students in a group chat. No publisher emits them yet; the chat publisher
+that does will check its documents against `chat`. A service that declares an
+output for `chat` only cannot publish it through `publishStudentResult`.
+
+**Where the declaration comes from.** Both paths read the declaration from
+the descriptor service (see "Capability descriptors"), and neither waits for
+a service that is down:
+
+- Live publication. When the declaration this process knows is missing or
+  older than the descriptor TTL (ten minutes), the registry refreshes it
+  first, through the cached descriptor request with its 5 s timeout. The
+  service has just called back, so it is normally reachable. When the request
+  fails, the last declaration fetched since the process started is used.
+  With none, the document is refused as `declaration_unavailable`.
+- Rebuilt results. A student waits for the rebuild (3 s) and the service may
+  be down, so the check makes no request and reads no connection: it uses the
+  last declaration fetched since the process started, kept while the service
+  is down and when the AI Additions connection changes or is removed. When
+  there is none, or it is older than the TTL, a refresh starts in the
+  background and serves later reads; the current read does not wait for it.
+  With no declaration at all, the rebuilt documents are dropped as
+  `declaration_unavailable` (legacy entries are unaffected).
+
+The last case is a process that has not fetched the service's descriptor once
+since it started, while the service is unreachable: rebuilt documents stay
+hidden until a fetch succeeds. A fetch starts on the first read that
+rebuilds a document, on a live publication and when teachers list services
+or open the design editor, so the window closes once the service answers.
+
+**Legacy form.** `{ userId, component: { componentId, ... }, payload, ... }` is
+emitted as passed, with no descriptor request, until the tutor adapter
+(#1133) and the development mock (#1134) publish documents. Rebuilt legacy
+entries keep the checks listed in "Student results reading".
+
+**Adding a schema.** A new document schema is copied into
+`canonical-schemas/ai-additions/` (see its README) and added to
+`DOCUMENT_SCHEMAS` in `services/student-result-documents.js`, with its
+integrity rules, before any service declares it.
 
 ## Case Analyses
 

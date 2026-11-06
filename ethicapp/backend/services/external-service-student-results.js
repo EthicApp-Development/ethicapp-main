@@ -5,6 +5,7 @@ import {
     TIMED_OUT,
 } from "./external-service-handler-run.js";
 import { createStudentResultsReader } from "./external-service-report-results.service.js";
+import { loggableDocumentSchema } from "./student-result-documents.js";
 
 /**
  * The `student-results-reading` hook (epic #1123, #1125): when a student
@@ -74,7 +75,34 @@ function isoDate(value) {
 
 // Problems name paths only, never a value: they are logged, and a value can
 // carry a student's text.
-function validateEntry(entry, label, { readResults, seenResultIds }) {
+// A rebuilt document is `component: { documentSchema }` with the document as
+// `payload`, as publishStudentResult() emits it. Its problems give codes and
+// paths inside the document, never a value.
+function documentProblems(label, component, payload, checkDocument) {
+    if (Object.keys(component).length !== 1) {
+        return [`${label}.component of a document must hold documentSchema only`];
+    }
+    if (!payload) {
+        return [`${label}.payload must be a plain data object`];
+    }
+    if (typeof checkDocument !== "function") {
+        return [`${label}.payload is refused: no document check`];
+    }
+
+    const { ok, problems } = checkDocument({
+        documentSchema: component.documentSchema,
+        document:       payload,
+    });
+    if (ok) {
+        return [];
+    }
+    const schema = loggableDocumentSchema(component.documentSchema) ?? "invalid document schema";
+    return problems.map(problem => `${label}.payload (${schema}) is refused: ${problem.code}`
+        + (problem.keyword ? ` (${problem.keyword})` : "")
+        + (problem.path ? ` at ${problem.path}` : ""));
+}
+
+function validateEntry(entry, label, { readResults, seenResultIds, checkDocument }) {
     if (!isPlainObject(entry)) {
         return { problems: [`${label} must be an object`] };
     }
@@ -108,12 +136,20 @@ function validateEntry(entry, label, { readResults, seenResultIds }) {
     }
 
     const component = isPlainObject(entry.component) ? frozenCopy(entry.component) : null;
-    if (!component || typeof component.componentId !== "string" || !component.componentId.trim()) {
-        problems.push(`${label}.component must be plain data with a componentId`);
-    }
     const payload = isPlainObject(entry.payload) ? frozenCopy(entry.payload) : null;
-    if (!payload) {
-        problems.push(`${label}.payload must be a plain data object`);
+    if (component && Object.hasOwn(component, "documentSchema")) {
+        // A document (#1131), checked like a published one.
+        problems.push(...documentProblems(label, component, payload, checkDocument));
+    } else {
+        if (!component || typeof component.componentId !== "string"
+            || !component.componentId.trim()) {
+            problems.push(
+                `${label}.component must be plain data with a componentId or a documentSchema`
+            );
+        }
+        if (!payload) {
+            problems.push(`${label}.payload must be a plain data object`);
+        }
     }
 
     const message = entry.message ?? null;
@@ -158,20 +194,28 @@ function validateEntry(entry, label, { readResults, seenResultIds }) {
  *   (`readResults`), once at most;
  * - `phaseId` is a positive integer and `questionId` a positive integer or
  *   null; each must equal its result's when the result has one;
- * - `component` is plain data with a non-empty `componentId`, `payload` a
- *   plain data object; both are copied;
+ * - `component` is plain data and `payload` a plain data object; both are
+ *   copied. A `component` that names a `documentSchema` holds nothing else,
+ *   and its `payload` is a document that `checkDocument` accepts (#1131);
+ *   any other `component` has a non-empty `componentId` (the legacy result
+ *   descriptor);
  * - `message` is a string or null, `status` a non-empty string and
  *   `publishedAt` a date (normalized to ISO 8601);
  * - no other key is accepted.
  *
  * @param {unknown} returned
- * @param {{ readResults: Map<string, Object> }} options - The results the
+ * @param {Object} options
+ * @param {Map<string, Object>} options.readResults - The results the
  *     handler's reader returned, by id.
+ * @param {(document: { documentSchema: unknown, document: Object }) =>
+ *     { ok: boolean, problems: Object[] }} [options.checkDocument] - Checks a
+ *     rebuilt document against its schema and the service's declaration.
+ *     Without it, every document is dropped.
  * @returns {{ valid: boolean, entries: Object[], problems: string[] }} `valid`
  *     is false only when `returned` is not a list; `entries` holds the kept
  *     entries, normalized, and `problems` why the others were dropped.
  */
-export function validateStudentResults(returned, { readResults }) {
+export function validateStudentResults(returned, { readResults, checkDocument }) {
     if (returned === undefined || returned === null) {
         return { valid: true, entries: [], problems: [] };
     }
@@ -183,7 +227,9 @@ export function validateStudentResults(returned, { readResults }) {
     const problems = [];
     const seenResultIds = new Set();
     returned.forEach((item, index) => {
-        const checked = validateEntry(item, `entries[${index}]`, { readResults, seenResultIds });
+        const checked = validateEntry(item, `entries[${index}]`, {
+            readResults, seenResultIds, checkDocument,
+        });
         problems.push(...checked.problems);
         if (checked.entry) {
             entries.push(checked.entry);
@@ -199,7 +245,7 @@ function logLeftOut(details) {
     console.warn("[external-services] Left out student results.", JSON.stringify(details));
 }
 
-async function collectOne({ context, serviceId, handler, resultsStore, timeoutMs }) {
+async function collectOne({ context, serviceId, handler, resultsStore, timeoutMs, checkDocument }) {
     const ids = { serviceId, sessionId: context.sessionId };
     const readResults = new Map();
     const results = createStudentResultsReader(resultsStore, { serviceId, ...context }, {
@@ -227,7 +273,12 @@ async function collectOne({ context, serviceId, handler, resultsStore, timeoutMs
         return { serviceId, status: STUDENT_RESULTS_STATUS.TIMED_OUT, entries: [] };
     }
 
-    const { valid, entries, problems } = validateStudentResults(returned, { readResults });
+    const { valid, entries, problems } = validateStudentResults(returned, {
+        readResults,
+        checkDocument: typeof checkDocument === "function"
+            ? document => checkDocument(serviceId, document)
+            : undefined,
+    });
     if (!valid) {
         logLeftOut({ ...ids, status: STUDENT_RESULTS_STATUS.INVALID, problems });
         return { serviceId, status: STUDENT_RESULTS_STATUS.INVALID, entries: [] };
@@ -254,6 +305,10 @@ async function collectOne({ context, serviceId, handler, resultsStore, timeoutMs
  *     ask, in subscription order, already selected by the registry.
  * @param {Object} options.resultsStore - An ExternalServiceReportResultsService.
  * @param {number} [options.timeoutMs]
+ * @param {(serviceId: string, document: Object) => { ok, problems }}
+ *     [options.checkDocument] - Checks each rebuilt document (#1131); the
+ *     registry checks it against the schema copy and the service's
+ *     declaration. Without it, every document is dropped.
  * @returns {Promise<ReadonlyArray<Object>>} Frozen `{ serviceId, resultId,
  *     phaseId, questionId, component, payload, message, status, publishedAt }`,
  *     oldest `publishedAt` first; ties keep the subscription order, then each
@@ -265,9 +320,10 @@ export async function collectStudentResults({
     subscribers,
     resultsStore,
     timeoutMs = STUDENT_RESULTS_TIMEOUT_MS,
+    checkDocument,
 }) {
     const outcomes = await Promise.all(subscribers.map(({ serviceId, handler }) => collectOne({
-        context, serviceId, handler, resultsStore, timeoutMs,
+        context, serviceId, handler, resultsStore, timeoutMs, checkDocument,
     })));
 
     const merged = outcomes.flatMap(({ serviceId, entries }) =>
