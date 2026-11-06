@@ -662,9 +662,8 @@ hook such as `phase-started` there has no effect, because the activity dispatch
 sites never read it.
 
 Jobs created by case and global hooks have `session_id`, `phase_id`,
-`question_id`, and `group_id` set to `NULL`. Use the `hookName` filter of
-`GET /external-services/jobs` and `GET /external-services/results` to find
-them.
+`question_id`, and `group_id` set to `NULL`; their `hook_name` tells them
+apart.
 
 ### Report building
 
@@ -838,7 +837,7 @@ in `hooks`, and only one handler per service. No other catalog declaration is
 needed.
 
 **Collecting dispatch.** The hook is never dispatched through `dispatchHook()`,
-which ignores it. The caller (the student route of #1127) calls
+which ignores it. The caller (the student route below, #1127) calls
 `registry.collectStudentResults({ sessionId, userId })`
 (`services/external-service-student-results.js`), which:
 
@@ -863,7 +862,8 @@ which ignores it. The caller (the student route of #1127) calls
 
 It rejects only for a context without positive integer `sessionId` and
 `userId`, or when the session's services cannot be read. The caller decides
-which of the student's phases to show.
+which of the student's phases to show; the student route below keeps the
+phases of the session.
 
 **Context and reader.** The handler's `context` is frozen:
 `{ serviceId, sessionId, userId }`. The second argument is
@@ -936,8 +936,46 @@ and `errorCode` for `failed`, `timeoutMs` for `timed_out` and `problems` for
 error message and its entries are never logged, since they can quote a
 student's text.
 
-No adapter subscribes yet. The tutor adapter's handler is #1126; the
-development mocks publish without storing a result and stay live-only.
+The tutor adapter subscribes (#1126, handler in
+`adapters/ats-feedback.student-results.js`). It rebuilds the `completed`
+results whose stored outcome, `adapterResult.payload.publishedToUserId`, names
+the student. The development mocks publish without storing a result and stay
+live-only.
+
+**Student route.** The student app reads the results with
+`GET /activities/:id/users/:user_id/external_service_results`
+(`controllers/activities/student-external-results.js`, #1127), where `:id` is
+the session and `:user_id` the student.
+
+- Guards. The route refuses what `full_state` refuses, with the same
+  answers: 401 without a signed-in user, 403 for any role other
+  than `A` before any lookup, 400 for ids that are not numbers, and the 404 of
+  an unknown session (`{ "error": "Session not found." }`) for another
+  student's id, a session the student is not enrolled in, an anonymized
+  account and an unknown session (`requireSessionOwnerOrParticipant` with
+  `subjectUserId`, #926).
+- Phases. It answers the results of every phase of the session the student
+  sees. The phase tabs of the student app show every phase `full_state`
+  lists, which is every `stages` row of the session, and a row exists once its
+  phase has started (#906). An entry whose `phaseId` is not one of those rows
+  is left out: an adapter can name a phase for a stored result that has none,
+  and a phase that a failed start replaced leaves its results behind. The
+  hook already drops an entry without a positive integer `phaseId`, so a
+  result whose phase is `null` reaches the route only when its adapter gives
+  it a phase, and then follows the same rule. Each request that leaves
+  entries out logs `[external-services] Left out student results of phases
+  outside the session.` with `sessionId`, `userId` and the `dropped` count.
+- Response. `200` with `{ "results": [...] }`, the entries of
+  `collectStudentResults()` as they come (`serviceId`, `resultId`, `phaseId`,
+  `questionId`, `component`, `payload`, `message`, `status`, `publishedAt`),
+  oldest `publishedAt` first. An activity whose design enables no subscribed
+  service, or whose services published nothing for the student, answers
+  `{ "results": [] }`. When the session's services or phases cannot be read
+  it answers `500` and logs `sessionId`, `userId`, `errorName` and
+  `errorCode` only.
+- Caching. None. Results arrive while the student works, so every request
+  runs the hook (#1123 keeps them out of `full_state`, which is cached in
+  Redis), and every answer carries `Cache-Control: no-store`.
 
 ### Adding a new hook
 
@@ -994,11 +1032,8 @@ for recording adapter outcomes, not for communicating with AI Additions.
 
 Asynchronous integrations keep the job `dispatched` after the outbound request
 and call `callback()` from the `callback-received` handler once the provider
-posts its result. Jobs and results are queryable through
-`GET /external-services/jobs`, `GET /external-services/jobs/:jobId`, and
-`GET /external-services/results` (roles `P` and `A`). The list endpoints accept
-`serviceId`, `hookName`, `sessionId`, `phaseId`, `status`, `from`, `to`, and
-`limit` query filters.
+posts its result. No HTTP route lists jobs or results; a student reads the
+results published to them through the route in "Student results reading".
 
 ### Instantiation reports
 
