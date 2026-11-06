@@ -26,6 +26,7 @@ import {
     tutorEvaluationFromExternalResult,
 } from "./ats-feedback.utils.js";
 import { buildReportContribution } from "./ats-feedback.report.js";
+import { readStudentResults } from "./ats-feedback.student-results.js";
 
 export {
     buildArgumentClientContext,
@@ -890,6 +891,10 @@ export async function register({
     // The tutor's feedback columns on the responses report (#948), from the
     // stored results only: the tutor is not called.
     subscribe("report-building", buildReportContribution);
+
+    // The feedback published to a student, rebuilt from the stored callbacks
+    // when the student loads the activity (#1126): the tutor is not called.
+    subscribe("student-results-reading", readStudentResults);
 
     subscribe("phase-ended", async (context, { callback }) => {
         try {
