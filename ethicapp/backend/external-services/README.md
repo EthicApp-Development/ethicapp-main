@@ -1165,7 +1165,12 @@ The registry provides two helper publishers to adapters:
   payload must include `content`, `phaseId`, `questionId`, and `groupId`;
   `sessionId`, `parentId`, and `agentDisplayName` are optional but should be
   provided when available. The agent identity is upserted in
-  `external_service_agents` by `serviceId`. Returns
+  `external_service_agents` by `serviceId`, with `agentDisplayName` as its
+  name: pass the agent's canonical name there. The optional `authorName` is
+  the name this message shows (#1026), such as the name a room gives the
+  agent: a string, trimmed and cut to 80 characters, that the live
+  notification carries as `author_name` in place of the agent row's name.
+  Returns
   `{ savedMessage, notificationPayload }` or `null` when the payload is
   incomplete or the message could not be saved.
 
@@ -1179,8 +1184,14 @@ The registry provides two helper publishers to adapters:
   `display_name` is overwritten with the latest agent name, so the result is
   where the name of each message's agent survives. The Polyadic bridge also
   lists the messages it published, `publishedMessages: [{ messageId,
-  agentName }]`, in its callback payload, which is stored in the result's
-  `adapter_result`. A message published outside a callback, or with a
+  agentName, displayName, evaluationIndex }]`, in its callback payload, which
+  is stored in the result's `adapter_result`. `displayName` is the message's
+  `authorName` (#1026): the chat transcripts show it as `author_name` (and the
+  semantic differential report as `name`), read through
+  `helpers/external-agent-author.js`. Until the handler completes they read
+  the `display_name` of the raw payload's evaluation of the message's agent.
+  A result of an anonymized user has every string redacted (V31), so its
+  messages show the agent row's name, as do results completed before #1026. A message published outside a callback, or with a
   `resultId` that is not a uuid, is saved with no link (the invalid id is
   logged). Students' and teachers' messages never carry one. Deleting a
   result sets the link to `NULL` and keeps the message.

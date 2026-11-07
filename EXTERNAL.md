@@ -332,10 +332,16 @@ session (#735) it sends:
   `agent_nickname`;
 - for settings the phase does not configure, EthicApp's defaults: the pipeline
   from `AI_ADDITIONS_POLYADIC_AGENTS_PIPELINE_TYPE` (default
-  `abogado-del-diablo`), and the guide nickname and `locale` (`es-CL` or
-  `en-US`) from the design language. The deprecated `idioma` is no longer sent.
+  `abogado-del-diablo`), and the `locale` (`es-CL` or `en-US`) from the design
+  language. The deprecated `idioma` is no longer sent.
 
-Anything still unset takes Polyadic's defaults. Polyadic's `warnings` and
+Anything still unset takes Polyadic's defaults. `agent_nickname` is sent only
+when the phase configures it (#1026, epic #1025): without it, Polyadic names
+the guide by the room's locale, `agente` in `es-CL` and `agent` in `en-US`, and
+students address it with `@agente` or `@agent`. Polyadic reports the name each
+room shows for an agent as the `display_name` of every callback evaluation,
+which the bridge publishes as the message's author (see "Chat-agent
+identity" below). Polyadic's `warnings` and
 `degraded` flags come back per room in the `phase-started` job result
 (`payload.rooms`). If Polyadic rejects the configured settings (400, a value a
 newer rule no longer accepts), the room is created again with EthicApp's
@@ -792,6 +798,17 @@ instead: the handler passes `resultId: context.resultId` to
 `external_service_result_id` (#947). The activity reports read the agent of
 each message, and the job the callback answered, from the linked result. See
 `ethicapp/backend/external-services/README.md` ("Available Hook Publishers").
+
+A service may name its agent differently in each room, as Polyadic does with
+the guide's nickname or its locale default (#1026). The adapter passes that
+name as the message's `authorName` and records it in its handler's result
+(`publishedMessages[].displayName`); the agent row keeps the canonical name.
+The live notification carries `authorName`, and the chat transcripts (the
+group chat route for students and teachers, and the semantic differential
+report's `name` column) read it from the linked result
+(`ethicapp/backend/helpers/external-agent-author.js`). Messages published
+before #1026, outside a callback, or from a result of an anonymized student,
+whose strings the erasure redacts (V31), show the agent row's name.
 
 The `mock-chat-agent` adapter uses the external mock service to produce messages
 like:

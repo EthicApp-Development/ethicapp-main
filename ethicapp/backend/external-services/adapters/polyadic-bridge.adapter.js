@@ -3,6 +3,7 @@ import * as config from "../../config/database.config.js";
 import defaultAiAdditionsClient from "../../services/ai-additions-client.service.js";
 import { plainTextOf } from "../../helpers/rich-text-helper.js";
 import { describeError } from "../../helpers/log-safety.js";
+import { normalizeExternalAgentAuthorName } from "../../helpers/external-agent-author.js";
 import { JOB_SOURCE_KIND } from "../../services/external-service-jobs.service.js";
 import {
     MAX_CONTRIBUTION_STRING_LENGTH,
@@ -256,12 +257,6 @@ async function getSessionLanguageCode(sessionId) {
     return row?.language_code ? normalizeText(row.language_code) : null;
 }
 
-const AGENT_NICKNAMES = {
-    en_US: "@agent",
-    es_CL: "@agente",
-};
-const DEFAULT_AGENT_NICKNAME = AGENT_NICKNAMES.es_CL;
-
 // Polyadic's `locale` (#735; replaces the deprecated `idioma` alias).
 const POLYADIC_LOCALES = {
     en_US: "en-US",
@@ -271,15 +266,6 @@ const DEFAULT_POLYADIC_LOCALE = POLYADIC_LOCALES.es_CL;
 
 function isEnglishLanguageCode(languageCode) {
     return normalizeText(languageCode).toLowerCase().startsWith("en");
-}
-
-export function resolveAgentNickname(languageCode) {
-    const normalized = normalizeText(languageCode);
-    if (AGENT_NICKNAMES[normalized]) {
-        return AGENT_NICKNAMES[normalized];
-    }
-
-    return isEnglishLanguageCode(normalized) ? AGENT_NICKNAMES.en_US : DEFAULT_AGENT_NICKNAME;
 }
 
 export function resolvePolyadicLocale(languageCode) {
@@ -312,20 +298,21 @@ function configuredSettings(serviceConfiguration) {
 
 /**
  * The body of POST /rooms/:room/sessions (#735). EthicApp's defaults come
- * first: the deployment pipeline (AI_ADDITIONS_POLYADIC_AGENTS_PIPELINE_TYPE),
- * and the guide nickname and `locale` from the design language. The phase's
- * configured settings (#734), validated against the capability descriptor on
- * save (#731), replace them and add any other instance field (`llm_tier`,
- * `session_duration_seconds`, ...). Fields left unset take Polyadic's defaults.
+ * first: the deployment pipeline (AI_ADDITIONS_POLYADIC_AGENTS_PIPELINE_TYPE)
+ * and the `locale` from the design language. The phase's configured settings
+ * (#734), validated against the capability descriptor on save (#731), replace
+ * them and add any other instance field (`llm_tier`, `agent_nickname`,
+ * `session_duration_seconds`, ...). Fields left unset take Polyadic's
+ * defaults: without `agent_nickname`, Polyadic names the guide by the room's
+ * locale, `agente` or `agent` (#1026, epic #1025).
  * `ethicapp_room_correlation_id` (#833) is the id of the room's room job, which
  * Polyadic uses for the room's proactive callbacks; no setting replaces it.
- * @param {{ topic?: string, agentNickname?: string, locale?: string,
+ * @param {{ topic?: string, locale?: string,
  *   serviceConfiguration?: object, pipelineType?: string,
  *   roomCorrelationId?: string|null }} options
  */
 export function buildPolyadicSessionPayload({
     topic,
-    agentNickname,
     locale,
     serviceConfiguration = {},
     pipelineType = getPipelineType(),
@@ -334,7 +321,6 @@ export function buildPolyadicSessionPayload({
     const payload = {
         prompt_inicial: topic || "EthicApp discussion",
         pipeline_type:  pipelineType,
-        agent_nickname: agentNickname || DEFAULT_AGENT_NICKNAME,
         locale:         locale || DEFAULT_POLYADIC_LOCALE,
         ...configuredSettings(serviceConfiguration),
     };
@@ -443,11 +429,11 @@ function creationOutcome(response, roomCorrelationId, extra = {}) {
  * settings, so the group still gets its agent, and `configurationRejected` says so.
  */
 async function ensurePolyadicSession(roomName, {
-    topic, agentNickname, locale, serviceConfiguration, roomCorrelationId = null,
+    topic, locale, serviceConfiguration, roomCorrelationId = null,
 }) {
     const path = `/rooms/${encodeURIComponent(roomName)}/sessions`;
     const body = buildPolyadicSessionPayload({
-        topic, agentNickname, locale, serviceConfiguration, roomCorrelationId,
+        topic, locale, serviceConfiguration, roomCorrelationId,
     });
 
     try {
@@ -462,7 +448,7 @@ async function ensurePolyadicSession(roomName, {
 
         console.warn(`[polyadic-bridge] Polyadic rejected the configured settings for ${roomName}; `
             + "creating the session with EthicApp's defaults.", error.responseBody ?? error);
-        const fallback = buildPolyadicSessionPayload({ topic, agentNickname, locale, roomCorrelationId });
+        const fallback = buildPolyadicSessionPayload({ topic, locale, roomCorrelationId });
         const response = await requestPolyadicJson(path, { method: "POST", body: fallback });
         console.info(`[polyadic-bridge] Polyadic session ready for ${roomName} without configured settings.`);
         return creationOutcome(response, roomCorrelationId, {
@@ -778,16 +764,10 @@ export async function register({
     async function resolveSessionLanguageContext(sessionId) {
         try {
             const languageCode = await dependencies.getSessionLanguageCode(sessionId);
-            return {
-                agentNickname: resolveAgentNickname(languageCode),
-                locale:        resolvePolyadicLocale(languageCode),
-            };
+            return { locale: resolvePolyadicLocale(languageCode) };
         } catch (error) {
             console.warn(`[polyadic-bridge] Unable to resolve conversation language for session ${sessionId}; using defaults.`, error);
-            return {
-                agentNickname: DEFAULT_AGENT_NICKNAME,
-                locale:        DEFAULT_POLYADIC_LOCALE,
-            };
+            return { locale: DEFAULT_POLYADIC_LOCALE };
         }
     }
 
@@ -796,12 +776,11 @@ export async function register({
         const question = await dependencies.getFirstQuestionForPhase(phaseId);
         const questionText = formatQuestionText(question);
         const fallbackTopic = `EthicApp session ${sessionId} phase ${phaseId}`;
-        const { agentNickname, locale } = await resolveSessionLanguageContext(sessionId);
+        const { locale } = await resolveSessionLanguageContext(sessionId);
 
         return {
             questionId: question?.id ?? null,
             topic:      composeTopic(caseText || fallbackTopic, questionText),
-            agentNickname,
             locale,
         };
     }
@@ -1088,19 +1067,26 @@ export async function register({
                 continue;
             }
 
+            // The name the room shows for the agent (#1026): the guide's
+            // nickname, or its default for the room's locale. A Polyadic
+            // without `display_name` leaves the canonical name.
+            const authorName = normalizeExternalAgentAuthorName(evaluation?.display_name) || agentName;
             const published = await publishGroupChatMessage({
                 sessionId:        storedContext.sessionId,
                 phaseId:          storedContext.phaseId,
                 questionId:       storedContext.questionId,
                 groupId:          storedContext.groupId,
+                // The service's agent row keeps the canonical name, so other
+                // rooms' messages keep theirs.
                 agentDisplayName: agentName,
+                authorName,
                 content,
                 // Links the message to this callback's result (#947).
                 resultId:         context.resultId,
             });
 
             if (published?.savedMessage) {
-                savedMessages.push({ message: published.savedMessage, agentName, evaluationIndex });
+                savedMessages.push({ message: published.savedMessage, agentName, authorName, evaluationIndex });
             }
         }
 
@@ -1116,11 +1102,14 @@ export async function register({
                 // shared external_service_agents row keeps only the latest
                 // name. `evaluationIndex` is the message's position in the
                 // payload's evaluations, so the report can tell which ones
-                // were not published (#949). Stored in the result's
+                // were not published (#949). `displayName` is the name the
+                // message shows, which the chat history reads (#1026,
+                // helpers/external-agent-author.js). Stored in the result's
                 // adapter_result.
-                publishedMessages:   savedMessages.map(({ message, agentName, evaluationIndex }) => ({
-                    messageId: message.id ?? null,
+                publishedMessages:   savedMessages.map(({ message, agentName, authorName, evaluationIndex }) => ({
+                    messageId:   message.id ?? null,
                     agentName,
+                    displayName: authorName,
                     evaluationIndex,
                 })),
             },

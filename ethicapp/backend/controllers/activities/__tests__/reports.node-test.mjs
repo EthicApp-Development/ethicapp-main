@@ -34,7 +34,8 @@ test("chat transcript preserves its recorded team and avoids phase-wide team joi
     assert.match(sql, /LEFT JOIN external_service_agents AS esa[\s\S]*ON dc\.external_agent_id = esa\.id/);
     assert.match(sql, /dc\.external_agent_id/);
     assert.match(sql, /WHEN esa\.id IS NOT NULL THEN 'external_service'/);
-    assert.match(sql, /COALESCE\(esa\.display_name, u\.name\) AS name/);
+    // An agent's per-room name from its callback comes first (#1026).
+    assert.match(sql, /COALESCE\([\s\S]*external_service_results AS author_result[\s\S]*\) END, esa\.display_name, u\.name\) AS name/);
     assert.match(sql, /esa\.service_id AS external_service_id/);
 });
 

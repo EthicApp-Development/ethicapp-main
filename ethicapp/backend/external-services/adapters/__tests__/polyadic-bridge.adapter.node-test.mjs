@@ -7,7 +7,6 @@ import {
     getRoomName,
     parseRoomName,
     register,
-    resolveAgentNickname,
     resolvePolyadicLocale,
     resolvePolyadicUsername,
 } from "../polyadic-bridge.adapter.js";
@@ -240,12 +239,15 @@ test("callback-received publishes ConversationGuide and legacy Orientador respon
     });
 
     assert.equal(harness.publishedMessages.length, 2);
+    // Without `display_name` (a Polyadic before ai-additions #222), the
+    // message shows the canonical name.
     assert.deepEqual(harness.publishedMessages[0], {
         sessionId:        11,
         phaseId:          22,
         questionId:       701,
         groupId:          301,
         agentDisplayName: "ConversationGuide",
+        authorName:       "ConversationGuide",
         content:          "Which tradeoff matters most here?",
         resultId,
     });
@@ -255,14 +257,51 @@ test("callback-received publishes ConversationGuide and legacy Orientador respon
         questionId:       701,
         groupId:          301,
         agentDisplayName: "Orientador",
+        authorName:       "Orientador",
         content:          "What assumption is your group making?",
         resultId,
     });
     assert.equal(harness.callbacks.at(-1).payload.messagesPublished, 2);
     assert.deepEqual(harness.callbacks.at(-1).payload.publishedMessages, [
-        { messageId: 1, agentName: "ConversationGuide", evaluationIndex: 1 },
-        { messageId: 2, agentName: "Orientador", evaluationIndex: 2 },
+        { messageId: 1, agentName: "ConversationGuide", displayName: "ConversationGuide", evaluationIndex: 1 },
+        { messageId: 2, agentName: "Orientador", displayName: "Orientador", evaluationIndex: 2 },
     ]);
+});
+
+test("callback-received publishes each message under the room's name for its agent (#1026)", async () => {
+    const harness = createHarness();
+    await harness.initialize();
+    const resultId = "0f8fad5b-d9cb-469f-a165-70867728950e";
+
+    await harness.dispatch("callback-received", {
+        resultId,
+        requestPayload: {
+            room:        "ethicapp-s11-p22-g301",
+            evaluations: [
+                { agente: "ConversationGuide", respuesta: "Default name", display_name: "agente" },
+                { agente: "ConversationGuide", respuesta: "Nickname", display_name: "  Profe Ana  " },
+                { agente: "ConversationGuide", respuesta: "Blank name", display_name: "   " },
+                { agente: "ConversationGuide", respuesta: "Not a string", display_name: { name: "x" } },
+                { agente: "ConversationGuide", respuesta: "Too long", display_name: "n".repeat(120) },
+            ],
+        },
+    });
+
+    // The agent row keeps the canonical name; the message shows the room's.
+    assert.deepEqual(
+        harness.publishedMessages.map(({ agentDisplayName, authorName }) => [agentDisplayName, authorName]),
+        [
+            ["ConversationGuide", "agente"],
+            ["ConversationGuide", "Profe Ana"],
+            ["ConversationGuide", "ConversationGuide"],
+            ["ConversationGuide", "ConversationGuide"],
+            ["ConversationGuide", "n".repeat(80)],
+        ]
+    );
+    assert.deepEqual(
+        harness.callbacks.at(-1).payload.publishedMessages.map(entry => entry.displayName),
+        ["agente", "Profe Ana", "ConversationGuide", "ConversationGuide", "n".repeat(80)]
+    );
 });
 
 test("callback-received without a result id publishes messages with no result link", async () => {
@@ -445,19 +484,6 @@ test("chat-message-received forwards with user-<id> fallback when identity resol
     assert.equal(harness.callbacks.at(-1).status, "completed");
 });
 
-test("resolveAgentNickname returns localized nickname per language code", () => {
-    assert.equal(resolveAgentNickname("en_US"), "@agent");
-    assert.equal(resolveAgentNickname("es_CL"), "@agente");
-});
-
-test("resolveAgentNickname falls back by language prefix and defaults to @agente", () => {
-    assert.equal(resolveAgentNickname("en_GB"), "@agent");
-    assert.equal(resolveAgentNickname("es_ES"), "@agente");
-    assert.equal(resolveAgentNickname("pt_BR"), "@agente");
-    assert.equal(resolveAgentNickname(""), "@agente");
-    assert.equal(resolveAgentNickname(null), "@agente");
-});
-
 test("resolvePolyadicLocale maps design languages to Polyadic locales, defaulting to es-CL", () => {
     assert.equal(resolvePolyadicLocale("en_US"), "en-US");
     assert.equal(resolvePolyadicLocale("es_CL"), "es-CL");
@@ -468,7 +494,10 @@ test("resolvePolyadicLocale maps design languages to Polyadic locales, defaultin
     assert.equal(resolvePolyadicLocale(null), "es-CL");
 });
 
-test("phase-started creates rooms with the localized agent nickname and locale (en_US)", async () => {
+// Polyadic owns the guide's default name and derives it from `locale`
+// (#1026, epic #1025): EthicApp sends `agent_nickname` only when the phase
+// configures it.
+test("phase-started creates rooms with the design's locale and no agent nickname (en_US)", async () => {
     const harness = createHarness({
         dependencies: {
             getTeamIdsForPhase:     async () => [301],
@@ -480,12 +509,12 @@ test("phase-started creates rooms with the localized agent nickname and locale (
     await harness.dispatch("phase-started", { sessionId: 11, phaseId: 22 });
 
     const sessionRequest = harness.requests.find(r => r.pathname.endsWith("/sessions"));
-    assert.equal(sessionRequest.options.body.agent_nickname, "@agent");
+    assert.equal(Object.hasOwn(sessionRequest.options.body, "agent_nickname"), false);
     assert.equal(sessionRequest.options.body.locale, "en-US");
     assert.equal(Object.hasOwn(sessionRequest.options.body, "idioma"), false);
 });
 
-test("chat-message-received creates a missing room with the localized agent nickname and locale (es_CL)", async () => {
+test("chat-message-received creates a missing room with the design's locale and no agent nickname (es_CL)", async () => {
     const harness = createHarness({
         dependencies: {
             getTeamIdsForPhase:     async () => [],
@@ -500,12 +529,12 @@ test("chat-message-received creates a missing room with the localized agent nick
     });
 
     const sessionRequest = harness.requests.find(r => r.pathname.endsWith("/sessions"));
-    assert.equal(sessionRequest.options.body.agent_nickname, "@agente");
+    assert.equal(Object.hasOwn(sessionRequest.options.body, "agent_nickname"), false);
     assert.equal(sessionRequest.options.body.locale, "es-CL");
     assert.equal(Object.hasOwn(sessionRequest.options.body, "idioma"), false);
 });
 
-test("phase-started falls back to default nickname and locale when language resolution fails", async () => {
+test("phase-started falls back to the default locale when language resolution fails", async () => {
     const harness = createHarness({
         dependencies: {
             getTeamIdsForPhase:     async () => [301],
@@ -519,7 +548,7 @@ test("phase-started falls back to default nickname and locale when language reso
     await harness.dispatch("phase-started", { sessionId: 11, phaseId: 22 });
 
     const sessionRequest = harness.requests.find(r => r.pathname.endsWith("/sessions"));
-    assert.equal(sessionRequest.options.body.agent_nickname, "@agente");
+    assert.equal(Object.hasOwn(sessionRequest.options.body, "agent_nickname"), false);
     assert.equal(sessionRequest.options.body.locale, "es-CL");
 });
 
@@ -556,14 +585,12 @@ function sessionBodies(harness) {
 
 test("buildPolyadicSessionPayload: EthicApp defaults without a configuration", () => {
     assert.deepEqual(buildPolyadicSessionPayload({
-        topic:         "Topic",
-        agentNickname: "@agent",
-        locale:        "en-US",
-        pipelineType:  "abogado-del-diablo",
+        topic:        "Topic",
+        locale:       "en-US",
+        pipelineType: "abogado-del-diablo",
     }), {
         prompt_inicial: "Topic",
         pipeline_type:  "abogado-del-diablo",
-        agent_nickname: "@agent",
         locale:         "en-US",
     });
 });
@@ -571,7 +598,6 @@ test("buildPolyadicSessionPayload: EthicApp defaults without a configuration", (
 test("buildPolyadicSessionPayload: configured settings replace and extend the defaults", () => {
     const payload = buildPolyadicSessionPayload({
         topic:                "Topic",
-        agentNickname:        "@agente",
         locale:               "es-CL",
         pipelineType:         "abogado-del-diablo",
         serviceConfiguration: {
@@ -633,7 +659,7 @@ test("phase-started sends the phase's configured settings", async () => {
     assert.equal(body.llm_tier, "advanced");
     assert.equal(body.session_duration_seconds, 900);
     assert.equal(body.locale, "es-CL");
-    assert.equal(body.agent_nickname, "@agente");
+    assert.equal(Object.hasOwn(body, "agent_nickname"), false);
 });
 
 test("chat-message-received sends the configured settings for a missing room", async () => {
