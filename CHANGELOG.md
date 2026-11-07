@@ -62,6 +62,7 @@ Results for students as versioned, localized documents, a student activity view 
 - Results stored between the student's first load and the socket's first connection appear once the socket has joined the student's room (#1143).
 - Every case copy path queues the copy's render by one rule and copies its files, authors, tags, videos and documents the same way (#1088, #1089).
 - Reports keep the Polyadic agent names of a forgotten student's replies (#1155).
+- The student app reads a phase's anonymity from `features.anonymity`, the name the backend sends, so the group chat keeps peers' mask letters even without the group context from `user_group` (#1166).
 - Under `vite` and `vite preview`, the auth, management console and student apps load the logo, favicons, manifest and font from `nginx/static`, and NGINX serves the logos under the `/auth/` and `/mng/` prefixes (#999).
 
 ### Security

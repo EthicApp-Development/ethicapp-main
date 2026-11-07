@@ -4,6 +4,7 @@ import PhaseChatOverlay from './PhaseChatOverlay.jsx';
 import PhaseInstructions from './PhaseInstructions.jsx';
 import PreviousPhaseResponsesAccordion from './PreviousPhaseResponsesAccordion.jsx';
 import SemanticDifferentialTaskView from './SemanticDifferentialTaskView.jsx';
+import { isPhaseAnonymous } from '../../../utils/phaseAnonymity.js';
 
 function mapResponsesByTaskId(phase) {
   const responseList = Array.isArray(phase?.responses) ? phase.responses : [];
@@ -273,10 +274,8 @@ export default function SemanticDifferentialPhaseView({
                   previousResponses={previousResponsesState.data}
                   task={task}
                   useAnonymousLabels={
-                    phase?.groupAnonymous === true
+                    isPhaseAnonymous(phase)
                     || previousResponsesState.data?.phaseAnonymous === true
-                    || phase?.features?.anonymity === true
-                    || phase?.features?.anonymous === true
                   }
                   loading={previousResponsesState.loading}
                   errorMessage={previousResponsesState.error}
