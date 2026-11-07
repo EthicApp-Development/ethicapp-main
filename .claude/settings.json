@@ -8,6 +8,7 @@
     }
   },
   "enabledPlugins": {
-    "ethicapp-security@ethicapp-agent-skills": true
+    "ethicapp-security@ethicapp-agent-skills": true,
+    "ethicapp-release@ethicapp-agent-skills": true
   }
 }

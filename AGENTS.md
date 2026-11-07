@@ -216,6 +216,56 @@ Production-oriented changes must stay aligned with the repository-owned deployme
   - Keep Redis memory defaults and eviction policies in sync across `.env.example`, `deploy/env.contract.yml`, and `INSTALL.md`.
 - Do not add generic `REDIS_HOST`, `REDIS_PORT`, or `REDIS_URL` production fallbacks; prefer role-specific Redis variables.
 
+### Releases
+
+A release is four things with one name:
+- an annotated git tag `vYYYY.MM.DD`, with `.1`, `.2` for later releases on
+  the same day;
+- its entry in `CHANGELOG.md`;
+- a GitHub Release with the same text;
+- the GHCR images published under the same tag.
+
+Use the `ethicapp-release` skills:
+- `/ethicapp-release:cut-release` opens the release pull request, then tags
+  and creates the GitHub Release once it is merged;
+- `/ethicapp-release:publish-images` builds and pushes the images;
+- `/ethicapp-release:pin-deployment` runs in `ethicapp-deployment`.
+
+Rules:
+- The `CHANGELOG.md` entry is written when the release is cut, in the release
+  pull request. Feature pull requests do not edit `CHANGELOG.md`.
+- Tags are never moved, deleted or republished. A fix after tagging is a
+  `.N` release.
+- `scripts/ghcr-build-push.sh` refuses a release-shaped tag (`vYYYY.MM.DD...`)
+  unless that git tag points at `HEAD` and the working tree is clean. Build
+  releases from `git worktree add --detach <dir> <tag>`.
+- Images carry `org.opencontainers.image.version` (the tag) and
+  `org.opencontainers.image.revision` (the commit). The source code holds no
+  version string: `docker inspect` on a running container tells which
+  release it is (#111).
+
+History: until `v2026.10.25`, tags ending in `-esa` were built from the
+`external-services-architecture` branch. GHCR also holds two misnamed tags
+that have no git tag: `v2026.06.03-eas` and `v2027.06.27-esa`.
+`CHANGELOG.md` explains both.
+
+Images, the `--service` names, and the paths each image is built from. A
+release is partial when only some of these changed, and then it publishes only
+those images.
+
+| `--service` | GHCR package | Built from |
+| --- | --- | --- |
+| `ethicapp` | `ethicapp` | `ethicapp/`, `canonical-schemas/`, `database/seeds/`, `external-mock-service/student-result.js` |
+| `auth-backend` | `ethicapp-auth-backend` | `auth-backend/` |
+| `ethicapp-student` | `ethicapp-student` | `ethicapp-student/` |
+| `management-console` | `ethicapp-management-console` | `management-console/` |
+| `nginx` | `ethicapp-nginx` | `nginx/` |
+| `db-migrations` | `ethicapp-db-migrations` | `database/` (`database/migrations/`) |
+| `external-mock-service` | `ethicapp-external-mock-service` | `external-mock-service/` (development and staging mocks) |
+
+Migrations live in `database/migrations/`. The environment contract is
+`deploy/env.contract.yml`.
+
 ## 8) Legacy EthicApp routing conventions (important)
 
 For the legacy app inside `ethicapp/`, keep backend and frontend routing concerns separated and colocated:
@@ -314,7 +364,8 @@ When adding/changing translatable features:
 
 `.claude/settings.json` registers the `ethicapp-agent-skills` marketplace
 (`EthicApp-Development/ethicapp-agent-skills`, public) and enables the
-`ethicapp-security` plugin for anyone who clones and trusts this repository.
+`ethicapp-security` and `ethicapp-release` plugins for anyone who clones and trusts this repository.
 Use `/ethicapp-security:dependency-vulnerabilities` for dependency
 vulnerability audits and fixes; the skill defers to this file for repository
 facts.
+Use the `ethicapp-release` skills for releases (see "Releases" above).
