@@ -60,10 +60,18 @@ export function useActivityRealtimeSync({
     const handleConnect = () => {
       connectionMonitor.handleConnect();
 
-      // A connect after the first: whatever was published while the socket
-      // was down was not replayed (#1128).
-      if (reconnectTracker?.handleConnect()) {
-        onReconnectRef.current?.();
+      // A connect after the first: the server forgot the rooms of the old
+      // connection, so they are joined again (#1108), and the results are
+      // loaded once the student's room is back, since whatever was published
+      // while the socket was down was not replayed (#1128, #1143).
+      if (socket && reconnectTracker?.handleConnect()) {
+        joinActivityRooms(socket, {
+          sessionId: activeSessionId,
+          userId: session.uid,
+          groupId: currentGroupIdRef.current,
+          onUserRoomJoined: () => onReconnectRef.current?.(),
+          isActive: () => !isUnmounted
+        });
       }
     };
 

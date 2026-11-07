@@ -13,13 +13,38 @@
  */
 
 /**
- * Joins the session's room and the student's room.
+ * The rooms an activity view joins, as `[event, argument]` emits, in order:
+ * the session's room, the student's room and, when the student has a group in
+ * the current phase, the group's room (#1108).
+ *
+ * @param {object} options
+ * @param {number} options.sessionId
+ * @param {number} options.userId
+ * @param {number|null} [options.groupId]
+ * @returns {Array<[string, number]>}
+ */
+export function activityRoomJoins({ sessionId, userId, groupId = null }) {
+  const joins = [['joinSession', sessionId], ['joinUser', userId]];
+  const group = Number(groupId);
+  if (Number.isInteger(group) && group > 0) {
+    joins.push(['joinGroup', group]);
+  }
+  return joins;
+}
+
+/**
+ * Joins the activity's rooms (activityRoomJoins()). The view calls it when it
+ * opens and again after every reconnect: the server forgets a connection's
+ * rooms when it drops, so a socket that reconnected without joining them
+ * again would stay connected and receive nothing (#1108).
  *
  * @param {{ emit: Function }} socket
  * @param {object} options
  * @param {number} options.sessionId
  * @param {number} options.userId - Ignored by the server, which joins the
  *     signed-in student's own room; sent for older servers.
+ * @param {number|null} [options.groupId] - The student's group in the
+ *     current phase, if any.
  * @param {() => void} [options.onUserRoomJoined] - Called once the server
  *     has joined the student's room.
  * @param {() => boolean} [options.isActive] - Whether the activity is still
@@ -29,13 +54,19 @@
 export function joinActivityRooms(socket, {
   sessionId,
   userId,
+  groupId = null,
   onUserRoomJoined = () => {},
   isActive = () => true
 }) {
-  socket.emit('joinSession', sessionId);
-  socket.emit('joinUser', userId, () => {
-    if (isActive()) {
-      onUserRoomJoined();
+  for (const [event, argument] of activityRoomJoins({ sessionId, userId, groupId })) {
+    if (event === 'joinUser') {
+      socket.emit(event, argument, () => {
+        if (isActive()) {
+          onUserRoomJoined();
+        }
+      });
+    } else {
+      socket.emit(event, argument);
     }
-  });
+  }
 }
