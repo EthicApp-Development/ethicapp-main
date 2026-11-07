@@ -55,7 +55,7 @@ Results for students as versioned, localized documents, a student activity view 
 
 ### Changed
 
-- Releases have a `CHANGELOG.md` and a GitHub Release, images carry `org.opencontainers.image.version`, and `scripts/ghcr-build-push.sh` builds a release tag only from a clean checkout of that tag (#110, #111).
+- Releases have a `CHANGELOG.md` and a GitHub Release, images carry `org.opencontainers.image.version`, and `scripts/ghcr-build-push.sh` builds a release tag only from a clean checkout of that tag and has no `latest` option; `latest` was removed from every GHCR package (#110, #111, #1163).
 
 ### Fixed
 
