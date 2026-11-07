@@ -1,9 +1,11 @@
 /**
  * When the student app loads the published external-service results of an
  * activity (epic #1123, #1128): when the activity opens, after a phase
- * transition and after the socket reconnects. Socket.IO does not replay
- * room emits, so a reconnect load catches up with results published while
- * the socket was down.
+ * transition, once the socket has joined the student's room and after the
+ * socket reconnects. Socket.IO does not replay room emits, so the load after
+ * the room is joined catches up with results published between the opening
+ * load and the subscription, however late the first connection is (#1143),
+ * and a reconnect load with results published while the socket was down.
  */
 
 /**
@@ -89,6 +91,9 @@ function sameTarget(left, right) {
  *   flight.
  * - `phaseChanged({ sessionId, phaseId })` with the current phase of an
  *   activity, whenever it is known; a transition of the open activity loads.
+ * - `subscribed()` once the socket has joined the student's room; it loads,
+ *   so a result published after the opening load and before the room could
+ *   receive its event is shown (#1143).
  * - `reconnected()` after the socket reconnects; it loads.
  *
  * `applyResults(results)` receives the answer of a load unless a later load
@@ -155,6 +160,9 @@ export function createExternalResultsLoader({
       if (isPhaseTransition(previous, next) && target?.sessionId === next.sessionId) {
         load();
       }
+    },
+    subscribed() {
+      load();
     },
     reconnected() {
       load();

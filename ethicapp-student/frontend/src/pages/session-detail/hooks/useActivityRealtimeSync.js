@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { legacyUserApi, studentApi } from '../../../api/studentApi.js';
 import { createRealtimeConnectionMonitor } from '../../../services/realtimeConnectionMonitor.js';
 import { getStudentSocket } from '../../../services/studentSocket.js';
+import { joinActivityRooms } from '../activitySocketRooms.js';
 import { createReconnectTracker } from '../externalResultsLoading.js';
 import { errorLogDetails, socketEventLogDetails } from '../../../utils/logDetails.js';
 
@@ -18,16 +19,22 @@ export function useActivityRealtimeSync({
   setGroupIdByPhaseId,
   setGroupContextByPhaseId,
   onExternalServiceResult,
+  onUserRoomJoined,
   onReconnect
 }) {
   const [realtimeIssue, setRealtimeIssue] = useState(null);
   // Read through a ref, so a new callback never makes the socket leave and
   // rejoin its rooms.
   const onReconnectRef = useRef(onReconnect);
+  const onUserRoomJoinedRef = useRef(onUserRoomJoined);
 
   useEffect(() => {
     onReconnectRef.current = onReconnect;
   }, [onReconnect]);
+
+  useEffect(() => {
+    onUserRoomJoinedRef.current = onUserRoomJoined;
+  }, [onUserRoomJoined]);
 
   useEffect(() => {
     if (!session.isAuthenticated || !selectedSession) {
@@ -105,8 +112,14 @@ export function useActivityRealtimeSync({
         reconnectTracker = createReconnectTracker({ connected: socket.connected });
         socket.on('connect_error', handleConnectError);
         socket.on('connect', handleConnect);
-        socket.emit('joinSession', activeSessionId);
-        socket.emit('joinUser', session.uid);
+        // Once the student's room is joined, the results published before
+        // it could receive their events are loaded (#1143).
+        joinActivityRooms(socket, {
+          sessionId: activeSessionId,
+          userId: session.uid,
+          onUserRoomJoined: () => onUserRoomJoinedRef.current?.(),
+          isActive: () => !isUnmounted
+        });
         socket.on('onPhaseTransition', handlePhaseTransition);
         socket.on('onShareResponse', handleShareResponse);
         socket.on('onEndSession', handleEndSession);
