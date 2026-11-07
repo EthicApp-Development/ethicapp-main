@@ -534,6 +534,19 @@ function triggerOf(result) {
     return { trigger: AGENT_TRIGGER.UNKNOWN, inReplyTo: null };
 }
 
+// The agent of a message the bridge published (#1155): the name its callback
+// recorded, which is always a chat agent's, since only those are published.
+// Any other recorded name is the erasure's placeholder (V31 redacts every
+// string of the result of an anonymized student), so the message row's agent,
+// which the erasure never touches, names it.
+function publishedAgentName(published, row) {
+    const recorded = normalizeText(published?.agentName);
+    if (isPublishableChatAgent(recorded)) {
+        return recorded;
+    }
+    return normalizeText(row?.externalAgentName) || recorded;
+}
+
 // A callback the `callback-received` handler completed, with the evaluations
 // it received and the messages it published (#947), or null. Results stored
 // before #947 list no published messages: their evaluations cannot be told
@@ -625,7 +638,10 @@ function placementOf({ result, ownRows, sessionId }) {
  *   `externalServiceResultId`, #947) gets the agent that wrote it, the
  *   trigger, the student message it answered when known, and
  *   `visible_to_students = true`. Messages published before #947 have no
- *   link and get no values.
+ *   link and get no values. The agent is the one the callback recorded,
+ *   unless that name is not a chat agent's: then the erasure redacted the
+ *   result of an anonymized student (V31), and the message row's agent
+ *   (`externalAgentName`) names it (#1155).
  * - Each evaluation a handled callback received but did not publish becomes
  *   a row at the result's `receivedAt`, with the same columns and
  *   `visible_to_students = false`. Published evaluations are already rows of
@@ -668,7 +684,7 @@ export function buildChatTranscriptContribution(context, storedResults) {
             values.push({
                 rowKey: row.messageId,
                 values: {
-                    [REPORT_COLUMNS.AGENT_NAME]:          reportText(published?.agentName),
+                    [REPORT_COLUMNS.AGENT_NAME]:          reportText(publishedAgentName(published, row)),
                     [REPORT_COLUMNS.TRIGGER]:             trigger,
                     [REPORT_COLUMNS.IN_REPLY_TO]:         inReplyTo,
                     [REPORT_COLUMNS.VISIBLE_TO_STUDENTS]: true,

@@ -741,9 +741,13 @@ services cannot be read.
 
 - responses report: `{ responseId, phaseId, questionId, userId, groupId }`;
 - chat transcript: `{ messageId, phaseId, questionId, groupId, userId,
-  externalServiceId, externalServiceResultId, time }`. `externalServiceResultId`
-  is the `external_service_results` row an agent message was published from
-  (#947), or `null`; `time` is ISO 8601.
+  externalServiceId, externalServiceResultId, externalAgentName, time }`.
+  `externalServiceResultId` is the `external_service_results` row an agent
+  message was published from (#947), or `null`; `externalAgentName` is the
+  name of the message's `external_service_agents` row, or `null` for a
+  participant's message. The erasure never redacts it, so it names the agent
+  of a message whose callback a forgotten student's erasure redacted (#1155).
+  `time` is ISO 8601.
 
 `phaseId` is the phase's `stages.id`, `questionId` the question's id
 (`differential.id`) and `groupId` the row's team.

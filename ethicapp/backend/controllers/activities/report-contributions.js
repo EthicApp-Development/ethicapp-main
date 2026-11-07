@@ -50,6 +50,7 @@ export function chatTranscriptRowKeys(rows) {
         userId:                  row.user_id ?? null,
         externalServiceId:       row.external_service_id ?? null,
         externalServiceResultId: row.external_service_result_id ?? null,
+        externalAgentName:       row.external_agent_name ?? null,
         time:                    isoTime(row.time),
     }));
 }

@@ -192,6 +192,7 @@ test("handlers receive the documented row keys of each report", () => {
     ]);
     assert.deepEqual(chatTranscriptRowKeys([chatRow(501, "2026-10-01T10:00:00.000Z", {
         external_service_id: "chat-service", external_service_result_id: "f1a2b3c4-0000-4000-8000-000000000001",
+        external_agent_name: "ConversationGuide",
     })]), [{
         messageId:               501,
         phaseId:                 71,
@@ -200,8 +201,11 @@ test("handlers receive the documented row keys of each report", () => {
         userId:                  31,
         externalServiceId:       "chat-service",
         externalServiceResultId: "f1a2b3c4-0000-4000-8000-000000000001",
+        externalAgentName:       "ConversationGuide",
         time:                    "2026-10-01T10:00:00.000Z",
     }]);
+    // A participant's message has no agent row (#1155).
+    assert.equal(chatTranscriptRowKeys([chatRow(502, "2026-10-01T10:01:00.000Z")])[0].externalAgentName, null);
 });
 
 // ─── No contributors ────────────────────────────────────────────────────────

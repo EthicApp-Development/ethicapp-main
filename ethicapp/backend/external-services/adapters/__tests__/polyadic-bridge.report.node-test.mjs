@@ -461,3 +461,54 @@ test("indexed metadata: every evaluation not published is a row exactly once", (
         { agentName: "ConversationGuide", content: "C" },
     ]);
 });
+
+// ─── Results redacted for an anonymized student (#1155) ────────────────────
+
+// What V31 leaves of a reactive callback's result once its student is
+// forgotten: every string is the placeholder, numbers are kept.
+const PLACEHOLDER = "******";
+
+function redactedResult(id, messageId) {
+    return callbackResult({
+        id,
+        evaluations:       [{ agente: PLACEHOLDER, respuesta: PLACEHOLDER }],
+        publishedMessages: [{ messageId, agentName: PLACEHOLDER, evaluationIndex: 0 }],
+    });
+}
+
+function agentRowOf(messageId, resultId, externalAgentName) {
+    return { ...agentRow(messageId, resultId, "2026-11-02T10:00:01.000Z"), externalAgentName };
+}
+
+test("a published message of a redacted result is named by its row's agent", () => {
+    const rows = [agentRowOf(602, 90, "ConversationGuide")];
+
+    const contribution = buildChatTranscriptContribution(contextOf(rows), [redactedResult(90, 602)]);
+
+    assert.equal(contribution.values[0].values.polyadic_agent_name, "ConversationGuide");
+    assert.equal(validate(contribution, rows).valid, true);
+});
+
+test("the name the callback recorded wins over the row's agent when it is a chat agent's", () => {
+    // The agent row keeps the latest name of the service's agents.
+    const rows = [agentRowOf(602, 90, "ConversationGuide")];
+    const result = callbackResult({
+        id:                90,
+        evaluations:       [{ agente: "Orientador", respuesta: "Legacy guide" }],
+        publishedMessages: [{ messageId: 602, agentName: "Orientador", evaluationIndex: 0 }],
+    });
+
+    const contribution = buildChatTranscriptContribution(contextOf(rows), [result]);
+
+    assert.equal(contribution.values[0].values.polyadic_agent_name, "Orientador");
+});
+
+test("a redacted name is kept when the row has no agent name", () => {
+    for (const externalAgentName of [null, undefined, ""]) {
+        const rows = [agentRowOf(602, 90, externalAgentName)];
+
+        const contribution = buildChatTranscriptContribution(contextOf(rows), [redactedResult(90, 602)]);
+
+        assert.equal(contribution.values[0].values.polyadic_agent_name, PLACEHOLDER);
+    }
+});
