@@ -12,7 +12,6 @@ IMAGE_TAG="${IMAGE_TAG:-}"
 ADDITIONAL_TAGS="${ADDITIONAL_TAGS:-}"
 PLATFORMS="${PLATFORMS:-linux/amd64}"
 PUSH="${PUSH:-true}"
-TAG_LATEST="${TAG_LATEST:-false}"
 DRY_RUN="${DRY_RUN:-false}"
 ALLOW_UNTAGGED_RELEASE="${ALLOW_UNTAGGED_RELEASE:-false}"
 SERVICES=""
@@ -34,7 +33,6 @@ Options:
   --platforms LIST    docker buildx platforms. Default: linux/amd64
   --service NAME      Service to build. Can be repeated.
   --all               Build all publishable project images. Default.
-  --latest            Also publish the latest tag.
   --no-push           Build locally with --load instead of pushing.
   --dry-run           Print docker commands without running them.
   --allow-untagged    Accept a release-shaped tag (vYYYY.MM.DD...) with no
@@ -52,7 +50,7 @@ Services:
 
 Environment variables mirror the long options:
   REGISTRY, GHCR_OWNER, IMAGE_PREFIX, IMAGE_TAG, ADDITIONAL_TAGS,
-  PLATFORMS, PUSH, TAG_LATEST, DRY_RUN, ALLOW_UNTAGGED_RELEASE
+  PLATFORMS, PUSH, DRY_RUN, ALLOW_UNTAGGED_RELEASE
 
 A release-shaped tag (vYYYY.MM.DD, with any suffix) must be a git tag
 pointing at HEAD, and the working tree must be clean: the images then
@@ -218,8 +216,9 @@ while [ "$#" -gt 0 ]; do
       shift
       ;;
     --latest)
-      TAG_LATEST="true"
-      shift
+      echo "--latest is not supported: images are published only under immutable" >&2
+      echo "version tags, which deployments pin." >&2
+      exit 1
       ;;
     --no-push)
       PUSH="false"
@@ -333,9 +332,6 @@ for service in $SERVICES; do
     IFS="$old_ifs"
   fi
 
-  if bool_is_true "$TAG_LATEST"; then
-    set -- "$@" --tag "$image:latest"
-  fi
 
   if bool_is_true "$PUSH"; then
     set -- "$@" --push
