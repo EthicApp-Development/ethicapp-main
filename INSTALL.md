@@ -522,22 +522,23 @@ For GitHub Actions, prefer the built-in `GITHUB_TOKEN` with `packages: write` pe
 
 ## Build and Push
 
-Publish all images with a release tag:
+A release tag (`vYYYY.MM.DD`, with any suffix) is published only from a clean
+checkout of the git tag with the same name. The script refuses it otherwise, so
+the image tag, the git tag and the image's revision label always agree. The
+release procedure is in `AGENTS.md`, "Releases".
+
+Publish all images of a release from a worktree of its tag:
 
 ```bash
-npm run publish:ghcr -- --owner github-org-or-user --tag v2026.05.11
+git worktree add --detach ../ethicapp-release-v2026.11.07 v2026.11.07
+cd ../ethicapp-release-v2026.11.07
+npm run publish:ghcr -- --owner github-org-or-user --tag v2026.11.07
 ```
 
-Publish all images with both a release tag and `latest`:
+Publish only one service of a release (a partial release), from the same worktree:
 
 ```bash
-npm run publish:ghcr -- --owner github-org-or-user --tag v2026.05.11 --latest
-```
-
-Build only one service:
-
-```bash
-npm run publish:ghcr -- --owner github-org-or-user --service auth-backend --tag v2026.05.11
+npm run publish:ghcr -- --owner github-org-or-user --service auth-backend --tag v2026.11.07
 ```
 
 Build locally without pushing:
@@ -549,7 +550,7 @@ npm run publish:ghcr -- --owner github-org-or-user --service ethicapp --tag loca
 Preview the Docker commands without running them:
 
 ```bash
-npm run publish:ghcr -- --owner github-org-or-user --tag v2026.05.11 --dry-run
+npm run publish:ghcr -- --owner github-org-or-user --tag v2026.11.07 --dry-run
 ```
 
 ## Configuration
@@ -564,14 +565,14 @@ The script accepts CLI options and matching environment variables.
 | `--tag` | `IMAGE_TAG` | Current git short SHA | Primary tag applied to each image. |
 | `--extra-tags` | `ADDITIONAL_TAGS` | Empty | Comma-separated extra tags. |
 | `--platforms` | `PLATFORMS` | `linux/amd64` | Buildx target platforms. |
-| `--latest` | `TAG_LATEST=true` | `false` | Also tag images as `latest`. |
+| `--allow-untagged` | `ALLOW_UNTAGGED_RELEASE=true` | `false` | Accept a release-shaped tag with no matching git tag at `HEAD`. Never for a release. |
 | `--no-push` | `PUSH=false` | `true` | Load the image locally instead of pushing it. |
 | `--dry-run` | `DRY_RUN=true` | `false` | Print commands without running them. |
 
 Multi-platform builds can be published with:
 
 ```bash
-npm run publish:ghcr -- --owner github-org-or-user --tag v2026.05.11 --platforms linux/amd64,linux/arm64
+npm run publish:ghcr -- --owner github-org-or-user --tag v2026.11.07 --platforms linux/amd64,linux/arm64
 ```
 
 Local `--no-push` builds use `docker buildx --load`, so they support one platform at a time.
@@ -587,7 +588,7 @@ npm run publish:ghcr -- --owner github-org-or-user --tag preflight --no-push --s
 npm run publish:ghcr -- --owner github-org-or-user --tag preflight --no-push --service management-console
 ```
 
-For a full release candidate, publish a versioned tag and deploy that exact tag in the deployment repository. Avoid deploying mutable tags such as `latest` as the source of record.
+Images are published only under versioned tags; the script has no `latest` option. The deployment repository pins the exact tag and digest.
 
 ## Deployment Repository Contract
 
