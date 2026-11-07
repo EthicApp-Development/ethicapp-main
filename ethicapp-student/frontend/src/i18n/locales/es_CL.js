@@ -57,6 +57,9 @@ const esCL = {
   sessionDetail: {
     title: 'Detalle de sesión',
     backHome: 'Volver al home',
+    refreshActivity: 'Actualizar actividad',
+    refreshingActivity: 'Actualizando…',
+    refreshActivityFailed: 'No se pudo actualizar la actividad. Inténtalo de nuevo en un momento.',
     loginToView: 'Inicia sesión para revisar la sesión seleccionada.',
     loadingDetail: 'Cargando detalle...',
     loadErrorFallback: 'No se pudieron cargar los datos de la sesión',
@@ -204,7 +207,7 @@ const esCL = {
     unavailable: 'EthicApp no está disponible por el momento. Vuelve a intentarlo en unos instantes.',
     reference: '(Referencia: {{requestId}})',
     retry: 'Reintentar',
-    realtimeUnavailable: 'Las actualizaciones en vivo están en pausa. Recarga la página si la actividad no avanza.'
+    realtimeUnavailable: 'Las actualizaciones en vivo están en pausa. La actividad se revisa cada cierto tiempo, y puedes actualizarla ahora con «Actualizar actividad».'
   },
   errors: {
     invalidSessionId: 'sessionId inválido',
