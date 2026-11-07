@@ -399,7 +399,7 @@ test("two evaluations of one agent, only the second published: each appears once
         publications:   [null, { savedMessage: { id: 602 } }],
     });
     assert.deepEqual(result.adapterResult.payload.publishedMessages, [
-        { messageId: 602, agentName: "ConversationGuide", evaluationIndex: 1 },
+        { messageId: 602, agentName: "ConversationGuide", displayName: "ConversationGuide", evaluationIndex: 1 },
     ]);
 
     const rows = [agentRow(602, 90, "2026-11-02T10:00:01.000Z")];
