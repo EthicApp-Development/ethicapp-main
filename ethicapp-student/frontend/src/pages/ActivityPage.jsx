@@ -292,7 +292,8 @@ export default function ActivityPage() {
   }, [showExternalResults]);
 
   // Loads the results published to the student when the activity opens,
-  // after a phase transition and after a socket reconnect. Only the answer
+  // after a phase transition, once the socket has joined the student's room
+  // and after a socket reconnect. Only the answer
   // of the latest load applied is kept, and a failed load leaves the shown
   // results as they are.
   const [externalResultsLoader] = useState(() => createExternalResultsLoader({
@@ -461,6 +462,9 @@ export default function ActivityPage() {
     setGroupIdByPhaseId,
     setGroupContextByPhaseId,
     onExternalServiceResult: handleExternalServiceResult,
+    // Catches up with results published between the opening load and the
+    // room's join, however late the first connection is (#1143).
+    onUserRoomJoined: externalResultsLoader.subscribed,
     // After a reconnect (after #1108, the socket has rejoined its rooms).
     onReconnect: externalResultsLoader.reconnected
   });

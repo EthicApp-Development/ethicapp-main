@@ -153,6 +153,33 @@ test('a reconnect loads', async () => {
   assert.equal(requests.length, 2);
 });
 
+test('joining the student\'s room loads, for the results the opening load missed', async () => {
+  const { loader, requests, applied } = harness();
+
+  loader.open(target);
+  await flush();
+  requests[0].resolve([]);
+  await flush();
+  loader.subscribed();
+  await flush();
+  requests[1].resolve([{ resultId: 'missed-result', phaseId: 21 }]);
+  await flush();
+
+  assert.equal(requests.length, 2);
+  assert.deepEqual(requests[1].target, target);
+  assert.deepEqual(applied, [[], [{ resultId: 'missed-result', phaseId: 21 }]]);
+});
+
+test('joining the room before the activity can load loads nothing', async () => {
+  const { loader, requests } = harness();
+
+  loader.open(null);
+  loader.subscribed();
+  await flush();
+
+  assert.equal(requests.length, 0);
+});
+
 test('a slow older answer does not replace a newer one', async () => {
   const { loader, requests, applied } = harness();
 
