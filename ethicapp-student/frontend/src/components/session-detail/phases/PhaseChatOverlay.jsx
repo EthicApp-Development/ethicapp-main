@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { legacyUserApi } from '../../../api/studentApi.js';
 import AtsFeedbackBubble from './AtsFeedbackBubble.jsx';
 import { chatMessageAuthorName } from '../../../utils/chatMessageAuthor.js';
+import { isPhaseAnonymous } from '../../../utils/phaseAnonymity.js';
 
 const DEFAULT_HEIGHT_PX = 320;
 const MIN_HEIGHT_PX = 220;
@@ -162,7 +163,7 @@ export default function PhaseChatOverlay({ isOpen, onClose, onHeightChange, phas
     }, {});
   }, [phase]);
 
-  const isAnonymousPhase = phase?.features?.anonymous === true || phase?.groupAnonymous === true;
+  const isAnonymousPhase = isPhaseAnonymous(phase);
 
   const messagesById = useMemo(() => messages.reduce((acc, message) => {
     acc[message.id] = message;
