@@ -14,6 +14,7 @@ PLATFORMS="${PLATFORMS:-linux/amd64}"
 PUSH="${PUSH:-true}"
 TAG_LATEST="${TAG_LATEST:-false}"
 DRY_RUN="${DRY_RUN:-false}"
+ALLOW_UNTAGGED_RELEASE="${ALLOW_UNTAGGED_RELEASE:-false}"
 SERVICES=""
 
 usage() {
@@ -36,6 +37,8 @@ Options:
   --latest            Also publish the latest tag.
   --no-push           Build locally with --load instead of pushing.
   --dry-run           Print docker commands without running them.
+  --allow-untagged    Accept a release-shaped tag (vYYYY.MM.DD...) with no
+                      matching git tag at HEAD. Never for a release.
   -h, --help          Show this help.
 
 Services:
@@ -49,7 +52,12 @@ Services:
 
 Environment variables mirror the long options:
   REGISTRY, GHCR_OWNER, IMAGE_PREFIX, IMAGE_TAG, ADDITIONAL_TAGS,
-  PLATFORMS, PUSH, TAG_LATEST, DRY_RUN
+  PLATFORMS, PUSH, TAG_LATEST, DRY_RUN, ALLOW_UNTAGGED_RELEASE
+
+A release-shaped tag (vYYYY.MM.DD, with any suffix) must be a git tag
+pointing at HEAD, and the working tree must be clean: the images then
+carry the same name and revision as the release. Build releases from a
+clean worktree of the tag.
 EOF
 }
 
@@ -221,6 +229,10 @@ while [ "$#" -gt 0 ]; do
       DRY_RUN="true"
       shift
       ;;
+    --allow-untagged)
+      ALLOW_UNTAGGED_RELEASE="true"
+      shift
+      ;;
     -h|--help)
       usage
       exit 0
@@ -263,6 +275,28 @@ CREATED_AT="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
 REVISION="$(git_revision)"
 SOURCE_URL="$(git_source_url)"
 
+# A release-shaped tag names a release: build it only from a clean checkout of
+# the git tag with the same name, so the image tag, the git tag and the
+# revision label agree.
+if [[ "$IMAGE_TAG" =~ ^v[0-9]{4}\.[0-9]{2}\.[0-9]{2} ]] && ! bool_is_true "$ALLOW_UNTAGGED_RELEASE"; then
+  tag_commit="$(git rev-parse -q --verify "refs/tags/$IMAGE_TAG^{commit}" 2>/dev/null || true)"
+  if [ -z "$tag_commit" ]; then
+    echo "Release tag $IMAGE_TAG does not exist in git. Create and push the tag first," >&2
+    echo "or pass --allow-untagged for a build that is not a release." >&2
+    exit 1
+  fi
+  if [ "$tag_commit" != "$REVISION" ]; then
+    echo "Git tag $IMAGE_TAG points at $tag_commit, but HEAD is $REVISION." >&2
+    echo "Build from a worktree of the tag: git worktree add --detach <dir> $IMAGE_TAG" >&2
+    exit 1
+  fi
+  if [ -n "$(git status --porcelain 2>/dev/null)" ]; then
+    echo "The working tree has uncommitted or untracked changes; release images" >&2
+    echo "must be built from a clean checkout of $IMAGE_TAG." >&2
+    exit 1
+  fi
+fi
+
 for service in $SERVICES; do
   context="$(service_context "$service" || true)"
   dockerfile="$(service_dockerfile "$service" || true)"
@@ -285,6 +319,7 @@ for service in $SERVICES; do
     --label "org.opencontainers.image.title=$title" \
     --label "org.opencontainers.image.source=$SOURCE_URL" \
     --label "org.opencontainers.image.revision=$REVISION" \
+    --label "org.opencontainers.image.version=$IMAGE_TAG" \
     --tag "$image:$IMAGE_TAG"
 
   if [ -n "$ADDITIONAL_TAGS" ]; then
