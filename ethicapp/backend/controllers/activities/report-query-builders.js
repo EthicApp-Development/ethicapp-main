@@ -116,7 +116,9 @@ export function buildSemanticDifferentialChatTranscriptSql() {
             dc.parent_id AS reply_to,
             st.id AS phase_id,
             d.id AS question_id,
-            dc.external_service_result_id
+            dc.external_service_result_id,
+            -- The agent row's name, which the erasure never redacts (#1155).
+            esa.display_name AS external_agent_name
         FROM differential_chat AS dc
         INNER JOIN differential AS d
             ON dc.did = d.id

@@ -113,11 +113,11 @@ test("both reports select the row keys the report-building hook needs", () => {
     assert.match(buildSemanticDifferentialResponsesReportSql(),
         /st\.id AS phase_id,\s+d\.id AS question_id\s+FROM differential_selection/);
     assert.match(buildSemanticDifferentialChatTranscriptSql(),
-        /st\.id AS phase_id,\s+d\.id AS question_id,\s+dc\.external_service_result_id\s+FROM/);
+        /st\.id AS phase_id,\s+d\.id AS question_id,\s+dc\.external_service_result_id,[\s\S]*esa\.display_name AS external_agent_name\s+FROM/);
 });
 
 test("the row keys add no CSV column", () => {
-    const keys = ["phase_id", "question_id", "external_service_result_id"];
+    const keys = ["phase_id", "question_id", "external_service_result_id", "external_agent_name"];
     for (const columns of [SEMANTIC_DIFFERENTIAL_RESPONSE_COLUMNS, SEMANTIC_DIFFERENTIAL_CHAT_COLUMNS]) {
         assert.deepEqual(keys.filter(key => columns.includes(key)), []);
     }

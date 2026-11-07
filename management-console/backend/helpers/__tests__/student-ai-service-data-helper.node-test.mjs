@@ -59,6 +59,41 @@ test('redactJsonStrings replaces every string at any depth and keeps the rest', 
   assert.equal(redactJsonStrings('text', '******'), '******');
 });
 
+// A Polyadic reactive callback and its handler result (#1155): the agents'
+// names stay, every reply and the per-room guide name are replaced.
+test('redactJsonStrings keeps the agent names of Polyadic payloads and nothing else', () => {
+  const raw = {
+    room: 'ethicapp-s11-p22-g301',
+    evaluations: [
+      { agente: 'ConversationGuide', respuesta: 'Ana, what do you think?', display_name: 'Profe Ana' },
+      { agente: 'Validator', respuesta: 'NO_INTERVENIR: Ana is answering' }
+    ]
+  };
+  const adapterResult = {
+    status: 'completed',
+    payload: { publishedMessages: [{ messageId: 7, agentName: 'ConversationGuide', displayName: 'Profe Ana', evaluationIndex: 0 }] }
+  };
+
+  assert.deepEqual(redactJsonStrings(raw, '******'), {
+    room: '******',
+    evaluations: [
+      { agente: 'ConversationGuide', respuesta: '******', display_name: '******' },
+      { agente: 'Validator', respuesta: '******' }
+    ]
+  });
+  assert.deepEqual(redactJsonStrings(adapterResult, '******'), {
+    status: '******',
+    payload: { publishedMessages: [{ messageId: 7, agentName: 'ConversationGuide', displayName: '******', evaluationIndex: 0 }] }
+  });
+});
+
+test('redactJsonStrings keeps only a string under an agent name key', () => {
+  assert.deepEqual(
+    redactJsonStrings({ agente: { name: 'Ana' }, agentName: ['Ana'], nested: { agente: 'Validator' } }, '******'),
+    { agente: { name: '******' }, agentName: ['******'], nested: { agente: 'Validator' } }
+  );
+});
+
 test('eraseExternalServicePayloads rewrites the payloads of the user\'s results and jobs that change', async () => {
   const client = createFakeClient({
     results: [

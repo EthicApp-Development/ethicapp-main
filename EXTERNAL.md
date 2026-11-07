@@ -561,7 +561,8 @@ local verification.
 
 The Polyadic bridge contributes to the chat transcript (#949). Each agent
 message it published from a callback (#947) gets `polyadic_agent_name`, the
-agent that wrote it, `polyadic_agent_trigger`, `polyadic_agent_in_reply_to`
+agent that wrote it (from the callback; for a callback redacted before V44
+kept agent names, from the message row's agent, #1155), `polyadic_agent_trigger`, `polyadic_agent_in_reply_to`
 and `polyadic_agent_visible_to_students = true`. Each evaluation a callback
 carried but the bridge did not publish becomes a row at the callback's receipt
 time, with the same columns and `polyadic_agent_visible_to_students = false`.
