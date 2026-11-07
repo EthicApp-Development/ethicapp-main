@@ -2,6 +2,7 @@ import * as config from "../config/database.config.js";
 import * as rpg2 from "../db/rest-pg-2.js";
 import * as Yup from "yup";
 import { getDesignTypeByPhaseId } from "./designs-helper.js";
+import { externalAgentAuthorNameSql } from "./external-agent-author.js";
 
 // Any uuid Postgres accepts, whatever its version: external_service_results
 // ids come from gen_random_uuid() (v4), but the format check stays loose.
@@ -293,7 +294,8 @@ async function semanticDifferentialChatTranscriptByGroup(groupId, questionId) {
                        WHEN esa.id IS NOT NULL THEN 'external_service'
                        ELSE u.role
                    END AS author_role,
-                   COALESCE(esa.display_name, u.name) AS author_name,
+                   -- An agent's per-room name from its callback (#1026).
+                   COALESCE(${externalAgentAuthorNameSql("c")}, esa.display_name, u.name) AS author_name,
                    esa.service_id AS external_service_id,
                    c.content,
                    c.stime,
@@ -331,7 +333,8 @@ async function rankingChatTranscriptByGroup(groupId, questionId) {
                        WHEN esa.id IS NOT NULL THEN 'external_service'
                        ELSE u.role
                    END AS author_role,
-                   COALESCE(esa.display_name, u.name) AS author_name,
+                   -- An agent's per-room name from its callback (#1026).
+                   COALESCE(${externalAgentAuthorNameSql("s")}, esa.display_name, u.name) AS author_name,
                    esa.service_id AS external_service_id,
                    s.content,
                    s.stime,

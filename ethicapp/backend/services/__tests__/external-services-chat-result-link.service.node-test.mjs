@@ -127,3 +127,46 @@ test("publishGroupChatMessage saves nothing for an incomplete payload, result id
 
     assert.equal(savedMessages.length, 0);
 });
+
+// The per-message author name (#1026, epic #1025): the live notification shows
+// it, while the agent row keeps the canonical name.
+test("publishGroupChatMessage notifies the message's author name and keeps the agent row's", async () => {
+    const { registry } = createRegistry();
+    const agents = [];
+    const getOrCreate = registry.getOrCreateExternalAgent;
+    registry.getOrCreateExternalAgent = async input => {
+        agents.push(input);
+        return getOrCreate(input);
+    };
+
+    const published = await registry.publishGroupChatMessage(SERVICE_ID, {
+        ...basePayload,
+        authorName: "  agente  ",
+        resultId:   RESULT_ID,
+    });
+
+    assert.deepEqual(agents, [{ serviceId: SERVICE_ID, displayName: "ConversationGuide" }]);
+    assert.equal(published.notificationPayload.author_name, "agente");
+    assert.equal(published.notificationPayload.external_agent_id, 9);
+});
+
+test("publishGroupChatMessage falls back to the agent row's name without a usable author name", async () => {
+    for (const authorName of [undefined, null, "", "   ", 42, { name: "x" }]) {
+        const { registry } = createRegistry();
+
+        const published = await registry.publishGroupChatMessage(SERVICE_ID, { ...basePayload, authorName });
+
+        assert.equal(published.notificationPayload.author_name, "ConversationGuide", String(authorName));
+    }
+});
+
+test("publishGroupChatMessage cuts a long author name to 80 characters", async () => {
+    const { registry } = createRegistry();
+
+    const published = await registry.publishGroupChatMessage(SERVICE_ID, {
+        ...basePayload,
+        authorName: "ñ".repeat(100),
+    });
+
+    assert.equal(published.notificationPayload.author_name, "ñ".repeat(80));
+});

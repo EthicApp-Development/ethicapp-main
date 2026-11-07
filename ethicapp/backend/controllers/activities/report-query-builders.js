@@ -1,3 +1,5 @@
+import { externalAgentAuthorNameSql } from "../../helpers/external-agent-author.js";
+
 // The columns of each CSV, in order. The SQL below selects them, plus the
 // keys the report-building hook needs (#945), which are not exported.
 export const SEMANTIC_DIFFERENTIAL_RESPONSE_COLUMNS = Object.freeze([
@@ -99,7 +101,8 @@ export function buildSemanticDifferentialChatTranscriptSql() {
                 WHEN esa.id IS NOT NULL THEN 'external_service'
                 ELSE u.role
             END AS author_role,
-            COALESCE(esa.display_name, u.name) AS name,
+            -- An agent's per-room name from its callback (#1026).
+            COALESCE(${externalAgentAuthorNameSql("dc")}, esa.display_name, u.name) AS name,
             u.sex AS gender,
             esa.service_id AS external_service_id,
             d.orden AS question_number,

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { legacyUserApi } from '../../../api/studentApi.js';
 import AtsFeedbackBubble from './AtsFeedbackBubble.jsx';
+import { chatMessageAuthorName } from '../../../utils/chatMessageAuthor.js';
 
 const DEFAULT_HEIGHT_PX = 320;
 const MIN_HEIGHT_PX = 220;
@@ -82,8 +83,8 @@ function parseAtsFeedbackPayload(content) {
 function normalizeMessage(message) {
   const id = Number(message?.id ?? message?.msgid ?? message?.mid);
   const authorId = Number(message?.uid ?? message?.user_id ?? message?.author_id);
-  const authorName = message?.display_name ?? message?.name ?? message?.username ?? '';
   const authorRole = message?.author_role ?? message?.authorRole ?? '';
+  const authorName = chatMessageAuthorName(message, authorRole);
   const externalServiceId = message?.external_service_id ?? message?.externalServiceId ?? '';
   const content = typeof message?.content === 'string' ? message.content.trim() : '';
   const atsFeedback = parseAtsFeedbackPayload(content);

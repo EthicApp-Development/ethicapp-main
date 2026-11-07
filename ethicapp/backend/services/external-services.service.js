@@ -72,6 +72,7 @@ import {
 } from "./student-result-documents.js";
 import { getEnabledExternalServiceIdsBySessionId } from "../helpers/designs-helper.js";
 import { loadSessionActivityLocale } from "../helpers/activity-locale.js";
+import { normalizeExternalAgentAuthorName } from "../helpers/external-agent-author.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -2135,6 +2136,14 @@ export class ExternalServicesRegistry {
         });
     }
 
+    /**
+     * Publishes an agent's message to a group chat. `agentDisplayName` names
+     * the service's agent row (external_service_agents, one per service); the
+     * optional `authorName` is the name this message shows, such as the name a
+     * room gives the agent (#1026). The live notification carries it, and the
+     * chat history reads it from the callback result the message links to, so
+     * an adapter that passes it records it in its handler's result as well.
+     */
     async publishGroupChatMessage(serviceId, payload) {
         const content = typeof payload?.content === "string" ? payload.content.trim() : "";
         const sessionId = Number(payload?.sessionId);
@@ -2182,8 +2191,9 @@ export class ExternalServicesRegistry {
         }
 
         const notificationPayload = this.normalizeServiceChatNotificationPayload({
-            message: savedMessage,
+            message:    savedMessage,
             agent,
+            authorName: normalizeExternalAgentAuthorName(payload?.authorName),
             phaseId,
             questionId,
         });
@@ -2235,12 +2245,12 @@ export class ExternalServicesRegistry {
         };
     }
 
-    normalizeServiceChatNotificationPayload({ message, agent, phaseId, questionId }) {
+    normalizeServiceChatNotificationPayload({ message, agent, authorName = "", phaseId, questionId }) {
         return {
             id:                  message.id,
             uid:                 message.uid,
             author_role:         "external_service",
-            author_name:         agent.displayName,
+            author_name:         authorName || agent.displayName,
             external_service_id: agent.serviceId,
             external_agent_id:   agent.id,
             groupId:             message.tmid,
