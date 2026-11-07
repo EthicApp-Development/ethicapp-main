@@ -221,6 +221,37 @@ server {
         access_log off;
     }
 
+    # The SPA prefixes NGINX matches with `^~` (/auth/, /mng/, and /auth/assets/
+    # for Vite's build output) stop the regex search, so the regex above never
+    # serves their logos; these longer prefixes do (#999).
+    location ^~ /auth/images/logos/ {
+        alias /usr/share/nginx/html/static/logos/;
+        expires 30d;
+        add_header Cache-Control "public, max-age=2592000";
+        access_log off;
+    }
+
+    location ^~ /auth/assets/images/logos/ {
+        alias /usr/share/nginx/html/static/logos/;
+        expires 30d;
+        add_header Cache-Control "public, max-age=2592000";
+        access_log off;
+    }
+
+    location ^~ /mng/images/logos/ {
+        alias /usr/share/nginx/html/static/logos/;
+        expires 30d;
+        add_header Cache-Control "public, max-age=2592000";
+        access_log off;
+    }
+
+    location ^~ /mng/assets/images/logos/ {
+        alias /usr/share/nginx/html/static/logos/;
+        expires 30d;
+        add_header Cache-Control "public, max-age=2592000";
+        access_log off;
+    }
+
     # ---------------------------------------
     # Auth SPA publica
     # Canonical base: /auth

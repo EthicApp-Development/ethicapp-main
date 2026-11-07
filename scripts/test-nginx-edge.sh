@@ -169,6 +169,21 @@ run_cases() {
   # Impersonation stop stays proxied: ethicapp is down here, hence 502.
   check "impersonation stop is still proxied" 502 application/json '{"status":"unavailable"}' \
     "${api[@]}" "${valid[@]}" --request POST "$base/api/admin/impersonation/stop"
+  # Shared assets from nginx/static (#999), without a session, at the root and
+  # under each SPA prefix. The `^~` locations of /auth/ and /mng/ used to send
+  # their logo URLs to the SPA, which answered with its index.html.
+  local prefix
+  for prefix in "" /auth /student /mng; do
+    check "logo at ${prefix}/images/logos/" 200 image/svg+xml 'svg' \
+      "$base$prefix/images/logos/ethicapp-logo.svg"
+    check "logo at ${prefix}/assets/images/logos/" 200 image/png 'Content-Length' \
+      "$base$prefix/assets/images/logos/ethicapp-logo.png"
+    check "favicon at ${prefix}/favicon.svg" 200 image/svg+xml 'svg' "$base$prefix/favicon.svg"
+    check "favicon at ${prefix}/favicon/" 200 image/png 'Content-Length' \
+      "$base$prefix/favicon/favicon-96x96.png"
+    check "font at ${prefix}/static/fonts/" 200 text/css '@font-face' \
+      "$base$prefix/static/fonts/nunito/nunito.css"
+  done
 }
 
 start_edge() {
