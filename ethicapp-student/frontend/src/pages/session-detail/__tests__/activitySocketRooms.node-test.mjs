@@ -6,7 +6,7 @@
 // does; the fake server joins the room and acknowledges it.
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { joinActivityRooms } from '../activitySocketRooms.js';
+import { activityRoomJoins, joinActivityRooms } from '../activitySocketRooms.js';
 import { createExternalResultsLoader, createReconnectTracker } from '../externalResultsLoading.js';
 import {
   liveExternalResult,
@@ -25,13 +25,28 @@ function fakeServer() {
   const server = {
     stored: [],
     roomJoined: false,
+    sessionRoomJoined: false,
     sockets: [],
     receive(socket, event, args) {
+      if (event === 'joinSession') {
+        server.sessionRoomJoined = true;
+      }
       if (event === 'joinUser') {
         server.roomJoined = true;
         const ack = args.at(-1);
         // The acknowledgement travels back after the join.
         if (typeof ack === 'function') setImmediate(() => ack({ ok: true }));
+      }
+    },
+    // A connection that drops loses its rooms, as on the Socket.IO server.
+    drop() {
+      server.roomJoined = false;
+      server.sessionRoomJoined = false;
+      server.sockets.forEach((socket) => { socket.connected = false; });
+    },
+    startPhase() {
+      if (server.sessionRoomJoined) {
+        server.sockets.forEach((socket) => socket.deliver('onPhaseTransition'));
       }
     },
     publish(result) {
@@ -74,10 +89,12 @@ function fakeSocket(server, { connected = false } = {}) {
   return socket;
 }
 
-// The page: shows each result once, from the load or from the event, and
-// counts the loads.
+// The page: shows each result once, from the load or from the event, counts
+// the loads and the phase changes it hears, and joins its rooms again after a
+// reconnect, loading once the student's room is back, as
+// useActivityRealtimeSync does (#1108).
 function fakePage(server, socket) {
-  const page = { shown: [], seen: new Set(), loads: 0 };
+  const page = { shown: [], seen: new Set(), loads: 0, transitions: 0 };
   const show = (entries) => {
     unseenExternalResults(page.seen, entries).forEach((entry) => page.seen.add(entry.key));
     page.shown = mergeExternalResults(page.shown, entries);
@@ -91,7 +108,16 @@ function fakePage(server, socket) {
   });
   const tracker = createReconnectTracker({ connected: socket.connected });
   socket.on('connect', () => {
-    if (tracker.handleConnect()) page.loader.reconnected();
+    if (tracker.handleConnect()) {
+      joinActivityRooms(socket, {
+        sessionId: SESSION_ID,
+        userId: USER_ID,
+        onUserRoomJoined: page.loader.reconnected
+      });
+    }
+  });
+  socket.on('onPhaseTransition', () => {
+    page.transitions += 1;
   });
   socket.on('onExternalServiceResult', (payload) => {
     const entry = liveExternalResult(payload);
@@ -231,12 +257,58 @@ test('a reconnect still loads, and the first connect does not count as one', asy
   await flush();
   assert.equal(page.loads, 2, 'the opening load and the catch-up load');
 
-  socket.connected = false;
-  server.roomJoined = false;
+  server.drop();
   server.publish({ resultId: 'while-down', phaseId: 21 });
   socket.connect();
+  await flush();
   await flush();
 
   assert.equal(page.loads, 3);
   assert.deepEqual(shownIds(page), ['while-down']);
+});
+
+// ─── Rooms after a reconnect (#1108) ────────────────────────────────────────
+
+test('the joins list the session, the student and, with a group, the group', () => {
+  assert.deepEqual(activityRoomJoins({ sessionId: 12, userId: 7 }), [['joinSession', 12], ['joinUser', 7]]);
+  assert.deepEqual(activityRoomJoins({ sessionId: 12, userId: 7, groupId: 30 }),
+    [['joinSession', 12], ['joinUser', 7], ['joinGroup', 30]]);
+  for (const groupId of [null, undefined, 0, -1, 'x', 1.5]) {
+    assert.equal(activityRoomJoins({ sessionId: 12, userId: 7, groupId }).length, 2, String(groupId));
+  }
+});
+
+test('joining a group room emits it after the session and student rooms', () => {
+  const server = fakeServer();
+  const socket = fakeSocket(server, { connected: true });
+
+  joinActivityRooms(socket, { sessionId: SESSION_ID, userId: USER_ID, groupId: '30' });
+
+  assert.deepEqual(socket.emitted, ['joinSession', 'joinUser', 'joinGroup']);
+});
+
+test('after a reconnect, phase changes and results reach the socket again', async () => {
+  const server = fakeServer();
+  const socket = fakeSocket(server);
+  const page = fakePage(server, socket);
+
+  page.loader.open({ sessionId: SESSION_ID, userId: USER_ID });
+  joinActivityRooms(socket, { sessionId: SESSION_ID, userId: USER_ID, onUserRoomJoined: page.loader.subscribed });
+  socket.connect();
+  await flush();
+  server.startPhase();
+  assert.equal(page.transitions, 1);
+
+  server.drop();
+  server.startPhase();
+  assert.equal(page.transitions, 1, 'nothing reaches a dropped connection');
+  socket.connect();
+  await flush();
+  await flush();
+
+  server.startPhase();
+  server.publish({ resultId: 'after-reconnect', phaseId: 22 });
+  assert.equal(page.transitions, 2, 'the session room was joined again');
+  assert.deepEqual(shownIds(page), ['after-reconnect']);
+  assert.deepEqual(socket.emitted, ['joinSession', 'joinUser', 'joinSession', 'joinUser']);
 });

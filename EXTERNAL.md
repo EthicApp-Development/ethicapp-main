@@ -911,8 +911,9 @@ ethicapp-student/frontend/src/components/session-detail/external-services/Extern
 
 The activity page also loads the published results from the student route
 (see "Student results reading" in `ethicapp/backend/external-services/README.md`):
-when the activity opens, after a phase transition and after the socket
-reconnects (#1128). It merges them with the socket events by `resultId`, so a
+when the activity opens, after a phase transition, after the socket
+reconnects (#1128) once the student's room is joined again (#1108), and from
+the view's "Update activity" action (#626). It merges them with the socket events by `resultId`, so a
 result shows once whichever source brings it first; an event without
 `resultId` keeps an id made in the browser. A load never removes a result
 already shown, the answer of an older load never replaces a newer one, and a
@@ -921,6 +922,24 @@ before its event shows no processing state. The pure logic lives next to the
 page, under `ethicapp-student/frontend/src/pages/session-detail/`:
 `externalServiceResults.js` (merge), `externalResultsLoading.js` (load
 triggers and ordering) and `externalResultsExpansion.js` (collapsing).
+
+The socket's rooms (session, student and group) are joined when the activity
+opens and again after every reconnect, since the server forgets a dropped
+connection's rooms (`activitySocketRooms.js`, #1108). While the socket is
+down, `realtimeFallback.js` keeps the view current (#626): it shows a notice
+once the outage lasts 8 seconds, probes the activity every 15, 30 and then 60
+seconds (±20%) and when the page becomes visible or focused, reloads it when
+the probe sees a new status or phase, and reloads it again on reconnect. The
+probe reads the activity's descriptor and the cached `full_state`, which the
+server flushes when a phase starts or the activity ends, so it flushes no
+cache itself. The "Update activity" button updates the activity on demand,
+for students who cannot reload the page, as inside an LMS iframe. It probes
+first and flushes the server's caches only when the status or phase changed
+(those caches are shared by the session's students), then stays disabled for
+10 seconds saying the activity is up to date (3 seconds after a failure), so
+repeated clicks cost one update. A failed reload keeps the activity on
+screen. The Socket.IO client keeps retrying, at most once every 30 seconds
+(±50%).
 
 Each phase tab shows its own results, newest first. The newest result of the
 current phase is expanded and the others are collapsed; the student can

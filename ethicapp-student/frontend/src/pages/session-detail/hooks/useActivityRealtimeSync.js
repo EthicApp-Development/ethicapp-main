@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { legacyUserApi, studentApi } from '../../../api/studentApi.js';
 import { createRealtimeConnectionMonitor } from '../../../services/realtimeConnectionMonitor.js';
 import { getStudentSocket } from '../../../services/studentSocket.js';
 import { joinActivityRooms } from '../activitySocketRooms.js';
 import { createReconnectTracker } from '../externalResultsLoading.js';
+import { REALTIME_STATUS, createRealtimeFallback } from '../realtimeFallback.js';
 import { errorLogDetails, socketEventLogDetails } from '../../../utils/logDetails.js';
 
 export function useActivityRealtimeSync({
@@ -20,13 +21,19 @@ export function useActivityRealtimeSync({
   setGroupContextByPhaseId,
   onExternalServiceResult,
   onUserRoomJoined,
-  onReconnect
+  onReconnect,
+  refreshActivity,
+  probeActivity
 }) {
   const [realtimeIssue, setRealtimeIssue] = useState(null);
-  // Read through a ref, so a new callback never makes the socket leave and
+  const [connectionStatus, setConnectionStatus] = useState(REALTIME_STATUS.CONNECTING);
+  // Read through refs, so a new callback never makes the socket leave and
   // rejoin its rooms.
   const onReconnectRef = useRef(onReconnect);
   const onUserRoomJoinedRef = useRef(onUserRoomJoined);
+  const refreshActivityRef = useRef(refreshActivity);
+  const probeActivityRef = useRef(probeActivity);
+  const fallbackRef = useRef(null);
 
   useEffect(() => {
     onReconnectRef.current = onReconnect;
@@ -35,6 +42,11 @@ export function useActivityRealtimeSync({
   useEffect(() => {
     onUserRoomJoinedRef.current = onUserRoomJoined;
   }, [onUserRoomJoined]);
+
+  useEffect(() => {
+    refreshActivityRef.current = refreshActivity;
+    probeActivityRef.current = probeActivity;
+  }, [probeActivity, refreshActivity]);
 
   useEffect(() => {
     if (!session.isAuthenticated || !selectedSession) {
@@ -54,17 +66,55 @@ export function useActivityRealtimeSync({
         if (!isUnmounted) setRealtimeIssue(null);
       }
     });
+    // Without a working socket the view keeps itself current by polling,
+    // and refreshes when the socket comes back (#626).
+    const fallback = createRealtimeFallback({
+      refresh: (request) => refreshActivityRef.current?.(request) ?? Promise.resolve(),
+      probe: () => probeActivityRef.current?.() ?? Promise.resolve(false),
+      onStatus: (status) => {
+        if (!isUnmounted) setConnectionStatus(status);
+      },
+      onError: (error, operation) => {
+        console.debug(`[student socket] activity ${operation} failed`, {
+          sessionId: activeSessionId,
+          ...errorLogDetails(error)
+        });
+      }
+    });
+    fallbackRef.current = fallback;
+    setConnectionStatus(fallback.status());
+
+    const handlePageVisible = () => {
+      if (document.visibilityState === 'visible') fallback.pageVisible();
+    };
+    document.addEventListener('visibilitychange', handlePageVisible);
+    window.addEventListener('focus', handlePageVisible);
+
     const handleConnectError = () => {
       connectionMonitor.handleConnectError();
+      fallback.lost();
+    };
+    const handleDisconnect = () => {
+      fallback.lost();
     };
     const handleConnect = () => {
       connectionMonitor.handleConnect();
 
-      // A connect after the first: whatever was published while the socket
-      // was down was not replayed (#1128).
-      if (reconnectTracker?.handleConnect()) {
-        onReconnectRef.current?.();
+      // A connect after the first: the server forgot the rooms of the old
+      // connection, so they are joined again (#1108), and the results are
+      // loaded once the student's room is back, since whatever was published
+      // while the socket was down was not replayed (#1128, #1143).
+      if (socket && reconnectTracker?.handleConnect()) {
+        joinActivityRooms(socket, {
+          sessionId: activeSessionId,
+          userId: session.uid,
+          groupId: currentGroupIdRef.current,
+          onUserRoomJoined: () => onReconnectRef.current?.(),
+          isActive: () => !isUnmounted
+        });
       }
+      // Reloads the activity after a drop, for a transition missed meanwhile.
+      fallback.connected();
     };
 
     // Socket payloads can quote students: only their ids are logged (#1139).
@@ -110,7 +160,9 @@ export function useActivityRealtimeSync({
 
         socket = instance;
         reconnectTracker = createReconnectTracker({ connected: socket.connected });
+        if (socket.connected) fallback.connected();
         socket.on('connect_error', handleConnectError);
+        socket.on('disconnect', handleDisconnect);
         socket.on('connect', handleConnect);
         // Once the student's room is joined, the results published before
         // it could receive their events are loaded (#1143).
@@ -138,9 +190,14 @@ export function useActivityRealtimeSync({
     return () => {
       isUnmounted = true;
       setRealtimeIssue(null);
+      fallback.dispose();
+      if (fallbackRef.current === fallback) fallbackRef.current = null;
+      document.removeEventListener('visibilitychange', handlePageVisible);
+      window.removeEventListener('focus', handlePageVisible);
       if (!socket) return;
 
       socket.off('connect_error', handleConnectError);
+      socket.off('disconnect', handleDisconnect);
       socket.off('connect', handleConnect);
 
       if (Number.isInteger(Number(currentGroupIdRef.current)) && Number(currentGroupIdRef.current) > 0) {
@@ -240,7 +297,14 @@ export function useActivityRealtimeSync({
           });
         }
       })
-      .catch(() => {});
+      .catch((error) => {
+        // The socket's own failure is reported by the connection state.
+        console.debug('[student socket] could not join the current phase group', {
+          sessionId: Number(selectedSession.id),
+          phaseId,
+          ...errorLogDetails(error)
+        });
+      });
 
     return () => {
       isUnmounted = true;
@@ -254,5 +318,13 @@ export function useActivityRealtimeSync({
     setGroupIdByPhaseId
   ]);
 
-  return { realtimeIssue };
+  // The view's "Update activity" action (realtimeFallback.updateNow()):
+  // shared while it runs and held for a while after it.
+  const updateNow = useCallback(() => {
+    if (fallbackRef.current) return fallbackRef.current.updateNow();
+    return Promise.resolve(refreshActivityRef.current?.({ invalidate: true }))
+      .then(() => ({ ok: true, changed: true, heldUntil: Date.now() }), () => ({ ok: false, changed: true, heldUntil: Date.now() }));
+  }, []);
+
+  return { realtimeIssue, connectionStatus, updateNow };
 }

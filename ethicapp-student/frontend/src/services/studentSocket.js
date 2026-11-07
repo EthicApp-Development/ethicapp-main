@@ -48,7 +48,14 @@ export async function getStudentSocket() {
 
   socketInstance = ioClient(`${studentSocketUrl}/student`, {
     withCredentials: true,
-    transports: ['websocket', 'polling']
+    transports: ['websocket', 'polling'],
+    // Retries never stop, but slow down to one every 30 s at most (±50%), so
+    // a class whose handshakes are refused (an expired session, a blocked
+    // cookie in an LMS iframe) does not hammer the edge. Meanwhile the
+    // activity view polls its state (#626).
+    reconnectionDelay: 1000,
+    reconnectionDelayMax: 30000,
+    randomizationFactor: 0.5
   });
 
   return socketInstance;

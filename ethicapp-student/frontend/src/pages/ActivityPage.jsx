@@ -25,6 +25,7 @@ import {
   toggleExternalResult
 } from './session-detail/externalResultsExpansion.js';
 import { createExternalResultsLoader } from './session-detail/externalResultsLoading.js';
+import { REALTIME_STATUS } from './session-detail/realtimeFallback.js';
 import {
   groupExternalResultsByPhase,
   liveExternalResult,
@@ -82,6 +83,11 @@ export default function ActivityPage() {
   const [groupIdByPhaseId, setGroupIdByPhaseId] = useState({});
   const [groupContextByPhaseId, setGroupContextByPhaseId] = useState({});
   const [pendingExternalResponseProcessingByPhaseId, setPendingExternalResponseProcessingByPhaseId] = useState({});
+  // The "Update activity" action: idle, running, done (held, "up to date")
+  // or failed (held for a shorter time).
+  const [activityUpdate, setActivityUpdate] = useState('idle');
+  const activityUpdateTimerRef = useRef(null);
+  const activityStatusCodeRef = useRef(null);
   const lastAutoSelectedPhaseIdRef = useRef(null);
   const currentGroupIdRef = useRef(null);
   const currentPhaseIdRef = useRef(null);
@@ -261,6 +267,10 @@ export default function ActivityPage() {
   const activityStatusCode = useMemo(() => {
     return normalizeStatusCode(localState.activityDescriptor?.status);
   }, [localState.activityDescriptor]);
+
+  useEffect(() => {
+    activityStatusCodeRef.current = activityStatusCode;
+  }, [activityStatusCode]);
 
   const shouldShowWaitingScreen = activityStatusCode === SESSION_STATUS.initiated;
   const shouldLoadActivityData = activityStatusCode >= SESSION_STATUS.inProgress;
@@ -449,7 +459,50 @@ export default function ActivityPage() {
     };
   }, [localState.caseDocument]);
 
-  const { realtimeIssue } = useActivityRealtimeSync({
+  // Reloads what a phase transition or the end of the activity changes: the
+  // activity's status and, once it started, its state. `invalidate` flushes
+  // the server's caches, as the socket's onPhaseTransition handler does; the
+  // caller asks for it only when the activity changed or may have, since
+  // those caches are shared by the session's students (#626).
+  const refreshActivity = useCallback(async ({ invalidate = true } = {}) => {
+    const activeSessionId = Number(selectedSession?.id);
+    if (!Number.isInteger(activeSessionId) || activeSessionId <= 0) return;
+
+    const { data } = await legacyUserApi.get(`/activities/${activeSessionId}/descriptor`);
+    const descriptor = data?.descriptor ?? null;
+    dispatch({ type: 'DESCRIPTOR_LOAD_SUCCESS', payload: descriptor });
+
+    const status = normalizeStatusCode(descriptor?.status);
+    if (status === SESSION_STATUS.inProgress) {
+      loadCurrentPhaseState({ sessionId: activeSessionId, invalidate }).catch(() => {});
+    }
+    if (status >= SESSION_STATUS.inProgress) {
+      await loadFullState({ sessionId: activeSessionId, userId: session.uid, invalidate });
+    }
+  }, [loadCurrentPhaseState, loadFullState, selectedSession, session.uid]);
+
+  // Whether the activity moved on since the view loaded it, without flushing
+  // any cache: its status, then its current phase from the cached full state.
+  // The server flushes the cached descriptor when a phase starts or the
+  // activity ends, so the cached answer is current (#626).
+  const probeActivity = useCallback(async () => {
+    const activeSessionId = Number(selectedSession?.id);
+    if (!Number.isInteger(activeSessionId) || activeSessionId <= 0) return false;
+
+    const { data } = await legacyUserApi.get(`/activities/${activeSessionId}/descriptor`);
+    const status = normalizeStatusCode(data?.descriptor?.status);
+    if (status !== activityStatusCodeRef.current) return true;
+    if (status !== SESSION_STATUS.inProgress) return false;
+
+    const { data: stateData } = await legacyUserApi.get(
+      `/activities/${activeSessionId}/users/${session.uid}/full_state`,
+      { params: { invalidate: false } }
+    );
+    const phaseId = Number(stateData?.state?.descriptor?.currentPhaseId);
+    return Number.isInteger(phaseId) && phaseId > 0 && phaseId !== Number(currentPhaseIdRef.current);
+  }, [selectedSession, session.uid]);
+
+  const { realtimeIssue, connectionStatus, updateNow } = useActivityRealtimeSync({
     session,
     selectedSession,
     currentPhaseIdRef,
@@ -466,8 +519,35 @@ export default function ActivityPage() {
     // room's join, however late the first connection is (#1143).
     onUserRoomJoined: externalResultsLoader.subscribed,
     // After a reconnect (after #1108, the socket has rejoined its rooms).
-    onReconnect: externalResultsLoader.reconnected
+    onReconnect: externalResultsLoader.reconnected,
+    refreshActivity,
+    probeActivity
   });
+
+  // The "Update activity" action, for views where a browser reload is not
+  // at hand, such as an LMS iframe (#626). The button stays disabled while
+  // the update runs and while further updates are held, saying the activity
+  // is up to date, so repeated clicks cost nothing and the student sees that
+  // the update worked.
+  const handleUpdateActivity = useCallback(async () => {
+    window.clearTimeout(activityUpdateTimerRef.current);
+    setActivityUpdate('running');
+    const { ok, held, heldUntil } = await updateNow();
+    if (ok && !held) externalResultsLoader.reconnected();
+    setActivityUpdate(ok ? 'done' : 'failed');
+    activityUpdateTimerRef.current = window.setTimeout(
+      () => setActivityUpdate('idle'),
+      Math.max(0, heldUntil - Date.now())
+    );
+  }, [externalResultsLoader, updateNow]);
+
+  // Another activity starts without the last one's update outcome.
+  useEffect(() => {
+    window.clearTimeout(activityUpdateTimerRef.current);
+    setActivityUpdate('idle');
+  }, [selectedSessionId]);
+
+  useEffect(() => () => window.clearTimeout(activityUpdateTimerRef.current), []);
 
   const phaseTabs = useMemo(() => {
     const phases = Array.isArray(activityState?.phases) ? activityState.phases : [];
@@ -648,17 +728,46 @@ export default function ActivityPage() {
                 <h1 className="h4 mb-2">{selectedSession.name ?? `${t('sessions.sessionFallbackName')} #${selectedSession.id}`}</h1>
                 <p className="text-secondary mb-0">{selectedSession.descr || t('sessionDetail.noDescription')}</p>
               </div>
-              <Link to="/" className="btn btn-outline-secondary btn-sm">
-                <span className="d-inline-flex align-items-center gap-2">
-                  <i className="fa-solid fa-arrow-left" aria-hidden="true" />
-                  <span>{t('sessionDetail.backHome')}</span>
-                </span>
-              </Link>
+              <div className="d-flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className={`btn btn-sm ${activityUpdate === 'done' ? 'btn-outline-success' : 'btn-outline-primary'}`}
+                  onClick={handleUpdateActivity}
+                  disabled={activityUpdate !== 'idle'}
+                >
+                  <span className="d-inline-flex align-items-center gap-2" aria-live="polite">
+                    <i
+                      className={`fa-solid ${activityUpdate === 'done' ? 'fa-check' : 'fa-rotate'}${activityUpdate === 'running' ? ' fa-spin' : ''}`}
+                      aria-hidden="true"
+                    />
+                    <span>
+                      {t({
+                        running: 'sessionDetail.refreshingActivity',
+                        done: 'sessionDetail.activityUpToDate'
+                      }[activityUpdate] ?? 'sessionDetail.refreshActivity')}
+                    </span>
+                  </span>
+                </button>
+                <Link to="/" className="btn btn-outline-secondary btn-sm">
+                  <span className="d-inline-flex align-items-center gap-2">
+                    <i className="fa-solid fa-arrow-left" aria-hidden="true" />
+                    <span>{t('sessionDetail.backHome')}</span>
+                  </span>
+                </Link>
+              </div>
             </div>
             <div className="card-body">
-              {realtimeIssue ? (
+              {/* Shown once the connection has stayed down for a while, so a
+                  short reconnect never flashes it (#626). */}
+              {connectionStatus === REALTIME_STATUS.DISCONNECTED ? (
                 <div className="alert alert-warning py-2 mb-3" role="status">
-                  {withReference(t('apiErrors.realtimeUnavailable'), realtimeIssue.requestId, t)}
+                  {withReference(t('apiErrors.realtimeUnavailable'), realtimeIssue?.requestId ?? null, t)}
+                </div>
+              ) : null}
+
+              {activityUpdate === 'failed' && !activityStateError ? (
+                <div className="alert alert-warning py-2 mb-3" role="alert">
+                  {t('sessionDetail.refreshActivityFailed')}
                 </div>
               ) : null}
 
@@ -672,7 +781,9 @@ export default function ActivityPage() {
 
               {shouldShowWaitingScreen ? <WaitingStatePanel t={t} /> : null}
 
-              {loadingActivityState ? <p className="text-muted mt-3 mb-0">{t('sessionDetail.loadingActivityState')}</p> : null}
+              {/* Only the first load says so: a reload keeps the activity in
+                  place instead of pushing it down (#626). */}
+              {loadingActivityState && !activityState ? <p className="text-muted mt-3 mb-0">{t('sessionDetail.loadingActivityState')}</p> : null}
 
               {activityStateError ? (
                 <div className="alert alert-warning mt-3 mb-0" role="alert">

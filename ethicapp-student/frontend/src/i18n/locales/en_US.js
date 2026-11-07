@@ -57,6 +57,10 @@ const enUS = {
   sessionDetail: {
     title: 'Session detail',
     backHome: 'Back home',
+    refreshActivity: 'Update activity',
+    refreshingActivity: 'Updating…',
+    activityUpToDate: 'Activity up to date',
+    refreshActivityFailed: 'The activity could not be updated. Try again in a moment.',
     loginToView: 'Sign in to review the selected session.',
     loadingDetail: 'Loading detail...',
     loadErrorFallback: 'Unable to load session data',
@@ -203,7 +207,7 @@ const enUS = {
     unavailable: 'EthicApp is temporarily unavailable. Try again in a moment.',
     reference: '(Reference: {{requestId}})',
     retry: 'Try again',
-    realtimeUnavailable: 'Live updates are paused. Reload the page if the activity does not advance.'
+    realtimeUnavailable: 'Live updates are paused. The activity is checked every so often, and you can update it now with “Update activity”.'
   },
   errors: {
     invalidSessionId: 'Invalid sessionId',
