@@ -162,13 +162,16 @@ Columns:
 | Column | Argumentation Tutor (`argumentation-tutor-system`) | Polyadic Agents (`polyadic-devils-advocate`) |
 | --- | --- | --- |
 | `external_service_jobs.outbound_payload` | Always NULL. | Always NULL. |
-| `external_service_results.raw_payload` | The callback's `payload`, stored whole: `argumentPreview` or `submitted_argument` (the student's argument verbatim), `comparison.initialArgument` and `comparison.revisedArgument`, the tutor's `summary`, `bullets[]`, `message`, `criteria[].value`, `claimTypeRationale` and `unsupportedClaims[].statement`, which can quote the student; ids and scores. | `{ room, evaluations: [{ agente, respuesta }] }`: agent replies that can quote students or name them by the name Polyadic was given (a first name or the anonymous mask). |
+| `external_service_results.raw_payload` | The callback's `payload`, stored whole: `argumentPreview` or `submitted_argument` (the student's argument verbatim), `comparison.initialArgument` and `comparison.revisedArgument`, the tutor's `summary`, `bullets[]`, `message`, `criteria[].value`, `claimTypeRationale` and `unsupportedClaims[].statement`, which can quote the student; ids and scores. | `{ room, evaluations: [{ agente, respuesta, display_name }] }`: agent replies that can quote students or name them by the name Polyadic was given (a first name or the anonymous mask); `display_name` is the room's guide name, which a teacher may have written. `agente` is the agent's canonical name, never user text, and is kept (#1155). |
 | `external_service_results.sanitized_payload` | Never written. | Never written. |
-| `external_service_results.adapter_result` | `payload.claimTypeRationale` and `payload.unsupportedClaims[].statement` (paraphrases of the student's claims), `feedbackTitle`, ids; `{ status, error }` on failure. | Counts and the room name; no text. |
+| `external_service_results.adapter_result` | `payload.claimTypeRationale` and `payload.unsupportedClaims[].statement` (paraphrases of the student's claims), `feedbackTitle`, ids; `{ status, error }` on failure. | Counts, the room name, and `payload.publishedMessages[]` (`messageId`, `evaluationIndex`, `agentName`, `displayName`); no student text. `agentName` is the agent's canonical name and is kept (#1155). |
 
 The per-account step replaces every string in those columns, for the rows with
 the student's `user_id`, so it does not depend on this inventory staying
-complete. An AI service can still deliver a callback for work it received
+complete. The one exception is a string under the key `agente` or `agentName`
+(V44, #1155): Polyadic and its bridge put an agent's canonical name there,
+never user text, and the activity report names the agent of each reply from
+it. A service must not put user text under those keys. An AI service can still deliver a callback for work it received
 before the student was forgotten. Triggers from V31 replace the strings of any
 payload later written for an anonymized user in the same way, with the
 placeholder of the run that anonymized the account. A write that races with

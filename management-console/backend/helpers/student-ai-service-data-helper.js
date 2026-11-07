@@ -26,9 +26,17 @@ export const USER_ERASURE_SERVICE_IDS = Object.freeze([
 
 const RESULT_PAYLOAD_COLUMNS = Object.freeze(["raw_payload", "sanitized_payload", "adapter_result"]);
 
+// Keys whose string value is an agent name the service chose, never user text
+// (#1155): Polyadic's `evaluations[].agente` and the Polyadic bridge's
+// `publishedMessages[].agentName`. Their values are kept, so the activity
+// report still names the agent of a forgotten student's replies. The same
+// list as redact_jsonb_strings (database/migrations/V44); keep both equal.
+export const KEPT_AGENT_NAME_KEYS = Object.freeze(["agente", "agentName"]);
+
 /**
  * A copy of a JSON value with every string replaced by `placeholder`, at any
- * depth. Object keys, numbers, booleans and nulls are kept.
+ * depth, except a string under one of KEPT_AGENT_NAME_KEYS. Object keys,
+ * numbers, booleans and nulls are kept.
  * @param {unknown} value
  * @param {string} placeholder
  * @returns {unknown}
@@ -44,7 +52,12 @@ export function redactJsonStrings(value, placeholder) {
 
     if (value && typeof value === "object") {
         return Object.fromEntries(
-            Object.entries(value).map(([key, item]) => [key, redactJsonStrings(item, placeholder)])
+            Object.entries(value).map(([key, item]) => [
+                key,
+                KEPT_AGENT_NAME_KEYS.includes(key) && typeof item === "string"
+                    ? item
+                    : redactJsonStrings(item, placeholder),
+            ])
         );
     }
 
