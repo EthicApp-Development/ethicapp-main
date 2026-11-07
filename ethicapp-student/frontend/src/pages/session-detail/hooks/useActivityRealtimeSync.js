@@ -69,7 +69,7 @@ export function useActivityRealtimeSync({
     // Without a working socket the view keeps itself current by polling,
     // and refreshes when the socket comes back (#626).
     const fallback = createRealtimeFallback({
-      refresh: () => refreshActivityRef.current?.() ?? Promise.resolve(),
+      refresh: (request) => refreshActivityRef.current?.(request) ?? Promise.resolve(),
       probe: () => probeActivityRef.current?.() ?? Promise.resolve(false),
       onStatus: (status) => {
         if (!isUnmounted) setConnectionStatus(status);
@@ -318,12 +318,13 @@ export function useActivityRealtimeSync({
     setGroupIdByPhaseId
   ]);
 
-  // The view's refresh action: a refresh now, coalesced with any running one.
-  // Resolves to whether it succeeded.
-  const refreshNow = useCallback(() => {
-    if (fallbackRef.current) return fallbackRef.current.refreshNow();
-    return Promise.resolve(refreshActivityRef.current?.()).then(() => true, () => false);
+  // The view's "Update activity" action (realtimeFallback.updateNow()):
+  // shared while it runs and held for a while after it.
+  const updateNow = useCallback(() => {
+    if (fallbackRef.current) return fallbackRef.current.updateNow();
+    return Promise.resolve(refreshActivityRef.current?.({ invalidate: true }))
+      .then(() => ({ ok: true, changed: true, heldUntil: Date.now() }), () => ({ ok: false, changed: true, heldUntil: Date.now() }));
   }, []);
 
-  return { realtimeIssue, connectionStatus, refreshNow };
+  return { realtimeIssue, connectionStatus, updateNow };
 }

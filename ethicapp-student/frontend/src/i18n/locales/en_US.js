@@ -59,6 +59,7 @@ const enUS = {
     backHome: 'Back home',
     refreshActivity: 'Update activity',
     refreshingActivity: 'Updating…',
+    activityUpToDate: 'Activity up to date',
     refreshActivityFailed: 'The activity could not be updated. Try again in a moment.',
     loginToView: 'Sign in to review the selected session.',
     loadingDetail: 'Loading detail...',

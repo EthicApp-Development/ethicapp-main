@@ -932,9 +932,14 @@ seconds (±20%) and when the page becomes visible or focused, reloads it when
 the probe sees a new status or phase, and reloads it again on reconnect. The
 probe reads the activity's descriptor and the cached `full_state`, which the
 server flushes when a phase starts or the activity ends, so it flushes no
-cache itself. The "Update activity" button reloads the activity on demand,
-for students who cannot reload the page, as inside an LMS iframe. The
-Socket.IO client keeps retrying, at most once every 30 seconds (±50%).
+cache itself. The "Update activity" button updates the activity on demand,
+for students who cannot reload the page, as inside an LMS iframe. It probes
+first and flushes the server's caches only when the status or phase changed
+(those caches are shared by the session's students), then stays disabled for
+10 seconds saying the activity is up to date (3 seconds after a failure), so
+repeated clicks cost one update. A failed reload keeps the activity on
+screen. The Socket.IO client keeps retrying, at most once every 30 seconds
+(±50%).
 
 Each phase tab shows its own results, newest first. The newest result of the
 current phase is expanded and the others are collapsed; the student can

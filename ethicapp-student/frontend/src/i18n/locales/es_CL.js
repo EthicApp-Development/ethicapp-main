@@ -59,6 +59,7 @@ const esCL = {
     backHome: 'Volver al home',
     refreshActivity: 'Actualizar actividad',
     refreshingActivity: 'Actualizando…',
+    activityUpToDate: 'Actividad al día',
     refreshActivityFailed: 'No se pudo actualizar la actividad. Inténtalo de nuevo en un momento.',
     loginToView: 'Inicia sesión para revisar la sesión seleccionada.',
     loadingDetail: 'Cargando detalle...',

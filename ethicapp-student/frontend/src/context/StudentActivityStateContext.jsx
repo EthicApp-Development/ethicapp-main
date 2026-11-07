@@ -71,7 +71,8 @@ export function StudentActivityStateProvider({ children }) {
     } catch (error) {
       const message = describeApiError(error, t, { fallbackKey: 'errors.fullStateFallback' });
 
-      setStateBySession((prev) => ({ ...prev, [parsedSessionId]: null }));
+      // A failed reload keeps the state already shown, with the error next to
+      // it, instead of emptying the activity (#626).
       setErrorBySession((prev) => ({ ...prev, [parsedSessionId]: message }));
       setLoadingBySession((prev) => ({ ...prev, [parsedSessionId]: false }));
       throw error;

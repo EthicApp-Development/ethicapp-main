@@ -16,12 +16,24 @@
  *   means slower updates, never a frozen view;
  * - refreshes the activity when the socket connects after having been lost,
  *   which recovers a transition missed meanwhile;
- * - refreshes it on demand (`refreshNow`), for the view's refresh action.
+ * - updates it on demand (`updateNow`), for the view's "Update activity"
+ *   action: it probes first, so the refresh flushes the server's caches only
+ *   when the activity changed, and then holds further updates for
+ *   `cooldownMs` (`failureCooldownMs` after a failure), so a student who
+ *   keeps clicking costs one update per hold, and sees it confirmed.
  *
- * Refreshes never overlap: a refresh requested while one runs runs once more
- * after it, however many were requested. A probe is skipped while a refresh or
- * another probe runs. Failed probes and refreshes are left to the next
- * attempt; `onError` receives them.
+ * `refresh(request)` receives `{ invalidate }`: true when the activity
+ * changed or may have (a reconnect, a probe that saw a change), which flushes
+ * the server's caches as the socket's onPhaseTransition handler does; false
+ * for an update with no change, which reloads from them. Those caches are
+ * shared by the whole session's students, so they are flushed only when
+ * needed.
+ *
+ * Refreshes never overlap: refreshes requested while one runs run once more
+ * after it, however many were requested, flushing the caches if any of them
+ * asked to. A probe is skipped while a refresh or another probe runs. Failed
+ * probes and refreshes are left to the next attempt; `onError` receives
+ * them.
  *
  * Timers, the clock and the random source are injectable for tests.
  */
@@ -36,12 +48,15 @@ export const REALTIME_FALLBACK_DEFAULTS = Object.freeze({
   noticeDelayMs: 8000,
   pollDelaysMs: Object.freeze([15000, 30000, 60000]),
   jitter: 0.2,
-  minProbeGapMs: 5000
+  minProbeGapMs: 5000,
+  cooldownMs: 10000,
+  failureCooldownMs: 3000
 });
 
 /**
  * @param {object} options
- * @param {() => Promise<unknown>} options.refresh - Reloads the activity.
+ * @param {(request: { invalidate: boolean }) => Promise<unknown>} options.refresh
+ *     Reloads the activity.
  * @param {() => Promise<boolean>} options.probe - Whether the activity changed.
  * @param {(status: string) => void} [options.onStatus]
  * @param {(error: unknown, operation: string) => void} [options.onError]
@@ -56,7 +71,9 @@ export function createRealtimeFallback({
   random = () => Math.random(),
   options = {}
 }) {
-  const { noticeDelayMs, pollDelaysMs, jitter, minProbeGapMs } = { ...REALTIME_FALLBACK_DEFAULTS, ...options };
+  const {
+    noticeDelayMs, pollDelaysMs, jitter, minProbeGapMs, cooldownMs, failureCooldownMs
+  } = { ...REALTIME_FALLBACK_DEFAULTS, ...options };
 
   let status = REALTIME_STATUS.CONNECTING;
   let lost = false;
@@ -67,7 +84,9 @@ export function createRealtimeFallback({
   let lastProbeAt = -Infinity;
   let probing = false;
   let refreshing = null;
-  let refreshAgain = false;
+  let queuedRequest = null;
+  let updating = null;
+  let updatesHeldUntil = -Infinity;
 
   function setStatus(next) {
     if (status !== next) {
@@ -84,25 +103,28 @@ export function createRealtimeFallback({
   }
 
   // Resolves to whether the last refresh it ran succeeded.
-  function runRefresh() {
+  function runRefresh(request = { invalidate: true }) {
     if (disposed) return Promise.resolve(false);
     if (refreshing) {
-      refreshAgain = true;
+      queuedRequest = { invalidate: Boolean(queuedRequest?.invalidate || request.invalidate) };
       return refreshing;
     }
 
     refreshing = (async () => {
       let succeeded = false;
-      do {
-        refreshAgain = false;
+      let next = { invalidate: Boolean(request.invalidate) };
+      while (next && !disposed) {
+        const current = next;
         try {
-          await refresh();
+          await refresh(current);
           succeeded = true;
         } catch (error) {
           succeeded = false;
           onError(error, 'refresh');
         }
-      } while (refreshAgain && !disposed);
+        next = queuedRequest;
+        queuedRequest = null;
+      }
       refreshing = null;
       return succeeded;
     })();
@@ -122,7 +144,7 @@ export function createRealtimeFallback({
       probing = false;
     }
     if (changed && !disposed) {
-      await runRefresh();
+      await runRefresh({ invalidate: true });
     }
   }
 
@@ -151,7 +173,7 @@ export function createRealtimeFallback({
       clearTimers();
       setStatus(REALTIME_STATUS.CONNECTED);
       if (wasLost) {
-        runRefresh();
+        runRefresh({ invalidate: true });
       }
     },
 
@@ -175,11 +197,39 @@ export function createRealtimeFallback({
     },
 
     /**
-     * Reloads the activity now. Resolves, once the refresh and any queued
-     * after it end, to whether the last one succeeded.
+     * The "Update activity" action. Resolves to `{ ok, changed, heldUntil }`:
+     * whether the update succeeded, whether the activity had changed, and
+     * the time until which further updates are held. An update requested
+     * while one runs shares it; one requested while updates are held does
+     * nothing and resolves to `{ ok: true, held: true, heldUntil }`. A probe
+     * that fails counts as a change, so the update still reloads everything.
      */
+    updateNow() {
+      if (disposed) return Promise.resolve({ ok: false, changed: false, heldUntil: now() });
+      if (updating) return updating;
+      if (now() < updatesHeldUntil) {
+        return Promise.resolve({ ok: true, changed: false, held: true, heldUntil: updatesHeldUntil });
+      }
+
+      updating = (async () => {
+        let changed = true;
+        try {
+          changed = Boolean(await probe());
+        } catch (error) {
+          onError(error, 'probe');
+        }
+        lastProbeAt = now();
+        const ok = await runRefresh({ invalidate: changed });
+        updatesHeldUntil = now() + (ok ? cooldownMs : failureCooldownMs);
+        updating = null;
+        return { ok, changed, heldUntil: updatesHeldUntil };
+      })();
+      return updating;
+    },
+
+    /** Reloads the activity now, flushing the caches; resolves to whether it succeeded. */
     refreshNow() {
-      return runRefresh();
+      return runRefresh({ invalidate: true });
     },
 
     dispose() {

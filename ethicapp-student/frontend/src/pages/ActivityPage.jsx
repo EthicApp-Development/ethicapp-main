@@ -83,7 +83,10 @@ export default function ActivityPage() {
   const [groupIdByPhaseId, setGroupIdByPhaseId] = useState({});
   const [groupContextByPhaseId, setGroupContextByPhaseId] = useState({});
   const [pendingExternalResponseProcessingByPhaseId, setPendingExternalResponseProcessingByPhaseId] = useState({});
-  const [activityRefresh, setActivityRefresh] = useState({ running: false, failed: false });
+  // The "Update activity" action: idle, running, done (held, "up to date")
+  // or failed (held for a shorter time).
+  const [activityUpdate, setActivityUpdate] = useState('idle');
+  const activityUpdateTimerRef = useRef(null);
   const activityStatusCodeRef = useRef(null);
   const lastAutoSelectedPhaseIdRef = useRef(null);
   const currentGroupIdRef = useRef(null);
@@ -457,9 +460,11 @@ export default function ActivityPage() {
   }, [localState.caseDocument]);
 
   // Reloads what a phase transition or the end of the activity changes: the
-  // activity's status and, once it started, its state with the caches
-  // flushed, as the socket's onPhaseTransition handler does (#626).
-  const refreshActivity = useCallback(async () => {
+  // activity's status and, once it started, its state. `invalidate` flushes
+  // the server's caches, as the socket's onPhaseTransition handler does; the
+  // caller asks for it only when the activity changed or may have, since
+  // those caches are shared by the session's students (#626).
+  const refreshActivity = useCallback(async ({ invalidate = true } = {}) => {
     const activeSessionId = Number(selectedSession?.id);
     if (!Number.isInteger(activeSessionId) || activeSessionId <= 0) return;
 
@@ -469,10 +474,10 @@ export default function ActivityPage() {
 
     const status = normalizeStatusCode(descriptor?.status);
     if (status === SESSION_STATUS.inProgress) {
-      loadCurrentPhaseState({ sessionId: activeSessionId, invalidate: true }).catch(() => {});
+      loadCurrentPhaseState({ sessionId: activeSessionId, invalidate }).catch(() => {});
     }
     if (status >= SESSION_STATUS.inProgress) {
-      await loadFullState({ sessionId: activeSessionId, userId: session.uid, invalidate: true });
+      await loadFullState({ sessionId: activeSessionId, userId: session.uid, invalidate });
     }
   }, [loadCurrentPhaseState, loadFullState, selectedSession, session.uid]);
 
@@ -497,7 +502,7 @@ export default function ActivityPage() {
     return Number.isInteger(phaseId) && phaseId > 0 && phaseId !== Number(currentPhaseIdRef.current);
   }, [selectedSession, session.uid]);
 
-  const { realtimeIssue, connectionStatus, refreshNow } = useActivityRealtimeSync({
+  const { realtimeIssue, connectionStatus, updateNow } = useActivityRealtimeSync({
     session,
     selectedSession,
     currentPhaseIdRef,
@@ -519,19 +524,30 @@ export default function ActivityPage() {
     probeActivity
   });
 
-  // The refresh action, for views where a browser reload is not at hand,
-  // such as an LMS iframe (#626).
-  const handleRefreshActivity = useCallback(async () => {
-    setActivityRefresh({ running: true, failed: false });
-    const succeeded = await refreshNow();
-    if (succeeded) externalResultsLoader.reconnected();
-    setActivityRefresh({ running: false, failed: !succeeded });
-  }, [externalResultsLoader, refreshNow]);
+  // The "Update activity" action, for views where a browser reload is not
+  // at hand, such as an LMS iframe (#626). The button stays disabled while
+  // the update runs and while further updates are held, saying the activity
+  // is up to date, so repeated clicks cost nothing and the student sees that
+  // the update worked.
+  const handleUpdateActivity = useCallback(async () => {
+    window.clearTimeout(activityUpdateTimerRef.current);
+    setActivityUpdate('running');
+    const { ok, held, heldUntil } = await updateNow();
+    if (ok && !held) externalResultsLoader.reconnected();
+    setActivityUpdate(ok ? 'done' : 'failed');
+    activityUpdateTimerRef.current = window.setTimeout(
+      () => setActivityUpdate('idle'),
+      Math.max(0, heldUntil - Date.now())
+    );
+  }, [externalResultsLoader, updateNow]);
 
-  // Another activity starts without the last one's refresh outcome.
+  // Another activity starts without the last one's update outcome.
   useEffect(() => {
-    setActivityRefresh({ running: false, failed: false });
+    window.clearTimeout(activityUpdateTimerRef.current);
+    setActivityUpdate('idle');
   }, [selectedSessionId]);
+
+  useEffect(() => () => window.clearTimeout(activityUpdateTimerRef.current), []);
 
   const phaseTabs = useMemo(() => {
     const phases = Array.isArray(activityState?.phases) ? activityState.phases : [];
@@ -715,16 +731,21 @@ export default function ActivityPage() {
               <div className="d-flex flex-wrap gap-2">
                 <button
                   type="button"
-                  className="btn btn-outline-primary btn-sm"
-                  onClick={handleRefreshActivity}
-                  disabled={activityRefresh.running}
+                  className={`btn btn-sm ${activityUpdate === 'done' ? 'btn-outline-success' : 'btn-outline-primary'}`}
+                  onClick={handleUpdateActivity}
+                  disabled={activityUpdate !== 'idle'}
                 >
-                  <span className="d-inline-flex align-items-center gap-2">
+                  <span className="d-inline-flex align-items-center gap-2" aria-live="polite">
                     <i
-                      className={`fa-solid fa-rotate${activityRefresh.running ? ' fa-spin' : ''}`}
+                      className={`fa-solid ${activityUpdate === 'done' ? 'fa-check' : 'fa-rotate'}${activityUpdate === 'running' ? ' fa-spin' : ''}`}
                       aria-hidden="true"
                     />
-                    <span>{t(activityRefresh.running ? 'sessionDetail.refreshingActivity' : 'sessionDetail.refreshActivity')}</span>
+                    <span>
+                      {t({
+                        running: 'sessionDetail.refreshingActivity',
+                        done: 'sessionDetail.activityUpToDate'
+                      }[activityUpdate] ?? 'sessionDetail.refreshActivity')}
+                    </span>
                   </span>
                 </button>
                 <Link to="/" className="btn btn-outline-secondary btn-sm">
@@ -744,7 +765,7 @@ export default function ActivityPage() {
                 </div>
               ) : null}
 
-              {activityRefresh.failed ? (
+              {activityUpdate === 'failed' && !activityStateError ? (
                 <div className="alert alert-warning py-2 mb-3" role="alert">
                   {t('sessionDetail.refreshActivityFailed')}
                 </div>
@@ -760,7 +781,9 @@ export default function ActivityPage() {
 
               {shouldShowWaitingScreen ? <WaitingStatePanel t={t} /> : null}
 
-              {loadingActivityState ? <p className="text-muted mt-3 mb-0">{t('sessionDetail.loadingActivityState')}</p> : null}
+              {/* Only the first load says so: a reload keeps the activity in
+                  place instead of pushing it down (#626). */}
+              {loadingActivityState && !activityState ? <p className="text-muted mt-3 mb-0">{t('sessionDetail.loadingActivityState')}</p> : null}
 
               {activityStateError ? (
                 <div className="alert alert-warning mt-3 mb-0" role="alert">

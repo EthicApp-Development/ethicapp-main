@@ -275,3 +275,114 @@ test('dispose stops every timer and ignores later events', async () => {
   assert.equal(calls.refresh, 0);
   assert.deepEqual(clock.pendingDelays(), []);
 });
+
+// ─── The "Update activity" action ──────────────────────────────────────────
+
+function setupUpdates({ changed = false, probeFails = false, refreshFails = false } = {}) {
+  const clock = createClock();
+  const calls = { probe: 0, requests: [] };
+  const fallback = createRealtimeFallback({
+    refresh: async (request) => {
+      calls.requests.push(request);
+      if (refreshFails) throw new Error('503');
+    },
+    probe: async () => {
+      calls.probe += 1;
+      if (probeFails) throw new Error('offline');
+      return changed;
+    },
+    timers: clock.timers,
+    now: clock.now,
+    random: () => 0.5,
+    options: { ...OPTIONS, cooldownMs: 10000, failureCooldownMs: 3000 }
+  });
+  return { clock, calls, fallback };
+}
+
+test('an update with no change reloads without flushing the caches', async () => {
+  const { calls, fallback } = setupUpdates({ changed: false });
+
+  const result = await fallback.updateNow();
+
+  assert.deepEqual(result, { ok: true, changed: false, heldUntil: 10000 });
+  assert.equal(calls.probe, 1);
+  assert.deepEqual(calls.requests, [{ invalidate: false }]);
+});
+
+test('an update after a change, or with a failed probe, flushes the caches', async () => {
+  const changed = setupUpdates({ changed: true });
+  assert.equal((await changed.fallback.updateNow()).changed, true);
+  assert.deepEqual(changed.calls.requests, [{ invalidate: true }]);
+
+  const unknown = setupUpdates({ probeFails: true });
+  assert.equal((await unknown.fallback.updateNow()).ok, true);
+  assert.deepEqual(unknown.calls.requests, [{ invalidate: true }]);
+});
+
+test('clicks while an update is held cost nothing; after the hold one more runs', async () => {
+  const { clock, calls, fallback } = setupUpdates();
+  await fallback.updateNow();
+
+  for (let i = 0; i < 20; i += 1) {
+    await clock.advance(400);
+    const held = await fallback.updateNow();
+    if (clock.now() < 10000) {
+      assert.equal(held.held, true);
+      assert.equal(held.heldUntil, 10000);
+    }
+  }
+  assert.equal(calls.probe, 1);
+  assert.equal(calls.requests.length, 1);
+
+  await clock.advance(2000);
+  const again = await fallback.updateNow();
+  assert.equal(again.held, undefined);
+  assert.equal(calls.requests.length, 2);
+});
+
+test('clicks during an update share it', async () => {
+  const { calls, fallback } = setupUpdates();
+
+  const results = await Promise.all([fallback.updateNow(), fallback.updateNow(), fallback.updateNow()]);
+
+  assert.equal(calls.probe, 1);
+  assert.equal(calls.requests.length, 1);
+  assert.deepEqual(results[1], results[0]);
+});
+
+test('a failed update holds further updates for a shorter time', async () => {
+  const { clock, calls, fallback } = setupUpdates({ refreshFails: true });
+
+  assert.deepEqual(await fallback.updateNow(), { ok: false, changed: false, heldUntil: 3000 });
+  await clock.advance(2999);
+  assert.equal((await fallback.updateNow()).held, true);
+  await clock.advance(1);
+  await fallback.updateNow();
+  assert.equal(calls.requests.length, 2);
+});
+
+test('a refresh queued during a non-flushing one flushes if any request asked to', async () => {
+  const runs = [];
+  const requests = [];
+  const fallback = createRealtimeFallback({
+    refresh: async (request) => {
+      requests.push(request);
+      const run = deferred();
+      runs.push(run);
+      await run.promise;
+    },
+    probe: async () => false,
+    options: OPTIONS
+  });
+
+  const update = fallback.updateNow();
+  await flush();
+  fallback.refreshNow();
+  fallback.refreshNow();
+  runs[0].resolve();
+  await flush();
+  runs[1].resolve();
+  await update;
+
+  assert.deepEqual(requests, [{ invalidate: false }, { invalidate: true }]);
+});
