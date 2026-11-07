@@ -19,8 +19,9 @@ docker inspect --format '{{ index .Config.Labels "org.opencontainers.image.versi
 docker inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' <container>
 ```
 
-Images published before this file existed carry only the revision label. The
-image tag is then the release.
+Images published before this file existed have no version label of their
+own; the migrations images show the version of their Flyway base image
+(11.20.3). For those images, the image tag is the release.
 
 Versions are dates: `vYYYY.MM.DD`, with `.1`, `.2` for later releases on the
 same day.
@@ -41,6 +42,39 @@ Entries for May and June 2026 are brief. EthicApp 1.0 and 2.0 (2023) are older
 than this file; see their GitHub Releases.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+
+## [v2026.11.07] - 2026-11-07
+
+Results for students as versioned, localized documents, a student activity view that stays current when its socket fails, and Polyadic guide names in the student chat (epics #1123, #1124, #1025).
+
+### Added
+
+- The student's activity state keeps the external services' results, and results shown to students follow the `student-result/v1` contract. EthicApp keeps a verbatim copy of the schema and examples in `canonical-schemas/ai-additions/`, validates each document against it, and shows a document only when the service declared that schema for the scope (#1123, #1124).
+- The student chat names each Polyadic message's author with the guide's name in that room: the teacher's nickname, or "agente" or "agent" by the room's language (#1026, epic #1025).
+- When the student's socket fails, the activity view polls for changes (after 15 s and 30 s, then every 60 s), shows a notice, and offers an "Actualizar actividad" button that holds off repeated clicks; after a reconnect it rejoins the activity's rooms (#626, #1108).
+
+### Changed
+
+- Releases have a `CHANGELOG.md` and a GitHub Release, images carry `org.opencontainers.image.version`, and `scripts/ghcr-build-push.sh` builds a release tag only from a clean checkout of that tag (#110, #111).
+
+### Fixed
+
+- Results stored between the student's first load and the socket's first connection appear once the socket has joined the student's room (#1143).
+- Every case copy path queues the copy's render by one rule and copies its files, authors, tags, videos and documents the same way (#1088, #1089).
+- Reports keep the Polyadic agent names of a forgotten student's replies (#1155).
+- Under `vite` and `vite preview`, the auth, management console and student apps load the logo, favicons, manifest and font from `nginx/static`, and NGINX serves the logos under the `/auth/` and `/mng/` prefixes (#999).
+
+### Security
+
+- The student's `full_state` no longer returns other groups' chat messages (#1122).
+- The student app's socket handlers log ids only (#1139).
+
+### Deployment
+
+- Migrations: V44 (`V44__keep_agent_names_in_redacted_payloads.sql`): the redaction of a forgotten student's payloads keeps the string values of `agente` and `agentName`. Run it with this release's `management-console`, which applies the same rule.
+- Environment contract: unchanged.
+- Deploy after ethicapp-ai-additions v2026.11.07-ai-additions: the student documents need the Argumentation Tutor with ethicapp-ai-additions#235, and the guide names need Polyadic Agents with ethicapp-ai-additions#249. Rooms open during the deployment keep the "@agente" nickname until they close.
+- The application Redis keys `chatMessages:*` are no longer read and expire within 300 s (#1122).
 
 ## [v2026.11.05] - 2026-11-05
 
@@ -770,6 +804,7 @@ Earliest published image set of ethicapp-main in the registry, built from 32b294
 - A GitHub workflow publishes the service images to GHCR, and a canonical environment contract (`config/env.contract.yml`) describes the deployment variables.
 - Production Compose runs separate Redis instances for sessions and for cache, configured with `REDIS_SESSION_*` and `REDIS_CACHE_*` and falling back to `REDIS_*`.
 
+[v2026.11.07]: https://github.com/EthicApp-Development/ethicapp-main/releases/tag/v2026.11.07
 [v2026.11.05]: https://github.com/EthicApp-Development/ethicapp-main/releases/tag/v2026.11.05
 [v2026.11.04.1]: https://github.com/EthicApp-Development/ethicapp-main/releases/tag/v2026.11.04.1
 [v2026.11.04]: https://github.com/EthicApp-Development/ethicapp-main/releases/tag/v2026.11.04
