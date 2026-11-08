@@ -5,8 +5,10 @@ import {
   criterionMeter,
   normalizeStudentResultDocument,
   normalizeStudentResultSection,
+  resultLabelLocale,
   studentResultStatusKey
 } from '../student-result/studentResultDocument.js';
+import { createTranslator } from '../../../../i18n/translator.js';
 import { EXAMPLE_NAMES, studentResultExample } from './fixtures.mjs';
 
 // Plain text: markup, tags, entities and indentation stay as they are.
@@ -216,4 +218,47 @@ test('criterionMeter needs a score inside its range', () => {
   assert.equal(criterionMeter({ score: 1, minScore: 3, maxScore: 3 }), null);
   assert.equal(criterionMeter({ score: '2', maxScore: 3 }), null);
   assert.equal(criterionMeter({ score: 2, minScore: null, maxScore: 3 }), null);
+});
+
+// #1169: the renderer's labels follow the result's language, whatever the app's.
+test('the labels of a result are in the document\'s language', () => {
+  const spanish = normalizeStudentResultDocument({ ...BASE, locale: 'es-CL' });
+  const english = normalizeStudentResultDocument({ ...BASE, locale: 'en-US' });
+
+  assert.equal(resultLabelLocale(spanish, 'en_US'), 'es_CL');
+  assert.equal(resultLabelLocale(english, 'es_CL'), 'en_US');
+  assert.equal(resultLabelLocale(spanish, 'es_CL'), 'es_CL');
+
+  const toggle = 'sessionDetail.studentResultOverviewToggle';
+  assert.equal(createTranslator(resultLabelLocale(spanish, 'en_US'))(toggle), '¿Cómo se evaluó tu trabajo?');
+  assert.equal(createTranslator(resultLabelLocale(english, 'es_CL'))(toggle), 'How was your work evaluated?');
+});
+
+test('the labels of a result without a language are in the app\'s', () => {
+  const unlabelled = normalizeStudentResultDocument({ ...BASE, locale: 'fr-FR' });
+
+  assert.equal(unlabelled.lang, null);
+  assert.equal(resultLabelLocale(unlabelled, 'es_CL'), 'es_CL');
+  assert.equal(resultLabelLocale(unlabelled, 'en_US'), 'en_US');
+});
+
+test('every label key of the renderer has a text in both app locales', () => {
+  const keys = [
+    'sessionDetail.studentResultOverviewToggle',
+    'sessionDetail.studentResultCriterionHelp',
+    'sessionDetail.studentResultBefore',
+    'sessionDetail.studentResultAfter',
+    studentResultStatusKey('partial'),
+    studentResultStatusKey('unavailable'),
+    comparisonTrendKey('improved'),
+    comparisonTrendKey('unchanged'),
+    comparisonTrendKey('declined')
+  ];
+
+  for (const locale of ['es_CL', 'en_US']) {
+    const t = createTranslator(locale);
+    for (const key of keys) {
+      assert.notEqual(t(key), key, `${locale} ${key}`);
+    }
+  }
 });

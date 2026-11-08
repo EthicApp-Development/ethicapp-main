@@ -1032,8 +1032,11 @@ The service writes every text in the activity's language: EthicApp sends the
 activity's locale with each request, and `locale` records the language of the
 answer (`es-CL` for EthicApp's `es_CL`, `en-US` for `en_US`). Renderers mark
 the document with that language (the HTML `lang` attribute) and write their
-own interface text, such as the label of the control that opens a
-description, in the student app's language.
+own interface text inside the document, such as the label of the control
+that opens a description, in that language too, so the student reads one
+result in one language (#1169). A document without a supported `locale` gets
+that text in the student app's language. Text around the document, such as
+the result panel's controls, stays in the student app's language.
 
 ### Strict objects and the extension point
 
@@ -1210,8 +1213,9 @@ To add a renderer for a new document schema, such as `<name>/v1`:
    next to it. The renderer treats every text as plain text
    except the fields its schema marks as Markdown, which go through the
    restricted `markdown-it` setup; it sets `lang` from the document's
-   `locale`, writes its interface text through the student app's locales, and
-   inserts no HTML from the document.
+   `locale`, writes its interface text through the student app's locales in
+   the document's language (`resultLabelLocale` in `studentResultDocument.js`),
+   and inserts no HTML from the document.
 5. Cover the renderer with node tests that render the copied examples,
    including their Markdown and their unknown parts, and add screenshots at
    360 px and 1366 px in both locales to the pull request.

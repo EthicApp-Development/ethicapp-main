@@ -21,6 +21,12 @@ const STATUS_LABEL_KEYS = {
   unavailable: 'sessionDetail.studentResultStatusUnavailable'
 };
 
+// The app locale of each document locale.
+const APP_LOCALES = {
+  'es-CL': 'es_CL',
+  'en-US': 'en_US'
+};
+
 const TREND_LABEL_KEYS = {
   improved: 'sessionDetail.studentResultTrendImproved',
   unchanged: 'sessionDetail.studentResultTrendUnchanged',
@@ -139,6 +145,18 @@ export function normalizeStudentResultSection(section) {
 
   const fields = SECTION_NORMALIZERS[section.kind](section);
   return fields ? { kind: section.kind, title: textOrNull(section.title), ...fields } : null;
+}
+
+/**
+ * The app locale of the renderer's own labels for a document (#1169): the
+ * document's language, so the student reads one result in one language, or
+ * `appLocale` when the document has none.
+ * @param {{ lang: string|null }|null} resultDocument from normalizeStudentResultDocument
+ * @param {string} appLocale the student app's locale (es_CL, en_US)
+ * @returns {string}
+ */
+export function resultLabelLocale(resultDocument, appLocale) {
+  return APP_LOCALES[resultDocument?.lang] ?? appLocale;
 }
 
 /**

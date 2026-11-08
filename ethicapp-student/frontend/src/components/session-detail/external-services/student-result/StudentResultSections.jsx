@@ -7,8 +7,8 @@ import { parseStudentResultMarkdown } from './studentResultMarkdown.js';
 // The parts of a student-result/v1 document (#1132). Texts from the document
 // are rendered as text, except the overview and criterion descriptions, which
 // use the contract's Markdown subset. Interface text, such as hints and trend
-// words, is in the app's language: `uiLang` marks it, since the document's
-// container carries the document's language.
+// words, is in the document's language when it has one (#1169), else in the
+// app's: `labelLang` marks it and `t` translates into it.
 
 // A text in the Markdown subset, built as React elements from its tree.
 export function StudentResultMarkdown({ text, id, hidden, className = '' }) {
@@ -64,7 +64,7 @@ export function CriterionSummary({ item }) {
 // A criterion with a description is a button that opens the description
 // right below it, and closes it again or with Escape. One without a
 // description is plain content.
-export function Criterion({ item, domId, expanded, onToggle, onClose, uiLang, t }) {
+export function Criterion({ item, domId, expanded, onToggle, onClose, labelLang, t }) {
   if (!item.description) {
     return (
       <li className="student-result__criterion">
@@ -92,7 +92,7 @@ export function Criterion({ item, domId, expanded, onToggle, onClose, uiLang, t 
       >
         <CriterionSummary item={item} />
         <i className="fa-regular fa-circle-question student-result__help-icon" aria-hidden="true" />
-        <span className="visually-hidden" lang={uiLang}>
+        <span className="visually-hidden" lang={labelLang}>
           {` ${t('sessionDetail.studentResultCriterionHelp')}`}
         </span>
       </button>
@@ -107,7 +107,7 @@ export function Criterion({ item, domId, expanded, onToggle, onClose, uiLang, t 
 }
 
 export function CriteriaSection({
-  section, sectionKey, domId, openKeys, onToggle, onClose, uiLang, t
+  section, sectionKey, domId, openKeys, onToggle, onClose, labelLang, t
 }) {
   return (
     <section className="student-result__section">
@@ -123,7 +123,7 @@ export function CriteriaSection({
               expanded={openKeys.has(key)}
               onToggle={() => onToggle(key)}
               onClose={() => onClose(key)}
-              uiLang={uiLang}
+              labelLang={labelLang}
               t={t}
             />
           );
@@ -155,7 +155,7 @@ export function TextSection({ section }) {
   );
 }
 
-export function ComparisonSection({ section, uiLang, t }) {
+export function ComparisonSection({ section, labelLang, t }) {
   return (
     <section className="student-result__section">
       <SectionTitle title={section.title} />
@@ -167,7 +167,7 @@ export function ComparisonSection({ section, uiLang, t }) {
               <span className="student-result__change-label">{item.label}</span>
               <span className="student-result__change-values">
                 <span className="student-result__plain">
-                  <span className="visually-hidden" lang={uiLang}>
+                  <span className="visually-hidden" lang={labelLang}>
                     {`${t('sessionDetail.studentResultBefore')}: `}
                   </span>
                   {item.before}
@@ -177,7 +177,7 @@ export function ComparisonSection({ section, uiLang, t }) {
                   aria-hidden="true"
                 />
                 <span className="student-result__plain student-result__change-after">
-                  <span className="visually-hidden" lang={uiLang}>
+                  <span className="visually-hidden" lang={labelLang}>
                     {`${t('sessionDetail.studentResultAfter')}: `}
                   </span>
                   {item.after}
@@ -186,7 +186,7 @@ export function ComparisonSection({ section, uiLang, t }) {
               {trendKey ? (
                 <span
                   className={`student-result__trend student-result__trend--${item.trend}`}
-                  lang={uiLang}
+                  lang={labelLang}
                 >
                   {t(trendKey)}
                 </span>

@@ -1,6 +1,7 @@
-import { createElement, useCallback, useId, useState } from 'react';
+import { createElement, useCallback, useId, useMemo, useState } from 'react';
+import { createTranslator } from '../../../../i18n/translator.js';
 import { closeDisclosure, toggleDisclosure } from './disclosure.js';
-import { studentResultStatusKey } from './studentResultDocument.js';
+import { resultLabelLocale, studentResultStatusKey } from './studentResultDocument.js';
 import {
   handleDisclosureKeyDown,
   SECTION_COMPONENTS,
@@ -21,15 +22,19 @@ function languageTag(locale) {
  * the student opens on demand, and the known sections in order.
  *
  * `resultDocument` comes from normalizeStudentResultDocument. The body carries the
- * document's language; the app's own words carry the app's (`locale`).
+ * document's language, and so do the renderer's own labels (#1169), so a
+ * result reads in one language whatever the app's; a document without a
+ * language gets them in the app's (`locale`).
  */
-export default function StudentResultDocument({ resultDocument, locale, t }) {
+export default function StudentResultDocument({ resultDocument, locale }) {
   const domId = useId();
   const [openKeys, setOpenKeys] = useState(() => new Set());
   const toggle = useCallback((key) => setOpenKeys((current) => toggleDisclosure(current, key)), []);
   const close = useCallback((key) => setOpenKeys((current) => closeDisclosure(current, key)), []);
 
-  const uiLang = languageTag(locale);
+  const labelLocale = resultLabelLocale(resultDocument, locale);
+  const labelLang = languageTag(labelLocale);
+  const t = useMemo(() => createTranslator(labelLocale), [labelLocale]);
   const statusKey = studentResultStatusKey(resultDocument.status);
   const overviewOpen = openKeys.has(OVERVIEW_KEY);
   const overviewId = `${domId}-overview`;
@@ -44,7 +49,7 @@ export default function StudentResultDocument({ resultDocument, locale, t }) {
       {statusKey ? (
         <p
           className={`student-result__status student-result__status--${resultDocument.status}`}
-          lang={uiLang}
+          lang={labelLang}
         >
           <i className="fa-solid fa-circle-exclamation" aria-hidden="true" />
           <span>{t(statusKey)}</span>
@@ -68,7 +73,7 @@ export default function StudentResultDocument({ resultDocument, locale, t }) {
             onClick={() => toggle(OVERVIEW_KEY)}
           >
             <i className="fa-solid fa-circle-info student-result__help-icon" aria-hidden="true" />
-            <span lang={uiLang}>{t('sessionDetail.studentResultOverviewToggle')}</span>
+            <span lang={labelLang}>{t('sessionDetail.studentResultOverviewToggle')}</span>
             <i
               className={`fa-solid ${overviewChevron} student-result__overview-chevron`}
               aria-hidden="true"
@@ -93,7 +98,7 @@ export default function StudentResultDocument({ resultDocument, locale, t }) {
           openKeys,
           onToggle: toggle,
           onClose: close,
-          uiLang,
+          labelLang,
           t
         });
       })}
