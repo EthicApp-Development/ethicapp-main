@@ -45,7 +45,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [v2026.11.08] - 2026-11-08
 
-Accounts created by administrators from the management console, and student result labels in the result's language (#1170, #1169).
+Accounts created by administrators from the management console, student result labels in the result's language, and the group chat readable after its phase (#1170, #1169, #1168).
 
 Partial release: only the `auth-backend`, `ethicapp-student`, `management-console` and `nginx` images.
 
@@ -57,6 +57,10 @@ Partial release: only the `auth-backend`, `ethicapp-student`, `management-consol
 ### Changed
 
 - The student result renderer writes its own labels inside a `student-result/v1` document in the document's language, so a Spanish result reads in Spanish with the app in English. Text around the document stays in the app's language (#1169).
+
+### Fixed
+
+- Students reopen, read-only, the group chat of earlier phases and of a finished activity. The student app now resolves the student's group in every phase with chat; it used to resolve it only for the current phase, which a finished activity lacks. Only the current phase joins the group's socket room; sending to a past phase or a finished activity still answers 403 (#1168).
 
 ### Removed
 
@@ -70,7 +74,7 @@ Partial release: only the `auth-backend`, `ethicapp-student`, `management-consol
 
 - Migrations: none.
 - Environment contract: unchanged. The welcome email uses the existing `SMTP_*` and `AUTH_PUBLIC_URL`.
-- No AI Additions release: ethicapp-ai-additions#255 changes only the contract's README for #1169.
+- No AI Additions release. Since `v2026.11.07-ai-additions` it changed only documentation (ethicapp-ai-additions#255 for #1169, ethicapp-ai-additions#258) and the development stack's Case Analyst prototype frontend (ethicapp-ai-additions#256), which the production Nginx template does not route.
 
 ## [v2026.11.07] - 2026-11-07
 
