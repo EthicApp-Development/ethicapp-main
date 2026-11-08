@@ -14,6 +14,7 @@ import runtimeConfigRoutes from './routes/runtime-config.routes.js';
 import profileRoutes from './routes/profile.routes.js';
 import viewRoutes from './routes/view.routes.js';
 import usersRoutes from './routes/users.routes.js';
+import userAccountRoutes from './routes/user-account.routes.js';
 import userForgettingRoutes from './routes/user-forgetting.routes.js';
 import userPasswordRoutes from './routes/user-password.routes.js';
 
@@ -51,6 +52,7 @@ app.use(profileRoutes);
 app.use(usersRoutes);
 app.use(userForgettingRoutes);
 app.use(userPasswordRoutes);
+app.use(userAccountRoutes);
 app.use(aiServicesRoutes);
 app.use(healthRoutes);
 app.use(viewRoutes);

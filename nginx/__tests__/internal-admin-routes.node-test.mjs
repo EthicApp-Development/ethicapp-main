@@ -6,8 +6,8 @@
 // otherwise the longest prefix, which stops the search when it is `^~`;
 // otherwise the first matching regex in file order; otherwise that longest
 // prefix. Prefix and exact matches are case-sensitive; `~*` regexes are not.
-// auth-backend's internal admin routes under /api/auth/admin/users/ (#889)
-// get the same check.
+// auth-backend's internal admin routes under /api/auth/admin/users (#889,
+// #1170) get the same check.
 //
 // `npm run test:nginx-edge` checks the same thing against a running NGINX.
 import assert from "node:assert/strict";
@@ -107,11 +107,12 @@ describe("internal /api/admin/ routes at the NGINX edge", () => {
         });
     }
 
-    // auth-backend's internal admin routes (#889), which only
+    // auth-backend's internal admin routes (#889, #1170), which only
     // management-console calls. Express matches routes regardless of letter
-    // case, so every spelling must stop at the edge.
+    // case and of a trailing slash, so every spelling must stop at the edge.
     const AUTH_INTERNAL_ROUTES = [
         "/api/auth/admin/users/12/password",
+        "/api/auth/admin/users",
         "/api/auth/admin/users/",
     ];
     const AUTH_PUBLIC_ROUTES = [
@@ -136,15 +137,15 @@ describe("internal /api/admin/ routes at the NGINX edge", () => {
         describe(`${config}: auth-backend internal routes`, () => {
             const locations = serverLocations(config);
             const blockingPrefix = locations.find(location => location.modifier === "^~"
-                && location.pattern === "/api/auth/admin/users/");
+                && location.pattern === "/api/auth/admin/users");
             const blockingRegex = locations.find(location => location.modifier === "~*"
-                && location.pattern === "^/api/auth/admin/users/");
+                && location.pattern === "^/api/auth/admin/users");
             const authApi = locations.find(location => location.modifier === ""
                 && location.pattern === "/api/auth/");
 
             for (const [label, blocking] of [
-                ["^~ /api/auth/admin/users/", blockingPrefix],
-                ["~* ^/api/auth/admin/users/", blockingRegex],
+                ["^~ /api/auth/admin/users", blockingPrefix],
+                ["~* ^/api/auth/admin/users", blockingRegex],
             ]) {
                 it(`has a blocking \`location ${label}\` that answers 404 without proxying`, () => {
                     assert.ok(blocking, `missing \`location ${label}\``);
@@ -163,7 +164,7 @@ describe("internal /api/admin/ routes at the NGINX edge", () => {
                 it(`blocks ${uri} in any letter case`, () => {
                     assert.equal(selectLocation(locations, uri), blockingPrefix);
                     for (const variant of authCaseVariants(uri)) {
-                        const expected = variant.startsWith("/api/auth/admin/users/")
+                        const expected = variant.startsWith("/api/auth/admin/users")
                             ? blockingPrefix
                             : blockingRegex;
                         assert.equal(selectLocation(locations, variant), expected, variant);

@@ -229,7 +229,8 @@ export default {
         pending: 'Pending confirmation'
       },
       actions: {
-        view: 'View details'
+        view: 'View details',
+        create: 'Create account'
       },
       createdAtUnknown: 'Unknown',
       sort: {
@@ -492,6 +493,54 @@ export default {
       },
       actions: {
         changePassword: 'Change password'
+      }
+    },
+    userCreate: {
+      heading: 'Create account',
+      description: 'Create a student or teacher account. The account starts active, with its email confirmed, so the person can sign in at once with the password you set here.',
+      back: 'Back to users',
+      choose: 'Choose an option',
+      fields: {
+        firstname: 'First name',
+        lastname: 'Last name',
+        email: 'Email',
+        gender: 'Gender',
+        role: 'Role',
+        locale: 'Account language',
+        password: 'Password',
+        passwordConfirmation: 'Confirm the password'
+      },
+      emailHelp: 'Check it carefully: the account starts with this email already confirmed.',
+      localeHelp: 'The language of EthicApp and of the welcome email for this person.',
+      locales: {
+        es_CL: 'Spanish (Chile)',
+        en_US: 'English (United States)'
+      },
+      generatePassword: 'Generate password',
+      copyPassword: 'Copy password',
+      passwordCopied: 'Password copied',
+      showPassword: 'Show passwords',
+      hidePassword: 'Hide passwords',
+      generatedHint: 'Write down or copy this password now: EthicApp does not show it again or send it by email. You can edit it or type your own.',
+      confirmedNote: 'The account is created active, with its email confirmed.',
+      welcomeEmailNote: 'The person receives a welcome email with the sign-in link, the privacy policy and the terms of use. The email does not include the password.',
+      handOverNote: 'Give the password to the person through a secure channel, outside EthicApp. You can change it later from the account page.',
+      privacyNotice: 'I informed this person of the EthicApp privacy policy and terms of use, and I take responsibility for having done so.',
+      submit: 'Create account',
+      confirm: {
+        title: 'Create this account?',
+        body: 'An account will be created for {{name}} ({{email}}) with the role {{role}}.',
+        detailConfirmed: 'The account starts active, with its email confirmed.',
+        detailWelcomeEmail: 'The person receives a welcome email without the password.',
+        detailHandOver: 'Give the password through a secure channel.',
+        confirm: 'Create account'
+      },
+      created: 'The account was created and the welcome email was sent. Give the password to the person through a secure channel.',
+      createdWelcomeEmailFailed: 'The account was created, but sending the welcome email could not be confirmed. Give the password through a secure channel and tell the person the sign-in link, the privacy policy and the terms of use.',
+      error: 'The account could not be created.',
+      errors: {
+        emailAlreadyRegistered: 'An account with this email already exists. Look for it in the users list.',
+        privacyNoticeNotConfirmed: 'Confirm that you informed the person of the privacy policy and the terms of use.'
       }
     },
     userSetPassword: {

@@ -17,6 +17,14 @@ import { csrfTokenHandler } from '../middleware/csrfProtection.js';
 import { initializeSessionPolicy } from '../middleware/sessionPolicy.js';
 import { getPasswordPolicy, isStrongPassword } from '../services/password-policy.js';
 import passwordResetService from '../services/password-reset.service.js';
+import {
+  NEW_ACCOUNT_REFUSALS,
+  hasRequiredNewAccountFields,
+  isUniqueMailViolation,
+  newAccountFieldsRefusal,
+  newAccountFullName,
+  readNewAccountFields
+} from '../services/new-account.js';
 
 const router = express.Router();
 
@@ -54,26 +62,6 @@ function getPostLoginRedirect(role) {
 
 function isUniqueViolation(err) {
   return err && err.code === '23505';
-}
-
-// users_mail_lower_unique (V42) refuses two emails that differ only in letter
-// case. The other names come from schemas before V42.
-const USER_MAIL_UNIQUE_CONSTRAINTS = new Set([
-  'users_mail_lower_unique',
-  'users_mail_unique',
-  'users_mail_key'
-]);
-
-function isUniqueMailViolation(err) {
-  if (!isUniqueViolation(err)) {
-    return false;
-  }
-
-  return (
-    USER_MAIL_UNIQUE_CONSTRAINTS.has(err.constraint) ||
-    (typeof err.detail === 'string' &&
-      (err.detail.includes('(mail)=') || err.detail.includes('(lower(mail))=')))
-  );
 }
 
 function ensureAuthenticatedAdmin(req, res) {
@@ -885,16 +873,12 @@ router.delete('/admin/passkeys/:passkeyId', async (req, res) => {
  */
 router.post('/register', async (req, res) => {
   try {
-    const firstname = (req.body.firstname || '').trim();
-    const lastname = (req.body.lastname || '').trim();
-    const gender = (req.body.gender || '').trim();
-    const email = (req.body.email || '').trim().toLowerCase();
-    const password = req.body.password || '';
-    const passwordConfirmation = req.body.password_confirmation || '';
+    const fields = readNewAccountFields(req.body);
+    const { firstname, lastname, gender, email, password } = fields;
     const recaptchaToken = (req.body.recaptcha_token || '').trim();
     const preferredLocale = normalizePreferredLocale((req.body.preferred_locale || '').trim() || inferPreferredLocaleFromRequest(req));
 
-    if (!firstname || !lastname || !email || !gender || !password || !passwordConfirmation) {
+    if (!hasRequiredNewAccountFields(fields)) {
       return res.status(400).json({
         error: t(req, 'requiredFieldsMissing')
       });
@@ -912,22 +896,10 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    if (password !== passwordConfirmation) {
-
+    const refusal = newAccountFieldsRefusal(fields);
+    if (refusal) {
       return res.status(400).json({
-        error: t(req, 'passwordsDoNotMatch')
-      });
-    }
-
-    if (!isStrongPassword(password)) {
-      return res.status(400).json({
-        error: t(req, 'weakPassword')
-      });
-    }
-
-    if (!['F', 'M', 'O'].includes(gender)) {
-      return res.status(400).json({
-        error: t(req, 'invalidGender')
+        error: t(req, NEW_ACCOUNT_REFUSALS[refusal])
       });
     }
 
@@ -949,7 +921,7 @@ router.post('/register', async (req, res) => {
 
     const passwordBcrypt = await bcrypt.hash(password, SALT_ROUNDS);
 
-    const fullName = [firstname, lastname].filter(Boolean).join(' ').trim();
+    const fullName = newAccountFullName(fields);
 
     await db.query('BEGIN');
 
@@ -1069,153 +1041,6 @@ router.get(['/confirm-account', '/confirm-account/:token'], async (req, res) => 
     return res.redirect('/auth/login?confirmed=error');
   }
 });
-
-/**
- * POST /register-prof
- *
- * Admin-only endpoint to create a professor account.
- *
- * Expects:
- * {
- *   firstname,
- *   lastname,
- *   gender,
- *   email,
- *   password,
- *   password_confirmation
- * }
- *
- * The email identifies the account. The national ID is no longer collected
- * (#1067): an older client that still sends it is not refused, and the value
- * is ignored.
- *
- * Legacy rule preserved:
- * - only role "S" can create professors
- * - created user gets role "P"
- */
-router.post('/register-prof', async (req, res) => {
-  try {
-    if (!req.isAuthenticated || !req.isAuthenticated()) {
-      return res.status(401).json({
-        error: t(req, 'unauthenticated')
-      });
-    }
-
-    if (!req.user || req.user.role !== 'S') {
-      return res.status(403).json({
-        error: t(req, 'unauthorized')
-      });
-    }
-
-    // Compatibilidad legacy:
-    // - name = firstname
-    // - lastname se mantiene
-    const firstname = (req.body.firstname || req.body.name || '').trim();
-    const lastname = (req.body.lastname || '').trim();
-    const gender = (req.body.gender || '').trim();
-    const email = (req.body.email || '').trim().toLowerCase();
-    const password = req.body.password || '';
-    const passwordConfirmation = req.body.password_confirmation || '';
-
-    if (!firstname || !lastname || !email || !gender || !password || !passwordConfirmation) {
-      return respondRegisterProfError(req, res, 400, t(req, 'requiredFieldsMissing'));
-    }
-
-    if (password !== passwordConfirmation) {
-      return respondRegisterProfError(req, res, 400, t(req, 'passwordsDoNotMatch'));
-    }
-
-    if (!isStrongPassword(password)) {
-      return respondRegisterProfError(
-        req,
-        res,
-        400,
-        t(req, 'weakPassword')
-      );
-    }
-
-    if (!['F', 'M', 'O'].includes(gender)) {
-      return respondRegisterProfError(req, res, 400, t(req, 'invalidGender'));
-    }
-
-    const existingUserResult = await db.query(
-      `
-        SELECT id
-        FROM users
-        WHERE lower(mail) = $1
-        LIMIT 1
-      `,
-      [email]
-    );
-
-    if (existingUserResult.rowCount > 0) {
-      return respondRegisterProfError(
-        req,
-        res,
-        409,
-        t(req, 'emailAlreadyRegistered')
-      );
-    }
-
-    const passwordBcrypt = await bcrypt.hash(password, SALT_ROUNDS);
-    const fullName = [firstname, lastname].filter(Boolean).join(' ').trim();
-
-    const insertResult = await db.query(
-      `
-        INSERT INTO users
-          (firstname, lastname, name, sex, mail, role, password_bcrypt, auth_provider, active)
-        VALUES
-          ($1, $2, $3, $4, $5, $6, $7, $8, true)
-        RETURNING id
-      `,
-      [firstname, lastname, fullName, gender, email, 'P', passwordBcrypt, 'local']
-    );
-
-    if (wantsHtmlRedirect(req)) {
-      return res.redirect('/login?rc=1');
-    }
-
-    return res.status(201).json({
-      message: t(req, 'professorCreated'),
-      user_id: insertResult.rows[0].id
-    });
-  } catch (err) {
-    // An account with the same email created after the check above: an
-    // expected outcome, answered as the check and not logged as an error.
-    if (isUniqueMailViolation(err)) {
-      return respondRegisterProfError(
-        req,
-        res,
-        409,
-        t(req, 'emailAlreadyRegistered')
-      );
-    }
-
-    console.error('REGISTER PROF ERROR:', err);
-
-    return respondRegisterProfError(
-      req,
-      res,
-      500,
-      t(req, 'internalServerError')
-    );
-  }
-});
-
-function wantsHtmlRedirect(req) {
-  const accept = req.headers.accept || '';
-  return accept.includes('text/html');
-}
-
-function respondRegisterProfError(req, res, statusCode, message) {
-  if (wantsHtmlRedirect(req)) {
-    return res.status(statusCode).send(message);
-  }
-
-  return res.status(statusCode).json({
-    error: message
-  });
-}
 
 /**
  * GET /session

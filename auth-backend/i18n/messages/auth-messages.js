@@ -17,7 +17,6 @@ const authMessages = {
     accountConfirmed: 'Account confirmed successfully',
     unauthenticated: 'Not authenticated',
     unauthorized: 'Not authorized',
-    professorCreated: 'Professor created successfully',
     sessionClosed: 'Session closed',
     logoutError: 'Error while logging out',
     emailRequired: 'Email is required',
@@ -39,7 +38,11 @@ const authMessages = {
     passwordSetRoleNotAllowed: 'Only student and teacher accounts can have their password set by an administrator',
     passwordSetAccountAnonymized: 'This account was anonymized and cannot sign in',
     passwordSetNotLocalAccount: 'This account does not sign in with a password',
-    passwordSetAccountChanged: 'The account changed since it was loaded. Reload it and try again'
+    passwordSetAccountChanged: 'The account changed since it was loaded. Reload it and try again',
+    invalidEmail: 'Invalid email address',
+    invalidRole: 'Only student and teacher accounts can be created here',
+    accountCreatedByAdmin: 'Account created. The user was sent a welcome email without the password',
+    accountCreatedByAdminWelcomeEmailFailed: 'Account created, but sending the welcome email could not be confirmed'
   },
   es_CL: {
     invalidCredentials: 'Credenciales inválidas',
@@ -57,7 +60,6 @@ const authMessages = {
     accountConfirmed: 'Cuenta confirmada correctamente',
     unauthenticated: 'No autenticado',
     unauthorized: 'No autorizado',
-    professorCreated: 'Profesor creado correctamente',
     sessionClosed: 'Sesión cerrada',
     logoutError: 'Error al cerrar sesión',
     emailRequired: 'El correo es obligatorio',
@@ -79,7 +81,11 @@ const authMessages = {
     passwordSetRoleNotAllowed: 'Solo se puede establecer la contraseña de cuentas de estudiantes y profesores',
     passwordSetAccountAnonymized: 'Esta cuenta fue anonimizada y no puede iniciar sesión',
     passwordSetNotLocalAccount: 'Esta cuenta no inicia sesión con contraseña',
-    passwordSetAccountChanged: 'La cuenta cambió desde que se cargó. Recárgala e intenta nuevamente'
+    passwordSetAccountChanged: 'La cuenta cambió desde que se cargó. Recárgala e intenta nuevamente',
+    invalidEmail: 'Correo electrónico inválido',
+    invalidRole: 'Aquí solo se pueden crear cuentas de estudiantes y profesores',
+    accountCreatedByAdmin: 'Cuenta creada. Se envió al usuario un correo de bienvenida sin la contraseña',
+    accountCreatedByAdminWelcomeEmailFailed: 'Cuenta creada, pero no se pudo confirmar el envío del correo de bienvenida'
   }
 };
 

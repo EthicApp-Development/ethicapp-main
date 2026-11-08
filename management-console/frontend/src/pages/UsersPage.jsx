@@ -134,10 +134,16 @@ function UsersPage() {
   return (
     <Card>
       <Card.Body>
-        <Card.Title className="d-flex align-items-center gap-2">
-          <i className="fa-solid fa-user-gear text-primary" aria-hidden="true" />
-          <span>{t('pages.users.heading')}</span>
-        </Card.Title>
+        <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+          <Card.Title className="d-flex align-items-center gap-2 mb-0">
+            <i className="fa-solid fa-user-gear text-primary" aria-hidden="true" />
+            <span>{t('pages.users.heading')}</span>
+          </Card.Title>
+          <Button as={Link} to="/users/new" variant="primary" data-testid="create-account-link">
+            <i className="fa-solid fa-user-plus me-2" aria-hidden="true" />
+            {t('pages.users.actions.create')}
+          </Button>
+        </div>
         <Card.Text>{t('pages.users.description')}</Card.Text>
 
         <Form onSubmit={handleSubmit} className="mb-3">

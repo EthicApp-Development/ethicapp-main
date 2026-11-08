@@ -164,6 +164,15 @@ run_cases() {
     "${api[@]}" "${valid[@]}" --request POST "$base/api/auth/Admin/Users/12/password"
   check "setting a user's password, upper case" 404 text/html 'X-Request-Id:' \
     "${api[@]}" "${valid[@]}" --request POST "$base/API/AUTH/ADMIN/USERS/12/PASSWORD"
+  # And the route to create an account (#1170), with or without a trailing
+  # slash.
+  check "creating an account is not served" 404 text/html 'X-Request-Id:' \
+    "${api[@]}" "${valid[@]}" --request POST --header 'X-Internal-Service-Token: guess' \
+    "$base/api/auth/admin/users"
+  check "creating an account, trailing slash" 404 text/html 'X-Request-Id:' \
+    "${api[@]}" "${valid[@]}" --request POST "$base/api/auth/admin/users/"
+  check "creating an account, other letter case" 404 text/html 'X-Request-Id:' \
+    "${api[@]}" "${valid[@]}" --request POST "$base/api/auth/Admin/Users"
   check "the password policy is still proxied" 200 application/json '"stub":"auth-backend"' \
     "${api[@]}" "$base/api/auth/password-policy"
   # Impersonation stop stays proxied: ethicapp is down here, hence 502.
