@@ -4,6 +4,7 @@ import AiServicesPage from '../pages/AiServicesPage.jsx';
 import DiagnosticsPage from '../pages/DiagnosticsPage.jsx';
 import InstitutionPage from '../pages/InstitutionPage.jsx';
 import ProfilePage from '../pages/ProfilePage.jsx';
+import UserCreatePage from '../pages/UserCreatePage.jsx';
 import UsersPage from '../pages/UsersPage.jsx';
 import UserShowPage from '../pages/UserShowPage.jsx';
 
@@ -17,6 +18,14 @@ const router = createBrowserRouter([
     element: (
       <ManagementLayout>
         <UsersPage />
+      </ManagementLayout>
+    )
+  },
+  {
+    path: '/users/new',
+    element: (
+      <ManagementLayout>
+        <UserCreatePage />
       </ManagementLayout>
     )
   },

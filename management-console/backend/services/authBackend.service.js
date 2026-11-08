@@ -330,3 +330,63 @@ export async function setUserPasswordWithAuthBackend({
     message: typeof body?.message === 'string' ? body.message : ''
   };
 }
+
+// Creates a student or teacher account (#1170), active and with its email
+// confirmed; auth-backend sends the user a welcome email without the
+// password. `account` holds firstname, lastname, gender, email, role,
+// preferred_locale, password and password_confirmation.
+//
+// Resolves to { ok: true, id, message, welcomeEmailSent } when the account
+// was created, or to { ok: false, status, code, message } when auth-backend
+// refused it or failed: `code` is its machine-readable code
+// (EMAIL_ALREADY_REGISTERED, WEAK_PASSWORD, ...) or null, and `message` its
+// localized text. Rejects only when auth-backend cannot be reached. The
+// password is sent in the body only, and no field of the request is ever
+// placed in an error.
+export async function createUserAccountWithAuthBackend({
+  account,
+  cookie,
+  language,
+  fetchImpl = fetch
+}) {
+  const response = await fetchImpl(buildUrl('/admin/users'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Cookie: cookie || '',
+      'Accept-Language': language || 'en-US',
+      ...internalServiceHeaders()
+    },
+    body: JSON.stringify({
+      firstname: account.firstname,
+      lastname: account.lastname,
+      gender: account.gender,
+      email: account.email,
+      role: account.role,
+      preferred_locale: account.preferred_locale,
+      password: account.password,
+      password_confirmation: account.password_confirmation
+    })
+  });
+
+  const body = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    return {
+      ok: false,
+      status: response.status,
+      code: typeof body?.code === 'string' ? body.code : null,
+      message: typeof body?.error === 'string' ? body.error : ''
+    };
+  }
+
+  const id = Number(body?.id);
+
+  return {
+    ok: Number.isInteger(id) && id > 0,
+    status: response.status,
+    id,
+    message: typeof body?.message === 'string' ? body.message : '',
+    welcomeEmailSent: body?.welcome_email_sent === true
+  };
+}

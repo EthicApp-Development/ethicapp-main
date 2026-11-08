@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, Button, Card, Col, Form, Row, Spinner } from 'react-bootstrap';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 
 import { useI18n } from '../app/providers.jsx';
 import { fetchProfile } from '../api/profileApi.js';
@@ -54,7 +54,10 @@ const UNSAVED_CHANGES_HINT_ID = 'unsaved-changes-hint';
 function UserShowPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { locale, t } = useI18n();
+  // Set by the "Create account" page after it created this account (#1170).
+  const [accountCreated, setAccountCreated] = useState(() => location.state?.accountCreated || null);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -162,6 +165,14 @@ function UserShowPage() {
       isMounted = false;
     };
   }, [applyUser, id]);
+
+  // The creation notice is shown once: going back to this entry or reloading
+  // the page does not show it again.
+  useEffect(() => {
+    if (location.state?.accountCreated) {
+      navigate(`${location.pathname}${location.search}`, { replace: true, state: null });
+    }
+  }, [location.pathname, location.search, location.state, navigate]);
 
   function onFieldChange(fieldName, value) {
     setForm((currentForm) => ({
@@ -366,6 +377,18 @@ function UserShowPage() {
           </Button>
         </div>
 
+        {accountCreated ? (
+          <Alert
+            variant={accountCreated.welcomeEmailSent ? 'success' : 'warning'}
+            dismissible
+            onClose={() => setAccountCreated(null)}
+            data-testid="account-created-notice"
+          >
+            {accountCreated.welcomeEmailSent
+              ? t('pages.userCreate.created')
+              : t('pages.userCreate.createdWelcomeEmailFailed')}
+          </Alert>
+        ) : null}
         {error ? <Alert variant="danger">{error}</Alert> : null}
         {success ? <Alert variant="success">{success}</Alert> : null}
         {resetMessage ? <Alert variant="info">{resetMessage}</Alert> : null}

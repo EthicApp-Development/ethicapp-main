@@ -13,10 +13,11 @@ server-to-server requests should not use browser CSRF tokens. Instead,
 `AUTH_INTERNAL_SERVICE_TOKEN`.
 
 Routes that only `management-console` may call also require the token
-outright, through `hasValidInternalServiceToken()`: setting a user's password
-(`POST /api/auth/admin/users/:id/password`, #889) refuses a request without
+outright, through `hasValidInternalServiceToken()`: creating an account
+(`POST /api/auth/admin/users`, #1170) and setting a user's password
+(`POST /api/auth/admin/users/:id/password`, #889) refuse a request without
 it even when the session has role `S`, so a stolen administrator session
-cannot use it from a browser.
+cannot use them from a browser.
 
 Production deployments must set the same `AUTH_INTERNAL_SERVICE_TOKEN` value in
 both `auth-backend` and `management-console`. The development fallback exists

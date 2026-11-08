@@ -78,18 +78,6 @@ function validRegistrationPayload(overrides = {}) {
   };
 }
 
-function validProfessorPayload(overrides = {}) {
-  return {
-    firstname: 'Pat',
-    lastname: 'Teacher',
-    gender: 'F',
-    email: 'pat@example.com',
-    password: 'StrongPassword123!@',
-    password_confirmation: 'StrongPassword123!@',
-    ...overrides
-  };
-}
-
 function sha256Hex(value) {
   return crypto
     .createHash('sha256')
@@ -420,90 +408,6 @@ describe('Auth Routes', () => {
       assert.strictEqual(mailMock.sendAccountConfirmationEmail.mock.calls.length, 0);
     });
   }
-
-  test('POST /register-prof - checks the email ignoring letter case', async () => {
-    dbMock.query.mock.mockImplementationOnce(() => Promise.resolve({ rowCount: 1, rows: [{ id: 7 }] }));
-
-    const res = await supertest(app)
-      .post('/register-prof')
-      .set('X-Test-User-Id', '7')
-      .set('X-Test-User-Role', 'S')
-      .send(validProfessorPayload({ email: 'Pat@Example.com' }));
-
-    assert.strictEqual(res.status, 409);
-    assert.strictEqual(res.body.error, 'An account with that email already exists');
-    const [sql, params] = dbMock.query.mock.calls[0].arguments;
-    assert.match(sql, /WHERE lower\(mail\) = \$1/);
-    assert.doesNotMatch(sql, /\brut\b/);
-    assert.deepStrictEqual(params, ['pat@example.com']);
-    assert.strictEqual(dbMock.query.mock.calls.length, 1);
-  });
-
-  test('POST /register-prof - requires the email', async () => {
-    const res = await supertest(app)
-      .post('/register-prof')
-      .set('X-Test-User-Id', '7')
-      .set('X-Test-User-Role', 'S')
-      .send(validProfessorPayload({ email: '  ' }));
-
-    assert.strictEqual(res.status, 400);
-    assert.strictEqual(res.body.error, 'Required fields are missing');
-    assert.strictEqual(dbMock.query.mock.calls.length, 0);
-  });
-
-  test('POST /register-prof - creates the professor without a national ID, ignoring one sent by an older client', async () => {
-    dbMock.query.mock.mockImplementation((queryStr) => {
-      if (queryStr.includes('INSERT INTO users')) {
-        return Promise.resolve({ rowCount: 1, rows: [{ id: 51 }] });
-      }
-      return Promise.resolve({ rowCount: 0, rows: [] });
-    });
-
-    const res = await supertest(app)
-      .post('/register-prof')
-      .set('X-Test-User-Id', '7')
-      .set('X-Test-User-Role', 'S')
-      .send(validProfessorPayload({ dni: '12345678-9' }));
-
-    assert.strictEqual(res.status, 201);
-    assert.strictEqual(res.body.user_id, 51);
-
-    const insertCall = dbMock.query.mock.calls.find((call) => call.arguments[0].includes('INSERT INTO users'));
-    assert.doesNotMatch(insertCall.arguments[0], /\brut\b/);
-    assert.ok(!insertCall.arguments[1].includes('12345678-9'));
-    assert.deepStrictEqual(insertCall.arguments[1].slice(0, 6), [
-      'Pat',
-      'Teacher',
-      'Pat Teacher',
-      'F',
-      'pat@example.com',
-      'P'
-    ]);
-  });
-
-  test('POST /register-prof - a unique violation on the email index answers as the duplicate check', async () => {
-    const consoleError = mock.method(console, 'error', () => {});
-    dbMock.query.mock.mockImplementation((queryStr) => {
-      if (queryStr.includes('INSERT INTO users')) {
-        return Promise.reject(Object.assign(new Error('duplicate key value'), {
-          code: '23505',
-          constraint: 'users_mail_lower_unique'
-        }));
-      }
-      return Promise.resolve({ rowCount: 0, rows: [] });
-    });
-
-    const res = await supertest(app)
-      .post('/register-prof')
-      .set('X-Test-User-Id', '7')
-      .set('X-Test-User-Role', 'S')
-      .send(validProfessorPayload());
-
-    consoleError.mock.restore();
-    assert.strictEqual(res.status, 409);
-    assert.strictEqual(res.body.error, 'An account with that email already exists');
-    assert.strictEqual(consoleError.mock.calls.length, 0);
-  });
 
   test('POST /register - an unexpected database error is logged and answered 500', async () => {
     const consoleError = mock.method(console, 'error', () => {});
@@ -1007,12 +911,6 @@ describe('Password policy (#889)', () => {
       name: 'POST /register',
       path: '/register',
       payload: (password) => validRegistrationPayload({ password, password_confirmation: password })
-    },
-    {
-      name: 'POST /register-prof',
-      path: '/register-prof',
-      admin: true,
-      payload: (password) => validProfessorPayload({ password, password_confirmation: password })
     },
     {
       name: 'POST /reset-password',

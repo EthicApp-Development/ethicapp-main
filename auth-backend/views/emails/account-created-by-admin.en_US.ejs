@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en-US">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Your EthicApp account</title>
+</head>
+
+<body style="font-family: Arial, sans-serif; line-height: 1.5; color: #222;">
+  <h2>Your EthicApp account</h2>
+  <p>
+    Hello<% if (firstname) { %> <%= firstname %><% } %>,
+  </p>
+
+  <p>
+    An EthicApp administrator created an account for you with the email <strong><%= email %></strong>.
+    The account is already confirmed, and you can sign in with the password the administrator gave you:
+  </p>
+
+  <p>
+    <a href="<%= loginUrl %>" target="_blank" rel="noopener noreferrer">
+      <%= loginUrl %>
+    </a>
+  </p>
+
+  <p>
+    This email does not include the password. If you did not receive it, or want to change it, use password recovery:
+    <a href="<%= forgotUrl %>" target="_blank" rel="noopener noreferrer"><%= forgotUrl %></a>
+  </p>
+
+  <p>
+    Your use of EthicApp is governed by the
+    <a href="<%= privacyUrl %>" target="_blank" rel="noopener noreferrer">privacy policy</a>
+    and the
+    <a href="<%= termsUrl %>" target="_blank" rel="noopener noreferrer">terms of use</a>.
+    Please read them before you sign in.
+  </p>
+
+  <p>
+    If you did not expect this account, contact the institution that runs EthicApp.
+  </p>
+</body>
+
+</html>

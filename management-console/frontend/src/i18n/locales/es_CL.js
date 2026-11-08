@@ -229,7 +229,8 @@ export default {
         pending: 'Pendiente de confirmación'
       },
       actions: {
-        view: 'Ver detalle'
+        view: 'Ver detalle',
+        create: 'Crear cuenta'
       },
       createdAtUnknown: 'Desconocida',
       sort: {
@@ -492,6 +493,54 @@ export default {
       },
       actions: {
         changePassword: 'Cambiar contraseña'
+      }
+    },
+    userCreate: {
+      heading: 'Crear cuenta',
+      description: 'Crea una cuenta de estudiante o profesor. La cuenta queda activa y con su correo confirmado, así que la persona puede ingresar de inmediato con la contraseña que definas aquí.',
+      back: 'Volver a usuarios',
+      choose: 'Selecciona una opción',
+      fields: {
+        firstname: 'Nombre',
+        lastname: 'Apellido',
+        email: 'Correo electrónico',
+        gender: 'Género',
+        role: 'Rol',
+        locale: 'Idioma de la cuenta',
+        password: 'Contraseña',
+        passwordConfirmation: 'Confirma la contraseña'
+      },
+      emailHelp: 'Revísalo bien: la cuenta parte con este correo ya confirmado.',
+      localeHelp: 'El idioma de EthicApp y del correo de bienvenida para esta persona.',
+      locales: {
+        es_CL: 'Español (Chile)',
+        en_US: 'Inglés (Estados Unidos)'
+      },
+      generatePassword: 'Generar contraseña',
+      copyPassword: 'Copiar contraseña',
+      passwordCopied: 'Contraseña copiada',
+      showPassword: 'Mostrar contraseñas',
+      hidePassword: 'Ocultar contraseñas',
+      generatedHint: 'Anota o copia esta contraseña ahora: EthicApp no la vuelve a mostrar ni la envía por correo. Puedes editarla o escribir otra.',
+      confirmedNote: 'La cuenta se crea activa y con su correo confirmado.',
+      welcomeEmailNote: 'La persona recibe un correo de bienvenida con el enlace de ingreso, la política de privacidad y los términos de uso. El correo no incluye la contraseña.',
+      handOverNote: 'Entrega la contraseña a la persona por un canal seguro, fuera de EthicApp. Puedes cambiarla después desde el detalle de la cuenta.',
+      privacyNotice: 'Informé a esta persona de la política de privacidad y los términos de uso de EthicApp, y asumo la responsabilidad de haberlo hecho.',
+      submit: 'Crear cuenta',
+      confirm: {
+        title: '¿Crear esta cuenta?',
+        body: 'Se creará una cuenta para {{name}} ({{email}}) con el rol {{role}}.',
+        detailConfirmed: 'La cuenta queda activa y con su correo confirmado.',
+        detailWelcomeEmail: 'La persona recibe un correo de bienvenida sin la contraseña.',
+        detailHandOver: 'Entrega la contraseña por un canal seguro.',
+        confirm: 'Crear cuenta'
+      },
+      created: 'Se creó la cuenta y se envió el correo de bienvenida. Entrega la contraseña a la persona por un canal seguro.',
+      createdWelcomeEmailFailed: 'Se creó la cuenta, pero no se pudo confirmar el envío del correo de bienvenida. Entrega la contraseña por un canal seguro e indica a la persona el enlace de ingreso, la política de privacidad y los términos de uso.',
+      error: 'No se pudo crear la cuenta.',
+      errors: {
+        emailAlreadyRegistered: 'Ya existe una cuenta con este correo. Búscala en la lista de usuarios.',
+        privacyNoticeNotConfirmed: 'Confirma que informaste a la persona de la política de privacidad y los términos de uso.'
       }
     },
     userSetPassword: {

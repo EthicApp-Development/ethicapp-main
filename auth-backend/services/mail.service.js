@@ -27,6 +27,11 @@ const accountConfirmationSubjects = {
   en_US: 'Confirm your EthicApp account'
 };
 
+const accountCreatedByAdminSubjects = {
+  es_CL: 'Tu cuenta de EthicApp',
+  en_US: 'Your EthicApp account'
+};
+
 function ensureSmtpConfig() {
   if (!SMTP_HOST || !SMTP_PORT || !SMTP_FROM) {
     throw new Error(
@@ -56,20 +61,32 @@ function resolvePreferredLocale(locale) {
   return SUPPORTED_LOCALES.has(normalizedLocale) ? normalizedLocale : DEFAULT_LOCALE;
 }
 
-function buildResetUrl(rawToken) {
+// A page of the public site, under AUTH_PUBLIC_URL.
+function buildPublicUrl(pathname) {
   const normalizedBaseUrl = AUTH_PUBLIC_URL.endsWith('/')
     ? AUTH_PUBLIC_URL.slice(0, -1)
     : AUTH_PUBLIC_URL;
 
-  return `${normalizedBaseUrl}/reset-password?token=${encodeURIComponent(rawToken)}`;
+  return `${normalizedBaseUrl}${pathname}`;
+}
+
+function buildResetUrl(rawToken) {
+  return buildPublicUrl(`/reset-password?token=${encodeURIComponent(rawToken)}`);
 }
 
 function buildAccountConfirmationUrl(rawToken) {
-  const normalizedBaseUrl = AUTH_PUBLIC_URL.endsWith('/')
-    ? AUTH_PUBLIC_URL.slice(0, -1)
-    : AUTH_PUBLIC_URL;
+  return buildPublicUrl(`/api/auth/confirm-account/${encodeURIComponent(rawToken)}`);
+}
 
-  return `${normalizedBaseUrl}/api/auth/confirm-account/${encodeURIComponent(rawToken)}`;
+// The pages the welcome email of an account created by an administrator
+// links to (#1170).
+function buildAccountCreatedByAdminUrls() {
+  return {
+    loginUrl: buildPublicUrl('/login'),
+    forgotUrl: buildPublicUrl('/forgot'),
+    privacyUrl: buildPublicUrl('/privacy'),
+    termsUrl: buildPublicUrl('/terms')
+  };
 }
 
 function createTransporter() {
@@ -102,6 +119,14 @@ async function renderForgotPasswordHtml({ preferredLocale, templateData }) {
 async function renderAccountConfirmationHtml({ preferredLocale, templateData }) {
   const resolvedLocale = resolvePreferredLocale(preferredLocale);
   const templateFileName = `account-confirmation.${resolvedLocale}.ejs`;
+  const templatePath = path.join(EMAIL_TEMPLATES_PATH, templateFileName);
+
+  return ejs.renderFile(templatePath, templateData);
+}
+
+async function renderAccountCreatedByAdminHtml({ preferredLocale, templateData }) {
+  const resolvedLocale = resolvePreferredLocale(preferredLocale);
+  const templateFileName = `account-created-by-admin.${resolvedLocale}.ejs`;
   const templatePath = path.join(EMAIL_TEMPLATES_PATH, templateFileName);
 
   return ejs.renderFile(templatePath, templateData);
@@ -159,9 +184,41 @@ async function sendAccountConfirmationEmail({ to, rawToken, preferredLocale }) {
   };
 }
 
+// Tells a user that an administrator created their account (#1170), with
+// the sign-in page, password recovery, the privacy policy and the terms of
+// use. The administrator hands the password over separately; the email never
+// carries it.
+async function sendAccountCreatedByAdminEmail({ to, firstname, preferredLocale }) {
+  const resolvedLocale = resolvePreferredLocale(preferredLocale);
+  const urls = buildAccountCreatedByAdminUrls();
+  const html = await renderAccountCreatedByAdminHtml({
+    preferredLocale: resolvedLocale,
+    templateData: {
+      ...urls,
+      firstname: String(firstname || ''),
+      email: String(to || '')
+    }
+  });
+
+  const transporter = createTransporter();
+
+  await transporter.sendMail({
+    from: SMTP_FROM,
+    to,
+    subject: accountCreatedByAdminSubjects[resolvedLocale],
+    html
+  });
+
+  return {
+    ...urls,
+    preferredLocale: resolvedLocale
+  };
+}
+
 const mailService = {
   sendPasswordResetEmail,
   sendAccountConfirmationEmail,
+  sendAccountCreatedByAdminEmail,
   buildResetUrl,
   buildAccountConfirmationUrl,
   normalizePreferredLocale,
@@ -171,6 +228,7 @@ const mailService = {
 export {
   sendPasswordResetEmail,
   sendAccountConfirmationEmail,
+  sendAccountCreatedByAdminEmail,
   buildResetUrl,
   buildAccountConfirmationUrl,
   normalizePreferredLocale,
