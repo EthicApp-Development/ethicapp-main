@@ -43,6 +43,35 @@ than this file; see their GitHub Releases.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v2026.11.08] - 2026-11-08
+
+Accounts created by administrators from the management console, and student result labels in the result's language (#1170, #1169).
+
+Partial release: only the `auth-backend`, `ethicapp-student`, `management-console` and `nginx` images.
+
+### Added
+
+- Administrators create student and teacher accounts from the management console ("Crear cuenta", `/mng/users/new`). The account starts active with its email confirmed. The administrator confirms with the step-up, declares having informed the person of the privacy policy and the terms of use, and can generate the password in the browser. Every attempt is audited as `account.create` (#1170).
+- The new user receives a welcome email in the account's language, with links to sign-in, password recovery, the privacy policy and the terms of use, and without the password. The administrator's answer waits for it at most 10 s; a failed or late email does not undo the account, and the console says so (#1170).
+
+### Changed
+
+- The student result renderer writes its own labels inside a `student-result/v1` document in the document's language, so a Spanish result reads in Spanish with the app in English. Text around the document stays in the app's language (#1169).
+
+### Removed
+
+- `POST /api/auth/register-prof`, which created teachers with an administrator session alone, without step-up or audit, and had no client (#1170).
+
+### Security
+
+- NGINX answers 404 at the edge for `/api/auth/admin/users`, with or without a trailing slash and in any letter case, so the new internal route is never served there; auth-backend also requires the internal service token (#1170).
+
+### Deployment
+
+- Migrations: none.
+- Environment contract: unchanged. The welcome email uses the existing `SMTP_*` and `AUTH_PUBLIC_URL`.
+- No AI Additions release: ethicapp-ai-additions#255 changes only the contract's README for #1169.
+
 ## [v2026.11.07] - 2026-11-07
 
 Results for students as versioned, localized documents, a student activity view that stays current when its socket fails, and Polyadic guide names in the student chat (epics #1123, #1124, #1025).
@@ -805,6 +834,7 @@ Earliest published image set of ethicapp-main in the registry, built from 32b294
 - A GitHub workflow publishes the service images to GHCR, and a canonical environment contract (`config/env.contract.yml`) describes the deployment variables.
 - Production Compose runs separate Redis instances for sessions and for cache, configured with `REDIS_SESSION_*` and `REDIS_CACHE_*` and falling back to `REDIS_*`.
 
+[v2026.11.08]: https://github.com/EthicApp-Development/ethicapp-main/releases/tag/v2026.11.08
 [v2026.11.07]: https://github.com/EthicApp-Development/ethicapp-main/releases/tag/v2026.11.07
 [v2026.11.05]: https://github.com/EthicApp-Development/ethicapp-main/releases/tag/v2026.11.05
 [v2026.11.04.1]: https://github.com/EthicApp-Development/ethicapp-main/releases/tag/v2026.11.04.1
