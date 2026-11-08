@@ -11,6 +11,7 @@ import { CaseVideosProvider } from '../context/CaseVideosContext.jsx';
 import { useStudentActivityState } from '../context/StudentActivityStateContext.jsx';
 import { errorLogDetails } from '../utils/logDetails.js';
 import { useActivityRealtimeSync } from './session-detail/hooks/useActivityRealtimeSync.js';
+import { useChatPhaseGroups } from './session-detail/hooks/useChatPhaseGroups.js';
 import { usePhaseResponseSubmission } from './session-detail/hooks/usePhaseResponseSubmission.js';
 import {
   EXTERNAL_RESPONSE_PROCESSING_TIMEOUT_MS,
@@ -548,6 +549,17 @@ export default function ActivityPage() {
   }, [selectedSessionId]);
 
   useEffect(() => () => window.clearTimeout(activityUpdateTimerRef.current), []);
+
+  // The chat of an earlier phase, or of any phase of a finished activity,
+  // opens read-only once the student's group there is known (#1168).
+  useChatPhaseGroups({
+    session,
+    sessionId: selectedSessionId,
+    phases: activityState?.phases,
+    currentPhaseId: activityState?.descriptor?.currentPhaseId,
+    setGroupIdByPhaseId,
+    setGroupContextByPhaseId
+  });
 
   const phaseTabs = useMemo(() => {
     const phases = Array.isArray(activityState?.phases) ? activityState.phases : [];

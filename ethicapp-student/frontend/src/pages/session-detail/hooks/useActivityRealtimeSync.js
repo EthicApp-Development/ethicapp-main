@@ -3,6 +3,11 @@ import { legacyUserApi, studentApi } from '../../../api/studentApi.js';
 import { createRealtimeConnectionMonitor } from '../../../services/realtimeConnectionMonitor.js';
 import { getStudentSocket } from '../../../services/studentSocket.js';
 import { joinActivityRooms } from '../activitySocketRooms.js';
+import {
+  phaseGroupFromUserGroup,
+  withPhaseGroupContext,
+  withPhaseGroupId
+} from '../phaseChatGroups.js';
 import { createReconnectTracker } from '../externalResultsLoading.js';
 import { REALTIME_STATUS, createRealtimeFallback } from '../realtimeFallback.js';
 import { errorLogDetails, socketEventLogDetails } from '../../../utils/logDetails.js';
@@ -240,53 +245,24 @@ export function useActivityRealtimeSync({
           const { data } = await legacyUserApi.get(`/phases/${phaseId}/user_group/${session.uid}`);
           if (isUnmounted) return;
 
-          const nextGroupId = Number(data?.team_id);
+          const phaseGroup = phaseGroupFromUserGroup(data);
+          const nextGroupId = phaseGroup?.groupId ?? null;
           const previousGroupId = Number(currentGroupIdRef.current);
 
-          if (Number.isInteger(nextGroupId) && nextGroupId > 0) {
-            setGroupIdByPhaseId((prev) => (prev[phaseId] === nextGroupId ? prev : { ...prev, [phaseId]: nextGroupId }));
-            setGroupContextByPhaseId((prev) => {
-              const nextContext = {
-                phaseAnonymous: Boolean(data?.phase_anonymous),
-                participants: Array.isArray(data?.participants) ? data.participants : []
-              };
-
-              const previousContext = prev[phaseId];
-              if (
-                previousContext?.phaseAnonymous === nextContext.phaseAnonymous
-                && JSON.stringify(previousContext?.participants ?? []) === JSON.stringify(nextContext.participants)
-              ) {
-                return prev;
-              }
-
-              return { ...prev, [phaseId]: nextContext };
-            });
-          } else {
-            setGroupIdByPhaseId((prev) => {
-              if (!(phaseId in prev)) return prev;
-              const next = { ...prev };
-              delete next[phaseId];
-              return next;
-            });
-            setGroupContextByPhaseId((prev) => {
-              if (!(phaseId in prev)) return prev;
-              const next = { ...prev };
-              delete next[phaseId];
-              return next;
-            });
-          }
+          setGroupIdByPhaseId((prev) => withPhaseGroupId(prev, phaseId, phaseGroup));
+          setGroupContextByPhaseId((prev) => withPhaseGroupContext(prev, phaseId, phaseGroup));
 
           if (Number.isInteger(previousGroupId) && previousGroupId > 0 && previousGroupId !== nextGroupId) {
             socket.emit('leaveGroup', previousGroupId);
           }
 
-          if (Number.isInteger(nextGroupId) && nextGroupId > 0 && previousGroupId !== nextGroupId) {
+          if (nextGroupId !== null && previousGroupId !== nextGroupId) {
             socket.emit('joinGroup', nextGroupId);
             currentGroupIdRef.current = nextGroupId;
             return;
           }
 
-          if (!Number.isInteger(nextGroupId) || nextGroupId <= 0) {
+          if (nextGroupId === null) {
             currentGroupIdRef.current = null;
           }
         } catch (error) {

@@ -6,7 +6,9 @@
 // full_state must carry no message of the other group, nor its authors' ids,
 // on a first call and on a second one served from the cache. The student's
 // chat reads its own group's messages through
-// GET /groups/:group_id/question/:question_id/chat_messages, checked here too.
+// GET /groups/:group_id/question/:question_id/chat_messages, checked here too,
+// with the read-only chat of an earlier phase and of a finished activity
+// (#1168): the route reads it and refuses a new message.
 //
 // The Redis cache client's get, set and del are replaced by an in-memory map,
 // as in the route's guardrail test, so the suite needs PostgreSQL only.
@@ -360,6 +362,50 @@ for (const designType of Object.keys(designTypes)) {
 
                 const other = await chatMessages(phase, phase.otherGroupId);
                 assert.equal(other.status, 403);
+            }
+        });
+
+        function postMessage(phase, groupId) {
+            return requestRouter(app.groupMessagesRouter, {
+                method:  "POST",
+                path:    `/phases/${phase.phaseId}/question/${phase.questionId}/chat_messages`,
+                body:    { group_id: groupId, content: `Late message ${randomUUID()}` },
+                session: student,
+            });
+        }
+
+        async function assertOwnTranscriptUnchanged(phase, index) {
+            const own = await chatMessages(phase, phase.ownGroupId);
+            assert.equal(own.status, 200);
+            assert.deepEqual(
+                own.body.chat_transcript.map(({ content }) => content),
+                [activity.ownMessages[index]]
+            );
+        }
+
+        // An earlier phase's chat is read-only (#1168): the student app opens
+        // it without the composer, and the route refuses a message to it.
+        it("refuses a message to the chat of an earlier phase", async () => {
+            const [earlier] = activity.phases;
+            const response = await postMessage(earlier, earlier.ownGroupId);
+            assert.equal(response.status, 403);
+            await assertOwnTranscriptUnchanged(earlier, 0);
+        });
+
+        // Runs last: it finishes the activity, which clears its current phase.
+        it("reads every phase's own chat after the activity finishes, and refuses messages", async () => {
+            await query(
+                "UPDATE sessions SET status = 3, current_stage = NULL WHERE id = $1;",
+                [activity.sessionId]
+            );
+
+            for (const [index, phase] of activity.phases.entries()) {
+                const response = await postMessage(phase, phase.ownGroupId);
+                assert.equal(response.status, 403, `phase ${index + 1}`);
+                await assertOwnTranscriptUnchanged(phase, index);
+
+                const other = await chatMessages(phase, phase.otherGroupId);
+                assert.equal(other.status, 403, `phase ${index + 1}`);
             }
         });
     });
