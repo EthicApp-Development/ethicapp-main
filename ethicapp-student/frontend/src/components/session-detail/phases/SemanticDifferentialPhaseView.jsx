@@ -5,44 +5,27 @@ import PhaseInstructions from './PhaseInstructions.jsx';
 import PreviousPhaseResponsesAccordion from './PreviousPhaseResponsesAccordion.jsx';
 import SemanticDifferentialTaskView from './SemanticDifferentialTaskView.jsx';
 import { isPhaseAnonymous } from '../../../utils/phaseAnonymity.js';
+import { draftNoteFor, unsentDrafts } from '../../../utils/phaseDrafts.js';
+import { ANSWER_PROBLEMS, effectiveAnswer, savedAnswersByTaskId } from '../../../utils/semanticDifferentialAnswer.js';
 
-function mapResponsesByTaskId(phase) {
-  const responseList = Array.isArray(phase?.responses) ? phase.responses : [];
-
-  return responseList.reduce((acc, response) => {
-    const taskId = Number(
-      response?.taskId
-      ?? response?.task_id
-      ?? response?.questionId
-      ?? response?.question_id
-      ?? response?.did
-    );
-
-    if (!Number.isInteger(taskId) || taskId <= 0) {
-      return acc;
-    }
-
-    const normalizedValue = Number(
-      response?.selection
-      ?? response?.sel
-      ?? response?.value
-      ?? response?.responseValue
-      ?? response?.response_value
-    );
-
-    const normalizedJustification = response?.justification
-      ?? response?.comment
-      ?? response?.description
-      ?? '';
-
-    acc[taskId] = {
-      ...response,
-      normalizedValue: Number.isInteger(normalizedValue) ? normalizedValue : null,
-      normalizedJustification: typeof normalizedJustification === 'string' ? normalizedJustification : ''
-    };
-    return acc;
-  }, {});
-}
+// The note under a task about its draft (draftNoteFor): by kind, and for
+// a draft that was not sent, by the reason the server would refuse it.
+const DRAFT_NOTE_MESSAGE_KEYS = {
+  sending: { default: 'phaseDrafts.taskSending' },
+  sent: { default: 'phaseDrafts.taskSent' },
+  kept: {
+    default: 'phaseDrafts.taskKept',
+    [ANSWER_PROBLEMS.MISSING_VALUE]: 'phaseDrafts.taskKeptMissingValue',
+    [ANSWER_PROBLEMS.MISSING_JUSTIFICATION]: 'phaseDrafts.taskKeptMissingJustification',
+    [ANSWER_PROBLEMS.JUSTIFICATION_TOO_SHORT]: 'phaseDrafts.taskKeptJustificationTooShort'
+  },
+  open: {
+    default: 'phaseDrafts.taskOpen',
+    [ANSWER_PROBLEMS.MISSING_VALUE]: 'phaseDrafts.taskOpenMissingValue',
+    [ANSWER_PROBLEMS.MISSING_JUSTIFICATION]: 'phaseDrafts.taskOpenMissingJustification',
+    [ANSWER_PROBLEMS.JUSTIFICATION_TOO_SHORT]: 'phaseDrafts.taskOpenJustificationTooShort'
+  }
+};
 
 function resolvePhaseGroupId(phase) {
   const group = phase?.group;
@@ -59,6 +42,7 @@ export default function SemanticDifferentialPhaseView({
   phase,
   draftByTaskId,
   onTaskDraftChange,
+  autoSendOutcomeByTaskId,
   isReadOnly,
   isActivePhase,
   onSubmitPhaseResponse,
@@ -67,8 +51,12 @@ export default function SemanticDifferentialPhaseView({
   userId,
   t
 }) {
-  const responsesByTask = useMemo(() => mapResponsesByTaskId(phase), [phase]);
+  const responsesByTask = useMemo(() => savedAnswersByTaskId(phase), [phase]);
   const safeDraftByTaskId = draftByTaskId ?? {};
+  const unsentByTaskId = useMemo(() => Object.fromEntries(
+    unsentDrafts(phase, draftByTaskId ?? {}).map((draft) => [draft.taskId, draft])
+  ), [draftByTaskId, phase]);
+  const isPhaseOver = isReadOnly || !isActivePhase;
   const [submittingTaskId, setSubmittingTaskId] = useState(null);
   const [feedbackByTaskId, setFeedbackByTaskId] = useState({});
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -166,22 +154,25 @@ export default function SemanticDifferentialPhaseView({
     onTaskDraftChange(taskId, partialUpdate);
   };
 
-  const getTaskValue = (taskId) => {
-    const draftValue = safeDraftByTaskId[taskId]?.value;
-    if (Number.isInteger(draftValue)) {
-      return draftValue;
-    }
+  const getTaskValue = (taskId) => effectiveAnswer(safeDraftByTaskId[taskId], responsesByTask[taskId]).value;
 
-    return Number.isInteger(responsesByTask[taskId]?.normalizedValue) ? responsesByTask[taskId].normalizedValue : null;
-  };
+  const getTaskJustification = (taskId) => (
+    effectiveAnswer(safeDraftByTaskId[taskId], responsesByTask[taskId]).justification
+  );
 
-  const getTaskJustification = (taskId) => {
-    if (typeof safeDraftByTaskId[taskId]?.justification === 'string') {
-      return safeDraftByTaskId[taskId].justification;
-    }
+  // What happened to the task's draft when time ran out (#1118): sent for
+  // the student, kept on the device once the phase is over, or still to be
+  // sent on a phase that takes answers after its time ran out.
+  const getDraftNote = (taskId) => {
+    const note = draftNoteFor({
+      outcome: autoSendOutcomeByTaskId?.[taskId],
+      unsent: unsentByTaskId[taskId],
+      phaseOver: isPhaseOver
+    });
+    if (!note) return null;
 
-    const persistedJustification = responsesByTask[taskId]?.normalizedJustification;
-    return typeof persistedJustification === 'string' ? persistedJustification : '';
+    const keys = DRAFT_NOTE_MESSAGE_KEYS[note.kind];
+    return { kind: note.kind, text: t(keys[note.problem] ?? keys.default) };
   };
 
   const submitTask = async (task) => {
@@ -263,6 +254,7 @@ export default function SemanticDifferentialPhaseView({
             selectedValue={selectedValue}
             justification={justification}
             taskFeedback={taskFeedback}
+            draftNote={getDraftNote(taskId)}
             submitting={submittingTaskId === taskId}
             externalResponseProcessing={Boolean(isExternalResponseProcessing)}
             previousResponsesContent={

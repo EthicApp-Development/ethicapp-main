@@ -5,6 +5,7 @@ import { studentApi, legacyUserApi } from '../api/studentApi.js';
 import { fetchStudentExternalResults } from '../api/studentExternalResults.js';
 import { useI18n } from '../app/providers.jsx';
 import ActivityTabsPanel from '../components/session-detail/ActivityTabsPanel.jsx';
+import DeadlineDraftNotice from '../components/session-detail/DeadlineDraftNotice.jsx';
 import PhaseTimer from '../components/session-detail/PhaseTimer.jsx';
 import SessionMetadata from '../components/session-detail/SessionMetadata.jsx';
 import WaitingStatePanel from '../components/session-detail/WaitingStatePanel.jsx';
@@ -14,6 +15,8 @@ import { errorLogDetails } from '../utils/logDetails.js';
 import { useActivityPhaseTimer } from './session-detail/hooks/useActivityPhaseTimer.js';
 import { useActivityRealtimeSync } from './session-detail/hooks/useActivityRealtimeSync.js';
 import { useChatPhaseGroups } from './session-detail/hooks/useChatPhaseGroups.js';
+import { useDeadlineDraftSender } from './session-detail/hooks/useDeadlineDraftSender.js';
+import { usePhaseDrafts } from './session-detail/hooks/usePhaseDrafts.js';
 import { usePhaseResponseSubmission } from './session-detail/hooks/usePhaseResponseSubmission.js';
 import {
   EXTERNAL_RESPONSE_PROCESSING_TIMEOUT_MS,
@@ -646,6 +649,29 @@ export default function ActivityPage() {
   }, [defaultExpandedKey]);
 
   const designType = activityState?.descriptor?.design?.type ?? localState.activityDescriptor?.design?.type ?? '';
+
+  // The student's unsent answers, kept on the device and sent for them
+  // when a hard-mode phase runs out of time (#1118). Only the semantic
+  // differential has answers to keep; the ranking view is a placeholder.
+  const keepsDrafts = designType === 'semantic_differential';
+  const canKeepDrafts = session.isAuthenticated && Boolean(selectedSession) && keepsDrafts && shouldLoadActivityData;
+  const { draftsByPhaseId, draftsRef, setTaskDraft } = usePhaseDrafts({
+    userId: session.uid,
+    sessionId: selectedSession?.id,
+    phases: activityState?.phases,
+    enabled: canKeepDrafts
+  });
+  const deadlineDrafts = useDeadlineDraftSender({
+    sessionId: selectedSession?.id,
+    userId: session.uid,
+    canRestore: canKeepDrafts,
+    enabled: activityStatusCode === SESSION_STATUS.inProgress,
+    timer: phaseTimer,
+    phases: activityState?.phases,
+    draftsRef,
+    submitActivityResponse,
+    loadFullState
+  });
   const hasCaseTab = localState.caseDocumentUrl.trim().length > 0 || Boolean(localState.caseDocument);
 
   const tabEntries = useMemo(() => {
@@ -732,6 +758,12 @@ export default function ActivityPage() {
       });
     }
   });
+
+  // The student's own submit: no answer sent for them starts meanwhile.
+  const submitPhaseResponse = (request) => deadlineDrafts.trackManual(
+    request?.responsePayload,
+    () => onSubmitPhaseResponse(request)
+  );
 
   return (
     <section className="mx-auto" style={{ maxWidth: '860px' }}>
@@ -831,6 +863,16 @@ export default function ActivityPage() {
                     </div>
                   ) : null}
                   <PhaseTimer timer={phaseTimer} visible={showPhaseTimer} t={t} />
+                  <DeadlineDraftNotice
+                    notice={deadlineDrafts.notice}
+                    phaseOpen={
+                      !isSessionFinished
+                      && deadlineDrafts.notice !== null
+                      && Number(deadlineDrafts.notice.phaseId) === Number(currentPhaseId)
+                    }
+                    onDismiss={deadlineDrafts.dismissNotice}
+                    t={t}
+                  />
                   <ActivityTabsPanel
                     tabEntries={tabEntries}
                     activeTab={localState.activeTab}
@@ -843,7 +885,10 @@ export default function ActivityPage() {
                     currentPhaseId={currentPhaseId}
                     designType={designType}
                     isSessionFinished={isSessionFinished}
-                    onSubmitPhaseResponse={onSubmitPhaseResponse}
+                    onSubmitPhaseResponse={submitPhaseResponse}
+                    draftsByPhaseId={draftsByPhaseId}
+                    onTaskDraftChange={setTaskDraft}
+                    autoSendOutcomesByPhaseId={deadlineDrafts.outcomesByPhaseId}
                     chatRefreshTokenByPhaseId={chatRefreshTokenByPhaseId}
                     externalResponseProcessingByPhaseId={externalResponseProcessingByPhaseId}
                     externalResultsByPhaseId={externalResultsByPhaseId}
