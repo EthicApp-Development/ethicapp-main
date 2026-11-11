@@ -61,9 +61,9 @@ async function createDashboard({ localNow = LOCAL_NOW } = {}) {
         unregisterListener(name, callback) {
             listeners[name] = (listeners[name] || []).filter(existing => existing !== callback);
         },
-        loadActivityState: async () => state,
+        loadActivityState:  async () => state,
         getInstancedPhases: async () => [],
-        getPhaseClock: () => clock.current,
+        getPhaseClock:      () => clock.current,
     };
     const toasts = [];
     const toast = { create: options => toasts.push(options) };
@@ -105,9 +105,9 @@ async function createDashboard({ localNow = LOCAL_NOW } = {}) {
         finishRequests,
         updated,
         advanced,
-        notify: (name, data) => Promise.all((listeners[name] || []).map(callback => callback(data))),
+        notify:        (name, data) => Promise.all((listeners[name] || []).map(callback => callback(data))),
         listenerCount: name => (listeners[name] || []).length,
-        destroy: () => destroyHandlers.forEach(handler => handler()),
+        destroy:       () => destroyHandlers.forEach(handler => handler()),
     };
 }
 

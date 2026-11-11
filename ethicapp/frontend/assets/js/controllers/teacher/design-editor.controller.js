@@ -508,11 +508,11 @@ export function DesignEditorController($scope, $translate, $timeout,
             // Initialize the phase's error container if it doesn't exist
             if (!vm.validationErrors.phases[phaseKey]) {
                 vm.validationErrors.phases[phaseKey] = {
-                    items: {},          // For item/question errors
-                    groupingConfig: [], // For grouping configuration errors
+                    items:             {}, // For item/question errors
+                    groupingConfig:    [], // For grouping configuration errors
                     phaseInstructions: [], // For phase instructions errors
-                    duration: [],       // For phase duration errors (#1107)
-                    other: [],          // Other phase-related errors
+                    duration:          [], // For phase duration errors (#1107)
+                    other:             [], // Other phase-related errors
                 };
             }
     

@@ -103,8 +103,8 @@ describe("nextPhaseClock", () => {
         assert.equal(current.phaseId, 42);
 
         const finished = clock({
-            finished: true, phaseId: null, phaseNumber: null, startedAt: null, endsAt: null,
-            isLastPhase: null, serverNow: "2026-11-11T12:10:00.000Z",
+            finished:    true, phaseId:     null, phaseNumber: null, startedAt:   null, endsAt:      null,
+            isLastPhase: null, serverNow:   "2026-11-11T12:10:00.000Z",
         });
         current = nextPhaseClock(current, finished, options).clock;
         assert.equal(current.finished, true);
