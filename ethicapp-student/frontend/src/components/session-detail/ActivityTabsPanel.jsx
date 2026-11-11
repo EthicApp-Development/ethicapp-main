@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import CaseDocumentViewer from './CaseDocumentViewer.jsx';
 import CaseMaterial from './CaseMaterial.jsx';
 import ExternalServiceResultPanel from './external-services/ExternalServiceResultPanel.jsx';
@@ -17,6 +17,9 @@ export default function ActivityTabsPanel({
   designType,
   isSessionFinished,
   onSubmitPhaseResponse,
+  draftsByPhaseId,
+  onTaskDraftChange,
+  autoSendOutcomesByPhaseId,
   chatRefreshTokenByPhaseId,
   externalResponseProcessingByPhaseId,
   externalResultsByPhaseId,
@@ -26,8 +29,6 @@ export default function ActivityTabsPanel({
   locale,
   t
 }) {
-  const [semanticDraftByPhaseId, setSemanticDraftByPhaseId] = useState({});
-
   const activePhase = useMemo(() => {
     if (typeof activeTab !== 'string' || !activeTab.startsWith('phase-')) {
       return null;
@@ -43,23 +44,6 @@ export default function ActivityTabsPanel({
 
   const isActivePhase = Number(activePhase?.id) === Number(currentPhaseId);
   const activePhaseId = Number(activePhase?.id);
-
-  const setSemanticTaskDraft = (phaseId, taskId, partialUpdate) => {
-    if (!Number.isInteger(phaseId) || phaseId <= 0) {
-      return;
-    }
-
-    setSemanticDraftByPhaseId((prev) => ({
-      ...prev,
-      [phaseId]: {
-        ...(prev[phaseId] ?? {}),
-        [taskId]: {
-          ...((prev[phaseId] ?? {})[taskId] ?? {}),
-          ...partialUpdate
-        }
-      }
-    }));
-  };
 
   const panelPaddingClass = activeTab === 'case' ? 'p-1 p-sm-3' : 'p-3';
 
@@ -97,8 +81,9 @@ export default function ActivityTabsPanel({
         {activeTab !== 'case' && activePhase && designType === 'semantic_differential' ? (
           <SemanticDifferentialPhaseView
             phase={activePhase}
-            draftByTaskId={semanticDraftByPhaseId[activePhaseId] ?? {}}
-            onTaskDraftChange={(taskId, partialUpdate) => setSemanticTaskDraft(activePhaseId, taskId, partialUpdate)}
+            draftByTaskId={draftsByPhaseId?.[activePhaseId] ?? {}}
+            onTaskDraftChange={(taskId, partialUpdate) => onTaskDraftChange?.(activePhaseId, taskId, partialUpdate)}
+            autoSendOutcomeByTaskId={autoSendOutcomesByPhaseId?.[activePhaseId] ?? {}}
             isReadOnly={isSessionFinished}
             isActivePhase={isActivePhase}
             onSubmitPhaseResponse={onSubmitPhaseResponse}

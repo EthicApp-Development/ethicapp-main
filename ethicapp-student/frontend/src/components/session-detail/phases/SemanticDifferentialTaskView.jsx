@@ -1,4 +1,11 @@
 import RichText from '../../common/RichText.jsx';
+import { countWords, minimumJustificationWords } from '../../../utils/semanticDifferentialAnswer.js';
+
+const DRAFT_NOTE_STYLES = {
+  sending: { className: 'text-secondary', iconClass: 'fa-solid fa-paper-plane' },
+  sent: { className: 'text-success-emphasis', iconClass: 'fa-solid fa-circle-check' },
+  kept: { className: 'text-warning-emphasis', iconClass: 'fa-solid fa-floppy-disk' }
+};
 
 export default function SemanticDifferentialTaskView({
   task,
@@ -6,6 +13,7 @@ export default function SemanticDifferentialTaskView({
   selectedValue,
   justification,
   taskFeedback,
+  draftNote,
   submitting,
   externalResponseProcessing,
   previousResponsesContent,
@@ -16,64 +24,11 @@ export default function SemanticDifferentialTaskView({
   showChatButton,
   t
 }) {
-  const countWords = (text) => {
-    if (typeof text !== 'string') {
-      return 0;
-    }
-
-    const normalizedText = text.trim();
-    if (normalizedText.length === 0) {
-      return 0;
-    }
-
-    return normalizedText.split(/\s+/).length;
-  };
-
-  const resolveMinimumWords = (currentTask) => {
-    const minimumRequiredCandidates = [
-      currentTask?.justificationMinimumLengthRequired,
-      currentTask?.justification_minimum_length_required,
-      currentTask?.answerFormat?.justificationMinimumLengthRequired,
-      currentTask?.answerFormat?.justification_minimum_length_required,
-      currentTask?.ansFormat?.justificationMinimumLengthRequired,
-      currentTask?.ansFormat?.justification_minimum_length_required,
-      currentTask?.ans_format?.justification_minimum_length_required
-    ];
-
-    const isMinimumRequired = minimumRequiredCandidates.some((value) => value === true);
-
-    const minimumWordCandidates = [
-      currentTask?.min_just_length,
-      currentTask?.minWordCount,
-      currentTask?.minJustificationWords,
-      currentTask?.minimumJustificationWords,
-      currentTask?.minJustLength,
-      currentTask?.answerFormat?.minJustLength,
-      currentTask?.answerFormat?.min_just_length,
-      currentTask?.ansFormat?.minJustLength,
-      currentTask?.ansFormat?.min_just_length,
-      currentTask?.ans_format?.min_just_length
-    ];
-
-    const parsedMinimumValues = minimumWordCandidates
-      .map((value) => Number(value))
-      .filter((value) => Number.isInteger(value) && value > 0);
-
-    if (parsedMinimumValues.length === 0) {
-      return null;
-    }
-
-    if (isMinimumRequired) {
-      return Math.max(...parsedMinimumValues);
-    }
-
-    return parsedMinimumValues[0];
-  };
-
   const taskId = Number(task?.id);
   const numValues = Number(task?.numValues);
   const wordCount = countWords(justification);
-  const minimumWords = resolveMinimumWords(task);
+  const minimumWords = minimumJustificationWords(task);
+  const draftNoteStyle = draftNote ? DRAFT_NOTE_STYLES[draftNote.kind] ?? DRAFT_NOTE_STYLES.kept : null;
   const isBelowMinimumWords = Number.isInteger(minimumWords) && wordCount < minimumWords;
 
   return (
@@ -135,6 +90,13 @@ export default function SemanticDifferentialTaskView({
             ) : null}
           </div>
         </div>
+      ) : null}
+
+      {draftNote ? (
+        <p className={`small mb-2 d-flex align-items-start gap-2 ${draftNoteStyle.className}`}>
+          <i className={`${draftNoteStyle.iconClass} mt-1`} aria-hidden="true" />
+          <span>{draftNote.text}</span>
+        </p>
       ) : null}
 
       <div className="d-flex justify-content-end align-items-center gap-2">

@@ -5,6 +5,7 @@ import { API_ERROR_KINDS, classifyApiError, describeApiError } from '../api/apiE
 import { studentApi } from '../api/studentApi.js';
 import StudentTopbar from '../components/StudentTopbar.jsx';
 import { useStudentUser } from '../context/StudentUserContext.jsx';
+import { clearPhaseDraftsOnDevice } from '../utils/phaseDrafts.js';
 import { nonStudentHome } from '../utils/roleHome.js';
 
 const SESSION_PLACEHOLDER = {
@@ -74,6 +75,8 @@ export default function StudentLayout() {
   }, [clearUser, refreshUser, t]);
 
   const handleLogout = () => {
+    // A shared computer keeps no unsent answers of the student (#1118).
+    clearPhaseDraftsOnDevice();
     window.location.assign('/logout');
   };
 

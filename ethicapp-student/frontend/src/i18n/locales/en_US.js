@@ -213,6 +213,19 @@ const enUS = {
     seconds: 'seconds',
     and: 'and'
   },
+  phaseDrafts: {
+    noticeSentOne: "Time's up for phase {{number}}. Your unsent answer was submitted for you.",
+    noticeSentOther: "Time's up for phase {{number}}. Your {{count}} unsent answers were submitted for you.",
+    noticeKeptOne: 'One answer from phase {{number}} could not be submitted. It is saved on this device.',
+    noticeKeptOther: '{{count}} answers from phase {{number}} could not be submitted. They are saved on this device.',
+    dismissNotice: 'Dismiss notice',
+    taskSending: 'Submitting your answer…',
+    taskSent: 'This answer was submitted for you when time ran out.',
+    taskKept: 'This answer was not submitted. It is saved on this device.',
+    taskKeptMissingValue: 'This answer was not submitted because no point on the scale is selected. It is saved on this device.',
+    taskKeptMissingJustification: 'This answer was not submitted because the justification is missing. It is saved on this device.',
+    taskKeptJustificationTooShort: 'This answer was not submitted because the justification is shorter than the minimum word count. It is saved on this device.'
+  },
   notFound: {
     title: 'Page not found',
     description: 'The route you tried to open does not exist in the student module.',
