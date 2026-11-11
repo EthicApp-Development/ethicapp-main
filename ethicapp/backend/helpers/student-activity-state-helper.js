@@ -15,6 +15,7 @@ import {
     invalidateStudentActivityDescriptorWith,
     studentUsableServices,
 } from "./student-activity-descriptor.js";
+import { previousPhaseTakesAnswers } from "./student-response-policy.js";
 
 export const buildInitialPhaseState = async function (phaseId) {
     try {
@@ -1194,6 +1195,16 @@ const previousGroupResponseHandlers = {
     },
 };
 
+/**
+ * The answers of the student's group in phase `phaseId` to the earlier
+ * phases `phaseNumbers`, cached for five minutes per phase and group.
+ *
+ * Nothing is cached while the phase before `phaseId` still takes answers,
+ * in the grace window after the deadline runner started `phaseId` (#1114):
+ * its students load this view as the phase starts, while drafts sent at the
+ * deadline are still arriving, and a cached copy would hide those for five
+ * minutes. Each request in the window reads the database.
+ */
 export async function getCachedPreviousGroupResponses(phaseId, userId, phaseNumbers, invalidate = false) {
     const normalizedPhaseNumbers = normalizePhaseNumberList(phaseNumbers);
     if (!phaseId || isNaN(Number(phaseId)) || !userId || isNaN(Number(userId)) || normalizedPhaseNumbers.length === 0) {
@@ -1229,6 +1240,9 @@ export async function getCachedPreviousGroupResponses(phaseId, userId, phaseNumb
         throw new Error(`Unsupported design type: ${designType}`);
     }
 
+    // Decided before the answers are read, so that answers read inside the
+    // window are never cached once it closes.
+    const cacheable = !await previousPhaseTakesAnswers(Number(phaseId));
     const participantsByUserId = buildParticipantLookup(groupContext.participants, null);
     const phases = await handler(
         groupContext.sessionId,
@@ -1244,7 +1258,9 @@ export async function getCachedPreviousGroupResponses(phaseId, userId, phaseNumb
         phases,
     };
 
-    await redisClient.set(cacheKey, JSON.stringify(responsePayload), "EX", 300);
+    if (cacheable) {
+        await redisClient.set(cacheKey, JSON.stringify(responsePayload), "EX", 300);
+    }
     return markPreviousGroupResponsesForUser(responsePayload, userId);
 }
 

@@ -26,10 +26,13 @@ const FORGOTTEN_STUDENT = Object.freeze({ uid: 13, role: "A" });
 const SESSION_ID = 10;
 const OTHER_SESSION_ID = 20;
 const UNKNOWN_SESSION_ID = 999;
+const PREVIOUS_PHASE = 99;
 const INDIVIDUAL_PHASE = 100;
 const TEAM_PHASE = 101;
 const QUESTION = 1;
 const TEAM_QUESTION = 2;
+const PREVIOUS_QUESTION = 3;
+const PREVIOUS_RANKING_ITEM = 8;
 const RANKING_ITEM = 7;
 const SEMANTIC_DIFFERENTIAL_RESPONSE_ID = 501;
 const RANKING_RESPONSE_ID = 601;
@@ -37,9 +40,11 @@ const RANKING_RESPONSE_ID = 601;
 // --- Fake PostgreSQL -------------------------------------------------------
 
 // The team phase has a group for STUDENT only: GROUPLESS_STUDENT joined after
-// the groups were formed. The route never reads groups.
+// the groups were formed. The route never reads groups. The teacher started
+// the current phase a minute ago, after PREVIOUS_PHASE.
 let sessions;
 const phases = new Map([
+    [PREVIOUS_PHASE, { questions: [PREVIOUS_QUESTION], items: [PREVIOUS_RANKING_ITEM] }],
     [INDIVIDUAL_PHASE, { questions: [QUESTION], items: [RANKING_ITEM] }],
     [TEAM_PHASE, { questions: [TEAM_QUESTION], items: [] }],
 ]);
@@ -55,6 +60,9 @@ function resetSessions(overrides = {}) {
             archived:      false,
             current_stage: INDIVIDUAL_PHASE,
             design_type:   "semantic_differential",
+            start_trigger: "teacher",
+            seconds:       "60",
+            previous:      PREVIOUS_PHASE,
             ...overrides,
         }],
         [OTHER_SESSION_ID, {
@@ -89,7 +97,15 @@ function rowsFor(sql, params = []) {
             return [];
         }
         const { status, archived, current_stage, design_type } = session;
-        return [{ status, archived, current_stage, design_type }];
+        return [{
+            status,
+            archived,
+            current_stage,
+            design_type,
+            current_phase_start_trigger:       session.start_trigger ?? null,
+            current_phase_seconds_since_start: session.seconds ?? null,
+            previous_phase_id:                 session.previous ?? null,
+        }];
     }
     if (sql === SEMANTIC_DIFFERENTIAL_TASK_SQL) {
         return phases.get(first)?.questions.includes(second)
@@ -254,6 +270,92 @@ describe("POST /activities/:id/response: enrolled students", () => {
         assert.deepEqual(context.source, { kind: "response", id: RANKING_RESPONSE_ID });
         assert.equal(context.responsePayload.type, "ranking");
     });
+});
+
+// --- The previous phase after an automatic advance (#1114) -----------------
+
+describe("POST /activities/:id/response: grace window after an automatic advance", () => {
+    const afterDeadlineAdvance = (overrides = {}) =>
+        resetSessions({ start_trigger: "deadline", seconds: "3.5", ...overrides });
+
+    it("stores the answer against the previous phase, notifies the teacher with it, "
+        + "and dispatches no hook", async () => {
+        afterDeadlineAdvance();
+
+        const { status } = await submit(STUDENT, {
+            body: { phaseId: PREVIOUS_PHASE, questionId: PREVIOUS_QUESTION, value: 4 },
+        });
+
+        assert.equal(status, 201);
+        const [write] = responseWrites();
+        assert.match(write.sql, /INSERT INTO differential_selection/u);
+        assert.deepEqual(write.params.slice(0, 4), [4, null, PREVIOUS_QUESTION, STUDENT.uid]);
+        const [notifiedSession, notifiedPhase, notified] = notifyTeacher.mock.calls[0].arguments;
+        assert.deepEqual([notifiedSession, notifiedPhase], [SESSION_ID, PREVIOUS_PHASE]);
+        assert.equal(notified.did, PREVIOUS_QUESTION);
+        assert.equal(dispatchHook.mock.callCount(), 0);
+    });
+
+    it("stores a ranking answer with the previous phase's id", async () => {
+        afterDeadlineAdvance({ design_type: "ranking" });
+
+        const { status } = await submit(STUDENT, {
+            body: {
+                phaseId:    PREVIOUS_PHASE,
+                questionId: PREVIOUS_RANKING_ITEM,
+                itemId:     PREVIOUS_RANKING_ITEM,
+                order:      2,
+            },
+        });
+
+        assert.equal(status, 201);
+        const [write] = responseWrites();
+        assert.match(write.sql, /INSERT INTO actor_selection/u);
+        assert.deepEqual(write.params.slice(0, 5),
+            [2, null, PREVIOUS_RANKING_ITEM, STUDENT.uid, PREVIOUS_PHASE]);
+        assert.equal(notifyTeacher.mock.calls[0].arguments[1], PREVIOUS_PHASE);
+        assert.equal(dispatchHook.mock.callCount(), 0);
+    });
+
+    it("still dispatches the hook for an answer to the current phase in the window", async () => {
+        afterDeadlineAdvance();
+
+        const { status } = await submit(STUDENT);
+
+        assert.equal(status, 201);
+        assert.equal(dispatchHook.mock.callCount(), 1);
+        assert.equal(dispatchHook.mock.calls[0].arguments[0].phaseId, INDIVIDUAL_PHASE);
+    });
+
+    it("validates the value against the previous phase's question", async () => {
+        afterDeadlineAdvance();
+
+        const { status, body } = await submit(STUDENT, {
+            body: { phaseId: PREVIOUS_PHASE, questionId: PREVIOUS_QUESTION, value: 9 },
+        });
+
+        assert.equal(status, 400);
+        assert.deepEqual(body, { error: "Invalid value. It must be an integer between 1 and 5." });
+        assertNothingSetOff();
+    });
+
+    const refused = [
+        ["after the window", { start_trigger: "deadline", seconds: "15" }],
+        ["after a teacher's advance", { start_trigger: "teacher", seconds: "1" }],
+    ];
+    for (const [when, overrides] of refused) {
+        it(`refuses the previous phase ${when} with 409 PHASE_CHANGED`, async () => {
+            resetSessions(overrides);
+
+            const { status, body } = await submit(STUDENT, {
+                body: { phaseId: PREVIOUS_PHASE, questionId: PREVIOUS_QUESTION, value: 4 },
+            });
+
+            assert.equal(status, 409);
+            assert.equal(body.code, "PHASE_CHANGED");
+            assertNothingSetOff();
+        });
+    }
 });
 
 // --- Refusals --------------------------------------------------------------
