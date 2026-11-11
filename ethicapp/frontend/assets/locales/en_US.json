@@ -425,7 +425,7 @@
 	"launch_wizard_time_hard": "Hard",
 	"launch_wizard_time_hard_help": "At 00:00, the activity moves to the next phase by itself, for every participant.",
 	"launch_wizard_time_none": "No clock",
-	"launch_wizard_time_none_help": "No clock: the activity runs as it always has.",
+	"launch_wizard_time_none_help": "The activity runs without a clock, as it always has.",
 	"launch_wizard_card_preview_title": "How you will see it in Activities and its dashboard",
 	"launch_wizard_card_preview_no_description": "description",
 	"launch_wizard_card_preview_today": "Today",

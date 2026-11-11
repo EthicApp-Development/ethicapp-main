@@ -437,7 +437,7 @@
 	"launch_wizard_time_hard": "Duro",
 	"launch_wizard_time_hard_help": "Al llegar a 00:00, la actividad pasa sola a la fase siguiente para todos los participantes.",
 	"launch_wizard_time_none": "Sin cronómetro",
-	"launch_wizard_time_none_help": "Sin reloj: la actividad funciona como hasta ahora.",
+	"launch_wizard_time_none_help": "La actividad funciona sin reloj, como hasta ahora.",
 	"launch_wizard_card_preview_title": "Así la verás en Actividades y en su panel",
 	"launch_wizard_card_preview_no_description": "descripción",
 	"launch_wizard_card_preview_today": "Hoy",
