@@ -23,7 +23,7 @@ function fakeTeacherSocket() {
                 },
             };
         },
-        joinSession: id => calls.push(["joinSession", id]),
+        joinSession:  id => calls.push(["joinSession", id]),
         leaveSession: id => calls.push(["leaveSession", id]),
         onReconnect(listener) {
             reconnectListeners.add(listener);
@@ -35,7 +35,7 @@ function fakeTeacherSocket() {
         reconnect() {
             reconnectListeners.forEach(listener => listener());
         },
-        listenerCount: name => handlers[name]?.size ?? 0,
+        listenerCount:          name => handlers[name]?.size ?? 0,
         reconnectListenerCount: () => reconnectListeners.size,
     };
 }
