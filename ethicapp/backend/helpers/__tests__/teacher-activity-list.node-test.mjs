@@ -29,6 +29,7 @@ function row(overrides = {}) {
         designId:            7,
         designTitle:         "Privacy in health apps",
         ai_services_enabled: true,
+        time_mode:           "soft",
         finishedAt:          null,
         currentPhaseNumber:  2,
         currentPhaseMode:    "team",
@@ -62,6 +63,10 @@ describe("TEACHER_ACTIVITIES_SQL (#1049)", () => {
         ]) {
             assert.ok(flatSql.includes(column), column);
         }
+    });
+
+    it("selects the time mode chosen at launch (#1109)", () => {
+        assert.ok(flatSql.includes("sessions.time_mode,"));
     });
 
     it("reads the current phase from the session's current stage", () => {
@@ -152,6 +157,7 @@ describe("teacherActivityListItem (#1049)", () => {
             phaseCount:        3,
             participantCount:  24,
             aiServicesEnabled: true,
+            timeMode:          "soft",
             finishedAt:        null,
             caseId:            31,
             caseTitle:         "Datos de pacientes",
@@ -199,6 +205,14 @@ describe("teacherActivityListItem (#1049)", () => {
             .aiServicesEnabled, true);
     });
 
+    it("gives the stored time mode, and none when the row has none (#1109)", () => {
+        assert.equal(teacherActivityListItem(row({ time_mode: "hard" })).timeMode, "hard");
+        for (const value of [undefined, null, "fast"]) {
+            assert.equal(teacherActivityListItem(row({ time_mode: value })).timeMode, "none",
+                String(value));
+        }
+    });
+
     it("takes the counts as strings and gives 0 for missing or invalid ones", () => {
         const fromStrings = teacherActivityListItem(
             row({ phaseCount: "4", participantCount: "12" }));
@@ -230,7 +244,7 @@ describe("teacherActivityListItem (#1049)", () => {
     it("leaves the row's internal columns out", () => {
         const item = teacherActivityListItem(row());
 
-        for (const key of ["ai_services_enabled", "currentPhaseNumber", "currentPhaseMode"]) {
+        for (const key of ["ai_services_enabled", "time_mode", "currentPhaseNumber", "currentPhaseMode"]) {
             assert.equal(Object.hasOwn(item, key), false, key);
         }
     });

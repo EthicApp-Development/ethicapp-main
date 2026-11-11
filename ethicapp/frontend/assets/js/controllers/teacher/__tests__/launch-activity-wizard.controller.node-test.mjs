@@ -136,6 +136,25 @@ describe("launch wizard, step 1", () => {
         assert.equal(vm.preview.launch, null, "never launched");
     });
 
+    it("previews the phases with a duration, for step 2's time mode (#1109)", async () => {
+        const { vm, settle } = createWizard();
+        await vm.ready;
+
+        vm.selectDesign(2);
+        await settle();
+        assert.deepEqual(vm.preview.plannedDuration,
+            { totalMinutes: 0, timedPhaseCount: 0, phaseCount: 1 });
+
+        DESIGNS[1].phases[0].durationMinutes = 15;
+        try {
+            vm.refreshPreview();
+            assert.deepEqual(vm.preview.plannedDuration,
+                { totalMinutes: 15, timedPhaseCount: 1, phaseCount: 1 });
+        } finally {
+            delete DESIGNS[1].phases[0].durationMinutes;
+        }
+    });
+
     it("preselects the route's design", async () => {
         const { vm } = createWizard({ routeParams: { designId: "1" } });
         await vm.ready;

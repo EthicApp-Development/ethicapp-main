@@ -114,6 +114,8 @@ function groupOf(phaseId, userId) {
 
 const SD_DESIGN = { type: "semantic_differential", phases: [] };
 const JOIN_CODE = "JOIN42";
+// The document a launch reads to store its time mode (#1109).
+let launchedDesign = SD_DESIGN;
 
 function rowsFor(sql, params = []) {
     const [first, second] = params.map(Number);
@@ -134,6 +136,9 @@ function rowsFor(sql, params = []) {
     if (sql === DESIGN_LAUNCH_SQL) {
         const design = designs.get(first);
         return design ? [{ design_id: first, owned: design.creator === second }] : [];
+    }
+    if (/^\s*SELECT design\s+FROM designs\s+WHERE id = \$1;\s*$/u.test(sql)) {
+        return designs.has(first) ? [{ design: launchedDesign }] : [];
     }
 
     // What the endpoints read once the check lets them through.
@@ -207,6 +212,7 @@ function rowsFor(sql, params = []) {
             designid:    DESIGN_ID,
             designTitle: " Privacy ",
             design:      SD_DESIGN,
+            time_mode:   "soft",
         }];
     }
     if (/SELECT id, type, number\s+FROM stages\s+WHERE sesid = \$1/u.test(sql)) {
@@ -344,6 +350,71 @@ describe("POST /activities", () => {
         assert.equal(status, 200);
         assert.equal(body.status, "ok");
         assert.deepEqual(storedSwitch(), [false, SESSION_ID]);
+    });
+
+    // The time mode (#1109): "soft", "hard" or "none"; missing means "none".
+    describe("time mode", () => {
+        const TIMED_DESIGN = { type: "semantic_differential", phases: [{ durationMinutes: 10 }, {}] };
+        const storedTimeMode = () => writes()
+            .find(({ sql }) => /SET time_mode = \$1/u.test(sql))?.params;
+
+        beforeEach(() => {
+            launchedDesign = TIMED_DESIGN;
+        });
+
+        after(() => {
+            launchedDesign = SD_DESIGN;
+        });
+
+        it("stores the chosen mode for a design with durations", async () => {
+            for (const timeMode of ["soft", "hard", "none"]) {
+                db.reset();
+                const { status, body } = await launch(OWNER, { timeMode });
+
+                assert.equal(status, 200, timeMode);
+                assert.equal(body.status, "ok");
+                assert.deepEqual(storedTimeMode(), [timeMode, SESSION_ID]);
+            }
+        });
+
+        it("stores none when the launch does not send a mode", async () => {
+            for (const extra of [{}, { timeMode: null }]) {
+                db.reset();
+                const { status } = await launch(OWNER, extra);
+
+                assert.equal(status, 200);
+                assert.deepEqual(storedTimeMode(), ["none", SESSION_ID]);
+            }
+        });
+
+        it("stores none for a design without durations, whatever the launch asks", async () => {
+            launchedDesign = SD_DESIGN;
+            const { status, body } = await launch(OWNER, { timeMode: "hard" });
+
+            assert.equal(status, 200);
+            assert.equal(body.status, "ok");
+            assert.deepEqual(storedTimeMode(), ["none", SESSION_ID]);
+        });
+
+        it("refuses an unknown mode with 400 and a code, before any lookup", async () => {
+            for (const timeMode of ["fast", "SOFT", "", true, 1, ["soft"]]) {
+                db.reset();
+                const { status, body } = await launch(OWNER, { timeMode });
+
+                assert.equal(status, 400, JSON.stringify(timeMode));
+                assert.equal(body.status, "err");
+                assert.equal(body.code, "INVALID_TIME_MODE");
+                assert.equal(db.queries.length, 0);
+            }
+        });
+
+        it("returns the stored mode with the launched activity", async () => {
+            // The activity row is read back after the launch: a relaunch
+            // answers the first launch's mode.
+            const { body } = await launch(OWNER, { timeMode: "hard" });
+
+            assert.equal(body.activity.timeMode, "soft");
+        });
     });
 });
 
@@ -670,6 +741,7 @@ describe("GET /activities/:session_id/descriptor", () => {
         assert.equal(body.descriptor.designTitle, "Privacy", "the design's title, trimmed");
         assert.equal(body.descriptor.status, "in_progress");
         assert.deepEqual(body.descriptor.phases.map(({ id }) => id), [PHASE_ID]);
+        assert.equal(body.descriptor.timeMode, "soft", "the time mode chosen at launch (#1109)");
     });
 
     it("returns the descriptor to a student enrolled in the session", async () => {

@@ -1,6 +1,7 @@
-// Integration tests for the activity launch transaction and the AI service
-// policy pin, against a real PostgreSQL database with migrations V1-V22
-// applied. Snapshot and lock behavior cannot be checked with fakes.
+// Integration tests for the activity launch transaction, the AI service
+// policy pin and the time mode (#1109), against a real PostgreSQL database
+// with every migration applied (the time mode needs V45). Snapshot and lock
+// behavior cannot be checked with fakes.
 //
 // Run with `npm run test:integration`, setting ETHICAPP_INTEGRATION_DATABASE_URL
 // to a disposable database. The tests insert users, designs, sessions and
@@ -36,7 +37,10 @@ async function query(sql, params = []) {
     return (await db.query(sql, params)).rows;
 }
 
-async function createFixture() {
+// A design whose first phase has a duration, and a second one without.
+const TIMED_DESIGN = { phases: [{ durationMinutes: 10 }, {}] };
+
+async function createFixture({ document = {} } = {}) {
     const suffix = randomUUID();
     const [user] = await query(`
         INSERT INTO users (name, mail, role)
@@ -45,9 +49,9 @@ async function createFixture() {
     `, [`${suffix}@integration.test`]);
     const [design] = await query(`
         INSERT INTO designs (creator, design)
-        VALUES ($1, '{}'::jsonb)
+        VALUES ($1, $2::jsonb)
         RETURNING id;
-    `, [user.id]);
+    `, [user.id, JSON.stringify(document)]);
     const [session] = await query(`
         INSERT INTO sessions (name, descr, creator, time, status, type)
         VALUES ('Integration session', '', $1, now(), 1, 'R')
@@ -74,6 +78,11 @@ async function sessionState(sessionId) {
         WHERE id = $1;
     `, [sessionId]);
     return { pin: Number(row.pin), code: row.code, activities: Number(row.activities) };
+}
+
+async function storedTimeMode(sessionId) {
+    const [row] = await query("SELECT time_mode FROM sessions WHERE id = $1;", [sessionId]);
+    return row.time_mode;
 }
 
 async function connect() {
@@ -118,6 +127,42 @@ test("a launch pins the current version; a relaunch keeps it", { skip: SKIP_REAS
         code:       "INT001",
         activities: 2,
     });
+});
+
+test("a launch stores the time mode once; a relaunch keeps it (#1109)", {
+    skip: SKIP_REASON,
+}, async () => {
+    const { designId, sessionId } = await createFixture({ document: TIMED_DESIGN });
+    assert.equal(await storedTimeMode(sessionId), "none", "the column's default");
+
+    await launchActivity({ sessionId, designId, sessionCode: "INT010", timeMode: "hard" }, {
+        connect,
+    });
+    assert.equal(await storedTimeMode(sessionId), "hard");
+
+    await launchActivity({ sessionId, designId, sessionCode: "INT011", timeMode: "soft" }, {
+        connect,
+    });
+    assert.equal(await storedTimeMode(sessionId), "hard", "the relaunch keeps the first choice");
+    assert.equal((await sessionState(sessionId)).activities, 2);
+});
+
+test("a launch without a mode stores none", { skip: SKIP_REASON }, async () => {
+    const { designId, sessionId } = await createFixture({ document: TIMED_DESIGN });
+
+    await launchActivity({ sessionId, designId, sessionCode: "INT012" }, { connect });
+    assert.equal(await storedTimeMode(sessionId), "none");
+});
+
+test("a design without durations launches with none, whatever is asked", {
+    skip: SKIP_REASON,
+}, async () => {
+    const { designId, sessionId } = await createFixture({ document: { phases: [{}, {}] } });
+
+    await launchActivity({ sessionId, designId, sessionCode: "INT013", timeMode: "soft" }, {
+        connect,
+    });
+    assert.equal(await storedTimeMode(sessionId), "none");
 });
 
 test("a failed launch rolls back the pin, the code and the activity", {
