@@ -2599,9 +2599,13 @@ h2{
 }
 
 .activity-dashboard-toast-container .teacher-toast-alert {
-    box-shadow: 0 8px 24px rgb(7 28 120 / 15%);
     margin-bottom: 0;
     pointer-events: auto;
+}
+
+/* The same blue as the selected phase in the phase list. */
+.activity-dashboard-toast-container .teacher-toast-alert.alert-info {
+    border-color: #2649ec;
 }
 
 .designs-list .designs-toast-container .teacher-toast-alert {

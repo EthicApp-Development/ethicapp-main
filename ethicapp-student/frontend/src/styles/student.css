@@ -925,7 +925,6 @@ body {
   border-radius: var(--bs-border-radius);
   color: #071c78;
   background: #f3f6ff;
-  box-shadow: 0 4px 12px rgba(7, 28, 120, 0.08);
 }
 
 .phase-timer__count {
