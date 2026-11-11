@@ -7,11 +7,13 @@ import { describe, it } from "node:test";
 
 import {
     ACTIVITY_DESIGN_SQL,
+    CLAIM_DUE_DEADLINE_SQL,
     DELETE_LEFTOVER_PHASES_SQL,
     INSERT_PHASE_SQL,
     LEFTOVER_PHASES_SQL,
     LOCK_SESSION_SQL,
     LOCK_TEACHER_SQL,
+    MARK_DEADLINE_HANDLED_SQL,
     PHASE_NUMBER_SQL,
     createPhaseStarter,
     phaseColumns,
@@ -35,6 +37,8 @@ const NAMES = new Map([
     [LOCK_TEACHER_SQL, "LOCK_TEACHER"],
     [LOCK_SESSION_SQL, "LOCK_SESSION"],
     [PHASE_NUMBER_SQL, "PHASE_NUMBER"],
+    [CLAIM_DUE_DEADLINE_SQL, "CLAIM_DUE_DEADLINE"],
+    [MARK_DEADLINE_HANDLED_SQL, "MARK_DEADLINE_HANDLED"],
     [ACTIVITY_DESIGN_SQL, "ACTIVITY_DESIGN"],
     [LEFTOVER_PHASES_SQL, "LEFTOVER_PHASES"],
     [INSERT_PHASE_SQL, "INSERT_PHASE"],
@@ -109,8 +113,9 @@ const RANKING_DESIGN = {
 
 /**
  * A database for one request: the session's row, the current phase's number,
- * the design, and anything else the test needs. `failOn` makes one statement
- * throw.
+ * the design, and anything else the test needs. `deadlineDue` is whether the
+ * current phase's deadline has passed and is not handled yet. `failOn` makes
+ * one statement throw.
  */
 function makeDatabase({
     teacherActive = true,
@@ -121,6 +126,7 @@ function makeDatabase({
     students = [],
     previousTeamPhase = null,
     previousMembers = [],
+    deadlineDue = false,
     failOn = null,
 } = {}) {
     const log = [];
@@ -140,6 +146,8 @@ function makeDatabase({
                 return { rows: session ? [session] : [] };
             case "PHASE_NUMBER":
                 return { rows: [{ number: currentPhaseNumber }] };
+            case "CLAIM_DUE_DEADLINE":
+                return { rows: deadlineDue ? [{ id: params[0] }] : [] };
             case "ACTIVITY_DESIGN":
                 return { rows: design ? [{ design }] : [] };
             case "LEFTOVER_PHASES":
@@ -234,7 +242,7 @@ describe("starting the first phase", () => {
         assert.deepEqual(database.find("LOCK_SESSION").params, [SESSION]);
         assert.deepEqual(database.find("LEFTOVER_PHASES").params, [SESSION, 0]);
         assert.deepEqual(database.find("INSERT_PHASE").params,
-            [1, "individual", true, false, SESSION, "[]", null, null]);
+            [1, "individual", true, false, SESSION, "[]", null, null, "teacher", null]);
         assert.deepEqual(database.find("TRANSITION_SESSION").params,
             [2, NEW_PHASE_ID, SESSION, TEACHER]);
 
@@ -272,7 +280,7 @@ describe("starting the first phase", () => {
 
         assert.equal(result.status, "started");
         assert.deepEqual(database.find("INSERT_PHASE").params,
-            [1, "individual", false, false, SESSION, null, "Rank them", null]);
+            [1, "individual", false, false, SESSION, null, "Rank them", null, "teacher", null]);
         assert.deepEqual(database.find("INSERT_RANKING_ITEMS").params, [
             ["First", "Second"],
             [true, false],
@@ -304,6 +312,7 @@ describe("starting a team phase", () => {
             "LOCK_SESSION",
             "PHASE_NUMBER",
             "ACTIVITY_DESIGN",
+            "MARK_DEADLINE_HANDLED",
             "LEFTOVER_PHASES",
             "INSERT_PHASE",
             "INSERT_DIFFERENTIAL_ITEMS",
@@ -317,8 +326,10 @@ describe("starting a team phase", () => {
             "NOTIFY",
         ]);
         assert.deepEqual(database.find("PHASE_NUMBER").params, [401]);
+        // The phase it leaves will not be advanced by its deadline.
+        assert.deepEqual(database.find("MARK_DEADLINE_HANDLED").params, [401]);
         assert.deepEqual(database.find("INSERT_PHASE").params,
-            [2, "team", false, true, SESSION, "[1]", null, "2:random"]);
+            [2, "team", false, true, SESSION, "[1]", null, "2:random", "teacher", null]);
         assert.deepEqual(database.find("INSERT_TEAM").params, [SESSION, NEW_PHASE_ID]);
         // [42, 43, 44, 45, 41] shuffled: groups [42, 43] and [44, 45], and 41
         // joins the first.
@@ -512,24 +523,224 @@ describe("failures", () => {
     });
 });
 
+describe("the phase clock (epic #1105)", () => {
+    const TIMED_DESIGN = {
+        type:   "semantic_differential",
+        phases: [
+            { ...SD_DESIGN.phases[0], durationMinutes: 5 },
+            { ...SD_DESIGN.phases[0], durationMinutes: 10 },
+        ],
+    };
+    const atPhaseOne = (timeMode, overrides = {}) => ({
+        session: {
+            id: SESSION, creator: TEACHER, status: 2, current_stage: 401, time_mode: timeMode,
+        },
+        currentPhaseNumber: 1,
+        design:             TIMED_DESIGN,
+        ...overrides,
+    });
+    const AT_ONE = { ...START, expectedPhaseNumber: 1 };
+    const insertedClock = database => database.find("INSERT_PHASE").params.slice(8);
+
+    it("gives a timed phase its duration in an activity with a time mode", async () => {
+        for (const timeMode of ["soft", "hard"]) {
+            const database = makeDatabase(atPhaseOne(timeMode));
+            const result = await makeStarter(database).starter.startNextPhase(AT_ONE);
+
+            assert.equal(result.status, "started");
+            assert.equal(result.trigger, "teacher");
+            assert.deepEqual(insertedClock(database), ["teacher", 600], timeMode);
+        }
+    });
+
+    it("gives no phase a duration in an activity without a time mode", async () => {
+        const database = makeDatabase(atPhaseOne("none"));
+        await makeStarter(database).starter.startNextPhase(AT_ONE);
+
+        assert.deepEqual(insertedClock(database), ["teacher", null]);
+    });
+
+    it("marks no deadline handled when the first phase starts", async () => {
+        const database = makeDatabase({ design: TIMED_DESIGN });
+        await makeStarter(database).starter.startNextPhase(START);
+
+        assert.equal(database.names().includes("MARK_DEADLINE_HANDLED"), false);
+    });
+
+    it("refuses an unknown trigger before opening a transaction", async () => {
+        const database = makeDatabase();
+        await assert.rejects(
+            makeStarter(database).starter.startNextPhase({ ...START, trigger: "timer" }),
+            TypeError
+        );
+        assert.deepEqual(database.log, []);
+    });
+
+    describe("a start by the deadline", () => {
+        const BY_DEADLINE = { ...AT_ONE, trigger: "deadline" };
+
+        it("claims the passed deadline and starts the next phase", async () => {
+            const database = makeDatabase(atPhaseOne("hard", { deadlineDue: true }));
+            const { starter, hooks } = makeStarter(database);
+
+            const result = await starter.startNextPhase(BY_DEADLINE);
+            await result.hooks;
+
+            assert.equal(result.status, "started");
+            assert.equal(result.trigger, "deadline");
+            assert.deepEqual(result.phase, { id: NEW_PHASE_ID, number: 2 });
+            assert.deepEqual(database.names(), [
+                "BEGIN",
+                "LOCK_TEACHER",
+                "LOCK_SESSION",
+                "PHASE_NUMBER",
+                "CLAIM_DUE_DEADLINE",
+                "ACTIVITY_DESIGN",
+                "LEFTOVER_PHASES",
+                "INSERT_PHASE",
+                "INSERT_DIFFERENTIAL_ITEMS",
+                "TRANSITION_SESSION",
+                "COMMIT",
+                "INVALIDATE",
+                "NOTIFY",
+            ]);
+            assert.deepEqual(database.find("CLAIM_DUE_DEADLINE").params, [401]);
+            assert.deepEqual(insertedClock(database), ["deadline", 600]);
+            assert.deepEqual(hooks.map(hook => hook.hookName), ["phase-ended", "phase-started"]);
+        });
+
+        async function notDue(databaseOptions, request = BY_DEADLINE) {
+            const database = makeDatabase(databaseOptions);
+            const { starter, hooks } = makeStarter(database);
+            const result = await starter.startNextPhase(request);
+            assert.equal(database.names().at(-1), "ROLLBACK");
+            assert.equal(database.names().some(name => /^(INSERT|TRANSITION|MARK)/u.test(name)),
+                false);
+            assert.deepEqual(hooks, []);
+            return { result, names: database.names() };
+        }
+
+        it("is not due in an activity whose time mode is not hard", async () => {
+            for (const timeMode of ["soft", "none"]) {
+                const { result, names } = await notDue(atPhaseOne(timeMode, { deadlineDue: true }));
+                assert.deepEqual(result, { status: "not_due", currentPhaseNumber: 1 });
+                assert.equal(names.includes("CLAIM_DUE_DEADLINE"), false);
+            }
+        });
+
+        it("is not due when the deadline has not passed or was handled", async () => {
+            const { result, names } = await notDue(atPhaseOne("hard", { deadlineDue: false }));
+            assert.deepEqual(result, { status: "not_due", currentPhaseNumber: 1 });
+            assert.deepEqual(names.slice(-2), ["CLAIM_DUE_DEADLINE", "ROLLBACK"]);
+        });
+
+        it("is not due before the first phase, which has no deadline", async () => {
+            const { result, names } = await notDue({
+                session: {
+                    id:            SESSION,
+                    creator:       TEACHER,
+                    status:        1,
+                    current_stage: null,
+                    time_mode:     "hard",
+                },
+                design: TIMED_DESIGN,
+            }, { ...START, trigger: "deadline" });
+            assert.deepEqual(result, { status: "not_due", currentPhaseNumber: 0 });
+            assert.equal(names.includes("CLAIM_DUE_DEADLINE"), false);
+        });
+
+        it("is stale, without claiming, once the activity moved on", async () => {
+            const { result, names } = await notDue(atPhaseOne("hard", {
+                deadlineDue:        true,
+                currentPhaseNumber: 2,
+            }));
+            assert.deepEqual(result, { status: "stale", currentPhaseNumber: 2 });
+            assert.equal(names.includes("CLAIM_DUE_DEADLINE"), false);
+        });
+
+        it("keeps the deadline handled when no next phase exists or can start", async () => {
+            const lastPhase = atPhaseOne("hard", {
+                deadlineDue: true,
+                design:      { ...TIMED_DESIGN, phases: [TIMED_DESIGN.phases[0]] },
+            });
+            const broken = atPhaseOne("hard", {
+                deadlineDue: true,
+                design:      {
+                    ...TIMED_DESIGN,
+                    phases: [TIMED_DESIGN.phases[0], { mode: "team", grouping_algorithm: "x" }],
+                },
+            });
+            const cases = [
+                [lastPhase, { status: "no_next_phase", currentPhaseNumber: 1 }],
+                [broken,
+                    { status: "invalid_design", problem: "Unsupported grouping algorithm: x" }],
+                [atPhaseOne("hard", { deadlineDue: true, design: null }),
+                    { status: "not_launched" }],
+            ];
+            for (const [databaseOptions, expected] of cases) {
+                const database = makeDatabase(databaseOptions);
+                const { starter, hooks } = makeStarter(database);
+
+                assert.deepEqual(await starter.startNextPhase(BY_DEADLINE), expected);
+                const names = database.names();
+                assert.ok(names.includes("CLAIM_DUE_DEADLINE"));
+                assert.equal(names.at(-1), "COMMIT", expected.status);
+                assert.equal(names.some(name => /^(INSERT|TRANSITION|NOTIFY)/u.test(name)), false);
+                assert.deepEqual(hooks, []);
+            }
+        });
+
+        it("rolls the claim back when the start fails, so it can be tried again", async () => {
+            const database = makeDatabase(atPhaseOne("hard", {
+                deadlineDue: true,
+                failOn:      "INSERT_DIFFERENTIAL_ITEMS",
+            }));
+            await assert.rejects(makeStarter(database).starter.startNextPhase(BY_DEADLINE),
+                /INSERT_DIFFERENTIAL_ITEMS/u);
+            assert.equal(database.names().at(-1), "ROLLBACK");
+            assert.equal(database.names().includes("COMMIT"), false);
+        });
+    });
+});
+
 describe("phaseColumns", () => {
     it("takes the phase's settings from the design, as the dashboard used to send them", () => {
         assert.deepEqual(phaseColumns(SD_DESIGN.phases[1]), {
-            type:     "team",
-            anon:     false,
-            chat:     true,
-            prevAns:  "[1]",
-            question: null,
-            grouping: "2:random",
+            type:            "team",
+            anon:            false,
+            chat:            true,
+            prevAns:         "[1]",
+            question:        null,
+            grouping:        "2:random",
+            durationSeconds: null,
         });
         assert.deepEqual(phaseColumns({ mode: "individual" }), {
-            type:     "individual",
-            anon:     false,
-            chat:     false,
-            prevAns:  null,
-            question: null,
-            grouping: null,
+            type:            "individual",
+            anon:            false,
+            chat:            false,
+            prevAns:         null,
+            question:        null,
+            grouping:        null,
+            durationSeconds: null,
         });
+    });
+
+    it("gives the phase's duration in seconds only in an activity with a time mode", () => {
+        const timed = { mode: "individual", durationMinutes: 10 };
+        assert.equal(phaseColumns(timed, "soft").durationSeconds, 600);
+        assert.equal(phaseColumns(timed, "hard").durationSeconds, 600);
+        assert.equal(phaseColumns({ mode: "individual", durationMinutes: 180 }, "hard")
+            .durationSeconds, 10800);
+        assert.equal(phaseColumns(timed, "none").durationSeconds, null);
+        assert.equal(phaseColumns(timed).durationSeconds, null, "no time mode is 'none'");
+        assert.equal(phaseColumns({ mode: "individual" }, "hard").durationSeconds, null);
+    });
+
+    it("gives no duration for one the design should not hold", () => {
+        for (const durationMinutes of [0, -5, 1.5, "10", 181, null]) {
+            assert.equal(phaseColumns({ mode: "individual", durationMinutes }, "hard")
+                .durationSeconds, null, `durationMinutes ${JSON.stringify(durationMinutes)}`);
+        }
     });
 });
 
