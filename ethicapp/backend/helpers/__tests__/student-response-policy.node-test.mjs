@@ -1,14 +1,20 @@
 // The response submission policy (#927, epic #923): one test per refusal,
 // and the students it must let through, a student without a group in a team
-// phase among them. The database reads are replaced by fakes over a small
-// in-memory activity, so nothing here needs PostgreSQL.
+// phase among them; and the grace window for the previous phase after an
+// automatic advance (#1114, epic #1105). The database reads are replaced by
+// fakes over a small in-memory activity, so nothing here needs PostgreSQL;
+// the integration suite runs the same rules against the real SQL
+// (controllers/activities/__tests__/deadline-grace-window.integration-test.mjs).
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
+    DEADLINE_GRACE_WINDOW_SECONDS,
     RESPONSE_REFUSAL_CODES,
     STUDENT_RESPONSE_REFUSED_EVENT,
     evaluateStudentResponse,
+    isWithinDeadlineGraceWindow,
+    previousPhaseTakesAnswers,
 } from "../student-response-policy.js";
 
 const STUDENT = 9;
@@ -20,42 +26,71 @@ const SESSION_ID = 10;
 const OTHER_SESSION_ID = 20;
 const UNKNOWN_SESSION_ID = 999;
 
+const EARLIER_PHASE = 98;
+const PREVIOUS_PHASE = 99;
 const INDIVIDUAL_PHASE = 100;
 const TEAM_PHASE = 101;
 const QUESTION = 1;
 const TEAM_QUESTION = 2;
+const PREVIOUS_QUESTION = 3;
+const EARLIER_QUESTION = 4;
+const PREVIOUS_RANKING_ITEM = 8;
 const RANKING_ITEM = 7;
 
 const IN_PROGRESS = 2;
 const FINISHED = 3;
 
 // The activity the fakes answer for. The team phase has a group for STUDENT
-// only: GROUPLESS_STUDENT joined after the groups were formed.
+// only: GROUPLESS_STUDENT joined after the groups were formed. By default the
+// teacher started the current phase a minute ago, after EARLIER_PHASE and
+// PREVIOUS_PHASE.
 function activity(overrides = {}) {
     return {
         sessions: new Map([
             [SESSION_ID, {
-                status:        IN_PROGRESS,
-                archived:      false,
-                current_stage: INDIVIDUAL_PHASE,
-                design_type:   "semantic_differential",
-                participants:  [STUDENT, GROUPLESS_STUDENT, FORGOTTEN_STUDENT],
+                status:                            IN_PROGRESS,
+                archived:                          false,
+                current_stage:                     INDIVIDUAL_PHASE,
+                design_type:                       "semantic_differential",
+                current_phase_start_trigger:       "teacher",
+                current_phase_seconds_since_start: "60.000000",
+                previous_phase_id:                 PREVIOUS_PHASE,
+                participants:                      [STUDENT, GROUPLESS_STUDENT, FORGOTTEN_STUDENT],
                 ...overrides,
             }],
             [OTHER_SESSION_ID, {
-                status:        IN_PROGRESS,
-                archived:      false,
-                current_stage: 200,
-                design_type:   "semantic_differential",
-                participants:  [OUTSIDER],
+                status:                            IN_PROGRESS,
+                archived:                          false,
+                current_stage:                     200,
+                design_type:                       "semantic_differential",
+                current_phase_start_trigger:       "deadline",
+                current_phase_seconds_since_start: "1.000000",
+                previous_phase_id:                 199,
+                participants:                      [OUTSIDER],
             }],
         ]),
         phases: new Map([
+            [EARLIER_PHASE, { type: "individual", tasks: [EARLIER_QUESTION], groups: [] }],
+            [PREVIOUS_PHASE, {
+                type:   "individual",
+                tasks:  [PREVIOUS_QUESTION, PREVIOUS_RANKING_ITEM],
+                groups: [],
+            }],
             [INDIVIDUAL_PHASE, { type: "individual", tasks: [QUESTION, RANKING_ITEM], groups: [] }],
             [TEAM_PHASE, { type: "team", tasks: [TEAM_QUESTION], groups: [[STUDENT]] }],
+            [199, { type: "individual", tasks: [PREVIOUS_QUESTION], groups: [] }],
         ]),
         anonymized: new Set([FORGOTTEN_STUDENT]),
     };
+}
+
+// The current phase was started by the deadline runner `seconds` ago.
+function afterDeadlineAdvance(seconds = "2.500000", overrides = {}) {
+    return activity({
+        current_phase_start_trigger:       "deadline",
+        current_phase_seconds_since_start: seconds,
+        ...overrides,
+    });
 }
 
 function fakes(world = activity()) {
@@ -72,8 +107,11 @@ function fakes(world = activity()) {
                 if (!session) {
                     return null;
                 }
-                const { status, archived, current_stage, design_type } = session;
-                return { status, archived, current_stage, design_type };
+                // A row of STUDENT_RESPONSE_SESSION_SQL: the session without
+                // its participants.
+                const row = { ...session };
+                delete row.participants;
+                return row;
             },
             findTask: async (lookup) => {
                 calls.findTask.push(lookup);
@@ -239,11 +277,12 @@ describe("student response policy: enrolled students", () => {
         const decision = await evaluate({}, dependencies);
 
         assert.deepEqual(decision, {
-            allowed:    true,
-            phaseId:    INDIVIDUAL_PHASE,
-            designType: "semantic_differential",
-            taskId:     QUESTION,
-            task:       { id: QUESTION, num_values: 5 },
+            allowed:       true,
+            phaseId:       INDIVIDUAL_PHASE,
+            previousPhase: false,
+            designType:    "semantic_differential",
+            taskId:        QUESTION,
+            task:          { id: QUESTION, num_values: 5 },
         });
         assert.deepEqual(calls.findTask, [{
             designType: "semantic_differential",
@@ -303,5 +342,209 @@ describe("student response policy: enrolled students", () => {
         assert.equal(byQuestion.allowed, true);
         const designTypes = calls.findTask.map(({ designType }) => designType);
         assert.deepEqual(designTypes, ["ranking", "ranking"]);
+    });
+});
+
+describe("student response policy: grace window after an automatic advance (#1114)", () => {
+    const previousAnswer = (overrides = {}) => ({
+        questionId: PREVIOUS_QUESTION,
+        payload:    { phaseId: PREVIOUS_PHASE, questionId: PREVIOUS_QUESTION, value: 4 },
+        ...overrides,
+    });
+
+    it("accepts an answer to the previous phase, and sends it to that phase", async () => {
+        const { calls, dependencies } = fakes(afterDeadlineAdvance());
+
+        const decision = await evaluate(previousAnswer(), dependencies);
+
+        assert.deepEqual(decision, {
+            allowed:       true,
+            phaseId:       PREVIOUS_PHASE,
+            previousPhase: true,
+            designType:    "semantic_differential",
+            taskId:        PREVIOUS_QUESTION,
+            task:          { id: PREVIOUS_QUESTION, num_values: 5 },
+        });
+        assert.deepEqual(calls.findTask, [{
+            designType: "semantic_differential",
+            phaseId:    PREVIOUS_PHASE,
+            taskId:     PREVIOUS_QUESTION,
+        }]);
+    });
+
+    it("accepts the previous phase's id as a string, and a ranking item of it", async () => {
+        const { dependencies } = fakes(afterDeadlineAdvance("0.2", { design_type: "ranking" }));
+
+        const decision = await evaluate({
+            questionId: PREVIOUS_RANKING_ITEM,
+            payload:    {
+                phaseId: String(PREVIOUS_PHASE),
+                itemId:  PREVIOUS_RANKING_ITEM,
+                order:   1,
+            },
+        }, dependencies);
+
+        assert.equal(decision.allowed, true);
+        assert.equal(decision.phaseId, PREVIOUS_PHASE);
+        assert.equal(decision.previousPhase, true);
+        assert.equal(decision.taskId, PREVIOUS_RANKING_ITEM);
+    });
+
+    it("keeps accepting the current phase in the window, as a current answer", async () => {
+        const { dependencies } = fakes(afterDeadlineAdvance());
+
+        const withPhase = await evaluate({}, dependencies);
+        const withoutPhase = await evaluate({ payload: { questionId: QUESTION } }, dependencies);
+
+        for (const decision of [withPhase, withoutPhase]) {
+            assert.equal(decision.allowed, true);
+            assert.equal(decision.phaseId, INDIVIDUAL_PHASE);
+            assert.equal(decision.previousPhase, false);
+        }
+    });
+
+    it("refuses the previous phase once the window has passed", async () => {
+        for (const seconds of [String(DEADLINE_GRACE_WINDOW_SECONDS), "15.000001", "3600"]) {
+            const { calls, dependencies } = fakes(afterDeadlineAdvance(seconds));
+
+            const decision = await evaluate(previousAnswer(), dependencies);
+
+            assert.equal(decision.status, 409, `after ${seconds} s`);
+            assert.equal(decision.code, RESPONSE_REFUSAL_CODES.PHASE_CHANGED);
+            assert.deepEqual(calls.findTask, []);
+        }
+    });
+
+    it("refuses the previous phase after a teacher's advance, however recent", async () => {
+        const { calls, dependencies } = fakes(activity({
+            current_phase_start_trigger:       "teacher",
+            current_phase_seconds_since_start: "0.5",
+        }));
+
+        const decision = await evaluate(previousAnswer(), dependencies);
+
+        assert.equal(decision.code, RESPONSE_REFUSAL_CODES.PHASE_CHANGED);
+        assert.deepEqual(calls.findTask, []);
+    });
+
+    it("refuses an older phase in the window", async () => {
+        const { calls, dependencies } = fakes(afterDeadlineAdvance());
+
+        const decision = await evaluate({
+            questionId: EARLIER_QUESTION,
+            payload:    { phaseId: EARLIER_PHASE, questionId: EARLIER_QUESTION, value: 2 },
+        }, dependencies);
+
+        assert.equal(decision.code, RESPONSE_REFUSAL_CODES.PHASE_CHANGED);
+        assert.deepEqual(calls.findTask, []);
+    });
+
+    it("refuses a phase of another session, even the previous phase there", async () => {
+        const { calls, dependencies } = fakes(afterDeadlineAdvance());
+
+        const decision = await evaluate(previousAnswer({
+            payload: { phaseId: 199, questionId: PREVIOUS_QUESTION, value: 4 },
+        }), dependencies);
+
+        assert.equal(decision.code, RESPONSE_REFUSAL_CODES.PHASE_CHANGED);
+        assert.deepEqual(calls.findTask, []);
+    });
+
+    it("refuses any other phase while the first phase is current", async () => {
+        // The first phase has no previous one; the deadline runner never
+        // starts it, but the rule holds whatever its trigger.
+        const { dependencies } = fakes(afterDeadlineAdvance("1", { previous_phase_id: null }));
+
+        const decision = await evaluate(previousAnswer(), dependencies);
+
+        assert.equal(decision.code, RESPONSE_REFUSAL_CODES.PHASE_CHANGED);
+    });
+
+    it("refuses the previous phase when the current one has no recorded start", async () => {
+        // A phase started before V45 has neither started_at nor start_trigger.
+        const { dependencies } = fakes(activity({
+            current_phase_start_trigger:       null,
+            current_phase_seconds_since_start: null,
+        }));
+
+        const decision = await evaluate(previousAnswer(), dependencies);
+
+        assert.equal(decision.code, RESPONSE_REFUSAL_CODES.PHASE_CHANGED);
+    });
+
+    it("refuses a question that is not in the previous phase", async () => {
+        const { calls, dependencies } = fakes(afterDeadlineAdvance());
+
+        const decision = await evaluate({
+            questionId: QUESTION,
+            payload:    { phaseId: PREVIOUS_PHASE, questionId: QUESTION, value: 3 },
+        }, dependencies);
+
+        assert.equal(decision.status, 400);
+        assert.equal(decision.code, RESPONSE_REFUSAL_CODES.QUESTION_NOT_IN_PHASE);
+        assert.deepEqual(calls.findTask.map(({ phaseId }) => phaseId), [PREVIOUS_PHASE]);
+    });
+
+    it("refuses a student of another session before reading anything", async () => {
+        const { calls, dependencies } = fakes(afterDeadlineAdvance());
+
+        const decision = await evaluate(previousAnswer({ userId: OUTSIDER }), dependencies);
+
+        assert.equal(decision.code, RESPONSE_REFUSAL_CODES.SESSION_NOT_FOUND);
+        assert.equal(calls.readSession, 0);
+    });
+
+    it("refuses a finished activity in the window", async () => {
+        const { dependencies } = fakes(afterDeadlineAdvance("1", {
+            status:        FINISHED,
+            current_stage: null,
+        }));
+
+        const decision = await evaluate(previousAnswer(), dependencies);
+
+        assert.equal(decision.code, RESPONSE_REFUSAL_CODES.ACTIVITY_FINISHED);
+    });
+});
+
+describe("isWithinDeadlineGraceWindow", () => {
+    it("is open for less than the window after a deadline start", () => {
+        assert.equal(DEADLINE_GRACE_WINDOW_SECONDS, 15);
+        for (const secondsSinceStart of [0, "0.000000", 14.999, "14.999999"]) {
+            assert.equal(isWithinDeadlineGraceWindow({
+                startTrigger: "deadline",
+                secondsSinceStart,
+            }), true, String(secondsSinceStart));
+        }
+    });
+
+    it("is closed from the window's end, and without a deadline start", () => {
+        const closed = [
+            { startTrigger: "deadline", secondsSinceStart: 15 },
+            { startTrigger: "deadline", secondsSinceStart: "15.000000" },
+            { startTrigger: "deadline", secondsSinceStart: null },
+            { startTrigger: "deadline", secondsSinceStart: undefined },
+            { startTrigger: "deadline", secondsSinceStart: "not a number" },
+            { startTrigger: "teacher", secondsSinceStart: 1 },
+            { startTrigger: null, secondsSinceStart: 1 },
+        ];
+        for (const phase of closed) {
+            assert.equal(isWithinDeadlineGraceWindow(phase), false, JSON.stringify(phase));
+        }
+    });
+});
+
+describe("previousPhaseTakesAnswers", () => {
+    it("reads the phase's start and applies the window", async () => {
+        const starts = new Map([
+            [1, { start_trigger: "deadline", seconds_since_start: "3.2" }],
+            [2, { start_trigger: "deadline", seconds_since_start: "20" }],
+            [3, { start_trigger: "teacher", seconds_since_start: "3.2" }],
+        ]);
+        const readPhaseStart = async phaseId => starts.get(phaseId) ?? null;
+
+        const answers = await Promise.all([1, 2, 3, 4].map(phaseId =>
+            previousPhaseTakesAnswers(phaseId, { readPhaseStart })));
+
+        assert.deepEqual(answers, [true, false, false, false]);
     });
 });
