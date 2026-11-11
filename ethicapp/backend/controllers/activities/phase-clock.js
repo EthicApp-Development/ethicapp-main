@@ -10,6 +10,7 @@ import {
     extendPhaseDeadline,
 } from "../../helpers/phase-clock-extension.js";
 import defaultPhaseClockNotifier from "../../helpers/phase-clock-notifier.js";
+import { dispatchPhaseHook } from "../../helpers/external-service-dispatch.js";
 
 const SESSION_NOT_FOUND = Object.freeze({ error: "Session not found." });
 const PHASE_NOT_FOUND = Object.freeze({ error: "Phase not found." });
@@ -65,12 +66,30 @@ const EXTENSION_CONFLICTS = Object.freeze({
  * @param {(sessionId: number) => Promise<void>} [dependencies.notifyClockChanged]
  *        Sends the new clock to the students and the teacher
  *        (helpers/phase-clock-notifier.js); it never throws.
+ * @param {(sessionId: number, phaseId: number) => Promise<unknown>}
+ *        [dependencies.notifyServicesClockChanged] Dispatches the
+ *        `phase-clock-changed` hook to the services the phase enables, which
+ *        send the new clock to their rooms (#1178).
+ * @param {{ error: Function }} [dependencies.logger]
  */
 export function createPhaseClockRouter({
     readClock = readPhaseClock,
     extendDeadline = extendPhaseDeadline,
     notifyClockChanged = sessionId => defaultPhaseClockNotifier.clockChanged(sessionId),
+    notifyServicesClockChanged = (sessionId, phaseId) =>
+        dispatchPhaseHook("phase-clock-changed", { sessionId, phaseId }),
+    logger = console,
 } = {}) {
+    // Not awaited, as the phase hooks after a phase start: the services call
+    // external APIs, and the teacher's request does not wait for them. A
+    // failure is logged and never undoes the extension.
+    function notifyServices(sessionId, phaseId) {
+        Promise.resolve()
+            .then(() => notifyServicesClockChanged(sessionId, phaseId))
+            .catch(error => logger.error("[external-services] Error dispatching "
+                + "phase-clock-changed hook.", error));
+    }
+
     const router = express.Router();
 
     /**
@@ -121,7 +140,9 @@ export function createPhaseClockRouter({
      *   A double click, or two dashboards of the same activity, add one minute
      *   between them. Only the activity's owner may do it (role P, or an
      *   administrator impersonating them). After a change the students and
-     *   the teacher get the new clock (`onPhaseClock`).
+     *   the teacher get the new clock (`onPhaseClock`), and the services the
+     *   phase enables get the `phase-clock-changed` hook, which sends it to
+     *   their rooms (#1178) without delaying the answer.
      *
      *   The minute is added to the later of the deadline and the
      *   database's now() (decision of 2026-11-11): before the deadline it
@@ -203,6 +224,7 @@ export function createPhaseClockRouter({
             }
 
             await notifyClockChanged(owner.sessionId);
+            notifyServices(owner.sessionId, phaseId);
             if (!clock) {
                 return res.status(404).json(SESSION_NOT_FOUND);
             }
