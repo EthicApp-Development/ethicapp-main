@@ -5797,6 +5797,50 @@ button.launch-wizard-step-body:focus-visible .launch-wizard-step-name {
     margin: 0;
 }
 
+/* The time mode (#1109): a fieldset drawn as the step's other cards, with
+   Bootstrap 3 radios, one line of help under each option. */
+.launch-step-time {
+    margin: 0;
+    min-width: 0;
+}
+
+.launch-step-time-title {
+    border: 0;
+    color: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    margin: 0;
+    padding: 0;
+    width: auto;
+}
+
+.launch-step-time-summary {
+    color: var(--launch-wizard-muted);
+    font-size: 13px;
+    margin: 2px 0 6px;
+}
+
+.launch-step-time-option {
+    border-top: 1px solid #e6e9f2;
+    margin: 0;
+    padding: 8px 0;
+}
+
+.launch-step-time-option + .launch-step-time-option {
+    margin-top: 0;
+}
+
+.launch-step-time-label {
+    display: block;
+    font-weight: 600;
+}
+
+.launch-step-time-help {
+    color: var(--launch-wizard-muted);
+    display: block;
+    font-size: 13px;
+}
+
 .launch-step-look-title {
     font-size: 16px;
     font-weight: 600;

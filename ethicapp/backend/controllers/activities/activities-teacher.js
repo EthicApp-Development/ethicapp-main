@@ -11,6 +11,11 @@ import {
     launchAiServicesEnabled,
     sessionAiServicesEnabled,
 } from "../../helpers/session-ai-services.js";
+import {
+    invalidTimeModeRefusal,
+    requestedTimeMode,
+    sessionTimeMode,
+} from "../../helpers/session-time-mode.js";
 import { getDesignTypeBySessionId } from "./activities-common.js";
 import activityFinisher from "../../helpers/activity-finish-helper.js";
 import { CREATE_SESSION_SQL } from "../../helpers/teacher-activity-writes.js";
@@ -164,10 +169,16 @@ router.post("/activities", async (req, res) => {
     // `aiServices: false` launches the activity with the design's AI
     // services turned off (#970); anything else keeps them on.
     const aiServicesEnabled = launchAiServicesEnabled(req.body.aiServices);
+    // "soft", "hard" or "none" (#1109); missing means "none". A design
+    // without any phase duration launches with "none" whatever is asked.
+    const timeMode = requestedTimeMode(req.body.timeMode);
 
     try {
         if (!sessionId || !designId) {
             return res.status(400).json({ status: "err", message: "Missing session or design ID" });
+        }
+        if (timeMode === null) {
+            return res.status(400).json(invalidTimeModeRefusal());
         }
 
         // Only the session's teacher launches it, with a design of theirs
@@ -180,7 +191,7 @@ router.post("/activities", async (req, res) => {
         const sessionCode = ActivitiesHelper.generateSessionCode(sessionId);
 
         const { policyVersionId } = await launchActivity({
-            sessionId, designId, sessionCode, aiServicesEnabled,
+            sessionId, designId, sessionCode, aiServicesEnabled, timeMode,
         });
 
         const activity = await rpg2.singleSQL({
@@ -199,6 +210,7 @@ router.post("/activities", async (req, res) => {
                     sessions.status,
                     sessions.type,
                     sessions.ai_services_enabled,
+                    sessions.time_mode,
                     designs.id as designId
                 FROM activity
                 INNER JOIN sessions
@@ -214,7 +226,8 @@ router.post("/activities", async (req, res) => {
 
         return res.status(200).json({
             status:             "ok",
-            activity,
+            // The stored time mode: a relaunch keeps the first launch's.
+            activity:           activity && { ...activity, timeMode: sessionTimeMode(activity) },
             servicesNotRunning: await servicesNotRunningAtLaunch({
                 design:            activity?.design,
                 policyVersionId,

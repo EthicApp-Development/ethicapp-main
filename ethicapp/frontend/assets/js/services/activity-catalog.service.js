@@ -61,11 +61,13 @@ let ActivityCatalogService = ($http) => {
         // design's title and `description`, then POST /activities. With
         // `aiServices: false` the activity runs without the design's AI
         // services (#970); otherwise the field is left out and they stay on.
+        // `timeMode` ("soft", "hard" or "none", #1109) is sent when given;
+        // without it the server stores "none".
         // Resolves with the session id. A failure rejects with a
         // LaunchActivityError naming the request that failed (`stage`:
         // "session" or "activity"), its HTTP `status` and the server's `code`,
         // so the launch wizard can say what went wrong (#972).
-        async createActivity(design, description, { aiServices } = {}) {
+        async createActivity(design, description, { aiServices, timeMode } = {}) {
             let stage = "session";
             try {
                 // Create the session for the activity
@@ -88,6 +90,9 @@ let ActivityCatalogService = ($http) => {
                 const activityRequest = { sessionId, designId };
                 if (aiServices === false) {
                     activityRequest.aiServices = false;
+                }
+                if (typeof timeMode === "string") {
+                    activityRequest.timeMode = timeMode;
                 }
                 const response = await $http({
                     url:    "/activities",

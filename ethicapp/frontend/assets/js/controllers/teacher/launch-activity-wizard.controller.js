@@ -19,6 +19,7 @@ import {
     launchSummary,
     phaseCountKey,
 } from "../../helpers/launch-design-list.js";
+import { plannedDesignDuration } from "../../helpers/phase-duration.js";
 import { serviceDisplayName } from "../../helpers/service-configuration-summary.js";
 
 export const CHOOSE_STEP = 1;
@@ -129,15 +130,18 @@ export function LaunchActivityWizardController($scope, $rootScope, $routeParams,
         const entry = stats.get(design.id);
         vm.selectedRow = { id: design.id, title: design.metainfo?.title || "" };
         vm.preview = {
-            id:             design.id,
-            title:          design.metainfo?.title || "",
-            phaseCount:     phases.length,
-            phaseCountKey:  phaseCountKey(phases.length),
-            usesAiServices: design.usesAiServices === true,
-            associatedCase: design.associatedCase || null,
+            id:              design.id,
+            title:           design.metainfo?.title || "",
+            phaseCount:      phases.length,
+            phaseCountKey:   phaseCountKey(phases.length),
+            usesAiServices:  design.usesAiServices === true,
+            associatedCase:  design.associatedCase || null,
             phases,
-            createdDate:    formatDate(design.createdAt),
-            launch:         entry?.count > 0 ? launchSummary(design, stats, formatDate) : null,
+            // The phases with a duration and their total, for step 2's time
+            // mode (#1109).
+            plannedDuration: plannedDesignDuration(design.phases),
+            createdDate:     formatDate(design.createdAt),
+            launch:          entry?.count > 0 ? launchSummary(design, stats, formatDate) : null,
         };
     };
 

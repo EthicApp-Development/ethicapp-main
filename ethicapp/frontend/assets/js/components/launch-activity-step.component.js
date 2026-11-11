@@ -2,19 +2,22 @@
 // and launch it. It names the chosen design, asks for the required
 // description (with the teacher's previous ones as chips), checks which of
 // the design's AI services can run and lets the teacher turn them off for
-// this activity, previews the activity card, and launches from its action
-// bar, where errors are shown too.
+// this activity, lets the teacher choose the time mode when the design has
+// phase durations (#1109), previews the activity card, and launches from its
+// action bar, where errors are shown too.
 //
 // The wizard (LaunchActivityWizardController) owns the selection and the
 // description, so going back to step 1 and returning keeps them:
 // - `designId`, the chosen design;
-// - `preview`, the wizard's preview of it (title, phases, case);
+// - `preview`, the wizard's preview of it (title, phases, case, planned
+//   duration);
 // - `description`, bound both ways;
 // - `onBack()`, "Change design" and "Back".
 //
 // The launch keeps today's flow: GET /designs/:id/valid, POST /sessions,
-// POST /activities (with `aiServices: false` when turned off, #970), the
-// design locked locally, then the activity's dashboard.
+// POST /activities (with `aiServices: false` when turned off, #970, and the
+// `timeMode` when the time card is shown, #1109), the design locked locally,
+// then the activity's dashboard.
 
 import {
     isActivityDescriptionValid,
@@ -27,6 +30,12 @@ import {
     launchAiServicesView,
 } from "../helpers/launch-ai-services.js";
 import { previousDescriptions } from "../helpers/launch-previous-descriptions.js";
+import {
+    DEFAULT_LAUNCH_TIME_MODE,
+    LAUNCH_TIME_MODE_OPTIONS,
+    launchTimeModeField,
+    launchTimeModeView,
+} from "../helpers/launch-time-mode.js";
 import { serviceDisplayName } from "../helpers/service-configuration-summary.js";
 
 export const DESCRIPTION_INPUT_ID = "activity-description-input";
@@ -69,6 +78,9 @@ function LaunchActivityStepController($scope, $rootScope, $timeout, $window,
     vm.descriptionInputId = DESCRIPTION_INPUT_ID;
     vm.aiServicesEnabled = true;
     vm.aiServices = launchAiServicesView({ loading: true });
+    vm.timeModeOptions = LAUNCH_TIME_MODE_OPTIONS;
+    vm.timeMode = DEFAULT_LAUNCH_TIME_MODE;
+    vm.timeModeView = launchTimeModeView(null);
     vm.previousDescriptions = [];
     vm.launching = false;
     vm.error = null;
@@ -159,6 +171,16 @@ function LaunchActivityStepController($scope, $rootScope, $timeout, $window,
         return vm.preview?.usesAiServices === true;
     };
 
+    // The time card follows the previewed design: shown only when one of its
+    // phases has a duration.
+    vm.refreshTimeMode = function() {
+        vm.timeModeView = launchTimeModeView(vm.preview?.plannedDuration);
+    };
+
+    vm.showsTimeMode = function() {
+        return vm.timeModeView.shown;
+    };
+
     vm.canLaunch = function() {
         return !vm.launching
             && vm.hasDescription()
@@ -187,7 +209,10 @@ function LaunchActivityStepController($scope, $rootScope, $timeout, $window,
             const sessionId = await ActivityCatalogService.createActivity(
                 design,
                 normalizeActivityDescription(vm.description),
-                { aiServices: launchAiServicesFlag(vm.aiServices) });
+                {
+                    aiServices: launchAiServicesFlag(vm.aiServices),
+                    timeMode:   launchTimeModeField(vm.timeModeView, vm.timeMode),
+                });
 
             // The server locked the design; the catalog follows. Its local
             // lock toggles, so a design already locked is left as it is.
@@ -216,7 +241,14 @@ function LaunchActivityStepController($scope, $rootScope, $timeout, $window,
         }
     };
 
+    vm.$onChanges = function(changes) {
+        if (changes.preview) {
+            vm.refreshTimeMode();
+        }
+    };
+
     vm.$onInit = function() {
+        vm.refreshTimeMode();
         vm.previousDescriptions = previousDescriptions(ActivityCatalogService.getActivities());
         // Service names follow the UI language.
         stopListening = $rootScope.$on("$translateChangeEnd", async () => {

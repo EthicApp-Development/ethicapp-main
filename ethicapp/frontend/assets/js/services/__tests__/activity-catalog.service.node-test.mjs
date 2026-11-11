@@ -1,5 +1,6 @@
 // ActivityCatalogService.createActivity (#972, epic #965): the launch's two
-// requests, the AI services switch, and failures the launch wizard can name.
+// requests, the AI services switch, the time mode (#1109), and failures the
+// launch wizard can name.
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
@@ -48,6 +49,27 @@ describe("ActivityCatalogService.createActivity", () => {
         const { service, requests } = createService(ok);
         await service.createActivity(DESIGN, "Sección 3", { aiServices: false });
         assert.deepEqual(requests[1].data, { sessionId: 41, designId: 7, aiServices: false });
+    });
+
+    it("sends the time mode when given (#1109)", async () => {
+        for (const timeMode of ["soft", "hard", "none"]) {
+            const { service, requests } = createService(ok);
+            await service.createActivity(DESIGN, "Sección 3", { timeMode });
+            assert.deepEqual(requests[1].data, { sessionId: 41, designId: 7, timeMode });
+        }
+    });
+
+    it("sends both launch choices together", async () => {
+        const { service, requests } = createService(ok);
+        await service.createActivity(DESIGN, "Sección 3", { aiServices: false, timeMode: "hard" });
+        assert.deepEqual(requests[1].data,
+            { sessionId: 41, designId: 7, aiServices: false, timeMode: "hard" });
+    });
+
+    it("leaves the time mode out when there is none to send", async () => {
+        const { service, requests } = createService(ok);
+        await service.createActivity(DESIGN, "Sección 3", { timeMode: undefined });
+        assert.equal(Object.hasOwn(requests[1].data, "timeMode"), false);
     });
 
     it("rejects with the failed request, its status and the server's code", async () => {

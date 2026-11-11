@@ -117,6 +117,25 @@
                 </ul>
             </div>
         </section>
+
+        <!-- The time mode (#1109): only for a design with phase durations. -->
+        <fieldset class="launch-wizard-card launch-step-time" ng-if="$ctrl.showsTimeMode()"
+            aria-describedby="launch-step-time-summary">
+            <legend class="launch-step-time-title">{{ 'launch_wizard_time_title' | translate }}</legend>
+            <p class="launch-step-time-summary" id="launch-step-time-summary">
+                {{ $ctrl.timeModeView.summary.key | translate:$ctrl.timeModeView.summary.params }}<span ng-if="$ctrl.timeModeView.hasUntimedPhases"> {{ 'launch_wizard_time_untimed_note' | translate }}</span>
+            </p>
+            <div class="radio launch-step-time-option" ng-repeat="option in $ctrl.timeModeOptions track by option.value">
+                <label>
+                    <input type="radio" name="launchTimeMode"
+                        ng-model="$ctrl.timeMode"
+                        ng-value="option.value"
+                        ng-disabled="$ctrl.launching">
+                    <span class="launch-step-time-label">{{ option.labelKey | translate }}</span>
+                    <span class="launch-step-time-help">{{ option.helpKey | translate }}</span>
+                </label>
+            </div>
+        </fieldset>
     </div>
 
     <aside class="launch-wizard-card launch-step-look" aria-labelledby="launch-step-look-title">

@@ -8,6 +8,7 @@ import * as StatusCodes from "../../../common/modules/session-status.js";
 import { requireRole } from "../../helpers/auth-helper.js";
 import { requireSessionOwnerOrParticipant } from "../../helpers/activity-owner-helper.js";
 import { sessionAiServicesEnabled } from "../../helpers/session-ai-services.js";
+import { sessionTimeMode } from "../../helpers/session-time-mode.js";
 import { designTitleOf } from "../../helpers/teacher-activity-list.js";
 
 const router = express.Router();
@@ -48,6 +49,7 @@ router.get("/activities/:session_id/descriptor", async (req, res) => {
                 sessions.status,
                 sessions.type,
                 sessions.ai_services_enabled,
+                sessions.time_mode,
                 designs.id AS designId,
                 designs.design -> 'metainfo' ->> 'title' AS "designTitle",
                 designs.design
@@ -95,6 +97,9 @@ router.get("/activities/:session_id/descriptor", async (req, res) => {
             // False when the activity was launched with its AI services
             // turned off (#970).
             aiServicesEnabled: sessionAiServicesEnabled(activityResult),
+
+            // "soft", "hard" or "none", chosen at launch (#1109).
+            timeMode: sessionTimeMode(activityResult),
         };
 
         console.info(`Successfully retrieved activity descriptor for session_id: ${session_id}.`);
