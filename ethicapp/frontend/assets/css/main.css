@@ -2606,6 +2606,7 @@ h2{
 /* The same blue as the selected phase in the phase list. */
 .activity-dashboard-toast-container .teacher-toast-alert.alert-info {
     border-color: #2649ec;
+    color: #2649ec;
 }
 
 .designs-list .designs-toast-container .teacher-toast-alert {
