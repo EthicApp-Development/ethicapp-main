@@ -1,6 +1,40 @@
-let ActivityStateService = function($http, TeacherSocketService) {
+import { isSessionEvent, nextPhaseClock } from "../helpers/phase-clock-state.js";
+import {
+    TRANSITION_ACTIONS,
+    phaseTransitionAction,
+    phaseTransitionNotice,
+} from "../helpers/phase-transition-sync.js";
+
+// `now` is for tests; AngularJS injects the first two.
+let ActivityStateService = function($http, TeacherSocketService, now = () => Date.now()) {
     const CHAT_NOTIFY_THROTTLE_MS = 3000;
     const CHAT_REFRESH_WATCHDOG_MS = 10000;
+
+    // Per activity (#1116): this dashboard's requests to start the next
+    // phase still running, a phase transition that arrived meanwhile, and
+    // the queue that runs the reads after a transition or a reconnect one at
+    // a time, so each new phase is read once.
+    const phaseSyncs = new Map();
+    const phaseSync = function(sessionId) {
+        const key = Number(sessionId);
+        if (!phaseSyncs.has(key)) {
+            phaseSyncs.set(key, { ownStarts: 0, deferred: null, queue: Promise.resolve() });
+        }
+        return phaseSyncs.get(key);
+    };
+    const enqueuePhaseSync = function(sessionId, task) {
+        const sync = phaseSync(sessionId);
+        sync.queue = sync.queue.then(task).catch((error) => {
+            console.error(
+                `[ActivityStateService] Failed to follow the phases of session ${sessionId}:`,
+                error);
+        });
+        return sync.queue;
+    };
+
+    // The latest phase clock of each activity (#1116), with its server
+    // offset: see getPhaseClock.
+    const phaseClocks = new Map();
 
     const service = {
         subscriptionsMap: new Map(), // Subscription to socket events
@@ -107,6 +141,9 @@ let ActivityStateService = function($http, TeacherSocketService) {
 
                 // load activity responses
                 await service.getResponses(sessionId, true);
+
+                // the phase clock (#1116); the activity loads without it
+                await service.refreshPhaseClock(sessionId);
         
                 return service.activityStates[sessionId];
             }
@@ -234,12 +271,50 @@ let ActivityStateService = function($http, TeacherSocketService) {
                 })
             );
         
+            // The phase events (#1116, epic #1105). The teacher's socket may be
+            // in the rooms of several activities, so each one is checked
+            // against this session.
+            subscriptions.push(
+                TeacherSocketService.fromEvent("onPhaseTransition").subscribe({
+                    next:  data => service.handlePhaseTransition(sessionId, data),
+                    error: err => console.error(
+                        `Websocket error for onPhaseTransition in session ${sessionId}:`, err),
+                })
+            );
+            subscriptions.push(
+                TeacherSocketService.fromEvent("onPhaseClock").subscribe({
+                    next:  data => service.acceptPhaseClock(sessionId, data),
+                    error: err => console.error(
+                        `Websocket error for onPhaseClock in session ${sessionId}:`, err),
+                })
+            );
+            subscriptions.push(
+                TeacherSocketService.fromEvent("onPhaseDeadlineReached").subscribe({
+                    next: (data) => {
+                        if (isSessionEvent(data, sessionId)) {
+                            service.notifyListeners("onPhaseDeadlineReached", data);
+                        }
+                    },
+                    error: err => console.error(
+                        `Websocket error for onPhaseDeadlineReached in session ${sessionId}:`, err),
+                })
+            );
+
+            // After a reconnect the socket service joins the session's room
+            // again; what happened meanwhile is read again here.
+            const stopFollowingReconnects = typeof TeacherSocketService.onReconnect === "function"
+                ? TeacherSocketService.onReconnect(() => service.resyncAfterReconnect(sessionId))
+                : () => {};
+
             // Function to unsubscribe all subscriptions
             const unsubscribeAll = () => {
                 subscriptions.forEach((subscription) => subscription.unsubscribe());
+                stopFollowingReconnects();
                 TeacherSocketService.leaveSession(sessionId);
                 service.stopChatRefreshWatchdog(sessionId);
                 service.clearChatNotificationState(sessionId);
+                phaseClocks.delete(Number(sessionId));
+                phaseSyncs.delete(Number(sessionId));
                 service.subscriptionsMap.delete(sessionId); // Remove from the map
             };
         
@@ -628,23 +703,153 @@ let ActivityStateService = function($http, TeacherSocketService) {
          * @returns {Promise<{ id: number, number: number }>} The new phase.
          */
         startNextPhase: async function(sessionId, expectedPhaseNumber) {
-            let response;
+            // While it runs, the `onPhaseTransition` of this very start is
+            // held, and checked again once the phases are read (#1116).
+            const sync = phaseSync(sessionId);
+            sync.ownStarts += 1;
             try {
-                response = await $http.post(`/activities/${sessionId}/phases/next`, {
-                    expectedPhaseNumber,
-                });
-            } catch (error) {
-                if (error?.status === 409) {
-                    await service.reloadPhaseState(sessionId).catch((reloadError) => {
-                        console.error(`Failed to reload the phases of session ${sessionId}:`,
-                            reloadError);
+                let response;
+                try {
+                    response = await $http.post(`/activities/${sessionId}/phases/next`, {
+                        expectedPhaseNumber,
                     });
+                } catch (error) {
+                    if (error?.status === 409) {
+                        await service.reloadPhaseState(sessionId).catch((reloadError) => {
+                            console.error(`Failed to reload the phases of session ${sessionId}:`,
+                                reloadError);
+                        });
+                    }
+                    throw error;
                 }
-                throw error;
-            }
 
-            await service.reloadPhaseState(sessionId);
-            return response.data.phase;
+                await service.reloadPhaseState(sessionId);
+                return response.data.phase;
+            } finally {
+                sync.ownStarts -= 1;
+                if (sync.ownStarts === 0 && sync.deferred) {
+                    const deferred = sync.deferred;
+                    sync.deferred = null;
+                    service.handlePhaseTransition(sessionId, deferred);
+                }
+            }
+        },
+
+        /**
+         * Follows a phase that started (#1116): `onPhaseTransition { sessionId,
+         * phaseId, phaseNumber, reason }`, from the deadline runner or from a
+         * teacher's request in any dashboard of the activity. A phase this
+         * dashboard does not know yet makes it read the phases, the
+         * descriptor and the responses once, then notifies the listeners of
+         * `onPhaseTransition` with the phase the activity is at and the
+         * event's reason (helpers/phase-transition-sync.js). This
+         * dashboard's own start is not read twice.
+         *
+         * @returns {Promise<void>}
+         */
+        handlePhaseTransition: function(sessionId, event) {
+            return enqueuePhaseSync(sessionId, async () => {
+                const sync = phaseSync(sessionId);
+                const action = phaseTransitionAction(event, {
+                    sessionId,
+                    descriptor:      service.activityStates[sessionId]?.descriptor,
+                    ownStartPending: sync.ownStarts > 0,
+                });
+                if (action === TRANSITION_ACTIONS.DEFER) {
+                    sync.deferred = event;
+                    return;
+                }
+                if (action !== TRANSITION_ACTIONS.APPLY) {
+                    return;
+                }
+
+                await service.reloadPhaseState(sessionId);
+                const notice = phaseTransitionNotice(sessionId,
+                    service.activityStates[sessionId]?.descriptor, event.reason);
+                if (notice) {
+                    service.notifyListeners("onPhaseTransition", notice);
+                }
+            });
+        },
+
+        /**
+         * Reads the activity again after the socket reconnected (#1116): the
+         * participants, the phases, the descriptor, the responses and the
+         * clock, since events may have been missed. Notifies
+         * `onPhaseTransition` (reason null) when the activity moved to
+         * another phase meanwhile, then `onActivityResynced { sessionId }`.
+         *
+         * @returns {Promise<void>}
+         */
+        resyncAfterReconnect: function(sessionId) {
+            return enqueuePhaseSync(sessionId, async () => {
+                const state = service.activityStates[sessionId];
+                if (!state) {
+                    return;
+                }
+                const phaseBefore = Number(state.descriptor?.currentPhase?.id) || null;
+
+                await service.getSessionUsers(sessionId, true);
+                await service.reloadPhaseState(sessionId);
+                await service.refreshPhaseClock(sessionId);
+
+                const notice = phaseTransitionNotice(sessionId,
+                    service.activityStates[sessionId]?.descriptor, null);
+                if (notice && notice.phaseId !== phaseBefore) {
+                    service.notifyListeners("onPhaseTransition", notice);
+                }
+                service.notifyListeners("onActivityResynced", { sessionId: Number(sessionId) });
+            });
+        },
+
+        /**
+         * The latest phase clock of an activity (#1116, epic #1105), or null
+         * before it is read. Its fields are the server's (GET
+         * /activities/:id/clock and `onPhaseClock`, documented in
+         * backend/helpers/phase-clock.js) plus `offsetMs`, the server's time
+         * minus the local time when it arrived, and `receivedAt`, that local
+         * time in ms (helpers/phase-clock-state.js). Listeners of
+         * `onPhaseClock` get it each time it changes.
+         *
+         * @param {number|string} sessionId
+         * @returns {Object|null}
+         */
+        getPhaseClock: function(sessionId) {
+            return phaseClocks.get(Number(sessionId)) ?? null;
+        },
+
+        /**
+         * Keeps `clock` as the activity's phase clock unless it is for
+         * another activity or older than the one kept, and then notifies the
+         * listeners of `onPhaseClock`.
+         *
+         * @returns {boolean} Whether it was kept.
+         */
+        acceptPhaseClock: function(sessionId, clock) {
+            const { accepted, clock: kept } = nextPhaseClock(service.getPhaseClock(sessionId),
+                clock, { sessionId, localNowMs: now() });
+            if (!accepted) {
+                return false;
+            }
+            phaseClocks.set(Number(sessionId), kept);
+            service.notifyListeners("onPhaseClock", kept);
+            return true;
+        },
+
+        /**
+         * Reads the activity's phase clock from the server. A failure is
+         * logged and keeps the clock already kept.
+         *
+         * @returns {Promise<Object|null>} The kept clock.
+         */
+        refreshPhaseClock: async function(sessionId) {
+            try {
+                const response = await $http.get(`/activities/${sessionId}/clock`);
+                service.acceptPhaseClock(sessionId, response?.data);
+            } catch (error) {
+                console.error(`Failed to read the phase clock of session ${sessionId}:`, error);
+            }
+            return service.getPhaseClock(sessionId);
         },
 
         reloadPhaseState: async function(sessionId) {

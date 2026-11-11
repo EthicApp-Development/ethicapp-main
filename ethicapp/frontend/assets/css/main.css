@@ -2587,6 +2587,23 @@ h2{
     font-size: small;
 }
 
+/* The toast of an advance by the deadline (#1116): under the activity bar,
+   on the right, over the content and the response detail panel. */
+.activity-dashboard-toast-container {
+    pointer-events: none;
+    position: fixed;
+    right: 16px;
+    top: calc(var(--activity-dashboard-sticky-top) + 8px);
+    width: min(420px, calc(100% - 32px));
+    z-index: 995;
+}
+
+.activity-dashboard-toast-container .teacher-toast-alert {
+    box-shadow: 0 8px 24px rgb(7 28 120 / 15%);
+    margin-bottom: 0;
+    pointer-events: auto;
+}
+
 .designs-list .designs-toast-container .teacher-toast-alert {
     height: 1 !important;
     margin-top: 0px;
@@ -2971,6 +2988,20 @@ h2{
     .activity-dashboard-page {
         --activity-bar-top: 62px;
     }
+}
+
+/* The last phase's deadline passed in a hard-mode activity (#1116) */
+.activity-deadline-notice {
+    margin-bottom: 12px;
+}
+
+.activity-deadline-notice p {
+    margin-bottom: 0;
+}
+
+.activity-deadline-notice .activity-deadline-notice-title {
+    font-weight: 600;
+    margin-bottom: 4px;
 }
 
 .activity-dashboard-grid {

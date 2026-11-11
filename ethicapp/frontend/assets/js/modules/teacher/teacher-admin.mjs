@@ -203,7 +203,7 @@ app.controller("CreateDesignController",
 app.controller("DashboardController", 
     ["$scope", "$routeParams", "$http", "$translate", "$timeout",
         "ActivityStateService", "ActivityCatalogService", "DesignCatalogService",
-        "CasesCatalogService", "LanguageCatalogService", "$window",
+        "CasesCatalogService", "LanguageCatalogService", "$window", "toast",
         DashboardController]);
 app.controller("DesignViewerController", 
     ["$scope", "$routeParams", "$window", "DesignCatalogService", "CasesCatalogService",
