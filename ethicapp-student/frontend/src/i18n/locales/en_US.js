@@ -196,6 +196,23 @@ const enUS = {
     showDeveloperInfo: 'Show information',
     hideDeveloperInfo: 'Hide information'
   },
+  phaseTimer: {
+    timeLeft: 'Time left',
+    lastMinute: 'Less than a minute left. Submit your answer.',
+    advancing: "Time's up. Moving to the next phase…",
+    timeUp: "Time's up. Your teacher will say when to move on.",
+    extended: 'Your teacher added time',
+    announceFiveMinutes: '5 minutes left.',
+    announceNewPhase: 'A new phase started. Time left: {{time}}.',
+    announceExtended: 'Your teacher added time. Time left: {{time}}.',
+    hour: 'hour',
+    hours: 'hours',
+    minute: 'minute',
+    minutes: 'minutes',
+    second: 'second',
+    seconds: 'seconds',
+    and: 'and'
+  },
   notFound: {
     title: 'Page not found',
     description: 'The route you tried to open does not exist in the student module.',
