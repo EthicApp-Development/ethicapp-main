@@ -209,6 +209,8 @@ describe("POST /activities/:session_id/phases/next: the request", () => {
                 question:            "Injected",
                 sesid:               OTHER_SESSION_ID,
                 userId:              OTHER_TEACHER.uid,
+                // Only the deadline runner starts a phase by the deadline.
+                trigger:             "deadline",
             },
         });
 
@@ -284,6 +286,8 @@ describe("POST /activities/:session_id/phases/next: outcomes", () => {
         assert.deepEqual(statements.slice(begin, begin + 3),
             ["BEGIN", LOCK_TEACHER_SQL, LOCK_SESSION_SQL]);
         assert.ok(statements.includes(INSERT_DIFFERENTIAL_ITEMS_SQL));
+        const insertedPhase = db.queries.find(({ sql }) => sql === INSERT_PHASE_SQL);
+        assert.equal(insertedPhase.params[8], "teacher", "the route starts as the teacher");
         assert.deepEqual(statements.slice(-2), [TRANSITION_SESSION_SQL, "COMMIT"]);
         assert.deepEqual(effects.slice(0, 2), [["invalidate", SESSION_ID], ["notify", SESSION_ID]]);
     });
