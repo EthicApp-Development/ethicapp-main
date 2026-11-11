@@ -5,8 +5,9 @@ import session from "express-session";
 import { Server as SocketIO } from "socket.io";
 import { io as connectClient } from "socket.io-client";
 import { configureSocketServer } from "../../config/socket.config.js";
-import { createStudentSocketInit } from "../student.socket.js";
-import { createTeacherSocketInit } from "../teacher.socket.js";
+import { createStudentSocketInit, toStudentsNotifications } from "../student.socket.js";
+import { createTeacherSocketInit, toTeacherNotifications } from "../teacher.socket.js";
+import { createPhaseClockNotifier } from "../../helpers/phase-clock-notifier.js";
 
 // Fixture: student 44 participates in session 57 and group 9; teacher 7
 // created session 57, which owns group 9.
@@ -227,3 +228,64 @@ for (const transport of ["polling", "websocket"]) {
         }
     });
 }
+
+// The phase clock's events (#1111) through real namespaces: the students and
+// the teacher who joined the session's room get the transition and the clock,
+// and only the teacher gets the deadline notice.
+function nextPayload(client, event, ms = 1000) {
+    return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error(`no ${event}`)), ms);
+        client.once(event, (payload) => {
+            clearTimeout(timer);
+            resolve(payload);
+        });
+    });
+}
+
+test("the phase clock's events reach the session's room in both namespaces", async () => {
+    const server = await startServer();
+    const student = connect(server, "/student", { userId: 44, role: "A", transport: "websocket" });
+    const teacher = connect(server, "/teacher", { userId: 7, role: "P", transport: "websocket" });
+    const clock = {
+        sessionId:   57,
+        timeMode:    "hard",
+        finished:    false,
+        phaseId:     301,
+        phaseNumber: 2,
+        startedAt:   "2026-11-11T10:00:00.000Z",
+        endsAt:      "2026-11-11T10:05:00.000Z",
+        isLastPhase: true,
+        serverNow:   "2026-11-11T10:00:00.050Z",
+    };
+    const notifier = createPhaseClockNotifier({
+        students:  () => toStudentsNotifications(server.studentNamespace),
+        teachers:  () => toTeacherNotifications(server.teacherNamespace),
+        readClock: async () => clock,
+        logger:    silentLogger,
+    });
+    try {
+        await Promise.all([waitForConnection(student), waitForConnection(teacher)]);
+        assert.deepEqual(await student.emitWithAck("joinSession", 57), { ok: true });
+        assert.deepEqual(await teacher.emitWithAck("joinSession", 57), { ok: true });
+
+        const transition = { sessionId: 57, phaseId: 301, phaseNumber: 2, reason: "deadline" };
+        const received = Promise.all([
+            nextPayload(student, "onPhaseTransition"),
+            nextPayload(student, "onPhaseClock"),
+            nextPayload(teacher, "onPhaseTransition"),
+            nextPayload(teacher, "onPhaseClock"),
+        ]);
+        await notifier.phaseStarted(57, { phaseId: 301, phaseNumber: 2, reason: "deadline" });
+        assert.deepEqual(await received, [transition, clock, transition, clock]);
+
+        const studentNotice = receivesWithin(student, "onPhaseDeadlineReached");
+        const teacherNotice = nextPayload(teacher, "onPhaseDeadlineReached");
+        notifier.deadlineReached(57, { phaseId: 301, isLastPhase: true });
+        assert.deepEqual(await teacherNotice, { sessionId: 57, phaseId: 301, isLastPhase: true });
+        assert.equal(await studentNotice, false);
+    } finally {
+        student.close();
+        teacher.close();
+        await server.close();
+    }
+});

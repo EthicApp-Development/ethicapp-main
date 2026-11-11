@@ -268,9 +268,11 @@ describe("POST /activities/:session_id/phases/next: outcomes", () => {
 
     it("runs the transaction for the owner, through the real starter", async () => {
         const effects = [];
+        const notify = async (sessionId, transition) =>
+            effects.push(["notify", sessionId, transition]);
         starter = createPhaseStarter({
             invalidateStudentDescriptor: async sessionId => effects.push(["invalidate", sessionId]),
-            notifyStudents:              sessionId => effects.push(["notify", sessionId]),
+            notifyPhaseStarted:          notify,
             dispatchPhaseHook:           async hookName => effects.push([hookName]),
             logger:                      { warn() {}, error() {} },
         });
@@ -289,7 +291,10 @@ describe("POST /activities/:session_id/phases/next: outcomes", () => {
         const insertedPhase = db.queries.find(({ sql }) => sql === INSERT_PHASE_SQL);
         assert.equal(insertedPhase.params[8], "teacher", "the route starts as the teacher");
         assert.deepEqual(statements.slice(-2), [TRANSITION_SESSION_SQL, "COMMIT"]);
-        assert.deepEqual(effects.slice(0, 2), [["invalidate", SESSION_ID], ["notify", SESSION_ID]]);
+        assert.deepEqual(effects.slice(0, 2), [
+            ["invalidate", SESSION_ID],
+            ["notify", SESSION_ID, { phaseId: PHASE_ID, phaseNumber: 1, reason: "teacher" }],
+        ]);
     });
 });
 
