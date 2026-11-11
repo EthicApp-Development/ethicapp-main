@@ -197,6 +197,23 @@ const esCL = {
     showDeveloperInfo: 'Mostrar información',
     hideDeveloperInfo: 'Ocultar información'
   },
+  phaseTimer: {
+    timeLeft: 'Tiempo restante',
+    lastMinute: 'Queda menos de 1 minuto. Envía tu respuesta.',
+    advancing: 'Tiempo cumplido. Pasando a la siguiente fase…',
+    timeUp: 'Tiempo cumplido. El docente indicará cuándo continuar.',
+    extended: 'El docente agregó tiempo',
+    announceFiveMinutes: 'Quedan 5 minutos.',
+    announceNewPhase: 'Comenzó una nueva fase. Tiempo restante: {{time}}.',
+    announceExtended: 'El docente agregó tiempo. Tiempo restante: {{time}}.',
+    hour: 'hora',
+    hours: 'horas',
+    minute: 'minuto',
+    minutes: 'minutos',
+    second: 'segundo',
+    seconds: 'segundos',
+    and: 'y'
+  },
   notFound: {
     title: 'Página no encontrada',
     description: 'La ruta que intentaste abrir no existe en el módulo de estudiante.',

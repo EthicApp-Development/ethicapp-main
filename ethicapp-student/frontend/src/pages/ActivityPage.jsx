@@ -5,11 +5,13 @@ import { studentApi, legacyUserApi } from '../api/studentApi.js';
 import { fetchStudentExternalResults } from '../api/studentExternalResults.js';
 import { useI18n } from '../app/providers.jsx';
 import ActivityTabsPanel from '../components/session-detail/ActivityTabsPanel.jsx';
+import PhaseTimer from '../components/session-detail/PhaseTimer.jsx';
 import SessionMetadata from '../components/session-detail/SessionMetadata.jsx';
 import WaitingStatePanel from '../components/session-detail/WaitingStatePanel.jsx';
 import { CaseVideosProvider } from '../context/CaseVideosContext.jsx';
 import { useStudentActivityState } from '../context/StudentActivityStateContext.jsx';
 import { errorLogDetails } from '../utils/logDetails.js';
+import { useActivityPhaseTimer } from './session-detail/hooks/useActivityPhaseTimer.js';
 import { useActivityRealtimeSync } from './session-detail/hooks/useActivityRealtimeSync.js';
 import { useChatPhaseGroups } from './session-detail/hooks/useChatPhaseGroups.js';
 import { usePhaseResponseSubmission } from './session-detail/hooks/usePhaseResponseSubmission.js';
@@ -613,6 +615,16 @@ export default function ActivityPage() {
   const currentPhaseNumber = activityState?.descriptor?.currentPhaseNumber ?? null;
   const currentPhaseId = activityState?.descriptor?.currentPhaseId ?? null;
 
+  // The current phase's time left (#1117), while the activity is in
+  // progress, shown on the case and on the current phase.
+  const phaseTimer = useActivityPhaseTimer({
+    sessionId: selectedSession?.id,
+    enabled: session.isAuthenticated && Boolean(selectedSession) && activityStatusCode === SESSION_STATUS.inProgress,
+    currentPhaseId
+  });
+  const showPhaseTimer = localState.activeTab === 'case'
+    || (currentPhaseId !== null && localState.activeTab === `phase-${currentPhaseId}`);
+
   // The newest result of the current phase is expanded, the others
   // collapsed, until the student toggles them (page state only).
   const defaultExpandedKey = useMemo(() => (
@@ -818,6 +830,7 @@ export default function ActivityPage() {
                       {t('sessionDetail.activityFinished')}
                     </div>
                   ) : null}
+                  <PhaseTimer timer={phaseTimer} visible={showPhaseTimer} t={t} />
                   <ActivityTabsPanel
                     tabEntries={tabEntries}
                     activeTab={localState.activeTab}

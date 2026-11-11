@@ -27,12 +27,18 @@ import {
     findDetailRow,
 } from "../../helpers/response-detail.js";
 import { hiddenNamePhase, pseudonymNumberMap } from "../../helpers/hidden-names.js";
+import { isSessionEvent } from "../../helpers/phase-clock-state.js";
+import { isDeadlineAdvance } from "../../helpers/phase-transition-sync.js";
+import { lastPhaseDeadlineNotice, reachedDeadline } from "../../helpers/phase-deadline-notice.js";
+
+const TOAST_CONTAINER = "activity-dashboard-toast-container";
+const DEADLINE_TOAST_TIMEOUT_MS = 8000;
 
 /*eslint func-style: ["error", "expression"]*/
 export function DashboardController($scope, $routeParams, $http,
     $translate, $timeout,
     ActivityStateService, ActivityCatalogService, DesignCatalogService, CasesCatalogService,
-    LanguageCatalogService, $window) {
+    LanguageCatalogService, $window, toast, now = () => Date.now()) {
 
     const vm = this;
 
@@ -103,6 +109,14 @@ export function DashboardController($scope, $routeParams, $http,
 
     // Titles the browser tab by the activity once the dashboard knows it.
     let documentTitle = null;
+
+    // The notice for the last phase's deadline in a hard-mode activity
+    // (#1116, helpers/phase-deadline-notice.js): null, or `{ key, phaseId,
+    // endsAt }` while it shows. The deadline the server reported, and the
+    // key of the notice the teacher closed.
+    vm.lastPhaseDeadlineNotice = null;
+    let reachedPhaseDeadline = null;
+    let dismissedDeadlineNoticeKey = null;
 
     // A service's name in the UI language, or its id without one.
     vm.serviceNotRunningName = function(service) {
@@ -520,6 +534,16 @@ export function DashboardController($scope, $routeParams, $http,
             vm.defaultEventHandler);
         ActivityStateService.registerListener("onChatMessage",
             vm.defaultEventHandler);
+        // Phase changes this dashboard did not start, the clock, and the
+        // last phase's deadline (#1116).
+        ActivityStateService.registerListener("onPhaseTransition",
+            vm.phaseTransitionHandler);
+        ActivityStateService.registerListener("onPhaseClock",
+            vm.phaseClockHandler);
+        ActivityStateService.registerListener("onPhaseDeadlineReached",
+            vm.phaseDeadlineHandler);
+        ActivityStateService.registerListener("onActivityResynced",
+            vm.activityResyncHandler);
 
         $scope.$on("$destroy", () => {
             ActivityStateService.unregisterListener("onStudentJoined",
@@ -531,6 +555,14 @@ export function DashboardController($scope, $routeParams, $http,
             ActivityStateService.unregisterListener("onChatMessage",
                 vm.defaultEventHandler
             );
+            ActivityStateService.unregisterListener("onPhaseTransition",
+                vm.phaseTransitionHandler);
+            ActivityStateService.unregisterListener("onPhaseClock",
+                vm.phaseClockHandler);
+            ActivityStateService.unregisterListener("onPhaseDeadlineReached",
+                vm.phaseDeadlineHandler);
+            ActivityStateService.unregisterListener("onActivityResynced",
+                vm.activityResyncHandler);
 
             // Stop ActivityStateService listening to events from the current session
             unsubscribeHandler();
@@ -605,6 +637,7 @@ export function DashboardController($scope, $routeParams, $http,
 
             // Have we reached the last phase?
             vm.reachedLastPhase = vm.lastPhaseReached();
+            vm.refreshDeadlineNotice();
     
             // Get phase instances
             const phaseInstances = await ActivityStateService.getInstancedPhases(vm.sessionId);
@@ -799,6 +832,7 @@ export function DashboardController($scope, $routeParams, $http,
     };
     
     vm.endActivity = function() {    
+        vm.lastPhaseDeadlineNotice = null;
         $http.post('/activities/' + vm.sessionId + '/finish')
             .then(response => {
                 console.log('Activity finished successfully:', response.data);
@@ -862,9 +896,9 @@ export function DashboardController($scope, $routeParams, $http,
     };
 
     // Starting the next phase always moves the view to it, on the responses
-    // (#894). The event comes after an await, outside a digest.
-    $scope.$on("activity:phase-advanced", (event, data) => {
-        const phaseId = data?.phaseId;
+    // (#894), whoever started it. The call comes after an await, outside a
+    // digest.
+    vm.showAdvancedPhase = function(phaseId) {
         $scope.$applyAsync(() => {
             // The previous phase's chat closes for the students; the panel
             // closes with it (#896).
@@ -872,7 +906,109 @@ export function DashboardController($scope, $routeParams, $http,
             vm.selectMainTab(DEFAULT_DASHBOARD_TAB);
             vm.activatePhaseTabById(phaseId || vm.currentPhaseId(), phaseId ? 8 : 0);
         });
+    };
+
+    $scope.$on("activity:phase-advanced", (event, data) => {
+        vm.showAdvancedPhase(data?.phaseId);
     });
+
+    // A phase this dashboard did not start began (#1116): the deadline
+    // runner of a hard-mode activity, the teacher in another tab, or a
+    // change found after a reconnect. ActivityStateService has read the
+    // phases again and tells it once per phase. The dashboard moves to it as
+    // for its own start; an advance by the deadline also shows a toast.
+    vm.phaseTransitionHandler = async function(notice) {
+        if (!isSessionEvent(notice, vm.sessionId) || !vm.activityState || !vm.designObj) {
+            return;
+        }
+
+        vm.isActivityFinished = vm.checkActivityFinished();
+        $scope.$applyAsync(() => {
+            vm.reachedLastPhase = vm.lastPhaseReached();
+        });
+
+        await vm.updateDashboardPhaseData(notice.phaseId);
+        vm.showAdvancedPhase(notice.phaseId);
+
+        if (isDeadlineAdvance(notice)) {
+            vm.showDeadlineAdvanceToast(notice.phaseNumber);
+        }
+    };
+
+    vm.showDeadlineAdvanceToast = function(phaseNumber) {
+        if (typeof toast?.create !== "function") {
+            return;
+        }
+        toast.create({
+            containerClass: TOAST_CONTAINER,
+            type:           "info",
+            dismissible:    true,
+            timeout:        DEADLINE_TOAST_TIMEOUT_MS,
+            message:        translateInstant("dashboard_phase_deadline_advanced_toast",
+                { number: phaseNumber }),
+        });
+    };
+
+    // The clock changed (#1116): a new phase, "+1 min" or a read after a
+    // reconnect. The dashboard's bar renders it (#1115); here it only
+    // updates the last phase's notice.
+    vm.phaseClockHandler = function(phaseClock) {
+        if (!isSessionEvent(phaseClock, vm.sessionId)) {
+            return;
+        }
+        $scope.$applyAsync(() => vm.refreshDeadlineNotice());
+    };
+
+    // The last phase of a hard-mode activity reached its deadline (#1116):
+    // the activity stays open, and the notice invites the teacher to finish
+    // it with the existing button.
+    vm.phaseDeadlineHandler = function(event) {
+        const reached = reachedDeadline(event, vm.phaseClock(), vm.sessionId);
+        if (!reached) {
+            return;
+        }
+        reachedPhaseDeadline = reached;
+        $scope.$applyAsync(() => vm.refreshDeadlineNotice());
+    };
+
+    // The socket reconnected and ActivityStateService read the activity
+    // again (#1116): the participants and every phase shown are rebuilt
+    // from it.
+    vm.activityResyncHandler = function(data) {
+        if (!isSessionEvent(data, vm.sessionId) || !vm.activityState || !vm.designObj) {
+            return;
+        }
+        vm.isActivityFinished = vm.checkActivityFinished();
+        $scope.$applyAsync(() => {
+            vm.userList = Array.isArray(vm.activityState.users) ? vm.activityState.users : [];
+            vm.reachedLastPhase = vm.lastPhaseReached();
+            vm.refreshDeadlineNotice();
+        });
+        vm.dashboardPhaseData.forEach((phaseData) => {
+            vm.updateDashboardPhaseData(phaseData.descriptor.id);
+        });
+    };
+
+    vm.phaseClock = function() {
+        return typeof ActivityStateService?.getPhaseClock === "function"
+            ? ActivityStateService.getPhaseClock(vm.sessionId)
+            : null;
+    };
+
+    vm.refreshDeadlineNotice = function() {
+        vm.lastPhaseDeadlineNotice = vm.isActivityFinished
+            ? null
+            : lastPhaseDeadlineNotice(vm.phaseClock(), {
+                localNowMs:   now(),
+                reached:      reachedPhaseDeadline,
+                dismissedKey: dismissedDeadlineNoticeKey,
+            });
+    };
+
+    vm.dismissLastPhaseDeadlineNotice = function() {
+        dismissedDeadlineNoticeKey = vm.lastPhaseDeadlineNotice?.key ?? null;
+        vm.lastPhaseDeadlineNotice = null;
+    };
 
     vm.lastPhaseReached = function() {
         return vm.activityState?.descriptor.currentPhase !== null && 

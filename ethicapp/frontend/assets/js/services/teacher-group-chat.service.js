@@ -43,7 +43,7 @@ let TeacherGroupChatService = function($http, TeacherSocketService) {
         },
 
         subscribeToGroup: function(groupId, onMessage) {
-            TeacherSocketService.emitEvent("joinGroupChat", groupId);
+            TeacherSocketService.joinGroupChat(groupId);
             const subscription = TeacherSocketService.fromEvent("onGroupChatMessage").subscribe({
                 next: (message) => {
                     const normalizedMessage = normalizeMessage(message);
@@ -60,7 +60,7 @@ let TeacherGroupChatService = function($http, TeacherSocketService) {
 
             return function unsubscribe() {
                 subscription.unsubscribe();
-                TeacherSocketService.emitEvent("leaveGroupChat", groupId);
+                TeacherSocketService.leaveGroupChat(groupId);
             };
         },
     };
