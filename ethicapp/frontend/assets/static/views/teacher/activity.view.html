@@ -1,6 +1,7 @@
 <div class="activity-dashboard-page" ng-controller="DashboardController as dc">
     <!-- Activity bar, sticky under the app bar (#893) -->
     <activity-bar class="activity-bar-host"
+        session-id="dc.sessionId"
         activity="dc.activityState.descriptor"
         total-phases="dc.designObj.phases.length"
         users="dc.userList"
