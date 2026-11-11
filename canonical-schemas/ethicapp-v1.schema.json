@@ -95,7 +95,13 @@
           "type": "string",
           "minLength": 1
         },
-        "instructionsContentType": { "$ref": "#/$defs/textContentType" }
+        "instructionsContentType": { "$ref": "#/$defs/textContentType" },
+        "durationMinutes": {
+          "description": "How long the phase is planned to last, in whole minutes (#1107). A phase without it has no clock; the editor deletes the key instead of storing null or 0.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 180
+        }
       }
     },
 

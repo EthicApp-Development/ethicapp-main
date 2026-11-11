@@ -1,3 +1,5 @@
+import { plannedDesignDurationText } from "../../helpers/phase-duration.js";
+
 export function DesignViewerController($scope, $routeParams, $window, DesignCatalogService, CasesCatalogService,
     DesignPublicationService) {
     const vm = this;
@@ -43,6 +45,11 @@ export function DesignViewerController($scope, $routeParams, $window, DesignCata
         } finally {
             $scope.$applyAsync();
         }
+    };
+
+    // The planned total of the phases with a duration (#1107).
+    vm.plannedDurationText = function() {
+        return plannedDesignDurationText(vm.design?.phases);
     };
 
     vm.formatCaseLabel = function(caseItem) {

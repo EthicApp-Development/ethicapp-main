@@ -7,6 +7,12 @@ import {
     isCaseNotAvailableError,
 } from "../../helpers/design-save-errors.js";
 import { designVideoWarnings } from "../../helpers/case-video-embeds.js";
+import {
+    hasInvalidPhaseDuration,
+    isPhaseDurationEnabled,
+    phaseDurationSwitch,
+    plannedDesignDurationText,
+} from "../../helpers/phase-duration.js";
 
 export function DesignEditorController($scope, $translate, $timeout,
     $routeParams, DesignStateService, DesignCatalogService, CasesCatalogService,
@@ -320,6 +326,14 @@ export function DesignEditorController($scope, $translate, $timeout,
         }
     };
 
+    // Phase durations (#1107): the "Set duration" switch, and the planned
+    // total of the phases that have one.
+    vm.phaseDurationSwitch = phaseDurationSwitch;
+    vm.isPhaseDurationEnabled = isPhaseDurationEnabled;
+    vm.plannedDurationText = function() {
+        return plannedDesignDurationText(vm.design?.phases);
+    };
+
     vm.updatePhaseType = function(phase) {
         $scope.$applyAsync(() => {
             designEditActions.updatePhaseType(phase);
@@ -425,6 +439,10 @@ export function DesignEditorController($scope, $translate, $timeout,
                 vm.showSaveErrorToast("save_design_invalid_service_settings");
                 return;
             }
+            if (hasInvalidPhaseDuration(vm.design.phases)) {
+                vm.showSaveErrorToast("save_design_invalid_phase_duration");
+                return;
+            }
             await DesignCatalogService.updateDesign(vm.designId, vm.design);
             serverServiceErrors.clear();
             vm.rememberStoredDesign();
@@ -493,6 +511,7 @@ export function DesignEditorController($scope, $translate, $timeout,
                     items: {},          // For item/question errors
                     groupingConfig: [], // For grouping configuration errors
                     phaseInstructions: [], // For phase instructions errors
+                    duration: [],       // For phase duration errors (#1107)
                     other: [],          // Other phase-related errors
                 };
             }
@@ -524,8 +543,13 @@ export function DesignEditorController($scope, $translate, $timeout,
                 }
             }
     
+            if (context.duration) {
+                vm.validationErrors.phases[phaseKey].duration = [...messages];
+            }
+
             // Handle general phase errors
-            if (!context.itemNumber && !context.groupingConfig && !context.phaseInstructions) {
+            if (!context.itemNumber && !context.groupingConfig && !context.phaseInstructions
+                && !context.duration) {
                 if (messages.length > 0) {
                     vm.validationErrors.phases[phaseKey].other = messages;
                 } else {
@@ -534,12 +558,7 @@ export function DesignEditorController($scope, $translate, $timeout,
             }
     
             // Clean up the phase key if there are no errors
-            if (
-                Object.keys(vm.validationErrors.phases[phaseKey].items).length === 0 &&
-                vm.validationErrors.phases[phaseKey].groupingConfig.length === 0 &&
-                vm.validationErrors.phases[phaseKey].phaseInstructions.length === 0 &&
-                vm.validationErrors.phases[phaseKey].other.length === 0
-            ) {
+            if (phaseValidationHelpers.isPhaseValid(vm.validationErrors.phases[phaseKey])) {
                 delete vm.validationErrors.phases[phaseKey];
             }
         }

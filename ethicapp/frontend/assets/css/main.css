@@ -2106,6 +2106,37 @@ h2{
     margin-left: auto;
 }
 
+/* Phase duration (#1107): the "Set duration" switch, the minutes and the
+   design's planned total. */
+.design-editor .phase-duration-editor {
+    margin-top: 0.75em;
+}
+
+.design-editor .phase-duration-editor h5 {
+    margin-bottom: 0.25em;
+    font-weight: bold;
+}
+
+.design-editor .phase-duration-input {
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+    margin-top: 0.25em;
+}
+
+.design-editor .phase-duration-spinbutton {
+    display: block;
+    max-width: 10em;
+}
+
+.design-planned-duration {
+    margin: 0 0 1em;
+}
+
+.design-planned-duration .fa-clock {
+    margin-right: 0.25em;
+}
+
 .design-editor .fa-solid {
     cursor: pointer;
 }

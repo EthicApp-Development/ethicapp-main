@@ -6,9 +6,7 @@ import {
 
 const phaseBuilders = {
     semantic_differential: genericPhaseBuilder,
-    ranking: () => { 
-        genericPhaseBuilder({ roles: [ ], randomize_item_order: false }) 
-    },
+    ranking: () => genericPhaseBuilder({ roles: [], randomize_item_order: false }),
 };
 
 const itemBuilders = {

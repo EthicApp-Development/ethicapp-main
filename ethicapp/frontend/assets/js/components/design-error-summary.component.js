@@ -77,6 +77,17 @@ const designErrorSummaryComponent = {
                     </ul>
                 </div>
 
+                <div ng-if="$ctrl.validationErrors.phases[phaseKey].duration.length > 0">
+                    <h5>{{ 'phase_duration_label' | translate }}</h5>
+                    <ul class="list-group">
+                        <li class="list-group-item"
+                            ng-repeat="error in $ctrl.validationErrors.phases[phaseKey].duration"
+                            ng-click="$ctrl.scrollTo({ phaseKey: phaseKey })">
+                            <span class="text-danger">{{ error | translate }}</span>
+                        </li>
+                    </ul>
+                </div>
+
                 <!-- Other Errors -->
                 <div ng-if="$ctrl.validationErrors.phases[phaseKey].other.length > 0">
                     <h5>{{ 'other_phase_errors_title' | translate }}</h5>

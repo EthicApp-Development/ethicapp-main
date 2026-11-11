@@ -184,3 +184,27 @@ test("content types reject any other value", () => {
         assertInvalid(rankingDesign({ instructionsContentType: contentType }), `ranking ${label}`);
     }
 });
+
+// ─── Phase duration (#1107) ──────────────────────────────────────────────────
+
+test("phases without durationMinutes stay valid", () => {
+    const phase = seedPhase();
+    assert.equal(Object.hasOwn(phase, "durationMinutes"), false);
+    assertValid(designWithPhase(phase));
+    assertValid(rankingDesign(), "ranking");
+});
+
+test("durationMinutes accepts whole minutes from 1 to 180", () => {
+    for (const minutes of [1, 10, 180]) {
+        assertValid(designWithPhase(seedPhase({ durationMinutes: minutes })), String(minutes));
+        assertValid(rankingDesign({ durationMinutes: minutes }), `ranking ${minutes}`);
+    }
+});
+
+test("durationMinutes rejects values out of range, decimals, strings and null", () => {
+    for (const minutes of [0, -5, 181, 2.5, "10", null]) {
+        const label = JSON.stringify(minutes);
+        assertInvalid(designWithPhase(seedPhase({ durationMinutes: minutes })), label);
+        assertInvalid(rankingDesign({ durationMinutes: minutes }), `ranking ${label}`);
+    }
+});

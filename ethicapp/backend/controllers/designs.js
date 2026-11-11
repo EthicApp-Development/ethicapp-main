@@ -35,6 +35,7 @@ import {
     UPDATE_UNLOCKED_DESIGN_SQL,
 } from "../helpers/design-update.js";
 import { ensureCasePdfRenderJob } from "../helpers/pdf-render-jobs-helper.js";
+import { phaseDurationRefusal } from "../helpers/phase-duration.js";
 import externalServicesRegistry from "../services/external-services.service.js";
 import {
     designEnabledServiceIds,
@@ -502,6 +503,11 @@ router.post("/designs", async (req, res) => {
             return res.status(400).json({ status: "err", message: "Invalid input: Design data is required." });
         }
 
+        const durationRefusal = phaseDurationRefusal(design);
+        if (durationRefusal) {
+            return res.status(durationRefusal.status).json(durationRefusal.body);
+        }
+
         const parsedTagIds = parseTagIds(tagIdsSnake.length ? tagIdsSnake : tagIds);
         if (!areTagIdsValid(parsedTagIds)) {
             return res.status(400).json({ status: "err", message: "A design can have at most five semantic tags." });
@@ -619,6 +625,11 @@ router.patch("/designs/:id", async (req, res) => {
         // Validate input
         if (!designId || !design) {
             return res.status(400).json({ status: "err", message: "Invalid input" });
+        }
+
+        const durationRefusal = phaseDurationRefusal(design);
+        if (durationRefusal) {
+            return res.status(durationRefusal.status).json(durationRefusal.body);
         }
 
         const parsedTagIds = parseTagIds(tagIdsSnake.length ? tagIdsSnake : tagIds);

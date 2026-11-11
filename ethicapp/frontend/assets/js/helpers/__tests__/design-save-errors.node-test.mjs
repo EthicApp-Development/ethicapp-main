@@ -19,6 +19,12 @@ describe("designSaveErrorMessageKey (#730)", () => {
         assert.equal(designSaveErrorMessageKey(rejection), "save_design_invalid_service_settings");
     });
 
+    it("explains a save refused because of a phase duration (#1107)", () => {
+        const rejection = { status: 400, data: { status: "err", code: "INVALID_PHASE_DURATION" } };
+
+        assert.equal(designSaveErrorMessageKey(rejection), "save_design_invalid_phase_duration");
+    });
+
     it("explains a save refused because the case is not available (#924)", () => {
         const rejection = { status: 404, data: { status: "err", code: "CASE_NOT_AVAILABLE" } };
 
@@ -31,6 +37,7 @@ describe("designSaveErrorMessageKey (#730)", () => {
             { status: 500, data: { code: "DESIGN_LOCKED" } },
             { status: 409, data: { code: "INVALID_SERVICE_CONFIGURATION" } },
             { status: 409, data: { code: "CASE_NOT_AVAILABLE" } },
+            { status: 409, data: { code: "INVALID_PHASE_DURATION" } },
             { status: 404, data: { status: "err", message: "Design not found" } },
             { status: -1, data: null },
             new Error("Cannot save a null design"),
