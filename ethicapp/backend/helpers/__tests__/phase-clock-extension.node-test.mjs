@@ -68,6 +68,17 @@ describe("extendPhaseDeadline", () => {
             }]);
         });
 
+    // Decision of 2026-11-11: once the deadline has passed, the minute is
+    // added to the database's now(); the expected deadline is compared with
+    // the old one, to the millisecond. The integration tests run it.
+    it("adds the minute to the later of the deadline and now()", () => {
+        assert.match(EXTEND_PHASE_DEADLINE_SQL,
+            /SET ends_at = GREATEST\(st\.ends_at, now\(\)\) \+ \$4::integer \* interval/);
+        assert.match(EXTEND_PHASE_DEADLINE_SQL,
+            /date_trunc\('milliseconds', st\.ends_at\) = \$5::timestamptz/);
+        assert.match(EXTEND_PHASE_DEADLINE_SQL, /deadline_handled_at = NULL/);
+    });
+
     it("reads why only when nothing was updated", async () => {
         const { query, calls } = fakeQuery(new Map([
             [EXTENSION_STATE_SQL, [stateRow({ status: FINISHED, current_stage: null })]],

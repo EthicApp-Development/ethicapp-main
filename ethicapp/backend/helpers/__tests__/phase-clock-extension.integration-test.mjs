@@ -4,8 +4,9 @@
 // started by the real phase starter. One extension adds 60 seconds, two with
 // the same expected deadline add it once, a finished activity, a phase that is
 // not current, an activity without a time mode, a phase without a duration and
-// a hard deadline that passed unhandled are refused, and an extension resets
-// the deadline the runner handled. The locks, the database's clock and the
+// a hard deadline that passed unhandled are refused, a deadline that passed
+// restarts at one minute from now (decision of 2026-11-11), and an extension
+// resets the deadline the runner handled. The locks, the database's clock and the
 // precision of timestamptz cannot be checked with fakes.
 //
 // Run with `npm run test:integration`, setting ETHICAPP_INTEGRATION_DATABASE_URL
@@ -318,7 +319,17 @@ test("a hard deadline that passed and was not handled is not extended", {
     assert.deepEqual(await phaseClock(first), { ends_at: endsAt, deadline_handled_at: null });
 });
 
-test("a soft deadline that passed is extended from the deadline", {
+// The deadline's distance from the database's now(), in seconds.
+async function secondsLeft(phaseId) {
+    const [{ left }] = await query(`
+        SELECT extract(epoch FROM ends_at - now())::float AS left
+        FROM stages
+        WHERE id = $1;
+    `, [phaseId]);
+    return left;
+}
+
+test("a soft deadline that passed restarts at one minute from now", {
     skip: SKIP_REASON,
 }, async () => {
     const activity = await createActivity({ timeMode: "soft" });
@@ -326,18 +337,24 @@ test("a soft deadline that passed is extended from the deadline", {
     await expireDeadline(first, 135);
     const { ends_at: endsAt } = await phaseClock(first);
 
-    assert.equal((await extend(activity, first, isoOf(endsAt))).status, "extended");
+    const result = await extend(activity, first, isoOf(endsAt));
+
+    assert.equal(result.status, "extended");
     const extended = await phaseClock(first);
-    assert.equal(secondsBetween(endsAt, extended.ends_at), 60);
+    assert.deepEqual(extended.ends_at, result.endsAt);
+    // One minute from the extension, not from the deadline that passed.
+    const left = await secondsLeft(first);
+    assert.ok(left > 55 && left <= 60, `${left} seconds left`);
     assert.equal(extended.deadline_handled_at, null);
 });
 
-test("the handled deadline of a hard last phase is extended and due again", {
+test("the handled deadline of a hard last phase restarts at one minute and is due again", {
     skip: SKIP_REASON,
 }, async () => {
     const activity = await createActivity({ timeMode: "hard" });
     const [, , last] = await startPhases(activity, 3);
-    await expireDeadline(last);
+    // Long past: the teacher adds the minute five minutes after the notice.
+    await expireDeadline(last, 300);
     // The deadline runner's start: the last phase is handled, not finished.
     assert.deepEqual(
         await starter.startNextPhase({ ...activity, expectedPhaseNumber: 3, trigger: "deadline" }),
@@ -349,8 +366,16 @@ test("the handled deadline of a hard last phase is extended and due again", {
     assert.equal((await extend(activity, last, isoOf(handled.ends_at))).status, "extended");
 
     const extended = await phaseClock(last);
-    assert.equal(secondsBetween(handled.ends_at, extended.ends_at), 60);
     assert.equal(extended.deadline_handled_at, null);
+    const left = await secondsLeft(last);
+    assert.ok(left > 55 && left <= 60, `${left} seconds left`);
+
+    // Not due right after the extension: a deadline start writes nothing.
+    assert.deepEqual(
+        await starter.startNextPhase({ ...activity, expectedPhaseNumber: 3, trigger: "deadline" }),
+        { status: "not_due", currentPhaseNumber: 3 }
+    );
+    assert.deepEqual(await phaseClock(last), extended);
 
     // Once the new deadline passes, the runner handles it again.
     await expireDeadline(last);

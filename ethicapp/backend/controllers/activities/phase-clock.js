@@ -123,10 +123,13 @@ export function createPhaseClockRouter({
      *   administrator impersonating them). After a change the students and
      *   the teacher get the new clock (`onPhaseClock`).
      *
-     *   The extension is added to the deadline, also once it has passed in
-     *   soft mode. In hard mode a deadline that passed and that the deadline
-     *   runner (#1113) did not handle yet is not extended; one it handled,
-     *   on the last phase, is extended and handled again once it passes.
+     *   The minute is added to the later of the deadline and the
+     *   database's now() (decision of 2026-11-11): before the deadline it
+     *   moves the deadline one minute later; once the deadline has passed,
+     *   in soft mode or on a hard-mode last phase whose deadline the runner
+     *   (#1113) handled, the new deadline is one minute from now, and the
+     *   runner handles it again once it passes. In hard mode a deadline that
+     *   passed and that the runner did not handle yet is not extended.
      * @body {{ minutes: 1, expectedEndsAt: string }} `minutes` must be 1;
      *   `expectedEndsAt` is the clock's `endsAt` as the teacher saw it, an
      *   ISO 8601 time compared to the millisecond.

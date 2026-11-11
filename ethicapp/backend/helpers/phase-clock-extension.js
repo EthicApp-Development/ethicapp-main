@@ -16,9 +16,12 @@
  * - in hard mode, the deadline has not passed unhandled: the deadline runner
  *   (#1113) is about to act on it, and its decision stands.
  *
- * The extension is added to the deadline, not to the current time, also in
- * soft mode after 00:00, where the teacher's negative count shrinks by one
- * minute (decision of 2026-11-04: "+1 min" works in both modes).
+ * The extension is added to the later of the deadline and the database's
+ * now() (decision of 2026-11-11), in both modes ("+1 min" works in both,
+ * decision of 2026-11-04). Before the deadline it moves 09:30 left to 10:30
+ * left; after it, in soft mode past 00:00 or on a hard-mode last phase whose
+ * deadline the runner handled, the clock restarts at one full minute for
+ * everyone. `expectedEndsAt` is still compared with the deadline as it was.
  *
  * The same statement sets `deadline_handled_at` back to null, so that the
  * runner handles the new deadline: a hard-mode last phase whose deadline the
@@ -62,7 +65,7 @@ export const EXTEND_PHASE_DEADLINE_SQL = `
         FOR SHARE
     )
     UPDATE stages AS st
-    SET ends_at = st.ends_at + $4::integer * interval '1 minute',
+    SET ends_at = GREATEST(st.ends_at, now()) + $4::integer * interval '1 minute',
         deadline_handled_at = NULL
     FROM session AS s
     WHERE st.id = $2
@@ -145,7 +148,8 @@ async function defaultQuery(sql, params) {
 
 /**
  * Adds `minutes` to the deadline of phase `phaseId` of session `sessionId`,
- * for the session's teacher `teacherId`, when it is still `expectedEndsAt`.
+ * or to the current time once the deadline has passed, for the session's
+ * teacher `teacherId`, when the deadline is still `expectedEndsAt`.
  * Callers check the request first: the owner (requireSessionOwner) and the
  * values, `minutes` being EXTENSION_MINUTES and `expectedEndsAt` a valid
  * time.
