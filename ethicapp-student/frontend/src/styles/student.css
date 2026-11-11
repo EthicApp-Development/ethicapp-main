@@ -909,6 +909,70 @@ body {
   height: auto;
 }
 
+/* The current phase's time left (#1117): it stays below the topbar while
+   the student scrolls the case or the phase. */
+.phase-timer {
+  position: sticky;
+  top: calc(var(--student-topbar-height) + 0.5rem);
+  z-index: 1020;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.75rem;
+  margin-top: 1rem;
+  padding: 0.5rem 0.875rem;
+  border: 1px solid #c9d5ff;
+  border-radius: var(--bs-border-radius);
+  color: #071c78;
+  background: #f3f6ff;
+  box-shadow: 0 4px 12px rgba(7, 28, 120, 0.08);
+}
+
+.phase-timer__count {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-weight: 600;
+}
+
+.phase-timer__digits {
+  font-size: 1.25rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.phase-timer__icon {
+  flex: 0 0 auto;
+}
+
+/* Next to the icon or the count when it fits, on its own line otherwise. */
+.phase-timer__message {
+  flex: 1 1 12rem;
+  min-width: 0;
+  font-weight: 600;
+}
+
+.phase-timer__extended {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.875rem;
+}
+
+.phase-timer--lastMinute {
+  border-color: var(--bs-warning-border-subtle);
+  color: var(--bs-warning-text-emphasis);
+  background: var(--bs-warning-bg-subtle);
+}
+
+.phase-timer--timeUp,
+.phase-timer--advancing {
+  border-color: var(--bs-border-color);
+  color: var(--bs-emphasis-color);
+  background: var(--bs-tertiary-bg);
+}
+
 @media (max-width: 575.98px) {
   :root {
     --student-topbar-height: 62px;
@@ -939,6 +1003,14 @@ body {
     margin-left: -0.5rem;
     margin-right: -0.5rem;
     padding-bottom: max(7rem, env(safe-area-inset-bottom));
+  }
+
+  .phase-timer {
+    top: calc(var(--student-topbar-height) + 0.25rem);
+    margin-left: -0.5rem;
+    margin-right: -0.5rem;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.9375rem;
   }
 
   .case-document-image-scroll {
