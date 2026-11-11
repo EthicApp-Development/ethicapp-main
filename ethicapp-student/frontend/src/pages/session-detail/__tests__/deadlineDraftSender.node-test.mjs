@@ -7,10 +7,13 @@ import {
   SEND_FAILED,
   createDeadlineDraftSender,
   deadlineNoticeFor,
-  previousPhaseId
+  nextOutcomeRecord,
+  noticeFromRecords,
+  previousPhaseId,
+  storedOutcomeRecord
 } from '../deadlineDraftSender.js';
 import { HIDDEN_TIMER_SNAPSHOT } from '../phaseClockTracker.js';
-import { unsentDrafts } from '../../../utils/phaseDrafts.js';
+import { createDraftOutcomeStore, draftNoteFor, unsentDrafts } from '../../../utils/phaseDrafts.js';
 import { ANSWER_PROBLEMS } from '../../../utils/semanticDifferentialAnswer.js';
 
 const T0 = Date.parse('2026-11-11T15:00:00.000Z');
@@ -90,9 +93,17 @@ function phaseFixture(id, number, responses = []) {
 
 // The sender with the page's drafts and phases, a fake server and a manual
 // clock. `respond` decides each submit's answer (resolves by default).
-function createHarness({ respond = () => Promise.resolve({ status: 'ok' }), phases } = {}) {
-  const clock = createClock();
-  const page = {
+function createHarness({
+  respond = () => Promise.resolve({ status: 'ok' }),
+  phases,
+  loadOutcomes,
+  onReport = () => {},
+  onReload = () => {},
+  clock: sharedClock,
+  page: sharedPage
+} = {}) {
+  const clock = sharedClock ?? createClock();
+  const page = sharedPage ?? {
     phases: phases ?? [phaseFixture(31, 1), phaseFixture(32, 2)],
     drafts: {}
   };
@@ -108,8 +119,13 @@ function createHarness({ respond = () => Promise.resolve({ status: 'ok' }), phas
     },
     afterSent: (sent) => {
       reloads.push(sent);
+      onReload(sent);
     },
-    onOutcome: (report) => reports.push(report),
+    onOutcome: (report) => {
+      reports.push(report);
+      onReport(report);
+    },
+    ...(loadOutcomes ? { loadOutcomes } : {}),
     timers: clock.timers,
     now: clock.now
   });
@@ -296,7 +312,7 @@ test('a draft completed after the first trigger is sent by the next one', async 
   assert.deepEqual(finalReports().at(-1).outcomes, { 311: { status: DRAFT_OUTCOMES.SENT, reason: null } });
 });
 
-test('a refused send is kept, and only a later trigger tries it again', async () => {
+test('a failed send is kept only once time ran out, and only a later trigger tries it again', async () => {
   const refusal = Object.assign(new Error('Conflict'), { response: { status: 409, data: { code: 'PHASE_CHANGED' } } });
   let refuse = true;
   const { clock, page, sender, submits, reports, finalReports } = createHarness({
@@ -307,7 +323,7 @@ test('a refused send is kept, and only a later trigger tries it again', async ()
   sender.timerChanged(hardSnapshot(clock, { untilDeadline: 20 * SECOND }));
   await clock.advance(20 * SECOND - LEAD);
   assert.equal(submits.length, 1);
-  assert.deepEqual(reports.at(-1).outcomes, { 311: { status: DRAFT_OUTCOMES.KEPT, reason: SEND_FAILED } });
+  assert.deepEqual(reports.at(-1).outcomes, {}, 'before the deadline the student is still at work');
 
   refuse = false;
   await clock.advance(LEAD);
@@ -464,4 +480,183 @@ test('builds the notice from the outcomes', () => {
   }), { phaseId: 31, phaseNumber: 1, sent: 2, kept: 1 });
   assert.equal(deadlineNoticeFor(31, 1, {}), null);
   assert.equal(deadlineNoticeFor(31, 1, { 1: { status: DRAFT_OUTCOMES.SENDING } }), null);
+});
+
+// A Storage with the methods the stores use.
+function createMemoryStorage() {
+  const items = new Map();
+  return {
+    get length() {
+      return items.size;
+    },
+    key: (index) => [...items.keys()][index] ?? null,
+    getItem: (key) => (items.has(key) ? items.get(key) : null),
+    setItem: (key, value) => {
+      items.set(key, String(value));
+    },
+    removeItem: (key) => {
+      items.delete(key);
+    }
+  };
+}
+
+// What useDeadlineDraftSender keeps of the sender's reports: a record per
+// phase, in memory and on the device.
+function createPageRecords(store, base = { userId: 5, sessionId: 7 }) {
+  const records = {};
+  const scope = (phaseId) => ({ ...base, phaseId });
+  return {
+    records,
+    loadOutcomes: (phaseId) => records[phaseId]?.tasks ?? store.load(scope(phaseId))?.tasks ?? {},
+    apply(report) {
+      const previous = records[report.phaseId] ?? store.load(scope(report.phaseId));
+      records[report.phaseId] = nextOutcomeRecord(previous, report);
+      store.save(scope(report.phaseId), storedOutcomeRecord(records[report.phaseId]));
+    },
+    restore(phases) {
+      phases.forEach((phase) => {
+        const record = store.load(scope(phase.id));
+        if (record) records[phase.id] = record;
+      });
+    }
+  };
+}
+
+// The note a phase's tab shows under a task (SemanticDifferentialPhaseView).
+function noteOnTab(page, records, phaseId, taskId, phaseOver) {
+  const phase = page.phases.find((candidate) => candidate.id === phaseId);
+  return draftNoteFor({
+    outcome: records[phaseId]?.tasks?.[taskId],
+    unsent: unsentDrafts(phase, page.drafts[phaseId]).find((draft) => draft.taskId === taskId),
+    phaseOver
+  });
+}
+
+function storeAnswer(page, phaseId, response) {
+  page.phases = page.phases.map((phase) => (
+    phase.id === phaseId ? { ...phase, responses: [...phase.responses, response] } : phase
+  ));
+}
+
+test('after a send 10 s before the deadline and the advance, the previous phase\'s tab and the notice say it was sent, also after a reload', async () => {
+  const storage = createMemoryStorage();
+  const clock = createClock();
+  const outcomeStore = createDraftOutcomeStore({ getStorage: () => storage, now: () => clock.now() });
+  const page = { phases: [phaseFixture(31, 1), phaseFixture(32, 2)], drafts: { 31: { 311: VALID } } };
+  const view = createPageRecords(outcomeStore);
+  const { sender, submits } = createHarness({
+    clock,
+    page,
+    loadOutcomes: view.loadOutcomes,
+    onReport: (report) => view.apply(report),
+    // The page reloads the activity: the answer is stored.
+    onReload: () => storeAnswer(page, 31, { taskId: 311, selection: 3, justification: 'Porque corresponde' })
+  });
+
+  // The page was reloaded 16 s before 00:00, with the draft restored.
+  sender.timerChanged(hardSnapshot(clock, { untilDeadline: 16 * SECOND }));
+  await clock.advance(6 * SECOND);
+  assert.deepEqual(submits.map(({ phaseId, questionId }) => [phaseId, questionId]), [[31, 311]]);
+  assert.equal(noticeFromRecords(view.records, page.phases), null, 'nothing is said before 00:00');
+
+  await clock.advance(10 * SECOND);
+  sender.timerChanged(HIDDEN_TIMER_SNAPSHOT);
+  await sender.phaseTransition({ sessionId: 7, phaseId: 32, phaseNumber: 2, reason: 'deadline' }, 31);
+  sender.timerChanged(hardSnapshot(clock, { phaseId: 32, untilDeadline: MINUTE }));
+
+  assert.equal(submits.length, 1);
+  const expectedNotice = { phaseId: 31, phaseNumber: 1, sent: 1, kept: 0 };
+  assert.deepEqual(noticeFromRecords(view.records, page.phases), expectedNotice, 'on the phase 2 tab');
+
+  // The student opens the phase 1 tab: the phase is over.
+  assert.deepEqual(noteOnTab(page, view.records, 31, 311, true), { kind: 'sent', problem: null });
+  assert.deepEqual(noticeFromRecords(view.records, page.phases), expectedNotice, 'on the phase 1 tab');
+
+  // A reload, or the sender created again: the device has the outcome.
+  sender.dispose();
+  const reloaded = createPageRecords(outcomeStore);
+  reloaded.restore(page.phases);
+  const again = createHarness({
+    clock,
+    page,
+    loadOutcomes: reloaded.loadOutcomes,
+    onReport: (report) => reloaded.apply(report)
+  });
+  assert.deepEqual(noteOnTab(page, reloaded.records, 31, 311, true), { kind: 'sent', problem: null });
+  assert.deepEqual(noticeFromRecords(reloaded.records, page.phases), expectedNotice);
+
+  // A late duplicate of the transition reaches the new sender: the outcome stays.
+  await again.sender.phaseTransition({ phaseId: 32, phaseNumber: 2, reason: 'deadline' }, 31);
+  assert.equal(again.submits.length, 0);
+  assert.deepEqual(noteOnTab(page, reloaded.records, 31, 311, true), { kind: 'sent', problem: null });
+});
+
+test('on the last phase, an incomplete draft is reported once time ran out, with its reason, until the student submits it', async () => {
+  const storage = createMemoryStorage();
+  const clock = createClock();
+  const outcomeStore = createDraftOutcomeStore({ getStorage: () => storage, now: () => clock.now() });
+  const page = { phases: [phaseFixture(31, 1)], drafts: { 31: { 311: { value: 3 } } } };
+  const view = createPageRecords(outcomeStore);
+  const { sender, submits } = createHarness({
+    clock,
+    page,
+    loadOutcomes: view.loadOutcomes,
+    onReport: (report) => view.apply(report)
+  });
+
+  sender.timerChanged(hardSnapshot(clock, { untilDeadline: 20 * SECOND, isLastPhase: true }));
+  await clock.advance(20 * SECOND - LEAD);
+  assert.equal(noteOnTab(page, view.records, 31, 311, false), null, 'still time to finish it');
+  assert.equal(noticeFromRecords(view.records, page.phases), null);
+
+  await clock.advance(LEAD);
+  assert.equal(submits.length, 0);
+  assert.deepEqual(noteOnTab(page, view.records, 31, 311, false), {
+    kind: 'open',
+    problem: ANSWER_PROBLEMS.MISSING_JUSTIFICATION
+  });
+  assert.deepEqual(noticeFromRecords(view.records, page.phases), { phaseId: 31, phaseNumber: 1, sent: 0, kept: 1 });
+
+  // The student completes and submits it while the activity is open.
+  page.drafts[31] = { 311: VALID };
+  const result = await sender.trackManual({ phaseId: 31, questionId: 311, ...VALID }, () => {
+    storeAnswer(page, 31, { taskId: 311, selection: 3, justification: 'Porque corresponde' });
+    return { ok: true };
+  });
+
+  assert.deepEqual(result, { ok: true });
+  assert.equal(noteOnTab(page, view.records, 31, 311, false), null);
+  assert.equal(noticeFromRecords(view.records, page.phases), null);
+  assert.equal(outcomeStore.load({ userId: 5, sessionId: 7, phaseId: 31 }), null, 'nothing left on the device');
+});
+
+test('a closed notice stays closed until what it says changes', () => {
+  const sent = { 1: { status: DRAFT_OUTCOMES.SENT, reason: null } };
+  const first = nextOutcomeRecord(null, { outcomes: sent, final: true });
+  assert.deepEqual(first, { tasks: sent, final: true, dismissed: false });
+
+  const dismissed = { ...first, dismissed: true };
+  assert.equal(nextOutcomeRecord(dismissed, { outcomes: sent, final: true }).dismissed, true);
+  assert.equal(nextOutcomeRecord(dismissed, {
+    outcomes: { ...sent, 2: { status: DRAFT_OUTCOMES.KEPT, reason: SEND_FAILED } },
+    final: true
+  }).dismissed, false);
+  assert.equal(nextOutcomeRecord(first, { outcomes: sent, final: false }).final, true, 'once final, always final');
+});
+
+test('the notice is the latest phase whose time ran out, unless closed', () => {
+  const phases = [{ id: 31, number: 1 }, { id: 32, number: 2 }];
+  const sent = { 1: { status: DRAFT_OUTCOMES.SENT } };
+  const kept = { 2: { status: DRAFT_OUTCOMES.KEPT, reason: SEND_FAILED } };
+
+  assert.deepEqual(noticeFromRecords({
+    31: { tasks: sent, final: true, dismissed: false },
+    32: { tasks: kept, final: true, dismissed: false }
+  }, phases), { phaseId: 32, phaseNumber: 2, sent: 0, kept: 1 });
+  assert.deepEqual(noticeFromRecords({
+    31: { tasks: sent, final: true, dismissed: false },
+    32: { tasks: kept, final: true, dismissed: true }
+  }, phases), { phaseId: 31, phaseNumber: 1, sent: 1, kept: 0 });
+  assert.equal(noticeFromRecords({ 32: { tasks: sent, final: false, dismissed: false } }, phases), null);
+  assert.equal(noticeFromRecords({}, phases), null);
 });

@@ -218,13 +218,19 @@ const enUS = {
     noticeSentOther: "Time's up for phase {{number}}. Your {{count}} unsent answers were submitted for you.",
     noticeKeptOne: 'One answer from phase {{number}} could not be submitted. It is saved on this device.',
     noticeKeptOther: '{{count}} answers from phase {{number}} could not be submitted. They are saved on this device.',
+    noticeOpenOne: 'One answer from phase {{number}} has not been submitted yet. You can review it and submit it while the activity is open.',
+    noticeOpenOther: '{{count}} answers from phase {{number}} have not been submitted yet. You can review them and submit them while the activity is open.',
     dismissNotice: 'Dismiss notice',
     taskSending: 'Submitting your answer…',
     taskSent: 'This answer was submitted for you when time ran out.',
     taskKept: 'This answer was not submitted. It is saved on this device.',
     taskKeptMissingValue: 'This answer was not submitted because no point on the scale is selected. It is saved on this device.',
     taskKeptMissingJustification: 'This answer was not submitted because the justification is missing. It is saved on this device.',
-    taskKeptJustificationTooShort: 'This answer was not submitted because the justification is shorter than the minimum word count. It is saved on this device.'
+    taskKeptJustificationTooShort: 'This answer was not submitted because the justification is shorter than the minimum word count. It is saved on this device.',
+    taskOpen: 'Time ran out and this answer has not been submitted yet. You can submit it while the activity is open.',
+    taskOpenMissingValue: 'Time ran out and this answer was not submitted because no point on the scale is selected. You can complete it and submit it while the activity is open.',
+    taskOpenMissingJustification: 'Time ran out and this answer was not submitted because the justification is missing. You can complete it and submit it while the activity is open.',
+    taskOpenJustificationTooShort: 'Time ran out and this answer was not submitted because the justification is shorter than the minimum word count. You can complete it and submit it while the activity is open.'
   },
   notFound: {
     title: 'Page not found',

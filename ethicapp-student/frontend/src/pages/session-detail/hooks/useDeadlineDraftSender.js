@@ -1,11 +1,24 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getStudentSocket } from '../../../services/studentSocket.js';
 import { errorLogDetails } from '../../../utils/logDetails.js';
-import { unsentDrafts } from '../../../utils/phaseDrafts.js';
-import { createDeadlineDraftSender, deadlineNoticeFor, previousPhaseId } from '../deadlineDraftSender.js';
+import { createDraftOutcomeStore, unsentDrafts } from '../../../utils/phaseDrafts.js';
+import {
+  createDeadlineDraftSender,
+  nextOutcomeRecord,
+  noticeFromRecords,
+  previousPhaseId,
+  storedOutcomeRecord
+} from '../deadlineDraftSender.js';
+
+const sharedOutcomeStore = createDraftOutcomeStore();
 
 function phaseById(phases, phaseId) {
   return Array.isArray(phases) ? phases.find((phase) => Number(phase?.id) === Number(phaseId)) ?? null : null;
+}
+
+function positiveInteger(value) {
+  const number = Number(value);
+  return Number.isInteger(number) && number > 0 ? number : null;
 }
 
 /**
@@ -13,10 +26,16 @@ function phaseById(phases, phaseId) {
  * time (#1118): a deadlineDraftSender fed by the phase clock's snapshots
  * and the `onPhaseTransition` socket event.
  *
+ * What became of each phase's drafts is kept on the device next to the
+ * drafts (utils/phaseDrafts.js, `createDraftOutcomeStore`), so the notes
+ * under the tasks and the page notice outlive a reload, and a sender
+ * created again starts from them.
+ *
  * @param {object} options
  * @param {number} options.sessionId
  * @param {number} options.userId
- * @param {boolean} options.enabled - The activity is in progress and its design keeps drafts.
+ * @param {boolean} options.canRestore - The design keeps drafts and the activity started (or finished).
+ * @param {boolean} options.enabled - Also in progress: the sender runs.
  * @param {object} options.timer - useActivityPhaseTimer()'s snapshot.
  * @param {Array<object>} options.phases - full_state's phases.
  * @param {{ current: object }} options.draftsRef - usePhaseDrafts()'s drafts by phase.
@@ -27,24 +46,72 @@ function phaseById(phases, phaseId) {
 export function useDeadlineDraftSender({
   sessionId,
   userId,
+  canRestore,
   enabled,
   timer,
   phases,
   draftsRef,
   submitActivityResponse,
-  loadFullState
+  loadFullState,
+  store = sharedOutcomeStore
 }) {
-  const [outcomesByPhaseId, setOutcomesByPhaseId] = useState({});
-  const [notice, setNotice] = useState(null);
+  const [recordsByPhaseId, setRecordsByPhaseId] = useState({});
+  const recordsRef = useRef(recordsByPhaseId);
+  const loadedPhaseIdsRef = useRef(new Set());
   const senderRef = useRef(null);
-  const noticeSeqRef = useRef(0);
   const phasesRef = useRef(phases);
-  const dependenciesRef = useRef({ submitActivityResponse, loadFullState, userId });
-  const activeSessionId = Number(sessionId);
-  const isActive = Boolean(enabled) && Number.isInteger(activeSessionId) && activeSessionId > 0;
+  const dependenciesRef = useRef({ submitActivityResponse, loadFullState });
+  const activeSessionId = positiveInteger(sessionId);
+  const activeUserId = positiveInteger(userId);
+  const scopeKey = `${activeUserId}:${activeSessionId}`;
+  const canKeep = Boolean(canRestore) && activeSessionId !== null && activeUserId !== null;
+  const isActive = canKeep && Boolean(enabled);
 
   phasesRef.current = phases;
-  dependenciesRef.current = { submitActivityResponse, loadFullState, userId };
+  dependenciesRef.current = { submitActivityResponse, loadFullState };
+
+  const scopeOf = useCallback((phaseId) => ({
+    userId: activeUserId,
+    sessionId: activeSessionId,
+    phaseId
+  }), [activeSessionId, activeUserId]);
+
+  const applyRecord = useCallback((phaseId, record) => {
+    recordsRef.current = { ...recordsRef.current, [phaseId]: record };
+    setRecordsByPhaseId(recordsRef.current);
+    store.save(scopeOf(phaseId), storedOutcomeRecord(record));
+  }, [scopeOf, store]);
+
+  // Another activity or user starts from nothing.
+  useEffect(() => {
+    recordsRef.current = {};
+    loadedPhaseIdsRef.current = new Set();
+    setRecordsByPhaseId({});
+  }, [scopeKey]);
+
+  useEffect(() => {
+    if (canKeep) store.prune();
+  }, [canKeep, scopeKey, store]);
+
+  // Each phase's outcomes come back from the device once, when the phase
+  // first appears.
+  useEffect(() => {
+    if (!canKeep || !Array.isArray(phases)) return;
+
+    const restored = {};
+    phases.forEach((phase) => {
+      const phaseId = positiveInteger(phase?.id);
+      if (phaseId === null || loadedPhaseIdsRef.current.has(phaseId)) return;
+      loadedPhaseIdsRef.current.add(phaseId);
+      const record = store.load(scopeOf(phaseId));
+      if (record && !recordsRef.current[phaseId]) restored[phaseId] = record;
+    });
+
+    if (Object.keys(restored).length > 0) {
+      recordsRef.current = { ...restored, ...recordsRef.current };
+      setRecordsByPhaseId(recordsRef.current);
+    }
+  }, [canKeep, phases, scopeOf, store]);
 
   useEffect(() => {
     if (!isActive) {
@@ -62,22 +129,16 @@ export function useDeadlineDraftSender({
       }),
       afterSent: () => dependenciesRef.current.loadFullState({
         sessionId: activeSessionId,
-        userId: dependenciesRef.current.userId,
+        userId: activeUserId,
         invalidate: true
       }),
-      onOutcome: ({ phaseId, outcomes, final }) => {
+      loadOutcomes: (phaseId) => (
+        recordsRef.current[phaseId]?.tasks ?? store.load(scopeOf(phaseId))?.tasks ?? {}
+      ),
+      onOutcome: (report) => {
         if (disposed) return;
-        setOutcomesByPhaseId((previous) => ({ ...previous, [phaseId]: outcomes }));
-        if (!final) return;
-
-        const phaseNumber = Number(phaseById(phasesRef.current, phaseId)?.number) || null;
-        const next = deadlineNoticeFor(phaseId, phaseNumber, outcomes);
-        if (!next) return;
-        setNotice((current) => (
-          current && current.phaseId === next.phaseId && current.sent === next.sent && current.kept === next.kept
-            ? current
-            : { ...next, id: (noticeSeqRef.current += 1) }
-        ));
+        const previous = recordsRef.current[report.phaseId] ?? store.load(scopeOf(report.phaseId));
+        applyRecord(report.phaseId, nextOutcomeRecord(previous, report));
       },
       onError: (error) => {
         // Ids, and the error's name, code and status: an answer can quote the
@@ -113,14 +174,7 @@ export function useDeadlineDraftSender({
       if (senderRef.current === sender) senderRef.current = null;
       if (socket) socket.off('onPhaseTransition', handlePhaseTransition);
     };
-  }, [activeSessionId, draftsRef, isActive]);
-
-  // Kept when the activity ends, so the last phase's notice stays; another
-  // activity starts without them.
-  useEffect(() => () => {
-    setOutcomesByPhaseId({});
-    setNotice(null);
-  }, [activeSessionId]);
+  }, [activeSessionId, activeUserId, applyRecord, draftsRef, isActive, scopeOf, store]);
 
   useEffect(() => {
     senderRef.current?.timerChanged(timer);
@@ -130,7 +184,17 @@ export function useDeadlineDraftSender({
     senderRef.current ? senderRef.current.trackManual(payload, send) : Promise.resolve().then(send)
   ), []);
 
-  const dismissNotice = useCallback(() => setNotice(null), []);
+  const outcomesByPhaseId = useMemo(() => Object.fromEntries(
+    Object.entries(recordsByPhaseId).map(([phaseId, record]) => [phaseId, record?.tasks ?? {}])
+  ), [recordsByPhaseId]);
+
+  const notice = useMemo(() => noticeFromRecords(recordsByPhaseId, phases), [phases, recordsByPhaseId]);
+
+  const dismissNotice = useCallback(() => {
+    if (!notice) return;
+    const record = recordsRef.current[notice.phaseId];
+    if (record) applyRecord(notice.phaseId, { ...record, dismissed: true });
+  }, [applyRecord, notice]);
 
   return { trackManual, outcomesByPhaseId, notice, dismissNotice };
 }

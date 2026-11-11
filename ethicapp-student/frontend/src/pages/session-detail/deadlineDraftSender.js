@@ -1,4 +1,4 @@
-import { DRAFT_OUTCOMES } from '../../utils/phaseDrafts.js';
+import { DRAFT_OUTCOMES, sanitizeOutcomes } from '../../utils/phaseDrafts.js';
 
 export { DRAFT_OUTCOMES };
 
@@ -46,7 +46,9 @@ export const DEADLINE_DRAFT_SENDER_DEFAULTS = Object.freeze({
 export const DRAFT_SEND_TRIGGERS = Object.freeze({
   BEFORE_DEADLINE: 'beforeDeadline',
   DEADLINE: 'deadline',
-  TRANSITION: 'transition'
+  TRANSITION: 'transition',
+  // Not a send: the student's own submit removed an outcome.
+  MANUAL: 'manual'
 });
 
 // The reason of a kept draft whose send failed; a draft the server would
@@ -75,8 +77,13 @@ function fingerprint(answer) {
  * @param {(report: { phaseId: number, outcomes: object, final: boolean, trigger: string }) => void} [options.onOutcome]
  *     Every automatic outcome of the phase so far, by task id
  *     (`{ status, reason }`, DRAFT_OUTCOMES): when a trigger starts sending,
- *     and once it is done. `final` is true when the deadline and transition
- *     triggers are done.
+ *     once it is done, and when the student's own submit replaces one.
+ *     `final` is true when the deadline and transition triggers are done.
+ *     Only those record a draft as kept: before the deadline the student
+ *     may still finish it.
+ * @param {(phaseId: number) => object} [options.loadOutcomes]
+ *     The outcomes the phase already had, by task id (kept on the device
+ *     across reloads, phaseDrafts.js `createDraftOutcomeStore`).
  * @param {(error: unknown) => void} [options.onError]
  */
 export function createDeadlineDraftSender({
@@ -84,6 +91,7 @@ export function createDeadlineDraftSender({
   submit,
   afterSent = () => {},
   onOutcome = () => {},
+  loadOutcomes = () => ({}),
   onError = () => {},
   timers = { setTimeout: (...args) => setTimeout(...args), clearTimeout: (id) => clearTimeout(id) },
   now = () => Date.now(),
@@ -131,8 +139,27 @@ export function createDeadlineDraftSender({
   }
 
   function outcomesFor(phaseId) {
-    if (!outcomesByPhase.has(phaseId)) outcomesByPhase.set(phaseId, new Map());
+    if (!outcomesByPhase.has(phaseId)) {
+      let initial = {};
+      try {
+        initial = loadOutcomes(phaseId) ?? {};
+      } catch (error) {
+        onError(error);
+      }
+      outcomesByPhase.set(phaseId, new Map(
+        Object.entries(initial).map(([taskId, outcome]) => [Number(taskId), outcome])
+      ));
+    }
     return outcomesByPhase.get(phaseId);
+  }
+
+  function report(phaseId, final, trigger) {
+    onOutcome({
+      phaseId,
+      outcomes: Object.fromEntries(outcomesFor(phaseId)),
+      final,
+      trigger
+    });
   }
 
   function track(phaseId, key, promise) {
@@ -149,10 +176,13 @@ export function createDeadlineDraftSender({
     return tracked;
   }
 
-  function sendOne(phaseId, taskId, answer) {
+  // Before the deadline a failed send is not reported as kept: the student
+  // is still at work, and the 00:00 trigger tries again.
+  function sendOne(phaseId, taskId, answer, final) {
     const key = taskKey(phaseId, taskId);
     const content = fingerprint(answer);
     const outcomes = outcomesFor(phaseId);
+    const previous = outcomes.get(taskId);
     outcomes.set(taskId, { status: DRAFT_OUTCOMES.SENDING, reason: null });
     const request = Promise.resolve()
       .then(() => submit({
@@ -166,7 +196,9 @@ export function createDeadlineDraftSender({
         outcomes.set(taskId, { status: DRAFT_OUTCOMES.SENT, reason: null });
         return true;
       }, (error) => {
-        outcomes.set(taskId, { status: DRAFT_OUTCOMES.KEPT, reason: SEND_FAILED });
+        if (final) outcomes.set(taskId, { status: DRAFT_OUTCOMES.KEPT, reason: SEND_FAILED });
+        else if (previous) outcomes.set(taskId, previous);
+        else outcomes.delete(taskId);
         if (!disposed) onError(error);
         return false;
       });
@@ -181,6 +213,7 @@ export function createDeadlineDraftSender({
       onError(error);
     }
 
+    const final = trigger !== DRAFT_SEND_TRIGGERS.BEFORE_DEADLINE;
     const outcomes = outcomesFor(phaseId);
     const unsentTaskIds = new Set(drafts.map(({ taskId }) => taskId));
     // A draft kept earlier that is no longer unsent (the student submitted
@@ -195,21 +228,15 @@ export function createDeadlineDraftSender({
       if (inFlight.has(key) || sentContent.get(key) === fingerprint(answer)) return;
 
       if (problem) {
-        outcomes.set(taskId, { status: DRAFT_OUTCOMES.KEPT, reason: problem });
+        // Only once time ran out: before, the student may still finish it.
+        if (final) outcomes.set(taskId, { status: DRAFT_OUTCOMES.KEPT, reason: problem });
         return;
       }
-      sends.push(sendOne(phaseId, taskId, answer).then((ok) => (ok ? taskId : null)));
-    });
-
-    const report = (final) => onOutcome({
-      phaseId,
-      outcomes: Object.fromEntries(outcomes),
-      final,
-      trigger
+      sends.push(sendOne(phaseId, taskId, answer, final).then((ok) => (ok ? taskId : null)));
     });
 
     // The page says which answers are on their way.
-    if (sends.length > 0) report(false);
+    if (sends.length > 0) report(phaseId, false, trigger);
 
     const sentTaskIds = (await Promise.all(sends)).filter((taskId) => taskId !== null);
     // Sends started earlier, by another trigger or the student, settle too
@@ -226,7 +253,7 @@ export function createDeadlineDraftSender({
       if (disposed) return;
     }
 
-    report(trigger !== DRAFT_SEND_TRIGGERS.BEFORE_DEADLINE);
+    report(phaseId, final, trigger);
   }
 
   function fire(trigger) {
@@ -328,8 +355,8 @@ export function createDeadlineDraftSender({
       return track(phaseId, key, request.then((result) => {
         if (result?.ok) {
           sentContent.set(key, content);
-          // Submitted by the student, not for them.
-          outcomesByPhase.get(phaseId)?.delete(taskId);
+          // Submitted by the student, not for them: nothing left to report.
+          if (outcomesFor(phaseId).delete(taskId) && !disposed) report(phaseId, false, DRAFT_SEND_TRIGGERS.MANUAL);
         }
         return result;
       }));
@@ -360,4 +387,54 @@ export function deadlineNoticeFor(phaseId, phaseNumber, outcomes) {
   const sent = statuses.filter((status) => status === DRAFT_OUTCOMES.SENT).length;
   const kept = statuses.filter((status) => status === DRAFT_OUTCOMES.KEPT).length;
   return sent + kept > 0 ? { phaseId, phaseNumber, sent, kept } : null;
+}
+
+function sameCounts(left, right) {
+  const a = deadlineNoticeFor(0, null, left);
+  const b = deadlineNoticeFor(0, null, right);
+  return (a?.sent ?? 0) === (b?.sent ?? 0) && (a?.kept ?? 0) === (b?.kept ?? 0);
+}
+
+/**
+ * What the page keeps of a phase after a report of the sender: the
+ * outcomes, `final` once the phase's time ran out, and `dismissed` while
+ * the student has closed a notice that still says the same.
+ *
+ * @param {{ tasks: object, final: boolean, dismissed: boolean }|null} previous
+ * @param {{ outcomes: object, final: boolean }} report
+ */
+export function nextOutcomeRecord(previous, report) {
+  const tasks = { ...(report?.outcomes ?? {}) };
+  return {
+    tasks,
+    final: previous?.final === true || report?.final === true,
+    dismissed: previous?.dismissed === true && sameCounts(previous.tasks, tasks)
+  };
+}
+
+/** A record as kept on the device: settled outcomes only. */
+export function storedOutcomeRecord(record) {
+  return { ...record, tasks: sanitizeOutcomes(record?.tasks) };
+}
+
+/**
+ * The page notice: the latest phase, by number, whose time ran out with
+ * answers sent or kept, unless the student closed it.
+ *
+ * @param {object} recordsByPhaseId - nextOutcomeRecord()s by phase id.
+ * @param {Array<{ id: number, number: number }>} phases
+ * @returns {{ phaseId: number, phaseNumber: number|null, sent: number, kept: number }|null}
+ */
+export function noticeFromRecords(recordsByPhaseId, phases) {
+  const numberOf = (phaseId) => {
+    const phase = Array.isArray(phases) ? phases.find((candidate) => Number(candidate?.id) === Number(phaseId)) : null;
+    const number = Number(phase?.number);
+    return Number.isInteger(number) && number > 0 ? number : null;
+  };
+
+  return Object.entries(recordsByPhaseId ?? {})
+    .filter(([, record]) => record?.final === true && record.dismissed !== true)
+    .map(([phaseId, record]) => deadlineNoticeFor(Number(phaseId), numberOf(phaseId), record.tasks))
+    .filter(Boolean)
+    .sort((left, right) => (right.phaseNumber ?? 0) - (left.phaseNumber ?? 0))[0] ?? null;
 }

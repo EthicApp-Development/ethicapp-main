@@ -4,7 +4,8 @@ import { countWords, minimumJustificationWords } from '../../../utils/semanticDi
 const DRAFT_NOTE_STYLES = {
   sending: { className: 'text-secondary', iconClass: 'fa-solid fa-paper-plane' },
   sent: { className: 'text-success-emphasis', iconClass: 'fa-solid fa-circle-check' },
-  kept: { className: 'text-warning-emphasis', iconClass: 'fa-solid fa-floppy-disk' }
+  kept: { className: 'text-warning-emphasis', iconClass: 'fa-solid fa-floppy-disk' },
+  open: { className: 'text-info-emphasis', iconClass: 'fa-solid fa-pen-to-square' }
 };
 
 export default function SemanticDifferentialTaskView({

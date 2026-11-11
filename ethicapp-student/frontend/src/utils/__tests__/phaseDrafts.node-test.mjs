@@ -1,8 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  DRAFT_OUTCOMES,
+  DRAFT_OUTCOMES_KEY_PREFIX,
   PHASE_DRAFTS_KEY_PREFIX,
+  createDraftOutcomeStore,
   createPhaseDraftStore,
+  draftNoteFor,
   keepUnsavedDrafts,
   phaseDraftKey,
   sanitizeTaskDrafts,
@@ -206,4 +210,77 @@ test('lists unsent answers in task order, with what the server would refuse', ()
   ]);
   assert.deepEqual(unsentDrafts(PHASE, undefined), []);
   assert.deepEqual(unsentDrafts(null, { 1: { value: 2 } }), []);
+});
+
+test('keeps the settled outcomes of a phase, apart from the drafts', () => {
+  const storage = createMemoryStorage();
+  const drafts = createPhaseDraftStore({ getStorage: () => storage, now: () => 1_000_000 });
+  const outcomeStore = createDraftOutcomeStore({ getStorage: () => storage, now: () => 1_000_000 });
+
+  outcomeStore.save(SCOPE, {
+    tasks: {
+      3: { status: DRAFT_OUTCOMES.SENT, reason: null },
+      4: { status: DRAFT_OUTCOMES.SENDING, reason: null },
+      5: { status: DRAFT_OUTCOMES.KEPT, reason: 'missingJustification' }
+    },
+    final: true,
+    dismissed: false
+  });
+
+  assert.deepEqual(outcomeStore.load(SCOPE), {
+    tasks: {
+      3: { status: DRAFT_OUTCOMES.SENT, reason: null },
+      5: { status: DRAFT_OUTCOMES.KEPT, reason: 'missingJustification' }
+    },
+    final: true,
+    dismissed: false
+  });
+  assert.ok(storage.items.has(`${DRAFT_OUTCOMES_KEY_PREFIX}:5:7:31`));
+  assert.deepEqual(drafts.load(SCOPE), {}, 'the drafts store does not read outcomes');
+
+  drafts.prune();
+  assert.ok(storage.items.has(`${DRAFT_OUTCOMES_KEY_PREFIX}:5:7:31`), 'nor prunes them');
+
+  outcomeStore.save(SCOPE, { tasks: { 4: { status: DRAFT_OUTCOMES.SENDING } }, final: true });
+  assert.equal(outcomeStore.load(SCOPE), null, 'nothing settled removes the entry');
+  assert.equal(storage.items.size, 0);
+});
+
+test('outcomes expire with the drafts\' time to live and go with clearAll', () => {
+  const storage = createMemoryStorage();
+  let current = 1_000_000;
+  const outcomeStore = createDraftOutcomeStore({ getStorage: () => storage, now: () => current, ttlMs: HOUR });
+
+  outcomeStore.save(SCOPE, { tasks: { 3: { status: DRAFT_OUTCOMES.SENT } }, final: true });
+  current += 2 * HOUR;
+  assert.equal(outcomeStore.load(SCOPE), null);
+
+  outcomeStore.save(SCOPE, { tasks: { 3: { status: DRAFT_OUTCOMES.SENT } }, final: true });
+  outcomeStore.clearAll();
+  assert.equal(storage.items.size, 0);
+});
+
+test('says what became of a task\'s draft', () => {
+  const sent = { status: DRAFT_OUTCOMES.SENT };
+  const kept = { status: DRAFT_OUTCOMES.KEPT, reason: 'missingJustification' };
+  const incomplete = { problem: ANSWER_PROBLEMS.MISSING_JUSTIFICATION };
+  const complete = { problem: null };
+
+  assert.deepEqual(draftNoteFor({ outcome: { status: DRAFT_OUTCOMES.SENDING }, unsent: complete, phaseOver: true }), {
+    kind: 'sending',
+    problem: null
+  });
+  assert.deepEqual(draftNoteFor({ outcome: sent, unsent: undefined, phaseOver: true }), { kind: 'sent', problem: null });
+  assert.deepEqual(draftNoteFor({ outcome: sent, unsent: undefined, phaseOver: false }), { kind: 'sent', problem: null });
+  assert.equal(draftNoteFor({ outcome: sent, unsent: complete, phaseOver: false }), null, 'edited again since');
+  assert.deepEqual(draftNoteFor({ outcome: undefined, unsent: incomplete, phaseOver: true }), {
+    kind: 'kept',
+    problem: ANSWER_PROBLEMS.MISSING_JUSTIFICATION
+  });
+  assert.deepEqual(draftNoteFor({ outcome: kept, unsent: incomplete, phaseOver: false }), {
+    kind: 'open',
+    problem: ANSWER_PROBLEMS.MISSING_JUSTIFICATION
+  });
+  assert.equal(draftNoteFor({ outcome: undefined, unsent: incomplete, phaseOver: false }), null, 'still at work');
+  assert.equal(draftNoteFor({ outcome: kept, unsent: undefined, phaseOver: false }), null, 'submitted since');
 });

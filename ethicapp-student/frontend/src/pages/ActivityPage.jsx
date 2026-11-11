@@ -654,17 +654,18 @@ export default function ActivityPage() {
   // when a hard-mode phase runs out of time (#1118). Only the semantic
   // differential has answers to keep; the ranking view is a placeholder.
   const keepsDrafts = designType === 'semantic_differential';
+  const canKeepDrafts = session.isAuthenticated && Boolean(selectedSession) && keepsDrafts && shouldLoadActivityData;
   const { draftsByPhaseId, draftsRef, setTaskDraft } = usePhaseDrafts({
     userId: session.uid,
     sessionId: selectedSession?.id,
     phases: activityState?.phases,
-    enabled: session.isAuthenticated && Boolean(selectedSession) && keepsDrafts && shouldLoadActivityData
+    enabled: canKeepDrafts
   });
   const deadlineDrafts = useDeadlineDraftSender({
     sessionId: selectedSession?.id,
     userId: session.uid,
-    enabled: session.isAuthenticated && Boolean(selectedSession) && keepsDrafts
-      && activityStatusCode === SESSION_STATUS.inProgress,
+    canRestore: canKeepDrafts,
+    enabled: activityStatusCode === SESSION_STATUS.inProgress,
     timer: phaseTimer,
     phases: activityState?.phases,
     draftsRef,
@@ -864,6 +865,11 @@ export default function ActivityPage() {
                   <PhaseTimer timer={phaseTimer} visible={showPhaseTimer} t={t} />
                   <DeadlineDraftNotice
                     notice={deadlineDrafts.notice}
+                    phaseOpen={
+                      !isSessionFinished
+                      && deadlineDrafts.notice !== null
+                      && Number(deadlineDrafts.notice.phaseId) === Number(currentPhaseId)
+                    }
                     onDismiss={deadlineDrafts.dismissNotice}
                     t={t}
                   />

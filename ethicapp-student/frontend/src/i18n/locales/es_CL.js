@@ -219,13 +219,19 @@ const esCL = {
     noticeSentOther: 'Se acabó el tiempo de la fase {{number}}. Tus {{count}} respuestas sin enviar se enviaron automáticamente.',
     noticeKeptOne: 'Una respuesta de la fase {{number}} no se pudo enviar. Quedó guardada en este dispositivo.',
     noticeKeptOther: '{{count}} respuestas de la fase {{number}} no se pudieron enviar. Quedaron guardadas en este dispositivo.',
+    noticeOpenOne: 'Una respuesta de la fase {{number}} aún no se ha enviado. Puedes revisarla y enviarla mientras la actividad siga abierta.',
+    noticeOpenOther: '{{count}} respuestas de la fase {{number}} aún no se han enviado. Puedes revisarlas y enviarlas mientras la actividad siga abierta.',
     dismissNotice: 'Cerrar aviso',
     taskSending: 'Enviando tu respuesta…',
     taskSent: 'Esta respuesta se envió automáticamente cuando se acabó el tiempo.',
     taskKept: 'Esta respuesta no se envió. Quedó guardada en este dispositivo.',
     taskKeptMissingValue: 'Esta respuesta no se envió porque falta elegir un valor de la escala. Quedó guardada en este dispositivo.',
     taskKeptMissingJustification: 'Esta respuesta no se envió porque falta la justificación. Quedó guardada en este dispositivo.',
-    taskKeptJustificationTooShort: 'Esta respuesta no se envió porque la justificación tiene menos palabras que el mínimo. Quedó guardada en este dispositivo.'
+    taskKeptJustificationTooShort: 'Esta respuesta no se envió porque la justificación tiene menos palabras que el mínimo. Quedó guardada en este dispositivo.',
+    taskOpen: 'Se acabó el tiempo y esta respuesta aún no se ha enviado. Puedes enviarla mientras la actividad siga abierta.',
+    taskOpenMissingValue: 'Se acabó el tiempo y esta respuesta no se envió porque falta elegir un valor de la escala. Puedes completarla y enviarla mientras la actividad siga abierta.',
+    taskOpenMissingJustification: 'Se acabó el tiempo y esta respuesta no se envió porque falta la justificación. Puedes completarla y enviarla mientras la actividad siga abierta.',
+    taskOpenJustificationTooShort: 'Se acabó el tiempo y esta respuesta no se envió porque la justificación tiene menos palabras que el mínimo. Puedes completarla y enviarla mientras la actividad siga abierta.'
   },
   notFound: {
     title: 'Página no encontrada',

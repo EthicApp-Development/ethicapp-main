@@ -5,14 +5,26 @@ import PhaseInstructions from './PhaseInstructions.jsx';
 import PreviousPhaseResponsesAccordion from './PreviousPhaseResponsesAccordion.jsx';
 import SemanticDifferentialTaskView from './SemanticDifferentialTaskView.jsx';
 import { isPhaseAnonymous } from '../../../utils/phaseAnonymity.js';
-import { DRAFT_OUTCOMES, unsentDrafts } from '../../../utils/phaseDrafts.js';
+import { draftNoteFor, unsentDrafts } from '../../../utils/phaseDrafts.js';
 import { ANSWER_PROBLEMS, effectiveAnswer, savedAnswersByTaskId } from '../../../utils/semanticDifferentialAnswer.js';
 
-// Why a draft of a phase that is over was not sent.
-const KEPT_DRAFT_MESSAGE_KEYS = {
-  [ANSWER_PROBLEMS.MISSING_VALUE]: 'phaseDrafts.taskKeptMissingValue',
-  [ANSWER_PROBLEMS.MISSING_JUSTIFICATION]: 'phaseDrafts.taskKeptMissingJustification',
-  [ANSWER_PROBLEMS.JUSTIFICATION_TOO_SHORT]: 'phaseDrafts.taskKeptJustificationTooShort'
+// The note under a task about its draft (draftNoteFor): by kind, and for
+// a draft that was not sent, by the reason the server would refuse it.
+const DRAFT_NOTE_MESSAGE_KEYS = {
+  sending: { default: 'phaseDrafts.taskSending' },
+  sent: { default: 'phaseDrafts.taskSent' },
+  kept: {
+    default: 'phaseDrafts.taskKept',
+    [ANSWER_PROBLEMS.MISSING_VALUE]: 'phaseDrafts.taskKeptMissingValue',
+    [ANSWER_PROBLEMS.MISSING_JUSTIFICATION]: 'phaseDrafts.taskKeptMissingJustification',
+    [ANSWER_PROBLEMS.JUSTIFICATION_TOO_SHORT]: 'phaseDrafts.taskKeptJustificationTooShort'
+  },
+  open: {
+    default: 'phaseDrafts.taskOpen',
+    [ANSWER_PROBLEMS.MISSING_VALUE]: 'phaseDrafts.taskOpenMissingValue',
+    [ANSWER_PROBLEMS.MISSING_JUSTIFICATION]: 'phaseDrafts.taskOpenMissingJustification',
+    [ANSWER_PROBLEMS.JUSTIFICATION_TOO_SHORT]: 'phaseDrafts.taskOpenJustificationTooShort'
+  }
 };
 
 function resolvePhaseGroupId(phase) {
@@ -149,21 +161,18 @@ export default function SemanticDifferentialPhaseView({
   );
 
   // What happened to the task's draft when time ran out (#1118): sent for
-  // the student, or kept on the device once the phase is over.
+  // the student, kept on the device once the phase is over, or still to be
+  // sent on a phase that takes answers after its time ran out.
   const getDraftNote = (taskId) => {
-    const outcome = autoSendOutcomeByTaskId?.[taskId]?.status;
-    const unsent = unsentByTaskId[taskId];
+    const note = draftNoteFor({
+      outcome: autoSendOutcomeByTaskId?.[taskId],
+      unsent: unsentByTaskId[taskId],
+      phaseOver: isPhaseOver
+    });
+    if (!note) return null;
 
-    if (outcome === DRAFT_OUTCOMES.SENDING) {
-      return { kind: 'sending', text: t('phaseDrafts.taskSending') };
-    }
-    if (outcome === DRAFT_OUTCOMES.SENT && (!unsent || isPhaseOver)) {
-      return { kind: 'sent', text: t('phaseDrafts.taskSent') };
-    }
-    if (unsent && isPhaseOver) {
-      return { kind: 'kept', text: t(KEPT_DRAFT_MESSAGE_KEYS[unsent.problem] ?? 'phaseDrafts.taskKept') };
-    }
-    return null;
+    const keys = DRAFT_NOTE_MESSAGE_KEYS[note.kind];
+    return { kind: note.kind, text: t(keys[note.problem] ?? keys.default) };
   };
 
   const submitTask = async (task) => {
