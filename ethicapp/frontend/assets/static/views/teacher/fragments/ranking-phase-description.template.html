@@ -1,5 +1,9 @@
 <div>
     <h4>{{ 'phase_mode_label' | translate }}: {{ ctrl.phaseMode | translate }}</h4>
+    <p ng-if="ctrl.phaseDetails.durationMinutes">
+        <strong>{{ 'phase_duration_label' | translate }}:</strong>
+        {{ 'phase_duration_minutes' | translate:{ minutes: ctrl.phaseDetails.durationMinutes } }}
+    </p>
     <div ng-if="ctrl.phaseMode === 'team'">
         <p>
             <strong>{{ 'interaction_type_label' | translate }}:</strong>

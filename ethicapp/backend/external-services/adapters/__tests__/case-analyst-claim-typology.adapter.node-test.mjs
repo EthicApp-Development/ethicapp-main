@@ -148,6 +148,11 @@ test("designAnalysisInput: the hash changes with a question, the case, its langu
     untouchedPhase.phases[1].questions[0].q_text = "Changed outside the tutor.";
     assert.equal(await hashOf(untouchedPhase), base, "phases without the tutor do not count");
 
+    const timed = structuredClone(DESIGN);
+    timed.phases[0].durationMinutes = 15;
+    assert.equal(await hashOf(timed), base,
+        "a phase duration does not make the typology stale (#1107)");
+
     assert.notEqual(await hashOf(DESIGN, { ...DESIGN_CASE, contentHash: "sha256:other" }), base);
     assert.notEqual(await hashOf(DESIGN, { ...DESIGN_CASE, languageCode: "en_US" }), base);
     assert.equal(await hashOf(DESIGN, { ...DESIGN_CASE, languageCode: "es" }), base,

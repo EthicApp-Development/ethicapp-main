@@ -122,7 +122,51 @@ describe("phase validation helpers", () => {
             items:             {},
             groupingConfig:    [],
             phaseInstructions: [],
+            duration:          [],
             other:             [],
         }), true);
+    });
+
+    it("treats a phase with duration errors as invalid (#1107)", () => {
+        assert.equal(isPhaseValid({
+            items:             {},
+            groupingConfig:    [],
+            phaseInstructions: [],
+            duration:          ["error_phase_duration_invalid"],
+            other:             [],
+        }), false);
+    });
+});
+
+describe("phase duration validation (#1107)", () => {
+    function rankingDesignWithDuration(durationMinutes) {
+        const phase = {
+            mode:  "individual",
+            roles: [{ name: "Actor", justification_required: false }],
+        };
+        if (durationMinutes !== undefined) {
+            phase.durationMinutes = durationMinutes;
+        }
+        return { type: "ranking", phases: [phase] };
+    }
+
+    it("accepts phases without a duration and whole minutes from 1 to 180", () => {
+        for (const minutes of [undefined, 1, 10, 180]) {
+            const result = validateDesign(rankingDesignWithDuration(minutes));
+            assert.equal(result.valid, true, String(minutes));
+            assert.deepEqual(result.validationErrors.phases, {});
+        }
+    });
+
+    it("reports values out of range, decimals, strings and empty values", () => {
+        for (const minutes of [0, -5, 181, 2.5, "10", null, undefined]) {
+            const design = rankingDesignWithDuration(10);
+            design.phases[0].durationMinutes = minutes;
+            const result = validateDesign(design);
+
+            assert.equal(result.valid, false, JSON.stringify(minutes));
+            assert.deepEqual(result.validationErrors.phases.phase_1.duration,
+                ["error_phase_duration_invalid"]);
+        }
     });
 });

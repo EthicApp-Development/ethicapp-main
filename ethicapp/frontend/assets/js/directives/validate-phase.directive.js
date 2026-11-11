@@ -1,6 +1,8 @@
+import { phaseDurationErrors } from "../helpers/phase-duration.js";
+
 const watchObjects = {
-    semantic_differential: ['phase.questions', 'phase.instructions'],
-    ranking: ['phase.roles', 'phase.instructions']
+    semantic_differential: ["phase.questions", "phase.instructions", "phase.durationMinutes"],
+    ranking:               ["phase.roles", "phase.instructions", "phase.durationMinutes"],
 };
 
 const itemValidators = {
@@ -30,6 +32,7 @@ const itemValidators = {
         }
 
         validatePhaseInstructions(scope, phaseNumber);
+        validatePhaseDuration(scope, phaseNumber);
     },
     ranking : function(scope, phaseNumber) {
         const phase = scope.phase;
@@ -56,6 +59,7 @@ const itemValidators = {
         }
 
         validatePhaseInstructions(scope, phaseNumber);
+        validatePhaseDuration(scope, phaseNumber);
     }
 }
 
@@ -74,6 +78,20 @@ function validatePhaseInstructions(scope, phaseNumber) {
             phaseInstructions: true
         },
         messages
+    };
+
+    scope.onValidate({ result });
+}
+
+// The phase's duration (#1107): whole minutes from 1 to 180 when it has one.
+function validatePhaseDuration(scope, phaseNumber) {
+    const result = {
+        type:    "phase",
+        context: {
+            phaseNumber,
+            duration: true,
+        },
+        messages: phaseDurationErrors(scope.phase),
     };
 
     scope.onValidate({ result });

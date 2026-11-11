@@ -79,6 +79,12 @@
         </div>
     </div>
 
+    <p class="design-planned-duration" ng-if="dec.plannedDurationText() !== null">
+        <i class="fa-regular fa-clock" aria-hidden="true"></i>
+        <strong>{{ 'design_planned_duration_label' | translate }}:</strong>
+        {{ dec.plannedDurationText().key | translate:dec.plannedDurationText().values }}
+    </p>
+
     <div class="design-editor" validate-design
             phases="dec.design.phases"
             on-validate="dec.handleValidationResult(result)">
@@ -117,6 +123,23 @@
                             <div ng-show="phase.mode !== 'individual'">
                                 <div toggle-switch ng-model="phase.anonymous" class="ats-switch switch-mini"></div> <label>{{ 'use_anonimity_label' | translate }}</label> <br>
                                 <div toggle-switch ng-model="phase.chat" class="ats-switch switch-mini"></div> <label>{{ 'use_chat_label' | translate }} </label> <br>
+                            </div>
+                            <div class="phase-duration-editor">
+                                <h5>{{ 'phase_duration_label' | translate }}</h5>
+                                <div toggle-switch
+                                    ng-model="dec.phaseDurationSwitch(phase)"
+                                    ng-model-options="{ getterSetter: true }"
+                                    class="ats-switch switch-mini"></div> <label>{{ 'phase_duration_switch_label' | translate }}</label>
+                                <div class="phase-duration-input" ng-if="dec.isPhaseDurationEnabled(phase)">
+                                    <numeric-input-with-spinbutton
+                                        class="phase-duration-spinbutton"
+                                        value="phase.durationMinutes"
+                                        min="1"
+                                        max="180"
+                                        step="1">
+                                    </numeric-input-with-spinbutton>
+                                    <span class="phase-duration-unit">{{ 'phase_duration_unit' | translate }}</span>
+                                </div>
                             </div>
                         </div>
                         <div class="col-md-4" style="padding-top: 16px" ng-if="phase.mode !== 'individual'">

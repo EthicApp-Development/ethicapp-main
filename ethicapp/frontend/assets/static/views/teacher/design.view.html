@@ -51,6 +51,11 @@
             <h4 style="margin-top:1em; margin-bottom:2em">
                 {{ 'design_explanation_text' | translate }}
             </h4>
+            <p class="design-planned-duration" ng-if="dvc.plannedDurationText() !== null">
+                <i class="fa-regular fa-clock" aria-hidden="true"></i>
+                <strong>{{ 'design_planned_duration_label' | translate }}:</strong>
+                {{ dvc.plannedDurationText().key | translate:dvc.plannedDurationText().values }}
+            </p>
             <design-viewer design="dvc.design" case-videos="dvc.associatedCase.videos"
                 claim-typology="dvc.claimTypology"></design-viewer>            
         </div>

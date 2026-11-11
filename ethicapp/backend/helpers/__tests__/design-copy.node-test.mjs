@@ -87,3 +87,16 @@ test("buildDesignCopyDocument keeps the tutor's evaluation mode, independently o
     assert.equal(source.phases[0].externalServices
         .configurations["argumentation-tutor-system"].evaluation_mode, "basic");
 });
+
+// Durations survive duplicating and importing a design (#1107): the copy
+// keeps each phase's durationMinutes and phases without one stay untimed.
+test("buildDesignCopyDocument keeps each phase's duration", () => {
+    const source = sourceDesign();
+    source.phases[0].durationMinutes = 25;
+    source.phases.push({ mode: "team", stdntAmount: 3 });
+
+    const copy = buildDesignCopyDocument(source, { title: "Copy", visibility: "private" });
+
+    assert.equal(copy.phases[0].durationMinutes, 25);
+    assert.equal(Object.hasOwn(copy.phases[1], "durationMinutes"), false);
+});
