@@ -193,8 +193,8 @@ function makeStarter(database, { random = () => 0, failing = {} } = {}) {
                 throw new Error("cache down");
             }
         },
-        notifyStudents: (sessionId) => {
-            database.log.push({ name: "NOTIFY", params: [sessionId] });
+        notifyPhaseStarted: async (sessionId, transition) => {
+            database.log.push({ name: "NOTIFY", params: [sessionId, transition] });
             if (failing.notify) {
                 throw new Error("socket down");
             }
@@ -237,6 +237,10 @@ describe("starting the first phase", () => {
             "NOTIFY",
         ]);
         assert.equal(database.client.released, true);
+        // The students and the teacher learn which phase started, and why
+        // (#1111).
+        assert.deepEqual(database.find("NOTIFY").params,
+            [SESSION, { phaseId: NEW_PHASE_ID, phaseNumber: 1, reason: "teacher" }]);
 
         assert.deepEqual(database.find("LOCK_TEACHER").params, [TEACHER]);
         assert.deepEqual(database.find("LOCK_SESSION").params, [SESSION]);
@@ -606,6 +610,8 @@ describe("the phase clock (epic #1105)", () => {
             ]);
             assert.deepEqual(database.find("CLAIM_DUE_DEADLINE").params, [401]);
             assert.deepEqual(insertedClock(database), ["deadline", 600]);
+            assert.deepEqual(database.find("NOTIFY").params,
+                [SESSION, { phaseId: NEW_PHASE_ID, phaseNumber: 2, reason: "deadline" }]);
             assert.deepEqual(hooks.map(hook => hook.hookName), ["phase-ended", "phase-started"]);
         });
 

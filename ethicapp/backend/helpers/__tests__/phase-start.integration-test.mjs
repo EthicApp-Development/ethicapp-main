@@ -189,7 +189,7 @@ function makeStarter({
         invalidateStudentDescriptor: async (sessionId) => {
             effects.push(["invalidate", sessionId]);
         },
-        notifyStudents: (sessionId) => {
+        notifyPhaseStarted: async (sessionId) => {
             effects.push(["notify", sessionId]);
         },
         dispatchPhaseHook: async (hookName, context) => {

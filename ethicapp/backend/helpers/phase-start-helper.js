@@ -27,9 +27,10 @@
  * 8. the session moves to the new phase (TRANSITION_SESSION_SQL).
  *
  * Any failure rolls all of it back. Only after the commit are the students'
- * cached descriptor dropped, the students notified and the phase hooks
- * dispatched, as the old phase transition endpoint did. Their failures are
- * logged and never undo the phase.
+ * cached descriptor dropped, the students and the teacher notified (the
+ * phase transition and the new clock, #1111) and the phase hooks dispatched,
+ * as the old phase transition endpoint did. Their failures are logged and
+ * never undo the phase.
  *
  * Times come from the database's now(), the start of the transaction, so a
  * phase's start, its deadline and the handling of the deadline it leaves
@@ -38,7 +39,7 @@
 import * as config from "../config/database.config.js";
 import * as rpg2 from "../db/rest-pg-2.js";
 import { getStatusCode } from "../../common/modules/session-status.js";
-import { studentNotifications } from "../config/socket.config.js";
+import defaultPhaseClockNotifier from "./phase-clock-notifier.js";
 import { dispatchPhaseHook as defaultDispatchPhaseHook } from "./external-service-dispatch.js";
 import { shouldDispatchActivityStarted } from "./activity-lifecycle-helper.js";
 import { TRANSITION_SESSION_SQL } from "./teacher-activity-writes.js";
@@ -219,8 +220,8 @@ async function defaultInvalidateStudentDescriptor(sessionId) {
     await descriptorCache.invalidateCachedStudentActivityDescriptor(sessionId);
 }
 
-function defaultNotifyStudents(sessionId) {
-    studentNotifications.phaseTransition(sessionId);
+function defaultNotifyPhaseStarted(sessionId, transition) {
+    return defaultPhaseClockNotifier.phaseStarted(sessionId, transition);
 }
 
 /**
@@ -228,7 +229,9 @@ function defaultNotifyStudents(sessionId) {
  * @param {() => Promise<{ query: Function, release: Function }>} [dependencies.connect]
  *        Checks out a `pg` client for the transaction.
  * @param {(sessionId: number) => Promise<void>} [dependencies.invalidateStudentDescriptor]
- * @param {(sessionId: number) => void} [dependencies.notifyStudents]
+ * @param {(sessionId: number, transition: { phaseId: number, phaseNumber: number,
+ *         reason: "teacher" | "deadline" }) => Promise<void>} [dependencies.notifyPhaseStarted]
+ *        Tells the students and the teacher (helpers/phase-clock-notifier.js).
  * @param {(hookName: string, context: Object) => Promise<unknown>} [dependencies.dispatchPhaseHook]
  * @param {() => number} [dependencies.random] For the random grouping.
  * @param {{ warn: Function, error: Function }} [dependencies.logger]
@@ -236,7 +239,7 @@ function defaultNotifyStudents(sessionId) {
 export function createPhaseStarter({
     connect = defaultConnect,
     invalidateStudentDescriptor = defaultInvalidateStudentDescriptor,
-    notifyStudents = defaultNotifyStudents,
+    notifyPhaseStarted = defaultNotifyPhaseStarted,
     dispatchPhaseHook = defaultDispatchPhaseHook,
     random = Math.random,
     logger = console,
@@ -392,11 +395,12 @@ export function createPhaseStarter({
     }
 
     // What the old phase transition endpoint did after its update. The
-    // descriptor is dropped before the students are told to reload it. The
-    // hooks are not awaited, as before: they call external services, and the
-    // teacher's request does not wait for them. `hooks` settles once they
+    // descriptor is dropped before the students are told to reload it; the
+    // teacher's dashboards are told too, and both get the new clock (#1111).
+    // The hooks are not awaited, as before: they call external services, and
+    // the teacher's request does not wait for them. `hooks` settles once they
     // are dispatched, and never rejects.
-    async function announce(sessionId, { phase, previousPhaseId, previousStatus }) {
+    async function announce(sessionId, { phase, trigger, previousPhaseId, previousStatus }) {
         try {
             await invalidateStudentDescriptor(sessionId);
         } catch (error) {
@@ -405,10 +409,14 @@ export function createPhaseStarter({
         }
 
         try {
-            notifyStudents(sessionId);
+            await notifyPhaseStarted(sessionId, {
+                phaseId:     phase.id,
+                phaseNumber: phase.number,
+                reason:      trigger,
+            });
         } catch (error) {
-            logger.error(`[phase-start] Could not notify the students of session ${sessionId}.`,
-                error);
+            logger.error("[phase-start] Could not notify the students and the teacher of "
+                + `session ${sessionId}.`, error);
         }
 
         const context = { sessionId, startedPhaseId: phase.id, endedPhaseId: previousPhaseId };
@@ -422,7 +430,8 @@ export function createPhaseStarter({
 
     /**
      * Resolves once the transaction ended and, for a started phase, the
-     * students were told; `hooks` settles when the phase hooks are dispatched.
+     * students and the teacher were told; `hooks` settles when the phase hooks
+     * are dispatched.
      *
      * `trigger` says who starts the phase, and is recorded as the new phase's
      * `start_trigger`:

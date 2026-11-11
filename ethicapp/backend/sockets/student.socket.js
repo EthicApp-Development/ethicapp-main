@@ -44,13 +44,51 @@ export function createStudentSocketInit({ access = roomAccess, logger = console 
 
 const studentSocketInit = createStudentSocketInit();
 
-// Teacher-Student socket notifications (from backend)
+/*
+ * Teacher-Student socket notifications (from backend), emitted on the
+ * /student namespace. The student app (ethicapp-student) consumes them.
+ *
+ * Room `session-<sessionId>`, joined with `joinSession` by the session's
+ * participants:
+ *
+ * - `onPhaseTransition` `{ sessionId, phaseId, phaseNumber, reason }`: the
+ *   activity moved to phase `phaseId` (number `phaseNumber`, from 1). `reason`
+ *   is what started it, the phase's `start_trigger`: "teacher" for the
+ *   teacher's request, "deadline" for the deadline runner of a hard-mode
+ *   activity (#1113). Sent after the commit, once the cached student
+ *   descriptor was dropped, so a reload sees the new phase (#906, #1111).
+ * - `onPhaseClock` `{ sessionId, timeMode, finished, phaseId, phaseNumber,
+ *   startedAt, endsAt, isLastPhase, serverNow }`: the phase clock after a
+ *   change, the answer of GET /activities/:id/clock (helpers/phase-clock.js
+ *   documents each field and the edge cases). It follows each
+ *   `onPhaseTransition` and each change of the deadline, such as "+1 min"
+ *   (#1112). It is read after the change, so it always describes the
+ *   activity's current phase, which may already be a later one than the
+ *   transition it follows. Times are ISO 8601 strings; `serverNow` is the
+ *   database's time, for the client's clock offset.
+ * - `onShareResponse` `{ content }`.
+ * - `onEndSession` `{ content }`: the activity was finished.
+ *
+ * Room `group-<groupId>`, joined with `joinGroup` by the group's members:
+ *
+ * - `onChatMessage`, without a payload: the group's chat has a new message.
+ *
+ * Room `user-<userId>`, the student's own, joined with `joinUser`:
+ *
+ * - `onExternalServiceResult`: a result an external service published to the
+ *   student.
+ */
 const toStudentsNotifications = (socketNamespace) => {
     return {
-        phaseTransition: (sessionId) => {
+        phaseTransition: (sessionId, transition) => {
             socketNamespace.to(`session-${sessionId}`).
-                emit("onPhaseTransition");
+                emit("onPhaseTransition", transition);
         },
+
+        phaseClock: (sessionId, clock) => {
+            socketNamespace.to(`session-${sessionId}`).emit("onPhaseClock", clock);
+        },
+
         chatMessage: (groupId) => {
             console.debug(`[student socket] Emitting chat message notification to group ${groupId}`);
             socketNamespace.to(`group-${groupId}`).emit("onChatMessage");
