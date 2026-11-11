@@ -211,6 +211,31 @@ For the complete operator-facing session variable list, defaults, and
 revocation semantics, see the Browser Session Policy section in
 [`deploy/README.md`](./deploy/README.md#browser-session-policy).
 
+## Phase Time Limits
+
+A teacher who launches an activity with hard time limits expects each phase to
+move to the next one by itself when its time runs out. The `ethicapp` web
+process does this with a phase deadline runner, which checks the database every
+`ETHICAPP_PHASE_CLOCK_POLL_INTERVAL_MS` milliseconds:
+
+```bash
+ETHICAPP_PHASE_CLOCK_POLL_INTERVAL_MS=1000
+```
+
+The default is 1000; a value that is not a positive integer falls back to it
+with a warning in the log. Each check starts the next phase of the hard-mode
+activities whose current phase is past its deadline, notifies the teacher when
+that phase is the last one (the activity is not finished), and marks the other
+due deadlines handled (soft mode, finished activities).
+
+The runner keeps its state in the database, so a restart loses nothing: the
+first check after a start, one interval later, advances every phase whose
+deadline passed while `ethicapp` was stopped. It needs no service, volume or
+secret of its own, and only the web process runs it, not the PDF render worker.
+The real-time events of a phase it starts reach only the browsers connected to
+the same `ethicapp` process, so deploy a single web replica, as Socket.IO
+already requires.
+
 ## AI Services (AI Additions)
 
 EthicApp's AI features come from a separate deployment, EthicApp AI Additions
