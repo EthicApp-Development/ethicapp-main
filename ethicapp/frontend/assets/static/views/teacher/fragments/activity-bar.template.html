@@ -25,6 +25,11 @@
     {{ 'activity_bar_no_phase' | translate }}
   </span>
 
+  <!-- The phase clock and "+1 min" (#1115), never hidden -->
+  <phase-timer class="phase-timer-host"
+               session-id="$ctrl.sessionId"
+               is-finished="$ctrl.statusName === 'finished'"></phase-timer>
+
   <span class="activity-bar-chip activity-bar-code" ng-if="$ctrl.activity.code">
     {{ 'activity_bar_access_code' | translate }}
     <span copy-to-clipboard class="activity-bar-code-value fixed-width-font white-against-black-bg bold-text black-bg-rounded-corners copy-to-clipboard-parent">{{ $ctrl.activity.code }}</span>

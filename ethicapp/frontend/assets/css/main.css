@@ -2969,6 +2969,89 @@ h2{
     }
 }
 
+/* The phase clock and "+1 min" in the activity bar (#1115), never hidden.
+   The host leaves the chip and the button as items of the bar. The digits
+   use tabular numerals at a fixed width, so the chip keeps its width while
+   it counts. */
+.phase-timer-host {
+    display: contents;
+}
+
+.phase-timer-chip {
+    align-items: center;
+    display: inline-flex;
+    gap: 6px;
+}
+
+.phase-timer-text {
+    align-items: baseline;
+    display: inline-flex;
+    gap: 0.3em;
+}
+
+.phase-timer-digits {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    min-width: 5ch;
+    text-align: right;
+}
+
+.phase-timer-marker {
+    align-items: baseline;
+    display: inline-flex;
+    font-size: 12px;
+    gap: 0.3em;
+}
+
+.phase-timer-warning {
+    background: #fcf8e3;
+    border-color: #c79a3b;
+    color: #8a6d3b;
+}
+
+.phase-timer-overtime,
+.phase-timer-time-up {
+    background: #f2dede;
+    border-color: #a94442;
+    color: #a94442;
+}
+
+.phase-timer-advancing {
+    background: #d9edf7;
+    border-color: #31708f;
+    color: #31708f;
+}
+
+.phase-timer-extend {
+    flex: none;
+}
+
+/* The leads shorten with the bar: the whole sentence from 1600 px, a short
+   one from 1200 px, the time alone below. */
+@media (width < 1600px) {
+    .phase-timer-wide {
+        display: none;
+    }
+}
+
+@media (width >= 1600px), (width < 1200px) {
+    .phase-timer-medium {
+        display: none;
+    }
+}
+
+@media (width < 1200px) {
+    .phase-timer-from-1200 {
+        display: none;
+    }
+}
+
+@media (width >= 1200px) {
+    .phase-timer-narrow {
+        display: none;
+    }
+}
+
 /* Two-column activity dashboard (#894): a rail with the phase navigator and
    the selected phase's context, and a main column with the responses first.
    The rail is 260 px from 1200 px wide and 320 px from 1600 px. Below

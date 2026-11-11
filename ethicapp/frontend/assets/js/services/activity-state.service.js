@@ -852,6 +852,45 @@ let ActivityStateService = function($http, TeacherSocketService, now = () => Dat
             return service.getPhaseClock(sessionId);
         },
 
+        /**
+         * Adds one minute to the current phase's deadline (#1115, through
+         * the route of #1112). `expectedEndsAt` is the kept clock's
+         * `endsAt`: the server adds the minute only while the deadline is
+         * still that one, so a double click, or two open dashboards, add it
+         * once. The clock in the answer is kept, a success's and a
+         * refusal's (409) alike; a refusal without one reads the clock
+         * again. Never throws.
+         *
+         * @param {number|string} sessionId
+         * @param {number} phaseId The kept clock's `phaseId`.
+         * @param {string} expectedEndsAt The kept clock's `endsAt`.
+         * @returns {Promise<{ ok: boolean, code: string|null }>} `code` is
+         *   the server's refusal code (DEADLINE_CHANGED, PHASE_NOT_CURRENT,
+         *   ACTIVITY_FINISHED, NO_DEADLINE, DEADLINE_PASSED, ...), or null.
+         */
+        extendPhaseClock: async function(sessionId, phaseId, expectedEndsAt) {
+            try {
+                const response = await $http.post(
+                    `/activities/${sessionId}/phases/${phaseId}/clock/extend`,
+                    { minutes: 1, expectedEndsAt });
+                service.acceptPhaseClock(sessionId, response?.data);
+                return { ok: true, code: null };
+            } catch (error) {
+                const code = typeof error?.data?.code === "string" ? error.data.code : null;
+                if (error?.status === 409) {
+                    if (error.data?.clock) {
+                        service.acceptPhaseClock(sessionId, error.data.clock);
+                    } else {
+                        await service.refreshPhaseClock(sessionId);
+                    }
+                } else {
+                    console.error(`Failed to extend the phase clock of session ${sessionId}:`,
+                        error);
+                }
+                return { ok: false, code };
+            }
+        },
+
         reloadPhaseState: async function(sessionId) {
             await service.getInstancedPhases(sessionId, true);
             await service.getActivityDescriptor(sessionId, true);

@@ -280,6 +280,8 @@ import { activityDescriptionComponent } from "../../components/activity-descript
 import { activitiesTableComponent } from "../../components/activities-table.component.js";
 // The sticky bar of the activity dashboard (#893).
 import activityBarComponent from "../../components/activity-bar.component.js";
+// The phase clock and "+1 min" in that bar (#1115).
+import phaseTimerComponent from "../../components/phase-timer.component.js";
 // The phase navigator in the activity dashboard's rail (#894).
 import phaseNavigatorComponent from "../../components/phase-navigator.component.js";
 // The response detail panel of the activity dashboard and its contents (#896).
@@ -347,6 +349,7 @@ import activitiesEmptyPageComponent from "../../components/activities-empty-page
 app.component('activityDescription', activityDescriptionComponent);
 app.component("activitiesTable", activitiesTableComponent);
 app.component("activityBar", activityBarComponent);
+app.component("phaseTimer", phaseTimerComponent);
 app.component("phaseNavigator", phaseNavigatorComponent);
 app.component("responseDetailPanel", responseDetailPanelComponent);
 app.component("sdStudentResponseDetail", sdStudentResponseDetailComponent);

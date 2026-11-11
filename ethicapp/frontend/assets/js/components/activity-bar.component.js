@@ -1,7 +1,8 @@
 // The sticky bar at the top of the teacher's activity dashboard (#893, epic
 // #892): the activity's name and description (#973), status, current phase,
 // access code (with copy) and connected students, with the activity controls
-// in its transcluded slot.
+// in its transcluded slot. The phase clock and "+1 min" follow the phase
+// (#1115, the phase-timer component).
 // It reads the activity descriptor and the user list the dashboard keeps live
 // through ActivityStateService, and works the values out on every digest, so
 // a phase transition, a student joining or the end of the activity shows at
@@ -80,6 +81,7 @@ function sameSummary(left, right) {
 
 export default {
     bindings: {
+        sessionId:   "<",
         activity:    "<",
         totalPhases: "<",
         users:       "<",
