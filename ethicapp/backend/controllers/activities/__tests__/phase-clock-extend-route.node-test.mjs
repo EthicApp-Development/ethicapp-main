@@ -2,8 +2,10 @@
 // #1105): "+1 min" on the activity dashboard. Only the activity's owner may
 // extend, the request carries exactly one minute and the deadline the teacher
 // saw, each refusal has its status and code, and the students and the teacher
-// are told only after a change. The owner check runs against a fake pg pool;
-// the extension, the clock reader and the notifier are fakes. The statement
+// are told only after a change, as are the services the phase enables
+// (`phase-clock-changed`, #1178), without the answer waiting for them. The
+// owner check runs against a fake pg pool; the extension, the clock reader
+// and the notifiers are fakes. The statement
 // itself is covered by
 // helpers/__tests__/phase-clock-extension.integration-test.mjs.
 import assert from "node:assert/strict";
@@ -73,6 +75,7 @@ after(() => {
 let extensions;
 let clockReads;
 let notifications;
+let serviceNotifications;
 let outcome;
 let clock;
 
@@ -81,6 +84,7 @@ beforeEach(() => {
     extensions = [];
     clockReads = [];
     notifications = [];
+    serviceNotifications = [];
     outcome = { status: "extended", phaseId: PHASE_ID };
     clock = clockAt("2026-11-11T10:06:00.000Z");
 });
@@ -97,6 +101,9 @@ function makeRouter(overrides = {}) {
         },
         notifyClockChanged: async (sessionId) => {
             notifications.push(sessionId);
+        },
+        notifyServicesClockChanged: async (sessionId, phaseId) => {
+            serviceNotifications.push({ sessionId, phaseId });
         },
         ...overrides,
     });
@@ -149,6 +156,46 @@ describe("an extension", () => {
         await extend();
 
         assert.deepEqual(notifications, [SESSION_ID]);
+    });
+
+    it("tells the services the phase enables, with the session and the phase", async () => {
+        await extend();
+
+        assert.deepEqual(serviceNotifications, [{ sessionId: SESSION_ID, phaseId: PHASE_ID }]);
+    });
+
+    it("answers without waiting for the services", async () => {
+        let started = false;
+        const router = makeRouter({
+            notifyServicesClockChanged: () => {
+                started = true;
+                return new Promise(() => {});
+            },
+        });
+
+        const response = await extend({ router });
+
+        assert.equal(response.status, 200);
+        assert.equal(started, true);
+    });
+
+    it("answers the new clock when telling the services fails, and logs it", async () => {
+        const errors = [];
+        const logger = { error: (...args) => errors.push(args) };
+        for (const notifyServicesClockChanged of [
+            async () => { throw new Error("registry down"); },
+            () => { throw new Error("thrown at once"); },
+        ]) {
+            const router = makeRouter({ notifyServicesClockChanged, logger });
+
+            const response = await extend({ router });
+            await new Promise(resolve => setImmediate(resolve));
+
+            assert.equal(response.status, 200);
+            assert.deepEqual(response.body, clock);
+        }
+        assert.equal(errors.length, 2);
+        assert.match(errors[0][0], /phase-clock-changed/);
     });
 
     it("passes the expected deadline as the teacher sent it", async () => {
@@ -316,6 +363,7 @@ describe("a refused extension", () => {
                 assert.deepEqual(response.body.clock, clock);
                 assert.deepEqual(clockReads, [SESSION_ID]);
                 assert.deepEqual(notifications, []);
+                assert.deepEqual(serviceNotifications, []);
             });
     }
 
@@ -327,6 +375,7 @@ describe("a refused extension", () => {
         assert.equal(response.status, 404);
         assert.deepEqual(response.body, PHASE_NOT_FOUND);
         assert.deepEqual(notifications, []);
+        assert.deepEqual(serviceNotifications, []);
     });
 
     it("answers a session that is no longer the teacher's with 404", async () => {
@@ -355,6 +404,7 @@ describe("a failure", () => {
         assert.equal(response.status, 500);
         assert.deepEqual(response.body, { error: "Internal server error" });
         assert.deepEqual(notifications, []);
+        assert.deepEqual(serviceNotifications, []);
     });
 
     it("answers 500 for an outcome it does not know", async () => {

@@ -328,12 +328,14 @@ Polyadic REST room per EthicApp session/phase/group. When it creates a room's
 session (#735) it sends:
 
 - the phase's configured settings (`context.serviceConfiguration`, #734), such
-  as `pipeline_type`, `llm_tier`, `session_duration_seconds` or
-  `agent_nickname`;
+  as `pipeline_type`, `llm_tier` or `agent_nickname`, and the deprecated
+  `session_duration_seconds` that older designs store;
 - for settings the phase does not configure, EthicApp's defaults: the pipeline
   from `AI_ADDITIONS_POLYADIC_AGENTS_PIPELINE_TYPE` (default
   `abogado-del-diablo`), and the `locale` (`es-CL` or `en-US`) from the design
-  language. The deprecated `idioma` is no longer sent.
+  language. The deprecated `idioma` is no longer sent;
+- for a timed phase, the phase clock as the session input `phase_clock`
+  (#1178, see "Polyadic phase clock" below).
 
 Anything still unset takes Polyadic's defaults. `agent_nickname` is sent only
 when the phase configures it (#1026, epic #1025): without it, Polyadic names
@@ -392,6 +394,61 @@ outside Compose and the mock service locally, set
   chat-agent reply containing the processed message followed by its character
   count.
 
+### Polyadic phase clock
+
+A Polyadic room follows the clock of its phase (#1178, epic #1105), so the
+guide's time milestones (25, 50 and 75 % of the phase) match the deadline
+participants see, the minutes the teacher adds included. Polyadic's side is
+ethicapp-ai-additions#259, implemented by ethicapp-ai-additions#260 ("Phase
+clock" in `polyadic-agents/README.md`): a
+room created without a clock is untimed, with no milestones and no time
+notices to the agents.
+
+- **Room creation.** When the phase has a clock (a duration, in an activity
+  whose time mode is not `none`), `POST /rooms/:room/sessions` carries, next
+  to `ethicapp_room_correlation_id` and never from the phase's settings:
+
+  ```json
+  { "phase_clock": { "duration_seconds": 900, "remaining_seconds": 884 } }
+  ```
+
+  `duration_seconds` is `stages.ends_at - stages.started_at`, extensions
+  included; `remaining_seconds` is `ends_at` minus the database's
+  `clock_timestamp()`, read (`helpers/phase-clock.js`) right before each
+  room's request, including a room created late by the first chat message and
+  the retry without configured settings. It is negative after the deadline:
+  in soft mode, and on a hard-mode last phase, which its deadline never
+  finishes. Both are whole seconds within Polyadic's bounds (duration 60 to
+  86400, remaining time from -86400 to the duration). An untimed phase, a
+  phase that is no longer current or a clock that cannot be read sends no
+  `phase_clock`, and the room is created untimed.
+- **"+1 min".** After an extension commits, `POST
+  /activities/:id/phases/:phase_id/clock/extend` dispatches
+  `phase-clock-changed` without waiting for it. The bridge sends
+  `PUT /rooms/:room/sessions/active/clock` with `{ "phase_clock": {...} }`,
+  read again for each request, to the room of every group of the phase,
+  waiting first for a room still being created. A `404` (no running session)
+  counts as not running; any other failure is logged and reported in the job
+  result, and never undoes the extension.
+- **Discovery.** EthicApp sends `phase_clock`, at creation and after an
+  extension, only when Polyadic's capability descriptor declares
+  `session_inputs.phase_clock`, read through the descriptor cache (ten
+  minutes; see "Capability descriptors" in
+  `ethicapp/backend/external-services/README.md`). Against an older Polyadic,
+  or while the descriptor is unavailable, no clock is sent and the rooms run
+  as before.
+- **Deprecated duration.** `session_duration_seconds` carries
+  `status: "deprecated"` in the descriptor, so the design editor no longer
+  offers it and shows it, with its deprecation notice, only on designs that
+  store it (#733). Such a design still sends it; Polyadic gives the room a
+  fixed clock from its start, unless a `phase_clock` comes in the same
+  request, which wins.
+
+The `phase-started` job result reports each timed room's clock as
+`payload.rooms[].phaseClock`, and the `phase-clock-changed` result reports
+`roomsUpdated`, `roomsNotRunning`, `roomsFailed` and each room's outcome and
+clock.
+
 ## Hook Dispatch
 
 EthicApp dispatches hooks only to services enabled in the phase design:
@@ -448,6 +505,9 @@ Current event hooks:
 - `phase-started`: dispatched when the teacher transitions a session into a phase.
 - `phase-ended`: dispatched when the teacher transitions a session away from the
   previously active phase.
+- `phase-clock-changed`: dispatched after the teacher adds a minute to the
+  current phase's deadline (#1112), so services can follow the new clock
+  (#1178, see "Polyadic phase clock").
 - `chat-message-received`: dispatched when a chat message is posted to a phase
   group chat.
 - `callback-received`: dispatched when an external service calls the callback

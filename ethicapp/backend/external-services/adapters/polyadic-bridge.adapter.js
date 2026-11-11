@@ -5,6 +5,8 @@ import { plainTextOf } from "../../helpers/rich-text-helper.js";
 import { describeError } from "../../helpers/log-safety.js";
 import { normalizeExternalAgentAuthorName } from "../../helpers/external-agent-author.js";
 import { JOB_SOURCE_KIND } from "../../services/external-service-jobs.service.js";
+import { readPhaseClock } from "../../helpers/phase-clock.js";
+import { TIME_MODES } from "../../helpers/session-time-mode.js";
 import {
     MAX_CONTRIBUTION_STRING_LENGTH,
 } from "../../services/external-service-report-contributions.js";
@@ -281,6 +283,60 @@ function isPlainObject(value) {
     return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
+// Polyadic's phase clock (#1178; ethicapp-ai-additions#259, "Phase clock" in
+// polyadic-agents/README.md): the session input a room of a timed phase is
+// created with, and the body of PUT /rooms/:room/sessions/active/clock after
+// "+1 min". Both values are relative to the moment Polyadic receives the
+// request. Polyadic answers 400 outside these bounds.
+export const PHASE_CLOCK_INPUT = "phase_clock";
+export const PHASE_CLOCK_MIN_DURATION_SECONDS = 60;
+export const PHASE_CLOCK_MAX_DURATION_SECONDS = 86400;
+
+function clamp(value, minimum, maximum) {
+    return Math.min(Math.max(value, minimum), maximum);
+}
+
+/**
+ * The `phase_clock` of a room of phase `phaseId`, from the activity's clock
+ * as helpers/phase-clock.js reads it, or null when the room has no clock to
+ * follow: the activity is untimed (`timeMode` "none") or finished, `phaseId`
+ * is not its current phase, or the phase has no duration or started before
+ * V45.
+ *
+ * - `duration_seconds` is the phase's whole length, `endsAt - startedAt`,
+ *   extensions included;
+ * - `remaining_seconds` is `endsAt - serverNow`, the time left when the clock
+ *   was read. It is negative after the deadline: a soft-mode phase past
+ *   00:00, or a hard-mode last phase, which its deadline never finishes.
+ *
+ * Both are whole seconds and kept within Polyadic's bounds: the duration
+ * between 60 s and 24 h, and the remaining time between -24 h and the
+ * duration. Only a phase run on for most of a day reaches them.
+ * @param {object|null} clock helpers/phase-clock.js `readPhaseClock()`
+ * @param {number} phaseId the room's phase (`stages.id`)
+ * @returns {{ duration_seconds: number, remaining_seconds: number } | null}
+ */
+export function buildPhaseClock(clock, phaseId) {
+    if (!clock || clock.finished || clock.timeMode === TIME_MODES.NONE
+        || clock.phaseId === null || clock.phaseId === undefined
+        || Number(clock.phaseId) !== Number(phaseId)) {
+        return null;
+    }
+
+    const startedAtMs = clock.startedAt ? Date.parse(clock.startedAt) : Number.NaN;
+    const endsAtMs = clock.endsAt ? Date.parse(clock.endsAt) : Number.NaN;
+    const nowMs = clock.serverNow ? Date.parse(clock.serverNow) : Number.NaN;
+    if (![startedAtMs, endsAtMs, nowMs].every(Number.isFinite)) {
+        return null;
+    }
+
+    const duration = clamp(Math.round((endsAtMs - startedAtMs) / 1000),
+        PHASE_CLOCK_MIN_DURATION_SECONDS, PHASE_CLOCK_MAX_DURATION_SECONDS);
+    const remaining = clamp(Math.round((endsAtMs - nowMs) / 1000),
+        -PHASE_CLOCK_MAX_DURATION_SECONDS, duration);
+    return { duration_seconds: duration, remaining_seconds: remaining };
+}
+
 // The configured settings to send: set values only. `prompt_inicial` is the
 // adapter's own and never comes from a configuration.
 function configuredSettings(serviceConfiguration) {
@@ -307,9 +363,14 @@ function configuredSettings(serviceConfiguration) {
  * locale, `agente` or `agent` (#1026, epic #1025).
  * `ethicapp_room_correlation_id` (#833) is the id of the room's room job, which
  * Polyadic uses for the room's proactive callbacks; no setting replaces it.
+ * `phase_clock` (#1178) is the phase's clock (buildPhaseClock()), sent only
+ * for a timed phase; no setting replaces it either. Without it the room is
+ * untimed, unless the design still stores the deprecated
+ * `session_duration_seconds`, which a `phase_clock` overrides.
  * @param {{ topic?: string, locale?: string,
  *   serviceConfiguration?: object, pipelineType?: string,
- *   roomCorrelationId?: string|null }} options
+ *   roomCorrelationId?: string|null,
+ *   phaseClock?: { duration_seconds: number, remaining_seconds: number }|null }} options
  */
 export function buildPolyadicSessionPayload({
     topic,
@@ -317,6 +378,7 @@ export function buildPolyadicSessionPayload({
     serviceConfiguration = {},
     pipelineType = getPipelineType(),
     roomCorrelationId = null,
+    phaseClock = null,
 } = {}) {
     const payload = {
         prompt_inicial: topic || "EthicApp discussion",
@@ -325,8 +387,12 @@ export function buildPolyadicSessionPayload({
         ...configuredSettings(serviceConfiguration),
     };
     delete payload.ethicapp_room_correlation_id;
+    delete payload[PHASE_CLOCK_INPUT];
     if (roomCorrelationId) {
         payload.ethicapp_room_correlation_id = roomCorrelationId;
+    }
+    if (phaseClock) {
+        payload[PHASE_CLOCK_INPUT] = phaseClock;
     }
     return payload;
 }
@@ -355,6 +421,7 @@ function createDependencies(overrides = {}) {
         getCaseDocumentRawText: getDefaultCaseDocumentRawText,
         getParticipantIdentity,
         getSessionLanguageCode,
+        getPhaseClock:          readPhaseClock,
         ...overrides,
     };
 }
@@ -427,19 +494,29 @@ function creationOutcome(response, roomCorrelationId, extra = {}) {
  * which a design saved before a rule tightened can still hold (#731 accepts it
  * with a warning). The room is then created once more without the configured
  * settings, so the group still gets its agent, and `configurationRejected` says so.
+ *
+ * `resolvePhaseClock` gives the room's `phase_clock` (#1178), or null. It is
+ * called right before each request is sent, the retry included, so that
+ * `remaining_seconds` is the time left when Polyadic receives it. The clock
+ * sent is returned as `phaseClock`.
  */
 async function ensurePolyadicSession(roomName, {
     topic, locale, serviceConfiguration, roomCorrelationId = null,
+    resolvePhaseClock = async () => null,
 }) {
     const path = `/rooms/${encodeURIComponent(roomName)}/sessions`;
+    let phaseClock = await resolvePhaseClock();
     const body = buildPolyadicSessionPayload({
-        topic, locale, serviceConfiguration, roomCorrelationId,
+        topic, locale, serviceConfiguration, roomCorrelationId, phaseClock,
     });
 
     try {
         const response = await requestPolyadicJson(path, { method: "POST", body });
         console.info(`[polyadic-bridge] Polyadic session ready for ${roomName}.`);
-        return creationOutcome(response, roomCorrelationId, { configurationRejected: false });
+        return creationOutcome(response, roomCorrelationId, {
+            configurationRejected: false,
+            phaseClock,
+        });
     } catch (error) {
         const hasConfiguration = Object.keys(configuredSettings(serviceConfiguration)).length > 0;
         if (Number(error?.statusCode) !== 400 || !hasConfiguration) {
@@ -448,14 +525,41 @@ async function ensurePolyadicSession(roomName, {
 
         console.warn(`[polyadic-bridge] Polyadic rejected the configured settings for ${roomName}; `
             + "creating the session with EthicApp's defaults.", error.responseBody ?? error);
-        const fallback = buildPolyadicSessionPayload({ topic, locale, roomCorrelationId });
+        phaseClock = await resolvePhaseClock();
+        const fallback = buildPolyadicSessionPayload({
+            topic, locale, roomCorrelationId, phaseClock,
+        });
         const response = await requestPolyadicJson(path, { method: "POST", body: fallback });
         console.info(`[polyadic-bridge] Polyadic session ready for ${roomName} without configured settings.`);
         return creationOutcome(response, roomCorrelationId, {
             configurationRejected: true,
             rejection:             error.responseBody ?? null,
+            phaseClock,
         });
     }
+}
+
+/**
+ * Sends a running room its phase's new clock (#1178):
+ * `PUT /rooms/{room}/sessions/active/clock` with `{ phase_clock }`. Resolves
+ * to `"updated"`, or `"not_running"` when Polyadic answers 404 because the
+ * room has no running session (it was never created, or it was closed).
+ * Rejects with the client's error otherwise.
+ */
+async function updatePolyadicPhaseClock(roomName, phaseClock) {
+    try {
+        await requestPolyadicJson(`/rooms/${encodeURIComponent(roomName)}/sessions/active/clock`, {
+            method: "PUT",
+            body:   { [PHASE_CLOCK_INPUT]: phaseClock },
+        });
+    } catch (error) {
+        if (Number(error?.statusCode) === 404) {
+            return "not_running";
+        }
+        throw error;
+    }
+    console.info(`[polyadic-bridge] Phase clock sent to ${roomName}.`);
+    return "updated";
 }
 
 async function closePolyadicSession(roomName) {
@@ -748,12 +852,19 @@ const NO_ROOM_JOBS = Object.freeze({
     fail:   async () => {},
 });
 
+// Without the registry's access to the descriptor, no session input is
+// declared, so no `phase_clock` is sent.
+const NO_SESSION_INPUTS = Object.freeze({
+    declares: async () => false,
+});
+
 export async function register({
     service,
     subscribe,
     publishGroupChatMessage,
     aiAdditionsClient: providedAiAdditionsClient,
     roomJobs = NO_ROOM_JOBS,
+    sessionInputs = NO_SESSION_INPUTS,
     polyadicBridgeDependencies = {},
 }) {
     aiAdditionsClient = providedAiAdditionsClient || defaultAiAdditionsClient;
@@ -801,6 +912,37 @@ export async function register({
         };
     }
 
+    // Whether Polyadic's descriptor declares `session_inputs.phase_clock`
+    // (#1178). An older Polyadic does not, and would report a room created
+    // with it as degraded, so EthicApp sends it no clock. The descriptor is
+    // cached by the registry (capability-descriptors.service.js).
+    async function acceptsPhaseClock() {
+        try {
+            return await sessionInputs.declares(PHASE_CLOCK_INPUT) === true;
+        } catch (error) {
+            console.warn("[polyadic-bridge] Could not read whether Polyadic accepts a phase clock; "
+                + "sending none.", describeError(error));
+            return false;
+        }
+    }
+
+    // The `phase_clock` for a room of phase `phaseId`, read from the
+    // database when it is called, or null: an untimed phase, a phase that is
+    // no longer current, or a Polyadic that does not accept it. A failed read
+    // sends no clock rather than no room.
+    async function phaseClockFor(sessionId, phaseId) {
+        if (!await acceptsPhaseClock()) {
+            return null;
+        }
+        try {
+            return buildPhaseClock(await dependencies.getPhaseClock(sessionId), phaseId);
+        } catch (error) {
+            console.warn("[polyadic-bridge] Could not read the phase clock of session "
+                + `${sessionId}; creating the room without one.`, describeError(error));
+            return null;
+        }
+    }
+
     // The room job of a new room (#833). Without one the room is created
     // without a room correlation id, and its proactive callbacks keep the
     // verified-destination rule (#815).
@@ -842,6 +984,7 @@ export async function register({
             outcome = await ensurePolyadicSession(roomName, {
                 ...sessionOptions,
                 roomCorrelationId: roomJobId,
+                resolvePhaseClock: () => phaseClockFor(sessionId, phaseId),
             });
         } catch (error) {
             roomContext.delete(roomName);
@@ -872,13 +1015,18 @@ export async function register({
     }
 
     // Polyadic's lifecycle report for each created room, for the job result.
+    // `phaseClock`, the clock the room was created with (#1178), only for a
+    // timed room.
     function roomReports(rooms) {
-        return rooms.map(({ roomName, warnings, degraded, configurationRejected, rejection }) => ({
+        return rooms.map(({
+            roomName, warnings, degraded, configurationRejected, rejection, phaseClock,
+        }) => ({
             room: roomName,
             warnings,
             degraded,
             configurationRejected,
             ...(configurationRejected ? { rejection: rejection ?? null } : {}),
+            ...(phaseClock ? { phaseClock } : {}),
         }));
     }
 
@@ -1159,6 +1307,68 @@ export async function register({
             hook:      "phase-ended",
             status:    "completed",
             payload:   { sessionId, phaseId, roomsClosed },
+        });
+    });
+
+    // The teacher added a minute to the phase's deadline (#1112, #1178):
+    // each running room of the phase gets the new clock. The rooms are the
+    // phase's groups, read from the database, so rooms created before a
+    // restart are included; one without a running session answers 404 and
+    // is counted as not running. A room still being created gets the clock
+    // once its creation settles, since the creation may have read the old
+    // deadline. Each clock is read right before its request. A failure is
+    // logged and reported, and the extension stands.
+    subscribe("phase-clock-changed", async (context, { callback }) => {
+        const { sessionId, phaseId } = context;
+        const result = (status, payload) => callback({
+            serviceId: service.id,
+            hook:      "phase-clock-changed",
+            status,
+            payload:   { sessionId, phaseId, ...payload },
+        });
+
+        if (!await acceptsPhaseClock()) {
+            await result("skipped", { reason: "phase_clock_not_supported" });
+            return;
+        }
+
+        const teamIds = await dependencies.getTeamIdsForPhase(sessionId, phaseId);
+        const rooms = [];
+        for (const groupId of teamIds) {
+            const roomName = getRoomName(sessionId, phaseId, groupId);
+            await roomCreations.get(roomName)?.catch(() => null);
+
+            let phaseClock;
+            try {
+                phaseClock = buildPhaseClock(await dependencies.getPhaseClock(sessionId), phaseId);
+            } catch (error) {
+                console.warn("[polyadic-bridge] Could not read the phase clock of session "
+                    + `${sessionId}.`, describeError(error));
+                rooms.push({ room: roomName, outcome: "failed" });
+                continue;
+            }
+            if (!phaseClock) {
+                // The phase is over or has no clock any more: nothing to send.
+                await result("skipped", { reason: "no_phase_clock", rooms });
+                return;
+            }
+
+            try {
+                const outcome = await updatePolyadicPhaseClock(roomName, phaseClock);
+                rooms.push({ room: roomName, outcome, phaseClock });
+            } catch (error) {
+                console.warn(`[polyadic-bridge] Failed to send the phase clock to ${roomName}.`,
+                    describeError(error));
+                rooms.push({ room: roomName, outcome: "failed", phaseClock });
+            }
+        }
+
+        const count = outcome => rooms.filter(room => room.outcome === outcome).length;
+        await result(count("failed") > 0 ? "failed" : "completed", {
+            roomsUpdated:    count("updated"),
+            roomsNotRunning: count("not_running"),
+            roomsFailed:     count("failed"),
+            rooms,
         });
     });
 

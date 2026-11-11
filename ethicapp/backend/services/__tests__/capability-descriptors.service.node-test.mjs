@@ -6,6 +6,7 @@ import {
     CapabilityDescriptorsClient,
     descriptorLocale,
     normalizeDescriptor,
+    normalizeSessionInputs,
     normalizeStudentOutputs,
 } from "../capability-descriptors.service.js";
 
@@ -338,6 +339,89 @@ test("normalizeDescriptor: unusable student outputs are dropped with warnings, a
 test("normalizeStudentOutputs: a value that is not a list declares none, with a warning", () => {
     assert.deepEqual(normalizeStudentOutputs({ id: "argument-feedback" }),
         { studentOutputs: [], warnings: ["student_outputs is not a list"] });
+});
+
+// ─── session_inputs (#1178) ──────────────────────────────────────────────────
+
+const PHASE_CLOCK_SESSION_INPUT = Object.freeze({
+    required:   ["duration_seconds"],
+    properties: {
+        duration_seconds:  { type: "integer", minimum: 60, maximum: 86400 },
+        remaining_seconds: { type: "integer", minimum: -86400, maximum: 86400 },
+    },
+});
+
+test("normalizeDescriptor: lists the declared session inputs next to the fields", () => {
+    const result = normalizeDescriptor(makeDescriptor({
+        session_inputs: { phase_clock: structuredClone(PHASE_CLOCK_SESSION_INPUT) },
+    }), "polyadic-agent");
+
+    assert.equal(result.ok, true);
+    assert.deepEqual(result.warnings, []);
+    assert.deepEqual(result.descriptor.sessionInputs, ["phase_clock"]);
+    assert.equal(result.descriptor.fields.length, 3);
+});
+
+test("normalizeDescriptor: a descriptor without session_inputs declares none", () => {
+    for (const sessionInputs of [undefined, null]) {
+        const raw = makeDescriptor({ session_inputs: sessionInputs });
+        const result = normalizeDescriptor(raw, "polyadic-agent");
+        assert.equal(result.ok, true);
+        assert.deepEqual(result.descriptor.sessionInputs, []);
+        assert.deepEqual(result.warnings, []);
+    }
+});
+
+test("normalizeSessionInputs: drops entries that are not objects, with warnings", () => {
+    assert.deepEqual(normalizeSessionInputs({
+        phase_clock: {},
+        broken:      true,
+        listed:      ["duration_seconds"],
+    }), {
+        sessionInputs: ["phase_clock"],
+        warnings:      [
+            "session input \"broken\" is not an object",
+            "session input \"listed\" is not an object",
+        ],
+    });
+    assert.deepEqual(normalizeSessionInputs(["phase_clock"]),
+        { sessionInputs: [], warnings: ["session_inputs is not an object"] });
+});
+
+test("sessionInputs: from the cached descriptor, fetched once in the default locale", async () => {
+    const { client, requests } = makeClient({
+        responses: [makeDescriptor({ session_inputs: { phase_clock: PHASE_CLOCK_SESSION_INPUT } })],
+    });
+
+    assert.deepEqual(await client.sessionInputs("svc-described"), ["phase_clock"]);
+    assert.deepEqual(await client.sessionInputs("svc-described"), ["phase_clock"]);
+    assert.equal(requests.length, 1);
+    assert.equal(requests[0].headers["Accept-Language"], "en-US");
+});
+
+test("sessionInputs: none for an older, a missing or an unreachable descriptor", async () => {
+    const older = makeClient({ responses: [makeDescriptor()] });
+    assert.deepEqual(await older.client.sessionInputs("svc-described"), []);
+
+    const undescribed = makeClient({ responses: [makeDescriptor()] });
+    assert.deepEqual(await undescribed.client.sessionInputs("svc-plain"), []);
+    assert.equal(undescribed.requests.length, 0);
+
+    const unreachable = makeClient({ responses: [httpError(503)] });
+    assert.deepEqual(await unreachable.client.sessionInputs("svc-described"), []);
+});
+
+test("sessionInputs: a descriptor kept as stale after a failure still answers", async () => {
+    const { client, advance } = makeClient({
+        responses: [
+            makeDescriptor({ session_inputs: { phase_clock: PHASE_CLOCK_SESSION_INPUT } }),
+            httpError(502),
+        ],
+    });
+
+    assert.deepEqual(await client.sessionInputs("svc-described"), ["phase_clock"]);
+    advance(1000);
+    assert.deepEqual(await client.sessionInputs("svc-described"), ["phase_clock"]);
 });
 
 // ─── CapabilityDescriptorsClient ─────────────────────────────────────────────

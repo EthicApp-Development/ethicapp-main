@@ -74,7 +74,7 @@ Which version applies:
 
 | Path | Version |
 | --- | --- |
-| Session hooks (`phase-started`, `phase-ended`, `activity-started`, `activity-finished`, `student-response-submitted`, `chat-message-received`, and any hook other than `case-created`, `design-created` and `design-updated`) | The version the session was pinned to at launch (`sessions.ai_service_policy_version_id`), found from `context.sessionId`. A hook without `sessionId` follows no version. |
+| Session hooks (`phase-started`, `phase-ended`, `phase-clock-changed`, `activity-started`, `activity-finished`, `student-response-submitted`, `chat-message-received`, and any hook other than `case-created`, `design-created` and `design-updated`) | The version the session was pinned to at launch (`sessions.ai_service_policy_version_id`), found from `context.sessionId`. A hook without `sessionId` follows no version. |
 | `case-created` (`NON_SESSION_HOOKS`) | The current version. It only bounds the author's choice (`case_analyses`), made when the case is created or later from the case view (`POST /cases/:id/analyses`, #1039): the candidates are the services chosen for the case, never every allowed one. |
 | `user-forgotten` (`NON_SESSION_HOOKS`, `ERASURE_HOOKS`) | None: erasure hooks skip the policy and only need the AI Additions connection. |
 | `design-created` and `design-updated` (`NON_SESSION_HOOKS`) | The current version. Only the reserved design analyses receive them (see "Design Analyses"). |
@@ -319,6 +319,7 @@ export async function register({
     caseAnalyses,            // markProcessing/complete/fail for this service's case analyses
     designAnalyses,          // markProcessing/complete/fail for this service's design analyses
     roomJobs,                // create/open/fail for this service's room jobs (see "Room jobs")
+    sessionInputs,           // { declares(name) => Promise<boolean> }; see "Capability descriptors"
 }) {
     subscribe("student-response-submitted", async (context, { callback }) => {
         // Adapter logic.
@@ -420,6 +421,18 @@ const configuration = await externalServicesRegistry
   `document_schema`, a student scope or both display texts, and a repeated
   `id`, are dropped with a warning, and the descriptor stays usable. See
   "Student result documents" for how they are used.
+- **Session inputs.** The optional `session_inputs` object (#1178) declares
+  values EthicApp computes for each room or session it creates, rather than
+  settings a teacher stores, such as Polyadic's `phase_clock`. It is
+  normalized to `sessionInputs`, the names whose entry is an object; an
+  absent object declares none, and other entries are dropped with a warning.
+  Adapters ask `sessionInputs.declares(name)` (an argument of `register()`),
+  which reads the cached descriptor through
+  `registry.declaresSessionInput(serviceId, name)` and the client's
+  `sessionInputs(serviceId)`. It is false for a service without a
+  descriptor and while the descriptor is unavailable (a stale descriptor
+  still answers), and it never throws, so an adapter never sends an input
+  the service may not know.
 - **Cache.** In memory, per process, keyed by service and descriptor locale.
   A valid descriptor is kept for ten minutes. After a failure the result is
   kept for a minute before asking again; if an earlier fetch succeeded, its
@@ -610,6 +623,7 @@ failures are isolated from teacher and student requests.
 | `activity-started` | `POST /activities/:id/phases/next` when the session enters `in_progress` (first phase only, see `helpers/activity-lifecycle-helper.js`) | Services enabled for the started phase | `sessionId`, `phaseId`, `startedPhaseId`, `endedPhaseId` |
 | `phase-started` | Every phase transition | Services enabled for the started phase | `sessionId`, `phaseId` (= started), `startedPhaseId`, `endedPhaseId` |
 | `phase-ended` | Phase transition, when a different phase was active before | Services enabled for the ended phase | `sessionId`, `phaseId` (= ended), `startedPhaseId`, `endedPhaseId` |
+| `phase-clock-changed` | `POST /activities/:id/phases/:phase_id/clock/extend` after "+1 min" moved the deadline (#1112, #1178), not awaited by the request | Services enabled for the phase | `sessionId`, `phaseId` (the extended phase) |
 | `activity-finished` | `POST /activities/:id/finish` | Union of services enabled in any phase of the design | `sessionId`, `phaseId` (= last active), `startedPhaseId: null`, `endedPhaseId` |
 | `student-response-submitted` | Student response endpoints in `controllers/activities/activities-student.js` | Services enabled for the phase | `sessionId`, `phaseId`, `userId`, `questionId`, `designType`, `requestPayload`, `responsePayload`, `source` (`{ kind: "response", id }`: the stored `differential_selection` row, or `actor_selection` for ranking) |
 | `chat-message-received` | `controllers/group-messages.js` after a group chat message is saved | Services enabled for the phase | `sessionId`, `phaseId`, `questionId`, `groupId`, `userId`, `parentId`, `content`, `savedMessage`, `notificationPayload`, `designType`, `source` (`{ kind: "chat_message", id }`: the saved `differential_chat` row, or `chat` for ranking) |
