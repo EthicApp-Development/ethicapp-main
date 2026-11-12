@@ -9,6 +9,7 @@ import {
     DESIGN_ANALYSIS_UNITS,
     developmentAdaptersEnabled,
     manifestStudentOutputs,
+    PARTICIPANT_ACTIVITY_HOOK,
     REPORT_BUILDING_HOOK,
     validateCatalog,
     validateCatalogEntry,
@@ -349,6 +350,55 @@ test("registerService: a development adapter keeps its normalized student output
 
     assert.deepEqual(registry.services.get("svc-development").studentOutputs, [mockReviewOutput()]);
     assert.equal(registry.services.get("svc-silent").studentOutputs, null);
+});
+
+// ─── participant-activity (#654) ─────────────────────────────────────────────
+
+test("validateCatalogEntry: accepts participant-activity like any other declared hook", () => {
+    assert.equal(PARTICIPANT_ACTIVITY_HOOK, "participant-activity");
+    assert.deepEqual(validateCatalogEntry(productionEntry({
+        hooks:  ["chat-message-received", PARTICIPANT_ACTIVITY_HOOK],
+        scopes: ["chat"],
+    })), []);
+    assert.deepEqual(validateCatalogEntry(developmentEntry({ hooks: [PARTICIPANT_ACTIVITY_HOOK] })), []);
+});
+
+test("registerService: an adapter that lists participant-activity keeps it and subscribes to it", async () => {
+    const handler = async () => {};
+    const registry = new ExternalServicesRegistry({
+        jobsService:   {},
+        importAdapter: async () => ({
+            register: async ({ subscribe }) => subscribe(PARTICIPANT_ACTIVITY_HOOK, handler),
+        }),
+    });
+
+    const { warnings } = await captureWarnings(() => registry.registerService(
+        productionEntry({ hooks: [PARTICIPANT_ACTIVITY_HOOK], scopes: ["chat"] }),
+        "/catalog/manifest.json"
+    ));
+
+    assert.deepEqual(warnings, []);
+    assert.deepEqual(registry.services.get("svc-production").hooks, [PARTICIPANT_ACTIVITY_HOOK]);
+    assert.deepEqual(registry.hookSubscribers.get(PARTICIPANT_ACTIVITY_HOOK), [
+        { serviceId: "svc-production", handler },
+    ]);
+});
+
+test("registerService: a participant-activity handler needs the hook in the catalog entry", async () => {
+    const registry = new ExternalServicesRegistry({
+        jobsService:   {},
+        importAdapter: async () => ({
+            register: async ({ subscribe }) => subscribe(PARTICIPANT_ACTIVITY_HOOK, async () => {}),
+        }),
+    });
+
+    const { warnings } = await captureWarnings(() => registry.registerService(
+        productionEntry({ hooks: ["chat-message-received"], scopes: ["chat"] }),
+        "/catalog/manifest.json"
+    ));
+
+    assert.equal(registry.hookSubscribers.has(PARTICIPANT_ACTIVITY_HOOK), false);
+    assert.ok(warnings.some(warning => warning.includes("its catalog entry must list the hook")), warnings.join("\n"));
 });
 
 // ─── validateCatalog ─────────────────────────────────────────────────────────
