@@ -1,6 +1,6 @@
 import { studentSocketUrl } from '../config/env.js';
+import { createSharedSocket } from './sharedSocket.js';
 
-let socketInstance = null;
 let socketScriptPromise = null;
 
 function loadSocketIoClientScript() {
@@ -39,14 +39,13 @@ function loadSocketIoClientScript() {
   return socketScriptPromise;
 }
 
-export async function getStudentSocket() {
-  if (socketInstance) {
-    return socketInstance;
-  }
-
-  const ioClient = await loadSocketIoClientScript();
-
-  socketInstance = ioClient(`${studentSocketUrl}/student`, {
+/**
+ * The student socket of the page, on the `/student` namespace. Every caller
+ * receives the same socket, also while the client script is still loading.
+ */
+export const getStudentSocket = createSharedSocket({
+  loadClient: loadSocketIoClientScript,
+  connect: (ioClient) => ioClient(`${studentSocketUrl}/student`, {
     withCredentials: true,
     transports: ['websocket', 'polling'],
     // Retries never stop, but slow down to one every 30 s at most (±50%), so
@@ -56,7 +55,5 @@ export async function getStudentSocket() {
     reconnectionDelay: 1000,
     reconnectionDelayMax: 30000,
     randomizationFactor: 0.5
-  });
-
-  return socketInstance;
-}
+  })
+});
