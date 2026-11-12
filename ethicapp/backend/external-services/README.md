@@ -575,7 +575,8 @@ shows the `errors` of a `400` next to their fields.
 Every hook handler receives `(context, { callback, reportInstantiation })`,
 except the collecting hooks `report-building` and `student-results-reading`,
 which receive `(context, { results, signal })` (see "Report building" and
-"Student results reading"):
+"Student results reading"), and the ephemeral hook `participant-activity`,
+which receives `(context)` only (see "Ephemeral hooks"):
 
 - `context` is the object built by the dispatch site plus registry-injected
   fields. For hooks dispatched through `dispatchHook()` the registry adds
@@ -633,6 +634,7 @@ failures are isolated from teacher and student requests.
 | `callback-received` | `POST /external-services/callbacks` | Only the service named in the callback body | `serviceId`, `eventType`, `correlationId`, `eventId`, `requestPayload`, `rawBody`, `auth` |
 | `report-building` | `registry.collectReportContributions(reportType, context)`, while an activity report is built (#944; the reports call it from #945) | The registered services subscribed to it with at least one job in the session, whatever the policy. Not dispatched through `dispatchHook()` (see "Report building") | `reportType`, `serviceId`, `sessionId`, `designType`, `rows` |
 | `student-results-reading` | `registry.collectStudentResults({ sessionId, userId })`, when a student loads an activity (#1125; the student route calls it from #1127) | The registered services subscribed to it that the session's design enables in any phase and its pinned policy version allows; the AI Additions connection is not required. Not dispatched through `dispatchHook()` (see "Student results reading") | `serviceId`, `sessionId`, `userId` |
+| `participant-activity` | `registry.dispatchEphemeralHook("participant-activity", context, { enabledServiceIds })`, from the student socket's `chatComposing` handler (#655, coalesced to one `composing` per participant every 12 s) | The subscribed services among the phase's enabled ones (none when the activity was launched with its AI services off) that the session's pinned policy version allows, with a usable AI Additions connection. Participants' signals only; the teacher's never reach it. Not dispatched through `dispatchHook()` (see "Ephemeral hooks") | `kind`, `sessionId`, `phaseId`, `questionId`, `groupId`, `userId`, `receivedAt`, `ttlSeconds` |
 | `user-forgotten` | The user erasure processor (`services/user-erasure/`), for each pending request in `user_erasure_requests`, of a forgotten student (#876) or teacher (#877) | Global (`globalHooks`), one AI Additions service at a time: the adapters that declare it and require the request's service. An erasure hook: it skips the policy (see "Erasure hooks") | `userId` (the forgotten account), `erasureRequestId` |
 
 ### Hook enablement
@@ -1028,6 +1030,81 @@ the session and `:user_id` the student.
 - Caching. None. Results arrive while the student works, so every request
   runs the hook (#1123 keeps them out of `full_state`, which is cached in
   Redis), and every answer carries `Cache-Control: no-store`.
+
+### Ephemeral hooks
+
+`EPHEMERAL_HOOKS` (`participant-activity`, epic #601, #654) tell a service
+what is happening right now; a signal loses its meaning a few seconds after
+it is sent. `participant-activity` tells a chat service that a participant is
+writing in their group's chat, so that it can hold back its room-level
+inactivity interventions (Polyadic Agents, ethicapp-ai-additions#177). It
+carries no draft text, key, input length or client time.
+
+An adapter subscribes with `subscribe("participant-activity", handler)`. The
+registry accepts the handler only when the catalog entry lists the hook in
+`hooks`; no other declaration is needed. No adapter declares it yet; the
+Polyadic bridge will (#657).
+
+**Ephemeral dispatch.** `dispatchHook()` ignores the hook, as it ignores the
+collecting hooks. The caller (the student socket handler, #655) calls
+`registry.dispatchEphemeralHook("participant-activity", context,
+{ enabledServiceIds })` (`services/external-service-ephemeral-hooks.js`),
+which:
+
+- rejects with a `TypeError`, before calling anything, a hook outside
+  `EPHEMERAL_HOOKS` and an invalid context;
+- calls the services subscribed to the hook that are among
+  `enabledServiceIds` and pass the AI service policy gate
+  (`policyEnabledServiceIds()`, as `dispatchHook()` does: the session's
+  pinned policy version and a usable AI Additions connection; development
+  adapters pass whenever they are registered). The caller resolves
+  `enabledServiceIds` from the phase's services, which are none when the
+  activity was launched with its AI services off (#970);
+- creates no job and no result row, injects no `jobId` or `correlationId`,
+  passes no `callback` or `reportInstantiation` and collects no result: the
+  handler receives its context and nothing else, and its return value is
+  ignored;
+- runs the handlers concurrently. One that throws or rejects is logged as
+  `[external-services] An ephemeral hook handler failed.` with the hook, the
+  service, `sessionId`, `phaseId`, `groupId` and the error's name, code and
+  status code, never its message, and affects neither the other services nor
+  the caller;
+- resolves to `[{ serviceId, status }]`, `delivered` or `failed`, one entry
+  per service called.
+
+**Context.** The handler's `context` is frozen and holds exactly
+`{ kind, sessionId, phaseId, questionId, groupId, userId, receivedAt,
+ttlSeconds, serviceId }`. Any other field the caller passes is dropped.
+
+| Field | Meaning |
+| --- | --- |
+| `kind` | `composing` while the participant writes, `stopped` once they stop |
+| `sessionId`, `phaseId`, `questionId`, `groupId` | The chat, as positive integers. The phase is the session's current one and its chat accepts messages: the socket handler checks it on every signal |
+| `userId` | The participant who writes, taken from the socket's session (`socket.data.uid`) |
+| `receivedAt` | When the server received the signal, as ISO 8601 |
+| `ttlSeconds` | How long the participant counts as active after `receivedAt`: 30 by default, an integer from 1 to 120 |
+
+**Semantics.** Each receiver applies these rules:
+
+- A service receives at most one `composing` per participant every 12 s,
+  while the participant keeps writing (`COMPOSING_SERVICE_INTERVAL_MS`).
+- A participant counts as active until `ttlSeconds` after the `receivedAt` of
+  their last `composing`. Duplicated, delayed and reordered signals never
+  extend activity past `max(receivedAt) + ttlSeconds`.
+- `stopped` is advisory. A receiver that never gets it reaches the same state
+  `ttlSeconds` after the last `composing`.
+- A receiver uses the signal only for its room-level inactivity. Its
+  per-participant behaviour keeps counting messages, and a submitted message
+  is still activity, so services without the hook keep their message-only
+  behaviour.
+- Only participants' signals are dispatched. The activity's teacher also
+  sends `chatComposing` (#1200), and the group sees it, but no service ever
+  receives it.
+
+The timing and the rate limit are in `helpers/composing-signal.js`, the
+server's one copy of the composing signal's names and timing. The socket
+events and the group notice are described in `EXTERNAL.md`, "Composing
+signal".
 
 ### Adding a new hook
 

@@ -72,11 +72,28 @@ const studentSocketInit = createStudentSocketInit();
  * Room `group-<groupId>`, joined with `joinGroup` by the group's members:
  *
  * - `onChatMessage`, without a payload: the group's chat has a new message.
+ * - `onChatComposing` `{ groupId, questionId, userId, role, name, kind }`
+ *   (epic #601, #654; emitted from #655): a member (`role` "A") or the
+ *   activity's teacher (`role` "P") started (`kind` "composing") or stopped
+ *   ("stopped") writing in the group's chat. Sent to every member but the
+ *   writer. `name` comes from helpers/chat-author-label.js and is never a
+ *   real name in an anonymous phase; null means the client shows its
+ *   translated label. A client drops "composing" after
+ *   COMPOSING_NOTICE_TTL_MS without a newer notice.
  *
  * Room `user-<userId>`, the student's own, joined with `joinUser`:
  *
  * - `onExternalServiceResult`: a result an external service published to the
  *   student.
+ *
+ * Client -> server events, besides joining and leaving rooms:
+ *
+ * - `chatComposing` `{ phaseId, questionId, groupId, kind }` (epic #601,
+ *   #654; handled from #655): the student started ("composing") or stopped
+ *   ("stopped") writing in their group's chat. A payload with any other field
+ *   is dropped and the writer is always `socket.data.uid`. Names, fields and
+ *   timing are in helpers/composing-signal.js; EXTERNAL.md, "Composing
+ *   signal", describes the checks and the rate limit.
  */
 const toStudentsNotifications = (socketNamespace) => {
     return {
