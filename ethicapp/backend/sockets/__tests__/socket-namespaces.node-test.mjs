@@ -19,11 +19,11 @@ const fakeAccess = {
 };
 const silentLogger = { warn: () => {}, error: () => {} };
 
-async function startServer({ access = fakeAccess } = {}) {
+async function startServer({ access = fakeAccess, studentOptions = {} } = {}) {
     const httpServer = createServer();
     const io = new SocketIO(httpServer);
     const serverSockets = [];
-    const studentInit = createStudentSocketInit({ access, logger: silentLogger });
+    const studentInit = createStudentSocketInit({ access, logger: silentLogger, ...studentOptions });
     const teacherInit = createTeacherSocketInit({ access, logger: silentLogger });
 
     const namespaces = configureSocketServer(io, {
@@ -286,6 +286,60 @@ test("the phase clock's events reach the session's room in both namespaces", asy
     } finally {
         student.close();
         teacher.close();
+        await server.close();
+    }
+});
+
+// The composing notice (epic #601, #655) through a real namespace: the
+// group's other members get it, the writer and other groups do not.
+test("a composing notice reaches the writer's group but not the writer or other groups", async () => {
+    const groups = new Map([[9, [44, 45]], [10, [46]]]);
+    const forwarded = [];
+    const server = await startServer({
+        access: {
+            ...fakeAccess,
+            isGroupMember: async (uid, groupId) => groups.get(groupId)?.includes(uid) ?? false,
+        },
+        studentOptions: {
+            participantActivity: {
+                forward: async signal => forwarded.push(signal),
+                forget:  () => {},
+            },
+            composing: {
+                checkAccess: async ({ userId, groupId, phaseId }) =>
+                    (phaseId === 20 && groups.get(groupId)?.includes(userId) ? { sessionId: 57 } : null),
+                resolveLabel: async ({ userId, role }) => ({ userId, role, name: "Fox" }),
+            },
+        },
+    });
+    const writer = connect(server, "/student", { userId: 44, role: "A", transport: "websocket" });
+    const peer = connect(server, "/student", { userId: 45, role: "A", transport: "websocket" });
+    const otherGroup = connect(server, "/student", { userId: 46, role: "A", transport: "websocket" });
+    try {
+        await Promise.all([writer, peer, otherGroup].map(waitForConnection));
+        assert.deepEqual(await writer.emitWithAck("joinGroup", 9), { ok: true });
+        assert.deepEqual(await peer.emitWithAck("joinGroup", 9), { ok: true });
+        assert.deepEqual(await otherGroup.emitWithAck("joinGroup", 10), { ok: true });
+
+        const peerNotice = nextPayload(peer, "onChatComposing");
+        const writerNotice = receivesWithin(writer, "onChatComposing", 300);
+        const otherNotice = receivesWithin(otherGroup, "onChatComposing", 300);
+        writer.emit("chatComposing", { phaseId: 20, questionId: 30, groupId: 9, kind: "composing" });
+
+        assert.deepEqual(await peerNotice, {
+            groupId: 9, questionId: 30, userId: 44, role: "A", name: "Fox", kind: "composing",
+        });
+        assert.deepEqual([await writerNotice, await otherNotice], [false, false]);
+        assert.deepEqual(forwarded.map(({ kind, sessionId, userId }) => [kind, sessionId, userId]),
+            [["composing", 57, 44]]);
+
+        const stoppedOnDisconnect = nextPayload(peer, "onChatComposing");
+        writer.close();
+        assert.equal((await stoppedOnDisconnect).kind, "stopped");
+    } finally {
+        writer.close();
+        peer.close();
+        otherGroup.close();
         await server.close();
     }
 });
