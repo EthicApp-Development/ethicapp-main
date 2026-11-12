@@ -43,6 +43,30 @@ than this file; see their GitHub Releases.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v2026.11.12.1] - 2026-11-12
+
+Who is typing in group chats, and participant activity for Polyadic (epic #601).
+
+Partial release: only the `ethicapp` and `ethicapp-student` images.
+
+### Added
+
+- The student app shows who is writing in the group chat, below the messages: "Ana está escribiendo…", "Ana y Luis están escribiendo…", "Varias personas están escribiendo…" or "Docente está escribiendo…". A notice lasts 10 s unless renewed, goes away when the writer sends or stops, and is announced politely to screen readers (#654, #655, #656, #1007, epic #601).
+- In an anonymous phase the notice shows the participant's mask or "Integrante anónimo", never a real name; the label is resolved on the server (#654, #655).
+- The teacher's chat in the activity dashboard tells the group's participants that the teacher is writing. The teacher's interface shows no typing notice (#1200).
+- The Polyadic devil's advocate receives participants' activity through the new `participant-activity` hook, at most one `composing` every 12 s per participant, and holds back its inactivity prompts while someone writes. Teachers' signals never reach AI services (#654, #655, #657).
+
+### Changed
+
+- The student and teacher sockets accept `chatComposing` with the phase, question, group and kind only. Each signal is checked against the chat's posting rule, so nothing is sent for a chat that closed, including after a hard-mode advance; each socket may send 20 signals per minute. No signal carries draft text, and none creates a job, a message or another row (#655, #1200).
+
+### Deployment
+
+- Migrations: none.
+- Environment contract: unchanged.
+- Deploy after ethicapp-ai-additions `v2026.11.12.1-ai-additions`, which publishes the Polyadic activity route. Against an earlier AI Additions, the notice works and Polyadic rooms count messages only.
+- One `ethicapp` web process only: the notice reaches the clients of the same process, and the coalescing and the rate limit live in its memory.
+
 ## [v2026.11.12] - 2026-11-12
 
 Phase time limits with soft and hard modes and a server clock (epic #1105).
@@ -864,6 +888,7 @@ Earliest published image set of ethicapp-main in the registry, built from 32b294
 - A GitHub workflow publishes the service images to GHCR, and a canonical environment contract (`config/env.contract.yml`) describes the deployment variables.
 - Production Compose runs separate Redis instances for sessions and for cache, configured with `REDIS_SESSION_*` and `REDIS_CACHE_*` and falling back to `REDIS_*`.
 
+[v2026.11.12.1]: https://github.com/EthicApp-Development/ethicapp-main/releases/tag/v2026.11.12.1
 [v2026.11.12]: https://github.com/EthicApp-Development/ethicapp-main/releases/tag/v2026.11.12
 [v2026.11.08]: https://github.com/EthicApp-Development/ethicapp-main/releases/tag/v2026.11.08
 [v2026.11.07]: https://github.com/EthicApp-Development/ethicapp-main/releases/tag/v2026.11.07
