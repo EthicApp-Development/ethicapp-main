@@ -43,6 +43,22 @@ than this file; see their GitHub Releases.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v2026.11.12.2] - 2026-11-12
+
+One socket per student activity page, so participants receive chat messages and clock changes (#1211).
+
+Partial release: only the `ethicapp-student` image.
+
+### Fixed
+
+- The activity page opens one socket. When the Socket.IO client script was slow to load, the page opened one connection per caller, joined the rooms on one and listened on another, so a participant saw neither new chat messages nor the teacher's "+1 min" until reloading. Present since `v2026.11.12` (#1211).
+- When the page's realtime connection is set up again, for example after the account's language replaces the browser's, it rejoins the group's chat room (#1211).
+
+### Deployment
+
+- Migrations: none.
+- Environment contract: unchanged.
+
 ## [v2026.11.12.1] - 2026-11-12
 
 Who is typing in group chats, and participant activity for Polyadic (epic #601).
@@ -888,6 +904,7 @@ Earliest published image set of ethicapp-main in the registry, built from 32b294
 - A GitHub workflow publishes the service images to GHCR, and a canonical environment contract (`config/env.contract.yml`) describes the deployment variables.
 - Production Compose runs separate Redis instances for sessions and for cache, configured with `REDIS_SESSION_*` and `REDIS_CACHE_*` and falling back to `REDIS_*`.
 
+[v2026.11.12.2]: https://github.com/EthicApp-Development/ethicapp-main/releases/tag/v2026.11.12.2
 [v2026.11.12.1]: https://github.com/EthicApp-Development/ethicapp-main/releases/tag/v2026.11.12.1
 [v2026.11.12]: https://github.com/EthicApp-Development/ethicapp-main/releases/tag/v2026.11.12
 [v2026.11.08]: https://github.com/EthicApp-Development/ethicapp-main/releases/tag/v2026.11.08
