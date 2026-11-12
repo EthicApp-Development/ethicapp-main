@@ -209,3 +209,48 @@ For browser verification through the Compose stack:
    Check that this explicit action opens the chosen session.
 4. Open `/student/?join=<valid-code>`. Check that the old query parameter does
    not prefill or automatically submit the join form.
+
+## 8. Composing Signal Smoke Check
+
+The composing signal (epic #601) crosses the student and teacher apps, the
+`/student` and `/teacher` sockets, the external-services registry and the
+Polyadic room-activity route. Its guardrail tests use fakes; this check runs it
+on the Compose stack with the AI Additions stack, before a release that
+changes any of these parts.
+
+Use an activity with a team chat phase and the Polyadic devil's advocate
+enabled, three participants in one group (A, B, C) and the activity's teacher.
+Watch the `pa-backend` log for `POST /api/rooms/<room>/sessions/active/activity`.
+
+1. A types without sending. B sees "A está escribiendo…" within a second;
+   the notice goes away when A sends, at once, or 8 s after A stops. Polyadic
+   logs a `202` for A's room about every 12 s while A types, and no `422`.
+2. The teacher types in the group's chat from the activity dashboard. A and B
+   see "Docente está escribiendo…"; the teacher's interface shows no
+   indicator; Polyadic logs nothing for the teacher's typing.
+3. In an anonymous phase, B's notice shows A's mask or "Integrante anónimo",
+   and the `onChatComposing` frames B receives carry no real name.
+4. A types for longer than the room's inactivity threshold (75 s) without
+   sending. Polyadic makes no inactivity intervention while A types.
+5. A stops. An intervention follows about `ttlSeconds` (30 s) plus the
+   threshold later.
+6. In hard mode, the phase deadline passes while A types. B's notice goes
+   away, A's client sends nothing more for the closed phase, a
+   `chatComposing` for the closed phase sent straight to the socket produces
+   no notice, and Polyadic logs nothing for the closed phase's room.
+7. In an activity launched with its AI services off, the notice works and
+   Polyadic logs nothing for its rooms. The student app shows no errors.
+
+Privacy: type a unique marker without sending it, then check that no
+WebSocket frame, no `ethicapp` or `pa-backend` log line and no request body
+contains it, that `external_service_jobs` holds no `participant-activity`
+job, and that the activity's chat holds no message from a participant.
+
+Residual risks:
+
+- One `ethicapp` web process only: the notice, the coalescing and the rate
+  limit do not cross processes (see `EXTERNAL.md`, "Composing signal").
+- Polyadic accepts activity for any participant id of a client's room; it
+  keeps no room membership (ethicapp-ai-additions#264).
+- Each signal reads the database twice, for the access check and the author
+  label. The per-socket rate limit of 20 signals per minute bounds it.
