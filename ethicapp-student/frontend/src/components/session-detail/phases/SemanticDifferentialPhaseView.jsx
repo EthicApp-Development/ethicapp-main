@@ -48,6 +48,7 @@ export default function SemanticDifferentialPhaseView({
   onSubmitPhaseResponse,
   isExternalResponseProcessing,
   onRequestOpenChatRefreshToken,
+  chatSocket,
   userId,
   t
 }) {
@@ -299,6 +300,7 @@ export default function SemanticDifferentialPhaseView({
         userId={userId}
         chatRefreshToken={onRequestOpenChatRefreshToken}
         readOnly={!canPostGroupChat}
+        chatSocket={chatSocket}
         t={t}
       />
     </div>
