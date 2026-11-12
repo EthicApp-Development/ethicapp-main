@@ -471,7 +471,7 @@
 	"activity_bar_connected_description": "{{count}} participantes conectados",
 	"activity_hold_next_phase_tip": "Mantén presionado este botón para iniciar la fase siguiente. Si lo sueltas antes, no pasará nada.",
 	"activity_hold_end_activity_tip": "Mantén presionado este botón para finalizar la actividad. Si lo sueltas antes, no pasará nada.",
-	"activity_reports_title": "Activity Reports",
+	"activity_reports_title": "Reportes de actividad",
 	"activity_reports_notice": "Los reportes de actividad pueden contener datos personales, respuestas de participantes, mensajes de chat y otra información que requiere un tratamiento cuidadoso. Antes de exportar estos datos para investigación o para cualquier finalidad distinta de la docencia, es tu responsabilidad obtener el consentimiento requerido de los participantes y, cuando corresponda, la aprobación del órgano de ética competente. Las operaciones de exportación quedan registradas para fines de gobierno de datos institucional y auditoría.",
 	"activity_reports_consent_label": "Entiendo estas responsabilidades y acepto continuar.",
 	"activity_reports_invalid_session": "La sesión de actividad no es válida.",

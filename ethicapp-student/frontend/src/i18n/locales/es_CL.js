@@ -138,7 +138,7 @@ const esCL = {
     chatResizeAria: 'Arrastrar para cambiar tamaño del chat',
     chatAnonymousAuthor: 'Integrante anónimo',
     chatYouAuthor: 'Tú',
-    chatTeacherAuthor: 'Teacher',
+    chatTeacherAuthor: 'Docente',
     chatExternalAgentAuthor: 'Agente externo',
     chatPeerAuthor: 'Integrante',
     chatReply: 'Responder',
