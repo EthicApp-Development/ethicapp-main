@@ -758,6 +758,18 @@ and uses the signal only for its room-level inactivity. The teacher's
 signals never reach the hook. The contract is described in
 `ethicapp/backend/external-services/README.md`, "Ephemeral hooks".
 
+**Polyadic.** The Polyadic bridge (#657) declares the hook and sends each
+signal to the running room of its group,
+`POST /polyadic-agent/api/rooms/{room}/sessions/active/activity` (the route
+of ethicapp-ai-additions#177), with
+`{ kind, received_at, ttl_seconds, participant_id }` and nothing else. It
+calls only rooms it created in this process and finished creating, so
+activity never opens a room, and uses a 3 s timeout. A `404` means the room
+is not running; other failures are logged at debug level without content
+and swallowed. ConversationGuide then holds back its room-level inactivity
+prompts while a participant is still writing. The details are in
+`ethicapp/backend/external-services/README.md`, "Ephemeral hooks".
+
 **Single instance.** The notice reaches only the clients connected to the
 same ethicapp instance, and the coalescing and the rate limit are kept in
 memory. A deployment with several web instances would need a Socket.IO Redis
