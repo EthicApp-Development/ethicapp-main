@@ -114,6 +114,21 @@ async function registerCatalog() {
     return registry;
 }
 
+// The composing signal reaches the Polyadic bridge only (epic #601, #657):
+// the registry accepts an ephemeral handler only from an entry that lists it.
+test("catalog: the Polyadic bridge declares and subscribes to participant-activity", async () => {
+    const declaring = manifest.services
+        .filter(service => service.hooks.includes("participant-activity"))
+        .map(service => service.id);
+    assert.deepEqual(declaring, ["polyadic-devils-advocate"]);
+
+    const registry = await registerCatalog();
+    assert.deepEqual(
+        registry.hookSubscribers.get("participant-activity").map(({ serviceId }) => serviceId),
+        ["polyadic-devils-advocate"]
+    );
+});
+
 // Case screens show each case-scoped service by its translated texts.
 test("catalog: every case-scoped service provides UI translations", async () => {
     const registry = await registerCatalog();

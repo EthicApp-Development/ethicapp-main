@@ -57,6 +57,7 @@
         "phase-started",
         "phase-ended",
         "phase-clock-changed",
+        "participant-activity",
         "callback-received",
         "activity-finished",
         "user-forgotten",
