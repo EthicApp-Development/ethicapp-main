@@ -19,12 +19,12 @@ const fakeAccess = {
 };
 const silentLogger = { warn: () => {}, error: () => {} };
 
-async function startServer({ access = fakeAccess, studentOptions = {} } = {}) {
+async function startServer({ access = fakeAccess, studentOptions = {}, teacherOptions = {} } = {}) {
     const httpServer = createServer();
     const io = new SocketIO(httpServer);
     const serverSockets = [];
     const studentInit = createStudentSocketInit({ access, logger: silentLogger, ...studentOptions });
-    const teacherInit = createTeacherSocketInit({ access, logger: silentLogger });
+    const teacherInit = createTeacherSocketInit({ access, logger: silentLogger, ...teacherOptions });
 
     const namespaces = configureSocketServer(io, {
         sessionMiddleware: session({
@@ -339,6 +339,57 @@ test("a composing notice reaches the writer's group but not the writer or other 
     } finally {
         writer.close();
         peer.close();
+        otherGroup.close();
+        await server.close();
+    }
+});
+
+// The teacher's composing notice (epic #601, #1200) through real namespaces:
+// sent on /teacher, it reaches the group's participants on /student, and
+// neither the teacher nor another group.
+test("a teacher's composing notice reaches the group's participants on /student", async () => {
+    const groups = new Map([[9, [44, 45]], [10, [46]]]);
+    const server = await startServer({
+        access: {
+            ...fakeAccess,
+            isGroupMember: async (uid, groupId) => groups.get(groupId)?.includes(uid) ?? false,
+        },
+        teacherOptions: {
+            composing: {
+                checkAccess: async ({ userId, groupId, phaseId, role }) =>
+                    (role === "P" && userId === 7 && phaseId === 20 && groups.has(groupId)
+                        ? { sessionId: 57 }
+                        : null),
+            },
+        },
+    });
+    const teacher = connect(server, "/teacher", { userId: 7, role: "P", transport: "websocket" });
+    const member = connect(server, "/student", { userId: 44, role: "A", transport: "websocket" });
+    const otherGroup = connect(server, "/student", { userId: 46, role: "A", transport: "websocket" });
+    try {
+        await Promise.all([teacher, member, otherGroup].map(waitForConnection));
+        assert.deepEqual(await teacher.emitWithAck("joinGroupChat", 9), { ok: true });
+        assert.deepEqual(await member.emitWithAck("joinGroup", 9), { ok: true });
+        assert.deepEqual(await otherGroup.emitWithAck("joinGroup", 10), { ok: true });
+
+        const memberNotice = nextPayload(member, "onChatComposing");
+        const teacherNotice = receivesWithin(teacher, "onChatComposing", 300);
+        const otherNotice = receivesWithin(otherGroup, "onChatComposing", 300);
+        teacher.emit("chatComposing", { phaseId: 20, questionId: 30, groupId: 9, kind: "composing" });
+
+        assert.deepEqual(await memberNotice, {
+            groupId: 9, questionId: 30, userId: 7, role: "P", name: null, kind: "composing",
+        });
+        assert.deepEqual([await teacherNotice, await otherNotice], [false, false]);
+
+        const stoppedOnDisconnect = nextPayload(member, "onChatComposing");
+        teacher.close();
+        assert.deepEqual(await stoppedOnDisconnect, {
+            groupId: 9, questionId: 30, userId: 7, role: "P", name: null, kind: "stopped",
+        });
+    } finally {
+        teacher.close();
+        member.close();
         otherGroup.close();
         await server.close();
     }

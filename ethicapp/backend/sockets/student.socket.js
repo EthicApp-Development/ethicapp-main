@@ -98,11 +98,12 @@ const studentSocketInit = createStudentSocketInit();
  *
  * - `onChatMessage`, without a payload: the group's chat has a new message.
  * - `onChatComposing` `{ groupId, questionId, userId, role, name, kind }`
- *   (epic #601, #654; sent by sockets/chat-composing.js since #655): a member
- *   (`role` "A") or the activity's teacher (`role` "P") started (`kind`
- *   "composing") or stopped ("stopped") writing in the group's chat. Sent to
- *   every member but the writer's socket, and as "stopped" when the writer's
- *   socket disconnects while composing. `name` comes from
+ *   (epic #601, #654; sent by sockets/chat-composing.js since #655, and for
+ *   the teacher since #1200): a member (`role` "A") or the activity's teacher
+ *   (`role` "P") started (`kind` "composing") or stopped ("stopped") writing
+ *   in the group's chat. Sent to every member but the writer's socket (the
+ *   teacher writes from /teacher, so every member gets theirs), and as
+ *   "stopped" when the writer's socket disconnects while composing. `name` comes from
  *   helpers/chat-author-label.js and is never a real name in an anonymous
  *   phase; null means the client shows its translated label. A client drops
  *   "composing" after COMPOSING_NOTICE_TTL_MS without a newer notice.
