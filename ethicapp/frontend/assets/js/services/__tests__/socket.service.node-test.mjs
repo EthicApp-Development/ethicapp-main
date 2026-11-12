@@ -108,4 +108,13 @@ describe("SocketService rooms", () => {
 
         assert.deepEqual(received, [{ sessionId: 10 }]);
     });
+
+    it("tells whether the socket is connected now", () => {
+        const { service, socket } = createService();
+        assert.equal(service.isConnected(), false);
+        socket.connected = true;
+        assert.equal(service.isConnected(), true);
+        socket.connected = false;
+        assert.equal(service.isConnected(), false);
+    });
 });

@@ -691,8 +691,9 @@ below, the author label helper and the ephemeral hook; the socket handlers
 (#655, #1200), the clients (#656, #1007, #1200) and the Polyadic bridge
 (#657) implement it.
 
-**Socket event, client to server.** `chatComposing` on `/student`, and on
-`/teacher` for the activity's teacher:
+**Socket event, client to server.** `chatComposing` on `/student` from the
+group's members (#655), and on `/teacher` from the activity's teacher
+(#1200):
 
 | Event | Payload |
 | --- | --- |
@@ -723,9 +724,14 @@ silently.
   `name`), their `anon_mask` in an anonymous phase, or `null` when the
   client shows a translated label (the teacher, or an anonymous participant
   without a mask). A notice never carries a real name in an anonymous phase.
-- The notice leaves from the writer's socket, which does not receive it.
-  Another socket of the writer, such as a second tab, does; a client ignores
-  a notice whose `userId` is its own user.
+- A participant's notice leaves from the writer's socket, which does not
+  receive it. Another socket of the writer, such as a second tab, does; a
+  client ignores a notice whose `userId` is its own user.
+- The teacher's notice is sent from `/teacher` to the group's room on
+  `/student`, with `role` `"P"` and `name` `null`, so every member gets it
+  and the teacher's sockets do not. The teacher's handler is the
+  participants' one (`sockets/chat-composing.js`) with the access rule for
+  the session's creator and no AI services forwarder.
 - When the writer's socket disconnects while composing, the group gets
   `stopped` for each chat they were composing in.
 - A client shows `composing` for 10 s unless a newer notice arrives, and
@@ -740,7 +746,11 @@ silently.
   and only after a `composing`.
 
 A client therefore sends at most 13 signals per minute. Without a working
-socket the student app polls, and no notice can reach it.
+socket the student app polls, and no notice can reach it. The legacy teacher
+chat keeps this timing in
+`ethicapp/frontend/assets/js/helpers/composing-signal.js`, a plain ES module
+the teacher frontend of #904 can reuse, and sends nothing while the teacher
+socket is disconnected.
 
 **AI services.** Participants' signals, coalesced per participant, group and
 question to the first `composing`, then at most one every 12 s, and a

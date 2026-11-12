@@ -1,14 +1,54 @@
+import { CHAT_COMPOSING_NOTICE_EVENT } from "../helpers/composing-signal.js";
+import { registerChatComposing } from "./chat-composing.js";
 import { registerGuardedRoom } from "./guarded-rooms.js";
 import { roomAccess } from "./socket-room-access.js";
+
+// The participants' namespace, where the groups' rooms `group-<groupId>` are.
+const STUDENT_NAMESPACE = "/student";
+
+/**
+ * The participants' room of a group, reached through the Socket.IO server
+ * the teacher's socket belongs to, so this module imports neither the socket
+ * configuration nor the student socket.
+ *
+ * @param {import("socket.io").Socket} socket - A socket of /teacher.
+ * @param {number} groupId
+ */
+function participantsGroupRoom(socket, groupId) {
+    return socket.nsp.server.of(STUDENT_NAMESPACE).to(`group-${groupId}`);
+}
 
 /**
  * Builds the /teacher connection handler. The namespace middleware
  * (requireSocketRole) has already stored the teacher's id in socket.data.
  * Teachers reach only sessions they created and those sessions' groups.
+ *
+ * `composing` replaces the dependencies of the `chatComposing` handler
+ * (sockets/chat-composing.js) in tests, except its role and its AI services'
+ * forwarder: the teacher's signals reach only the group notice (epic #601,
+ * #1200).
  */
-export function createTeacherSocketInit({ access = roomAccess, logger = console } = {}) {
+export function createTeacherSocketInit({
+    access = roomAccess,
+    logger = console,
+    composing = {},
+} = {}) {
     return (socket) => {
         const { uid } = socket.data;
+
+        // The teacher's composing signal: the group's participants get the
+        // notice, with the teacher's label (`role` "P", `name` null). The
+        // access check is the posting rule of the chat for the activity's
+        // teacher; nothing goes to AI services.
+        registerChatComposing(socket, {
+            emitNotice: (groupId, notice) => {
+                participantsGroupRoom(socket, groupId).emit(CHAT_COMPOSING_NOTICE_EVENT, notice);
+            },
+            logger,
+            ...composing,
+            role:     "P",
+            activity: null,
+        });
 
         registerGuardedRoom(socket, {
             joinEvent:  "joinSession",
@@ -66,6 +106,20 @@ const teacherSocketInit = createTeacherSocketInit();
  * Room `teacher-group-<groupId>`, joined with `joinGroupChat`:
  *
  * - `onGroupChatMessage`: a message of the group's chat.
+ *
+ * Client -> server events, besides joining and leaving rooms:
+ *
+ * - `chatComposing` `{ phaseId, questionId, groupId, kind }` (epic #601,
+ *   #1200; handled by sockets/chat-composing.js): the activity's teacher
+ *   started ("composing") or stopped ("stopped") writing in a group's chat.
+ *   It is accepted only where the teacher could post a message: the teacher
+ *   created the session, the group belongs to the phase, and the chat accepts
+ *   messages. The group's participants get `onChatComposing` on /student,
+ *   with `role` "P" and `name` null (see sockets/student.socket.js); the
+ *   teacher's interface gets nothing, and the signal never reaches AI
+ *   services. A payload with any other field is dropped, the writer is
+ *   always `socket.data.uid`, and the rate limit is the student socket's.
+ *   EXTERNAL.md, "Composing signal", describes the checks.
  */
 const toTeacherNotifications = (socketNamespace) => {
     return {

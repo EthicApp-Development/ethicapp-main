@@ -165,6 +165,8 @@
         <input type="text"
                class="form-control"
                ng-model="$ctrl.draftMessage"
+               ng-change="$ctrl.onDraftChange()"
+               ng-blur="$ctrl.onDraftBlur()"
                ng-keydown="$ctrl.onChatKeyDown($event)"
                ng-disabled="$ctrl.chatSending"
                placeholder="{{ 'teacher_group_chat_placeholder' | translate }}">
