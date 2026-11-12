@@ -508,7 +508,7 @@ export default function ActivityPage() {
     return Number.isInteger(phaseId) && phaseId > 0 && phaseId !== Number(currentPhaseIdRef.current);
   }, [selectedSession, session.uid]);
 
-  const { realtimeIssue, connectionStatus, updateNow } = useActivityRealtimeSync({
+  const { realtimeIssue, connectionStatus, updateNow, connectedSocket } = useActivityRealtimeSync({
     session,
     selectedSession,
     currentPhaseIdRef,
@@ -890,6 +890,7 @@ export default function ActivityPage() {
                     onTaskDraftChange={setTaskDraft}
                     autoSendOutcomesByPhaseId={deadlineDrafts.outcomesByPhaseId}
                     chatRefreshTokenByPhaseId={chatRefreshTokenByPhaseId}
+                    chatSocket={connectedSocket}
                     externalResponseProcessingByPhaseId={externalResponseProcessingByPhaseId}
                     externalResultsByPhaseId={externalResultsByPhaseId}
                     expandedExternalResultKeys={expandedExternalResultKeys}

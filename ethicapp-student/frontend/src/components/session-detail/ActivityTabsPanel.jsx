@@ -21,6 +21,7 @@ export default function ActivityTabsPanel({
   onTaskDraftChange,
   autoSendOutcomesByPhaseId,
   chatRefreshTokenByPhaseId,
+  chatSocket,
   externalResponseProcessingByPhaseId,
   externalResultsByPhaseId,
   expandedExternalResultKeys,
@@ -89,6 +90,7 @@ export default function ActivityTabsPanel({
             onSubmitPhaseResponse={onSubmitPhaseResponse}
             isExternalResponseProcessing={Boolean(externalResponseProcessingByPhaseId?.[activePhaseId])}
             onRequestOpenChatRefreshToken={chatRefreshTokenByPhaseId[activePhaseId] ?? 0}
+            chatSocket={chatSocket}
             userId={userId}
             t={t}
           />
