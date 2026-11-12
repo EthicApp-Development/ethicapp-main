@@ -43,6 +43,32 @@ than this file; see their GitHub Releases.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v2026.11.12] - 2026-11-12
+
+Phase time limits with soft and hard modes and a server clock (epic #1105).
+
+Partial release: only the `ethicapp`, `ethicapp-student` and `db-migrations` images.
+
+### Added
+
+- Each design phase can have a duration from 1 to 180 minutes. The design editor and viewer show the planned total, the designs list shows it next to the number of phases, and the launch preview shows it with each phase's duration (#1107, epic #1105).
+- Launching a design with durations asks for a time mode: "Blando" (soft, preselected), "Duro" (hard) or "Sin cronómetro". A design without durations launches as before (#1109).
+- Each phase records its start and deadline on the server. The activity dashboard's bar shows the time left, and the time over in soft mode. "+1 min" adds a minute to the later of the deadline and the current time, for every screen (#1110, #1111, #1112, #1115).
+- In hard mode the server starts the next phase when the deadline passes, and the dashboard and the student app follow within seconds. The last phase does not advance; the teacher gets a notice to finish the activity (#1113, #1116).
+- The student app shows the time left in the phase and "Tiempo cumplido" at the deadline. In hard mode it keeps unsent answers on the device and sends the complete ones at the deadline. Answers to the previous phase are accepted for 15 seconds after an automatic advance (#1114, #1117, #1118).
+- The Polyadic rooms of a timed phase receive the phase clock when they are created and after "+1 min" (#1178, ethicapp-ai-additions#259).
+
+### Fixed
+
+- A student page loaded within five minutes of a phase start shows the new phase and its group. It used to show only the earlier phases until the student app asked for a fresh state (#1176).
+- The title of an activity's reports page and the author of the teacher's chat messages appear in Spanish in Spanish sessions: "Reportes de actividad" and "Docente" (#1177).
+
+### Deployment
+
+- Migrations: V45 (adds `sessions.time_mode` and the phase clock columns of `stages`; existing activities get `none` and run without a clock).
+- Environment contract: adds `ETHICAPP_PHASE_CLOCK_POLL_INTERVAL_MS` (optional, default 1000, not secret), the interval of the phase deadline runner in the web process.
+- Deploy after ethicapp-ai-additions `v2026.11.12-ai-additions`, which publishes the Polyadic clock route this release calls.
+
 ## [v2026.11.08] - 2026-11-08
 
 Accounts created by administrators from the management console, student result labels in the result's language, and the group chat readable after its phase (#1170, #1169, #1168).
@@ -838,6 +864,7 @@ Earliest published image set of ethicapp-main in the registry, built from 32b294
 - A GitHub workflow publishes the service images to GHCR, and a canonical environment contract (`config/env.contract.yml`) describes the deployment variables.
 - Production Compose runs separate Redis instances for sessions and for cache, configured with `REDIS_SESSION_*` and `REDIS_CACHE_*` and falling back to `REDIS_*`.
 
+[v2026.11.12]: https://github.com/EthicApp-Development/ethicapp-main/releases/tag/v2026.11.12
 [v2026.11.08]: https://github.com/EthicApp-Development/ethicapp-main/releases/tag/v2026.11.08
 [v2026.11.07]: https://github.com/EthicApp-Development/ethicapp-main/releases/tag/v2026.11.07
 [v2026.11.05]: https://github.com/EthicApp-Development/ethicapp-main/releases/tag/v2026.11.05
