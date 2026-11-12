@@ -186,7 +186,7 @@ function makeStarter({
                 release: () => client.release(),
             };
         },
-        invalidateStudentDescriptor: async (sessionId) => {
+        invalidateStudentPhaseState: async (sessionId) => {
             effects.push(["invalidate", sessionId]);
         },
         notifyPhaseStarted: async (sessionId) => {

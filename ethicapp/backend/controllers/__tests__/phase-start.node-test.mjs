@@ -271,7 +271,7 @@ describe("POST /activities/:session_id/phases/next: outcomes", () => {
         const notify = async (sessionId, transition) =>
             effects.push(["notify", sessionId, transition]);
         starter = createPhaseStarter({
-            invalidateStudentDescriptor: async sessionId => effects.push(["invalidate", sessionId]),
+            invalidateStudentPhaseState: async sessionId => effects.push(["invalidate", sessionId]),
             notifyPhaseStarted:          notify,
             dispatchPhaseHook:           async hookName => effects.push([hookName]),
             logger:                      { warn() {}, error() {} },

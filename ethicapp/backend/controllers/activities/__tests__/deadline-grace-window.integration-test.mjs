@@ -67,7 +67,7 @@ async function loadApplication() {
 
     const starter = createPhaseStarter({
         connect:                     () => pool.connect(),
-        invalidateStudentDescriptor: async () => {},
+        invalidateStudentPhaseState: async () => {},
         notifyPhaseStarted:          async () => {},
         dispatchPhaseHook:           async () => {},
         logger:                      { warn() {}, error() {} },

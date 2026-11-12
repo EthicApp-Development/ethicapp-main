@@ -128,7 +128,7 @@ function makeStarter({ onConnect = async () => {} } = {}) {
             await onConnect(client);
             return client;
         },
-        invalidateStudentDescriptor: async (sessionId) => {
+        invalidateStudentPhaseState: async (sessionId) => {
             effects.push(["invalidate", sessionId]);
         },
         notifyPhaseStarted: async (sessionId, transition) => {

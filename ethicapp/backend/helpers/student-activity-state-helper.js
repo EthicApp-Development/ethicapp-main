@@ -16,6 +16,13 @@ import {
     studentUsableServices,
 } from "./student-activity-descriptor.js";
 import { previousPhaseTakesAnswers } from "./student-response-policy.js";
+import {
+    STUDENT_ACTIVITY_GROUPS_TTL_SECONDS,
+    STUDENT_ACTIVITY_PHASES_TTL_SECONDS,
+    invalidatePhaseStartCachesWith,
+    studentActivityGroupsCacheKey,
+    studentActivityPhasesCacheKey,
+} from "./student-phase-state-cache.js";
 
 export const buildInitialPhaseState = async function (phaseId) {
     try {
@@ -71,6 +78,11 @@ export async function getCachedStudentActivityDescriptor(sessionId, invalidate =
 
 export async function invalidateCachedStudentActivityDescriptor(sessionId) {
     await invalidateStudentActivityDescriptorWith(redisClient, sessionId);
+}
+
+// A phase start changes the current phase and the list of phases (#1176).
+export async function invalidateCachedStudentPhaseState(sessionId) {
+    await invalidatePhaseStartCachesWith(redisClient, sessionId);
 }
 
 export async function getStudentActivityDescriptor(sessionId) {
@@ -133,7 +145,7 @@ export async function getCachedStudentActivityPhases(sessionId, invalidate = fal
         return { phases: [] };
     }
 
-    const cacheKey = `session:${sessionId}:phases:v2`;
+    const cacheKey = studentActivityPhasesCacheKey(sessionId);
 
     try {
         // Handle cache invalidation
@@ -155,7 +167,8 @@ export async function getCachedStudentActivityPhases(sessionId, invalidate = fal
 
         // Cache the result
         if (phases) {
-            await redisClient.set(cacheKey, JSON.stringify({ phases }), "EX", 300);
+            await redisClient.set(cacheKey, JSON.stringify({ phases }), "EX",
+                STUDENT_ACTIVITY_PHASES_TTL_SECONDS);
         }
 
         return { phases };
@@ -253,7 +266,8 @@ export async function getCachedStudentActivityGroups(sessionId, userId, phases, 
         return phases;
     }
 
-    const cacheKey = `session:${sessionId}:user:${userId}:groups`;
+    const cacheKey = studentActivityGroupsCacheKey(sessionId, userId,
+        phases.map(phase => phase.number));
 
     try {
         // Handle cache invalidation
@@ -290,7 +304,8 @@ export async function getCachedStudentActivityGroups(sessionId, userId, phases, 
         });
 
         // Cache the result in Redis
-        await redisClient.set(cacheKey, JSON.stringify(groupsByPhase), "EX", 3600); // Expiration: 1 hour
+        await redisClient.set(cacheKey, JSON.stringify(groupsByPhase), "EX",
+            STUDENT_ACTIVITY_GROUPS_TTL_SECONDS);
 
         return updatedPhases;
     } catch (error) {
