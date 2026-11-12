@@ -28,6 +28,11 @@ import {
     SESSION_STUDENTS_SQL,
 } from "../groups-helper.js";
 import { TRANSITION_SESSION_SQL } from "../teacher-activity-writes.js";
+import {
+    invalidatePhaseStartCachesWith,
+    studentActivityPhasesCacheKey,
+} from "../student-phase-state-cache.js";
+import { studentActivityDescriptorCacheKey } from "../student-activity-descriptor.js";
 
 const TEACHER = 5;
 const SESSION = 10;
@@ -187,7 +192,7 @@ function makeStarter(database, { random = () => 0, failing = {} } = {}) {
     const errors = [];
     const starter = createPhaseStarter({
         connect:                     async () => database.client,
-        invalidateStudentDescriptor: async (sessionId) => {
+        invalidateStudentPhaseState: async (sessionId) => {
             database.log.push({ name: "INVALIDATE", params: [sessionId] });
             if (failing.invalidate) {
                 throw new Error("cache down");
@@ -292,6 +297,37 @@ describe("starting the first phase", () => {
             [10, 0],
             NEW_PHASE_ID,
         ]);
+    });
+});
+
+describe("the students' cached phase state (#1176)", () => {
+    it("drops the cached descriptor and phase list once the phase is committed", async () => {
+        const database = makeDatabase();
+        const cached = new Set([
+            studentActivityDescriptorCacheKey(SESSION),
+            studentActivityPhasesCacheKey(SESSION),
+        ]);
+        const redis = {
+            async del(...keys) {
+                database.log.push({ name: "DEL", params: keys });
+                keys.forEach(key => cached.delete(key));
+            },
+        };
+        const starter = createPhaseStarter({
+            connect:                     async () => database.client,
+            invalidateStudentPhaseState: id => invalidatePhaseStartCachesWith(redis, id),
+            notifyPhaseStarted:          async () => {},
+            dispatchPhaseHook:           async () => {},
+            logger:                      { warn() {}, error() {} },
+        });
+
+        const result = await starter.startNextPhase(START);
+        await result.hooks;
+
+        assert.equal(result.status, "started");
+        assert.equal(cached.size, 0, "a page loaded without invalidate reads the new phase");
+        const names = database.names();
+        assert.ok(names.indexOf("COMMIT") < names.indexOf("DEL"));
     });
 });
 

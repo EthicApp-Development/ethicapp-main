@@ -289,7 +289,7 @@ describe("GET /activities/:id/users/:user_id/full_state", () => {
             `descriptor:${SESSION_ID}:v2`,
             `responses:${SESSION_ID}:${STUDENT.uid}:1`,
             `session:${SESSION_ID}:phases:v2`,
-            `session:${SESSION_ID}:user:${STUDENT.uid}:groups`,
+            `session:${SESSION_ID}:user:${STUDENT.uid}:groups:1`,
             `session:${SESSION_ID}:user:${STUDENT.uid}:peer_responses:semantic_differential`,
             `tasks:${SESSION_ID}:phases:1`,
         ]);

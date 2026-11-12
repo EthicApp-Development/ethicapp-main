@@ -101,7 +101,7 @@ const readClock = sessionId => readPhaseClock(sessionId, { query });
 function makeStarter({ notifyPhaseStarted = async () => {} } = {}) {
     return createPhaseStarter({
         connect:                     () => getPool().connect(),
-        invalidateStudentDescriptor: async () => {},
+        invalidateStudentPhaseState: async () => {},
         notifyPhaseStarted,
         dispatchPhaseHook:           async () => {},
         logger:                      { warn() {}, error() {} },

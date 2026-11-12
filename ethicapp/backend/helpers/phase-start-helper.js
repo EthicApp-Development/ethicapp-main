@@ -213,11 +213,11 @@ async function defaultConnect() {
     return db.connect();
 }
 
-// Loaded on first use: the descriptor cache module opens a Redis connection
+// Loaded on first use: the student state module opens a Redis connection
 // when it is imported, which tests importing this module avoid.
-async function defaultInvalidateStudentDescriptor(sessionId) {
-    const descriptorCache = await import("./student-activity-state-helper.js");
-    await descriptorCache.invalidateCachedStudentActivityDescriptor(sessionId);
+async function defaultInvalidateStudentPhaseState(sessionId) {
+    const studentState = await import("./student-activity-state-helper.js");
+    await studentState.invalidateCachedStudentPhaseState(sessionId);
 }
 
 function defaultNotifyPhaseStarted(sessionId, transition) {
@@ -228,7 +228,9 @@ function defaultNotifyPhaseStarted(sessionId, transition) {
  * @param {Object} [dependencies]
  * @param {() => Promise<{ query: Function, release: Function }>} [dependencies.connect]
  *        Checks out a `pg` client for the transaction.
- * @param {(sessionId: number) => Promise<void>} [dependencies.invalidateStudentDescriptor]
+ * @param {(sessionId: number) => Promise<void>} [dependencies.invalidateStudentPhaseState]
+ *        Drops the cached descriptor and phase list of the students
+ *        (helpers/student-phase-state-cache.js, #1176).
  * @param {(sessionId: number, transition: { phaseId: number, phaseNumber: number,
  *         reason: "teacher" | "deadline" }) => Promise<void>} [dependencies.notifyPhaseStarted]
  *        Tells the students and the teacher (helpers/phase-clock-notifier.js).
@@ -238,7 +240,7 @@ function defaultNotifyPhaseStarted(sessionId, transition) {
  */
 export function createPhaseStarter({
     connect = defaultConnect,
-    invalidateStudentDescriptor = defaultInvalidateStudentDescriptor,
+    invalidateStudentPhaseState = defaultInvalidateStudentPhaseState,
     notifyPhaseStarted = defaultNotifyPhaseStarted,
     dispatchPhaseHook = defaultDispatchPhaseHook,
     random = Math.random,
@@ -395,16 +397,17 @@ export function createPhaseStarter({
     }
 
     // What the old phase transition endpoint did after its update. The
-    // descriptor is dropped before the students are told to reload it; the
-    // teacher's dashboards are told too, and both get the new clock (#1111).
+    // descriptor and the phase list (#1176) are dropped before the students
+    // are told to reload them; the teacher's dashboards are told too, and
+    // both get the new clock (#1111).
     // The hooks are not awaited, as before: they call external services, and
     // the teacher's request does not wait for them. `hooks` settles once they
     // are dispatched, and never rejects.
     async function announce(sessionId, { phase, trigger, previousPhaseId, previousStatus }) {
         try {
-            await invalidateStudentDescriptor(sessionId);
+            await invalidateStudentPhaseState(sessionId);
         } catch (error) {
-            logger.error("[phase-start] Could not drop the cached student descriptor of "
+            logger.error("[phase-start] Could not drop the cached student phase state of "
                 + `session ${sessionId}.`, error);
         }
 

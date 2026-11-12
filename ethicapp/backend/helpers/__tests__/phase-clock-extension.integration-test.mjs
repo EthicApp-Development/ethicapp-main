@@ -102,7 +102,7 @@ async function createActivity({ timeMode = "soft" } = {}) {
 
 const starter = createPhaseStarter({
     connect:                     () => getPool().connect(),
-    invalidateStudentDescriptor: async () => {},
+    invalidateStudentPhaseState: async () => {},
     notifyPhaseStarted:          async () => {},
     dispatchPhaseHook:           async () => {},
     logger:                      { warn() {}, error() {} },
