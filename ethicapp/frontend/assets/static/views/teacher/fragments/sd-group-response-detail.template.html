@@ -109,6 +109,9 @@
             chat-sending="$ctrl.chatSending"
             chat-error="$ctrl.chatError"
             can-use-live-chat="$ctrl.canUseLiveChat"
+            phase-id="$ctrl.phaseData.descriptor.id"
+            question-id="$ctrl.questions[0].id"
+            group-id="$ctrl.group.groupId"
             on-send="$ctrl.sendChatMessage(content, parentId)"
             resolve-author-name="$ctrl.getChatAuthorName(message)"
             resolve-is-own-message="$ctrl.isTeacherMessage(message)">

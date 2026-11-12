@@ -1,5 +1,5 @@
-import { io } from 'socket.io-client';
-import { Observable } from 'rxjs';
+import { io } from "socket.io-client";
+import { Observable } from "rxjs";
 import { trackSocketRooms } from "../helpers/socket-rooms.js";
 
 const SESSION_ROOM = { join: "joinSession", leave: "leaveSession" };
@@ -64,6 +64,10 @@ const SocketService = function(namespace, {
         emitEvent: (eventName, data) => {
             socket.emit(eventName, data);
         },
+
+        // Whether the socket is connected now. Best-effort signals, such as
+        // the composing signal (#1200), are sent only then, never buffered.
+        isConnected: () => socket.connected === true,
 
         // Join a session's room, again after each reconnect
         joinSession: (sessionId) => {

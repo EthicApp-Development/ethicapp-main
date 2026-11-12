@@ -1,13 +1,45 @@
-const TeacherGroupChatController = function($timeout, $element) {
+import { createComposingSignal } from "../helpers/composing-signal.js";
+
+// The bindings that tell where the teacher's composing signal goes.
+const COMPOSING_TARGET_BINDINGS = ["phaseId", "questionId", "groupId", "canUseLiveChat"];
+
+const TeacherGroupChatController = function($timeout, $element, TeacherSocketService) {
     const $ctrl = this;
+
+    // The teacher's composing signal (epic #601, #1200): the group's
+    // participants see that the teacher is writing. The timing lives in the
+    // helper; the teacher's interface shows no indicator.
+    const composingSignal = createComposingSignal();
+    const composingChannel = {
+        isConnected: () => TeacherSocketService?.isConnected?.() === true,
+        emit:        (eventName, payload) => TeacherSocketService.emitEvent(eventName, payload),
+    };
+
+    function updateComposingTarget() {
+        composingSignal.update({
+            channel:    composingChannel,
+            phaseId:    $ctrl.phaseId,
+            questionId: $ctrl.questionId,
+            groupId:    $ctrl.groupId,
+            enabled:    $ctrl.canUseLiveChat === true,
+        });
+    }
 
     $ctrl.$onInit = function() {
         $ctrl.draftMessage = "";
         $ctrl.replyToMessageId = null;
         $ctrl.lastMessageSignature = "";
+        updateComposingTarget();
+    };
+
+    $ctrl.$onDestroy = function() {
+        composingSignal.dispose();
     };
 
     $ctrl.$onChanges = function(changes) {
+        if (COMPOSING_TARGET_BINDINGS.some(binding => changes[binding])) {
+            updateComposingTarget();
+        }
         if (changes.messages) {
             $ctrl.updateMessageSignature();
             if ($ctrl.replyToMessageId && !$ctrl.getSelectedReplyMessage()) {
@@ -124,12 +156,23 @@ const TeacherGroupChatController = function($timeout, $element) {
         return { "margin-left": offset };
     };
 
+    // The draft changed (ng-change), and lost focus (ng-blur).
+    $ctrl.onDraftChange = function() {
+        composingSignal.edited();
+    };
+
+    $ctrl.onDraftBlur = function() {
+        composingSignal.stop();
+    };
+
     $ctrl.sendMessage = function() {
         const content = $ctrl.draftMessage.trim();
 
         if (!content || !$ctrl.canUseLiveChat || $ctrl.chatSending || typeof $ctrl.onSend !== "function") {
             return;
         }
+
+        composingSignal.stop();
 
         const parentId = Number.isInteger($ctrl.replyToMessageId)
             ? $ctrl.replyToMessageId
@@ -154,16 +197,21 @@ const TeacherGroupChatController = function($timeout, $element) {
 
 const teacherGroupChatComponent = {
     bindings: {
-        messages: "<",
-        chatLoading: "<",
-        chatSending: "<",
-        chatError: "<",
-        canUseLiveChat: "<",
-        onSend: "&",
-        resolveAuthorName: "&",
+        messages:            "<",
+        chatLoading:         "<",
+        chatSending:         "<",
+        chatError:           "<",
+        canUseLiveChat:      "<",
+        // Where the teacher's composing signal goes: the chat's phase,
+        // question and group.
+        phaseId:             "<",
+        questionId:          "<",
+        groupId:             "<",
+        onSend:              "&",
+        resolveAuthorName:   "&",
         resolveIsOwnMessage: "&",
     },
-    controller: ["$timeout", "$element", TeacherGroupChatController],
+    controller:  ["$timeout", "$element", "TeacherSocketService", TeacherGroupChatController],
     templateUrl: "/assets/static/views/teacher/fragments/teacher-group-chat.template.html",
 };
 
