@@ -1042,8 +1042,8 @@ carries no draft text, key, input length or client time.
 
 An adapter subscribes with `subscribe("participant-activity", handler)`. The
 registry accepts the handler only when the catalog entry lists the hook in
-`hooks`; no other declaration is needed. No adapter declares it yet; the
-Polyadic bridge will (#657).
+`hooks`; no other declaration is needed. The Polyadic bridge declares it
+(#657, see "Polyadic bridge" below).
 
 **Ephemeral dispatch.** `dispatchHook()` ignores the hook, as it ignores the
 collecting hooks. The caller (the student socket handler, #655) calls
@@ -1100,6 +1100,36 @@ ttlSeconds, serviceId }`. Any other field the caller passes is dropped.
 - Only participants' signals are dispatched. The activity's teacher also
   sends `chatComposing` (#1200), and the group sees it, but no service ever
   receives it.
+
+**Polyadic bridge.** The `polyadic-devils-advocate` adapter (#657) forwards
+each signal to the running room of its group, `ethicapp-s<session>-p<phase>-g<group>`
+(`getRoomName()`), through the room-activity route of
+ethicapp-ai-additions#177:
+
+```text
+POST /polyadic-agent/api/rooms/{room}/sessions/active/activity
+```
+
+```json
+{ "kind": "composing", "received_at": "2026-11-12T15:04:05.123Z",
+  "ttl_seconds": 30, "participant_id": "9001" }
+```
+
+- The body holds these four fields only, built in
+  `adapters/polyadic-bridge.activity.js`: `kind` as received, `received_at`
+  the context's `receivedAt` in UTC, `ttl_seconds` the context's
+  `ttlSeconds`, and `participant_id` the writer's user id as a string, as
+  the bridge sends it with messages. Polyadic answers `422` for any other
+  key.
+- Only a room the bridge created in this process and finished creating
+  gets the signal. Activity alone never opens a room; a room still being
+  created is skipped, not awaited; after a restart the bridge knows no room
+  until the group's next message, which remains the baseline activity.
+- The request has a 3 s timeout instead of the client's 12 s. A `404`
+  means no mediator runs for the room. Any other failure, a timeout
+  included, is logged at debug level with the room and the error's name,
+  code and status code, never its message or the body, and is swallowed.
+- Nothing else follows: no job, callback, published message or result.
 
 The timing and the rate limit are in `helpers/composing-signal.js`, the
 server's one copy of the composing signal's names and timing. The socket
