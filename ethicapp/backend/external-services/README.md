@@ -1136,6 +1136,38 @@ server's one copy of the composing signal's names and timing. The socket
 events and the group notice are described in `EXTERNAL.md`, "Composing
 signal".
 
+**Rollout.** The composing signal needs no migration, environment variable
+or flag.
+
+- Release ethicapp-ai-additions first, with its `polyadic-agents-api` and
+  `nginx` images: the nginx image publishes the room-activity route. Then
+  release the `ethicapp` and `ethicapp-student` images.
+- If EthicApp runs against an AI Additions release without the route, the
+  AI Additions nginx answers `404`, which the bridge reads as "room not
+  running". The group notice works and Polyadic keeps its message-only
+  behaviour.
+- To keep an activity's AI services from receiving any signal, launch it with
+  its AI services off. The group notice still works.
+
+**Message-only fallback.** Messages remain the baseline activity, and a room
+falls back to counting messages alone whenever no signal reaches it:
+
+- the participant's view polls because its socket is down;
+- the bridge restarted and knows no room until the group's next message;
+- the room was still being created when the signal arrived;
+- Polyadic answered `404` or failed, or the request timed out;
+- the clocks of EthicApp and Polyadic differ by more than `ttlSeconds`, so
+  Polyadic discards the signal as stale.
+
+The room then reaches its inactivity threshold as it did before the composing
+signal.
+
+**Deployment constraint.** The group notice reaches only the clients connected
+to the same `ethicapp` web process, and the coalescing and the rate limit are
+kept in that process's memory. A deployment with several web processes needs
+a Socket.IO Redis adapter first (see `EXTERNAL.md`, "Composing signal",
+"Single instance").
+
 ### Adding a new hook
 
 1. Choose a kebab-case name and add it to the Hook Catalog above with its
