@@ -172,10 +172,15 @@ export function useActivityRealtimeSync({
         socket.on('disconnect', handleDisconnect);
         socket.on('connect', handleConnect);
         // Once the student's room is joined, the results published before
-        // it could receive their events are loaded (#1143).
+        // it could receive their events are loaded (#1143). The group's
+        // room is joined again too: when this effect runs again, its cleanup
+        // left the group, and the group effect below joins only on a change
+        // of group. While the ref holds no group, as on the first run, the
+        // group effect joins it once it is known.
         joinActivityRooms(socket, {
           sessionId: activeSessionId,
           userId: session.uid,
+          groupId: currentGroupIdRef.current,
           onUserRoomJoined: () => onUserRoomJoinedRef.current?.(),
           isActive: () => !isUnmounted
         });
