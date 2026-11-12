@@ -14,6 +14,7 @@ import {
     deriveDesignStatus,
 } from "./design-status.js";
 import { orderDesignsForLaunch, phaseCountKey } from "./launch-design-list.js";
+import { plannedDurationListText } from "./phase-duration.js";
 
 export const DESIGNS_TAB_MINE = "mine";
 export const DESIGNS_TAB_SHARED = "shared";
@@ -179,17 +180,19 @@ export function buildDesignRow(design, activityCounts) {
     const statusInfo = deriveDesignStatus(design, activityCounts);
     const phaseCount = Array.isArray(design?.phases) ? design.phases.length : 0;
     return {
-        id:            design.id,
+        id:              design.id,
         design,
-        title:         design?.metainfo?.title || "",
-        caseTitle:     design?.associatedCase?.title || "",
+        title:           design?.metainfo?.title || "",
+        caseTitle:       design?.associatedCase?.title || "",
         phaseCount,
-        phaseCountKey: phaseCountKey(phaseCount),
+        phaseCountKey:   phaseCountKey(phaseCount),
+        // The phases' planned total, or null without durations (#1107).
+        plannedDuration: plannedDurationListText(design?.phases),
         statusInfo,
-        status:        statusLabel(statusInfo),
-        primary:       primaryRowAction(statusInfo, { archived: statusInfo.archived }),
-        menu:          rowMenuEntries(statusInfo, { archived: statusInfo.archived }),
-        sharing:       sharingState(design, { archived: statusInfo.archived }),
+        status:          statusLabel(statusInfo),
+        primary:         primaryRowAction(statusInfo, { archived: statusInfo.archived }),
+        menu:            rowMenuEntries(statusInfo, { archived: statusInfo.archived }),
+        sharing:         sharingState(design, { archived: statusInfo.archived }),
     };
 }
 

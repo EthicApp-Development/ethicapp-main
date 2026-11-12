@@ -96,3 +96,17 @@ export function plannedDesignDurationText(phases) {
         : "design_planned_duration_summary";
     return { key, values };
 }
+
+// The planned duration as a list of designs shows it, or null when no phase
+// has a duration: "45 min" when every phase has one, otherwise
+// "30 min in 2 of 3 phases".
+export function plannedDurationListText(phases) {
+    const planned = plannedDesignDuration(phases);
+    if (planned.timedPhaseCount === 0) {
+        return null;
+    }
+    if (planned.timedPhaseCount === planned.phaseCount) {
+        return { key: "phase_duration_minutes", values: { minutes: planned.totalMinutes } };
+    }
+    return plannedDesignDurationText(phases);
+}

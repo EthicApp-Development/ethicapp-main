@@ -144,12 +144,15 @@ describe("launch wizard, step 1", () => {
         await settle();
         assert.deepEqual(vm.preview.plannedDuration,
             { totalMinutes: 0, timedPhaseCount: 0, phaseCount: 1 });
+        assert.equal(vm.preview.plannedDurationText, null);
 
         DESIGNS[1].phases[0].durationMinutes = 15;
         try {
             vm.refreshPreview();
             assert.deepEqual(vm.preview.plannedDuration,
                 { totalMinutes: 15, timedPhaseCount: 1, phaseCount: 1 });
+            assert.deepEqual(vm.preview.plannedDurationText,
+                { key: "phase_duration_minutes", values: { minutes: 15 } });
         } finally {
             delete DESIGNS[1].phases[0].durationMinutes;
         }

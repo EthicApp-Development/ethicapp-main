@@ -17,6 +17,7 @@ import {
     importedCopiesBySource,
 } from "./design-status.js";
 import { normalizeSearchText, phaseCountKey } from "./launch-design-list.js";
+import { plannedDurationListText } from "./phase-duration.js";
 
 export { IMPORT_STATE_IMPORTABLE, IMPORT_STATE_IMPORTED, IMPORT_STATE_NOT_IMPORTABLE };
 
@@ -37,16 +38,18 @@ export function buildSharedRow(design, copies) {
     const phaseCount = Array.isArray(design?.phases) ? design.phases.length : 0;
     const { state, copy } = deriveImportState(design, copies);
     return {
-        id:            design.id,
+        id:              design.id,
         design,
-        title:         design?.metainfo?.title || "",
-        caseTitle:     design?.associatedCase?.title || "",
+        title:           design?.metainfo?.title || "",
+        caseTitle:       design?.associatedCase?.title || "",
         phaseCount,
-        phaseCountKey: phaseCountKey(phaseCount),
-        author:        sharedDesignAuthor(design),
-        licenseCode:   design?.licenseCode || "",
-        importState:   state,
-        copyId:        copy ? copy.id : null,
+        phaseCountKey:   phaseCountKey(phaseCount),
+        // The phases' planned total, or null without durations (#1107).
+        plannedDuration: plannedDurationListText(design?.phases),
+        author:          sharedDesignAuthor(design),
+        licenseCode:     design?.licenseCode || "",
+        importState:     state,
+        copyId:          copy ? copy.id : null,
     };
 }
 

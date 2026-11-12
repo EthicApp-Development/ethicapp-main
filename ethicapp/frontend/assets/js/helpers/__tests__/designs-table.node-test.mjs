@@ -162,6 +162,15 @@ describe("designs table, the lists", () => {
         assert.equal(row.primary.id, "edit");
     });
 
+    it("gives the row the planned duration of its phases (#1107)", () => {
+        const phases = [{ durationMinutes: 15 }, { durationMinutes: 5 }];
+        const timed = buildDesignRow({ ...DESIGNS[0], phases }, new Map());
+        assert.deepEqual(timed.plannedDuration,
+            { key: "phase_duration_minutes", values: { minutes: 20 } });
+        const untimed = buildDesignRow({ ...DESIGNS[0], phases: [{}] }, new Map());
+        assert.equal(untimed.plannedDuration, null);
+    });
+
     it("lists nothing for a missing payload", () => {
         assert.deepEqual(buildDesignTables(undefined, undefined), { mine: [], archived: [], shared: [] });
     });
