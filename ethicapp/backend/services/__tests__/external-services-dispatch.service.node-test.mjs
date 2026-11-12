@@ -934,6 +934,61 @@ test("getServiceInstanceConfiguration: the default client follows the manifest l
         "a service without a descriptor link has no instance configuration");
 });
 
+// ─── session inputs (#1178) ──────────────────────────────────────────────────
+
+test("declaresSessionInput: reads the descriptor's session inputs, and never throws", async () => {
+    const calls = [];
+    let answer = ["phase_clock"];
+    const registry = new ExternalServicesRegistry({
+        jobsService:           makeJobsServiceStub(),
+        capabilityDescriptors: {
+            sessionInputs: async (serviceId) => {
+                calls.push(serviceId);
+                if (answer instanceof Error) {
+                    throw answer;
+                }
+                return answer;
+            },
+        },
+    });
+
+    assert.equal(await registry.declaresSessionInput("svc-described", "phase_clock"), true);
+    assert.equal(await registry.declaresSessionInput("svc-described", "other_input"), false);
+    answer = [];
+    assert.equal(await registry.declaresSessionInput("svc-described", "phase_clock"), false);
+    answer = new Error("descriptor client failed");
+    const { warnings } = await captureWarnings(async () => {
+        assert.equal(await registry.declaresSessionInput("svc-described", "phase_clock"), false);
+    });
+    assert.equal(warnings.length, 1);
+    assert.deepEqual(calls, Array(4).fill("svc-described"));
+});
+
+test("registerService: adapters ask whether their descriptor declares an input", async () => {
+    let registered = null;
+    const registry = new ExternalServicesRegistry({
+        jobsService:         makeJobsServiceStub(),
+        developmentAdapters: true,
+        importAdapter:       async () => ({
+            register: async (args) => { registered = args; },
+        }),
+        capabilityDescriptors: {
+            sessionInputs: async serviceId => (serviceId === "svc-clock" ? ["phase_clock"] : []),
+        },
+    });
+
+    await registry.registerService({
+        id:          "svc-clock",
+        adapter:     "./adapters/not-imported.adapter.js",
+        hooks:       ["phase-clock-changed"],
+        development: true,
+        requires:    [],
+    }, "/nonexistent/manifest.json");
+
+    assert.equal(await registered.sessionInputs.declares("phase_clock"), true);
+    assert.equal(await registered.sessionInputs.declares("other_input"), false);
+});
+
 // ─── capabilities (removed in favor of the response scope, #726) ─────────────
 
 test("registerService: ignores the deprecated capabilities key with one warning", async () => {

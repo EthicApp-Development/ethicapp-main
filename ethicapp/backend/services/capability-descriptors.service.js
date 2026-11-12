@@ -3,10 +3,10 @@
 // (`instance_configuration`). This module fetches a service's descriptor
 // through the AI additions client, checks it against contract version "1"
 // (ethicapp-ai-additions, shared/schemas/capability-descriptor.v1.schema.json),
-// normalizes its instance fields and the documents it declares for students
-// (`student_outputs`, epic #1124, #1131), and caches the result in memory per
-// process. Nothing is stored in Redis. `runtime_configuration` is never
-// returned.
+// normalizes its instance fields, the documents it declares for students
+// (`student_outputs`, epic #1124, #1131) and the session inputs it accepts
+// (`session_inputs`, #1178), and caches the result in memory per process.
+// Nothing is stored in Redis. `runtime_configuration` is never returned.
 
 export const DESCRIPTOR_CONTRACT_VERSION = "1";
 
@@ -21,9 +21,10 @@ const STUDENT_OUTPUT_ID_MAX_LENGTH = 64;
 // A document schema name, `<name>/v<major>`, such as `student-result/v1`.
 const DOCUMENT_SCHEMA_PATTERN = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*\/v[1-9][0-9]*$/u;
 
-// The declaration is read in this descriptor locale when no caller asked for
-// one (refreshStudentOutputs()); only its display text depends on the locale.
-const STUDENT_OUTPUTS_LOCALE = "en_US";
+// The descriptor is read in this locale when no caller asked for one
+// (refreshStudentOutputs(), sessionInputs()); only its display text depends
+// on the locale.
+const DEFAULT_DESCRIPTOR_LOCALE = "en_US";
 
 const DESCRIPTOR_TTL_MS       = 10 * 60 * 1000;
 const DESCRIPTOR_RETRY_MS     = 60 * 1000;
@@ -238,6 +239,37 @@ export function normalizeStudentOutputs(raw) {
     return { studentOutputs, warnings };
 }
 
+/**
+ * The names of the session inputs a descriptor declares (#1178): the keys of
+ * its optional `session_inputs` whose entry is an object. A session input is
+ * a value EthicApp computes for each room or session it creates, such as
+ * Polyadic's `phase_clock`, rather than a setting a teacher stores. Absent
+ * means none. An entry that is not an object is dropped with a warning; the
+ * entries' contents are the service's contract with its adapter and are not
+ * interpreted here.
+ * @param {unknown} raw
+ * @returns {{ sessionInputs: string[], warnings: string[] }}
+ */
+export function normalizeSessionInputs(raw) {
+    if (raw === undefined || raw === null) {
+        return { sessionInputs: [], warnings: [] };
+    }
+    if (!isPlainObject(raw)) {
+        return { sessionInputs: [], warnings: ["session_inputs is not an object"] };
+    }
+
+    const sessionInputs = [];
+    const warnings = [];
+    for (const [name, entry] of Object.entries(raw)) {
+        if (isPlainObject(entry) && isNonEmptyString(name)) {
+            sessionInputs.push(name);
+        } else {
+            warnings.push(`session input "${name}" is not an object`);
+        }
+    }
+    return { sessionInputs, warnings };
+}
+
 function hasFieldGroup(group) {
     return isPlainObject(group) && Array.isArray(group.fields);
 }
@@ -297,6 +329,8 @@ export function normalizeDescriptor(raw, expectedServiceId) {
 
     const studentOutputs = normalizeStudentOutputs(raw.student_outputs);
     warnings.push(...studentOutputs.warnings);
+    const sessionInputs = normalizeSessionInputs(raw.session_inputs);
+    warnings.push(...sessionInputs.warnings);
 
     return {
         ok:         true,
@@ -306,6 +340,7 @@ export function normalizeDescriptor(raw, expectedServiceId) {
             usesLlm:        service.uses_llm,
             fields,
             studentOutputs: studentOutputs.studentOutputs,
+            sessionInputs:  sessionInputs.sessionInputs,
         },
         warnings,
     };
@@ -471,8 +506,25 @@ export class CapabilityDescriptorsClient {
      * never throws, and it waits at most for one descriptor request.
      */
     async refreshStudentOutputs(serviceId) {
-        await this.getInstanceConfiguration(serviceId, STUDENT_OUTPUTS_LOCALE);
+        await this.getInstanceConfiguration(serviceId, DEFAULT_DESCRIPTOR_LOCALE);
         return this.knownStudentOutputs(serviceId);
+    }
+
+    /**
+     * The session inputs the service's descriptor declares (#1178), such as
+     * Polyadic's `phase_clock`, from the cached descriptor or a fetch when the
+     * cache has none in date, as getInstanceConfiguration() does. A
+     * descriptor kept as stale after a failure still answers. It never
+     * throws: a service without a descriptor, or whose descriptor cannot be
+     * fetched or is invalid, declares none, so adapters send no input the
+     * service may not know.
+     * @param {string} serviceId - The registry's (manifest) service id.
+     * @returns {Promise<string[]>}
+     */
+    async sessionInputs(serviceId) {
+        const configuration = await this.getInstanceConfiguration(serviceId,
+            DEFAULT_DESCRIPTOR_LOCALE);
+        return configuration?.available ? configuration.sessionInputs : [];
     }
 
     clearCache() {
@@ -518,6 +570,7 @@ export class CapabilityDescriptorsClient {
             locale:              acceptLanguage,
             fields:              result.descriptor.fields,
             studentOutputs:      result.descriptor.studentOutputs,
+            sessionInputs:       result.descriptor.sessionInputs,
         };
     }
 }

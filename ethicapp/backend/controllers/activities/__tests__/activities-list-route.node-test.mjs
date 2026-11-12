@@ -1,7 +1,7 @@
 // The teacher's GET /activities (#1049, epic #1046): one statement for the
 // whole list, with the teacher's id, and each row mapped with the current
-// phase, the phase count, the participants, the AI services switch and the
-// end time. PostgreSQL is replaced by a fake pg pool.
+// phase, the phase count, the participants, the AI services switch, the time
+// mode and the end time. PostgreSQL is replaced by a fake pg pool.
 import assert from "node:assert/strict";
 import { after, beforeEach, describe, it } from "node:test";
 
@@ -37,6 +37,7 @@ const NOT_STARTED_ROW = Object.freeze({
     archived:            false,
     status:              1,
     ai_services_enabled: false,
+    time_mode:           "none",
     finishedAt:          null,
     participantCount:    0,
     caseId:              null,
@@ -53,6 +54,7 @@ const FINISHED_ROW = Object.freeze({
     archived:            true,
     status:              3,
     ai_services_enabled: true,
+    time_mode:           "hard",
     finishedAt:          "2026-11-02T19:00:00.000Z",
     participantCount:    18,
     caseId:              31,
@@ -110,6 +112,7 @@ describe("GET /activities (#1049)", () => {
             phaseCount:        2,
             participantCount:  0,
             aiServicesEnabled: false,
+            timeMode:          "none",
             finishedAt:        null,
             caseId:            null,
             caseTitle:         null,
@@ -119,6 +122,7 @@ describe("GET /activities (#1049)", () => {
         assert.equal(body.activities[1].finishedAt, "2026-11-02T19:00:00.000Z");
         assert.equal(body.activities[1].participantCount, 18);
         assert.equal(body.activities[1].aiServicesEnabled, true);
+        assert.equal(body.activities[1].timeMode, "hard");
     });
 
     it("does not return the design documents (#1055)", async () => {

@@ -2106,6 +2106,37 @@ h2{
     margin-left: auto;
 }
 
+/* Phase duration (#1107): the "Set duration" switch, the minutes and the
+   design's planned total. */
+.design-editor .phase-duration-editor {
+    margin-top: 0.75em;
+}
+
+.design-editor .phase-duration-editor h5 {
+    margin-bottom: 0.25em;
+    font-weight: bold;
+}
+
+.design-editor .phase-duration-input {
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+    margin-top: 0.25em;
+}
+
+.design-editor .phase-duration-spinbutton {
+    display: block;
+    max-width: 10em;
+}
+
+.design-planned-duration {
+    margin: 0 0 1em;
+}
+
+.design-planned-duration .fa-clock {
+    margin-right: 0.25em;
+}
+
 .design-editor .fa-solid {
     cursor: pointer;
 }
@@ -2556,6 +2587,28 @@ h2{
     font-size: small;
 }
 
+/* The toast of an advance by the deadline (#1116): under the activity bar,
+   on the right, over the content and the response detail panel. */
+.activity-dashboard-toast-container {
+    pointer-events: none;
+    position: fixed;
+    right: 16px;
+    top: calc(var(--activity-dashboard-sticky-top) + 8px);
+    width: min(420px, calc(100% - 32px));
+    z-index: 995;
+}
+
+.activity-dashboard-toast-container .teacher-toast-alert {
+    margin-bottom: 0;
+    pointer-events: auto;
+}
+
+/* The same blue as the selected phase in the phase list. */
+.activity-dashboard-toast-container .teacher-toast-alert.alert-info {
+    border-color: #2649ec;
+    color: #2649ec;
+}
+
 .designs-list .designs-toast-container .teacher-toast-alert {
     height: 1 !important;
     margin-top: 0px;
@@ -2921,6 +2974,89 @@ h2{
     }
 }
 
+/* The phase clock and "+1 min" in the activity bar (#1115), never hidden.
+   The host leaves the chip and the button as items of the bar. The digits
+   use tabular numerals at a fixed width, so the chip keeps its width while
+   it counts. */
+.phase-timer-host {
+    display: contents;
+}
+
+.phase-timer-chip {
+    align-items: center;
+    display: inline-flex;
+    gap: 6px;
+}
+
+.phase-timer-text {
+    align-items: baseline;
+    display: inline-flex;
+    gap: 0.3em;
+}
+
+.phase-timer-digits {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    min-width: 5ch;
+    text-align: right;
+}
+
+.phase-timer-marker {
+    align-items: baseline;
+    display: inline-flex;
+    font-size: 12px;
+    gap: 0.3em;
+}
+
+.phase-timer-warning {
+    background: #fcf8e3;
+    border-color: #c79a3b;
+    color: #8a6d3b;
+}
+
+.phase-timer-overtime,
+.phase-timer-time-up {
+    background: #f2dede;
+    border-color: #a94442;
+    color: #a94442;
+}
+
+.phase-timer-advancing {
+    background: #d9edf7;
+    border-color: #31708f;
+    color: #31708f;
+}
+
+.phase-timer-extend {
+    flex: none;
+}
+
+/* The leads shorten with the bar: the whole sentence from 1600 px, a short
+   one from 1200 px, the time alone below. */
+@media (width < 1600px) {
+    .phase-timer-wide {
+        display: none;
+    }
+}
+
+@media (width >= 1600px), (width < 1200px) {
+    .phase-timer-medium {
+        display: none;
+    }
+}
+
+@media (width < 1200px) {
+    .phase-timer-from-1200 {
+        display: none;
+    }
+}
+
+@media (width >= 1200px) {
+    .phase-timer-narrow {
+        display: none;
+    }
+}
+
 /* Two-column activity dashboard (#894): a rail with the phase navigator and
    the selected phase's context, and a main column with the responses first.
    The rail is 260 px from 1200 px wide and 320 px from 1600 px. Below
@@ -2940,6 +3076,20 @@ h2{
     .activity-dashboard-page {
         --activity-bar-top: 62px;
     }
+}
+
+/* The last phase's deadline passed in a hard-mode activity (#1116) */
+.activity-deadline-notice {
+    margin-bottom: 12px;
+}
+
+.activity-deadline-notice p {
+    margin-bottom: 0;
+}
+
+.activity-deadline-notice .activity-deadline-notice-title {
+    font-weight: 600;
+    margin-bottom: 4px;
 }
 
 .activity-dashboard-grid {
@@ -5764,6 +5914,50 @@ button.launch-wizard-step-body:focus-visible .launch-wizard-step-name {
 
 .launch-step-ai-note-text {
     margin: 0;
+}
+
+/* The time mode (#1109): a fieldset drawn as the step's other cards, with
+   Bootstrap 3 radios, one line of help under each option. */
+.launch-step-time {
+    margin: 0;
+    min-width: 0;
+}
+
+.launch-step-time-title {
+    border: 0;
+    color: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    margin: 0;
+    padding: 0;
+    width: auto;
+}
+
+.launch-step-time-summary {
+    color: var(--launch-wizard-muted);
+    font-size: 13px;
+    margin: 2px 0 6px;
+}
+
+.launch-step-time-option {
+    border-top: 1px solid #e6e9f2;
+    margin: 0;
+    padding: 8px 0;
+}
+
+.launch-step-time-option + .launch-step-time-option {
+    margin-top: 0;
+}
+
+.launch-step-time-label {
+    display: block;
+    font-weight: 600;
+}
+
+.launch-step-time-help {
+    color: var(--launch-wizard-muted);
+    display: block;
+    font-size: 13px;
 }
 
 .launch-step-look-title {

@@ -1,10 +1,23 @@
 import { io } from 'socket.io-client';
 import { Observable } from 'rxjs';
+import { trackSocketRooms } from "../helpers/socket-rooms.js";
 
-const SocketService = function(namespace) {
-    const url = `${window.location.protocol}//${window.location.hostname}${window.location.port ? `:${window.location.port}` : ''}/${namespace}`;
-    const socket = io(url);
+const SESSION_ROOM = { join: "joinSession", leave: "leaveSession" };
+const GROUP_CHAT_ROOM = { join: "joinGroupChat", leave: "leaveGroupChat" };
+
+// `connect` and `location` are for tests; the app uses socket.io-client and
+// the page's location.
+const SocketService = function(namespace, {
+    connect = io,
+    location = globalThis.window?.location,
+} = {}) {
+    const port = location.port ? `:${location.port}` : "";
+    const url = `${location.protocol}//${location.hostname}${port}/${namespace}`;
+    const socket = connect(url);
     const socketTag = `[SocketService:${namespace}]`;
+    // The rooms joined through this service are joined again after each
+    // reconnect (#1116).
+    const rooms = trackSocketRooms(socket);
 
     socket.on("connect", () => {
         console.debug(`${socketTag} connected`, { socketId: socket.id, url });
@@ -52,15 +65,30 @@ const SocketService = function(namespace) {
             socket.emit(eventName, data);
         },
 
-        // Join a specific room
+        // Join a session's room, again after each reconnect
         joinSession: (sessionId) => {
-            socket.emit("joinSession", sessionId);
+            rooms.join(SESSION_ROOM.join, sessionId);
         },
 
-        // Exit a specific room
+        // Exit a session's room
         leaveSession: (sessionId) => {
-            socket.emit("leaveSession", sessionId);
+            rooms.leave(SESSION_ROOM.join, sessionId, SESSION_ROOM.leave);
         },
+
+        // Join a group's chat room (teacher namespace), again after each
+        // reconnect
+        joinGroupChat: (groupId) => {
+            rooms.join(GROUP_CHAT_ROOM.join, groupId);
+        },
+
+        leaveGroupChat: (groupId) => {
+            rooms.leave(GROUP_CHAT_ROOM.join, groupId, GROUP_CHAT_ROOM.leave);
+        },
+
+        // Calls `listener` after each reconnect, once the rooms are joined
+        // again, so it can read what was missed while disconnected. Returns
+        // the function that stops it.
+        onReconnect: (listener) => rooms.onReconnect(listener),
 
         // Disconnect the socket
         disconnect: () => {

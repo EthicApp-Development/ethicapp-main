@@ -1,10 +1,12 @@
 // Integration tests for starting an activity's next phase (#906), against a
-// real PostgreSQL database with migrations V1-V33 applied: the transaction
+// real PostgreSQL database with migrations V1-V45 applied: the transaction
 // that creates the phase, its items and its groups and moves the session to
 // it, its rollback, two concurrent starts of the same phase, the
-// UNIQUE (sesid, number) constraint of V33, and a start that waits for the
-// forgetting of its teacher. Lock waits and rollbacks cannot be checked with
-// fakes.
+// UNIQUE (sesid, number) constraint of V33, a start that waits for the
+// forgetting of its teacher, and the phase clock of V45 (#1110): each phase's
+// start, trigger and deadline from the database's clock, and the starts by
+// the deadline. Lock waits, rollbacks and the database's clock cannot be
+// checked with fakes.
 //
 // Run with `npm run test:integration`, setting ETHICAPP_INTEGRATION_DATABASE_URL
 // to a disposable database. The tests insert users, designs, sessions and
@@ -122,17 +124,22 @@ async function insertUser(role) {
 }
 
 // A launched activity of `design`, with `studentCount` students in it.
-async function createActivity({ design = SD_DESIGN, studentCount = 5, status = INITIATED } = {}) {
+async function createActivity({
+    design = SD_DESIGN,
+    studentCount = 5,
+    status = INITIATED,
+    timeMode = "none",
+} = {}) {
     const teacherId = await insertUser("P");
     const [{ id: designId }] = await query(
         "INSERT INTO designs (creator, design, locked) VALUES ($1, $2, true) RETURNING id;",
         [teacherId, design]
     );
     const [{ id: sessionId }] = await query(`
-        INSERT INTO sessions (name, descr, creator, time, status, type)
-        VALUES ('Integration session', '', $1, now(), $2, 'T')
+        INSERT INTO sessions (name, descr, creator, time, status, type, time_mode)
+        VALUES ('Integration session', '', $1, now(), $2, 'T', $3)
         RETURNING id;
-    `, [teacherId, status]);
+    `, [teacherId, status, timeMode]);
     await query("INSERT INTO activity (design, session) VALUES ($1, $2);", [designId, sessionId]);
     await query("INSERT INTO sesusers (sesid, uid) VALUES ($1, $2);", [sessionId, teacherId]);
 
@@ -148,28 +155,41 @@ async function createActivity({ design = SD_DESIGN, studentCount = 5, status = I
 /**
  * A starter on the test database. `failOn` makes the statement with that SQL
  * throw, after the ones before it ran in the transaction; `onConnect` sees
- * each checked-out client.
+ * each checked-out client. `transactionTimes` receives, as text, the
+ * database's now() inside each transaction the starter opens.
  */
-function makeStarter({ failOn = null, onConnect = async () => {} } = {}) {
+function makeStarter({
+    failOn = null,
+    onConnect = async () => {},
+    transactionTimes = null,
+} = {}) {
     const effects = [];
     const starter = createPhaseStarter({
         connect: async () => {
             const client = await getPool().connect();
             await onConnect(client);
-            if (!failOn) {
+            if (!failOn && !transactionTimes) {
                 return client;
             }
             return {
-                query: (sql, params) => (sql === failOn
-                    ? Promise.reject(new Error("Forced failure"))
-                    : client.query(sql, params)),
+                query: async (sql, params) => {
+                    if (sql === failOn) {
+                        throw new Error("Forced failure");
+                    }
+                    const result = await client.query(sql, params);
+                    if (sql === "BEGIN" && transactionTimes) {
+                        const { rows: [row] } = await client.query("SELECT now()::text AS now;");
+                        transactionTimes.push(row.now);
+                    }
+                    return result;
+                },
                 release: () => client.release(),
             };
         },
         invalidateStudentDescriptor: async (sessionId) => {
             effects.push(["invalidate", sessionId]);
         },
-        notifyStudents: (sessionId) => {
+        notifyPhaseStarted: async (sessionId) => {
             effects.push(["notify", sessionId]);
         },
         dispatchPhaseHook: async (hookName, context) => {
@@ -557,4 +577,314 @@ test("a finish committed while a start waits for the session is seen by the star
         finishing.release();
     }
     assert.equal((await countRows(sessionId)).stages, 0);
+});
+
+// --- Phase clock (V45, #1110) -------------------------------------------------
+
+// Two individual phases of 5 and 10 minutes, then one without a duration.
+const TIMED_DESIGN = {
+    type:   "semantic_differential",
+    phases: [
+        { ...SD_DESIGN.phases[0], durationMinutes: 5 },
+        { ...SD_DESIGN.phases[0], durationMinutes: 10 },
+        { ...SD_DESIGN.phases[0] },
+    ],
+};
+
+// The clock columns of a phase, with what the database computes from them.
+async function clockOf(phaseId) {
+    const [row] = await query(`
+        SELECT started_at::text AS started_at,
+               ends_at::text AS ends_at,
+               duration_seconds,
+               start_trigger,
+               deadline_handled_at::text AS deadline_handled_at,
+               extract(epoch FROM ends_at - started_at)::integer AS ends_after_seconds
+        FROM stages
+        WHERE id = $1;
+    `, [phaseId]);
+    return row;
+}
+
+// Moves the deadline of a phase to one second ago, as if its time had run out.
+async function expireDeadline(phaseId) {
+    await query("UPDATE stages SET ends_at = now() - interval '1 second' WHERE id = $1;",
+        [phaseId]);
+}
+
+async function startPhases(starter, { sessionId, teacherId }, count) {
+    const phases = [];
+    for (let number = 0; number < count; number += 1) {
+        const result = await starter.startNextPhase({
+            sessionId, teacherId, expectedPhaseNumber: number,
+        });
+        assert.equal(result.status, "started");
+        phases.push(result.phase.id);
+    }
+    return phases;
+}
+
+test("a phase records its start, its trigger and its deadline from the database's clock", {
+    skip: SKIP_REASON,
+}, async () => {
+    for (const timeMode of ["soft", "hard"]) {
+        const { teacherId, sessionId } = await createActivity({ design: TIMED_DESIGN, timeMode });
+        const transactionTimes = [];
+        const { starter } = makeStarter({ transactionTimes });
+
+        const result = await starter.startNextPhase({
+            sessionId, teacherId, expectedPhaseNumber: 0,
+        });
+
+        assert.equal(result.status, "started");
+        assert.equal(result.trigger, "teacher");
+        const { started_at: startedAt, ends_at: endsAt, ...clock } =
+            await clockOf(result.phase.id);
+        // now() of the start's own transaction, to the microsecond, which no
+        // Node clock would match.
+        const [{ same_start: sameStart }] = await query(
+            "SELECT $1::timestamptz = $2::timestamptz AS same_start;",
+            [startedAt, transactionTimes[0]]
+        );
+        assert.equal(sameStart, true, `${timeMode}: ${startedAt} ${transactionTimes[0]}`);
+        assert.notEqual(endsAt, null);
+        assert.deepEqual(clock, {
+            duration_seconds:    300,
+            start_trigger:       "teacher",
+            deadline_handled_at: null,
+            ends_after_seconds:  300,
+        }, timeMode);
+    }
+});
+
+test("no deadline without a time mode or without a duration; the start is still recorded", {
+    skip: SKIP_REASON,
+}, async () => {
+    const untimed = await createActivity({ design: TIMED_DESIGN, timeMode: "none" });
+    const timed = await createActivity({ design: TIMED_DESIGN, timeMode: "hard" });
+    const { starter } = makeStarter();
+
+    const untimedPhases = await startPhases(starter, untimed, 1);
+    // The third phase of the hard-mode design has no duration.
+    const timedPhases = await startPhases(starter, timed, 3);
+
+    for (const phaseId of [untimedPhases[0], timedPhases[2]]) {
+        const clock = await clockOf(phaseId);
+        assert.notEqual(clock.started_at, null);
+        assert.equal(clock.start_trigger, "teacher");
+        assert.equal(clock.duration_seconds, null);
+        assert.equal(clock.ends_at, null);
+    }
+    assert.equal((await clockOf(timedPhases[1])).duration_seconds, 600);
+});
+
+test("a teacher's start marks the deadline of the phase it leaves as handled", {
+    skip: SKIP_REASON,
+}, async () => {
+    const activity = await createActivity({ design: TIMED_DESIGN, timeMode: "hard" });
+    const { starter } = makeStarter();
+
+    // Moving on early, before phase 1's deadline.
+    const [first, second, third] = await startPhases(starter, activity, 3);
+
+    const [firstClock, secondClock, thirdClock] =
+        await Promise.all([first, second, third].map(clockOf));
+    assert.equal(firstClock.deadline_handled_at, secondClock.started_at);
+    assert.equal(secondClock.deadline_handled_at, thirdClock.started_at);
+    assert.equal(thirdClock.deadline_handled_at, null, "the current phase is not handled");
+
+    // The runner, late for phase 2's deadline, finds the activity moved on.
+    await expireDeadline(second);
+    assert.deepEqual(await starter.startNextPhase({
+        ...activity, expectedPhaseNumber: 2, trigger: "deadline",
+    }), { status: "stale", currentPhaseNumber: 3 });
+});
+
+test("a start by the deadline advances a hard-mode phase whose deadline passed", {
+    skip: SKIP_REASON,
+}, async () => {
+    const activity = await createActivity({ design: TIMED_DESIGN, timeMode: "hard" });
+    const { starter, effects } = makeStarter();
+    const [first] = await startPhases(starter, activity, 1);
+    await expireDeadline(first);
+    effects.length = 0;
+
+    const result = await starter.startNextPhase({
+        ...activity, expectedPhaseNumber: 1, trigger: "deadline",
+    });
+    await result.hooks;
+
+    assert.equal(result.status, "started");
+    assert.equal(result.trigger, "deadline");
+    assert.equal(result.phase.number, 2);
+    const [leaving, started] = await Promise.all([first, result.phase.id].map(clockOf));
+    assert.equal(leaving.deadline_handled_at, started.started_at);
+    assert.equal(started.start_trigger, "deadline");
+    assert.equal(started.ends_after_seconds, 600);
+    assert.deepEqual(await sessionOf(activity.sessionId),
+        { status: IN_PROGRESS, currentStage: result.phase.id });
+    assert.deepEqual(effects, [
+        ["invalidate", activity.sessionId],
+        ["notify", activity.sessionId],
+        ["phase-ended", first],
+        ["phase-started", result.phase.id],
+    ]);
+});
+
+test("a start by the deadline is not due before the deadline, in soft mode or once handled", {
+    skip: SKIP_REASON,
+}, async () => {
+    const { starter, effects } = makeStarter();
+    const byDeadline = activity => starter.startNextPhase({
+        ...activity, expectedPhaseNumber: 1, trigger: "deadline",
+    });
+    const notDue = { status: "not_due", currentPhaseNumber: 1 };
+
+    async function unchanged(activity, phaseId, check) {
+        const before = { rows: await countRows(activity.sessionId), clock: await clockOf(phaseId) };
+        effects.length = 0;
+        await check();
+        assert.deepEqual(await countRows(activity.sessionId), before.rows);
+        assert.deepEqual(await clockOf(phaseId), before.clock);
+        assert.deepEqual(await sessionOf(activity.sessionId),
+            { status: IN_PROGRESS, currentStage: phaseId });
+        assert.deepEqual(effects, []);
+    }
+
+    // Hard mode, five minutes left.
+    const running = await createActivity({ design: TIMED_DESIGN, timeMode: "hard" });
+    const [runningPhase] = await startPhases(starter, running, 1);
+    await unchanged(running, runningPhase, async () => {
+        assert.deepEqual(await byDeadline(running), notDue);
+    });
+
+    // Soft mode, past the deadline: only the teacher moves on.
+    const soft = await createActivity({ design: TIMED_DESIGN, timeMode: "soft" });
+    const [softPhase] = await startPhases(starter, soft, 1);
+    await expireDeadline(softPhase);
+    await unchanged(soft, softPhase, async () => {
+        assert.deepEqual(await byDeadline(soft), notDue);
+    });
+
+    // Hard mode, past a deadline already handled.
+    const handled = await createActivity({ design: TIMED_DESIGN, timeMode: "hard" });
+    const [handledPhase] = await startPhases(starter, handled, 1);
+    await expireDeadline(handledPhase);
+    await query("UPDATE stages SET deadline_handled_at = now() WHERE id = $1;", [handledPhase]);
+    await unchanged(handled, handledPhase, async () => {
+        assert.deepEqual(await byDeadline(handled), notDue);
+    });
+
+    // Before the first phase there is no deadline.
+    const notStarted = await createActivity({ design: TIMED_DESIGN, timeMode: "hard" });
+    assert.deepEqual(await starter.startNextPhase({
+        ...notStarted, expectedPhaseNumber: 0, trigger: "deadline",
+    }), { status: "not_due", currentPhaseNumber: 0 });
+    assert.equal((await countRows(notStarted.sessionId)).stages, 0);
+});
+
+test("the deadline of the last phase is handled without finishing the activity", {
+    skip: SKIP_REASON,
+}, async () => {
+    const design = { ...TIMED_DESIGN, phases: TIMED_DESIGN.phases.slice(0, 2) };
+    const activity = await createActivity({ design, timeMode: "hard" });
+    const { starter, effects } = makeStarter();
+    const [, last] = await startPhases(starter, activity, 2);
+    await expireDeadline(last);
+    effects.length = 0;
+    const rowsBefore = await countRows(activity.sessionId);
+
+    const atLast = { ...activity, expectedPhaseNumber: 2 };
+    assert.deepEqual(await starter.startNextPhase({ ...atLast, trigger: "deadline" }),
+        { status: "no_next_phase", currentPhaseNumber: 2 });
+
+    assert.notEqual((await clockOf(last)).deadline_handled_at, null, "the runner stops");
+    assert.deepEqual(await sessionOf(activity.sessionId),
+        { status: IN_PROGRESS, currentStage: last });
+    assert.deepEqual(await countRows(activity.sessionId), rowsBefore);
+    assert.deepEqual(effects, []);
+
+    // A second tick finds nothing to do; the teacher still finishes it by hand.
+    assert.deepEqual(await starter.startNextPhase({ ...atLast, trigger: "deadline" }),
+        { status: "not_due", currentPhaseNumber: 2 });
+    assert.deepEqual(await starter.startNextPhase(atLast),
+        { status: "no_next_phase", currentPhaseNumber: 2 });
+});
+
+test("of the teacher and the deadline starting a phase at once, or two deadline starts, one "
+    + "starts it", { skip: SKIP_REASON }, async () => {
+    for (const triggers of [["teacher", "deadline"], ["deadline", "teacher"],
+        ["deadline", "deadline"]]) {
+        const activity = await createActivity({ design: TIMED_DESIGN, timeMode: "hard" });
+        const [first] = await startPhases(makeStarter().starter, activity, 1);
+        await expireDeadline(first);
+
+        const pids = [];
+        const { starter } = makeStarter({ onConnect: recordPid(pids) });
+        const blocker = await getPool().connect();
+        let results;
+        try {
+            await blocker.query("BEGIN");
+            await blocker.query(LOCK_SESSION_SQL, [activity.sessionId]);
+
+            const requests = triggers.map(trigger => starter.startNextPhase({
+                ...activity, expectedPhaseNumber: 1, trigger,
+            }));
+            while (pids.length < 2) {
+                await delay(20);
+            }
+            await Promise.all(pids.map(waitUntilBlockedOnLock));
+            await blocker.query("COMMIT");
+            results = await Promise.all(requests);
+        } finally {
+            blocker.release();
+        }
+
+        const label = triggers.join(" vs ");
+        const winners = results.filter(result => result.status === "started");
+        assert.equal(winners.length, 1, label);
+        assert.deepEqual(results.filter(result => result.status !== "started"),
+            [{ status: "stale", currentPhaseNumber: 2 }], label);
+
+        const phases = await phasesOf(activity.sessionId);
+        assert.deepEqual(phases.map(phase => phase.number), [1, 2], label);
+        const [leaving, started] = await Promise.all([first, winners[0].phase.id].map(clockOf));
+        assert.equal(started.start_trigger, winners[0].trigger, label);
+        assert.equal(leaving.deadline_handled_at, started.started_at, label);
+    }
+});
+
+test("a start by the deadline sees an extension committed while it waits for the phase", {
+    skip: SKIP_REASON,
+}, async () => {
+    const activity = await createActivity({ design: TIMED_DESIGN, timeMode: "hard" });
+    const [first] = await startPhases(makeStarter().starter, activity, 1);
+    await expireDeadline(first);
+
+    const pids = [];
+    const { starter } = makeStarter({ onConnect: recordPid(pids) });
+    // "+1 min", committed after the start read the session but before its claim.
+    const extension = await getPool().connect();
+    try {
+        await extension.query("BEGIN");
+        await extension.query(
+            "UPDATE stages SET ends_at = now() + interval '1 minute' WHERE id = $1;",
+            [first]
+        );
+
+        const request = starter.startNextPhase({
+            ...activity, expectedPhaseNumber: 1, trigger: "deadline",
+        });
+        while (pids.length < 1) {
+            await delay(20);
+        }
+        await waitUntilBlockedOnLock(pids[0]);
+        await extension.query("COMMIT");
+
+        assert.deepEqual(await request, { status: "not_due", currentPhaseNumber: 1 });
+    } finally {
+        extension.release();
+    }
+    assert.equal((await clockOf(first)).deadline_handled_at, null);
+    assert.equal((await countRows(activity.sessionId)).stages, 1);
 });

@@ -2,6 +2,7 @@
     <h4>{{ 'features_title_text' | translate }}</h4>
     <ul class="list-with-dots">
         <li>{{ 'phase_mode_label' | translate }}: {{ ctrl.phaseMode | translate }}</li>
+        <li ng-if="ctrl.phaseDetails.durationMinutes"><strong>{{ 'phase_duration_label' | translate }}:</strong> {{ 'phase_duration_minutes' | translate:{ minutes: ctrl.phaseDetails.durationMinutes } }}</li>
         <li ng-if="ctrl.phaseMode === 'team'"><strong>{{ 'interaction_type_label' | translate }}:</strong> {{ ctrl.phaseDetails.anonymous ? ('anonymous_label' | translate) : ('identified_label' | translate) }}</li>
         <li ng-if="ctrl.phaseMode === 'team'"><strong>{{ 'chat_enabled_label' | translate }}:</strong> {{ ctrl.phaseDetails.chat ? ('yes_label' | translate) : ('no_label' | translate) }}</li>
         <li ng-if="ctrl.phaseMode === 'team'"><strong>{{ 'grouping_algorithm_label' | translate }}:</strong> {{ ctrl.phaseDetails.grouping_algorithm | translate }}</li>

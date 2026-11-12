@@ -37,6 +37,15 @@ describe("shared designs table, rows", () => {
         assert.equal(row.licenseCode, "CC BY-SA 4.0");
         assert.equal(row.importState, "importable");
         assert.equal(row.copyId, null);
+        assert.equal(row.plannedDuration, null);
+    });
+
+    it("shows the planned duration of a design with durations (#1107)", () => {
+        const row = buildSharedRow(shared(6, { phases: [{ durationMinutes: 10 }, {}] }), new Map());
+        assert.deepEqual(row.plannedDuration, {
+            key:    "design_planned_duration_summary",
+            values: { minutes: 10, timed: 1, total: 2 },
+        });
     });
 
     it("leaves an unknown author empty", () => {

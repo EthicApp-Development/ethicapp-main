@@ -151,6 +151,14 @@ router.get("/activities/:id/users/:user_id/full_state", async (req, res) => {
 // student is not enrolled in, a finished or archived activity, a phase that
 // is not the current one and a task outside it (#927). A refusal writes
 // nothing, notifies no teacher and dispatches no hook.
+//
+// Just after an automatic advance, the policy also accepts a response to the
+// previous phase (#1114). It is stored against that phase, and the teacher's
+// dashboard is told with that phase's id, so it lands under that phase. The
+// student-response-submitted hook is not dispatched for it: the phase-ended
+// hook already closed that phase's AI services (the ATS tutor's sessions,
+// for one), and a response hook would open a tutor session again for a
+// phase that is over, which no phase-ended would close.
 router.post("/activities/:id/response", async (req, res) => {
     const sessionId = Number(req.params.id);
     const userId = Number(req.session?.uid);
@@ -184,7 +192,7 @@ router.post("/activities/:id/response", async (req, res) => {
             return res.status(decision.status).json({ error: decision.error, code: decision.code });
         }
 
-        const { phaseId, designType, taskId, task } = decision;
+        const { phaseId, previousPhase, designType, taskId, task } = decision;
         const handler = responseSubmissionHandlers[designType];
 
         if (!handler) {
@@ -200,17 +208,21 @@ router.post("/activities/:id/response", async (req, res) => {
         });
 
         responseSubmissionEffects.notifyTeacher(sessionId, phaseId, notificationData);
-        responseSubmissionEffects.dispatchHook({
-            sessionId,
-            phaseId,
-            userId,
-            questionId:      Number(questionId),
-            designType,
-            requestPayload:  req.body,
-            responsePayload: notificationData,
-            // The stored response row, recorded on each hook job (#946).
-            source:          responseId ? { kind: JOB_SOURCE_KIND.RESPONSE, id: responseId } : null,
-        });
+        if (!previousPhase) {
+            responseSubmissionEffects.dispatchHook({
+                sessionId,
+                phaseId,
+                userId,
+                questionId:      Number(questionId),
+                designType,
+                requestPayload:  req.body,
+                responsePayload: notificationData,
+                // The stored response row, recorded on each hook job (#946).
+                source:          responseId
+                    ? { kind: JOB_SOURCE_KIND.RESPONSE, id: responseId }
+                    : null,
+            });
+        }
 
         return res.status(201).json({
             status:  "ok",

@@ -1,12 +1,35 @@
 <div class="activity-dashboard-page" ng-controller="DashboardController as dc">
     <!-- Activity bar, sticky under the app bar (#893) -->
     <activity-bar class="activity-bar-host"
+        session-id="dc.sessionId"
         activity="dc.activityState.descriptor"
         total-phases="dc.designObj.phases.length"
         users="dc.userList"
         is-finished="dc.isActivityFinished">
         <activity-controls is-last-phase="dc.reachedLastPhase" is-finished="dc.isActivityFinished" parent-ctrl="dc"></activity-controls>
     </activity-bar>
+
+    <!-- "Time is up: phase N has started", when the deadline of a
+         hard-mode activity moved it on (#1116). Fixed under the bar, over
+         the content. -->
+    <div class="activity-dashboard-toast-container">
+        <toast></toast>
+    </div>
+
+    <!-- The last phase of a hard-mode activity reached its deadline: the
+         activity stays open until the teacher finishes it (#1116). -->
+    <div class="alert alert-warning activity-deadline-notice" role="status"
+        ng-if="dc.lastPhaseDeadlineNotice && !dc.isActivityFinished">
+        <button type="button" class="close" ng-click="dc.dismissLastPhaseDeadlineNotice()"
+            aria-label="{{ 'dashboard_last_phase_deadline_dismiss' | translate }}">
+            <span aria-hidden="true">&times;</span>
+        </button>
+        <p class="activity-deadline-notice-title">
+            <i class="fa-solid fa-hourglass-end" aria-hidden="true"></i>
+            {{ 'dashboard_last_phase_deadline_title' | translate }}
+        </p>
+        <p>{{ 'dashboard_last_phase_deadline_body' | translate }}</p>
+    </div>
 
     <!-- Two columns from 1200 px (#894): the rail with the phases and the
          selected phase's context, and the main column with the responses

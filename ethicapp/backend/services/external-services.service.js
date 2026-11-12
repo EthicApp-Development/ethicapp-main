@@ -805,6 +805,9 @@ export class ExternalServicesRegistry {
             caseAnalyses,
             designAnalyses,
             roomJobs:                createRoomJobsAccess(this._roomJobsService, normalizedService.id),
+            sessionInputs:           Object.freeze({
+                declares: name => this.declaresSessionInput(normalizedService.id, name),
+            }),
         });
     }
 
@@ -921,6 +924,23 @@ export class ExternalServicesRegistry {
         }
 
         return this._capabilityDescriptors.getInstanceConfiguration(serviceId, locale);
+    }
+
+    // Whether the capability descriptor of service `serviceId` declares the
+    // session input `name` (#1178), such as Polyadic's `phase_clock`. Read
+    // from the descriptor cache (capability-descriptors.service.js), so it
+    // costs a request only when the cache has nothing in date. False for a
+    // service without a descriptor and while its descriptor is unavailable.
+    // It never throws.
+    async declaresSessionInput(serviceId, name) {
+        try {
+            const inputs = await this._capabilityDescriptors.sessionInputs(serviceId);
+            return Array.isArray(inputs) && inputs.includes(name);
+        } catch (error) {
+            console.warn(`[external-services] Could not read the session inputs of ${serviceId}: `
+                + (error?.message || error?.name || "unknown error"));
+            return false;
+        }
     }
 
     // Asks the adapter for its UI texts. Valid texts are kept for ten minutes.

@@ -12,13 +12,14 @@ This directory currently contains JSON Schemas for portable EthicApp objects.
 
 ## Tests
 
-`npm run test:schemas` (repository root) validates documents against these schemas. `__tests__/ethicapp-v1.schema.node-test.mjs` checks every canonical seed design in `database/seeds/canonical-activities/manifest.json`, plus the external service `configurations` rules and the text content types. `__tests__/rich-text.node-test.mjs` checks that the rich text fixtures are well formed and normalized, and that their trees match `rich-text/rich-text-tree-v2.schema.json`. `__tests__/student-result-v1.schema.node-test.mjs` checks the examples of the `student-result/v1` copy against it, along with documents it must reject and the unknown section kinds it must accept. Run them whenever a schema, a seed or a fixture changes.
+`npm run test:schemas` (repository root) validates documents against these schemas. `__tests__/ethicapp-v1.schema.node-test.mjs` checks every canonical seed design in `database/seeds/canonical-activities/manifest.json`, plus the external service `configurations` rules, the text content types and the phase duration. `__tests__/rich-text.node-test.mjs` checks that the rich text fixtures are well formed and normalized, and that their trees match `rich-text/rich-text-tree-v2.schema.json`. `__tests__/student-result-v1.schema.node-test.mjs` checks the examples of the `student-result/v1` copy against it, along with documents it must reject and the unknown section kinds it must accept. Run them whenever a schema, a seed or a fixture changes.
 
 ## Design Notes
 
 - **External service configurations (#729).** `phases[].externalServices.configurations` maps each external service manifest id to that phase's settings: an object whose keys are capability descriptor field keys and whose values are scalars (string, number, boolean or null). A configuration for a service that is not in `enabledServiceIds` is kept but ignored, so turning a service off and on keeps the teacher's values. Designs with only `enabledServiceIds`, or without `externalServices`, stay valid.
 - **Text content types (#762).** `phases[].instructionsContentType` and `phases[].questions[].q_text_content_type` are `text/plain` or `text/markdown`. A missing value means `text/plain`, so every existing design keeps rendering its text as written. See [`rich-text/README.md`](rich-text/README.md).
 - **`grouping_algorithm`** is `"random"` for grouped phases and `null` where the editor does not group, such as individual phases.
+- **Phase duration (#1107).** `phases[].durationMinutes` is how long a phase is planned to last, in whole minutes from 1 to 180. A phase without it has no clock. The key is left out rather than stored as `null` or `0`, so every existing design stays valid and untimed.
 
 ## Tag Taxonomy Notes
 

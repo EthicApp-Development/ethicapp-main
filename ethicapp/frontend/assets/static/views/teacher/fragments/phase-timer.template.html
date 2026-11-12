@@ -1,0 +1,36 @@
+<!-- The phase clock and "+1 min" (#1115). The host is display: contents, so
+     the chip and the button are items of the bar. The digits are written by
+     the component on every tick, outside AngularJS; they and the rest of
+     the visible text are hidden from screen readers, which read the hidden
+     text in whole minutes. The leads shorten with the bar's width:
+     .phase-timer-wide from 1600 px, .phase-timer-medium from 1200 px to
+     1599 px, .phase-timer-from-1200 from 1200 px and .phase-timer-narrow
+     below 1200 px. -->
+<span class="activity-bar-chip phase-timer-chip"
+      ng-show="$ctrl.view.state !== 'none'"
+      ng-class="'phase-timer-' + $ctrl.view.state">
+  <i class="fa-solid phase-timer-icon" aria-hidden="true"
+     ng-class="$ctrl.view.state === 'advancing' ? 'fa-hourglass-half' : 'fa-stopwatch'"></i>
+  <span class="phase-timer-text" aria-hidden="true">
+    <span class="phase-timer-wide" ng-if="$ctrl.view.state === 'warning' && $ctrl.view.automatic">{{ 'phase_timer_next_phase_in' | translate:{ number: $ctrl.view.nextPhaseNumber } }}</span>
+    <span class="phase-timer-medium" ng-if="$ctrl.view.state === 'warning' && $ctrl.view.automatic">{{ 'phase_timer_next_phase_in_short' | translate:{ number: $ctrl.view.nextPhaseNumber } }}</span>
+    <span class="phase-timer-from-1200" ng-if="$ctrl.view.state === 'advancing'">{{ 'phase_timer_advancing' | translate }}</span>
+    <span class="phase-timer-narrow" ng-if="$ctrl.view.state === 'advancing'">{{ 'phase_timer_advancing_short' | translate }}</span>
+    <span ng-if="$ctrl.view.state === 'time-up'">{{ 'phase_timer_time_up' | translate }}</span>
+    <span class="phase-timer-digits" ng-show="$ctrl.view.showDigits"></span>
+    <span class="phase-timer-marker" ng-if="$ctrl.view.state === 'running' && $ctrl.view.automatic"
+          title="{{ 'phase_timer_sr_automatic' | translate:{ number: $ctrl.view.nextPhaseNumber } }}">
+      <i class="fa-solid fa-forward"></i><span class="phase-timer-wide">{{ 'phase_timer_automatic' | translate }}</span>
+    </span>
+  </span>
+  <span class="sr-only" ng-if="$ctrl.view.spoken">{{ $ctrl.view.spoken.key | translate:$ctrl.view.spoken.params }}</span>
+  <span class="sr-only" ng-if="$ctrl.view.automatic && $ctrl.view.state !== 'advancing'">{{ 'phase_timer_sr_automatic' | translate:{ number: $ctrl.view.nextPhaseNumber } }}</span>
+</span>
+<button type="button" class="btn btn-default btn-sm phase-timer-extend"
+        ng-show="$ctrl.view.state !== 'none'"
+        ng-class="{ disabled: $ctrl.isExtendDisabled() }"
+        aria-disabled="{{ $ctrl.isExtendDisabled() ? 'true' : 'false' }}"
+        aria-label="{{ 'phase_timer_extend_label' | translate }}"
+        title="{{ 'phase_timer_extend_label' | translate }}"
+        ng-click="$ctrl.extend()">{{ 'phase_timer_extend_button' | translate }}</button>
+<span class="sr-only" role="status" aria-live="polite">{{ $ctrl.announcement }}</span>

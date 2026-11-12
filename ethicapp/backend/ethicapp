@@ -11,6 +11,7 @@ import { initializeSockets } from "./config/socket.config.js";
 import { startDomainEventSubscriber } from "./services/domain-events/index.js";
 import { startUserErasureProcessor } from "./services/user-erasure/index.js";
 import { startUploadDeletionProcessor } from "./services/upload-deletion/index.js";
+import { startPhaseDeadlineRunner } from "./services/phase-clock/index.js";
 
 const debug = debugLib("ethicapp:server");
 
@@ -42,6 +43,12 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
 
     // Delete the upload files that forgetting an account freed (#877).
     startUploadDeletionProcessor();
+
+    // Advance hard-mode activities when the current phase's deadline passes
+    // (#1113), including deadlines that passed while ethicapp was stopped.
+    // It runs here, after Socket.IO, because the phase start's events reach
+    // only the clients connected to this process.
+    startPhaseDeadlineRunner();
 }
 
 /**

@@ -56,6 +56,7 @@
         "chat-message-received",
         "phase-started",
         "phase-ended",
+        "phase-clock-changed",
         "callback-received",
         "activity-finished",
         "user-forgotten",

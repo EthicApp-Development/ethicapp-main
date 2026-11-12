@@ -5,6 +5,7 @@
 // Plain functions over the payloads of GET /designs and GET /activities, so
 // the wizard's controller only wires them to the page.
 
+import { isValidPhaseDuration } from "./phase-duration.js";
 import { phaseEnabledServiceIds } from "./service-configuration-summary.js";
 
 // Rows shown before "Show more", and how many more each click adds.
@@ -222,8 +223,9 @@ export function buildLaunchList(designs, activities, { query = "", formatDate = 
 }
 
 /**
- * The phases of the preview: mode, group size, chat, number of questions and
- * the AI services, named by `serviceName(id)` (null when it has no name).
+ * The phases of the preview: mode, group size, chat, number of questions,
+ * duration in minutes (null when the phase has none, #1107) and the AI
+ * services, named by `serviceName(id)` (null when it has no name).
  */
 export function describeDesignPhases(design, serviceName = () => null) {
     return (Array.isArray(design?.phases) ? design.phases : []).map((phase, index) => {
@@ -231,6 +233,7 @@ export function describeDesignPhases(design, serviceName = () => null) {
         const size = Number(phase?.stdntAmount);
         const groupSize = isTeam && Number.isInteger(size) && size > 0 ? size : null;
         const questionCount = Array.isArray(phase?.questions) ? phase.questions.length : 0;
+        const minutes = phase?.durationMinutes;
         return {
             number:           index + 1,
             isTeam,
@@ -238,6 +241,7 @@ export function describeDesignPhases(design, serviceName = () => null) {
             chat:             isTeam && phase?.chat === true,
             questionCount,
             questionCountKey: questionCountKey(questionCount),
+            durationMinutes:  isValidPhaseDuration(minutes) ? minutes : null,
             services:         phaseEnabledServiceIds(phase)
                 .map(id => ({ id, name: serviceName(id) })),
         };

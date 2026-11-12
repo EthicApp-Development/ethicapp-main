@@ -205,9 +205,10 @@ describe("preview phases", () => {
     it("describes mode, groups, chat, questions and services", () => {
         const phases = describeDesignPhases({
             phases: [
-                { mode: "individual", questions: [{}, {}], chat: true },
+                { mode: "individual", questions: [{}, {}], chat: true, durationMinutes: 10 },
                 {
                     mode:             "team",
+                    durationMinutes:  0,
                     stdntAmount:      3,
                     chat:             true,
                     questions:        [{}],
@@ -221,15 +222,18 @@ describe("preview phases", () => {
             {
                 number:           1, isTeam:           false, groupSize:        null, chat:             false,
                 questionCount:    2, questionCountKey: "launch_wizard_questions_other", services:         [],
+                durationMinutes:  10,
             },
             {
                 number:           2, isTeam:           true, groupSize:        3, chat:             true,
                 questionCount:    1, questionCountKey: "launch_wizard_questions_one",
+                durationMinutes:  null,
                 services:         [{ id: "tutor", name: "Tutor" }, { id: "agent", name: null }],
             },
             {
                 number:           3, isTeam:           true, groupSize:        null, chat:             false,
                 questionCount:    0, questionCountKey: "launch_wizard_questions_other", services:         [],
+                durationMinutes:  null,
             },
         ]);
     });

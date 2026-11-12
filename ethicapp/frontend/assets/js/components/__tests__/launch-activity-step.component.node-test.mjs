@@ -1,6 +1,6 @@
 // The launch wizard's second step (#972, epic #965): the AI services check,
-// the switch, the previous descriptions, and the launch with its progress and
-// errors in the action bar.
+// the switch, the time mode (#1109), the previous descriptions, and the
+// launch with its progress and errors in the action bar.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
@@ -30,6 +30,7 @@ function createStep({
     createActivity = async () => 41,
     activities = [],
     description = "",
+    plannedDuration = undefined,
 } = {}) {
     const calls = { navigated: null, created: [], locked: [], validChecks: 0 };
     const $scope = { $applyAsync() {} };
@@ -79,7 +80,7 @@ function createStep({
     const vm = new LaunchActivityStepController($scope, $rootScope, $timeout, $window,
         designs, activityCatalog, externalServices, languages);
     vm.designId = 7;
-    vm.preview = { title: "Privacidad", phaseCount: 1 };
+    vm.preview = { title: "Privacidad", phaseCount: 1, plannedDuration };
     vm.description = description;
     let backs = 0;
     vm.onBack = () => {
@@ -140,6 +141,72 @@ describe("launch step, AI services", () => {
     });
 });
 
+describe("launch step, time mode (#1109)", () => {
+    const THREE_OF_FOUR = { totalMinutes: 45, timedPhaseCount: 3, phaseCount: 4 };
+
+    it("shows no time card for a design without durations, and sends no mode", async () => {
+        for (const plannedDuration of [undefined, { totalMinutes: 0, timedPhaseCount: 0, phaseCount: 4 }]) {
+            const { vm, calls } = createStep({ description: "Sección 3", plannedDuration });
+            await vm.ready;
+            assert.equal(vm.showsTimeMode(), false);
+
+            await vm.launch();
+            assert.equal(calls.created[0][2].timeMode, undefined, "the server stores none");
+        }
+    });
+
+    it("shows the card with Soft preselected and the count of timed phases", async () => {
+        const { vm } = createStep({ plannedDuration: THREE_OF_FOUR });
+        await vm.ready;
+
+        assert.equal(vm.showsTimeMode(), true);
+        assert.equal(vm.timeMode, "soft");
+        assert.deepEqual(vm.timeModeOptions.map(option => option.value), ["soft", "hard", "none"]);
+        assert.deepEqual(vm.timeModeView.summary, {
+            key:    "launch_wizard_time_phases_some",
+            params: { minutes: 45, timed: 3, total: 4 },
+        });
+        assert.equal(vm.timeModeView.hasUntimedPhases, true, "it says the others run untimed");
+    });
+
+    it("launches with the chosen mode", async () => {
+        for (const timeMode of [undefined, "hard", "none"]) {
+            const { vm, calls } = createStep({ description: "Sección 3", plannedDuration: THREE_OF_FOUR });
+            await vm.ready;
+            if (timeMode) {
+                vm.timeMode = timeMode;
+            }
+
+            await vm.launch();
+            assert.deepEqual(calls.created[0][2], { aiServices: undefined, timeMode: timeMode ?? "soft" });
+        }
+    });
+
+    it("follows the previewed design when the wizard changes it", async () => {
+        const { vm } = createStep({ plannedDuration: THREE_OF_FOUR });
+        await vm.ready;
+
+        vm.preview = { ...vm.preview, plannedDuration: { totalMinutes: 0, timedPhaseCount: 0, phaseCount: 2 } };
+        vm.$onChanges({ preview: { currentValue: vm.preview } });
+        assert.equal(vm.showsTimeMode(), false);
+
+        vm.preview = { ...vm.preview, plannedDuration: { totalMinutes: 20, timedPhaseCount: 2, phaseCount: 2 } };
+        vm.$onChanges({ preview: { currentValue: vm.preview } });
+        assert.equal(vm.showsTimeMode(), true);
+        assert.equal(vm.timeModeView.summary.key, "launch_wizard_time_phases_all");
+        assert.equal(vm.timeModeView.hasUntimedPhases, false);
+    });
+
+    it("draws the card only when shown, as radios bound to the mode", () => {
+        assert.match(template,
+            /<fieldset class="launch-wizard-card launch-step-time" ng-if="\$ctrl\.showsTimeMode\(\)"/u);
+        assert.match(template, /<legend class="launch-step-time-title">\{\{ 'launch_wizard_time_title' \| translate \}\}<\/legend>/u);
+        assert.match(template, /ng-repeat="option in \$ctrl\.timeModeOptions track by option\.value"/u);
+        assert.match(template, /<input type="radio" name="launchTimeMode"\s+ng-model="\$ctrl\.timeMode"\s+ng-value="option\.value"/u);
+        assert.match(template, /ng-if="\$ctrl\.timeModeView\.hasUntimedPhases"> \{\{ 'launch_wizard_time_untimed_note' \| translate \}\}/u);
+    });
+});
+
 describe("launch step, description", () => {
     it("offers the previous descriptions and fills the field with one", async () => {
         const { vm } = createStep({
@@ -182,7 +249,8 @@ describe("launch step, launch", () => {
         assert.equal(vm.canLaunch(), false, "disabled while launching");
         await launching;
 
-        assert.deepEqual(calls.created, [[DESIGN, "Sección 3", { aiServices: undefined }]]);
+        assert.deepEqual(calls.created,
+            [[DESIGN, "Sección 3", { aiServices: undefined, timeMode: undefined }]]);
         assert.deepEqual(calls.locked, [[7, true]]);
         assert.equal(calls.navigated, "/activities/41");
         assert.equal(vm.launching, true, "it stays busy until the dashboard opens");
@@ -195,7 +263,7 @@ describe("launch step, launch", () => {
         vm.refreshAiServices();
 
         await vm.launch();
-        assert.deepEqual(calls.created[0][2], { aiServices: false });
+        assert.deepEqual(calls.created[0][2], { aiServices: false, timeMode: undefined });
     });
 
     it("does not toggle the local lock of a design already locked", async () => {

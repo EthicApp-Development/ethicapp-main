@@ -1,3 +1,5 @@
+import { phaseDurationErrors } from "./phase-duration.js";
+
 const MIN_JUSTIFICATION_WORDS = 5;
 
 function hasText(value) {
@@ -12,6 +14,7 @@ function ensurePhaseErrors(validationErrors, phaseNumber) {
             items:             {},
             groupingConfig:    [],
             phaseInstructions: [],
+            duration:          [],
             other:             [],
         };
     }
@@ -116,6 +119,17 @@ function validatePhaseInstructions(phase, phaseNumber, validationErrors) {
     phaseErrors.phaseInstructions = ["error_phase_instructions_required"];
 }
 
+// A phase's duration (#1107): whole minutes from 1 to 180 when it has one.
+function validatePhaseDuration(phase, phaseNumber, validationErrors) {
+    const messages = phaseDurationErrors(phase);
+    if (messages.length === 0) {
+        return;
+    }
+
+    const phaseErrors = ensurePhaseErrors(validationErrors, phaseNumber);
+    phaseErrors.duration = messages;
+}
+
 function validateGroupingConfig(design, phase, phaseIndex, validationErrors) {
     if (phase?.mode !== "team") {
         return;
@@ -156,9 +170,11 @@ export const isPhaseValid = function(phaseErrors) {
     const groupConfigValid = !phaseErrors.groupingConfig || phaseErrors.groupingConfig.length === 0;
     const instructionsConfigValid = !phaseErrors.phaseInstructions
         || phaseErrors.phaseInstructions.length === 0;
+    const durationValid = !phaseErrors.duration || phaseErrors.duration.length === 0;
     const otherConfigValid = !phaseErrors.other || phaseErrors.other.length === 0;
 
-    return itemsValid && groupConfigValid && instructionsConfigValid && otherConfigValid;
+    return itemsValid && groupConfigValid && instructionsConfigValid && durationValid
+        && otherConfigValid;
 };
 
 export const isValidationErrorStateValid = function(validationErrors) {
@@ -181,6 +197,7 @@ export const validateDesign = function(design) {
 
             validatePhaseItems(designType, phase, phaseNumber, validationErrors);
             validatePhaseInstructions(phase, phaseNumber, validationErrors);
+            validatePhaseDuration(phase, phaseNumber, validationErrors);
             validateGroupingConfig(design, phase, index, validationErrors);
             cleanupPhaseErrors(validationErrors, phaseNumber);
         });

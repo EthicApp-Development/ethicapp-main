@@ -24,6 +24,7 @@
 //   or missing.
 
 import { sessionAiServicesEnabled } from "./session-ai-services.js";
+import { sessionTimeMode } from "./session-time-mode.js";
 
 // The role of students in `users.role`.
 const STUDENT_ROLE = "A";
@@ -49,6 +50,7 @@ export const TEACHER_ACTIVITIES_SQL = `
         designs.id AS "designId",
         designs.design -> 'metainfo' ->> 'title' AS "designTitle",
         sessions.ai_services_enabled,
+        sessions.time_mode,
         sessions.finished_at AS "finishedAt",
         associated_case.id AS "caseId",
         associated_case.title AS "caseTitle",
@@ -160,6 +162,7 @@ export function teacherActivityListItem(row) {
         phaseCount:        countOf(row.phaseCount),
         participantCount:  countOf(row.participantCount),
         aiServicesEnabled: sessionAiServicesEnabled(row),
+        timeMode:          sessionTimeMode(row),
         finishedAt:        row.finishedAt ?? null,
         ...activityCaseOf(row),
     };
