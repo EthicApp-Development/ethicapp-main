@@ -36,6 +36,7 @@
                 <span ng-if="phase.isTeam && !phase.groupSize">{{ 'activity_bar_phase_mode_team' | translate }}</span>
                 <span ng-if="phase.chat"> &middot; {{ 'launch_wizard_phase_chat' | translate }}</span>
                 &middot; {{ phase.questionCountKey | translate:{ count: phase.questionCount } }}
+                <span ng-if="phase.durationMinutes"> &middot; <span class="text-nowrap">{{ 'phase_duration_minutes' | translate:{ minutes: phase.durationMinutes } }}</span></span>
                 <span class="launch-design-phase-service" ng-repeat="service in phase.services track by service.id">
                     <span aria-hidden="true">&#10022;</span>
                     {{ service.name || ('service_summary_unnamed_service' | translate) }}

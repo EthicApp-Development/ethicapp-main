@@ -10,6 +10,7 @@ import {
     phaseDurationSwitch,
     plannedDesignDuration,
     plannedDesignDurationText,
+    plannedDurationListText,
     setPhaseDurationEnabled,
 } from "../phase-duration.js";
 
@@ -122,5 +123,29 @@ describe("plannedDesignDuration and plannedDesignDurationText (#1107)", () => {
         });
         assert.equal(plannedDesignDurationText([{}, {}]), null);
         assert.equal(plannedDesignDurationText([]), null);
+    });
+});
+
+describe("plannedDurationListText (#1107)", () => {
+    it("gives the total alone when every phase has a duration", () => {
+        const phases = [{ durationMinutes: 10 }, { durationMinutes: 25 }];
+        assert.deepEqual(plannedDurationListText(phases),
+            { key: "phase_duration_minutes", values: { minutes: 35 } });
+        assert.deepEqual(plannedDurationListText([{ durationMinutes: 5 }]),
+            { key: "phase_duration_minutes", values: { minutes: 5 } });
+    });
+
+    it("says how many phases the total covers when some have none", () => {
+        const phases = [{ durationMinutes: 10 }, {}, { durationMinutes: 20 }];
+        assert.deepEqual(plannedDurationListText(phases), {
+            key:    "design_planned_duration_summary",
+            values: { minutes: 30, timed: 2, total: 3 },
+        });
+    });
+
+    it("gives nothing without valid durations", () => {
+        assert.equal(plannedDurationListText([{}, { durationMinutes: 0 }]), null);
+        assert.equal(plannedDurationListText([]), null);
+        assert.equal(plannedDurationListText(undefined), null);
     });
 });

@@ -94,6 +94,7 @@
                     <td class="designs-cell designs-cell-design">
                         <a class="designs-row-title" ng-href="#!/designs/{{ row.id }}">{{ row.title }}</a>
                         <span class="designs-row-meta">{{ row.phaseCountKey | translate:{ count: row.phaseCount } }} &middot; <span
+                            ng-if="row.plannedDuration">{{ row.plannedDuration.key | translate:row.plannedDuration.values }} &middot; </span><span
                             ng-if="row.caseTitle">{{ 'launch_wizard_case_label' | translate }} {{ row.caseTitle }}</span><span
                             ng-if="!row.caseTitle">{{ 'designs_no_case' | translate }}</span></span>
                     </td>
@@ -218,6 +219,7 @@
                     <td class="designs-cell designs-cell-design">
                         <a class="designs-row-title" ng-href="#!/designs/{{ row.id }}">{{ row.title }}</a>
                         <span class="designs-row-meta">{{ row.phaseCountKey | translate:{ count: row.phaseCount } }} &middot; <span
+                            ng-if="row.plannedDuration">{{ row.plannedDuration.key | translate:row.plannedDuration.values }} &middot; </span><span
                             ng-if="row.caseTitle">{{ 'launch_wizard_case_label' | translate }} {{ row.caseTitle }}</span><span
                             ng-if="!row.caseTitle">{{ 'designs_no_case' | translate }}</span></span>
                     </td>
