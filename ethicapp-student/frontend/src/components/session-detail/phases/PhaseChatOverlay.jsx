@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { legacyUserApi } from '../../../api/studentApi.js';
+import { useComposingNotices } from '../../../pages/session-detail/hooks/useComposingNotices.js';
+import { useComposingSignal } from '../../../pages/session-detail/hooks/useComposingSignal.js';
 import AtsFeedbackBubble from './AtsFeedbackBubble.jsx';
+import ChatComposingNotice from './ChatComposingNotice.jsx';
 import { chatMessageAuthorName } from '../../../utils/chatMessageAuthor.js';
 import { isPhaseAnonymous } from '../../../utils/phaseAnonymity.js';
 
@@ -130,7 +133,7 @@ function summarizeMessageForReply(message) {
   return typeof message?.content === 'string' ? message.content : '';
 }
 
-export default function PhaseChatOverlay({ isOpen, onClose, onHeightChange, phase, chatRefreshToken, userId, readOnly = false, t }) {
+export default function PhaseChatOverlay({ isOpen, onClose, onHeightChange, phase, chatRefreshToken, userId, readOnly = false, chatSocket = null, t }) {
   const [heightPx, setHeightPx] = useState(DEFAULT_HEIGHT_PX);
   const [messages, setMessages] = useState([]);
   const [draftMessage, setDraftMessage] = useState('');
@@ -180,17 +183,41 @@ export default function PhaseChatOverlay({ isOpen, onClose, onHeightChange, phas
     return Number(orderedTasks[0]?.id);
   }, [phase]);
 
+  // Tells the group that the student is writing (#656): only that the
+  // draft changed, never what it holds, and only while the composer is
+  // shown and the socket is connected.
+  const composingSignal = useComposingSignal({
+    socket: chatSocket,
+    phaseId: phase?.id,
+    questionId: fallbackQuestionId,
+    groupId,
+    enabled: isOpen && !readOnly
+  });
+
+  // Shows who else is writing (#1007), from the group's notices.
+  const composingNotices = useComposingNotices({
+    socket: chatSocket,
+    phaseId: phase?.id,
+    groupId,
+    questionId: fallbackQuestionId,
+    userId,
+    enabled: isOpen && !readOnly
+  });
+
   const loadMessages = async () => {
     if (!Number.isInteger(groupId) || groupId <= 0 || !Number.isInteger(fallbackQuestionId) || fallbackQuestionId <= 0) {
       return;
     }
 
     setLoading(true);
+    const requestedAt = composingNotices.transcriptRequested();
 
     try {
       const { data } = await legacyUserApi.get(`/groups/${groupId}/question/${fallbackQuestionId}/chat_messages`);
       const chatTranscript = Array.isArray(data?.chat_transcript) ? data.chat_transcript : [];
-      setMessages(chatTranscript.map(normalizeMessage).filter((message) => message.content.length > 0));
+      const loadedMessages = chatTranscript.map(normalizeMessage);
+      setMessages(loadedMessages.filter((message) => message.content.length > 0));
+      composingNotices.transcriptLoaded(loadedMessages, { groupId, questionId: fallbackQuestionId, requestedAt });
       setReplyToMessageId((currentReplyToMessageId) => (
         Number.isInteger(currentReplyToMessageId) && chatTranscript.some((message) => Number(message?.id ?? message?.msgid ?? message?.mid) === currentReplyToMessageId)
           ? currentReplyToMessageId
@@ -263,6 +290,7 @@ export default function PhaseChatOverlay({ isOpen, onClose, onHeightChange, phas
       return;
     }
 
+    composingSignal.stopped();
     setSending(true);
     try {
       await legacyUserApi.post(`/phases/${phase.id}/question/${fallbackQuestionId}/chat_messages`, {
@@ -354,6 +382,7 @@ export default function PhaseChatOverlay({ isOpen, onClose, onHeightChange, phas
             );
           })}
         </div>
+        <ChatComposingNotice writers={composingNotices.writers} t={t} />
         {errorMessage ? <div className="alert alert-danger rounded-0 py-1 px-2 mb-0">{errorMessage}</div> : null}
         <div className="border-top p-2">
           {readOnly ? (
@@ -374,7 +403,11 @@ export default function PhaseChatOverlay({ isOpen, onClose, onHeightChange, phas
               <input
                 className="form-control"
                 value={draftMessage}
-                onChange={(event) => setDraftMessage(event.target.value)}
+                onChange={(event) => {
+                  setDraftMessage(event.target.value);
+                  composingSignal.edited();
+                }}
+                onBlur={composingSignal.stopped}
                 onKeyDown={(event) => {
                   if (event.key === 'Enter' && !event.shiftKey) {
                     event.preventDefault();

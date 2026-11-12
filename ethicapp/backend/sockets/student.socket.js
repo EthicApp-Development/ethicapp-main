@@ -1,3 +1,6 @@
+import { CHAT_COMPOSING_NOTICE_EVENT } from "../helpers/composing-signal.js";
+import { createParticipantActivityForwarder } from "../helpers/participant-activity-helper.js";
+import { registerChatComposing } from "./chat-composing.js";
 import { registerGuardedRoom } from "./guarded-rooms.js";
 import { roomAccess } from "./socket-room-access.js";
 
@@ -6,10 +9,32 @@ import { roomAccess } from "./socket-room-access.js";
  * (requireSocketRole) has already stored the student's id in socket.data.
  * Rooms are joined only after a server-side participation check; the
  * personal room is always the caller's own.
+ *
+ * `composing` replaces the dependencies of the `chatComposing` handler
+ * (sockets/chat-composing.js) in tests; `participantActivity` is the AI
+ * services' forwarder, whose coalescing state all of the namespace's sockets
+ * share.
  */
-export function createStudentSocketInit({ access = roomAccess, logger = console } = {}) {
+export function createStudentSocketInit({
+    access = roomAccess,
+    logger = console,
+    participantActivity = createParticipantActivityForwarder({ logger }),
+    composing = {},
+} = {}) {
     return (socket) => {
         const { uid } = socket.data;
+
+        // A participant's composing signal: the group's other members get the
+        // notice, and the phase's AI services the coalesced activity.
+        registerChatComposing(socket, {
+            role:       "A",
+            emitNotice: (groupId, notice) => {
+                socket.to(`group-${groupId}`).emit(CHAT_COMPOSING_NOTICE_EVENT, notice);
+            },
+            activity: participantActivity,
+            logger,
+            ...composing,
+        });
 
         registerGuardedRoom(socket, {
             joinEvent:  "joinSession",
@@ -72,11 +97,31 @@ const studentSocketInit = createStudentSocketInit();
  * Room `group-<groupId>`, joined with `joinGroup` by the group's members:
  *
  * - `onChatMessage`, without a payload: the group's chat has a new message.
+ * - `onChatComposing` `{ groupId, questionId, userId, role, name, kind }`
+ *   (epic #601, #654; sent by sockets/chat-composing.js since #655, and for
+ *   the teacher since #1200): a member (`role` "A") or the activity's teacher
+ *   (`role` "P") started (`kind` "composing") or stopped ("stopped") writing
+ *   in the group's chat. Sent to every member but the writer's socket (the
+ *   teacher writes from /teacher, so every member gets theirs), and as
+ *   "stopped" when the writer's socket disconnects while composing. `name` comes from
+ *   helpers/chat-author-label.js and is never a real name in an anonymous
+ *   phase; null means the client shows its translated label. A client drops
+ *   "composing" after COMPOSING_NOTICE_TTL_MS without a newer notice.
  *
  * Room `user-<userId>`, the student's own, joined with `joinUser`:
  *
  * - `onExternalServiceResult`: a result an external service published to the
  *   student.
+ *
+ * Client -> server events, besides joining and leaving rooms:
+ *
+ * - `chatComposing` `{ phaseId, questionId, groupId, kind }` (epic #601,
+ *   #654; handled by sockets/chat-composing.js since #655): the student
+ *   started ("composing") or stopped ("stopped") writing in their group's
+ *   chat. A payload with any other field
+ *   is dropped and the writer is always `socket.data.uid`. Names, fields and
+ *   timing are in helpers/composing-signal.js; EXTERNAL.md, "Composing
+ *   signal", describes the checks and the rate limit.
  */
 const toStudentsNotifications = (socketNamespace) => {
     return {

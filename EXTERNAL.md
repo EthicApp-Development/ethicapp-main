@@ -516,6 +516,9 @@ Current event hooks:
   `in_progress` (its first phase), so adapters can run any preparation/warm-up.
   It does not fire on ordinary phase-to-phase advances. Resolved against the
   services enabled for the phase being entered.
+- `participant-activity`: an ephemeral hook (epic #601, #654), dispatched
+  with `dispatchEphemeralHook()` while a participant writes in a group chat,
+  without jobs or callbacks (see "Composing signal").
 - `activity-finished`: dispatched when the teacher finishes an activity, so
   adapters can run any required cleanup (close rooms, release provider sessions,
   flush state). Resolved against the **union of services enabled across all
@@ -672,6 +675,116 @@ student are left out.
 
 The contract and the reader are described in
 `ethicapp/backend/external-services/README.md`, "Student results reading".
+
+### Composing signal
+
+The composing signal (epic #601, #654) tells a group that one of its members
+or the activity's teacher is writing in its chat, and tells the chat's AI
+services that a participant is still writing. It never carries draft text,
+keys or input length, and it creates no job, chat message, database record or
+callback. The server's names and timing are in
+`ethicapp/backend/helpers/composing-signal.js`; ethicapp-student keeps its own
+copy of the client timing.
+
+Delivery is split across sub-issues of epic #601. #654 defines the contract
+below, the author label helper and the ephemeral hook; the socket handlers
+(#655, #1200), the clients (#656, #1007, #1200) and the Polyadic bridge
+(#657) implement it.
+
+**Socket event, client to server.** `chatComposing` on `/student` from the
+group's members (#655), and on `/teacher` from the activity's teacher
+(#1200):
+
+| Event | Payload |
+| --- | --- |
+| `chatComposing` | `{ phaseId, questionId, groupId, kind }`, with `kind` `"composing"` or `"stopped"` |
+
+The server drops a payload with any other field and takes the writer from
+`socket.data.uid`. On every signal, without caching, it checks that the
+writer is a member of the group (or owns its session, for the teacher), that
+the group belongs to the phase, and that the chat accepts messages: the
+phase has chat, is the session's current phase and the session is in
+progress, the rule of `POST /phases/:id/question/:question_id/chat_messages`.
+A phase started by the deadline runner (#1105) closes the previous phase's
+chat for the next signal. Each socket may send 20 signals per minute
+(`helpers/sliding-window-throttle.js`); signals over the limit are dropped
+silently.
+
+**Group notice, server to clients.** `onChatComposing` to the room
+`group-<groupId>` on `/student`, to every member but the writer:
+
+| Event | Payload |
+| --- | --- |
+| `onChatComposing` | `{ groupId, questionId, userId, role, name, kind }` |
+
+- `role` is `"A"` for a participant and `"P"` for the activity's teacher.
+- `name` is resolved on the server by `chatAuthorLabel()`
+  (`ethicapp/backend/helpers/chat-author-label.js`), with the rule of the
+  student app's chat: the participant's first and last name (or their
+  `name`), their `anon_mask` in an anonymous phase, or `null` when the
+  client shows a translated label (the teacher, or an anonymous participant
+  without a mask). A notice never carries a real name in an anonymous phase.
+- A participant's notice leaves from the writer's socket, which does not
+  receive it. Another socket of the writer, such as a second tab, does; a
+  client ignores a notice whose `userId` is its own user.
+- The teacher's notice is sent from `/teacher` to the group's room on
+  `/student`, with `role` `"P"` and `name` `null`, so every member gets it
+  and the teacher's sockets do not. The teacher's handler is the
+  participants' one (`sockets/chat-composing.js`) with the access rule for
+  the session's creator and no AI services forwarder.
+- When the writer's socket disconnects while composing, the group gets
+  `stopped` for each chat they were composing in.
+- A client shows `composing` for 10 s unless a newer notice arrives, and
+  clears it at once on `stopped`. The activity's teacher's interface shows
+  no indicator.
+
+**Client timing,** the same for both clients:
+
+- `composing` on the first edit, and again at most every 5 s while edits
+  continue;
+- `stopped` once on submit, blur, 8 s without edits, navigation or unmount,
+  and only after a `composing`.
+
+A client therefore sends at most 13 signals per minute. Without a working
+socket the student app polls, and no notice can reach it. The legacy teacher
+chat keeps this timing in
+`ethicapp/frontend/assets/js/helpers/composing-signal.js`, a plain ES module
+the teacher frontend of #904 can reuse, and sends nothing while the teacher
+socket is disconnected.
+
+**AI services.** Participants' signals, coalesced per participant, group and
+question to the first `composing`, then at most one every 12 s, and a
+`stopped` only once after a forwarded `composing`, reach the
+`participant-activity` hook through `registry.dispatchEphemeralHook()`.
+Its audience is the services subscribed to the hook among those the phase
+enables (none when the activity was launched with its AI services off) that
+the session's pinned policy version allows, with a usable AI Additions
+connection. Each handler receives `{ kind, sessionId, phaseId, questionId,
+groupId, userId, receivedAt, ttlSeconds, serviceId }`, where `receivedAt` is
+the server's receipt time and `ttlSeconds` defaults to 30. A receiver counts
+the participant as active until `ttlSeconds` after the last `composing`,
+never past `max(receivedAt) + ttlSeconds`, treats `stopped` as advisory,
+and uses the signal only for its room-level inactivity. The teacher's
+signals never reach the hook. The contract is described in
+`ethicapp/backend/external-services/README.md`, "Ephemeral hooks".
+
+**Polyadic.** The Polyadic bridge (#657) declares the hook and sends each
+signal to the running room of its group,
+`POST /polyadic-agent/api/rooms/{room}/sessions/active/activity` (the route
+of ethicapp-ai-additions#177), with
+`{ kind, received_at, ttl_seconds, participant_id }` and nothing else. It
+calls only rooms it created in this process and finished creating, so
+activity never opens a room, and uses a 3 s timeout. A `404` means the room
+is not running; other failures are logged at debug level without content
+and swallowed. ConversationGuide then holds back its room-level inactivity
+prompts while a participant is still writing. The details are in
+`ethicapp/backend/external-services/README.md`, "Ephemeral hooks".
+
+**Single instance.** The notice reaches only the clients connected to the
+same ethicapp instance, and the coalescing and the rate limit are kept in
+memory. A deployment with several web instances would need a Socket.IO Redis
+adapter, like the other single-instance assumptions of the phase deadline
+runner and the Polyadic bridge.
 
 ## External Result Callback
 

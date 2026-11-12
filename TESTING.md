@@ -154,7 +154,13 @@ Current guardrail coverage includes:
 - The phase clock in Polyadic rooms (#1178, epic #1105): in `ethicapp/backend`, the `phase_clock` built from the activity's clock (the phase's length and the time left, extensions included, a negative time left after the deadline in soft mode and on a hard-mode last phase, whole seconds, Polyadic's bounds, and no clock for an untimed activity, a phase without a duration, a finished activity or a phase that is no longer current); the room creation payload, with fake AI Additions, descriptor and clock reads (no clock for an untimed phase or against a descriptor without `session_inputs.phase_clock`, the clock read right before each room's request, a room created late by a chat message, the retry without configured settings, a failed clock read or descriptor check that creates the room untimed, and a `phase_clock` in the stored configuration that is never sent); the `phase-clock-changed` handler (every room of the phase, one failing room that leaves the others, rooms without a running session, a phase without groups, an older descriptor, a phase that moved on, and a room still being created); the descriptor's `session_inputs` and the registry's `declaresSessionInput`; and the extension route, which dispatches the hook only after a change and answers without waiting for it or failing with it. The clock is read with `PHASE_CLOCK_SQL`, which the phase clock integration suite covers; no SQL was added.
 - Hiding students' names on the dashboard (#897): in `ethicapp/backend`, the assignment of pseudonym numbers with a fake database (the range switch, draws that follow neither the join order nor a sequence, a late joiner, numbers held by former participants, a collision retried, giving up after ten rounds) and the owner-only reads `GET /sessions/:id/pseudonyms` and `GET /phases/:id/groups` with each member's letter (student, another teacher, an anonymized owner, a super-admin who is not impersonating, the owner, an administrator impersonating the owner, unknown ids); in `management-console/backend`, the new user reference.
 - Setting a user's password (#889): in `auth-backend`, the password policy module, the public policy endpoint, the policy on every route that sets a password, and the internal endpoint (internal service token, role, validation, target refusals, transaction order, no password in responses or logs), and the recovery route's refusal of a link revoked while the password was hashed; in `management-console/backend`, the route (step-up, refusals passed through, audit rows) and the auth-backend client; in `management-console/frontend`, the dialog.
+- The composing signal contract (#654, epic #601): in `ethicapp/backend`, its names and timing (`helpers/composing-signal.js`); the chat author label (the full name, the name, the mask in an anonymous phase, null for the teacher and for an anonymous participant without a mask, no real name in an anonymous phase, and the member read with a fake query); the catalog's acceptance of `participant-activity` and the refusal of a handler whose catalog entry does not list it; and `dispatchEphemeralHook()` with a jobs-service fake (only subscribed, requested services that the policy gate allows, no job, job id or callback, only the contract's context fields, a failing handler isolated and logged without its message, the hooks and contexts it rejects), and the refusal of `participant-activity` by `dispatchHook()`.
 - Creating an account (#1170): in `auth-backend`, the new account fields shared with sign-up, the internal endpoint (internal service token, role, validation in order, the insert, the duplicate email, the administrator's language for messages and the account's for the email, the best-effort welcome email, no password in responses or logs) and the welcome email in both locales; in `management-console/backend`, the route (privacy notice confirmation, step-up, refusals passed through, audit rows with the role and a failed welcome email) and the auth-backend client; in `management-console/frontend`, the password generator, the form rules, the error messages, the page and the notice on the new account's page.
+- Receiving the composing signal on the student socket (#655, epic #601): in `ethicapp/backend`, the group chat access rules shared with the chat routes, with a fake query (membership, the teacher, a group of another phase, a question of another phase, a chat that is closed, not current or of an activity not in progress); the payload check (extra fields such as `content`, `text` and `length`, missing fields, ids, kinds), the per-socket rate limit and the notice; the coalescing with a fake clock (one `composing` every 12 s per participant, group and question, `stopped` once after a forwarded `composing`, expiry and sweep) and the forwarder (the contract's fields, no dispatch without services, failures logged with ids only); and the handler with a fake socket, a fake database query and a fake registry (who may signal, a chat closed by an automatic advance, the notice from the writer's socket to its group, the mask in an anonymous phase, order, the `stopped` on disconnect, the 21st signal of a minute, read-only statements, and only enabled, subscribed, allowed services through `dispatchEphemeralHook()` with no job), plus the notice through a real `/student` namespace.
+- Sending composing signals from the student chat (#656, epic #601): in `ethicapp-student/frontend`, run with `npm test` on the host, the timing controller with a fake clock and a fake socket (the first edit, one `composing` per interval however many keypresses, at most 13 signals in any minute of typing, `stopped` once after the idle time, on blur or submit, on a group, phase or question change, when the chat stops accepting messages and on unmount, never without a `composing` before it, no timer left after unmount, nothing for a read-only chat, without a socket or with a disconnected one, an emit that throws, and payloads with only the target and the kind), and the mirror of the contract's names and timing against `ethicapp/backend/helpers/composing-signal.js`.
+- The teacher's composing signal (#1200, epic #601): in `ethicapp/backend`, the `/teacher` handler with a fake socket and a fake database query (the activity's teacher, a teacher who does not own the activity, a group of another activity or phase, a chat that is closed, not current or of an activity not in progress, the notice to the group's room on `/student` with `role` `"P"` and `name` null and never to `/teacher`, no AI services forwarder even when one is passed, only the access read and no write, extra fields dropped, the 21st signal of a minute, the `stopped` on disconnect), plus the notice from a real `/teacher` socket to the group's members on `/student`; in `ethicapp/frontend`, the timing helper with a fake clock and fake timers (the same cases as the student chat's, and its copy of the contract's names and timing against the server's), the teacher socket service's connection state, and the chat component's wiring (edits, blur, submit, a group, question or read-only change, destroy, a disconnected or failing socket, no listener for the notice, and the templates' bindings).
+- Showing who is typing in the student chat (#1007, epic #601): in `ethicapp-student/frontend`, run with `npm test` on the host, the notices controller with a fake clock (a writer kept one TTL after their last `composing` and extended without a new report, `stopped` at once, start order, the student's own notices from another tab, other groups and questions, malformed notices, a change of group, phase or question, the chat closing and a reconnect forgetting every writer, a new message in the reloaded transcript removing its author unless a newer `composing` arrived meanwhile, the first transcript only recording, transcripts of another chat ignored, no timer left after dispose), and the wording in both locales (one or two writers named, several people from three, the teacher's and the anonymous labels for a notice without a name, the mask, and the Spanish "e" before a name that starts with the sound /i/).
+- Forwarding participant activity to Polyadic (#657, epic #601): in `ethicapp/backend`, the bridge's `participant-activity` handler with a fake AI Additions client (one `POST /rooms/{room}/sessions/active/activity` for a room created by `phase-started` or by a chat message, with only `kind`, `received_at` in UTC, `ttl_seconds` and `participant_id` and a 3 s timeout; no request for an unknown group, phase or session or for a room still being created; a `404`, a `500`, a timeout and a connection error that never escape, logged without content; no callback, report or published message), the request body builder, and the shipped catalog, where only the bridge declares and subscribes to the hook.
 
 The broader integration regression layer is not yet consistently implemented; `ethicapp/backend` has a first suite (section 1.2). Until it exists for a touched area, changes that rely on real database behavior should be manually verified against the local Docker Compose stack and should document that limitation in PR verification notes.
 
@@ -203,3 +209,48 @@ For browser verification through the Compose stack:
    Check that this explicit action opens the chosen session.
 4. Open `/student/?join=<valid-code>`. Check that the old query parameter does
    not prefill or automatically submit the join form.
+
+## 8. Composing Signal Smoke Check
+
+The composing signal (epic #601) crosses the student and teacher apps, the
+`/student` and `/teacher` sockets, the external-services registry and the
+Polyadic room-activity route. Its guardrail tests use fakes; this check runs it
+on the Compose stack with the AI Additions stack, before a release that
+changes any of these parts.
+
+Use an activity with a team chat phase and the Polyadic devil's advocate
+enabled, three participants in one group (A, B, C) and the activity's teacher.
+Watch the `pa-backend` log for `POST /api/rooms/<room>/sessions/active/activity`.
+
+1. A types without sending. B sees "A está escribiendo…" within a second;
+   the notice goes away when A sends, at once, or 8 s after A stops. Polyadic
+   logs a `202` for A's room about every 12 s while A types, and no `422`.
+2. The teacher types in the group's chat from the activity dashboard. A and B
+   see "Docente está escribiendo…"; the teacher's interface shows no
+   indicator; Polyadic logs nothing for the teacher's typing.
+3. In an anonymous phase, B's notice shows A's mask or "Integrante anónimo",
+   and the `onChatComposing` frames B receives carry no real name.
+4. A types for longer than the room's inactivity threshold (75 s) without
+   sending. Polyadic makes no inactivity intervention while A types.
+5. A stops. An intervention follows about `ttlSeconds` (30 s) plus the
+   threshold later.
+6. In hard mode, the phase deadline passes while A types. B's notice goes
+   away, A's client sends nothing more for the closed phase, a
+   `chatComposing` for the closed phase sent straight to the socket produces
+   no notice, and Polyadic logs nothing for the closed phase's room.
+7. In an activity launched with its AI services off, the notice works and
+   Polyadic logs nothing for its rooms. The student app shows no errors.
+
+Privacy: type a unique marker without sending it, then check that no
+WebSocket frame, no `ethicapp` or `pa-backend` log line and no request body
+contains it, that `external_service_jobs` holds no `participant-activity`
+job, and that the activity's chat holds no message from a participant.
+
+Residual risks:
+
+- One `ethicapp` web process only: the notice, the coalescing and the rate
+  limit do not cross processes (see `EXTERNAL.md`, "Composing signal").
+- Polyadic accepts activity for any participant id of a client's room; it
+  keeps no room membership (ethicapp-ai-additions#264).
+- Each signal reads the database twice, for the access check and the author
+  label. The per-socket rate limit of 20 signals per minute bounds it.

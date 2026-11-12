@@ -38,6 +38,11 @@ export const REPORT_COLUMN_PREFIX_PATTERN = /^[a-z][a-z0-9]*_$/u;
 // declaration.
 export const STUDENT_RESULTS_READING_HOOK = "student-results-reading";
 
+// The ephemeral hook through which adapters learn that a participant is
+// writing in a group chat (epic #601, #654). An adapter that subscribes to it
+// lists it in `hooks`, like any other hook; it needs no other declaration.
+export const PARTICIPANT_ACTIVITY_HOOK = "participant-activity";
+
 // Keys the catalog no longer accepts, with the reason given to whoever adds one.
 const REMOVED_KEYS = Object.freeze({
     enabled: "is removed (#812): adapters are listed, not enabled; usability is decided at dispatch",

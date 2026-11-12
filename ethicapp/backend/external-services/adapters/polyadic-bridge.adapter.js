@@ -10,6 +10,8 @@ import { TIME_MODES } from "../../helpers/session-time-mode.js";
 import {
     MAX_CONTRIBUTION_STRING_LENGTH,
 } from "../../services/external-service-report-contributions.js";
+import { PARTICIPANT_ACTIVITY_HOOK } from "../catalog.js";
+import { sendRoomActivity } from "./polyadic-bridge.activity.js";
 
 // The Polyadic Agents API under the AI Additions connection's base URL (#814).
 export const POLYADIC_API_BASE_PATH = "/polyadic-agent/api";
@@ -462,7 +464,8 @@ export async function erasePolyadicParticipant(userId) {
     };
 }
 
-async function requestPolyadicJson(pathname, { method = "GET", body = null } = {}) {
+// `timeoutMs` replaces the client's default timeout (12 s) for one request.
+async function requestPolyadicJson(pathname, { method = "GET", body = null, timeoutMs } = {}) {
     return aiAdditionsClient.requestJson(pathname, {
         method,
         body,
@@ -470,6 +473,7 @@ async function requestPolyadicJson(pathname, { method = "GET", body = null } = {
         // Unauthenticated calls still need the connection: without one the
         // client rejects with `not_configured` before any request.
         authenticated: isPolyadicAuthenticated(),
+        ...(timeoutMs === undefined ? {} : { timeoutMs }),
     });
 }
 
@@ -1370,6 +1374,32 @@ export async function register({
             roomsFailed:     count("failed"),
             rooms,
         });
+    });
+
+    // A participant is writing in the group's chat (epic #601, #657): an
+    // ephemeral hook, so the handler receives its context only and reports
+    // nothing. The signal goes only to a room the bridge already knows and
+    // has finished creating; activity alone never opens a room, and a room
+    // still being created is skipped, not awaited. After a restart the bridge
+    // knows no room until the group's next message, which remains the
+    // baseline activity. A 404 means the room is not running; any other
+    // failure, a timeout included, is logged at debug level without content
+    // and swallowed.
+    subscribe(PARTICIPANT_ACTIVITY_HOOK, async context => {
+        const { sessionId, phaseId, groupId } = context;
+        const roomName = getRoomName(sessionId, phaseId, groupId);
+        if (roomCreations.has(roomName)
+            || !phaseRooms.get(getPhaseRoomsKey(sessionId, phaseId))?.has(roomName)) {
+            return;
+        }
+
+        try {
+            await sendRoomActivity(requestPolyadicJson, roomName, context);
+        } catch (error) {
+            const { name, code, statusCode } = describeError(error);
+            console.debug(`[polyadic-bridge] Could not send participant activity to ${roomName}.`,
+                { name, code, statusCode });
+        }
     });
 
     // An administrator forgot the user (#876). Dispatched by the erasure

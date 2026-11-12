@@ -1,13 +1,11 @@
 "use strict";
 
 import express from "express";
-import * as config from "../config/database.config.js";
-import * as rpg2 from "../db/rest-pg-2.js";
 import { getDesignTypeByPhaseId } from "../helpers/designs-helper.js";
 import { dispatchPhaseHook } from "../helpers/external-service-dispatch.js";
+import { resolveGroupChatAccessContext } from "../helpers/group-chat-access.js";
 import { describeError } from "../helpers/log-safety.js";
 import { JOB_SOURCE_KIND } from "../services/external-service-jobs.service.js";
-import { getStatusCode } from "../../common/modules/session-status.js";
 import { messageCountHandlers,
     chatTranscriptHandlers,
     saveChatMessage } from "../helpers/chat-helper.js";
@@ -232,73 +230,6 @@ async function dispatchIncomingChatMessageHook(context) {
         console.error("[external-services] Error dispatching incoming chat message hook.",
             describeError(error));
     }
-}
-
-async function resolveGroupChatAccessContext({ groupId, phaseId = null, questionId, userId, role }) {
-    const rows = await rpg2.execSQL({
-        sql: `
-            SELECT t.id AS group_id,
-                   t.stageid AS phase_id,
-                   s.id AS session_id,
-                   s.creator,
-                   s.current_stage,
-                   s.status,
-                   st.chat,
-                   EXISTS (
-                       SELECT 1
-                       FROM teamusers AS tu
-                       WHERE tu.tmid = t.id
-                         AND tu.uid = $4
-                   ) AS is_group_member,
-                   EXISTS (
-                       SELECT 1
-                       FROM differential AS d
-                       WHERE d.id = $3
-                         AND d.stageid = t.stageid
-                   ) AS question_belongs_to_phase
-            FROM teams AS t
-            INNER JOIN stages AS st
-                ON st.id = t.stageid
-            INNER JOIN sessions AS s
-                ON s.id = st.sesid
-            WHERE t.id = $1
-              AND ($2::integer IS NULL OR t.stageid = $2)
-            LIMIT 1
-        `,
-        dbcon: config.dbconnString,
-        sqlParams: [
-            Number(groupId),
-            phaseId == null ? null : Number(phaseId),
-            Number(questionId),
-            Number(userId),
-        ],
-    });
-
-    if (rows.length === 0) {
-        return null;
-    }
-
-    const row = rows[0];
-    const designType = await getDesignTypeByPhaseId(row.phase_id);
-    if (designType === "semantic_differential" && !row.question_belongs_to_phase) {
-        return null;
-    }
-
-    const isTeacherOwner = role === "P" && Number(row.creator) === Number(userId);
-    const isStudentMember = role === "A" && row.is_group_member === true;
-    const activeStatus = getStatusCode("in_progress");
-    const isActiveChatPhase = Boolean(row.chat)
-        && Number(row.current_stage) === Number(row.phase_id)
-        && Number(row.status) === Number(activeStatus);
-
-    return {
-        phaseId: Number(row.phase_id),
-        sessionId: Number(row.session_id),
-        groupId: Number(row.group_id),
-        designType,
-        canRead: isTeacherOwner || isStudentMember,
-        canPost: (isTeacherOwner || isStudentMember) && isActiveChatPhase,
-    };
 }
 
 function normalizeChatNotificationPayload(message, role) {

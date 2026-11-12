@@ -10,6 +10,10 @@ import {
     resolvePolyadicLocale,
     resolvePolyadicUsername,
 } from "../polyadic-bridge.adapter.js";
+import { buildRoomActivityBody } from "../polyadic-bridge.activity.js";
+import {
+    normalizeParticipantActivityContext,
+} from "../../../services/external-service-ephemeral-hooks.js";
 
 function createHarness({ dependencies = {}, respond = null } = {}) {
     const subscribers = new Map();
@@ -909,4 +913,230 @@ test("a rejected configuration is retried with the same room correlation id", as
         ["create", "ethicapp-s11-p22-g301", "phase-started"],
         ["open", "room-job-7", { bound: true }],
     ]);
+});
+
+// ─── participant-activity (epic #601, #657) ──────────────────────────────────
+
+const ACTIVITY_ROOM = "ethicapp-s11-p22-g301";
+const ACTIVITY_PATH = `/rooms/${ACTIVITY_ROOM}/sessions/active/activity`;
+
+// The context the registry hands the handler: normalized, frozen, with the
+// service id, and nothing else.
+function activityContext(overrides = {}) {
+    return Object.freeze({
+        ...normalizeParticipantActivityContext({
+            kind:       "composing",
+            sessionId:  11,
+            phaseId:    22,
+            questionId: 701,
+            groupId:    301,
+            userId:     9001,
+            receivedAt: Date.UTC(2026, 10, 12, 15, 4, 5, 123),
+            ...overrides,
+        }),
+        serviceId: "polyadic-devils-advocate",
+    });
+}
+
+// An ephemeral handler receives its context only: no callback, no report.
+async function dispatchActivity(harness, context = activityContext()) {
+    const handler = harness.subscribers.get("participant-activity");
+    assert.equal(typeof handler, "function", "Missing subscriber for participant-activity");
+    return handler(context);
+}
+
+function activityRequests(harness) {
+    return harness.requests.filter(request => request.pathname === ACTIVITY_PATH);
+}
+
+async function withConsole(method, action) {
+    const calls = [];
+    const original = console[method];
+    console[method] = (...args) => calls.push(args);
+    try {
+        await action();
+    } finally {
+        console[method] = original;
+    }
+    return calls;
+}
+
+test("participant-activity: a known room gets one request with the contract fields", async () => {
+    const harness = createHarness({ dependencies: { getTeamIdsForPhase: async () => [301] } });
+    await harness.initialize();
+    await harness.dispatch("phase-started", { sessionId: 11, phaseId: 22 });
+    const before = harness.requests.length;
+    const callbacksBefore = harness.callbacks.length;
+    const reportsBefore = harness.reports.length;
+
+    assert.equal(await dispatchActivity(harness), undefined);
+
+    assert.equal(harness.requests.length, before + 1);
+    const [request] = activityRequests(harness);
+    assert.equal(request.pathname, ACTIVITY_PATH);
+    assert.equal(request.options.method, "POST");
+    assert.equal(request.options.basePath, "/polyadic-agent/api");
+    assert.equal(request.options.authenticated, true);
+    assert.equal(request.options.timeoutMs, 3000);
+    assert.deepEqual(request.options.body, {
+        kind:           "composing",
+        received_at:    "2026-11-12T15:04:05.123Z",
+        ttl_seconds:    30,
+        participant_id: "9001",
+    });
+    assert.equal(harness.callbacks.length, callbacksBefore);
+    assert.equal(harness.reports.length, reportsBefore);
+    assert.equal(harness.publishedMessages.length, 0);
+});
+
+test("participant-activity: a chat message's room is known, and stopped is forwarded", async () => {
+    const harness = createHarness({ dependencies: { getTeamIdsForPhase: async () => [] } });
+    await harness.initialize();
+    await harness.dispatch("chat-message-received", {
+        sessionId: 11, phaseId: 22, questionId: 701, groupId: 301, userId: 9002, content: "Hello",
+    });
+
+    await dispatchActivity(harness, activityContext({ kind: "stopped", ttlSeconds: 45 }));
+
+    assert.deepEqual(activityRequests(harness).map(request => request.options.body), [{
+        kind:           "stopped",
+        received_at:    "2026-11-12T15:04:05.123Z",
+        ttl_seconds:    45,
+        participant_id: "9001",
+    }]);
+    // Other requests keep the client's default timeout.
+    assert.equal(Object.hasOwn(harness.requests[1].options, "timeoutMs"), false);
+});
+
+test("participant-activity: an unknown group, phase or session calls nothing", async () => {
+    const harness = createHarness({ dependencies: { getTeamIdsForPhase: async () => [301] } });
+    await harness.initialize();
+
+    // Before any room exists, as after a restart.
+    await dispatchActivity(harness);
+    assert.equal(harness.requests.length, 0);
+
+    await harness.dispatch("phase-started", { sessionId: 11, phaseId: 22 });
+    const before = harness.requests.length;
+    await dispatchActivity(harness, activityContext({ groupId: 302 }));
+    await dispatchActivity(harness, activityContext({ phaseId: 23 }));
+    await dispatchActivity(harness, activityContext({ sessionId: 12 }));
+
+    assert.equal(harness.requests.length, before);
+    assert.equal(harness.callbacks.length, 1);
+});
+
+test("participant-activity: a room still being created is skipped, not awaited", async () => {
+    let releaseCreation;
+    const creationGate = new Promise(resolve => {
+        releaseCreation = resolve;
+    });
+    const harness = createHarness({
+        dependencies: { getTeamIdsForPhase: async () => [301] },
+        respond:      async (pathname, options) => {
+            if (pathname.endsWith("/sessions") && options.method === "POST") {
+                await creationGate;
+            }
+            return { status: "ok" };
+        },
+    });
+    await harness.initialize();
+
+    const phaseStart = harness.dispatch("phase-started", { sessionId: 11, phaseId: 22 });
+    // Let the creation reach Polyadic.
+    while (harness.requests.length === 0) {
+        await new Promise(resolve => setImmediate(resolve));
+    }
+
+    await dispatchActivity(harness);
+    assert.deepEqual(activityRequests(harness), []);
+
+    releaseCreation();
+    await phaseStart;
+    await dispatchActivity(harness);
+    assert.equal(activityRequests(harness).length, 1);
+});
+
+test("participant-activity: a 404 means the room is not running and raises nothing", async () => {
+    const harness = createHarness({
+        dependencies: { getTeamIdsForPhase: async () => [301] },
+        respond:      pathname => {
+            if (pathname === ACTIVITY_PATH) {
+                throw Object.assign(new Error("HTTP 404"), { statusCode: 404 });
+            }
+            return { status: "ok" };
+        },
+    });
+    await harness.initialize();
+    await harness.dispatch("phase-started", { sessionId: 11, phaseId: 22 });
+    const before = harness.requests.length;
+
+    const debug = await withConsole("debug", () => dispatchActivity(harness));
+
+    // One request, no room re-created, nothing logged.
+    assert.equal(harness.requests.length, before + 1);
+    assert.deepEqual(debug, []);
+});
+
+test("participant-activity: errors and timeouts never escape and log no content", async () => {
+    const failures = [
+        Object.assign(new Error("HTTP 500 request failed: {\"content\":\"draft\"}"), {
+            statusCode:   500,
+            responseBody: { detail: "secret draft" },
+        }),
+        Object.assign(new Error("This operation was aborted"), { name: "AbortError" }),
+        Object.assign(new Error("connect ECONNREFUSED"), { code: "ECONNREFUSED" }),
+    ];
+    let failure = null;
+    const harness = createHarness({
+        dependencies: { getTeamIdsForPhase: async () => [301] },
+        respond:      pathname => {
+            if (pathname === ACTIVITY_PATH) {
+                throw failure;
+            }
+            return { status: "ok" };
+        },
+    });
+    await harness.initialize();
+    await harness.dispatch("phase-started", { sessionId: 11, phaseId: 22 });
+
+    for (const error of failures) {
+        failure = error;
+        const debug = await withConsole("debug", async () => {
+            assert.equal(await dispatchActivity(harness), undefined);
+        });
+
+        assert.equal(debug.length, 1);
+        assert.match(debug[0][0], /ethicapp-s11-p22-g301/);
+        assert.deepEqual(debug[0][1], {
+            name:       error.name,
+            code:       error.code ?? null,
+            statusCode: error.statusCode ?? null,
+        });
+        assert.doesNotMatch(JSON.stringify(debug), /draft|9001/);
+    }
+    assert.equal(activityRequests(harness).length, failures.length);
+});
+
+test("buildRoomActivityBody: only the contract's fields, or null for an invalid context", () => {
+    assert.deepEqual(buildRoomActivityBody({
+        kind:       "composing",
+        userId:     42,
+        receivedAt: "2026-11-12T12:04:05.123-03:00",
+        content:    "draft text",
+        length:     10,
+        groupId:    301,
+    }), {
+        kind:           "composing",
+        received_at:    "2026-11-12T15:04:05.123Z",
+        ttl_seconds:    30,
+        participant_id: "42",
+    });
+    assert.equal(buildRoomActivityBody({ kind: "typing", userId: 42, receivedAt: 0 }), null);
+    assert.equal(buildRoomActivityBody({ kind: "composing", userId: 0, receivedAt: 0 }), null);
+    assert.equal(
+        buildRoomActivityBody({ kind: "composing", userId: 42, receivedAt: "soon" }),
+        null
+    );
+    assert.equal(buildRoomActivityBody(null), null);
 });

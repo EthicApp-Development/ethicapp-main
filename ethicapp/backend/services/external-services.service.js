@@ -58,6 +58,11 @@ import {
 import { externalServiceReportResultsService } from "./external-service-report-results.service.js";
 import { errorClassification } from "./external-service-handler-run.js";
 import {
+    normalizeEphemeralContext,
+    PARTICIPANT_ACTIVITY_HOOK,
+    runEphemeralHandlers,
+} from "./external-service-ephemeral-hooks.js";
+import {
     collectStudentResults,
     STUDENT_RESULTS_READING_HOOK,
     STUDENT_RESULTS_TIMEOUT_MS,
@@ -113,6 +118,13 @@ export const ERASURE_HOOKS = Object.freeze([
 export const COLLECTING_HOOKS = Object.freeze([
     REPORT_BUILDING_HOOK,
     STUDENT_RESULTS_READING_HOOK,
+]);
+
+// Hooks with their own ephemeral dispatch, dispatchEphemeralHook(), which
+// dispatchHook() ignores: they create no job, pass no callback and collect no
+// result (epic #601, #654).
+export const EPHEMERAL_HOOKS = Object.freeze([
+    PARTICIPANT_ACTIVITY_HOOK,
 ]);
 
 const DEFAULT_AI_SERVICE_POLICY = Object.freeze({
@@ -831,6 +843,10 @@ export class ExternalServicesRegistry {
             return;
         }
 
+        if (EPHEMERAL_HOOKS.includes(hookName) && !this._declaresHook(serviceId, hookName)) {
+            return;
+        }
+
         if (!this.hookSubscribers.has(hookName)) {
             this.hookSubscribers.set(hookName, []);
         }
@@ -865,6 +881,19 @@ export class ExternalServicesRegistry {
             return false;
         }
         return !this._hasCollectingHandler(serviceId, STUDENT_RESULTS_READING_HOOK);
+    }
+
+    // Whether the catalog entry of `serviceId` lists `hookName`, which an
+    // ephemeral hook handler requires (#654); warns when it does not.
+    _declaresHook(serviceId, hookName) {
+        if (this.services.get(serviceId)?.hooks.includes(hookName)) {
+            return true;
+        }
+        console.warn(
+            `[external-services] Ignoring the ${hookName} handler of ${serviceId}: `
+            + "its catalog entry must list the hook."
+        );
+        return false;
     }
 
     // Whether `serviceId` already has a handler for a collecting hook, which
@@ -1404,8 +1433,9 @@ export class ExternalServicesRegistry {
     async dispatchHook(hookName, context, options = {}) {
         // report-building and student-results-reading have their own
         // collecting dispatches (collectReportContributions,
-        // collectStudentResults), which create no jobs.
-        if (COLLECTING_HOOKS.includes(hookName)) {
+        // collectStudentResults), and participant-activity its ephemeral one
+        // (dispatchEphemeralHook), which create no jobs.
+        if (COLLECTING_HOOKS.includes(hookName) || EPHEMERAL_HOOKS.includes(hookName)) {
             console.warn(`[external-services] ${hookName} is not dispatched through dispatchHook().`);
             return [];
         }
@@ -1440,6 +1470,65 @@ export class ExternalServicesRegistry {
                 presetJobId: Object.hasOwn(jobIds, serviceId) ? jobIds[serviceId] : null,
             })
         ));
+    }
+
+    /**
+     * Dispatches an ephemeral hook (EPHEMERAL_HOOKS, epic #601, #654): a
+     * signal about what is happening right now, such as a participant writing
+     * in a group chat (`participant-activity`).
+     *
+     * The services called are those subscribed to the hook (which their
+     * catalog entry lists, see subscribe()) that are among
+     * `enabledServiceIds` and pass the AI service policy gate
+     * (policyEnabledServiceIds(): the session's pinned policy version and a
+     * usable AI Additions connection, as for dispatchHook()). The caller
+     * resolves `enabledServiceIds` from the phase's services, which are none
+     * when the activity was launched with its AI services off (#970).
+     *
+     * No job is created, no `jobId` or `correlationId` is injected, no
+     * `callback` is passed and no result is collected: each handler receives
+     * only the normalized context (normalizeEphemeralContext()) and its
+     * `serviceId`. Handlers run concurrently; one that throws is logged
+     * without content and affects neither the others nor the caller.
+     *
+     * @param {string} hookName - One of EPHEMERAL_HOOKS.
+     * @param {Object} context - For `participant-activity`: `{ kind,
+     *     sessionId, phaseId, questionId, groupId, userId, receivedAt,
+     *     ttlSeconds }`; other fields are dropped.
+     * @param {{ enabledServiceIds?: string[] }} [options]
+     * @returns {Promise<{ serviceId: string, status: "delivered"|"failed" }[]>}
+     *     One outcome per service called.
+     * @throws {TypeError} For a hook outside EPHEMERAL_HOOKS or an invalid
+     *     context, before any service is called.
+     */
+    async dispatchEphemeralHook(hookName, context, { enabledServiceIds = [] } = {}) {
+        if (!EPHEMERAL_HOOKS.includes(hookName)) {
+            throw new TypeError(`${hookName} is not an ephemeral hook.`);
+        }
+        const serviceContext = normalizeEphemeralContext(hookName, context);
+
+        if (!this.initialized) {
+            await this.initialize();
+        }
+
+        const requested = new Set(enabledServiceIds);
+        const subscribed = (this.hookSubscribers.get(hookName) || [])
+            .filter(({ serviceId }) => requested.has(serviceId) && this.services.has(serviceId));
+        if (subscribed.length === 0) {
+            return [];
+        }
+
+        const allowed = new Set(await this.policyEnabledServiceIds(
+            hookName,
+            serviceContext,
+            Array.from(new Set(subscribed.map(({ serviceId }) => serviceId)))
+        ));
+        const subscribers = subscribed.filter(({ serviceId }) => allowed.has(serviceId));
+        if (subscribers.length === 0) {
+            return [];
+        }
+
+        return runEphemeralHandlers({ hookName, context: serviceContext, subscribers });
     }
 
     /**

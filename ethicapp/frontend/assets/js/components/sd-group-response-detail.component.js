@@ -4,7 +4,8 @@
 // controller's work: it loads the group's answers and chat messages,
 // subscribes to the group's live chat while it lives ($onInit / $onDestroy),
 // sends the teacher's messages and replies, and names the authors, the
-// teacher as "Teacher". The chat itself is `teacher-group-chat`, unchanged.
+// teacher as "Teacher". The chat itself is `teacher-group-chat`, which also
+// sends the teacher's composing signal to the group (#1200).
 //
 // With `use-tabs`, the answers and the chat are tabs: it opens on the answers
 // (or on the chat when `initial-tab` says so), the Chat tab counts the
