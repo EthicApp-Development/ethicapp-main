@@ -32,6 +32,7 @@ export function useActivityRealtimeSync({
 }) {
   const [realtimeIssue, setRealtimeIssue] = useState(null);
   const [connectionStatus, setConnectionStatus] = useState(REALTIME_STATUS.CONNECTING);
+  const [socketInstance, setSocketInstance] = useState(null);
   // Read through refs, so a new callback never makes the socket leave and
   // rejoin its rooms.
   const onReconnectRef = useRef(onReconnect);
@@ -164,6 +165,7 @@ export function useActivityRealtimeSync({
         if (isUnmounted) return;
 
         socket = instance;
+        setSocketInstance(instance);
         reconnectTracker = createReconnectTracker({ connected: socket.connected });
         if (socket.connected) fallback.connected();
         socket.on('connect_error', handleConnectError);
@@ -195,6 +197,7 @@ export function useActivityRealtimeSync({
     return () => {
       isUnmounted = true;
       setRealtimeIssue(null);
+      setSocketInstance(null);
       fallback.dispose();
       if (fallbackRef.current === fallback) fallbackRef.current = null;
       document.removeEventListener('visibilitychange', handlePageVisible);
@@ -302,5 +305,10 @@ export function useActivityRealtimeSync({
       .then(() => ({ ok: true, changed: true, heldUntil: Date.now() }), () => ({ ok: false, changed: true, heldUntil: Date.now() }));
   }, []);
 
-  return { realtimeIssue, connectionStatus, updateNow };
+  // The socket for what the student sends over it, such as the chat's
+  // composing signals (#656): only while it is connected, never while the
+  // view polls.
+  const connectedSocket = connectionStatus === REALTIME_STATUS.CONNECTED ? socketInstance : null;
+
+  return { realtimeIssue, connectionStatus, updateNow, connectedSocket };
 }

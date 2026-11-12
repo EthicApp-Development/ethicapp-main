@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { legacyUserApi } from '../../../api/studentApi.js';
+import { useComposingSignal } from '../../../pages/session-detail/hooks/useComposingSignal.js';
 import AtsFeedbackBubble from './AtsFeedbackBubble.jsx';
 import { chatMessageAuthorName } from '../../../utils/chatMessageAuthor.js';
 import { isPhaseAnonymous } from '../../../utils/phaseAnonymity.js';
@@ -130,7 +131,7 @@ function summarizeMessageForReply(message) {
   return typeof message?.content === 'string' ? message.content : '';
 }
 
-export default function PhaseChatOverlay({ isOpen, onClose, onHeightChange, phase, chatRefreshToken, userId, readOnly = false, t }) {
+export default function PhaseChatOverlay({ isOpen, onClose, onHeightChange, phase, chatRefreshToken, userId, readOnly = false, chatSocket = null, t }) {
   const [heightPx, setHeightPx] = useState(DEFAULT_HEIGHT_PX);
   const [messages, setMessages] = useState([]);
   const [draftMessage, setDraftMessage] = useState('');
@@ -179,6 +180,17 @@ export default function PhaseChatOverlay({ isOpen, onClose, onHeightChange, phas
     orderedTasks.sort((leftTask, rightTask) => Number(leftTask?.order ?? 0) - Number(rightTask?.order ?? 0));
     return Number(orderedTasks[0]?.id);
   }, [phase]);
+
+  // Tells the group that the student is writing (#656): only that the
+  // draft changed, never what it holds, and only while the composer is
+  // shown and the socket is connected.
+  const composingSignal = useComposingSignal({
+    socket: chatSocket,
+    phaseId: phase?.id,
+    questionId: fallbackQuestionId,
+    groupId,
+    enabled: isOpen && !readOnly
+  });
 
   const loadMessages = async () => {
     if (!Number.isInteger(groupId) || groupId <= 0 || !Number.isInteger(fallbackQuestionId) || fallbackQuestionId <= 0) {
@@ -263,6 +275,7 @@ export default function PhaseChatOverlay({ isOpen, onClose, onHeightChange, phas
       return;
     }
 
+    composingSignal.stopped();
     setSending(true);
     try {
       await legacyUserApi.post(`/phases/${phase.id}/question/${fallbackQuestionId}/chat_messages`, {
@@ -374,7 +387,11 @@ export default function PhaseChatOverlay({ isOpen, onClose, onHeightChange, phas
               <input
                 className="form-control"
                 value={draftMessage}
-                onChange={(event) => setDraftMessage(event.target.value)}
+                onChange={(event) => {
+                  setDraftMessage(event.target.value);
+                  composingSignal.edited();
+                }}
+                onBlur={composingSignal.stopped}
                 onKeyDown={(event) => {
                   if (event.key === 'Enter' && !event.shiftKey) {
                     event.preventDefault();
