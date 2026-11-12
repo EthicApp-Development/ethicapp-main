@@ -4,6 +4,7 @@
         <h3 class="launch-design-preview-title">{{ $ctrl.preview.title }}</h3>
         <ul class="launch-design-chips">
             <li class="launch-design-chip">{{ $ctrl.preview.phaseCountKey | translate:{ count: $ctrl.preview.phaseCount } }}</li>
+            <li class="launch-design-chip" ng-if="$ctrl.preview.plannedDurationText">{{ $ctrl.preview.plannedDurationText.key | translate:$ctrl.preview.plannedDurationText.values }}</li>
             <li class="launch-design-chip launch-design-chip-ai" ng-if="$ctrl.preview.usesAiServices"
                 title="{{ 'launch_wizard_ai_badge_title' | translate }}">
                 <span aria-hidden="true">{{ 'launch_wizard_ai_badge' | translate }}</span>
