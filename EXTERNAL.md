@@ -723,6 +723,11 @@ silently.
   `name`), their `anon_mask` in an anonymous phase, or `null` when the
   client shows a translated label (the teacher, or an anonymous participant
   without a mask). A notice never carries a real name in an anonymous phase.
+- The notice leaves from the writer's socket, which does not receive it.
+  Another socket of the writer, such as a second tab, does; a client ignores
+  a notice whose `userId` is its own user.
+- When the writer's socket disconnects while composing, the group gets
+  `stopped` for each chat they were composing in.
 - A client shows `composing` for 10 s unless a newer notice arrives, and
   clears it at once on `stopped`. The activity's teacher's interface shows
   no indicator.
@@ -737,19 +742,20 @@ silently.
 A client therefore sends at most 13 signals per minute. Without a working
 socket the student app polls, and no notice can reach it.
 
-**AI services.** Participants' signals, coalesced to at most one `composing`
-per participant every 12 s, reach the `participant-activity` hook through
-`registry.dispatchEphemeralHook()`. Its audience is the services subscribed
-to the hook among those the phase enables (none when the activity was
-launched with its AI services off) that the session's pinned policy version
-allows, with a usable AI Additions connection. Each handler receives
-`{ kind, sessionId, phaseId, questionId, groupId, userId, receivedAt,
-ttlSeconds, serviceId }`, where `receivedAt` is the server's receipt time and
-`ttlSeconds` defaults to 30. A receiver counts the participant as active
-until `ttlSeconds` after the last `composing`, never past
-`max(receivedAt) + ttlSeconds`, treats `stopped` as advisory, and uses the
-signal only for its room-level inactivity. The teacher's signals never reach
-the hook. The contract is described in
+**AI services.** Participants' signals, coalesced per participant, group and
+question to the first `composing`, then at most one every 12 s, and a
+`stopped` only once after a forwarded `composing`, reach the
+`participant-activity` hook through `registry.dispatchEphemeralHook()`.
+Its audience is the services subscribed to the hook among those the phase
+enables (none when the activity was launched with its AI services off) that
+the session's pinned policy version allows, with a usable AI Additions
+connection. Each handler receives `{ kind, sessionId, phaseId, questionId,
+groupId, userId, receivedAt, ttlSeconds, serviceId }`, where `receivedAt` is
+the server's receipt time and `ttlSeconds` defaults to 30. A receiver counts
+the participant as active until `ttlSeconds` after the last `composing`,
+never past `max(receivedAt) + ttlSeconds`, treats `stopped` as advisory,
+and uses the signal only for its room-level inactivity. The teacher's
+signals never reach the hook. The contract is described in
 `ethicapp/backend/external-services/README.md`, "Ephemeral hooks".
 
 **Single instance.** The notice reaches only the clients connected to the
