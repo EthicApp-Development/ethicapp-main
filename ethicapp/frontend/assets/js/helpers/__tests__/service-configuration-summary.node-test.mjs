@@ -185,3 +185,30 @@ describe("compactSettingsLine (#894)", () => {
         assert.equal(compactSettingsLine(undefined), "");
     });
 });
+
+describe("advanced settings in the summary (#1214)", () => {
+    const RUBRIC = field("evaluation_rubric", "enum", {
+        entries: [
+            { value: "v19", label: "Rúbrica v19", status: "active", supersededBy: null },
+            { value: "v12", label: "Rúbrica v12", status: "deprecated", supersededBy: "v19" },
+        ],
+    }, { label: "Rúbrica", default: "v19", group: "Avanzado", order: 1 });
+
+    it("leaves out an advanced setting at its default", () => {
+        const { rows } = summarizeServiceSettings([...FIELDS, RUBRIC], {});
+
+        assert.equal(rows.some(row => row.key === "evaluation_rubric"), false);
+        assert.equal(rows.some(row => Object.hasOwn(row, "advanced")), false);
+    });
+
+    it("shows an advanced setting the design stores, marked as advanced", () => {
+        const { rows } = summarizeServiceSettings([...FIELDS, RUBRIC], { evaluation_rubric: "v12" });
+        const row = rows.find(candidate => candidate.key === "evaluation_rubric");
+
+        assert.equal(row.text, "Rúbrica v12");
+        assert.equal(row.advanced, true);
+        assert.equal(row.isDefault, false);
+        assert.equal(row.notice.kind, "deprecated_value");
+        assert.equal(rows.at(-1), row, "after the other settings");
+    });
+});

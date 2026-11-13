@@ -25,10 +25,33 @@ function isVisible(field, configuration) {
     return field.status !== "deprecated" || !isUnset(configuration[field.key]);
 }
 
+// The names of the descriptor group whose fields are technical settings,
+// shown collapsed behind an "Advanced options" link (#1214). A descriptor
+// names the group `advanced` (`display.group`, ethicapp-ai-additions#275),
+// but groups are display text that the service localizes with
+// Accept-Language, so its usual translations are recognized too.
+const ADVANCED_GROUP_NAMES = new Set([
+    "advanced",
+    "advanced options",
+    "advanced settings",
+    "avanzado",
+    "avanzada",
+    "avanzados",
+    "avanzadas",
+    "opciones avanzadas",
+]);
+
+/** Whether a field's `group` is the advanced group, in any letter case. */
+export function isAdvancedGroup(group) {
+    return typeof group === "string" && ADVANCED_GROUP_NAMES.has(group.trim().toLowerCase());
+}
+
 /**
  * Visible fields grouped by `group` and ordered by `order` (fields without an
- * order last, ties in descriptor order). Groups follow their first field.
- * @returns {{ group: string|null, fields: object[] }[]}
+ * order last, ties in descriptor order). Groups follow their first field,
+ * except the advanced group (isAdvancedGroup()), which always comes last and
+ * is marked `advanced: true`; the form shows it collapsed.
+ * @returns {{ group: string|null, advanced: boolean, fields: object[] }[]}
  */
 export function buildFieldSections(fields, configuration = {}) {
     const ordered = fields
@@ -39,16 +62,40 @@ export function buildFieldSections(fields, configuration = {}) {
         .map(({ field }) => field);
 
     const sections = [];
+    let advancedSection = null;
     for (const field of ordered) {
         const group = field.group || null;
+        if (isAdvancedGroup(group)) {
+            advancedSection = advancedSection ?? { group, advanced: true, fields: [] };
+            advancedSection.fields.push(field);
+            continue;
+        }
         let section = sections.find(candidate => candidate.group === group);
         if (!section) {
-            section = { group, fields: [] };
+            section = { group, advanced: false, fields: [] };
             sections.push(section);
         }
         section.fields.push(field);
     }
+    if (advancedSection) {
+        sections.push(advancedSection);
+    }
     return sections;
+}
+
+/**
+ * Whether the advanced section must be shown open: when one of its fields
+ * has an error or a lifecycle notice, which the form never hides. Otherwise
+ * it starts collapsed, whatever its fields hold.
+ * @param {{ advanced: boolean, fields: object[] }[]} sections
+ * @param {object} errors - `{ [key]: code }`, as configurationErrors() gives.
+ * @param {{ byField: object }} notices - As settingNotices() gives.
+ */
+export function advancedNeedsAttention(sections, errors = {}, notices = { byField: {} }) {
+    return sections
+        .filter(section => section.advanced)
+        .some(section => section.fields.some(field => Boolean(errors[field.key])
+            || Boolean(notices.byField?.[field.key])));
 }
 
 /** The control that edits `field`: select, number, checkbox, textarea or text. */

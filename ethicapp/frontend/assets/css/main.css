@@ -4500,6 +4500,15 @@ tr.group-summary {
     margin-bottom: 6px;
 }
 
+/* The advanced options link and the section it opens (#1214). */
+.service-configuration-form .service-configuration-advanced-toggle {
+    margin: 4px 0;
+}
+
+.service-configuration-form .service-configuration-advanced-toggle .btn-link {
+    padding-left: 0;
+}
+
 .service-configuration-form .form-group {
     max-width: 480px;
 }

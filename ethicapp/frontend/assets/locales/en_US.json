@@ -561,6 +561,7 @@
 	"service_settings_stale": "The service is not responding; these settings are the last ones it reported.",
 	"service_settings_default": "Default",
 	"service_settings_use_default": "Use default",
+	"service_settings_advanced_options": "Advanced options",
 	"service_setting_error_invalid_type": "This value has the wrong type.",
 	"service_setting_error_not_in_enum": "Choose one of the listed options.",
 	"service_setting_error_below_minimum": "The minimum is {{minimum}}.",

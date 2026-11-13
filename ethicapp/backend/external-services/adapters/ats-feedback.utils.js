@@ -6,6 +6,12 @@ import {
     STUDENT_RESULT_DOCUMENT_SCHEMA,
     validateStudentResultDocument,
 } from "../../services/student-result-documents.js";
+import {
+    argumentEvaluationOf,
+    currentEvaluation,
+    EVALUATION_CRITERION_KEYS,
+    levelWithScaleText,
+} from "./ats-feedback.evaluation.js";
 
 // The tutor's catalog id, which design phases enable.
 export { ARGUMENTATION_TUTOR_SERVICE_ID };
@@ -55,7 +61,59 @@ function safeJsonParse(value) {
     }
 }
 
+const EVALUATION_CRITERION_LABELS = Object.freeze({
+    claim:     "Claim",
+    evidence:  "Evidence",
+    warrant:   "Warrant",
+    qualifier: "Qualifier",
+});
+
+// The criteria of a v19 evaluation (#1214) in the shape of the legacy
+// `criteria` list: the level as `score`, with the scale the evaluation gives
+// it as `minScore` and `maxScore`, and `value` such as `2 (0-2)`. The claim's
+// value adds the stance of its claim type. Unreadable criteria read
+// `Not available`.
+function evaluationCriteria(evaluation) {
+    return EVALUATION_CRITERION_KEYS.map(key => {
+        const criterion = evaluation?.criteria?.[key] ?? null;
+        const item = { key, label: EVALUATION_CRITERION_LABELS[key] };
+        if (!criterion) {
+            return { ...item, score: null, value: "Not available" };
+        }
+        const stance = key === "claim" && criterion.stance ? `, ${criterion.stance}` : "";
+        return {
+            ...item,
+            score:    criterion.level,
+            minScore: criterion.min,
+            maxScore: criterion.max,
+            value:    `${levelWithScaleText(criterion)}${stance}`,
+        };
+    });
+}
+
+// A v19 comparison (#1214) in the shape of the legacy `comparison.scores`:
+// per criterion the two levels, the change and the scale they share.
+function evaluationComparisonScores(read) {
+    return Object.fromEntries(EVALUATION_CRITERION_KEYS.map(key => {
+        const initial = read.initial?.criteria[key] ?? null;
+        const revised = read.revised?.criteria[key] ?? null;
+        const scale = revised ?? initial;
+        return [key, {
+            initial: initial?.level ?? null,
+            revised: revised?.level ?? null,
+            delta:   read.differences?.[key]?.levelChange ?? null,
+            min:     scale?.min ?? null,
+            max:     scale?.max ?? null,
+        }];
+    }));
+}
+
 function normalizeCriteriaFromAts(parsedResult) {
+    const evaluation = currentEvaluation(argumentEvaluationOf(parsedResult));
+    if (evaluation) {
+        return evaluationCriteria(evaluation);
+    }
+
     const claimScore = Number(parsedResult?.claim);
     const evidenceScore = Number(parsedResult?.evidence);
     const warrantScore = Number(parsedResult?.warrant);
@@ -120,7 +178,29 @@ function normalizeScore(value) {
     return Number.isFinite(numeric) ? numeric : null;
 }
 
+function argumentTexts(parsedResult, submissionMeta) {
+    return {
+        initialArgument: normalizeText(
+            submissionMeta?.initialArgumentPreview
+            || parsedResult?.original_argument
+            || parsedResult?.initial_argument
+        ),
+        revisedArgument: normalizeText(
+            submissionMeta?.revisedArgumentPreview
+            || parsedResult?.revised_argument
+        ),
+    };
+}
+
 function extractComparisonData(parsedResult, submissionMeta = {}) {
+    const read = argumentEvaluationOf(parsedResult);
+    if (read?.kind === "comparison") {
+        return {
+            ...argumentTexts(parsedResult, submissionMeta),
+            scores: evaluationComparisonScores(read),
+        };
+    }
+
     const initialScores = parsedResult?.initial_scores && typeof parsedResult.initial_scores === "object"
         ? parsedResult.initial_scores
         : null;
@@ -152,15 +232,7 @@ function extractComparisonData(parsedResult, submissionMeta = {}) {
     };
 
     return {
-        initialArgument: normalizeText(
-            submissionMeta?.initialArgumentPreview
-            || parsedResult?.original_argument
-            || parsedResult?.initial_argument
-        ),
-        revisedArgument: normalizeText(
-            submissionMeta?.revisedArgumentPreview
-            || parsedResult?.revised_argument
-        ),
+        ...argumentTexts(parsedResult, submissionMeta),
         scores: {
             claim:     normalizePair("claim"),
             evidence:  normalizePair("evidence"),
@@ -206,15 +278,45 @@ export function buildFeedbackPayloadFromAtsStatus(statusResponse, context, submi
     };
 }
 
+// The scale bounds of a criteria item, when it carries them (v19, #1214).
+function scaleBounds(item) {
+    const bounds = {};
+    for (const key of ["minScore", "maxScore"]) {
+        if (Number.isFinite(item?.[key])) {
+            bounds[key] = item[key];
+        }
+    }
+    return bounds;
+}
+
+/**
+ * The feedback object of a callback payload. A v19 payload (#1214) has no
+ * `criteria` or `comparison`: they are read from its `argumentEvaluation`,
+ * levels with their scales, and `rubric` says which rubric it follows.
+ * Nothing of the evaluation's ids, fragments or reasons is copied.
+ */
 export function buildFeedbackPayloadFromExternalResult(requestPayload, fallbackContext) {
     const payloadRoot = requestPayload && typeof requestPayload === "object" ? requestPayload : {};
     const sourcePayload = payloadRoot?.payload?.feedback || payloadRoot?.payload || payloadRoot;
     const input = sourcePayload && typeof sourcePayload === "object" ? sourcePayload : {};
 
-    const criteria = Array.isArray(input.criteria) ? input.criteria : [];
+    const evaluation = argumentEvaluationOf(requestPayload);
+    const legacyCriteria = Array.isArray(input.criteria) ? input.criteria : [];
+    const criteria = evaluation && legacyCriteria.length === 0
+        ? evaluationCriteria(currentEvaluation(evaluation))
+        : legacyCriteria;
     const bullets = Array.isArray(input.bullets) ? input.bullets : [];
-    const mode = normalizeText(input.mode) || "analysis";
-    const comparison = input?.comparison && typeof input.comparison === "object" ? input.comparison : null;
+    const mode = normalizeText(input.mode) || evaluation?.kind || "analysis";
+    const legacyComparison = input?.comparison && typeof input.comparison === "object"
+        ? input.comparison
+        : null;
+    const comparison = evaluation?.kind === "comparison" && !legacyComparison
+        ? {
+            initialArgument: "",
+            revisedArgument: "",
+            scores:          evaluationComparisonScores(evaluation),
+        }
+        : legacyComparison;
 
     return {
         version:  "1",
@@ -227,6 +329,7 @@ export function buildFeedbackPayloadFromExternalResult(requestPayload, fallbackC
                 key:   normalizeText(item?.key) || normalizeText(item?.label).toLowerCase().replace(/\s+/gu, "-"),
                 label: normalizeText(item?.label) || "Criterion",
                 score: Number.isFinite(Number(item?.score)) ? Number(item.score) : null,
+                ...scaleBounds(item),
                 value: normalizeText(item?.value) || "Not available",
             }))
             .filter(item => item.label && item.value)
@@ -237,6 +340,7 @@ export function buildFeedbackPayloadFromExternalResult(requestPayload, fallbackC
             .slice(0, 6),
         argumentPreview: normalizeText(input.argumentPreview || input.submitted_argument),
         comparison,
+        ...(evaluation ? { rubric: evaluation.rubric } : {}),
         meta:            {
             sessionId:  Number(payloadRoot.sessionId) || fallbackContext?.sessionId || null,
             phaseId:    Number(payloadRoot.phaseId) || fallbackContext?.phaseId || null,
@@ -303,6 +407,17 @@ const DOCUMENT_TEXTS = Object.freeze({
             noPosition:   "Sin postura clara",
             score:        (score, maxScore) => `${score} de ${maxScore}`,
             notAvailable: "No disponible",
+            present:      "Presente",
+            absent:       "Ausente",
+            withStance:   (score, stance) => `${score} · ${stance}`,
+        },
+        // The stance of the claim type the claim matches, relative to the
+        // case's focal action (argument-evaluation/v1, #1214).
+        stances: {
+            in_favor:    "A favor",
+            against:     "En contra",
+            alternative: "Alternativa",
+            conditional: "Condicional",
         },
         message: "Ya está disponible la retroalimentación sobre tu argumento.",
     },
@@ -333,6 +448,15 @@ const DOCUMENT_TEXTS = Object.freeze({
             noPosition:   "No clear position",
             score:        (score, maxScore) => `${score} of ${maxScore}`,
             notAvailable: "Not available",
+            present:      "Present",
+            absent:       "Absent",
+            withStance:   (score, stance) => `${score} · ${stance}`,
+        },
+        stances: {
+            in_favor:    "In favor",
+            against:     "Against",
+            alternative: "Alternative",
+            conditional: "Conditional",
         },
         message: "Feedback on your argument is now available.",
     },
@@ -545,6 +669,156 @@ export function legacyStudentDocument(requestPayload, locale) {
     return document;
 }
 
+// `{ value, score, available }` of one v19 criterion (#1214): its level out
+// of the scale the evaluation gives it, never a scale known here. A two-level
+// scale (the qualifier's 0-1) reads as present or absent, and the claim adds
+// the stance of its claim type; the claim type's id is never shown.
+function evaluationCriterionResult(key, criterion, texts) {
+    const { values } = texts;
+    if (!criterion) {
+        return { value: values.notAvailable, score: null, available: false };
+    }
+    const { level, min, max } = criterion;
+    let value = max - min === 1
+        ? (level === max ? values.present : values.absent)
+        : values.score(level, max);
+    const stance = key === "claim" ? texts.stances[criterion.stance] : undefined;
+    if (stance) {
+        value = values.withStance(value, stance);
+    }
+    return { value, score: level, available: true, min, max };
+}
+
+function evaluationCriteriaItems(evaluation, texts) {
+    let complete = true;
+    const items = EVALUATION_CRITERION_KEYS.map(key => {
+        const result = evaluationCriterionResult(key, evaluation?.criteria[key] ?? null, texts);
+        complete = complete && result.available;
+        const item = { key, label: texts.labels[key], value: result.value };
+        if (result.available) {
+            Object.assign(item, { score: result.score, minScore: result.min, maxScore: result.max });
+        }
+        return item;
+    });
+    return { items, complete };
+}
+
+function evaluationTrend(change) {
+    if (!Number.isInteger(change)) {
+        return null;
+    }
+    if (change > 0) {
+        return "improved";
+    }
+    return change < 0 ? "declined" : "unchanged";
+}
+
+function evaluationComparisonItems(read, texts) {
+    return EVALUATION_CRITERION_KEYS.map(key => {
+        const initial = read.initial?.criteria[key] ?? null;
+        const revised = read.revised?.criteria[key] ?? null;
+        const item = {
+            key,
+            label:  texts.labels[key],
+            before: evaluationCriterionResult(key, initial, texts).value,
+            after:  evaluationCriterionResult(key, revised, texts).value,
+        };
+        const trend = initial && revised
+            ? evaluationTrend(read.differences?.[key]?.levelChange)
+            : null;
+        if (trend) {
+            item.trend = trend;
+        }
+        return item;
+    });
+}
+
+/**
+ * The `student-result/v1` document of a v19 callback payload (#1214) that
+ * carries no valid `studentResult`: built from its `argumentEvaluation`
+ * (`read`, from argumentEvaluationOf()), in `locale` as
+ * legacyStudentDocument() builds it, with the same titles, sections and
+ * texts. Each level reads out of the scale the evaluation gives it, and the
+ * claim with the stance of its claim type. The evaluation's ids (`AF#`,
+ * `EV#`, `EX#`), fragments and reasons are never read into it. A criterion
+ * that cannot be read makes the document `partial`.
+ *
+ * @returns {Object} A document that validateStudentResultDocument() accepts.
+ */
+export function evaluationStudentDocument(requestPayload, read, locale) {
+    const documentLocale = documentLocaleOf(locale) ?? DEFAULT_DOCUMENT_LOCALE;
+    const texts = DOCUMENT_TEXTS[documentLocale];
+    const input = legacyFeedbackSource(requestPayload);
+    const isComparison = read.kind === "comparison";
+    const document = {
+        schemaVersion: STUDENT_RESULT_DOCUMENT_SCHEMA,
+        locale:        documentLocale,
+        title:         texts.title[isComparison ? "comparison" : "analysis"],
+    };
+    const summary = clippedText(input.summary, SUMMARY_MAX);
+    if (summary && summary !== LEGACY_PLACEHOLDER_SUMMARY) {
+        document.summary = summary;
+    }
+
+    const sections = [];
+    if (isComparison) {
+        sections.push({
+            kind:  "comparison",
+            title: texts.sections.comparison,
+            items: evaluationComparisonItems(read, texts),
+        });
+    }
+    const criteria = evaluationCriteriaItems(currentEvaluation(read), texts);
+    sections.push({
+        kind:  "criteria",
+        title: texts.sections[isComparison ? "revisedCriteria" : "criteria"],
+        items: criteria.items,
+    });
+
+    const bullets = (Array.isArray(input.bullets) ? input.bullets : [])
+        .map(bullet => clippedText(bullet, BULLET_MAX))
+        .filter(bullet => bullet && bullet !== LEGACY_PLACEHOLDER_SUMMARY
+            && bullet !== document.summary)
+        .slice(0, MAX_BULLETS);
+    if (bullets.length > 0) {
+        sections.push({ kind: "bullets", title: texts.sections.bullets, items: bullets });
+    }
+
+    const argument = input.argumentPreview || input.submitted_argument;
+    const comparison = isPlainObject(input.comparison) ? input.comparison : {};
+    if (isComparison) {
+        sections.push(
+            ...textSection(texts.sections.previousArgument, comparison.initialArgument),
+            ...textSection(texts.sections.revisedArgument, argument || comparison.revisedArgument)
+        );
+    } else {
+        sections.push(...textSection(texts.sections.argument, argument));
+    }
+
+    const complete = criteria.complete && (!isComparison || Boolean(read.initial));
+    if (!complete) {
+        document.status = "partial";
+    }
+    document.sections = sections;
+    return document;
+}
+
+/**
+ * The document of a callback payload without a valid `studentResult`: from
+ * its `argumentEvaluation` when it carries one (v19, #1214), from its legacy
+ * keys otherwise (v12). `source` is `evaluation` or `legacy`.
+ *
+ * @returns {{document: Object, source: "evaluation"|"legacy"}}
+ */
+export function mappedStudentDocument(requestPayload, locale) {
+    const read = argumentEvaluationOf(requestPayload);
+    if (read) {
+        const document = evaluationStudentDocument(requestPayload, read, locale);
+        return { document, source: "evaluation" };
+    }
+    return { document: legacyStudentDocument(requestPayload, locale), source: "legacy" };
+}
+
 /**
  * The tutor's own document (ethicapp-ai-additions#233): the callback
  * payload's `studentResult`, read at its top level as the tutor sends it, or
@@ -581,11 +855,13 @@ export function tutorStudentDocument(requestPayload) {
  *
  * The result is a `student-result/v1` document (epic #1124): the tutor's
  * `studentResult`, unchanged, when it carries a valid one
- * (tutorStudentDocument()), and otherwise the legacy keys mapped by
- * legacyStudentDocument() in the locale `resolveLocale()` gives, which is
- * called only then. The teacher-only keys of the payload (the claim type of
- * #850, the mode and evidence of #865) are never read into it; they are only
- * recorded with the result.
+ * (tutorStudentDocument()), and otherwise the payload mapped by
+ * mappedStudentDocument() in the locale `resolveLocale()` gives, which is
+ * called only then: its v19 `argumentEvaluation` (#1214) when it has one,
+ * its legacy keys otherwise. The teacher-only keys of the payload (the claim
+ * type of #850, the mode and evidence of #865, the evaluation's ids,
+ * fragments and reasons) are never read into it; they are only recorded with
+ * the result.
  *
  * `destination` is the callback's trusted destination (`sessionId`,
  * `phaseId`, `questionId`, `userId`): the job's when the callback arrives,
@@ -599,7 +875,7 @@ export function tutorStudentDocument(requestPayload) {
  * @param {Object} [options]
  * @param {() => Promise<string|null>} [options.resolveLocale] - The
  *     activity's locale for a mapped document; null gives `es-CL`.
- * @returns {Promise<{fallbackContext: Object, source: "tutor"|"legacy",
+ * @returns {Promise<{fallbackContext: Object, source: "tutor"|"evaluation"|"legacy",
  *     tutorDocumentProblems: Object[]|null, studentResult: {phaseId:
  *     number|null, questionId: number|null, documentSchema: string,
  *     document: Object, message: string, status: string}}>}
@@ -618,11 +894,13 @@ export async function buildStudentFeedback(requestPayload, destination, {
     };
 
     const tutor = tutorStudentDocument(requestPayload);
-    const document = tutor.document
-        ?? legacyStudentDocument(requestPayload, await resolveLocale());
+    const mapped = tutor.document
+        ? { document: tutor.document, source: "tutor" }
+        : mappedStudentDocument(requestPayload, await resolveLocale());
+    const { document } = mapped;
     return {
         fallbackContext,
-        source:                tutor.document ? "tutor" : "legacy",
+        source:                mapped.source,
         tutorDocumentProblems: tutor.problems,
         studentResult:         {
             phaseId:        Number(fallbackContext.phaseId) || null,
@@ -662,9 +940,12 @@ export function differentialQuestionText(row) {
 }
 
 /**
- * The body of POST /sessions (#736). The only setting sent is the configured
- * `llm_tier` (#734); the deprecated `model` is not sent, and new designs are
- * not offered it (#733). An unset tier takes the tutor's default. In the
+ * The body of POST /sessions (#736). The settings sent are the configured
+ * `llm_tier` (#734) and `evaluation_rubric` (#1214,
+ * ethicapp-ai-additions#275: `v19`, the tutor's default, or the deprecated
+ * `v12`), each only when the phase stores one; the deprecated `model` is not
+ * sent, and new designs are not offered it (#733). An unset tier or rubric
+ * takes the tutor's default. In the
  * enhanced mode (#865) the session input `case_context`
  * (tutor-case-context/v1, ethicapp-ai-additions#209) carries the case's
  * evidence inventory and the question's claim typology. The deprecated
@@ -698,6 +979,10 @@ export function buildAtsSessionPayload(
     const llmTier = normalizeText(serviceConfiguration?.llm_tier);
     if (llmTier) {
         body.llm_tier = llmTier;
+    }
+    const rubric = normalizeText(serviceConfiguration?.evaluation_rubric);
+    if (rubric) {
+        body.evaluation_rubric = rubric;
     }
     if (evaluationMode) {
         body.evaluation_mode = evaluationMode;
@@ -736,20 +1021,22 @@ const LOCALE_NAME = /\blocale\b/iu;
  * Which optional part of a session body the tutor refused with a 400, so it
  * can be left out: `case_context` when the error names it, `locale` when the
  * error names it, `case_context` when it is the only other optional part
- * sent, otherwise `llm_tier`. null when the body has no optional part left.
+ * sent, otherwise the configured settings (`llm_tier`, `evaluation_rubric`),
+ * which are dropped together. null when the body has no optional part left.
  */
 function rejectedOptionalField(error, body) {
     const answer = JSON.stringify(error?.responseBody ?? null);
+    const configured = Boolean(body.llm_tier || body.evaluation_rubric);
     if (body.case_context && CASE_CONTEXT_NAME.test(answer)) {
         return "case_context";
     }
     if (body.locale && LOCALE_NAME.test(answer)) {
         return "locale";
     }
-    if (body.case_context && !body.llm_tier) {
+    if (body.case_context && !configured) {
         return "case_context";
     }
-    return body.llm_tier ? "llm_tier" : null;
+    return configured ? "configuration" : null;
 }
 
 function caseContextOutcome(response, rejection) {
@@ -870,6 +1157,12 @@ export async function createAtsSession({
         creation.localeRejection = localeRejection;
     }
 
+    // The rubric the tutor reports for the session (#1214), when it does.
+    const reportedRubric = normalizeText(response?.rubric);
+    if (/^v[1-9][0-9]*$/u.test(reportedRubric)) {
+        creation.rubric = reportedRubric;
+    }
+
     if (TUTOR_SESSION_MODES.has(response?.mode)) {
         creation.tutorMode = response.mode;
         if (Array.isArray(response.missing) && response.missing.length > 0) {
@@ -911,12 +1204,18 @@ function evaluationSource(requestPayload, keys) {
  * also read. null when the evaluation reports neither, as evaluations of
  * sessions without a typology do.
  *
+ * A v19 payload (#1214) reports the claim type inside its
+ * `argumentEvaluation`, for an analysis and for the revised argument of a
+ * comparison; it is read from there, without a rationale (the evaluation's
+ * `reason` is not copied).
+ *
  * @returns {{claimTypeId: string|null, claimTypeRationale: string|null}|null}
  */
 export function claimTypeFromExternalResult(requestPayload) {
     const source = evaluationSource(requestPayload, ["claimTypeId", "claimTypeRationale"]);
     if (!source) {
-        return null;
+        const claim = currentEvaluation(argumentEvaluationOf(requestPayload))?.criteria.claim;
+        return claim ? { claimTypeId: claim.claimTypeId, claimTypeRationale: null } : null;
     }
 
     const id = normalizeText(source.claimTypeId);
@@ -957,9 +1256,17 @@ function unsupportedClaim(item) {
  * `evidenceFactIds` (the inventory facts the argument states) and
  * `unsupportedClaims` (`{ statement, exclusionId }`). null when the
  * evaluation reports no mode, as those of sessions opened with neither do.
+ *
+ * A v19 payload (#1214) reports them inside its `argumentEvaluation`, for
+ * analyses and comparisons alike: `tutorMode`, `requestedMode`, and the
+ * facts of the evaluation (the revised one of a comparison) as
+ * `evidenceFactIds`. It reports no unsupported claims.
  */
 export function tutorEvaluationFromExternalResult(requestPayload) {
     const source = evaluationSource(requestPayload, ["tutorMode"]);
+    if (!source) {
+        return evaluationModeOf(argumentEvaluationOf(requestPayload));
+    }
     const tutorMode = normalizeText(source?.tutorMode);
     if (!TUTOR_SESSION_MODES.has(tutorMode)) {
         return null;
@@ -981,6 +1288,22 @@ export function tutorEvaluationFromExternalResult(requestPayload) {
             .map(unsupportedClaim)
             .filter(Boolean)
             .slice(0, MAX_UNSUPPORTED_CLAIMS);
+    }
+    return evaluation;
+}
+
+// tutorEvaluationFromExternalResult() of a v19 evaluation (#1214).
+function evaluationModeOf(read) {
+    if (!read?.tutorMode) {
+        return null;
+    }
+    const evaluation = { tutorMode: read.tutorMode };
+    if (read.requestedMode) {
+        evaluation.requestedMode = read.requestedMode;
+    }
+    const evidence = currentEvaluation(read)?.criteria.evidence;
+    if (evidence) {
+        evaluation.evidenceFactIds = evidence.factIds;
     }
     return evaluation;
 }

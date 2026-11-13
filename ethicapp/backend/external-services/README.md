@@ -2345,7 +2345,9 @@ does not upgrade a running session.
   (`{ statement, exclusionId }`, at most 10). The `callback-received` handler
   records them in the result's `adapter_result` (`external_service_results`,
   next to the raw payload). The feedback published to the student keeps its
-  shape and never includes them.
+  shape and never includes them. A v19 payload carries them inside its
+  `argumentEvaluation` instead, for analyses and comparisons alike; see "The
+  tutor's rubrics".
 - **Teachers.** The design view shows, per tutor question, the mode it can
   expect as of now: "Advanced evaluation available", or "The tutor will
   evaluate without the advanced capabilities" with the reason, and a link to
@@ -2422,6 +2424,82 @@ activity, not inside one activity:
 
 Assigning modes to groups of students inside one activity is out of scope.
 
+### The tutor's rubrics
+
+The tutor evaluates with one of two rubrics (epic ethicapp-ai-additions#267,
+#1214). A session's rubric is fixed when the tutor creates it, and each
+callback payload says which one its evaluation follows:
+
+| Rubric | Callback payload | Scales |
+| --- | --- | --- |
+| v12 (`correccion_argumento_etica_v12`), the tutor's default before its release of 16 November 2026 | The legacy keys: `criteria` (`{ key, label, score, value }`), `comparison.scores` (`{ initial, revised, delta }`), `summary`, `bullets` | The claim a position (-1, 0, 1), the other criteria 1 to 3 |
+| v19 (the coders' Toulmin rubric), the default from that release on | `argumentEvaluation`, an `argument-evaluation/v1` document, and `rubric: "v19"`; none of the v12 score keys | Each level with its own `scale`: Claim 0–2, Evidence 0–2, Warrant 0–2, Qualifier 0–1 |
+
+A design goes back to v12 with the tutor's `evaluation_rubric` instance
+configuration field (`v19` by default, `v12` deprecated,
+ethicapp-ai-additions#275), which the design editor shows only under
+"Advanced options" (EXTERNAL.md, "Settings form"). The adapter sends a
+stored value as `evaluation_rubric` when it creates the session, as it sends
+`llm_tier`, and leaves the field out otherwise, so the tutor applies its
+default; nothing in EthicApp chooses the rubric. A 400 about the configured
+settings drops both and creates the session with the tutor's defaults
+(`configurationRejected: true`). The instantiation report records the
+rubric the tutor reports for the session as `rubric`, when it reports one.
+
+`argument-evaluation/v1` is owned by ethicapp-ai-additions and copied
+verbatim in `canonical-schemas/ai-additions/` (its README explains the
+copy). `kind: analysis` carries one `evaluation`; `kind: comparison` carries
+the evaluations of the earlier argument (`initial`) and of its revision
+(`revised`), made independently, and their `differences`. Each evaluation has
+`rubricVersion`, the four criteria and `entryRuleApplied`. The claim carries
+its claim type (`claimTypeId`, `AF#`) and that type's `stance` (`in_favor`,
+`against`, `alternative`, `conditional`); the evidence the inventory facts
+the argument states (`factIds`, `EV#`) and the statements the case does not
+make (`exclusionIds`, `EX#`).
+
+**Reading.** `adapters/ats-feedback.evaluation.js` reads the document
+(`argumentEvaluationOf()`) at the payload's top level or in a nested feedback
+object, as the legacy keys are read. Every level is read with the scale the
+document gives it, never with a scale known in EthicApp, and is kept only
+when it is an integer within that scale; the other criteria are read
+regardless. The reading is lenient on purpose: a forgotten student's stored
+payloads have every string replaced (V31), so their levels and scales remain
+and their ids, kinds and stances do not, and a redacted document is told
+apart by its keys. A document of another major version
+(`argument-evaluation/v2`) is not read. The criteria's `fragment` and
+`reason` (a quote of the argument and the model's text) are never read.
+
+**Teachers.** The `callback-received` handler records, next to the keys
+above, `rubric` (when the payload states one) and `rubricEvaluation`: the
+levels with their scales, the claim type with its stance, the facts,
+exclusions and the warrant's fact, and, for a comparison, both evaluations
+and their `differences` (`levelChange` per criterion, the facts gained and
+lost). It holds ids and numbers only. A v19 payload's `claimTypeId`,
+`tutorMode`, `requestedMode` and `evidenceFactIds` are read from the
+evaluation (the revised one of a comparison), so the activity's tutor modes
+count v19 comparisons by their mode too. The responses report exports the
+same levels (see "The tutor's report columns"). A v12 callback's recorded
+outcome keeps its shape.
+
+**Students.** Without a valid `studentResult`, a v19 payload is mapped to the
+student's `student-result/v1` document from its evaluation
+(`evaluationStudentDocument()`), with the titles, sections and texts of the
+v12 mapping: each level reads out of its own scale (`2 de 2`), a two-level
+scale (the qualifier's) as `Presente` or `Ausente`, and the claim adds the
+stance of its claim type (`2 de 2 · En contra`). A comparison adds the
+before and after of each criterion with its trend, from the document's
+`levelChange`. The document's ids, fragments and reasons never reach it.
+The stored outcome records `studentDocument.source: "evaluation"`, and the
+rebuild for `student-results-reading` maps it the same way. The tutor's own
+`studentResult`, when it sends a valid one (ethicapp-ai-additions#274), is
+published unchanged, as for v12.
+
+**Deployment.** The AI Additions release that makes v19 the default is
+deployed first and this adapter right after it, with no tutor sessions in
+between: a tutor that sends v19 payloads to an EthicApp without #1214 has
+its results mapped as `unavailable` for the student and exported without
+levels. Sessions opened before the tutor's release keep v12.
+
 ### The tutor's report columns
 
 The tutor adapter subscribes to `report-building` (#948, see "Report
@@ -2437,8 +2515,16 @@ It reads only its stored `student-response-submitted` results, whose
 | `ats_requested_mode` | `enhanced` or `basic`, the mode the phase requested |
 | `ats_feedback_title`, `ats_feedback_summary` | The feedback's title and summary |
 | `ats_feedback_bullets` | The feedback's points, one per line |
-| `ats_claim`, `ats_evidence`, `ats_warrant`, `ats_qualifier` | The criterion scores: the claim's position (-1, 0 or 1), the others 0 to 3 |
-| `ats_claim_type` | The claim type the tutor matched (`AF#`) |
+| `ats_claim`, `ats_evidence`, `ats_warrant`, `ats_qualifier` | The v12 criterion scores: the claim's position (-1, 0 or 1), the others 1 to 3 |
+| `ats_rubric` | `v19`, or the rubric the payload states (#1214) |
+| `ats_rubric_version` | The v19 evaluation's `rubricVersion`, such as `toulmin-coders/v1` |
+| `ats_claim_level`, `ats_evidence_level`, `ats_warrant_level`, `ats_qualifier_level` | The v19 levels |
+| `ats_claim_scale`, `ats_evidence_scale`, `ats_warrant_scale`, `ats_qualifier_scale` | The scale of each v19 level as the result gives it, such as `0-2` |
+| `ats_claim_stance` | The stance of the v19 claim type (`in_favor`, `against`, `alternative`, `conditional`) |
+| `ats_evidence_facts`, `ats_evidence_exclusions` | The inventory facts (`EV#`) and exclusions (`EX#`) the v19 evidence found, comma-separated |
+| `ats_entry_rule_applied` | Whether the v19 entry rule lowered the warrant or the qualifier |
+| `ats_claim_level_change`, `ats_evidence_level_change`, `ats_warrant_level_change`, `ats_qualifier_level_change` | A v19 comparison's level change per criterion (revised minus initial) |
+| `ats_claim_type` | The claim type the tutor matched (`AF#`); for v19, that of the evaluation |
 | `ats_unsupported_claims` | How many unsupported claims the tutor found |
 | `ats_feedback_count` | How many results reached the row |
 | `ats_feedback_time` | When the shown result was received (ISO 8601) |
@@ -2458,6 +2544,12 @@ It reads only its stored `student-response-submitted` results, whose
   claim type's rationale are not exported; the report's `comment` column
   already holds the response. A field the result does not report is empty.
 - Results of a forgotten user are redacted as stored (V31) and appear so.
+- Each rubric fills its own columns. A v19 result fills the `_level`,
+  `_scale` and other v19 columns, and leaves the v12 scores empty; a
+  comparison shows the revised evaluation's levels and the level changes,
+  and, unlike a v12 comparison, its claim type and tutor mode. A v12 row has
+  none of the v19 columns, so its values are those it had before #1214; its
+  columns are the same, except that the report now lists the v19 ones too.
 
 ### The tutor's student feedback
 
@@ -2488,6 +2580,8 @@ report holds its answer as `localeRejection`.
   schema checks of `validateStudentResultDocument()`, it is published
   unchanged, as `{ documentSchema: "student-result/v1", document }`, with its
   criterion descriptions and overview.
+- Otherwise, a v19 payload is mapped from its `argumentEvaluation` (see "The
+  tutor's rubrics").
 - Otherwise, as for callbacks stored before ethicapp-ai-additions#235, the
   legacy keys (`summary`, `criteria`, `bullets`, `argumentPreview`,
   `comparison`) are mapped to a document by `legacyStudentDocument()`. The
@@ -2510,7 +2604,7 @@ read only into the stored outcome; the document schema is closed and the
 registry emits only the document and its ids.
 
 **Live and rebuilt.** The callback's stored outcome records
-`studentDocument: { source, locale }` (`source` is `tutor` or `legacy`) next to
+`studentDocument: { source, locale }` (`source` is `tutor`, `evaluation` or `legacy`) next to
 `feedbackTitle`, which is now the document's title. The rebuild maps a legacy
 payload in that recorded locale, so it equals the document published live
 even if the design's language changes later. Callbacks processed before
