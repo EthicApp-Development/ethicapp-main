@@ -1,6 +1,7 @@
 import * as config from "../config/database.config.js";
 import * as rpg2 from "../db/rest-pg-2.js";
 import redisClient from "../db/redis.js";
+import { peerOfResponse, previousGroupResponsesForStudent } from "./peer-names.js";
 import { responseFactories } from  "../../common/modules/design-types.js";
 import {
     phaseInstructions,
@@ -972,10 +973,14 @@ function buildParticipantLookup(participants, userId) {
     }, {});
 }
 
+// The cached payload of a group, as its student `userId` sees it: their own
+// entries marked, and their peers' names left out in an anonymous phase
+// (#1199). The cache keeps the names, so the rule applies to cached and fresh
+// payloads alike.
 function markPreviousGroupResponsesForUser(responsePayload, userId) {
     const normalizedUserId = Number(userId);
 
-    return {
+    return previousGroupResponsesForStudent({
         ...responsePayload,
         participants: (responsePayload.participants || []).map(participant => ({
             ...participant,
@@ -991,7 +996,7 @@ function markPreviousGroupResponsesForUser(responsePayload, userId) {
                 })),
             })),
         })),
-    };
+    }, normalizedUserId);
 }
 
 function attachResponsesToTasks(phaseRows, taskRows, responseRows, participantsByUserId, designType) {
@@ -1293,7 +1298,8 @@ export async function getCachedStudentActivityPeerResponses(designType, sessionI
         return phases;
     }
 
-    const cacheKey = `session:${sessionId}:user:${userId}:peer_responses:${designType}`;
+    // `v2`: entries cached before #1199 carried the names of anonymous peers.
+    const cacheKey = `session:${sessionId}:user:${userId}:peer_responses:v2:${designType}`;
 
     try {
         // Handle cache invalidation
@@ -1384,7 +1390,8 @@ export async function getStudentActivityPeerResponses_semanticDifferential(sessi
                 d.stageid AS phase_id,
                 tu.uid AS peer_id,
                 u.name AS peer_name,
-                tu.anon_mask AS peer_anonymity
+                tu.anon_mask AS peer_anonymity,
+                st.anon AS phase_anonymous
             FROM 
                 teamusers tu
             JOIN 
@@ -1429,11 +1436,8 @@ export async function getStudentActivityPeerResponses_semanticDifferential(sessi
                 selection:     row.selection,
                 justification: row.justification,
                 timestamp:     row.timestamp,
-                peer:          {
-                    id:       row.peer_id,
-                    name:     row.peer_name,
-                    anonMask: row.peer_anonymity,
-                },
+                // No name in an anonymous phase (#1199).
+                peer:          peerOfResponse(row),
             });
         });
 
@@ -1459,7 +1463,8 @@ export async function getStudentActivityPeerResponses_ranking(sessionId, userId)
                 asel.stageid AS phase_id,
                 tu.uid AS peer_id,
                 u.name AS peer_name,
-                tu.anon_mask AS peer_anonymity
+                tu.anon_mask AS peer_anonymity,
+                st.anon AS phase_anonymous
             FROM 
                 teamusers tu
             JOIN 
@@ -1502,11 +1507,8 @@ export async function getStudentActivityPeerResponses_ranking(sessionId, userId)
                 rankOrder:     row.rank_order,
                 justification: row.justification,
                 timestamp:     row.timestamp,
-                peer:          {
-                    id:       row.peer_id,
-                    name:     row.peer_name,
-                    anonMask: row.peer_anonymity,
-                },
+                // No name in an anonymous phase (#1199).
+                peer:          peerOfResponse(row),
             });
         });
 

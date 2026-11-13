@@ -11,6 +11,7 @@ import { messageCountHandlers,
     saveChatMessage } from "../helpers/chat-helper.js";
 import { studentNotifications, teacherNotifications } from "../config/socket.config.js";
 import { requirePhaseOwner } from "../helpers/activity-owner-helper.js";
+import { chatTranscriptForStudent, loadGroupMasks } from "../helpers/peer-names.js";
 
 const router = express.Router();
 
@@ -116,7 +117,19 @@ router.get("/groups/:group_id/question/:question_id/chat_messages", async (req, 
             return res.status(200).json({ chat_transcript: [] });
         }
 
-        res.status(200).json({ chat_transcript: results });
+        // The teacher reads every author's name. A student in an anonymous
+        // phase reads their peers by their masks (#1199).
+        if (role === "P") {
+            return res.status(200).json({ chat_transcript: results });
+        }
+        const { phaseAnonymous, masksByUserId } = await loadGroupMasks(accessContext.groupId);
+        res.status(200).json({
+            chat_transcript: chatTranscriptForStudent(results, {
+                viewerId: userId,
+                phaseAnonymous,
+                masksByUserId,
+            }),
+        });
     } catch (err) {
         console.error("Error fetching chat transcript:", err);
         res.status(500).json({ error: "Internal server error" });

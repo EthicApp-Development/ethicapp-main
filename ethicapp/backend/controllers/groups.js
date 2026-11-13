@@ -5,6 +5,7 @@ import * as config from "../config/database.config.js";
 import * as rpg2 from "../db/rest-pg-2.js";
 import * as StudentActivityStatusHelper from "../helpers/student-activity-state-helper.js";
 import { requireRole } from "../helpers/auth-helper.js";
+import { groupParticipantsForStudent } from "../helpers/peer-names.js";
 import {
     requirePhaseOwner,
     requirePhaseOwnerOrParticipant,
@@ -130,7 +131,8 @@ router.get("/phases/:id/user_group/:user_id", async (req, res) => {
     try {
         // The activity's teacher may ask for any user; a student, only for
         // themselves, in a session they participate in (#910). The answer
-        // names the group's members.
+        // lists the group's members, named for the teacher and for a student
+        // in a phase that is not anonymous (#1199).
         const access = await requirePhaseOwnerOrParticipant(req, res, phaseId, {
             subjectUserId: userId,
         });
@@ -187,17 +189,26 @@ router.get("/phases/:id/user_group/:user_id", async (req, res) => {
             sqlParams: [rpg2.param('plain', teamId)],
         });
 
-        // Respond with the team details and its participants
+        // Respond with the team details and its participants. A student in
+        // an anonymous phase gets their peers' masks without their names
+        // (#1199); the activity's teacher gets every name.
+        const phaseAnonymous = Boolean(results[0]?.phase_anonymous);
+        const participants = groupParticipants.map(row => ({
+            user_id: row.user_id,
+            anon_mask: row.anon_mask,
+            firstname: row.firstname,
+            lastname: row.lastname,
+            name: row.name,
+        }));
         res.status(200).json({
             team_id: teamId,
-            phase_anonymous: Boolean(results[0]?.phase_anonymous),
-            participants: groupParticipants.map(row => ({
-                user_id: row.user_id,
-                anon_mask: row.anon_mask,
-                firstname: row.firstname,
-                lastname: row.lastname,
-                name: row.name,
-            })),
+            phase_anonymous: phaseAnonymous,
+            participants: req.session.role === "P"
+                ? participants
+                : groupParticipantsForStudent(participants, {
+                    viewerId: req.session.uid,
+                    phaseAnonymous,
+                }),
         });
     } catch (err) {
         // Log the error for debugging purposes
