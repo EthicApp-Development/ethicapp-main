@@ -1,0 +1,336 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/EthicApp-Development/ethicapp-ai-additions/schemas/argument-evaluation/v1",
+  "title": "Argument Evaluation Result",
+  "description": "The Argumentation Tutor's evaluation of a student argument with the coders' Toulmin rubric (prompt v19, epic ethicapp-ai-additions#267): stored in the session history and sent to EthicApp. kind analysis carries one evaluation; kind comparison carries the evaluations of an argument and of its revision, made independently, and the differences between them. See the root README, section 'Argument Evaluation Contract', for semantics. The levels are computed in code from the model's answers (argumentation-tutor/docs/PROMPT_TUTOR_V19.md, section 6); texts are the model's or quotes of the student's argument and are meant for teachers, not shown to students as they are. Rules that JSON Schema cannot express, checked by the shared Python validator (ethicapp_ai_capabilities.validate_argument_evaluation) and by the tutor before storing or sending: the entry rule (a claim level of 0 sets the warrant and qualifier levels to 0; otherwise each equals its rawLevel), entryRuleApplied is true exactly when the claim level is 0 and a raw warrant or qualifier level is above 0, the evidence level is the number of factIds capped at 2, claimTypeId is null when the claim level is 0, stance is null exactly when claimTypeId is null, both evaluations of a comparison have the same rubricVersion, and the differences are the ones computed from the two evaluations. EthicApp keeps a verbatim copy of this file (ethicapp-main canonical-schemas/ai-additions/); change both together.",
+  "type": "object",
+  "required": ["schemaVersion", "kind", "tutorMode"],
+  "properties": {
+    "schemaVersion": {
+      "const": "argument-evaluation/v1"
+    },
+    "kind": {
+      "description": "analysis: the evaluation of one argument. comparison: the evaluations of an argument and of its revision, with their differences.",
+      "enum": ["analysis", "comparison"]
+    },
+    "tutorMode": {
+      "description": "The session's tutor mode. Version 1 describes the enhanced mode, which evaluates with the question's claim typology and the case's evidence inventory.",
+      "enum": ["enhanced"]
+    },
+    "requestedMode": {
+      "description": "The evaluation_mode the phase requested, present only when the session was opened with that field (ethicapp-ai-additions#211).",
+      "enum": ["enhanced"]
+    },
+    "evaluation": {
+      "description": "kind analysis only: the evaluation of the argument.",
+      "$ref": "#/$defs/evaluation"
+    },
+    "initial": {
+      "description": "kind comparison only: the evaluation of the earlier argument, as stored when it was evaluated.",
+      "$ref": "#/$defs/evaluation"
+    },
+    "revised": {
+      "description": "kind comparison only: the evaluation of the revised argument, made without seeing the earlier one.",
+      "$ref": "#/$defs/evaluation"
+    },
+    "differences": {
+      "description": "kind comparison only: per-criterion differences, computed in code from initial and revised.",
+      "$ref": "#/$defs/differences"
+    }
+  },
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": { "kind": { "const": "analysis" } },
+        "required": ["kind"]
+      },
+      "then": {
+        "required": ["evaluation"],
+        "properties": { "initial": { "not": {} }, "revised": { "not": {} }, "differences": { "not": {} } }
+      }
+    },
+    {
+      "if": {
+        "properties": { "kind": { "const": "comparison" } },
+        "required": ["kind"]
+      },
+      "then": {
+        "required": ["initial", "revised", "differences"],
+        "properties": { "evaluation": { "not": {} } }
+      }
+    }
+  ],
+  "$defs": {
+    "claimTypeId": {
+      "description": "An AF# id of the session's claim typology.",
+      "type": "string",
+      "pattern": "^AF[1-9][0-9]*$"
+    },
+    "factId": {
+      "description": "An EV# id of the case's evidence inventory.",
+      "type": "string",
+      "pattern": "^EV[1-9][0-9]*$"
+    },
+    "exclusionId": {
+      "description": "An EX# id of the case's evidence inventory.",
+      "type": "string",
+      "pattern": "^EX[1-9][0-9]*$"
+    },
+    "factIds": {
+      "type": "array",
+      "uniqueItems": true,
+      "maxItems": 60,
+      "items": { "$ref": "#/$defs/factId" }
+    },
+    "fragment": {
+      "description": "The fragment of the argument the model quotes for this criterion, as the model wrote it, or null when it quoted none. It is not checked against the argument.",
+      "type": ["string", "null"]
+    },
+    "reason": {
+      "description": "The model's one or two sentences linking the fragment with the rubric, in the language of promptLocale.",
+      "type": "string"
+    },
+    "evaluation": {
+      "type": "object",
+      "required": ["rubricVersion", "promptLocale", "calls", "criteria", "entryRuleApplied"],
+      "properties": {
+        "rubricVersion": {
+          "description": "The rubric the levels follow, as <name>/v<n>. The scales of this schema are those of the coders' rubric; the name and version are set by the rubric selection (ethicapp-ai-additions#275).",
+          "type": "string",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*/v[1-9][0-9]*$",
+          "maxLength": 64
+        },
+        "promptLocale": {
+          "description": "Language of the prompts that produced the evaluation, as a BCP 47 tag. es-CL runs the measured Spanish prompts; en-US runs their English version.",
+          "enum": ["es-CL", "en-US"]
+        },
+        "calls": {
+          "description": "The LLM calls the evaluation made.",
+          "type": "object",
+          "required": ["correction", "mapping"],
+          "properties": {
+            "correction": {
+              "description": "The correction call, which answers the rubric's questions.",
+              "$ref": "#/$defs/call"
+            },
+            "mapping": {
+              "description": "The evidence mapping call, which maps the argument's assertions to the inventory.",
+              "$ref": "#/$defs/call"
+            }
+          },
+          "additionalProperties": false
+        },
+        "criteria": {
+          "type": "object",
+          "required": ["claim", "evidence", "warrant", "qualifier"],
+          "properties": {
+            "claim": { "$ref": "#/$defs/claim" },
+            "evidence": { "$ref": "#/$defs/evidence" },
+            "warrant": { "$ref": "#/$defs/warrant" },
+            "qualifier": { "$ref": "#/$defs/qualifier" }
+          },
+          "additionalProperties": false
+        },
+        "entryRuleApplied": {
+          "description": "True when the claim level is 0 and the entry rule lowered a raw warrant or qualifier level to 0.",
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "call": {
+      "type": "object",
+      "required": ["promptVersion", "model", "reasoningEffort"],
+      "properties": {
+        "promptVersion": {
+          "description": "Name of the prompt version in the tutor's prompt catalog, for example correccion_argumento_etica_v19.",
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]*$",
+          "maxLength": 120
+        },
+        "model": {
+          "description": "The concrete OpenAI model of the call.",
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:/-]*$",
+          "maxLength": 100
+        },
+        "reasoningEffort": {
+          "description": "The reasoning_effort sent with the call, or null when none was sent and the model used its default.",
+          "enum": ["minimal", "low", "medium", "high", null]
+        }
+      },
+      "additionalProperties": false
+    },
+    "claim": {
+      "description": "Afirmación: 0 no decision can be told from the text; 1 the decision must be inferred; 2 the student states in the first person whether they would take the focal action.",
+      "type": "object",
+      "required": ["level", "scale", "fragment", "reason", "claimTypeId", "stance"],
+      "properties": {
+        "level": { "type": "integer", "minimum": 0, "maximum": 2 },
+        "scale": { "$ref": "#/$defs/scale0to2" },
+        "fragment": { "$ref": "#/$defs/fragment" },
+        "reason": { "$ref": "#/$defs/reason" },
+        "claimTypeId": {
+          "description": "The claim type the model chose, or null when it chose none or the claim level is 0.",
+          "anyOf": [{ "$ref": "#/$defs/claimTypeId" }, { "type": "null" }]
+        },
+        "stance": {
+          "description": "The stance of the claim type in the session's typology, relative to its focal action, or null when claimTypeId is null.",
+          "enum": ["in_favor", "against", "alternative", "conditional", null]
+        }
+      },
+      "additionalProperties": false
+    },
+    "evidence": {
+      "description": "Evidencia: the number of distinct inventory facts (EV#) the mapping call found in the argument, capped at 2. Exclusions and assertions not in the case do not count.",
+      "type": "object",
+      "required": ["level", "scale", "factIds", "exclusionIds", "notInCaseCount"],
+      "properties": {
+        "level": { "type": "integer", "minimum": 0, "maximum": 2 },
+        "scale": { "$ref": "#/$defs/scale0to2" },
+        "factIds": {
+          "description": "The distinct EV# facts the argument states, in the order the mapping found them.",
+          "$ref": "#/$defs/factIds"
+        },
+        "exclusionIds": {
+          "description": "The distinct EX# exclusions the argument states (statements the case does not make), in the order the mapping found them.",
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 25,
+          "items": { "$ref": "#/$defs/exclusionId" }
+        },
+        "notInCaseCount": {
+          "description": "How many of the argument's assertions match no fact and no exclusion of the inventory.",
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "warrant": {
+      "description": "Garantía: 0 no reasoning; 1 reasoning not grounded in the case, or not connected to the decision; 2 connected reasoning grounded in the case (it names an inventory fact, or the mapping found one in the argument).",
+      "type": "object",
+      "required": ["level", "rawLevel", "scale", "fragment", "reason", "factId"],
+      "properties": {
+        "level": { "type": "integer", "minimum": 0, "maximum": 2 },
+        "rawLevel": {
+          "description": "The level before the entry rule.",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2
+        },
+        "scale": { "$ref": "#/$defs/scale0to2" },
+        "fragment": { "$ref": "#/$defs/fragment" },
+        "reason": { "$ref": "#/$defs/reason" },
+        "factId": {
+          "description": "The inventory fact the model says the reasoning names, or null.",
+          "anyOf": [{ "$ref": "#/$defs/factId" }, { "type": "null" }]
+        }
+      },
+      "additionalProperties": false
+    },
+    "qualifier": {
+      "description": "Calificador: 0 absent; 1 an expression explicitly limits the decision or states a condition for it.",
+      "type": "object",
+      "required": ["level", "rawLevel", "scale", "fragment", "reason"],
+      "properties": {
+        "level": { "type": "integer", "minimum": 0, "maximum": 1 },
+        "rawLevel": {
+          "description": "The level before the entry rule.",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "scale": { "$ref": "#/$defs/scale0to1" },
+        "fragment": { "$ref": "#/$defs/fragment" },
+        "reason": { "$ref": "#/$defs/reason" }
+      },
+      "additionalProperties": false
+    },
+    "scale0to2": {
+      "type": "object",
+      "required": ["min", "max"],
+      "properties": {
+        "min": { "const": 0 },
+        "max": { "const": 2 }
+      },
+      "additionalProperties": false
+    },
+    "scale0to1": {
+      "type": "object",
+      "required": ["min", "max"],
+      "properties": {
+        "min": { "const": 0 },
+        "max": { "const": 1 }
+      },
+      "additionalProperties": false
+    },
+    "differences": {
+      "type": "object",
+      "required": ["claim", "evidence", "warrant", "qualifier"],
+      "properties": {
+        "claim": {
+          "type": "object",
+          "required": ["levelChange", "claimTypeChanged", "stanceChanged"],
+          "properties": {
+            "levelChange": { "$ref": "#/$defs/levelChange0to2" },
+            "claimTypeChanged": {
+              "description": "True when the two evaluations have different claimTypeId values, null included.",
+              "type": "boolean"
+            },
+            "stanceChanged": {
+              "description": "True when the two evaluations have different stance values, null included.",
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        },
+        "evidence": {
+          "type": "object",
+          "required": ["levelChange", "factIdsGained", "factIdsLost"],
+          "properties": {
+            "levelChange": { "$ref": "#/$defs/levelChange0to2" },
+            "factIdsGained": {
+              "description": "The revised factIds that the initial evaluation does not have, in the revised order.",
+              "$ref": "#/$defs/factIds"
+            },
+            "factIdsLost": {
+              "description": "The initial factIds that the revised evaluation does not have, in the initial order.",
+              "$ref": "#/$defs/factIds"
+            }
+          },
+          "additionalProperties": false
+        },
+        "warrant": {
+          "type": "object",
+          "required": ["levelChange"],
+          "properties": {
+            "levelChange": { "$ref": "#/$defs/levelChange0to2" }
+          },
+          "additionalProperties": false
+        },
+        "qualifier": {
+          "type": "object",
+          "required": ["levelChange"],
+          "properties": {
+            "levelChange": {
+              "description": "Revised level minus initial level.",
+              "type": "integer",
+              "minimum": -1,
+              "maximum": 1
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "levelChange0to2": {
+      "description": "Revised level minus initial level.",
+      "type": "integer",
+      "minimum": -2,
+      "maximum": 2
+    }
+  }
+}

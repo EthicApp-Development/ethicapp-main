@@ -9,20 +9,35 @@ them here: the copy changes only to match the source.
 | --- | --- |
 | `student-result.v1.schema.json` | `shared/schemas/student-result.v1.schema.json` |
 | `examples/student-result.v1/*.json` | `shared/schemas/examples/student-result.v1/*.json` |
+| `argument-evaluation.v1.schema.json` | `shared/schemas/argument-evaluation.v1.schema.json` |
+| `examples/argument-evaluation.v1/*.json` | `shared/schemas/examples/argument-evaluation.v1/*.json` |
 
-Copied from commit
-[`3b292d1`](https://github.com/EthicApp-Development/ethicapp-ai-additions/commit/3b292d1)
-byte for byte. The schema comes from ethicapp-ai-additions PR #234 (issue
-#232); the tutor examples were regenerated from the tutor's own output by PR
-#235 (issue #233). The folder keeps
-the layout of the source's `shared/schemas/`, so the examples sit next to the
-schema as they do there.
+Every file was compared byte for byte with commit
+[`c4a573a`](https://github.com/EthicApp-Development/ethicapp-ai-additions/commit/c4a573a).
+The `student-result/v1` schema comes from ethicapp-ai-additions PR #234
+(issue #232), and its tutor examples were regenerated from the tutor's own
+output by PR #235 (issue #233); they are unchanged since commit `3b292d1`.
+The `argument-evaluation/v1` schema and its examples come from PR #280
+(issue #268) and were copied for #1214. The folder keeps the layout of the
+source's `shared/schemas/`, so the examples sit next to their schema as they
+do there.
 
-The schema defines `student-result/v1`, the document an AI service publishes
-to show a result to one student (epic #1124). Its semantics are explained in
-the "Student Result Document" section of the ethicapp-ai-additions
-`README.md`, and EthicApp's side of the contract in [`EXTERNAL.md`](../../EXTERNAL.md),
+`student-result/v1` is the document an AI service publishes to show a result
+to one student (epic #1124). Its semantics are explained in the "Student
+Result Document" section of the ethicapp-ai-additions `README.md`, and
+EthicApp's side of the contract in [`EXTERNAL.md`](../../EXTERNAL.md),
 "Student result documents".
+
+`argument-evaluation/v1` is the Argumentation Tutor's evaluation of an
+argument with the coders' Toulmin rubric (prompt v19, epic
+ethicapp-ai-additions#267): the levels Claim 0–2, Evidence 0–2, Warrant 0–2
+and Qualifier 0–1, each with its scale, for one argument (`kind: analysis`)
+or for an argument and its revision (`kind: comparison`). The tutor sends it
+as `argumentEvaluation` in its callback payload. It is teacher-facing data:
+its `AF#`, `EV#` and `EX#` ids, fragments and reasons never reach a student.
+Its semantics are explained in the "Argument Evaluation Contract" section of
+the ethicapp-ai-additions `README.md`, and how the tutor adapter reads it in
+`ethicapp/backend/external-services/README.md`, "The tutor's rubrics".
 
 ## Changing the contract
 
@@ -34,8 +49,8 @@ Both copies change together, ethicapp-ai-additions first:
 2. In ethicapp-main, replace the files of this folder with the ones at that
    commit, as described below.
 3. Update the commit in this README, the tests in
-   `canonical-schemas/__tests__/student-result-v1.schema.node-test.mjs` when
-   the change adds a rule, and `EXTERNAL.md` when it changes what the document
+   `canonical-schemas/__tests__/` (`student-result-v1.schema.node-test.mjs`,
+   `argument-evaluation-v1.schema.node-test.mjs`) when the change adds a rule, and `EXTERNAL.md` when it changes what the document
    means. The student app's renderer and EthicApp's validation follow in the
    same pull request or before any service emits the new form.
 4. Record the `shasum` comparison of step 2 in the pull request, since the
@@ -57,11 +72,16 @@ AI=../ethicapp-ai-additions
 COMMIT=<commit>
 DEST=canonical-schemas/ai-additions
 
+CONTRACTS="shared/schemas/student-result.v1.schema.json
+  shared/schemas/examples/student-result.v1
+  shared/schemas/argument-evaluation.v1.schema.json
+  shared/schemas/examples/argument-evaluation.v1"
+
 git -C "$AI" fetch origin
-rm -f "$DEST"/examples/student-result.v1/*.json
-for f in $(git -C "$AI" ls-tree -r --name-only "$COMMIT" \
-    shared/schemas/student-result.v1.schema.json \
-    shared/schemas/examples/student-result.v1); do
+rm -f "$DEST"/examples/student-result.v1/*.json \
+  "$DEST"/examples/argument-evaluation.v1/*.json
+for f in $(git -C "$AI" ls-tree -r --name-only "$COMMIT" $CONTRACTS); do
+  mkdir -p "$(dirname "$DEST/${f#shared/schemas/}")"
   git -C "$AI" show "$COMMIT:$f" > "$DEST/${f#shared/schemas/}"
 done
 ```
@@ -73,9 +93,7 @@ that the source deleted.
 Then check that every copy matches its source and run the tests:
 
 ```sh
-for f in $(git -C "$AI" ls-tree -r --name-only "$COMMIT" \
-    shared/schemas/student-result.v1.schema.json \
-    shared/schemas/examples/student-result.v1); do
+for f in $(git -C "$AI" ls-tree -r --name-only "$COMMIT" $CONTRACTS); do
   src=$(git -C "$AI" show "$COMMIT:$f" | shasum -a 256 | cut -d' ' -f1)
   dst=$(shasum -a 256 "$DEST/${f#shared/schemas/}" | cut -d' ' -f1)
   [ "$src" = "$dst" ] && echo "same     $dst  ${f#shared/schemas/}" \
@@ -98,3 +116,17 @@ with the same problem codes (`duplicate_criterion_key`, `score_out_of_range`)
 in `ethicapp/backend/services/student-result-documents.js` (#1131), which
 validates every document published or rebuilt for a student against this
 copy.
+
+`canonical-schemas/__tests__/argument-evaluation-v1.schema.node-test.mjs`
+validates every `argument-evaluation/v1` example against its copy the same
+way, checks that each level lies within the scale the document gives it, and
+rejects malformed documents: an analysis without its evaluation, a comparison
+without its differences, a level outside its scale, an id outside its
+pattern, an undefined key. The integrity rules outside JSON Schema (the
+entry rule, the evidence level from the facts, the computed differences) are
+checked by ethicapp-ai-additions with
+`ethicapp_ai_capabilities.validate_argument_evaluation()`. EthicApp reads the
+documents leniently, criterion by criterion
+(`ethicapp/backend/external-services/adapters/ats-feedback.evaluation.js`),
+because a forgotten student's stored payloads have their strings redacted
+(V31), and does not validate them against this copy at runtime.

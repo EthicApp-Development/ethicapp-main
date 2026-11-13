@@ -1,0 +1,122 @@
+{
+  "schemaVersion": "argument-evaluation/v1",
+  "kind": "comparison",
+  "tutorMode": "enhanced",
+  "requestedMode": "enhanced",
+  "initial": {
+    "rubricVersion": "toulmin-coders/v1",
+    "promptLocale": "es-CL",
+    "calls": {
+      "correction": {
+        "promptVersion": "correccion_argumento_etica_v19",
+        "model": "gpt-5-mini",
+        "reasoningEffort": null
+      },
+      "mapping": {
+        "promptVersion": "mapeo_evidencia_v17e",
+        "model": "gpt-5-mini",
+        "reasoningEffort": "medium"
+      }
+    },
+    "criteria": {
+      "claim": {
+        "level": 1,
+        "scale": { "min": 0, "max": 2 },
+        "fragment": "No corresponde ayudar a Sebastián en el examen",
+        "reason": "La decisión se deduce de una valoración impersonal: no dice en primera persona qué haría.",
+        "claimTypeId": "AF2",
+        "stance": "against"
+      },
+      "evidence": {
+        "level": 1,
+        "scale": { "min": 0, "max": 2 },
+        "factIds": ["EV4"],
+        "exclusionIds": [],
+        "notInCaseCount": 1
+      },
+      "warrant": {
+        "level": 1,
+        "rawLevel": 1,
+        "scale": { "min": 0, "max": 2 },
+        "fragment": "Copiar es injusto con los compañeros que estudian",
+        "reason": "Da una razón ética general, sin un hecho del caso y sin un conector que la una con la decisión.",
+        "factId": null
+      },
+      "qualifier": {
+        "level": 0,
+        "rawLevel": 0,
+        "scale": { "min": 0, "max": 1 },
+        "fragment": null,
+        "reason": "No hay una expresión que limite o condicione la decisión."
+      }
+    },
+    "entryRuleApplied": false
+  },
+  "revised": {
+    "rubricVersion": "toulmin-coders/v1",
+    "promptLocale": "es-CL",
+    "calls": {
+      "correction": {
+        "promptVersion": "correccion_argumento_etica_v19",
+        "model": "gpt-5-mini",
+        "reasoningEffort": null
+      },
+      "mapping": {
+        "promptVersion": "mapeo_evidencia_v17e",
+        "model": "gpt-5-mini",
+        "reasoningEffort": "medium"
+      }
+    },
+    "criteria": {
+      "claim": {
+        "level": 2,
+        "scale": { "min": 0, "max": 2 },
+        "fragment": "Yo no ayudaría a Sebastián a contestar el examen",
+        "reason": "El estudiante dice en primera persona que no haría la acción focal.",
+        "claimTypeId": "AF2",
+        "stance": "against"
+      },
+      "evidence": {
+        "level": 2,
+        "scale": { "min": 0, "max": 2 },
+        "factIds": ["EV13", "EV19", "EV5"],
+        "exclusionIds": ["EX3"],
+        "notInCaseCount": 0
+      },
+      "warrant": {
+        "level": 2,
+        "rawLevel": 2,
+        "scale": { "min": 0, "max": 2 },
+        "fragment": "porque su papá le dijo que en su familia no se toman atajos",
+        "reason": "Une la decisión con un hecho del caso, lo que el padre dijo sobre no tomar atajos, mediante \"porque\".",
+        "factId": "EV13"
+      },
+      "qualifier": {
+        "level": 1,
+        "rawLevel": 1,
+        "scale": { "min": 0, "max": 1 },
+        "fragment": "Solo lo ayudaría a estudiar antes del examen, no durante la prueba",
+        "reason": "Limita la decisión: excluye ayudarlo durante la prueba y restringe la ayuda a estudiar antes."
+      }
+    },
+    "entryRuleApplied": false
+  },
+  "differences": {
+    "claim": {
+      "levelChange": 1,
+      "claimTypeChanged": false,
+      "stanceChanged": false
+    },
+    "evidence": {
+      "levelChange": 1,
+      "factIdsGained": ["EV13", "EV19", "EV5"],
+      "factIdsLost": ["EV4"]
+    },
+    "warrant": {
+      "levelChange": 1
+    },
+    "qualifier": {
+      "levelChange": 1
+    }
+  }
+}

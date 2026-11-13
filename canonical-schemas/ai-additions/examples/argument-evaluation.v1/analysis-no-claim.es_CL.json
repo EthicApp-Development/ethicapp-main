@@ -1,0 +1,54 @@
+{
+  "schemaVersion": "argument-evaluation/v1",
+  "kind": "analysis",
+  "tutorMode": "enhanced",
+  "evaluation": {
+    "rubricVersion": "toulmin-coders/v1",
+    "promptLocale": "es-CL",
+    "calls": {
+      "correction": {
+        "promptVersion": "correccion_argumento_etica_v19",
+        "model": "gpt-5-mini",
+        "reasoningEffort": null
+      },
+      "mapping": {
+        "promptVersion": "mapeo_evidencia_v17e",
+        "model": "gpt-5-mini",
+        "reasoningEffort": "medium"
+      }
+    },
+    "criteria": {
+      "claim": {
+        "level": 0,
+        "scale": { "min": 0, "max": 2 },
+        "fragment": null,
+        "reason": "El estudiante dice que no sabe qué haría: no hay una decisión frente a la acción focal.",
+        "claimTypeId": null,
+        "stance": null
+      },
+      "evidence": {
+        "level": 0,
+        "scale": { "min": 0, "max": 2 },
+        "factIds": [],
+        "exclusionIds": [],
+        "notInCaseCount": 0
+      },
+      "warrant": {
+        "level": 0,
+        "rawLevel": 0,
+        "scale": { "min": 0, "max": 2 },
+        "fragment": null,
+        "reason": "No hay un razonamiento que sostenga una decisión.",
+        "factId": null
+      },
+      "qualifier": {
+        "level": 0,
+        "rawLevel": 0,
+        "scale": { "min": 0, "max": 1 },
+        "fragment": null,
+        "reason": "No hay una expresión que limite una decisión."
+      }
+    },
+    "entryRuleApplied": false
+  }
+}
