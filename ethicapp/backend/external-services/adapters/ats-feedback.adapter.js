@@ -27,6 +27,7 @@ import {
     questionTextFromPhaseDesign,
     tutorEvaluationFromExternalResult,
 } from "./ats-feedback.utils.js";
+import { rubricOutcomeOf } from "./ats-feedback.evaluation.js";
 import { buildReportContribution } from "./ats-feedback.report.js";
 import { readStudentResults } from "./ats-feedback.student-results.js";
 
@@ -832,6 +833,9 @@ function createAtsFeedbackHandlers({ dependencies, publishStudentResult }) {
                 studentDocument:   { source, locale: studentResult.document.locale },
                 ...claimTypeFromExternalResult(requestPayload),
                 ...tutorEvaluationFromExternalResult(requestPayload),
+                // The v19 rubric's levels, claim type and facts, for
+                // teachers (#1214); nothing for a v12 payload.
+                ...rubricOutcomeOf(requestPayload),
             },
         });
     }

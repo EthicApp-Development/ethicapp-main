@@ -2,6 +2,12 @@ import {
     MAX_CONTRIBUTION_STRING_LENGTH,
 } from "../../services/external-service-report-contributions.js";
 import {
+    argumentEvaluationOf,
+    currentEvaluation,
+    EVALUATION_CRITERION_KEYS,
+    scaleText,
+} from "./ats-feedback.evaluation.js";
+import {
     claimTypeFromExternalResult,
     tutorEvaluationFromExternalResult,
 } from "./ats-feedback.utils.js";
@@ -31,14 +37,41 @@ import {
  *   (a comparison reports no claim type or tutor mode) are empty.
  *
  * Results of a forgotten user are redacted as stored (V31) and shown as such.
+ *
+ * Two rubrics (#1214). A v12 result fills the `ats_claim` ... `ats_qualifier`
+ * scores, as before. A v19 result (`argumentEvaluation`, epic
+ * ethicapp-ai-additions#267) fills the `ats_*_level` columns instead, each
+ * with its scale as the result gives it (`ats_*_scale`, such as `0-2`), plus
+ * `ats_rubric`, `ats_rubric_version`, the claim type's stance, the facts and
+ * exclusions the evidence used and, for a comparison, the level changes. The
+ * v19 columns are left out of a v12 row, so a v12 row's values are the ones
+ * it had before #1214.
  */
 
 const RESPONSE_HOOK = "student-response-submitted";
 const REPORTED_STATUSES = new Set(["completed", "callback-received"]);
 
-// The tutor's criteria (ethicapp-ai-additions, ethicapp_callback.py): the
-// claim's position (-1, 0 or 1) and the other elements on a 0-3 scale.
+// The tutor's v12 criteria (ethicapp-ai-additions, ethicapp_callback.py):
+// the claim's position (-1, 0 or 1) and the other elements on a 1-3 scale.
 const CRITERION_KEYS = Object.freeze(["claim", "evidence", "warrant", "qualifier"]);
+
+// The columns of the v19 rubric (#1214), filled only by v19 results.
+const RUBRIC_COLUMNS = Object.freeze([
+    { id: "ats_rubric", label: "Tutor rubric (v12 or v19)" },
+    { id: "ats_rubric_version", label: "Rubric version of the tutor levels (v19)" },
+    ...EVALUATION_CRITERION_KEYS.flatMap(key => [
+        { id: `ats_${key}_level`, label: `Tutor level (v19): ${key}` },
+        { id: `ats_${key}_scale`, label: `Tutor level scale (v19): ${key}` },
+    ]),
+    { id: "ats_claim_stance", label: "Stance of the claim type (v19)" },
+    { id: "ats_evidence_facts", label: "Case facts the argument states (v19)" },
+    { id: "ats_evidence_exclusions", label: "Statements the case does not make (v19)" },
+    { id: "ats_entry_rule_applied", label: "Entry rule applied (v19)" },
+    ...EVALUATION_CRITERION_KEYS.map(key => ({
+        id:    `ats_${key}_level_change`,
+        label: `Level change from the previous argument (v19): ${key}`,
+    })),
+]);
 
 export const ATS_REPORT_COLUMNS = Object.freeze([
     { id: "ats_mode", label: "Tutor evaluation (analysis or comparison)" },
@@ -48,6 +81,7 @@ export const ATS_REPORT_COLUMNS = Object.freeze([
     { id: "ats_feedback_summary", label: "Tutor feedback summary" },
     { id: "ats_feedback_bullets", label: "Tutor feedback points" },
     ...CRITERION_KEYS.map(key => ({ id: `ats_${key}`, label: `Tutor score: ${key}` })),
+    ...RUBRIC_COLUMNS,
     { id: "ats_claim_type", label: "Claim type matched by the tutor" },
     { id: "ats_unsupported_claims", label: "Unsupported claims (count)" },
     { id: "ats_feedback_count", label: "Tutor feedback received (count)" },
@@ -103,16 +137,49 @@ function bulletsText(bullets) {
     return text(bullets.map(text).filter(Boolean).join("\n"));
 }
 
+function idsText(ids) {
+    return Array.isArray(ids) && ids.length > 0 ? text(ids.join(", ")) : null;
+}
+
+// The v19 columns of a result with an `argumentEvaluation` (#1214), or {}.
+function rubricColumnValues(rawPayload) {
+    const read = argumentEvaluationOf(rawPayload);
+    if (!read) {
+        return {};
+    }
+    const evaluation = currentEvaluation(read);
+    const criteria = evaluation?.criteria ?? {};
+    const values = {
+        ats_rubric:         read.rubric,
+        ats_rubric_version: evaluation?.rubricVersion ?? null,
+    };
+    for (const key of EVALUATION_CRITERION_KEYS) {
+        values[`ats_${key}_level`] = criteria[key]?.level ?? null;
+        values[`ats_${key}_scale`] = scaleText(criteria[key] ?? null);
+    }
+    Object.assign(values, {
+        ats_claim_stance:        criteria.claim?.stance ?? null,
+        ats_evidence_facts:      idsText(criteria.evidence?.factIds),
+        ats_evidence_exclusions: idsText(criteria.evidence?.exclusionIds),
+        ats_entry_rule_applied:  evaluation?.entryRuleApplied ?? null,
+    });
+    for (const key of EVALUATION_CRITERION_KEYS) {
+        values[`ats_${key}_level_change`] = read.differences?.[key]?.levelChange ?? null;
+    }
+    return values;
+}
+
 /**
  * The report values of one stored tutor result, without the count and time.
  * Missing or malformed fields are null; nothing quotes the student's
- * argument.
+ * argument. The v19 columns are present only for a v19 result.
  */
 export function feedbackColumnValues(rawPayload) {
     const feedback = feedbackSource(rawPayload);
     const evaluation = tutorEvaluationFromExternalResult(rawPayload);
     const claimType = claimTypeFromExternalResult(rawPayload);
-    const mode = text(feedback.mode);
+    const rubricValues = rubricColumnValues(rawPayload);
+    const mode = text(feedback.mode) ?? argumentEvaluationOf(rawPayload)?.kind ?? null;
 
     return {
         ats_mode:               mode === "analysis" || mode === "comparison" ? mode : null,
@@ -122,6 +189,7 @@ export function feedbackColumnValues(rawPayload) {
         ats_feedback_summary:   text(feedback.summary),
         ats_feedback_bullets:   bulletsText(feedback.bullets),
         ...criterionScores(feedback.criteria),
+        ...rubricValues,
         ats_claim_type:         claimType?.claimTypeId ?? null,
         ats_unsupported_claims: Array.isArray(evaluation?.unsupportedClaims)
             ? evaluation.unsupportedClaims.length

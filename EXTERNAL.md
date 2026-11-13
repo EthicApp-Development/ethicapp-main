@@ -152,10 +152,13 @@ mode and its reason are recorded and shown to teachers (#865, see "The tutor's
 modes" in `ethicapp/backend/external-services/README.md`). When the phase
 configures `llm_tier` (`context.serviceConfiguration`, #734), the creation
 request sends it (#736);
-otherwise the tutor uses its default tier. The deprecated `model` is not sent.
+otherwise the tutor uses its default tier. The same holds for
+`evaluation_rubric` (#1214): a phase that stores `v12` gets the v12 rubric,
+any other phase the tutor's default, v19 (see "The tutor's rubrics" in
+`ethicapp/backend/external-services/README.md`). The deprecated `model` is not sent.
 The tutor's `llm_tier`, resolved `model`, `warnings` and `degraded` come back
 in the `student-response-submitted` handler's result as `sessionCreation`. If
-the tutor rejects the configured tier (400), the session is created with its
+the tutor rejects the configured settings (400), the session is created with its
 defaults and reported with `configurationRejected: true`.
 
 Its `callback-received` handler publishes the tutor's feedback to the student
