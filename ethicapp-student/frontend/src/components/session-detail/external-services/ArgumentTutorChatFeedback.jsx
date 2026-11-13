@@ -1,3 +1,10 @@
+import {
+  evaluationCriteriaPills,
+  levelText,
+  readArgumentEvaluation,
+  v19ComparisonRows
+} from './argumentTutorFeedback.js';
+
 const CRITERION_LABEL_KEYS = {
   claim: 'sessionDetail.atsCriterionClaim',
   evidence: 'sessionDetail.atsCriterionEvidence',
@@ -52,7 +59,12 @@ function normalizeCriteria(criteria) {
       }
       const key = typeof item?.key === 'string' ? item.key.trim().toLowerCase() : '';
       const score = Number.isFinite(Number(item?.score)) ? Number(item.score) : null;
-      return { key, label, value, score };
+      // A v19 level carries its scale (#1214).
+      const scaled = Number.isInteger(item?.score) && Number.isInteger(item?.minScore)
+        && Number.isInteger(item?.maxScore) && item.minScore < item.maxScore
+        && item.score >= item.minScore && item.score <= item.maxScore;
+      const scale = scaled ? { level: item.score, min: item.minScore, max: item.maxScore, stance: null } : null;
+      return { key, label, value, score, scale };
     })
     .filter(Boolean)
     .slice(0, 4);
@@ -164,11 +176,52 @@ function ComparisonScores({ comparison, t }) {
   );
 }
 
+// A v19 comparison (#1214): each criterion's level before and after, with
+// its scale, and the change in levels.
+function LevelComparison({ rows, t }) {
+  if (rows.length === 0) {
+    return null;
+  }
+
+  return (
+    <section className="ats-feedback-compact__comparison">
+      <h3 className="ats-feedback-compact__section-title">{t('sessionDetail.atsComparisonScores')}</h3>
+      <div className="ats-feedback-compact__score-grid">
+        {rows.map((row) => {
+          const { label: deltaLabel, tone } = formatDelta(row.delta);
+          return (
+            <article key={row.key} className="ats-feedback-compact__score-item">
+              <div className="ats-feedback-compact__score-label">{localizeCriterionLabel(row.key, row.key, t)}</div>
+              <div className="ats-feedback-compact__score-values">
+                <span>{row.initial ?? '-'}</span>
+                <span className="ats-feedback-compact__score-arrow">→</span>
+                <span>{row.revised ?? '-'}</span>
+              </div>
+              {row.delta === null ? null : (
+                <div className={`ats-feedback-compact__delta ats-feedback-compact__delta--${tone}`}>
+                  {deltaLabel}
+                </div>
+              )}
+            </article>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 export default function ArgumentTutorChatFeedback({ payload = {}, t = (key) => key }) {
   const feedback = payload?.feedback && typeof payload.feedback === 'object' ? payload.feedback : payload;
-  const mode = typeof feedback?.mode === 'string' ? feedback.mode.trim().toLowerCase() : 'analysis';
+  const evaluation = readArgumentEvaluation(feedback);
+  const mode = typeof feedback?.mode === 'string'
+    ? feedback.mode.trim().toLowerCase()
+    : evaluation?.kind ?? 'analysis';
   const summary = sanitizeSummary(feedback?.summary);
-  const criteria = normalizeCriteria(feedback?.criteria);
+  const evaluationPills = evaluationCriteriaPills(evaluation, t);
+  const levelRows = mode === 'comparison' ? v19ComparisonRows(feedback, t) : null;
+  const criteria = evaluationPills.length > 0
+    ? evaluationPills.map((pill) => ({ ...pill, label: pill.key, score: null }))
+    : normalizeCriteria(feedback?.criteria);
   const bullets = normalizeBullets(feedback?.bullets);
   const comparison = feedback?.comparison && typeof feedback.comparison === 'object' ? feedback.comparison : null;
 
@@ -187,7 +240,12 @@ export default function ArgumentTutorChatFeedback({ payload = {}, t = (key) => k
         <section className="ats-feedback-compact__criteria">
           {criteria.map((item) => {
             const criterionLabel = localizeCriterionLabel(item.key, item.label, t);
-            const criterionValue = localizeCriterionValue(item.key, item.score, item.value, t);
+            // A v19 level is already a localized text; a v12 claim is a position.
+            const criterionValue = evaluationPills.length > 0
+              ? item.value
+              : item.scale
+                ? levelText(item.key, item.scale, t)
+                : localizeCriterionValue(item.key, item.score, item.value, t);
             return (
               <span key={`${item.key || item.label}-${item.value}`} className="ats-feedback-compact__criteria-pill">
                 <strong>{criterionLabel}:</strong> {criterionValue}
@@ -197,7 +255,8 @@ export default function ArgumentTutorChatFeedback({ payload = {}, t = (key) => k
         </section>
       ) : null}
 
-      {mode === 'comparison' ? <ComparisonScores comparison={comparison} t={t} /> : null}
+      {mode === 'comparison' && levelRows ? <LevelComparison rows={levelRows} t={t} /> : null}
+      {mode === 'comparison' && !levelRows ? <ComparisonScores comparison={comparison} t={t} /> : null}
 
       {mode !== 'comparison' && submittedArgument ? (
         <section className="ats-feedback-compact__arguments">

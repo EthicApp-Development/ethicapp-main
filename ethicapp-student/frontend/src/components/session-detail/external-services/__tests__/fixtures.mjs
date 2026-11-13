@@ -17,3 +17,12 @@ export const EXAMPLE_NAMES = [
   'tutor-comparison.es_CL',
   'unknown-section-kind.en_US'
 ];
+
+// The argument-evaluation/v1 examples in fixtures/argument-evaluation.v1/ are
+// verbatim copies of ethicapp-ai-additions
+// shared/schemas/examples/argument-evaluation.v1/ at commit c4a573a (PR #280),
+// as canonical-schemas/ai-additions/ holds them (#1214).
+export function argumentEvaluationExample(name) {
+  const url = new URL(`./fixtures/argument-evaluation.v1/${name}.json`, import.meta.url);
+  return JSON.parse(readFileSync(url, 'utf8'));
+}
