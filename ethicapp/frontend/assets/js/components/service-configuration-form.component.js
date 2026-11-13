@@ -5,6 +5,7 @@
 
 import { normalizeExternalServicesConfig } from "../helpers/phase-external-services.js";
 import {
+    advancedNeedsAttention,
     buildFieldSections,
     configurationErrors,
     controlKind,
@@ -31,6 +32,9 @@ function ServiceConfigurationFormController($scope, $rootScope, $translate,
     vm.storedEntries = [];
     vm.notices = { byField: {}, retiredFields: [] };
     vm.idPrefix = `service-setting-${$scope.$id}`;
+    // The advanced options (#1214) start collapsed; validate() opens them
+    // when one of their fields has an error or a notice.
+    vm.advancedOpen = false;
 
     let serverErrorsByField = {};
     let defaultLabel = $translate.instant("service_settings_default");
@@ -54,7 +58,18 @@ function ServiceConfigurationFormController($scope, $rootScope, $translate,
         const stored = vm.storedConfigurations || [];
         vm.errors = configurationErrors(vm.fields, currentConfiguration(), stored);
         vm.notices = settingNotices(vm.fields, currentConfiguration());
+        if (advancedNeedsAttention(vm.sections, vm.errors, vm.notices)) {
+            vm.advancedOpen = true;
+        }
         reportErrors();
+    };
+
+    vm.hasAdvancedSection = function() {
+        return vm.sections.some(section => section.advanced);
+    };
+
+    vm.toggleAdvanced = function() {
+        vm.advancedOpen = !vm.advancedOpen;
     };
 
     // Rebuilds the controls from the stored configuration.

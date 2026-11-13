@@ -2,12 +2,14 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
+    advancedNeedsAttention,
     buildFieldSections,
     configurationErrors,
     controlKind,
     defaultText,
     enumOptions,
     errorParameters,
+    isAdvancedGroup,
     readControlValue,
     setConfigurationValue,
     settingNotices,
@@ -266,3 +268,61 @@ describe("the tutor's evaluation_mode field (#870)", () => {
     });
 });
 
+// The tutor's rubric field (ethicapp-ai-additions#275): a technical setting
+// in the descriptor's `advanced` group, v19 by default and v12 deprecated.
+const RUBRIC = field("evaluation_rubric", "enum", {
+    entries: [
+        { value: "v19", label: "v19", status: "active", supersededBy: null },
+        { value: "v12", label: "v12", status: "deprecated", supersededBy: "v19" },
+    ],
+}, { default: "v19", group: "advanced", order: 2 });
+
+describe("advanced options (#1214)", () => {
+    it("recognizes the advanced group in either locale and any letter case", () => {
+        for (const group of ["advanced", "Advanced", " Advanced options ", "Avanzado",
+            "Opciones avanzadas", "AVANZADAS"]) {
+            assert.equal(isAdvancedGroup(group), true, group);
+        }
+        for (const group of ["General", "Tiempo", "", null, undefined, 3]) {
+            assert.equal(isAdvancedGroup(group), false, String(group));
+        }
+    });
+
+    it("puts the advanced fields in one section, last, whatever their order", () => {
+        const other = { ...RUBRIC, key: "evaluation_model", group: "Avanzado", order: 0 };
+        const sections = buildFieldSections([RUBRIC, ...FIELDS, other]);
+
+        assert.deepEqual(sections.map(section => [section.group, section.advanced,
+            section.fields.map(f => f.key)]), [
+            ["General", false, ["anonymous_guide", "llm_tier"]],
+            ["Presentación", false, ["agent_nickname"]],
+            ["Tiempo", false, ["session_duration_seconds"]],
+            [null, false, ["notes"]],
+            ["Avanzado", true, ["evaluation_model", "evaluation_rubric"]],
+        ]);
+    });
+
+    it("has no advanced section when no field is in the group", () => {
+        assert.equal(buildFieldSections(FIELDS).some(section => section.advanced), false);
+    });
+
+    it("keeps the advanced options closed unless one of them needs attention", () => {
+        const fields = [TIER, RUBRIC];
+        const closed = configuration => advancedNeedsAttention(
+            buildFieldSections(fields, configuration),
+            configurationErrors(fields, configuration),
+            settingNotices(fields, configuration)
+        );
+
+        assert.equal(closed({}), false, "the default rubric");
+        assert.equal(closed({ evaluation_rubric: "v19" }), false, "the active value stored");
+        assert.equal(closed({ evaluation_rubric: "v12" }), true, "a deprecated value stored");
+        assert.equal(closed({ evaluation_rubric: "v3" }), true, "a value the service dropped");
+        assert.equal(closed({ llm_tier: "unknown" }), false, "a problem outside the group");
+    });
+
+    it("offers the deprecated rubric only while a design stores it", () => {
+        assert.deepEqual(enumOptions(RUBRIC, undefined).map(entry => entry.value), ["v19"]);
+        assert.deepEqual(enumOptions(RUBRIC, "v12").map(entry => entry.value), ["v19", "v12"]);
+    });
+});

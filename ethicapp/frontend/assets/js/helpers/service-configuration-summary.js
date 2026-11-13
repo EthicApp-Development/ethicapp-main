@@ -64,8 +64,10 @@ function displayValue(field, value) {
 /**
  * One row per visible descriptor field, in the form's order: its label and the
  * stored value, or the service default when nothing is stored (`isDefault`).
- * `notice` is the field's lifecycle notice (#733), if any. Settings the
- * descriptor no longer defines come back in `retiredFields`.
+ * `notice` is the field's lifecycle notice (#733), if any. A field of the
+ * advanced group (#1214) gets a row only when a value is stored, marked
+ * `advanced: true`: its default is a technical detail the views leave out.
+ * Settings the descriptor no longer defines come back in `retiredFields`.
  * @returns {{ rows: object[], retiredFields: { key: string, value: * }[] }}
  */
 export function summarizeServiceSettings(fields, configuration = {}) {
@@ -76,6 +78,9 @@ export function summarizeServiceSettings(fields, configuration = {}) {
         for (const field of section.fields) {
             const value = configuration[field.key];
             const isDefault = isUnset(value);
+            if (section.advanced && isDefault) {
+                continue;
+            }
             const shown = isDefault
                 ? { text: defaultText(field) || null, booleanValue: null }
                 : displayValue(field, value);
@@ -88,6 +93,7 @@ export function summarizeServiceSettings(fields, configuration = {}) {
                 key:         field.key,
                 label:       field.label,
                 group:       section.group,
+                ...(section.advanced ? { advanced: true } : {}),
                 isDefault,
                 ...shown,
                 notice:      notices.byField[field.key] || null,

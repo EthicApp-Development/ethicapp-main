@@ -1050,6 +1050,15 @@ editor shows its fields below the service, in the UI language
   "Use default" removes a value;
 - deprecated fields and enum values are offered only while a design stores
   them;
+- fields of the descriptor's `advanced` group (`display.group`, recognized in
+  any letter case and as the service's Spanish translation, such as
+  "Avanzado" or "Opciones avanzadas") are technical settings, such as the
+  tutor's `evaluation_rubric` (#1214, ethicapp-ai-additions#275). They come
+  last, in one section hidden behind an "Advanced options" ("Opciones
+  avanzadas") link, which opens by itself when one of them has an error or a
+  lifecycle notice, for example a design that stores the deprecated `v12`
+  rubric. The read-only views list an advanced setting only when the design
+  stores a value for it;
 - lifecycle notices (#733) for stored values, matching the server's save
   warnings (#731): a deprecated field or value says so and offers a switch to
   its `superseded_by` replacement; a retired enum value stays visible in the

@@ -20,11 +20,30 @@
         <p class="help-block" ng-if="$ctrl.stale">{{ 'service_settings_stale' | translate }}</p>
         <p class="help-block" ng-if="$ctrl.sections.length === 0">{{ 'service_settings_none' | translate }}</p>
 
+        <!-- The advanced group comes last, collapsed behind a link (#1214). -->
+        <p
+            class="service-configuration-advanced-toggle"
+            ng-repeat-start="section in $ctrl.sections track by $index"
+            ng-if="section.advanced">
+            <button
+                type="button"
+                class="btn btn-link btn-xs"
+                ng-click="$ctrl.toggleAdvanced()"
+                aria-expanded="{{ $ctrl.advancedOpen ? 'true' : 'false' }}"
+                aria-controls="{{ $ctrl.idPrefix }}-advanced"
+                data-testid="service-settings-advanced-toggle">
+                <i class="fa" ng-class="$ctrl.advancedOpen ? 'fa-caret-down' : 'fa-caret-right'" aria-hidden="true"></i>
+                {{ 'service_settings_advanced_options' | translate }}
+            </button>
+        </p>
         <fieldset
             class="service-configuration-section"
-            ng-repeat="section in $ctrl.sections track by $index"
+            ng-class="{ 'service-configuration-advanced': section.advanced }"
+            ng-repeat-end
+            ng-if="!section.advanced || $ctrl.advancedOpen"
+            ng-attr-id="{{ section.advanced ? $ctrl.idPrefix + '-advanced' : undefined }}"
             ng-disabled="$ctrl.readOnly">
-            <legend class="service-configuration-group" ng-if="section.group">{{ section.group }}</legend>
+            <legend class="service-configuration-group" ng-if="section.group && !section.advanced">{{ section.group }}</legend>
 
             <div
                 class="form-group"
