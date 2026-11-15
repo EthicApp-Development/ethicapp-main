@@ -29,6 +29,10 @@
  *   was handled meanwhile. Nothing to do;
  * - `invalid_design`, `not_launched`: the start handled the deadline, which
  *   no retry can change. Logged;
+ * - `missing_case_inputs` (#1220): the next phase's services require a case
+ *   input the case's analyses do not provide. The start handled the
+ *   deadline, and the teacher starts the phase by hand, where the dashboard
+ *   says what is missing. Logged;
  * - `forbidden` (the teacher's account is anonymized), `finished`,
  *   `not_found`: the start wrote nothing; the deadline is marked handled
  *   here, and the outcome logged;
@@ -167,6 +171,10 @@ export function createPhaseDeadlineRunner({
         case "invalid_design":
             logger.error(`${LABEL} ${describe(deadline)}: the next phase cannot start `
                 + `(${result.problem}); its deadline is handled.`);
+            break;
+        case "missing_case_inputs":
+            logger.error(`${LABEL} ${describe(deadline)}: the next phase cannot start, `
+                + `${result.missing.length} case input(s) missing; its deadline is handled.`);
             break;
         case "not_launched":
             logger.error(`${LABEL} ${describe(deadline)}: the session has no launched `

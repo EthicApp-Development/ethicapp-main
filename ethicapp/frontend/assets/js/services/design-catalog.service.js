@@ -261,6 +261,21 @@ let DesignCatalogService = ($rootScope, $http) => {
             }
         },
 
+        // The case inputs the design's services require as edited, and which
+        // of them its case does not provide (#1220): what saving it would
+        // check, without saving. Resolves to `{ inputs, missing, unchecked }`.
+        async checkCaseInputs(designId, designObj) {
+            const response = await $http.post("/designs/case-inputs", {
+                design:   designObj,
+                caseId:   designObj?.caseId ?? null,
+                designId: designId || null,
+            });
+            if (response.data?.status === "ok" && response.data.result) {
+                return response.data.result;
+            }
+            throw new Error("Unexpected case inputs response format.");
+        },
+
         isDesignValid: async function(designId) {
             try {
                 // Call the API endpoint

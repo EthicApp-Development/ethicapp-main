@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { designSaveErrorMessageKey, isCaseNotAvailableError } from "../design-save-errors.js";
+import {
+    designSaveErrorMessageKey,
+    isCaseNotAvailableError,
+    isMissingCaseInputsSaveError,
+} from "../design-save-errors.js";
 
 describe("designSaveErrorMessageKey (#730)", () => {
     it("explains a save refused because the design is locked", () => {
@@ -31,6 +35,15 @@ describe("designSaveErrorMessageKey (#730)", () => {
         assert.equal(designSaveErrorMessageKey(rejection), "save_design_case_not_available");
     });
 
+    it("explains a save refused because a case analysis is not ready (#1220)", () => {
+        const rejection = { status: 400, data: { status: "err", code: "MISSING_CASE_INPUTS" } };
+
+        assert.equal(designSaveErrorMessageKey(rejection), "save_design_missing_case_inputs");
+        assert.equal(isMissingCaseInputsSaveError(rejection), true);
+        assert.equal(isMissingCaseInputsSaveError({ status: 422, data: { code: "MISSING_CASE_INPUTS" } }), false);
+        assert.equal(isMissingCaseInputsSaveError(undefined), false);
+    });
+
     it("falls back to the generic failure otherwise", () => {
         const errors = [
             { status: 409, data: { code: "CASE_VISIBILITY_REQUIRED" } },
@@ -38,6 +51,7 @@ describe("designSaveErrorMessageKey (#730)", () => {
             { status: 409, data: { code: "INVALID_SERVICE_CONFIGURATION" } },
             { status: 409, data: { code: "CASE_NOT_AVAILABLE" } },
             { status: 409, data: { code: "INVALID_PHASE_DURATION" } },
+            { status: 422, data: { code: "MISSING_CASE_INPUTS" } },
             { status: 404, data: { status: "err", message: "Design not found" } },
             { status: -1, data: null },
             new Error("Cannot save a null design"),

@@ -56,6 +56,11 @@ Each manifest entry declares:
 - `descriptor`: `{ path }`, the capability descriptor that the AI service
   publishes (`GET <path>` under the AI Additions connection's `base_url`). Its id is the one
   service in `requires`, mapped to the catalog `id` instead of renamed.
+- `produces` and `consumes`: the design analyses the adapter produces or needs
+  (`[{ documentSchema, unit }]`, unit `question`, #863). A case-scoped adapter
+  also declares under `produces` the one document its case analysis holds,
+  with unit `case` (#1220), so a service's case input can find it; see "Case
+  inputs from case analyses".
 
 There is no `enabled`: the catalog lists adapters, and whether one may be used
 is decided at dispatch by the AI service policy gate
@@ -451,6 +456,113 @@ The `phase-started` job result reports each timed room's clock as
 `payload.rooms[].phaseClock`, and the `phase-clock-changed` result reports
 `roomsUpdated`, `roomsNotRunning`, `roomsFailed` and each room's outcome and
 clock.
+
+### Case inputs from case analyses
+
+Some services need, for some of their settings, a value EthicApp keeps with
+the case: Polyadic's `contentCoverage` mode needs the case's topic list
+(epic ethicapp-ai-additions#293). EthicApp enforces this from what the
+service declares, without knowing the service (#1220).
+
+**How a service declares a case input.** In its capability descriptor, a
+`session_inputs` entry gets a `source` and, when only some configurations
+need it, `required_when` (ethicapp-ai-additions README, "Session Inputs From
+Case Analyses"; schema `capability-descriptor.v1.schema.json`, `$defs`
+`sessionInput`):
+
+```json
+"session_inputs": {
+  "discussion_topics": {
+    "source": {
+      "kind": "case_analysis",
+      "document_schema": "topic-listing/v1",
+      "pointer": "/topics"
+    },
+    "required_when": [
+      { "field": "pipeline_type", "in": ["contentCoverage"] }
+    ]
+  }
+}
+```
+
+- `source.document_schema` names the document of a case analysis, and
+  `source.pointer` (RFC 6901, `""` for the whole document) the part sent
+  under the entry's key. `require_reviewed: true` asks for the teacher's
+  review; by default an unreviewed draft is enough.
+- `required_when` lists conditions on instance configuration fields; the input
+  is required when one holds for the field's effective value (the stored
+  value, else the field's default). An entry with a `source` and no
+  `required_when` is optional.
+
+**How EthicApp finds the analysis.** A case-scoped adapter declares the
+document its case analysis holds in the catalog, with unit `case`:
+
+```json
+{ "id": "case-analyst-topic-listing", "scopes": ["case"],
+  "produces": [{ "documentSchema": "topic-listing/v1", "unit": "case" }] }
+```
+
+The case analysis of an input is the `case_analyses` row of the design's case
+and one of those adapters. The catalog decides rather than the row's
+`document_schema`, which a pending row may not have yet. The four Case
+Analyst and mock case adapters declare `case-evaluation/v1`,
+`evidence-inventory/v1`, `mock-case-analysis/v1` and `topic-listing/v1`; a
+test checks each against the schema its adapter stores.
+
+**What EthicApp enforces.** `helpers/case-session-inputs.js` computes the
+inputs a configuration requires and resolves them; the validator
+`services/case-input-validation.service.js` applies it to a design or one of
+its phases. An input resolves only from a `ready` analysis that holds the
+pointed part (and is reviewed when the source asks for it). Otherwise it is
+`absent`, `pending` (a generation in flight), `failed` (the generation failed
+or never answered, or the document lacks the part) or `not_reviewed`.
+
+- **Design save.** `POST /designs` and `PATCH /designs/:id` (which is also
+  how a design's case changes) check every enabled service of every phase,
+  under the current AI service policy version, after the configuration
+  validation. A required input that does not resolve refuses the save:
+
+  ```json
+  {
+    "status": "err",
+    "code": "MISSING_CASE_INPUTS",
+    "message": "The case has no ready analysis for an input a phase's service needs: phase 2, polyadic-devils-advocate: discussion_topics needs the case's topic-listing/v1 analysis (pending).",
+    "errors": [
+      { "phaseIndex": 1, "serviceId": "polyadic-devils-advocate", "key": "discussion_topics",
+        "documentSchema": "topic-listing/v1", "analysisServiceIds": ["case-analyst-topic-listing"],
+        "status": "pending" }
+    ],
+    "warnings": []
+  }
+  ```
+
+  A successful save answers the required inputs as `caseInputs`. Services the
+  policy does not allow, and services whose descriptor cannot be read, are
+  not checked: nothing is known of their inputs. The configuration
+  validation already warns about the first (`not_allowed`) and, when they
+  store settings, the second (`not_validated`).
+- **Design editor.** `POST /designs/case-inputs` with `{ design, caseId,
+  designId }` answers `{ inputs, missing, unchecked }` for the design as
+  edited, under the case rule of a save (#924). The editor asks again, after
+  a short pause, when the case or a phase's services or settings change, and
+  shows each required input next to its service's settings, named by the
+  producing service's label. It computes nothing itself.
+- **Phase start.** `POST /activities/:id/phases/next` checks the phase's
+  services under the session's pinned policy version, inside the start's
+  transaction and after the design's own problems. A phase whose required
+  input does not resolve does not start, and the route answers `422
+  MISSING_CASE_INPUTS` with `phaseNumber` and `missing`; the dashboard shows
+  the teacher a toast. A start by the deadline runner is refused the same
+  way, its deadline is handled and logged, and the teacher starts the phase
+  by hand. So a listing deleted or regenerating after the design was saved
+  stops the phase instead of letting the service fail.
+
+**Sending the value.** Adapters build the value with
+`resolveCaseSessionInputs()` and send it, under the entry's key, only to
+sessions or rooms whose configuration requires it (or, for an optional input,
+when it resolves). The Polyadic adapter's `discussion_topics` is
+ethicapp-main#1221. The tutor's `case_context`, which predates this contract,
+is still built by its adapter (`helpers/tutor-mode.js`).
 
 ## Hook Dispatch
 

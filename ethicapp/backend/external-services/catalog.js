@@ -20,6 +20,15 @@ export const AI_ADDITIONS_SERVICE_IDS = Object.freeze([
 // differential question, identified by position (helpers/design-analysis-units.js).
 export const DESIGN_ANALYSIS_UNITS = Object.freeze(["question"]);
 
+// The unit of a case analysis (#1220): one document per case, stored in
+// `case_analyses`. A case-scoped adapter declares the schema of its document
+// as `produces: [{ documentSchema, unit: "case" }]`, so EthicApp can find the
+// analysis that provides a service's case input (helpers/case-session-inputs.js).
+export const CASE_ANALYSIS_UNIT = "case";
+
+// The units a `produces` entry may name; `consumes` names design units only.
+const PRODUCTION_UNITS = Object.freeze([...DESIGN_ANALYSIS_UNITS, CASE_ANALYSIS_UNIT]);
+
 // The document schema of a design analysis, as stored in
 // `design_analyses.document_schema`: a kebab-case name and a major version.
 const DOCUMENT_SCHEMA_PATTERN = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*\/v[1-9][0-9]*$/u;
@@ -58,15 +67,17 @@ function isPlainObject(value) {
 
 /**
  * Validates a `produces` or `consumes` declaration: a list of
- * `{ documentSchema, unit }`, each naming a design analysis schema
- * (`<name>/v<major>`) and one of DESIGN_ANALYSIS_UNITS, without other keys
- * and without repeating a pair. Absent is valid; it means none.
+ * `{ documentSchema, unit }`, each naming an analysis schema
+ * (`<name>/v<major>`) and one of `units`, without other keys and without
+ * repeating a pair. Absent is valid; it means none.
  *
  * @param {unknown} declaration
  * @param {string} key - `produces` or `consumes`, for the messages.
+ * @param {readonly string[]} units - DESIGN_ANALYSIS_UNITS, or PRODUCTION_UNITS
+ *     for `produces`.
  * @returns {string[]} Problems, in English.
  */
-function validateDesignAnalysisDeclaration(declaration, key) {
+function validateDesignAnalysisDeclaration(declaration, key, units = DESIGN_ANALYSIS_UNITS) {
     if (declaration === undefined) {
         return [];
     }
@@ -97,9 +108,9 @@ function validateDesignAnalysisDeclaration(declaration, key) {
                 + "such as claim-typology/v1"
             );
         }
-        const unitValid = DESIGN_ANALYSIS_UNITS.includes(item.unit);
+        const unitValid = units.includes(item.unit);
         if (!unitValid) {
-            problems.push(`${label}.unit must be one of ${DESIGN_ANALYSIS_UNITS.join(", ")}`);
+            problems.push(`${label}.unit must be one of ${units.join(", ")}`);
         }
 
         if (schemaValid && unitValid) {
@@ -113,6 +124,36 @@ function validateDesignAnalysisDeclaration(declaration, key) {
         }
     });
 
+    return problems;
+}
+
+/**
+ * What an adapter produces is stored as its design analysis (a design unit,
+ * `design` scope) or as its case analysis (CASE_ANALYSIS_UNIT, `case` scope).
+ * A case analysis holds one document per case and service, so an adapter
+ * produces at most one per case.
+ *
+ * @param {Object} entry
+ * @returns {string[]} Problems, in English.
+ */
+function validateProductionScopes(entry) {
+    if (!Array.isArray(entry.produces)) {
+        return [];
+    }
+    const scopes = Array.isArray(entry.scopes) ? entry.scopes : [];
+    const units = entry.produces.map(item => (isPlainObject(item) ? item.unit : null));
+    const caseCount = units.filter(unit => unit === CASE_ANALYSIS_UNIT).length;
+
+    const problems = [];
+    if (units.some(unit => DESIGN_ANALYSIS_UNITS.includes(unit)) && !scopes.includes("design")) {
+        problems.push("an adapter that `produces` design analyses needs the `design` scope");
+    }
+    if (caseCount > 0 && !scopes.includes("case")) {
+        problems.push("an adapter that `produces` a case analysis needs the `case` scope");
+    }
+    if (caseCount > 1) {
+        problems.push("an adapter `produces` at most one case analysis document");
+    }
     return problems;
 }
 
@@ -258,8 +299,10 @@ export function manifestStudentOutputs(entry) {
  *   only its `path`: `requires[0]` replaces the former `descriptor.serviceId`.
  * - `produces` and `consumes` (#863), when present, list the design analyses
  *   the adapter produces or needs, as `{ documentSchema, unit }`. A producer
- *   has the `design` scope. Whether a consumption has a producer is a
- *   catalog-wide question, answered by catalogWarnings().
+ *   has the `design` scope. A case-scoped adapter may also declare the one
+ *   document its case analysis holds, with unit `case` (#1220). Whether a
+ *   consumption has a producer is a catalog-wide question, answered by
+ *   catalogWarnings().
  * - `report` (#944), `{ columnPrefix }`, is required by an adapter that lists
  *   REPORT_BUILDING_HOOK in `hooks`. Prefixes are unique in the catalog
  *   (validateCatalog()), and end at their only `_`, so the columns of two
@@ -295,16 +338,12 @@ export function validateCatalogEntry(entry) {
     }
     const isDevelopment = entry.development === true;
 
-    problems.push(...validateDesignAnalysisDeclaration(entry.produces, "produces"));
+    problems.push(...validateDesignAnalysisDeclaration(entry.produces, "produces",
+        PRODUCTION_UNITS));
     problems.push(...validateDesignAnalysisDeclaration(entry.consumes, "consumes"));
     problems.push(...validateReportDeclaration(entry));
     problems.push(...manifestStudentOutputs(entry).problems);
-    // What an adapter produces is stored as its design analysis.
-    const declaresProduction = Array.isArray(entry.produces) && entry.produces.length > 0;
-    const hasDesignScope = Array.isArray(entry.scopes) && entry.scopes.includes("design");
-    if (declaresProduction && !hasDesignScope) {
-        problems.push("an adapter that `produces` design analyses needs the `design` scope");
-    }
+    problems.push(...validateProductionScopes(entry));
 
     if (!Array.isArray(entry.requires)) {
         problems.push("`requires` is missing: list the AI Additions services the adapter requires");

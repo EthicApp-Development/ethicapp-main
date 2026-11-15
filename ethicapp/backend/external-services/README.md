@@ -285,7 +285,7 @@ Each manifest entry describes one service:
 | `globalHooks` | no | Hooks the service opts into at manifest level, without an activity-design opt-in. Defaults to `[]`. Each name must be kebab-case and must also appear in `hooks`; other entries are dropped with a warning and duplicates are removed. Only consulted by `dispatchGlobalHook()` (see "Hook enablement"). Exposed through `GET /external-services`. |
 | `scopes` | no | Where the service operates: `case` (case documents), `design` (activity designs, see "Design Analyses"), `response` (student responses) or `chat` (group chat). Defaults to `[]`. Unknown values are dropped with a warning and duplicates are removed. Screens list services by scope (see "Listing services"), so an entry without scopes appears in none of them; `__tests__/manifest.node-test.mjs` requires at least one. |
 | `ui` | no | `{ component }`: the kebab-case name of the EthicApp frontend component that shows the service's analysis in its case view tab (see "Case view tabs"). Defaults to `{ component: null }`; other names are dropped with a warning. The texts come from the adapter, not from the manifest (see "UI translations"). |
-| `produces` | no | The design analyses the adapter produces, as `[{ documentSchema, unit }]`, for example `[{ "documentSchema": "claim-typology/v1", "unit": "question" }]`. `documentSchema` is a kebab-case name with its major version (`<name>/v<major>`); `unit` is one of `DESIGN_ANALYSIS_UNITS` in `catalog.js` (only `question` so far). A producer needs the `design` scope. A malformed list, an unknown key or unit, or a repeated pair rejects the catalog. See "Producers, consumers and units". |
+| `produces` | no | The design analyses the adapter produces, as `[{ documentSchema, unit }]`, for example `[{ "documentSchema": "claim-typology/v1", "unit": "question" }]`. `documentSchema` is a kebab-case name with its major version (`<name>/v<major>`); `unit` is one of `DESIGN_ANALYSIS_UNITS` in `catalog.js` (only `question` so far). A producer needs the `design` scope. A case-scoped adapter also declares here the one document its case analysis holds, with unit `case` (`CASE_ANALYSIS_UNIT`, #1220), for example `[{ "documentSchema": "topic-listing/v1", "unit": "case" }]`; it needs the `case` scope and declares at most one. A malformed list, an unknown key or unit, or a repeated pair rejects the catalog. See "Producers, consumers and units" and "Case inputs". |
 | `consumes` | no | The design analyses the adapter needs, in the same form as `produces`. Its phases decide which units the producer analyses. A consumption that no catalog entry produces for the same unit logs a warning at startup (`catalogWarnings()`), so a consumer can ship before its producer. |
 | `descriptor` | no | `{ path }`: the capability descriptor the service's AI backend publishes (#687). Its id (`service.id` in the descriptor) is the one AI Additions service in `requires`, so an adapter with a descriptor requires exactly one service; `descriptor.serviceId` is no longer accepted (#812). That id may differ from `id`: ids are mapped, not renamed, so stored designs, chat agents and jobs keep the manifest id. `path` is the descriptor route relative to the AI Additions connection's `base_url`, for example `/polyadic-agent/api/capabilities`; it must be an absolute path without host, query or `..` segments. An invalid path is dropped with a warning. `GET /external-services` exposes `descriptor.serviceId` and a summary (see "Listing services"); the route stays internal (`getServiceDescriptor()`). |
 | `capabilities` | — | Removed (#726). Entries that still declare it log a deprecation warning and the key is ignored. A service that processes student responses declares the `response` scope instead; the student app shows the processing state for those services. |
@@ -432,7 +432,12 @@ const configuration = await externalServicesRegistry
   `sessionInputs(serviceId)`. It is false for a service without a
   descriptor and while the descriptor is unavailable (a stale descriptor
   still answers), and it never throws, so an adapter never sends an input
-  the service may not know.
+  the service may not know. Each entry's `source` and `required_when`
+  (#1220) are normalized to `sessionInputDeclarations[name]`,
+  `{ source: { kind, documentSchema, pointer, requireReviewed } | null,
+  requiredWhen: [{ field, in }] | null }`; an unusable `source` or
+  `required_when`, and a `required_when` without a usable `source`, are
+  dropped with a warning. See "Case inputs".
 - **Cache.** In memory, per process, keyed by service and descriptor locale.
   A valid descriptor is kept for ten minutes. After a failure the result is
   kept for a minute before asking again; if an earlier fetch succeeded, its
@@ -563,6 +568,9 @@ never block a save:
 | `deprecated_value` | The enum value is deprecated. | `value`, `supersededBy` (value) |
 | `no_longer_accepted` | The stored design already had this problem (same service, field, `reason` and value): the service retired the field or value, or tightened a limit. The teacher did not introduce it, so it does not block the save; the service warns or substitutes at instantiation. | `reason` (an error code), `value` |
 | `not_validated` | The configuration was stored without validation (`field` is `null`). | `reason`: `unreachable`, `invalid_descriptor`, `unsupported_contract_version`, `service_id_mismatch`, or `no_descriptor` (unknown, disabled, or no descriptor) |
+
+A save whose configuration requires a case input that the case's analyses do
+not provide answers `400 MISSING_CASE_INPUTS` (#1220, "Case inputs").
 
 The descriptors are read in English through the descriptor cache, so a save
 adds at most one request per service. The design editor's settings form (#732)
@@ -1489,6 +1497,50 @@ legacy entries keep the checks listed in "Student results reading".
 `canonical-schemas/ai-additions/` (see its README) and added to
 `DOCUMENT_SCHEMAS` in `services/student-result-documents.js`, with its
 integrity rules, before any service declares it.
+
+### Case inputs
+
+A service may need, for some of its configurations, a value that comes from
+the case's analyses, such as Polyadic's `discussion_topics` from the case's
+topic listing (#1220, epic ethicapp-ai-additions#293). The service declares it
+in its descriptor's `session_inputs` with `source` and `required_when`
+(ethicapp-ai-additions README, "Session Inputs From Case Analyses"); EthicApp
+reads only those two keys, so nothing below knows a service.
+
+- **Helper.** `helpers/case-session-inputs.js`:
+  - `caseSessionInputs(descriptor, configuration)` lists `{ key, source,
+    required }` for every entry with a `source`. `required` is true when one
+    `required_when` condition holds for the configuration's effective value
+    (the stored value, else the field's default; values compared with `===`),
+    false for an entry without `required_when`; an entry whose conditions do
+    not hold is left out. `descriptor` is what
+    `getServiceInstanceConfiguration()` returns, or a raw descriptor.
+  - `resolveCaseSessionInputs({ descriptor, configuration, caseId, deps })`
+    answers `{ values, missing }`: `values[key]` is a copy of the part of the
+    analysis document at the RFC 6901 pointer `source.pointer` (`""` is the
+    whole document), for every input that resolves, required or optional;
+    `missing` lists `{ key, documentSchema, status }` for the required
+    inputs that do not. Read failures are thrown.
+- **Finding the analysis.** The adapters whose catalog entry `produces` the
+  schema with unit `case` (`registry.getCaseAnalysisProducerIds()`), read as
+  `case_analyses (case_id, service_id)`. The `document_schema` column alone
+  cannot find it: a row is reserved before its first document arrives. When
+  several adapters produce the schema, the first ready one in catalog order
+  is used. Whether the producer is usable now is not asked: a stored
+  document stays the case's.
+- **Statuses.** An analysis is used only while `ready`; an unreviewed draft is
+  enough unless the source sets `require_reviewed`. Otherwise the input is
+  `absent` (no analysis, or no document of that schema), `pending` (a
+  generation in flight), `failed` (the latest generation failed or went
+  stale, or the document lacks the pointed part) or `not_reviewed`.
+- **Validator.** `services/case-input-validation.service.js`
+  (`checkCaseInputs()`, `checkCaseInputsWithRegistry()`) lists, per phase and
+  enabled service, the required inputs with their status (`inputs`, `missing`)
+  and the services it could not check (`unchecked`: not allowed by the AI
+  service policy, or descriptor unavailable). It runs at `POST /designs` and
+  `PATCH /designs/:id` (also how a design's case changes), at
+  `POST /designs/case-inputs` for the editor, and when a phase starts. See
+  "Case inputs from case analyses" in `EXTERNAL.md`.
 
 ## Case Analyses
 

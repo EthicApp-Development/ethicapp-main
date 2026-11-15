@@ -5,7 +5,14 @@ import { normalizeExternalServicesConfig } from "../../helpers/phase-external-se
 import {
     designSaveErrorMessageKey,
     isCaseNotAvailableError,
+    isMissingCaseInputsSaveError,
 } from "../../helpers/design-save-errors.js";
+import {
+    CASE_INPUT_CHECK_DELAY_MS,
+    caseAnalysisLabel,
+    caseInputNoticesByPhase,
+    caseInputsRequestKey,
+} from "../../helpers/design-case-inputs.js";
 import { designVideoWarnings } from "../../helpers/case-video-embeds.js";
 import {
     hasInvalidPhaseDuration,
@@ -58,6 +65,68 @@ export function DesignEditorController($scope, $translate, $timeout,
     const serverServiceErrors = new Map();
     const NO_SERVER_ERRORS = Object.freeze([]);
     
+    // Case inputs (#1220): what the server's validator says the design's
+    // services require from the case's analyses, shown next to each
+    // service's configuration. The editor asks again, after a short pause,
+    // whenever the case or a phase's services or settings change; it
+    // computes nothing itself. Notices are kept per phase object, so they
+    // follow phases when they move, and rebuilt only with a new answer.
+    vm.caseServices = [];
+    let caseInputNotices = new Map();
+    let caseInputsTimer = null;
+    let caseInputsSequence = 0;
+    const NO_CASE_INPUTS = Object.freeze([]);
+
+    vm.caseInputsFor = function(phase, serviceId) {
+        return caseInputNotices.get(phase)?.[serviceId] || NO_CASE_INPUTS;
+    };
+
+    let lastCaseInputs = { inputs: [], phases: [] };
+
+    vm.applyCaseInputs = function(inputs, phases = vm.design?.phases) {
+        lastCaseInputs = { inputs, phases };
+        const language = LanguageCatalogService.getCurrentUiLanguageCode();
+        caseInputNotices = caseInputNoticesByPhase(inputs, phases,
+            input => caseAnalysisLabel(input, vm.caseServices, language));
+    };
+
+    vm.refreshCaseInputs = async function() {
+        const sequence = ++caseInputsSequence;
+        if (caseInputsRequestKey(vm.design) === null) {
+            vm.applyCaseInputs([]);
+            return;
+        }
+        const phases = [...vm.design.phases];
+        try {
+            const result = await DesignCatalogService.checkCaseInputs(vm.designId, vm.design);
+            if (sequence === caseInputsSequence) {
+                vm.applyCaseInputs(result.inputs, phases);
+            }
+        } catch (error) {
+            // The save checks again; the notices are only a preview.
+            console.error("[DesignEditorController::refreshCaseInputs] Error.", error);
+        } finally {
+            $scope.$applyAsync();
+        }
+    };
+
+    $scope.$watch(() => caseInputsRequestKey(vm.design), (key) => {
+        if (caseInputsTimer) {
+            $timeout.cancel(caseInputsTimer);
+        }
+        if (key === null) {
+            vm.applyCaseInputs([]);
+            return;
+        }
+        caseInputsTimer = $timeout(() => vm.refreshCaseInputs(), CASE_INPUT_CHECK_DELAY_MS);
+    });
+    $scope.$on("$destroy", () => {
+        if (caseInputsTimer) {
+            $timeout.cancel(caseInputsTimer);
+        }
+        caseInputsSequence += 1;
+    });
+
     vm.init = async function() {
         vm.languages = await LanguageCatalogService.getLanguages();
 
@@ -101,6 +170,11 @@ export function DesignEditorController($scope, $translate, $timeout,
             vm.externalServices = await ExternalServicesCatalogService.getServices({
                 scopes: ["response", "chat"],
             });
+            // Case services name the analyses a case input needs (#1220).
+            vm.caseServices = await ExternalServicesCatalogService.getServices({
+                scopes: ["case"],
+            }).catch(() => []);
+            vm.applyCaseInputs(lastCaseInputs.inputs, lastCaseInputs.phases);
         } catch (error) {
             console.error("[DesignEditorController::loadExternalServices] Error loading external services.", error);
             vm.externalServices = [];
@@ -462,6 +536,9 @@ export function DesignEditorController($scope, $translate, $timeout,
         } catch (error) {
             if (error?.data?.code === "INVALID_SERVICE_CONFIGURATION") {
                 $scope.$applyAsync(() => vm.applyServerServiceErrors(error.data.errors));
+            }
+            if (isMissingCaseInputsSaveError(error)) {
+                $scope.$applyAsync(() => vm.applyCaseInputs(error.data.errors));
             }
             // The case can no longer be associated (#924): clear it, so the
             // teacher can pick another case or save without one.

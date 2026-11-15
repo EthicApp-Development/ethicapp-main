@@ -378,14 +378,109 @@ test("normalizeSessionInputs: drops entries that are not objects, with warnings"
         broken:      true,
         listed:      ["duration_seconds"],
     }), {
-        sessionInputs: ["phase_clock"],
-        warnings:      [
+        sessionInputs:            ["phase_clock"],
+        sessionInputDeclarations: { phase_clock: { source: null, requiredWhen: null } },
+        warnings:                 [
             "session input \"broken\" is not an object",
             "session input \"listed\" is not an object",
         ],
     });
-    assert.deepEqual(normalizeSessionInputs(["phase_clock"]),
-        { sessionInputs: [], warnings: ["session_inputs is not an object"] });
+    assert.deepEqual(normalizeSessionInputs(["phase_clock"]), {
+        sessionInputs:            [],
+        sessionInputDeclarations: {},
+        warnings:                 ["session_inputs is not an object"],
+    });
+});
+
+// A case input (#1220): its source and the configurations that need it. The
+// service and its names are made up; nothing here knows a real service.
+const GLOSSARY_SESSION_INPUT = Object.freeze({
+    source: {
+        kind:            "case_analysis",
+        document_schema: "glossary/v2",
+        pointer:         "/terms",
+    },
+    required_when: [{ field: "agent_role", in: ["moderator"] }],
+});
+
+test("normalizeDescriptor: keeps the source and required_when of case inputs", () => {
+    const result = normalizeDescriptor(makeDescriptor({
+        session_inputs: {
+            phase_clock: structuredClone(PHASE_CLOCK_SESSION_INPUT),
+            glossary:    structuredClone(GLOSSARY_SESSION_INPUT),
+            summary:     { source: { kind: "case_analysis", document_schema: "summary/v1", pointer: "", require_reviewed: true } },
+        },
+    }), "polyadic-agent");
+
+    assert.equal(result.ok, true);
+    assert.deepEqual(result.warnings, []);
+    assert.deepEqual(result.descriptor.sessionInputs, ["phase_clock", "glossary", "summary"]);
+    assert.deepEqual(result.descriptor.sessionInputDeclarations, {
+        phase_clock: { source: null, requiredWhen: null },
+        glossary:    {
+            source: {
+                kind:            "case_analysis",
+                documentSchema:  "glossary/v2",
+                pointer:         "/terms",
+                requireReviewed: false,
+            },
+            requiredWhen: [{ field: "agent_role", in: ["moderator"] }],
+        },
+        summary: {
+            source: {
+                kind:            "case_analysis",
+                documentSchema:  "summary/v1",
+                pointer:         "",
+                requireReviewed: true,
+            },
+            requiredWhen: null,
+        },
+    });
+});
+
+test("normalizeSessionInputs: drops an unusable source or required_when, with warnings", () => {
+    const source = GLOSSARY_SESSION_INPUT.source;
+    const cases = [
+        [{ source: { ...source, kind: "design_analysis" } }, "has a source of unknown kind"],
+        [{ source: { ...source, extra: true } }, "has a source that is not an object of known keys"],
+        [{ source: "glossary/v2" }, "has a source that is not an object of known keys"],
+        [{ source: { ...source, document_schema: "glossary" } }, "has a source without a valid document_schema"],
+        [{ source: { ...source, pointer: "terms" } }, "has a source without a valid pointer"],
+        [{ source: { ...source, pointer: "/a~2" } }, "has a source without a valid pointer"],
+        [{ source: { ...source, require_reviewed: "yes" } }, "has a source whose require_reviewed is not a boolean"],
+        [{ source, required_when: [] }, "has a required_when that is not a non-empty list"],
+        [{ source, required_when: [{ field: "agent_role", in: [] }] }, "has a required_when with an invalid condition"],
+        [{ source, required_when: [{ field: "", in: ["x"] }] }, "has a required_when with an invalid condition"],
+        [{ source, required_when: [{ field: "a", in: ["x"], not: ["y"] }] }, "has a required_when with an invalid condition"],
+        [{ required_when: [{ field: "agent_role", in: ["moderator"] }] }, "has a required_when without a valid source"],
+    ];
+
+    for (const [entry, warning] of cases) {
+        const result = normalizeSessionInputs({ glossary: entry });
+        assert.deepEqual(result.sessionInputs, ["glossary"], warning);
+        assert.deepEqual(result.warnings, [`session input "glossary" ${warning}`]);
+        assert.equal(result.sessionInputDeclarations.glossary.requiredWhen, null, warning);
+    }
+
+    // A valid source survives an unusable required_when: the input is optional.
+    assert.deepEqual(
+        normalizeSessionInputs({ glossary: { source, required_when: "always" } })
+            .sessionInputDeclarations.glossary.source.documentSchema,
+        "glossary/v2"
+    );
+});
+
+test("getInstanceConfiguration: carries the session input declarations", async () => {
+    const { client } = makeClient({
+        responses: [makeDescriptor({ session_inputs: { glossary: GLOSSARY_SESSION_INPUT } })],
+    });
+
+    const configuration = await client.getInstanceConfiguration("svc-described", "en_US");
+
+    assert.deepEqual(configuration.sessionInputs, ["glossary"]);
+    assert.equal(configuration.sessionInputDeclarations.glossary.source.pointer, "/terms");
+    assert.deepEqual(configuration.sessionInputDeclarations.glossary.requiredWhen,
+        [{ field: "agent_role", in: ["moderator"] }]);
 });
 
 test("sessionInputs: from the cached descriptor, fetched once in the default locale", async () => {

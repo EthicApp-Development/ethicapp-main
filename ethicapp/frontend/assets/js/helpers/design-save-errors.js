@@ -6,6 +6,8 @@
 //   (#924);
 // - 400 INVALID_PHASE_DURATION: a phase duration is not a whole number of
 //   minutes from 1 to 180 (#1107);
+// - 400 MISSING_CASE_INPUTS: a service needs a case analysis that is not
+//   ready (#1220);
 // - anything else is a generic failure.
 export function designSaveErrorMessageKey(error) {
     const code = error?.data?.code;
@@ -17,6 +19,9 @@ export function designSaveErrorMessageKey(error) {
     }
     if (error?.status === 400 && code === "INVALID_PHASE_DURATION") {
         return "save_design_invalid_phase_duration";
+    }
+    if (isMissingCaseInputsSaveError(error)) {
+        return "save_design_missing_case_inputs";
     }
     if (isCaseNotAvailableError(error)) {
         return "save_design_case_not_available";
@@ -30,4 +35,11 @@ export function designSaveErrorMessageKey(error) {
 // clears the case, so the teacher can pick another one or save without one.
 export function isCaseNotAvailableError(error) {
     return error?.status === 404 && error?.data?.code === "CASE_NOT_AVAILABLE";
+}
+
+// Whether the save was refused because a service of the design needs a case
+// analysis that is not ready (#1220). The editor then shows the errors next
+// to each service's configuration.
+export function isMissingCaseInputsSaveError(error) {
+    return error?.status === 400 && error?.data?.code === "MISSING_CASE_INPUTS";
 }

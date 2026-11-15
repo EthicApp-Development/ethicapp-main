@@ -111,6 +111,9 @@
         "callback-received"
       ],
       "scopes": ["case"],
+      "produces": [
+        { "documentSchema": "case-evaluation/v1", "unit": "case" }
+      ],
       "ui": { "component": "case-evaluation" },
       "callbackAuth": {
         "allowedClientIds": ["case-analyst-api"],
@@ -127,6 +130,9 @@
         "callback-received"
       ],
       "scopes": ["case"],
+      "produces": [
+        { "documentSchema": "evidence-inventory/v1", "unit": "case" }
+      ],
       "ui": { "component": "case-evidence-inventory" },
       "callbackAuth": {
         "allowedClientIds": ["case-analyst-api"],
@@ -143,6 +149,9 @@
         "case-created"
       ],
       "scopes": ["case"],
+      "produces": [
+        { "documentSchema": "mock-case-analysis/v1", "unit": "case" }
+      ],
       "ui": { "component": "mock-case-analysis" },
       "callbackAuth": {
         "allowedClientIds": ["ethicapp-external-mock"],
@@ -195,6 +204,9 @@
         "callback-received"
       ],
       "scopes": ["case"],
+      "produces": [
+        { "documentSchema": "topic-listing/v1", "unit": "case" }
+      ],
       "ui": { "component": "case-topic-listing" },
       "callbackAuth": {
         "allowedClientIds": ["case-analyst-api"],
