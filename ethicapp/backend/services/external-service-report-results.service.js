@@ -67,6 +67,42 @@ function jobSourceFromRow(row) {
     return source ? Object.freeze(source) : null;
 }
 
+function isoOrNull(value) {
+    return value instanceof Date ? value.toISOString() : value ?? null;
+}
+
+function idOrNull(value) {
+    const id = Number(value);
+    return Number.isSafeInteger(id) && id > 0 ? id : null;
+}
+
+// A stored mediation decision (#1222, V46) with the job its callback
+// correlated with, normally the room job of its room (#833).
+function mediationDecisionFromRow(row) {
+    const job = row.job_id
+        ? Object.freeze({
+            id:                  row.job_id,
+            kind:                row.job_kind ?? null,
+            createdAt:           isoOrNull(row.job_created_at),
+            instantiationReport: row.job_instantiation_report ?? null,
+        })
+        : null;
+    return Object.freeze({
+        id:                        row.id,
+        decisionId:                row.decision_id,
+        phaseId:                   row.phase_id ?? null,
+        questionId:                row.question_id ?? null,
+        groupId:                   row.group_id ?? null,
+        resultId:                  row.result_id ?? null,
+        record:                    row.record ?? null,
+        windowChatMessageIds:      Object.freeze((row.window_chat_message_ids ?? []).map(idOrNull)),
+        interventionChatMessageId: idOrNull(row.intervention_chat_message_id),
+        decidedAt:                 isoOrNull(row.decided_at),
+        receivedAt:                isoOrNull(row.received_at),
+        job,
+    });
+}
+
 function resultFromRow(row) {
     return Object.freeze({
         id:            row.id,
@@ -132,6 +168,27 @@ export class ExternalServiceReportResultsService {
             params
         );
     }
+
+    /**
+     * One service's stored mediation decisions for one session (#1222),
+     * oldest decision first, each with the job its callback correlated with.
+     * @returns {Promise<Object[]>} Raw rows.
+     */
+    async listMediationDecisions({ serviceId, sessionId }) {
+        return this._db(
+            `SELECT d.id, d.service_id, d.session_id, d.decision_id::text AS decision_id,
+                    d.phase_id, d.question_id, d.group_id, d.result_id, d.record,
+                    d.window_chat_message_ids, d.intervention_chat_message_id,
+                    d.decided_at, d.received_at, d.job_id,
+                    j.kind AS job_kind, j.created_at AS job_created_at,
+                    j.instantiation_report AS job_instantiation_report
+             FROM external_service_mediation_decisions d
+             LEFT JOIN external_service_jobs j ON j.id = d.job_id
+             WHERE d.service_id = $1 AND d.session_id = $2
+             ORDER BY d.decided_at ASC, d.id ASC`,
+            [serviceId, sessionId]
+        );
+    }
 }
 
 /**
@@ -144,6 +201,10 @@ export class ExternalServiceReportResultsService {
  * the `{ kind, id }` the result's job recorded (#946): `kind` is `response` or
  * `chat_message`, and `id` a Number. It is null when the job recorded none or
  * the result has no job. Unknown or malformed filters reject with a TypeError.
+ *
+ * `mediationDecisions()` resolves to the service's stored mediation decisions
+ * of the session (#1222), oldest first, each with the job its callback
+ * correlated with (see mediationDecisionFromRow()).
  */
 export function createReportResultsReader(store, { serviceId, sessionId }) {
     return Object.freeze({
@@ -158,6 +219,18 @@ export function createReportResultsReader(store, { serviceId, sessionId }) {
             return rows
                 .filter(row => row.service_id === serviceId && Number(row.session_id) === sessionId)
                 .map(resultFromRow);
+        },
+
+        // The service's stored mediation decisions of the session (#1222),
+        // oldest first; empty for a store that keeps none.
+        async mediationDecisions() {
+            if (typeof store.listMediationDecisions !== "function") {
+                return [];
+            }
+            const rows = await store.listMediationDecisions({ serviceId, sessionId });
+            return rows
+                .filter(row => row.service_id === serviceId && Number(row.session_id) === sessionId)
+                .map(mediationDecisionFromRow);
         },
     });
 }

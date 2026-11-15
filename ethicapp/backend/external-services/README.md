@@ -325,6 +325,7 @@ export async function register({
     designAnalyses,          // markProcessing/complete/fail for this service's design analyses
     roomJobs,                // create/open/fail for this service's room jobs (see "Room jobs")
     sessionInputs,           // { declares(name), descriptor({ sessionId }) }; see "Capability descriptors" and "Case inputs"
+    mediationDecisions,      // { record({ sessionId, phaseId, questionId, groupId, jobId, resultId, decisions }) }; see below
 }) {
     subscribe("student-response-submitted", async (context, { callback }) => {
         // Adapter logic.
@@ -334,6 +335,16 @@ export async function register({
 
 The `service` object passed to `register()` carries the normalized entry,
 including `globalHooks`.
+
+`mediationDecisions` (#1222) stores the `mediation-decision/v1` records a
+service's callbacks carry (`services/external-service-mediation-decisions.service.js`,
+table `external_service_mediation_decisions`, V46). `record()` takes records
+the adapter already validated (`services/mediation-decision-records.js`), as
+`decisions: [{ record, interventionChatMessageId? }]`, stores each once per
+service and `decisionId`, resolves each window reference's `correlationId`
+to the chat message its `chat-message-received` job forwarded, and resolves
+to `{ stored, duplicates }` (decision ids). Errors propagate. The Polyadic
+bridge is the only user; see `EXTERNAL.md`, "Polyadic mediation decisions".
 
 `register()` may declare additional optional parameters for test-only
 dependency injection (for example `polyadicBridgeDependencies` in the Polyadic
@@ -801,6 +812,13 @@ message the result's job processed (#946), as `{ kind: "response" |
 "chat_message", id }` with a numeric `id` (see "Jobs and `callback(result)`").
 It is `null` for a result without a job and for a job that recorded none,
 such as jobs of other hooks and jobs created before migration V38.
+
+`results.mediationDecisions()` (#1222) resolves to the service's stored
+mediation decisions of the session, oldest `decidedAt` first, as frozen
+`{ id, decisionId, phaseId, questionId, groupId, resultId, record,
+windowChatMessageIds, interventionChatMessageId, decidedAt, receivedAt, job }`,
+where `job` is `{ id, kind, createdAt, instantiationReport }` of the job the
+callback correlated with (the room job), or null. It takes no filters.
 
 **Contribution contract.** The handler resolves to `undefined`/`null` (nothing
 to add) or to:

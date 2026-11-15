@@ -196,8 +196,9 @@ function isAtOrBelow(path, ancestor) {
 }
 
 // The leaf errors of a validation, without repeats. The validator's messages
-// are not kept: some quote the document.
-function schemaProblems(errors) {
+// are not kept: some quote the document. Also used for mediation-decision/v1
+// records (services/mediation-decision-records.js).
+export function schemaProblems(errors) {
     const leaves = [];
     const seen = new Set();
     for (const error of errors) {

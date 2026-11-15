@@ -1,0 +1,60 @@
+{
+  "schemaVersion": "mediation-decision/v1",
+  "agent": "Validator",
+  "pipelineType": "contentCoverage",
+  "decisionId": "0b9e8a52-7a1f-4f7e-9d43-5c1e2f3a4b02",
+  "decidedAt": "2026-11-18T14:05:58-03:00",
+  "trigger": {
+    "kind": "adaptive_window",
+    "reason": "max_messages"
+  },
+  "window": {
+    "messages": [
+      {
+        "messageId": 107,
+        "correlationId": "6f1c2a4e-0b7d-4c55-9a0e-3d2b1c0a0107"
+      },
+      {
+        "messageId": 108,
+        "correlationId": "6f1c2a4e-0b7d-4c55-9a0e-3d2b1c0a0108"
+      },
+      {
+        "messageId": 109,
+        "correlationId": "6f1c2a4e-0b7d-4c55-9a0e-3d2b1c0a0109"
+      },
+      {
+        "messageId": 110,
+        "correlationId": "6f1c2a4e-0b7d-4c55-9a0e-3d2b1c0a0110"
+      },
+      {
+        "messageId": 111,
+        "correlationId": "6f1c2a4e-0b7d-4c55-9a0e-3d2b1c0a0111"
+      },
+      {
+        "messageId": 112,
+        "correlationId": "6f1c2a4e-0b7d-4c55-9a0e-3d2b1c0a0112"
+      },
+      {
+        "messageId": 113,
+        "correlationId": "6f1c2a4e-0b7d-4c55-9a0e-3d2b1c0a0113"
+      },
+      {
+        "messageId": 114,
+        "correlationId": "6f1c2a4e-0b7d-4c55-9a0e-3d2b1c0a0114"
+      }
+    ]
+  },
+  "decision": "intervene",
+  "category": "STUCK",
+  "topic": {
+    "id": "T3",
+    "name": "Costos personales de denunciar"
+  },
+  "reason": "El grupo repite que firmar está mal sin agregar argumentos nuevos.",
+  "intervention": {
+    "status": "suppressed",
+    "agent": "ConversationGuide",
+    "messageId": null,
+    "suppressedBy": "cooldown"
+  }
+}
