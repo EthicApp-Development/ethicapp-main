@@ -43,6 +43,31 @@ than this file; see their GitHub Releases.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v2026.11.15] - 2026-11-15
+
+EthicApp reads the Argumentation Tutor's v19 rubric evaluations (ethicapp-ai-additions epic #267), and student responses in anonymous phases no longer carry peers' names (#1199).
+
+Partial release: only the `ethicapp` and `ethicapp-student` images.
+
+### Added
+
+- The tutor adapter reads v19 callbacks (`argumentEvaluation`, `rubric: "v19"`). It keeps a level only within the scale the payload gives, builds a `student-result/v1` document when the payload has no valid `studentResult`, and records the rubric and the levels in the callback outcome, with ids and numbers only. v12 results render and export as before (#1214, #1216).
+- A design's stored `evaluation_rubric` is sent when the tutor session is created. If the tutor answers 400, the session runs on the tutor's defaults (#1214, #1216).
+- The responses report adds the v19 columns: rubric and version, level and scale per criterion, claim stance, facts, exclusions, entry rule, and the level change per criterion for revisions. The v12 columns stay (#1214, #1216).
+- The student chat feedback reads v19 analyses and comparisons (#1214, #1216).
+- The service configuration form puts the fields of the `advanced` group in a last section, collapsed behind "Opciones avanzadas" / "Advanced options". It opens on its own when one of its fields has an error or a lifecycle notice. The tutor's `evaluation_rubric` is such a field (#1214, #1216).
+- `canonical-schemas/ai-additions/` holds `argument-evaluation/v1`, with the basic mode, and the tutor's v19 student documents, identical to ethicapp-ai-additions `v2026.11.15-ai-additions` (#1216, #1217).
+
+### Fixed
+
+- In an anonymous phase, a student's responses no longer carry peers' `firstname`, `lastname` or `name`: the group, chat messages, previous responses and full-state routes send the peer's mask or null. The student app already hid the names, but they were readable in the browser's network panel. The teacher still sees every name (#1199, #1215).
+
+### Deployment
+
+- Migrations: none.
+- Environment contract: unchanged.
+- Deploy right after ethicapp-ai-additions `v2026.11.15-ai-additions`, in the same window, with no tutor sessions running between the two deploys.
+
 ## [v2026.11.12.2] - 2026-11-12
 
 One socket per student activity page, so participants receive chat messages and clock changes (#1211).
