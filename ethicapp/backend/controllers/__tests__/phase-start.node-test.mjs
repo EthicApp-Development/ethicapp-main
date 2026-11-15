@@ -246,6 +246,33 @@ describe("POST /activities/:session_id/phases/next: outcomes", () => {
             error: "Unsupported grouping algorithm: x",
             code:  "INVALID_PHASE_DESIGN",
         }],
+        // The phase's services require a case input the case does not
+        // provide (#1220): the teacher is told which.
+        [{
+            status:      "missing_case_inputs",
+            phaseNumber: 2,
+            missing:     [{
+                phaseIndex:         1,
+                serviceId:          "essay-reviewer",
+                key:                "glossary",
+                documentSchema:     "glossary/v2",
+                analysisServiceIds: ["glossary-maker"],
+                status:             "absent",
+            }],
+        }, 422, {
+            error: "The phase cannot start: phase 2, essay-reviewer: glossary needs the "
+                + "case's glossary/v2 analysis (absent).",
+            code:        "MISSING_CASE_INPUTS",
+            phaseNumber: 2,
+            missing:     [{
+                phaseIndex:         1,
+                serviceId:          "essay-reviewer",
+                key:                "glossary",
+                documentSchema:     "glossary/v2",
+                analysisServiceIds: ["glossary-maker"],
+                status:             "absent",
+            }],
+        }],
     ];
 
     for (const [result, expectedStatus, expectedBody] of cases) {

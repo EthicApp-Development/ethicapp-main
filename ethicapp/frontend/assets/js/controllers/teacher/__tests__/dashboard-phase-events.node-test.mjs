@@ -64,6 +64,13 @@ async function createDashboard({ localNow = LOCAL_NOW } = {}) {
         loadActivityState:  async () => state,
         getInstancedPhases: async () => [],
         getPhaseClock:      () => clock.current,
+        // `state.startError`, when set, is how the server refuses a start.
+        startNextPhase:     async () => {
+            if (state.startError) {
+                throw state.startError;
+            }
+            return { id: 43, number: 3 };
+        },
     };
     const toasts = [];
     const toast = { create: options => toasts.push(options) };
@@ -274,5 +281,41 @@ describe("DashboardController last phase deadline notice", () => {
 
         assert.equal(dashboard.vm.lastPhaseDeadlineNotice, null);
         assert.deepEqual(dashboard.finishRequests, [`/activities/${SESSION_ID}/finish`]);
+    });
+});
+
+describe("a phase start refused for a case analysis that is not ready (#1220)", () => {
+    it("tells the teacher why with a toast, and stays on the current phase", async () => {
+        const dashboard = await createDashboard();
+        dashboard.state.startError = {
+            status: 422,
+            data:   {
+                code:        "MISSING_CASE_INPUTS",
+                phaseNumber: 3,
+                missing:     [{ key: "glossary", documentSchema: "glossary/v2", status: "pending" }],
+            },
+        };
+
+        const phaseId = await dashboard.vm.startNextPhase();
+
+        assert.equal(phaseId, null);
+        assert.deepEqual(dashboard.updated, []);
+        assert.equal(dashboard.toasts.length, 1);
+        assert.equal(dashboard.toasts[0].type, "danger");
+        assert.equal(dashboard.toasts[0].message,
+            "dashboard_phase_missing_case_inputs_toast{\"number\":3}");
+    });
+
+    it("shows no such toast for other refusals", async () => {
+        const dashboard = await createDashboard();
+        dashboard.state.startError = { status: 422, data: { code: "INVALID_PHASE_DESIGN" } };
+        const originalError = console.error;
+        console.error = () => {};
+        try {
+            assert.equal(await dashboard.vm.startNextPhase(), null);
+        } finally {
+            console.error = originalError;
+        }
+        assert.deepEqual(dashboard.toasts, []);
     });
 });

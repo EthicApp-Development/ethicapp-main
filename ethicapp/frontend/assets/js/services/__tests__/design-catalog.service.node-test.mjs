@@ -244,3 +244,44 @@ describe("DesignCatalogService.loadDesigns", () => {
         assert.equal(service.hasLoadedDesigns, false);
     });
 });
+
+describe("DesignCatalogService.checkCaseInputs (#1220)", () => {
+    function createCheckService(postOutcome) {
+        const posts = [];
+        const $http = async () => ({ data: { status: "ok" } });
+        $http.get = async () => ({ data: { status: "ok", result: [] } });
+        $http.post = async (url, data) => {
+            posts.push({ url, data });
+            return postOutcome();
+        };
+        const $rootScope = { $broadcast() {}, $emit() {}, $applyAsync(fn) { fn?.(); } };
+        return { service: DesignCatalogService($rootScope, $http), posts };
+    }
+
+    it("asks the validator about the design as edited, with its case", async () => {
+        const result = { inputs: [], missing: [], unchecked: [] };
+        const { service, posts } = createCheckService(async () => ({ data: { status: "ok", result } }));
+        const design = { caseId: 3, phases: [] };
+
+        assert.deepEqual(await service.checkCaseInputs(5, design), result);
+        assert.deepEqual(posts, [{
+            url:  "/designs/case-inputs",
+            data: { design, caseId: 3, designId: 5 },
+        }]);
+    });
+
+    it("sends no case or design id when there are none", async () => {
+        const { service, posts } = createCheckService(async () => ({
+            data: { status: "ok", result: { inputs: [], missing: [], unchecked: [] } },
+        }));
+
+        await service.checkCaseInputs(0, { phases: [] });
+
+        assert.deepEqual(posts[0].data, { design: { phases: [] }, caseId: null, designId: null });
+    });
+
+    it("rejects an unexpected answer", async () => {
+        const { service } = createCheckService(async () => ({ data: { status: "err" } }));
+        await assert.rejects(service.checkCaseInputs(5, {}), /Unexpected case inputs response/u);
+    });
+});

@@ -193,6 +193,19 @@
                                     read-only="dec.design.locked"
                                     on-errors-change="dec.setServiceSettingErrors(phase, serviceId, count)">
                                 </service-configuration-form>
+                                <!-- The case analyses this service needs under its settings (#1220), as the server's validator reports them. -->
+                                <ul class="list-unstyled service-case-inputs"
+                                    role="status"
+                                    ng-if="dec.isExternalServiceEnabled(phase, service.id) && dec.caseInputsFor(phase, service.id).length > 0">
+                                    <li class="help-block service-case-input"
+                                        ng-repeat="input in dec.caseInputsFor(phase, service.id) track by input.key"
+                                        ng-class="{ 'text-danger': !input.ready }"
+                                        data-testid="service-case-input">
+                                        <i class="fa" ng-class="input.ready ? 'fa-check text-success' : 'fa-exclamation-triangle'" aria-hidden="true"></i>
+                                        {{ 'design_case_input_needs' | translate }} <strong>{{ input.analysisLabel }}</strong>.
+                                        {{ input.messageKey | translate }}
+                                    </li>
+                                </ul>
                             </div>
                         </div>
                     </div>

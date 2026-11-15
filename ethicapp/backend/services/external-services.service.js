@@ -27,6 +27,7 @@ import {
 } from "../helpers/ai-service-policy.js";
 import {
     assertValidCatalog,
+    CASE_ANALYSIS_UNIT,
     catalogWarnings,
     developmentAdaptersEnabled,
     manifestStudentOutputs,
@@ -243,7 +244,9 @@ function normalizeUi(ui, serviceId) {
     return { component };
 }
 
-// A validated `produces` or `consumes` declaration (catalog.js), copied.
+// A validated `produces` or `consumes` declaration (catalog.js), copied. A
+// `produces` may also name the document of a case analysis (unit `case`,
+// #1220), which getCaseAnalysisProducerIds() reads.
 function designAnalysisDeclaration(declaration) {
     return Array.isArray(declaration)
         ? declaration.map(({ documentSchema, unit }) => ({ documentSchema, unit }))
@@ -1287,6 +1290,24 @@ export class ExternalServicesRegistry {
                 + "the phase is selected.", error?.message || error);
             return true;
         }
+    }
+
+    /**
+     * The registered adapters whose case analysis holds a document of schema
+     * `documentSchema` (#1220): those whose catalog entry `produces` it with
+     * unit `case`. A case analysis is stored per case and adapter, so these
+     * are the `case_analyses.service_id` values to read for the schema. Only
+     * registered adapters count; whether they are usable now is not asked,
+     * since a document already stored stays the case's.
+     *
+     * @param {string} documentSchema - Such as `topic-listing/v1`.
+     * @returns {string[]} Adapter ids in catalog order; [] when none.
+     */
+    getCaseAnalysisProducerIds(documentSchema) {
+        return Array.from(this.services.values())
+            .filter(service => (service.produces ?? []).some(item =>
+                item.unit === CASE_ANALYSIS_UNIT && item.documentSchema === documentSchema))
+            .map(service => service.id);
     }
 
     getServiceById(serviceId) {

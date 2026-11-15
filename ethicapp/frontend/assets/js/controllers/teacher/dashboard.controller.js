@@ -30,9 +30,11 @@ import { hiddenNamePhase, pseudonymNumberMap } from "../../helpers/hidden-names.
 import { isSessionEvent } from "../../helpers/phase-clock-state.js";
 import { isDeadlineAdvance } from "../../helpers/phase-transition-sync.js";
 import { lastPhaseDeadlineNotice, reachedDeadline } from "../../helpers/phase-deadline-notice.js";
+import { isMissingCaseInputsError } from "../../helpers/design-case-inputs.js";
 
 const TOAST_CONTAINER = "activity-dashboard-toast-container";
 const DEADLINE_TOAST_TIMEOUT_MS = 8000;
+const MISSING_CASE_INPUTS_TOAST_TIMEOUT_MS = 12000;
 
 /*eslint func-style: ["error", "expression"]*/
 export function DashboardController($scope, $routeParams, $http,
@@ -592,6 +594,12 @@ export function DashboardController($scope, $routeParams, $http,
                 expectedPhaseNumber);
             phaseId = phase.id;
         } catch (error) {
+            // A service of the phase needs a case analysis that is not ready
+            // (#1220): the phase did not start, and the teacher is told why.
+            if (isMissingCaseInputsError(error)) {
+                vm.showMissingCaseInputsToast(error.data);
+                return null;
+            }
             if (error?.status !== 409) {
                 console.error("Error in startNextPhase:", error);
                 return null;
@@ -933,6 +941,20 @@ export function DashboardController($scope, $routeParams, $http,
         if (isDeadlineAdvance(notice)) {
             vm.showDeadlineAdvanceToast(notice.phaseNumber);
         }
+    };
+
+    vm.showMissingCaseInputsToast = function(refusal) {
+        if (typeof toast?.create !== "function") {
+            return;
+        }
+        toast.create({
+            containerClass: TOAST_CONTAINER,
+            type:           "danger",
+            dismissible:    true,
+            timeout:        MISSING_CASE_INPUTS_TOAST_TIMEOUT_MS,
+            message:        translateInstant("dashboard_phase_missing_case_inputs_toast",
+                { number: refusal?.phaseNumber ?? "" }),
+        });
     };
 
     vm.showDeadlineAdvanceToast = function(phaseNumber) {

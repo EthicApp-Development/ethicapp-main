@@ -5,7 +5,8 @@
 // (ethicapp-ai-additions, shared/schemas/capability-descriptor.v1.schema.json),
 // normalizes its instance fields, the documents it declares for students
 // (`student_outputs`, epic #1124, #1131) and the session inputs it accepts
-// (`session_inputs`, #1178), and caches the result in memory per process.
+// (`session_inputs`, #1178, with the case inputs' `source` and
+// `required_when`, #1220), and caches the result in memory per process.
 // Nothing is stored in Redis. `runtime_configuration` is never returned.
 
 export const DESCRIPTOR_CONTRACT_VERSION = "1";
@@ -239,35 +240,153 @@ export function normalizeStudentOutputs(raw) {
     return { studentOutputs, warnings };
 }
 
+// A case input's `source` (ethicapp-ai-additions#293, contract "Session Inputs
+// From Case Analyses"): closed, of kind `case_analysis`, with the schema of the
+// case analysis document and an RFC 6901 JSON Pointer into it.
+const SESSION_INPUT_SOURCE_KEYS = Object.freeze([
+    "kind", "document_schema", "pointer", "require_reviewed",
+]);
+const SESSION_INPUT_CONDITION_KEYS = Object.freeze(["field", "in"]);
+export const CASE_ANALYSIS_SOURCE_KIND = "case_analysis";
+const SOURCE_DOCUMENT_SCHEMA_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*\/v[1-9][0-9]*$/u;
+const JSON_POINTER_PATTERN = /^(?:\/(?:[^~/]|~[01])*)*$/u;
+
+function hasOnlyKeys(value, keys) {
+    return Object.keys(value).every(key => keys.includes(key));
+}
+
 /**
- * The names of the session inputs a descriptor declares (#1178): the keys of
- * its optional `session_inputs` whose entry is an object. A session input is
- * a value EthicApp computes for each room or session it creates, such as
- * Polyadic's `phase_clock`, rather than a setting a teacher stores. Absent
- * means none. An entry that is not an object is dropped with a warning; the
- * entries' contents are the service's contract with its adapter and are not
- * interpreted here.
+ * Normalizes a session input's `source`, or explains why it is unusable.
+ * @returns {{ source: { kind: string, documentSchema: string, pointer: string,
+ *   requireReviewed: boolean } } | { error: string }}
+ */
+export function normalizeSessionInputSource(raw) {
+    if (!isPlainObject(raw) || !hasOnlyKeys(raw, SESSION_INPUT_SOURCE_KEYS)) {
+        return { error: "has a source that is not an object of known keys" };
+    }
+    if (raw.kind !== CASE_ANALYSIS_SOURCE_KIND) {
+        return { error: "has a source of unknown kind" };
+    }
+    if (typeof raw.document_schema !== "string"
+        || !SOURCE_DOCUMENT_SCHEMA_PATTERN.test(raw.document_schema)) {
+        return { error: "has a source without a valid document_schema" };
+    }
+    if (typeof raw.pointer !== "string" || !JSON_POINTER_PATTERN.test(raw.pointer)) {
+        return { error: "has a source without a valid pointer" };
+    }
+    if (raw.require_reviewed !== undefined && typeof raw.require_reviewed !== "boolean") {
+        return { error: "has a source whose require_reviewed is not a boolean" };
+    }
+    return {
+        source: {
+            kind:            raw.kind,
+            documentSchema:  raw.document_schema,
+            pointer:         raw.pointer,
+            requireReviewed: raw.require_reviewed === true,
+        },
+    };
+}
+
+/**
+ * Normalizes a session input's `required_when`, or explains why it is
+ * unusable: a non-empty list of `{ field, in }`, `in` a non-empty list.
+ * @returns {{ requiredWhen: Array<{ field: string, in: unknown[] }> } | { error: string }}
+ */
+export function normalizeSessionInputConditions(raw) {
+    if (!Array.isArray(raw) || raw.length === 0) {
+        return { error: "has a required_when that is not a non-empty list" };
+    }
+    const valid = raw.every(condition => isPlainObject(condition)
+        && hasOnlyKeys(condition, SESSION_INPUT_CONDITION_KEYS)
+        && isNonEmptyString(condition.field)
+        && Array.isArray(condition.in) && condition.in.length > 0);
+    if (!valid) {
+        return { error: "has a required_when with an invalid condition" };
+    }
+    return {
+        requiredWhen: raw.map(condition => ({ field: condition.field, in: [...condition.in] })),
+    };
+}
+
+/**
+ * The case-input part of one `session_inputs` entry: its `source` and
+ * `required_when`, normalized, each null when absent. An unusable `source`
+ * or `required_when` is dropped with a warning, and so is a `required_when`
+ * without a usable `source`, which the contract forbids: EthicApp could not
+ * tell where the value comes from. The rest of the entry is the service's
+ * contract with its adapter and is not interpreted.
+ * @returns {{ declaration: { source: object|null, requiredWhen: object[]|null },
+ *   warnings: string[] }}
+ */
+function normalizeSessionInputDeclaration(name, entry) {
+    const warnings = [];
+    let source = null;
+    let requiredWhen = null;
+
+    if (entry.source !== undefined) {
+        const result = normalizeSessionInputSource(entry.source);
+        if (result.error) {
+            warnings.push(`session input "${name}" ${result.error}`);
+        } else {
+            source = result.source;
+        }
+    }
+    if (entry.required_when !== undefined) {
+        const result = normalizeSessionInputConditions(entry.required_when);
+        if (result.error) {
+            warnings.push(`session input "${name}" ${result.error}`);
+        } else if (source === null) {
+            warnings.push(`session input "${name}" has a required_when without a valid source`);
+        } else {
+            requiredWhen = result.requiredWhen;
+        }
+    }
+
+    return { declaration: { source, requiredWhen }, warnings };
+}
+
+/**
+ * The session inputs a descriptor declares (#1178): the keys of its optional
+ * `session_inputs` whose entry is an object. A session input is a value
+ * EthicApp computes for each room or session it creates, such as Polyadic's
+ * `phase_clock`, rather than a setting a teacher stores. Absent means none.
+ * An entry that is not an object is dropped with a warning.
+ *
+ * `sessionInputDeclarations` keeps, per input, the two keys EthicApp reads
+ * generically (ethicapp-ai-additions#293): where a case input comes from
+ * (`source`) and which configurations need it (`requiredWhen`); see
+ * helpers/case-session-inputs.js. The rest of each entry is the service's
+ * contract with its adapter and is not interpreted here.
  * @param {unknown} raw
- * @returns {{ sessionInputs: string[], warnings: string[] }}
+ * @returns {{ sessionInputs: string[], sessionInputDeclarations: Object<string, {
+ *   source: object|null, requiredWhen: object[]|null }>, warnings: string[] }}
  */
 export function normalizeSessionInputs(raw) {
     if (raw === undefined || raw === null) {
-        return { sessionInputs: [], warnings: [] };
+        return { sessionInputs: [], sessionInputDeclarations: {}, warnings: [] };
     }
     if (!isPlainObject(raw)) {
-        return { sessionInputs: [], warnings: ["session_inputs is not an object"] };
+        return {
+            sessionInputs:            [],
+            sessionInputDeclarations: {},
+            warnings:                 ["session_inputs is not an object"],
+        };
     }
 
     const sessionInputs = [];
+    const sessionInputDeclarations = {};
     const warnings = [];
     for (const [name, entry] of Object.entries(raw)) {
         if (isPlainObject(entry) && isNonEmptyString(name)) {
             sessionInputs.push(name);
+            const normalized = normalizeSessionInputDeclaration(name, entry);
+            sessionInputDeclarations[name] = normalized.declaration;
+            warnings.push(...normalized.warnings);
         } else {
             warnings.push(`session input "${name}" is not an object`);
         }
     }
-    return { sessionInputs, warnings };
+    return { sessionInputs, sessionInputDeclarations, warnings };
 }
 
 function hasFieldGroup(group) {
@@ -341,6 +460,7 @@ export function normalizeDescriptor(raw, expectedServiceId) {
             fields,
             studentOutputs: studentOutputs.studentOutputs,
             sessionInputs:  sessionInputs.sessionInputs,
+            sessionInputDeclarations: sessionInputs.sessionInputDeclarations,
         },
         warnings,
     };
@@ -571,6 +691,8 @@ export class CapabilityDescriptorsClient {
             fields:              result.descriptor.fields,
             studentOutputs:      result.descriptor.studentOutputs,
             sessionInputs:       result.descriptor.sessionInputs,
+            // `source` and `required_when` of each session input (#1220).
+            sessionInputDeclarations: result.descriptor.sessionInputDeclarations,
         };
     }
 }

@@ -58,9 +58,15 @@ test("catalog: each adapter requires its AI Additions service; mocks are develop
 // Design analyses are declared (#863): the claim typology is produced per
 // question for the tutor, and every consumption has a producer.
 test("catalog: the claim typology is produced per question and the tutor consumes it", () => {
+    // Design analyses only: case analyses declare their document with unit
+    // `case` (#1220), checked below.
+    const perQuestion = list => list?.filter(item => item.unit === "question");
     const declared = Object.fromEntries(manifest.services
-        .filter(service => service.produces || service.consumes)
-        .map(service => [service.id, { produces: service.produces, consumes: service.consumes }]));
+        .filter(service => perQuestion(service.produces)?.length || service.consumes)
+        .map(service => [service.id, {
+            produces: perQuestion(service.produces),
+            consumes: service.consumes,
+        }]));
     const typologyPerQuestion = [{ documentSchema: "claim-typology/v1", unit: "question" }];
 
     assert.deepEqual(declared, {
@@ -68,6 +74,29 @@ test("catalog: the claim typology is produced per question and the tutor consume
         "case-analyst-claim-typology": { produces: typologyPerQuestion, consumes: undefined },
     });
     assert.deepEqual(catalogWarnings(manifest), []);
+});
+
+// Each case analysis adapter declares the document its analysis holds, so a
+// service's case input can find it (#1220), and the declaration is the schema
+// the adapter stores.
+test("catalog: case analysis adapters declare the document they store", async () => {
+    const adapterSchemas = {
+        "case-analyst-evaluation": (await import(
+            "../adapters/case-analyst-evaluation.adapter.js")).CASE_EVALUATION_SCHEMA,
+        "case-analyst-evidence-inventory": (await import(
+            "../adapters/case-analyst-evidence-inventory.adapter.js")).DOCUMENT_SCHEMA,
+        "case-analyst-topic-listing": (await import(
+            "../adapters/case-analyst-topic-listing.adapter.js")).TOPIC_LISTING_SCHEMA,
+        "mock-case-analysis": (await import(
+            "../adapters/mock-case-analysis.adapter.js")).MOCK_CASE_ANALYSIS_SCHEMA,
+    };
+    const declared = Object.fromEntries(manifest.services
+        .filter(service => service.scopes.includes("case"))
+        .map(service => [service.id, service.produces]));
+
+    assert.deepEqual(declared, Object.fromEntries(Object.entries(adapterSchemas)
+        .map(([id, documentSchema]) => [id, [{ documentSchema, unit: "case" }]])));
+    assert.equal(adapterSchemas["case-analyst-topic-listing"], "topic-listing/v1");
 });
 
 test("catalog: no service declares the removed enabled or capabilities keys", () => {

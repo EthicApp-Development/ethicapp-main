@@ -4,6 +4,10 @@ import express from "express";
 import { requireRole } from "../../helpers/auth-helper.js";
 import { requireSessionOwner } from "../../helpers/activity-owner-helper.js";
 import defaultPhaseStarter from "../../helpers/phase-start-helper.js";
+import {
+    MISSING_CASE_INPUTS_CODE,
+    missingCaseInputsProblem,
+} from "../../services/case-input-validation.service.js";
 
 // The status and body of each outcome other than "started"
 // (helpers/phase-start-helper.js).
@@ -31,6 +35,15 @@ function refusal(result) {
         }];
     case "invalid_design":
         return [422, { error: result.problem, code: "INVALID_PHASE_DESIGN" }];
+    // The phase's services require a case input that the case's analyses do
+    // not provide (#1220); `missing` says which, for the teacher.
+    case "missing_case_inputs":
+        return [422, {
+            error:       missingCaseInputsProblem(result),
+            code:        MISSING_CASE_INPUTS_CODE,
+            phaseNumber: result.phaseNumber,
+            missing:     result.missing,
+        }];
     default:
         throw new Error(`Unknown phase start outcome: ${result.status}`);
     }
@@ -60,7 +73,10 @@ export function createPhaseStartRouter({ phaseStarter = defaultPhaseStarter } = 
      * @returns 201 `{ status: "ok", phase: { id, number } }`; 409 with `code`
      *   PHASE_CHANGED (and `currentPhaseNumber`) when the activity is no longer
      *   at that phase, ACTIVITY_FINISHED or NO_NEXT_PHASE; 422
-     *   INVALID_PHASE_DESIGN when the design's phase cannot be started.
+     *   INVALID_PHASE_DESIGN when the design's phase cannot be started, and
+     *   MISSING_CASE_INPUTS (with `phaseNumber` and `missing`) when its
+     *   services require a case input the case's analyses do not provide
+     *   (#1220).
      */
     router.post("/activities/:session_id/phases/next", async (req, res) => {
         if (!requireRole(req, res, "P")) {

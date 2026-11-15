@@ -208,6 +208,24 @@ describe("a tick", () => {
             assert.match(logger.lines.error[1], /Session 2.*no launched activity/);
         });
 
+    it("logs a next phase missing a case input (#1220), which the start handled", async () => {
+        const { runner, calls, logger } = setup({
+            due:       [deadline(1)],
+            outcomeOf: () => ({
+                status:      "missing_case_inputs",
+                phaseNumber: 2,
+                missing:     [{ key: "glossary", documentSchema: "glossary/v2", status: "absent" }],
+            }),
+        });
+
+        await runner.processDue();
+
+        assert.deepEqual(calls.marks, []);
+        assert.deepEqual(calls.notices, []);
+        assert.equal(logger.lines.error.length, 1);
+        assert.match(logger.lines.error[0], /Session 1.*1 case input\(s\) missing/);
+    });
+
     it("marks the deadline handled when the teacher cannot start phases, the activity is "
         + "finished or the session is gone", async () => {
         const due = [deadline(1), deadline(2), deadline(3)];

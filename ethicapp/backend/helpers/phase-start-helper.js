@@ -14,7 +14,9 @@
  *    only when the activity's time mode is hard and the current phase's
  *    deadline has passed and was not yet handled, which it marks handled;
  * 4. the design's phase after the current one is read from the database, not
- *    from the request;
+ *    from the request, and it must be one that can run: a phase whose
+ *    services require a case input (#1220) that the case's analyses do not
+ *    provide is refused, and the teacher is told what is missing;
  * 5. a start by the teacher marks the current phase's deadline, if it has
  *    one, as handled, so that the runner never acts on it;
  * 6. phases numbered above the current one, left by a start that failed
@@ -46,6 +48,9 @@ import { TRANSITION_SESSION_SQL } from "./teacher-activity-writes.js";
 import { phaseItemWriters } from "./phase-items-helper.js";
 import { groupingAlgorithms, insertGroups } from "./groups-helper.js";
 import { isValidPhaseDuration } from "./phase-duration.js";
+import { phaseExternalServices } from "./phase-external-services.js";
+import externalServicesRegistry from "../services/external-services.service.js";
+import { checkCaseInputsWithRegistry } from "../services/case-input-validation.service.js";
 
 const IN_PROGRESS = getStatusCode("in_progress");
 const FINISHED = getStatusCode("finished");
@@ -83,9 +88,10 @@ export const PHASE_NUMBER_SQL = `
     WHERE id = $1
 `;
 
-// $1 session id. The design of the activity launched in the session.
+// $1 session id. The design of the activity launched in the session, and its
+// case.
 export const ACTIVITY_DESIGN_SQL = `
-    SELECT d.design
+    SELECT d.design, d.case_id
     FROM activity AS a
     INNER JOIN designs AS d
         ON a.design = d.id
@@ -208,6 +214,38 @@ export function phaseDesignProblem(designType, phase) {
     return null;
 }
 
+/**
+ * The case inputs that the services of the design's phase `phaseIndex`
+ * require and the case's analyses do not provide (#1220), under the AI
+ * service policy version the session is pinned to, as its hooks follow it.
+ * A phase without services reads nothing.
+ *
+ * @param {{ design: Object, caseId: number|null, phaseIndex: number,
+ *     sessionId: number }} request
+ * @param {Object} [dependencies] - For tests: `registry` and `deps`
+ *     (services/case-input-validation.service.js).
+ * @returns {Promise<{ missing: Object[] }>} See
+ *     services/case-input-validation.service.js.
+ */
+export async function checkPhaseCaseInputs(
+    { design, caseId, phaseIndex, sessionId },
+    { registry = externalServicesRegistry, deps = {} } = {}
+) {
+    const phase = Array.isArray(design?.phases) ? design.phases[phaseIndex] : null;
+    if (phaseExternalServices(phase).enabledServiceIds.length === 0) {
+        return { inputs: [], missing: [], unchecked: [] };
+    }
+    await registry.initialize();
+    return checkCaseInputsWithRegistry({
+        design,
+        caseId,
+        phaseIndexes:  [phaseIndex],
+        registry,
+        policyVersion: await registry.getSessionPolicyVersion(sessionId),
+        deps,
+    });
+}
+
 async function defaultConnect() {
     const db = await rpg2.getDBInstance(config.dbconnString);
     return db.connect();
@@ -235,6 +273,10 @@ function defaultNotifyPhaseStarted(sessionId, transition) {
  *         reason: "teacher" | "deadline" }) => Promise<void>} [dependencies.notifyPhaseStarted]
  *        Tells the students and the teacher (helpers/phase-clock-notifier.js).
  * @param {(hookName: string, context: Object) => Promise<unknown>} [dependencies.dispatchPhaseHook]
+ * @param {(request: { design: Object, caseId: number|null, phaseIndex: number,
+ *         sessionId: number }) => Promise<{ missing: Object[] }>} [dependencies.checkCaseInputs]
+ *        The case inputs the phase's services require and the case does not
+ *        provide (#1220); checkPhaseCaseInputs() by default.
  * @param {() => number} [dependencies.random] For the random grouping.
  * @param {{ warn: Function, error: Function }} [dependencies.logger]
  */
@@ -243,6 +285,7 @@ export function createPhaseStarter({
     invalidateStudentPhaseState = defaultInvalidateStudentPhaseState,
     notifyPhaseStarted = defaultNotifyPhaseStarted,
     dispatchPhaseHook = defaultDispatchPhaseHook,
+    checkCaseInputs = checkPhaseCaseInputs,
     random = Math.random,
     logger = console,
 } = {}) {
@@ -333,6 +376,22 @@ export function createPhaseStarter({
         const problem = phaseDesignProblem(design.type, phase);
         if (problem) {
             return settle({ status: "invalid_design", problem });
+        }
+
+        // A phase whose services cannot run without a case input the case's
+        // analyses do not provide is not started (#1220).
+        const { missing } = await checkCaseInputs({
+            design,
+            caseId:     activity.case_id ?? null,
+            phaseIndex: currentPhaseNumber,
+            sessionId,
+        });
+        if (missing.length > 0) {
+            return settle({
+                status:      "missing_case_inputs",
+                phaseNumber: currentPhaseNumber + 1,
+                missing,
+            });
         }
 
         if (!byDeadline && previousPhaseId !== null) {
@@ -450,7 +509,9 @@ export function createPhaseStarter({
      *   current phase's deadline is marked handled and stays so whatever the
      *   outcome: `started`, and also `no_next_phase` (the last phase, which a
      *   deadline never finishes), `invalid_design` and `not_launched`, which
-     *   no retry can change. Only a thrown error rolls the mark back.
+     *   no retry can change, and `missing_case_inputs`, which the teacher
+     *   resolves and then starts the phase by hand. Only a thrown error rolls
+     *   the mark back.
      *
      * Every other outcome writes nothing.
      *
@@ -462,6 +523,7 @@ export function createPhaseStarter({
      *       previousStatus: number|null, hooks: Promise<void> }
      *   | { status: "stale" | "no_next_phase" | "not_due", currentPhaseNumber: number }
      *   | { status: "invalid_design", problem: string }
+     *   | { status: "missing_case_inputs", phaseNumber: number, missing: Object[] }
      *   | { status: "forbidden" | "not_found" | "finished" | "not_launched" }>}
      */
     async function startNextPhase({

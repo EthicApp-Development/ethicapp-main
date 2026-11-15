@@ -5,6 +5,7 @@ import path from "node:path";
 import test from "node:test";
 import {
     AI_ADDITIONS_SERVICE_IDS,
+    CASE_ANALYSIS_UNIT,
     catalogWarnings,
     DESIGN_ANALYSIS_UNITS,
     developmentAdaptersEnabled,
@@ -159,6 +160,87 @@ test("validateCatalogEntry: a producer needs the design scope", () => {
         );
     }
     assert.deepEqual(validateCatalogEntry(productionEntry({ produces: [] })), []);
+});
+
+// ─── case analysis documents (#1220) ─────────────────────────────────────────
+
+const TOPIC_LISTING_PER_CASE = Object.freeze({ documentSchema: "topic-listing/v1", unit: "case" });
+
+test("CASE_ANALYSIS_UNIT: a case analysis holds one document per case", () => {
+    assert.equal(CASE_ANALYSIS_UNIT, "case");
+});
+
+test("validateCatalogEntry: a case-scoped adapter declares the document of its case analysis", () => {
+    assert.deepEqual(validateCatalogEntry(productionEntry({
+        requires: ["case-analyst"],
+        scopes:   ["case"],
+        produces: [TOPIC_LISTING_PER_CASE],
+    })), []);
+    assert.deepEqual(validateCatalogEntry(developmentEntry({
+        scopes:   ["case", "design"],
+        produces: [TOPIC_LISTING_PER_CASE, TYPOLOGY_PER_QUESTION],
+    })), []);
+});
+
+test("validateCatalogEntry: a case analysis needs the case scope and is one document", () => {
+    for (const scopes of [undefined, [], ["design"], "case"]) {
+        assertProblem(
+            productionEntry({ scopes, produces: [TOPIC_LISTING_PER_CASE] }),
+            "`produces` a case analysis needs the `case` scope"
+        );
+    }
+    assertProblem(
+        productionEntry({
+            scopes:   ["case"],
+            produces: [TOPIC_LISTING_PER_CASE, { documentSchema: "evidence-inventory/v1", unit: "case" }],
+        }),
+        "`produces` at most one case analysis document"
+    );
+});
+
+test("validateCatalogEntry: consumes names design units only", () => {
+    assertProblem(
+        productionEntry({ scopes: ["chat"], consumes: [TOPIC_LISTING_PER_CASE] }),
+        "`consumes[0]`.unit must be one of question"
+    );
+});
+
+test("getCaseAnalysisProducerIds: the registered adapters whose case analysis holds the schema", async () => {
+    const directory = await fs.mkdtemp(path.join(os.tmpdir(), "ethicapp-catalog-"));
+    const manifestPath = path.join(directory, "manifest.json");
+
+    try {
+        await fs.writeFile(manifestPath, JSON.stringify({
+            services: [
+                productionEntry({ id: "topics-a", requires: ["case-analyst"], scopes: ["case"], produces: [TOPIC_LISTING_PER_CASE] }),
+                productionEntry({ id: "typology", requires: ["case-analyst"], scopes: ["design"], produces: [TYPOLOGY_PER_QUESTION] }),
+                productionEntry({ id: "topics-b", requires: ["case-analyst"], scopes: ["case"], produces: [TOPIC_LISTING_PER_CASE] }),
+                productionEntry({ id: "plain", scopes: ["chat"] }),
+            ],
+        }));
+        const registry = new ExternalServicesRegistry({
+            jobsService:   {},
+            importAdapter: async () => ({ register: async () => {} }),
+        });
+        await captureWarnings(async () => {
+            const originalInfo = console.info;
+            console.info = () => {};
+            try {
+                await registry.initialize(manifestPath);
+            } finally {
+                console.info = originalInfo;
+            }
+        });
+
+        assert.deepEqual(registry.getCaseAnalysisProducerIds("topic-listing/v1"), ["topics-a", "topics-b"]);
+        assert.deepEqual(registry.getCaseAnalysisProducerIds("claim-typology/v1"), [],
+            "a design analysis is not a case analysis");
+        assert.deepEqual(registry.getCaseAnalysisProducerIds("glossary/v1"), []);
+        assert.deepEqual(registry.getDesignAnalysisConsumerIds("topics-a"), [],
+            "a case analysis has no design analysis consumers");
+    } finally {
+        await fs.rm(directory, { recursive: true, force: true });
+    }
 });
 
 test("catalogWarnings: a consumption without a producer of the same unit", () => {

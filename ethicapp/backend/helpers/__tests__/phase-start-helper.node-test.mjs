@@ -15,6 +15,7 @@ import {
     LOCK_TEACHER_SQL,
     MARK_DEADLINE_HANDLED_SQL,
     PHASE_NUMBER_SQL,
+    checkPhaseCaseInputs,
     createPhaseStarter,
     phaseColumns,
     phaseDesignProblem,
@@ -133,6 +134,7 @@ function makeDatabase({
     previousMembers = [],
     deadlineDue = false,
     failOn = null,
+    caseId = null,
 } = {}) {
     const log = [];
     let nextTeamId = 900;
@@ -154,7 +156,7 @@ function makeDatabase({
             case "CLAIM_DUE_DEADLINE":
                 return { rows: deadlineDue ? [{ id: params[0] }] : [] };
             case "ACTIVITY_DESIGN":
-                return { rows: design ? [{ design }] : [] };
+                return { rows: design ? [{ design, case_id: caseId }] : [] };
             case "LEFTOVER_PHASES":
                 return { rows: leftovers.map(id => ({ id })) };
             case "INSERT_PHASE":
@@ -187,7 +189,9 @@ function makeDatabase({
 }
 
 // The effects after commit, recorded in the same log as the statements.
-function makeStarter(database, { random = () => 0, failing = {} } = {}) {
+// `checkCaseInputs` replaces the case input check (#1220); by default the
+// real one runs, which reads nothing for a phase without services.
+function makeStarter(database, { random = () => 0, failing = {}, checkCaseInputs } = {}) {
     const hooks = [];
     const errors = [];
     const starter = createPhaseStarter({
@@ -210,6 +214,7 @@ function makeStarter(database, { random = () => 0, failing = {} } = {}) {
                 throw new Error("service down");
             }
         },
+        ...(checkCaseInputs ? { checkCaseInputs } : {}),
         random,
         logger: { warn() {}, error: (...args) => errors.push(args) },
     });
@@ -521,6 +526,147 @@ describe("refusals, which roll back and announce nothing", () => {
             status:  "invalid_design",
             problem: "Unsupported grouping algorithm: alphabetical",
         });
+    });
+});
+
+describe("case inputs the phase's services require (#1220)", () => {
+    const CASE_ID = 77;
+    const MISSING = Object.freeze([{
+        phaseIndex:         1,
+        serviceId:          "essay-reviewer",
+        key:                "glossary",
+        documentSchema:     "glossary/v2",
+        analysisServiceIds: ["glossary-maker"],
+        status:             "pending",
+    }]);
+    const AT_ONE = { ...START, expectedPhaseNumber: 1 };
+    const atPhaseOne = (overrides = {}) => ({
+        session:            { id: SESSION, creator: TEACHER, status: 2, current_stage: 401 },
+        currentPhaseNumber: 1,
+        caseId:             CASE_ID,
+        ...overrides,
+    });
+
+    function recordingCheck(missing) {
+        const requests = [];
+        return {
+            requests,
+            check: async (request) => {
+                requests.push(request);
+                return { missing: [...missing] };
+            },
+        };
+    }
+
+    it("refuses a phase whose services miss a case input, telling which", async () => {
+        const database = makeDatabase(atPhaseOne());
+        const { requests, check } = recordingCheck(MISSING);
+        const { starter, hooks } = makeStarter(database, { checkCaseInputs: check });
+
+        const result = await starter.startNextPhase(AT_ONE);
+
+        assert.deepEqual(result, { status: "missing_case_inputs", phaseNumber: 2, missing: MISSING });
+        assert.deepEqual(requests, [{
+            design: SD_DESIGN, caseId: CASE_ID, phaseIndex: 1, sessionId: SESSION,
+        }]);
+        const names = database.names();
+        assert.equal(names.at(-1), "ROLLBACK");
+        assert.equal(names.some(name => /^(INSERT|DELETE|TRANSITION|MARK)/u.test(name)), false);
+        assert.deepEqual(hooks, []);
+    });
+
+    it("starts a phase whose case inputs are all provided", async () => {
+        const database = makeDatabase(atPhaseOne());
+        const { check } = recordingCheck([]);
+        const result = await makeStarter(database, { checkCaseInputs: check }).starter
+            .startNextPhase(AT_ONE);
+
+        assert.equal(result.status, "started");
+    });
+
+    it("checks after the design's own problems, which come first", async () => {
+        const design = {
+            type:   "semantic_differential",
+            phases: [{ mode: "team", grouping_algorithm: "alphabetical", stdntAmount: 3 }],
+        };
+        const { requests, check } = recordingCheck(MISSING);
+        const result = await makeStarter(makeDatabase({ design }), { checkCaseInputs: check })
+            .starter.startNextPhase(START);
+
+        assert.equal(result.status, "invalid_design");
+        assert.deepEqual(requests, []);
+    });
+
+    it("keeps a deadline's claim when the deadline's start is refused", async () => {
+        const database = makeDatabase(atPhaseOne({
+            session: {
+                id: SESSION, creator: TEACHER, status: 2, current_stage: 401, time_mode: "hard",
+            },
+            deadlineDue: true,
+        }));
+        const { check } = recordingCheck(MISSING);
+        const result = await makeStarter(database, { checkCaseInputs: check }).starter
+            .startNextPhase({ ...AT_ONE, trigger: "deadline" });
+
+        assert.equal(result.status, "missing_case_inputs");
+        assert.equal(database.names().at(-1), "COMMIT");
+        assert.equal(database.names().includes("INSERT_PHASE"), false);
+    });
+
+    it("reads nothing by default for a phase without services", async () => {
+        const result = await makeStarter(makeDatabase(atPhaseOne())).starter.startNextPhase(AT_ONE);
+        assert.equal(result.status, "started");
+    });
+
+    it("checks by default under the session's pinned policy version", async () => {
+        const calls = [];
+        const registry = {
+            initialize:              async () => calls.push("initialize"),
+            getSessionPolicyVersion: async (sessionId) => {
+                calls.push(["session policy", sessionId]);
+                return { id: 9 };
+            },
+            usableServiceIds: async (ids, { policyVersion }) => {
+                calls.push(["usable", ids, policyVersion]);
+                return ids;
+            },
+            getServiceInstanceConfiguration: async () => ({
+                available:                true,
+                fields:                   [],
+                sessionInputDeclarations: {
+                    glossary: {
+                        source:       { kind: "case_analysis", documentSchema: "glossary/v2", pointer: "", requireReviewed: false },
+                        requiredWhen: null,
+                    },
+                    topics: {
+                        source:       { kind: "case_analysis", documentSchema: "topics/v1", pointer: "", requireReviewed: false },
+                        requiredWhen: [{ field: "mode", in: ["coverage"] }],
+                    },
+                },
+            }),
+            getCaseAnalysisProducerIds: documentSchema => [`${documentSchema}-maker`],
+        };
+        const design = {
+            phases: [{}, {
+                externalServices: {
+                    enabledServiceIds: ["essay-reviewer"],
+                    configurations:    { "essay-reviewer": { mode: "coverage" } },
+                },
+            }],
+        };
+
+        const result = await checkPhaseCaseInputs(
+            { design, caseId: CASE_ID, phaseIndex: 1, sessionId: SESSION },
+            { registry, deps: { getCaseAnalysis: async () => null } }
+        );
+
+        assert.deepEqual(result.missing.map(entry => [entry.key, entry.status]),
+            [["topics", "absent"]], "the optional glossary is never missing");
+        assert.deepEqual(calls, [
+            "initialize",
+            ["session policy", SESSION],
+            ["usable", ["essay-reviewer"], { id: 9 }],
+        ]);
     });
 });
 

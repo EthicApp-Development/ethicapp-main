@@ -38,6 +38,10 @@ import { ensureCasePdfRenderJob } from "../helpers/pdf-render-jobs-helper.js";
 import { phaseDurationRefusal } from "../helpers/phase-duration.js";
 import externalServicesRegistry from "../services/external-services.service.js";
 import {
+    checkCaseInputsWithRegistry,
+    missingCaseInputsResponse,
+} from "../services/case-input-validation.service.js";
+import {
     designEnabledServiceIds,
     invalidConfigurationResponse,
     validateDesignServiceConfigurations,
@@ -105,6 +109,18 @@ async function validateServiceConfigurations(design, storedDesign = null) {
         ),
         getInstanceConfiguration: (serviceId, locale) => externalServicesRegistry
             .getServiceInstanceConfiguration(serviceId, locale, { policyVersion }),
+    });
+}
+
+// The case inputs the design's services require under their stored
+// configurations, and which of them the case's analyses do not provide
+// (#1220), under the current AI service policy version. Run after
+// validateServiceConfigurations(), which initializes the registry.
+async function checkDesignCaseInputs(design, caseId) {
+    return checkCaseInputsWithRegistry({
+        design,
+        caseId,
+        registry: externalServicesRegistry,
     });
 }
 
@@ -526,6 +542,12 @@ router.post("/designs", async (req, res) => {
             const invalid = invalidConfigurationResponse(configurationCheck);
             return res.status(invalid.status).json(invalid.body);
         }
+        // A required case input whose analysis is not ready refuses the save (#1220).
+        const caseInputCheck = await checkDesignCaseInputs(designNoId, caseId);
+        if (caseInputCheck.missing.length > 0) {
+            const refused = missingCaseInputsResponse(caseInputCheck, configurationCheck.warnings);
+            return res.status(refused.status).json(refused.body);
+        }
 
         const nextVisibility = normalizeVisibility(visibility);
         if (nextVisibility === PUBLIC_VISIBILITY && caseId) {
@@ -576,9 +598,10 @@ router.post("/designs", async (req, res) => {
         if (result && result.id) {
             await replaceDesignTags(result.id, parsedTagIds, sessionUid);
             const response = res.json({
-                status:   "ok",
-                id:       result.id,
-                warnings: configurationCheck.warnings,
+                status:     "ok",
+                id:         result.id,
+                warnings:   configurationCheck.warnings,
+                caseInputs: caseInputCheck.inputs,
             });
             // Design analyses run in the background, after the answer (#848).
             scheduleDesignAnalyses(result.id, {
@@ -675,6 +698,13 @@ router.patch("/designs/:id", async (req, res) => {
             const invalid = invalidConfigurationResponse(configurationCheck);
             return res.status(invalid.status).json(invalid.body);
         }
+        // A required case input whose analysis is not ready refuses the save,
+        // also when the save changes the design's case (#1220).
+        const caseInputCheck = await checkDesignCaseInputs(design, caseId);
+        if (caseInputCheck.missing.length > 0) {
+            const refused = missingCaseInputsResponse(caseInputCheck, configurationCheck.warnings);
+            return res.status(refused.status).json(refused.body);
+        }
 
         let {id, ...designNoId} = design;
         designNoId = JSON.stringify(designNoId);
@@ -725,9 +755,10 @@ router.patch("/designs/:id", async (req, res) => {
         await replaceDesignTags(designId, parsedTagIds, sessionUid);
 
         const response = res.json({
-            status:   "ok",
-            message:  "Design updated successfully",
-            warnings: configurationCheck.warnings,
+            status:     "ok",
+            message:    "Design updated successfully",
+            warnings:   configurationCheck.warnings,
+            caseInputs: caseInputCheck.inputs,
         });
         // Design analyses run in the background, after the answer (#848).
         scheduleDesignAnalyses(designId, {
@@ -737,6 +768,71 @@ router.patch("/designs/:id", async (req, res) => {
         return response;
     } catch (err) {
         console.error("Error in /designs/:id PATCH:", err);
+        return res.status(500).json({ status: "err", message: "Internal Server Error" });
+    }
+});
+
+// $1 design id, $2 teacher id. The case of a design the teacher created.
+export const OWN_DESIGN_CASE_SQL = `
+    SELECT case_id
+    FROM designs
+    WHERE id = $1
+      AND creator = $2
+`;
+
+/**
+ * @route POST /designs/case-inputs
+ * @description The case inputs the services of a design being edited require
+ *   under their configurations, and which of them the case's analyses do not
+ *   provide (#1220), as saving the design would check them. The editor shows
+ *   the result next to each service's configuration; it computes nothing.
+ * @body {{ design: Object, caseId: number|null, designId?: number }} The
+ *   design as edited and its case. The case must be one the teacher may
+ *   associate (#924), or the one `designId`, a design of theirs, already has.
+ * @returns 200 `{ status: "ok", result: { inputs, missing, unchecked } }`
+ *   (services/case-input-validation.service.js); 404 CASE_NOT_AVAILABLE.
+ */
+router.post("/designs/case-inputs", async (req, res) => {
+    if (!requireRole(req, res, "P")) {
+        return;
+    }
+
+    try {
+        const sessionUid = req.session?.uid;
+        const { design, caseId: requestedCaseId = null, designId = null } = req.body ?? {};
+        if (!design || typeof design !== "object" || Array.isArray(design)) {
+            return res.status(400).json({
+                status:  "err",
+                message: "Invalid input: Design data is required.",
+            });
+        }
+
+        const ownDesignId = Number.isSafeInteger(Number(designId)) && Number(designId) > 0
+            ? Number(designId)
+            : null;
+        const stored = ownDesignId === null ? null : await rpg2.singleSQL({
+            dbcon:     config.dbconnString,
+            sql:       OWN_DESIGN_CASE_SQL,
+            sqlParams: [
+                rpg2.param("plain", ownDesignId),
+                rpg2.param("plain", sessionUid),
+            ],
+        });
+        const caseCheck = await checkDesignCase({
+            requestedCaseId,
+            storedCaseId: stored?.case_id ?? null,
+            userId:       sessionUid,
+            designId:     ownDesignId,
+        });
+        if (caseCheck.refusal) {
+            return res.status(caseCheck.refusal.status).json(caseCheck.refusal.body);
+        }
+
+        await externalServicesRegistry.initialize();
+        const result = await checkDesignCaseInputs(design, caseCheck.caseId);
+        return res.json({ status: "ok", result });
+    } catch (err) {
+        console.error("Error in POST /designs/case-inputs:", err);
         return res.status(500).json({ status: "err", message: "Internal Server Error" });
     }
 });
