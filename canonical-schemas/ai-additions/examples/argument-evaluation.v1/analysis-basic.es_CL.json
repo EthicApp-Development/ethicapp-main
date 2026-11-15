@@ -1,0 +1,62 @@
+{
+  "schemaVersion": "argument-evaluation/v1",
+  "kind": "analysis",
+  "tutorMode": "basic",
+  "requestedMode": "basic",
+  "evaluation": {
+    "rubricVersion": "toulmin-coders/v1",
+    "promptLocale": "es-CL",
+    "calls": {
+      "correction": {
+        "promptVersion": "correccion_argumento_etica_v19_basico",
+        "model": "gpt-5-mini",
+        "reasoningEffort": null
+      },
+      "mapping": {
+        "promptVersion": "mapeo_evidencia_v17e_basico",
+        "model": "gpt-5-mini",
+        "reasoningEffort": "medium"
+      }
+    },
+    "criteria": {
+      "claim": {
+        "level": 2,
+        "scale": { "min": 0, "max": 2 },
+        "fragment": "Yo no ayudaría a Sebastián a contestar el examen",
+        "reason": "El estudiante dice en primera persona que no haría la acción focal.",
+        "claimTypeId": null,
+        "stance": null,
+        "focalAction": "ayudar a Sebastián a contestar el examen online"
+      },
+      "evidence": {
+        "level": 2,
+        "scale": { "min": 0, "max": 2 },
+        "factIds": [],
+        "caseQuotes": [
+          "no hacemos las cosas a medias o tomando atajos",
+          "Incluso lo hemos hablado con varios profesores",
+          "si reprueba el curso se atrasa un año y no tendrá dinero para pagar el cuota de la carrera (Sebastián estudia con gratuidad completa)"
+        ],
+        "exclusionIds": [],
+        "notInCaseCount": 1
+      },
+      "warrant": {
+        "level": 2,
+        "rawLevel": 2,
+        "scale": { "min": 0, "max": 2 },
+        "fragment": "porque su papá le dijo que en su familia no se toman atajos",
+        "reason": "Une la decisión con un hecho del caso, lo que el padre dijo sobre no tomar atajos, mediante \"porque\".",
+        "factId": null,
+        "caseQuote": "no hacemos las cosas a medias o tomando atajos"
+      },
+      "qualifier": {
+        "level": 1,
+        "rawLevel": 1,
+        "scale": { "min": 0, "max": 1 },
+        "fragment": "Solo lo ayudaría a estudiar antes del examen, no durante la prueba",
+        "reason": "Limita la decisión: excluye ayudarlo durante la prueba y restringe la ayuda a estudiar antes."
+      }
+    },
+    "entryRuleApplied": false
+  }
+}

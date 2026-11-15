@@ -1,0 +1,66 @@
+{
+  "schemaVersion": "student-result/v1",
+  "locale": "en-US",
+  "title": "Feedback on your argument",
+  "summary": "Your argument takes a clear decision and supports it with facts of the case. To make it stronger, explain why those facts weigh more than the risk that Sebastián loses his free tuition.",
+  "overview": "We reviewed your argument with a simplified version of the Toulmin model, which looks at four parts:\n\n- **Claim**: your decision on the question, that is, what you would do.\n- **Evidence**: the facts of the case you use.\n- **Warrant**: the reasoning that explains why those facts lead to your decision.\n- **Qualifier**: how far your decision goes, or the condition under which you would take it.\n\nOpen each criterion to see what it means and how it was evaluated. You can use this feedback to improve your argument.",
+  "sections": [
+    {
+      "kind": "criteria",
+      "title": "Criteria",
+      "items": [
+        {
+          "key": "claim",
+          "label": "Claim",
+          "value": "2 of 2 · Against",
+          "score": 2,
+          "minScore": 0,
+          "maxScore": 2,
+          "description": "Your **claim** is your decision on the question: whether you would or would not take the action the question asks about, if you were in that situation.\n\nIt is scored from 0 to 2: 2 when you say in the first person what you would do, 1 when your decision can be inferred from what you write but you do not state it, and 0 when it is not possible to tell what you would do.\n\nThis criterion does not reward a position: no position is worth more than another."
+        },
+        {
+          "key": "evidence",
+          "label": "Evidence",
+          "value": "2 of 2",
+          "score": 2,
+          "minScore": 0,
+          "maxScore": 2,
+          "description": "**Evidence** is the facts of the case you use in your argument: what the people involved do or say, and the circumstances they act in.\n\nIt is scored from 0 to 2 by how many distinct facts of the case you use: 2 when you use two or more, 1 when you use one, and 0 when you use none. Your own assumptions and what the case does not say do not count as evidence."
+        },
+        {
+          "key": "warrant",
+          "label": "Warrant",
+          "value": "2 of 2",
+          "score": 2,
+          "minScore": 0,
+          "maxScore": 2,
+          "description": "The **warrant** is the reasoning that explains why you decide what you decide: it links the facts of the case to your decision with connectors such as *because*, *since* or *given that*.\n\nIt is scored from 0 to 2: 2 when your reasoning rests on specific facts of the case and is linked to your decision, 1 when you give general reasons (values, consequences in general or assumptions) or reasons that are not linked to your decision, and 0 when you do not explain why you decide."
+        },
+        {
+          "key": "qualifier",
+          "label": "Qualifier",
+          "value": "Present",
+          "score": 1,
+          "minScore": 0,
+          "maxScore": 1,
+          "description": "The **qualifier** shows how far your decision goes, or the condition under which you would take it, with expressions such as *only if*, *as long as*, *at most*, *just that once* or *but not in…*.\n\nIt is evaluated as present or absent. Saying how sure you are, with phrases such as *I think* or *probably*, does not count as a qualifier."
+        }
+      ]
+    },
+    {
+      "kind": "bullets",
+      "title": "Comments",
+      "items": [
+        "Claim: You say clearly that you would not help Sebastián answer the exam. Keep that sentence at the start, so your decision is read right away.",
+        "Evidence: You use several facts of the case, such as what Sebastián's father said and the complaints against cheating. Check that everything you mention is in the case: the case does not say that whoever helps could be expelled from the program.",
+        "Warrant: You link your decision to what Sebastián's father said with a \"because\". You can develop why that advice matters in this situation.",
+        "Qualifier: You say that you would help him study before the exam, but not during the test. That makes clear how far your decision goes."
+      ]
+    },
+    {
+      "kind": "text",
+      "title": "Your argument",
+      "text": "I would not help Sebastián answer the exam, because his dad told him that in his family they do not take shortcuts, and the two of us have complained to the teachers about cheating. I know that if he fails he loses his free tuition, and I could be expelled from the program. I would only help him study before the exam, not during the test."
+    }
+  ]
+}

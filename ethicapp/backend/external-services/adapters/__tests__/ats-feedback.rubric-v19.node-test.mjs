@@ -56,6 +56,9 @@ const EXAMPLES = Object.freeze({
     noClaim:    await readJson(new URL("analysis-no-claim.es_CL.json", EXAMPLES_URL)),
     comparison: await readJson(new URL("comparison.es_CL.json", EXAMPLES_URL)),
 });
+// The basic mode (ethicapp-ai-additions#277): no claim type, case quotes in
+// place of EV# ids, and the focal action the model stated.
+const BASIC_EXAMPLE = await readJson(new URL("analysis-basic.es_CL.json", EXAMPLES_URL));
 
 const SESSION_ID = 5;
 const PHASE_ID = 20;
@@ -202,6 +205,45 @@ test("every contract example is read with the levels and scales it states", () =
                 );
             }
         }
+    }
+});
+
+test("a basic-mode evaluation is read with its levels, without a claim type or ids", () => {
+    const read = argumentEvaluationOf(v19Payload(BASIC_EXAMPLE));
+    assert.equal(read.kind, "analysis");
+    assert.equal(read.tutorMode, "basic");
+    assert.equal(read.requestedMode, "basic");
+    for (const [key, criterion] of Object.entries(BASIC_EXAMPLE.evaluation.criteria)) {
+        assert.deepEqual(
+            { level: read.evaluation.criteria[key].level, min: read.evaluation.criteria[key].min,
+                max:   read.evaluation.criteria[key].max },
+            { level: criterion.level, ...criterion.scale },
+            key
+        );
+    }
+
+    const record = evaluationRecordOf(read);
+    assert.equal(record.claimTypeId, null);
+    assert.equal(record.stance, null);
+    assert.deepEqual(record.factIds, []);
+    // The record quotes neither the case nor the model.
+    const recorded = JSON.stringify(record);
+    const { claim, evidence, warrant } = BASIC_EXAMPLE.evaluation.criteria;
+    for (const text of [claim.focalAction, warrant.caseQuote, ...evidence.caseQuotes].filter(Boolean)) {
+        assert.equal(recorded.includes(text), false);
+    }
+});
+
+test("a basic-mode analysis maps to the student's levels with no stance", () => {
+    const { document } = mappedStudentDocument(v19Payload(BASIC_EXAMPLE), "es_CL");
+    assert.deepEqual(criteriaOf(document).map(item => item.value),
+        ["2 de 2", "2 de 2", "2 de 2", "Presente"]);
+    assertValidDocument(document, "basic analysis");
+    assertNoTeacherOnlyText(document, BASIC_EXAMPLE, "basic document");
+    const json = JSON.stringify(document);
+    const { claim, evidence } = BASIC_EXAMPLE.evaluation.criteria;
+    for (const text of [claim.focalAction, ...evidence.caseQuotes]) {
+        assert.equal(json.includes(text), false, "the document quotes neither the case nor the model");
     }
 });
 

@@ -13,12 +13,18 @@ them here: the copy changes only to match the source.
 | `examples/argument-evaluation.v1/*.json` | `shared/schemas/examples/argument-evaluation.v1/*.json` |
 
 Every file was compared byte for byte with commit
-[`c4a573a`](https://github.com/EthicApp-Development/ethicapp-ai-additions/commit/c4a573a).
+[`eec8f54`](https://github.com/EthicApp-Development/ethicapp-ai-additions/commit/eec8f54).
 The `student-result/v1` schema comes from ethicapp-ai-additions PR #234
 (issue #232), and its tutor examples were regenerated from the tutor's own
 output by PR #235 (issue #233); they are unchanged since commit `3b292d1`.
 The `argument-evaluation/v1` schema and its examples come from PR #280
-(issue #268) and were copied for #1214. The folder keeps the layout of the
+(issue #268) and were copied for #1214; ethicapp-ai-additions PR #287 (issue
+#277) added the basic mode (`tutorMode: basic`, with `focalAction`,
+`caseQuotes` and the warrant's `caseQuote`, example
+`analysis-basic.es_CL.json`), and PR #289 renamed the tutor document its
+description names. The tutor's v19 student documents
+(`tutor-v19-*.json`) come from ethicapp-ai-additions PRs #282 and #285
+(issue #274). The folder keeps the layout of the
 source's `shared/schemas/`, so the examples sit next to their schema as they
 do there.
 
@@ -32,7 +38,9 @@ EthicApp's side of the contract in [`EXTERNAL.md`](../../EXTERNAL.md),
 argument with the coders' Toulmin rubric (prompt v19, epic
 ethicapp-ai-additions#267): the levels Claim 0–2, Evidence 0–2, Warrant 0–2
 and Qualifier 0–1, each with its scale, for one argument (`kind: analysis`)
-or for an argument and its revision (`kind: comparison`). The tutor sends it
+or for an argument and its revision (`kind: comparison`), in the enhanced
+mode (with the case's inventory and the question's typology) or the basic
+mode (`tutorMode: basic`, without them). The tutor sends it
 as `argumentEvaluation` in its callback payload. It is teacher-facing data:
 its `AF#`, `EV#` and `EX#` ids, fragments and reasons never reach a student.
 Its semantics are explained in the "Argument Evaluation Contract" section of

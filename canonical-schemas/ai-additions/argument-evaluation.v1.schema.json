@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/EthicApp-Development/ethicapp-ai-additions/schemas/argument-evaluation/v1",
   "title": "Argument Evaluation Result",
-  "description": "The Argumentation Tutor's evaluation of a student argument with the coders' Toulmin rubric (prompt v19, epic ethicapp-ai-additions#267): stored in the session history and sent to EthicApp. kind analysis carries one evaluation; kind comparison carries the evaluations of an argument and of its revision, made independently, and the differences between them. See the root README, section 'Argument Evaluation Contract', for semantics. The levels are computed in code from the model's answers (argumentation-tutor/docs/PROMPT_TUTOR_V19.md, section 6); texts are the model's or quotes of the student's argument and are meant for teachers, not shown to students as they are. Rules that JSON Schema cannot express, checked by the shared Python validator (ethicapp_ai_capabilities.validate_argument_evaluation) and by the tutor before storing or sending: the entry rule (a claim level of 0 sets the warrant and qualifier levels to 0; otherwise each equals its rawLevel), entryRuleApplied is true exactly when the claim level is 0 and a raw warrant or qualifier level is above 0, the evidence level is the number of factIds capped at 2, claimTypeId is null when the claim level is 0, stance is null exactly when claimTypeId is null, both evaluations of a comparison have the same rubricVersion, and the differences are the ones computed from the two evaluations. EthicApp keeps a verbatim copy of this file (ethicapp-main canonical-schemas/ai-additions/); change both together.",
+  "description": "The Argumentation Tutor's evaluation of a student argument with the coders' Toulmin rubric (prompt v19, epic ethicapp-ai-additions#267): stored in the session history and sent to EthicApp. kind analysis carries one evaluation; kind comparison carries the evaluations of an argument and of its revision, made independently, and the differences between them. See the root README, section 'Argument Evaluation Contract', for semantics. The levels are computed in code from the model's answers (argumentation-tutor/docs/20261111-PROMPT_TUTOR_V19.md, section 6); texts are the model's or quotes of the student's argument and are meant for teachers, not shown to students as they are. Rules that JSON Schema cannot express, checked by the shared Python validator (ethicapp_ai_capabilities.validate_argument_evaluation) and by the tutor before storing or sending: the entry rule (a claim level of 0 sets the warrant and qualifier levels to 0; otherwise each equals its rawLevel), entryRuleApplied is true exactly when the claim level is 0 and a raw warrant or qualifier level is above 0, the evidence level is the number of factIds (caseQuotes in the basic mode) capped at 2, claimTypeId is null when the claim level is 0, stance is null exactly when claimTypeId is null, both evaluations of a comparison have the same rubricVersion, and the differences are the ones computed from the two evaluations. EthicApp keeps a verbatim copy of this file (ethicapp-main canonical-schemas/ai-additions/); change both together.",
   "type": "object",
   "required": ["schemaVersion", "kind", "tutorMode"],
   "properties": {
@@ -14,12 +14,12 @@
       "enum": ["analysis", "comparison"]
     },
     "tutorMode": {
-      "description": "The session's tutor mode. Version 1 describes the enhanced mode, which evaluates with the question's claim typology and the case's evidence inventory.",
-      "enum": ["enhanced"]
+      "description": "The session's tutor mode. enhanced evaluates with the question's claim typology and the case's evidence inventory. basic (ethicapp-ai-additions#277) evaluates without them: the model states the focal action from the question, the evidence is the case facts the argument states, each quoted literally from the case text and found there by code (caseQuotes, no EV# ids), and there is no claim type.",
+      "enum": ["enhanced", "basic"]
     },
     "requestedMode": {
-      "description": "The evaluation_mode the phase requested, present only when the session was opened with that field (ethicapp-ai-additions#211).",
-      "enum": ["enhanced"]
+      "description": "The evaluation_mode the phase requested, present only when the session was opened with that field (ethicapp-ai-additions#211). A session that requested enhanced without a complete case context is evaluated in the basic mode; one that requested basic is never evaluated in the enhanced mode.",
+      "enum": ["enhanced", "basic"]
     },
     "evaluation": {
       "description": "kind analysis only: the evaluation of the argument.",
@@ -59,6 +59,35 @@
         "required": ["initial", "revised", "differences"],
         "properties": { "evaluation": { "not": {} } }
       }
+    },
+    {
+      "if": {
+        "properties": { "tutorMode": { "const": "basic" } },
+        "required": ["tutorMode"]
+      },
+      "then": {
+        "properties": {
+          "evaluation": { "$ref": "#/$defs/basicEvaluation" },
+          "initial": { "$ref": "#/$defs/basicEvaluation" },
+          "revised": { "$ref": "#/$defs/basicEvaluation" }
+        }
+      },
+      "else": {
+        "properties": {
+          "evaluation": { "$ref": "#/$defs/enhancedEvaluation" },
+          "initial": { "$ref": "#/$defs/enhancedEvaluation" },
+          "revised": { "$ref": "#/$defs/enhancedEvaluation" }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "requestedMode": { "const": "basic" } },
+        "required": ["requestedMode"]
+      },
+      "then": {
+        "properties": { "tutorMode": { "const": "basic" } }
+      }
     }
   ],
   "$defs": {
@@ -82,6 +111,11 @@
       "uniqueItems": true,
       "maxItems": 60,
       "items": { "$ref": "#/$defs/factId" }
+    },
+    "caseQuote": {
+      "description": "Basic mode: a literal quote of the case text, as the model wrote it, that code found in the case text after normalization (lowercase, collapsed whitespace, quotes, periods and ellipses removed at the edges).",
+      "type": "string",
+      "minLength": 1
     },
     "fragment": {
       "description": "The fragment of the argument the model quotes for this criterion, as the model wrote it, or null when it quoted none. It is not checked against the argument.",
@@ -115,7 +149,7 @@
               "$ref": "#/$defs/call"
             },
             "mapping": {
-              "description": "The evidence mapping call, which maps the argument's assertions to the inventory.",
+              "description": "The evidence mapping call, which maps the argument's assertions to the inventory (enhanced mode) or to literal quotes of the case text (basic mode).",
               "$ref": "#/$defs/call"
             }
           },
@@ -178,30 +212,41 @@
         "stance": {
           "description": "The stance of the claim type in the session's typology, relative to its focal action, or null when claimTypeId is null.",
           "enum": ["in_favor", "against", "alternative", "conditional", null]
+        },
+        "focalAction": {
+          "description": "Basic mode only, and required there: the focal action as the model stated it from the question, before judging the claim against it. The enhanced mode takes the focal action from the session's claim typology and has no focalAction.",
+          "type": "string"
         }
       },
       "additionalProperties": false
     },
     "evidence": {
-      "description": "Evidencia: the number of distinct inventory facts (EV#) the mapping call found in the argument, capped at 2. Exclusions and assertions not in the case do not count.",
+      "description": "Evidencia: the number of distinct case facts the argument states, capped at 2. Enhanced mode: the inventory facts (EV#) the mapping call found. Basic mode: the case facts the mapping call quoted literally from the case text and code found there (caseQuotes). Exclusions and assertions not in the case do not count.",
       "type": "object",
       "required": ["level", "scale", "factIds", "exclusionIds", "notInCaseCount"],
       "properties": {
         "level": { "type": "integer", "minimum": 0, "maximum": 2 },
         "scale": { "$ref": "#/$defs/scale0to2" },
         "factIds": {
-          "description": "The distinct EV# facts the argument states, in the order the mapping found them.",
+          "description": "The distinct EV# facts the argument states, in the order the mapping found them. Always empty in the basic mode, which has no inventory.",
           "$ref": "#/$defs/factIds"
         },
+        "caseQuotes": {
+          "description": "Basic mode only, and required there: the distinct case facts the argument states, one literal quote of the case text each, in the order the mapping call gave them. A quote not found in the case text is left out, and two quotes are one fact when one contains the other.",
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 60,
+          "items": { "$ref": "#/$defs/caseQuote" }
+        },
         "exclusionIds": {
-          "description": "The distinct EX# exclusions the argument states (statements the case does not make), in the order the mapping found them.",
+          "description": "The distinct EX# exclusions the argument states (statements the case does not make), in the order the mapping found them. Always empty in the basic mode.",
           "type": "array",
           "uniqueItems": true,
           "maxItems": 25,
           "items": { "$ref": "#/$defs/exclusionId" }
         },
         "notInCaseCount": {
-          "description": "How many of the argument's assertions match no fact and no exclusion of the inventory.",
+          "description": "How many of the argument's assertions match no fact and no exclusion of the inventory. Basic mode: the assertions the mapping call found not to be in the case, plus those it gave as case facts with a quote code did not find in the case text.",
           "type": "integer",
           "minimum": 0
         }
@@ -209,7 +254,7 @@
       "additionalProperties": false
     },
     "warrant": {
-      "description": "Garantía: 0 no reasoning; 1 reasoning not grounded in the case, or not connected to the decision; 2 connected reasoning grounded in the case (it names an inventory fact, or the mapping found one in the argument).",
+      "description": "Garantía: 0 no reasoning; 1 reasoning not grounded in the case, or not connected to the decision; 2 connected reasoning grounded in the case (it names an inventory fact, or the mapping found one in the argument; in the basic mode, it names a case fact whose quote code found in the case text, or caseQuotes is not empty).",
       "type": "object",
       "required": ["level", "rawLevel", "scale", "fragment", "reason", "factId"],
       "properties": {
@@ -224,8 +269,12 @@
         "fragment": { "$ref": "#/$defs/fragment" },
         "reason": { "$ref": "#/$defs/reason" },
         "factId": {
-          "description": "The inventory fact the model says the reasoning names, or null.",
+          "description": "The inventory fact the model says the reasoning names, or null. Always null in the basic mode.",
           "anyOf": [{ "$ref": "#/$defs/factId" }, { "type": "null" }]
+        },
+        "caseQuote": {
+          "description": "Basic mode only, and required there: the model's literal quote of the case fact the reasoning names, when code found it in the case text, or null.",
+          "anyOf": [{ "$ref": "#/$defs/caseQuote" }, { "type": "null" }]
         }
       },
       "additionalProperties": false
@@ -247,6 +296,39 @@
         "reason": { "$ref": "#/$defs/reason" }
       },
       "additionalProperties": false
+    },
+    "basicEvaluation": {
+      "description": "What tutorMode basic requires of each evaluation, on top of $defs/evaluation: the model's focalAction, caseQuotes and the warrant's caseQuote; no claim type, no stance, no EV# or EX# ids.",
+      "properties": {
+        "criteria": {
+          "properties": {
+            "claim": {
+              "required": ["focalAction"],
+              "properties": { "claimTypeId": { "type": "null" }, "stance": { "type": "null" } }
+            },
+            "evidence": {
+              "required": ["caseQuotes"],
+              "properties": { "factIds": { "maxItems": 0 }, "exclusionIds": { "maxItems": 0 } }
+            },
+            "warrant": {
+              "required": ["caseQuote"],
+              "properties": { "factId": { "type": "null" } }
+            }
+          }
+        }
+      }
+    },
+    "enhancedEvaluation": {
+      "description": "What tutorMode enhanced requires of each evaluation, on top of $defs/evaluation: none of the basic mode's keys.",
+      "properties": {
+        "criteria": {
+          "properties": {
+            "claim": { "properties": { "focalAction": { "not": {} } } },
+            "evidence": { "properties": { "caseQuotes": { "not": {} } } },
+            "warrant": { "properties": { "caseQuote": { "not": {} } } }
+          }
+        }
+      }
     },
     "scale0to2": {
       "type": "object",
