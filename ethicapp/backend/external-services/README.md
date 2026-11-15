@@ -216,6 +216,11 @@ Polyadic:
   stay unbound and keep the verified-destination rule above. Either release
   can therefore ship first.
 
+`open(id, { bound, report })` and `fail(id, { report })` may store the
+adapter's report on the room in the job's `instantiation_report`. Polyadic
+stores the case inputs a room was created with (`caseInputs`) and why a room
+was not created (`failure`, #1221); other rooms' jobs store none.
+
 Every room job write is one statement conditional on the job's status, so a
 phase transition and a re-creation racing each other never reopen a closed
 job. If a room job cannot be created, the room is created without an id, as
@@ -319,7 +324,7 @@ export async function register({
     caseAnalyses,            // markProcessing/complete/fail for this service's case analyses
     designAnalyses,          // markProcessing/complete/fail for this service's design analyses
     roomJobs,                // create/open/fail for this service's room jobs (see "Room jobs")
-    sessionInputs,           // { declares(name) => Promise<boolean> }; see "Capability descriptors"
+    sessionInputs,           // { declares(name), descriptor({ sessionId }) }; see "Capability descriptors" and "Case inputs"
 }) {
     subscribe("student-response-submitted", async (context, { callback }) => {
         // Adapter logic.
@@ -1541,6 +1546,17 @@ reads only those two keys, so nothing below knows a service.
   `PATCH /designs/:id` (also how a design's case changes), at
   `POST /designs/case-inputs` for the editor, and when a phase starts. See
   "Case inputs from case analyses" in `EXTERNAL.md`.
+- **Sending.** An adapter reads its descriptor for a session with
+  `sessionInputs.descriptor({ sessionId })` (an argument of `register()`):
+  `registry.getSessionServiceInstanceConfiguration(serviceId, sessionId)`,
+  the normalized instance configuration under the session's pinned policy
+  version, in the validator's locale, from the descriptor cache. It passes it
+  to `resolveCaseSessionInputs()` with the configuration it actually sends.
+  The Polyadic bridge does so for `discussion_topics` (#1221,
+  `adapters/polyadic-bridge.case-inputs.js`): a room whose required input
+  does not resolve, or that Polyadic refuses for it, is not created, never
+  retried without its settings, and its room job fails with the reason. See
+  "Polyadic discussion topics" in `EXTERNAL.md`.
 
 ## Case Analyses
 

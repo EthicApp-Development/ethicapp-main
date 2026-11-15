@@ -989,6 +989,42 @@ test("registerService: adapters ask whether their descriptor declares an input",
     assert.equal(await registered.sessionInputs.declares("other_input"), false);
 });
 
+test("registerService: adapters read their descriptor for a session's case inputs (#1221)", async () => {
+    let registered = null;
+    const calls = [];
+    const registry = new ExternalServicesRegistry({
+        jobsService:         makeJobsServiceStub(),
+        developmentAdapters: true,
+        importAdapter:       async () => ({
+            register: async (args) => { registered = args; },
+        }),
+        // A development adapter needs no policy version.
+        aiServicePolicy:       {
+            getSessionPolicyVersionId: async () => null,
+            getPolicyVersion:          async () => null,
+        },
+        capabilityDescriptors: {
+            getInstanceConfiguration: async (serviceId, locale) => {
+                calls.push({ serviceId, locale });
+                return { available: true, fields: [], sessionInputDeclarations: {} };
+            },
+        },
+    });
+
+    await registry.registerService({
+        id:          "svc-inputs",
+        adapter:     "./adapters/not-imported.adapter.js",
+        hooks:       ["phase-started"],
+        development: true,
+        requires:    [],
+    }, "/nonexistent/manifest.json");
+
+    assert.deepEqual(await registered.sessionInputs.descriptor({ sessionId: 12 }),
+        { available: true, fields: [], sessionInputDeclarations: {} });
+    // The locale the design validation reads (#1220), so both share a cache entry.
+    assert.deepEqual(calls, [{ serviceId: "svc-inputs", locale: "en_US" }]);
+});
+
 // ─── capabilities (removed in favor of the response scope, #726) ─────────────
 
 test("registerService: ignores the deprecated capabilities key with one warning", async () => {

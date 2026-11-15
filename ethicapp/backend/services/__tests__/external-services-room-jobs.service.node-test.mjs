@@ -678,3 +678,32 @@ test("room jobs: a failed bound lookup answers 503 and leaves the result pending
     assert.equal(harness.database.results[0].status, RESULT_STATUS.PENDING);
     assert.deepEqual(harness.published, []);
 }));
+
+// ─── room reports (#1221) ────────────────────────────────────────────────────
+
+test("room jobs: open and fail store the adapter's report, and keep it when none is given", async () => {
+    const statements = [];
+    const service = new ExternalServiceRoomJobsService({
+        dbQuery: async (sql, params) => {
+            statements.push({ sql: normalize(sql), params });
+            return [{ id: params[0] }];
+        },
+    });
+    const access = createRoomJobsAccess(service, SERVICE_ID);
+    const report = { warnings: [], degraded: false, configurationRejected: false,
+        caseInputs: [{ key: "discussion_topics", ids: ["T1"] }] };
+
+    await access.open("job-1", { bound: true, report });
+    await access.open("job-2", { bound: false });
+    await access.fail("job-3", { report: { failure: { reason: "missing_case_inputs" } } });
+    await access.fail("job-4");
+
+    assert.match(statements[0].sql,
+        /instantiation_report = COALESCE\(\$8::jsonb, job\.instantiation_report\)/);
+    assert.deepEqual(JSON.parse(statements[0].params[7]), report);
+    assert.equal(statements[1].params[7], null);
+    assert.match(statements[2].sql, /instantiation_report = COALESCE\(\$5::jsonb, instantiation_report\)/);
+    assert.deepEqual(JSON.parse(statements[2].params[4]),
+        { failure: { reason: "missing_case_inputs" } });
+    assert.equal(statements[3].params[4], null);
+});

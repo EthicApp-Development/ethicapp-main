@@ -87,6 +87,8 @@ const HOOK_NAME_PATTERN = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/u;
 
 export const SERVICE_SCOPES = Object.freeze(["case", "design", "response", "chat"]);
 const UI_LOCALES = Object.freeze(["es_CL", "en_US"]);
+// The descriptor locale case inputs are judged in (#1220, #1221).
+const CASE_INPUTS_DESCRIPTOR_LOCALE = "en_US";
 
 const UI_TRANSLATIONS_TIMEOUT_MS = 3000;
 const UI_TRANSLATIONS_TTL_MS     = 10 * 60 * 1000;
@@ -821,7 +823,9 @@ export class ExternalServicesRegistry {
             designAnalyses,
             roomJobs:                createRoomJobsAccess(this._roomJobsService, normalizedService.id),
             sessionInputs:           Object.freeze({
-                declares: name => this.declaresSessionInput(normalizedService.id, name),
+                declares:   name => this.declaresSessionInput(normalizedService.id, name),
+                descriptor: ({ sessionId }) =>
+                    this.getSessionServiceInstanceConfiguration(normalizedService.id, sessionId),
             }),
         });
     }
@@ -956,6 +960,20 @@ export class ExternalServicesRegistry {
         }
 
         return this._capabilityDescriptors.getInstanceConfiguration(serviceId, locale);
+    }
+
+    // The normalized instance configuration of service `serviceId` under the
+    // AI service policy version session `sessionId` is pinned to, as its
+    // hooks follow it, for the case inputs an adapter sends to a session or
+    // room (#1221, helpers/case-session-inputs.js). Read in the locale the
+    // design validation reads (services/case-input-validation.service.js), so
+    // both share a descriptor cache entry; declarations and defaults do not
+    // depend on it. Null or `{ available: false }` as
+    // getServiceInstanceConfiguration() answers.
+    async getSessionServiceInstanceConfiguration(serviceId, sessionId) {
+        return this.getServiceInstanceConfiguration(serviceId, CASE_INPUTS_DESCRIPTOR_LOCALE, {
+            policyVersion: await this.getSessionPolicyVersion(sessionId),
+        });
     }
 
     // Whether the capability descriptor of service `serviceId` declares the

@@ -492,6 +492,19 @@ test("instance configuration: only for services the current version allows", asy
     assert.deepEqual(allowing.descriptorCalls, ["svc-production"]);
 });
 
+test("session instance configuration (#1221): follows the session's pinned version", async () => {
+    // The current version (3) removes the service; session 10 is pinned to 2.
+    const { registry, descriptorCalls } = makeRegistry({ policy: makePolicy({ currentVersionId: 3 }) });
+
+    assert.deepEqual(
+        await registry.getSessionServiceInstanceConfiguration("svc-production", 10),
+        { available: true, fields: [] }
+    );
+    // Session 11 is pinned to the seed, which allows nothing.
+    assert.equal(await registry.getSessionServiceInstanceConfiguration("svc-production", 11), null);
+    assert.deepEqual(descriptorCalls, ["svc-production"]);
+});
+
 // ─── launch notice ───────────────────────────────────────────────────────────
 
 test("launch notice: lists the enabled services the pinned version does not run", async () => {
