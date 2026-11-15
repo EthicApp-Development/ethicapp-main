@@ -1,0 +1,165 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/EthicApp-Development/ethicapp-ai-additions/schemas/mediation-decision/v1",
+  "title": "EthicApp Mediation Decision",
+  "description": "One decision of a chat mediation agent that does not speak in the chat (a gatekeeper, such as Polyadic Agents' Validator): whether the agent that speaks should intervene, why, about which topic, and what happened next. Polyadic sends these records to EthicApp in the room callback's `decisions` list; EthicApp stores and exports them for the analysis of conversations. See the root README, section 'Mediation Decision Record', for the rules this schema cannot express.",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "decisionId",
+    "agent",
+    "pipelineType",
+    "decidedAt",
+    "trigger",
+    "window",
+    "decision",
+    "category",
+    "topic",
+    "reason",
+    "intervention"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "mediation-decision/v1" },
+    "decisionId": {
+      "description": "Unique id of the decision (UUID), so a callback delivered twice stores it once.",
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "agent": {
+      "description": "Canonical name of the deciding agent, the same identity as `evaluations[].agente` (for example `Validator`).",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "pipelineType": {
+      "description": "The room's discussion mode, a value of the descriptor's `pipeline_type` (for example `contentCoverage`).",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "decidedAt": {
+      "description": "When the agent's reply was received, ISO 8601 with offset.",
+      "type": "string",
+      "format": "date-time"
+    },
+    "trigger": {
+      "description": "What started the evaluation. `kind` is the pipeline step's trigger (for example `adaptive_window`, `window_full`); `reason` is why it fired, when the trigger has reasons (`max_messages`, `quiet_timeout` or `max_wait` for `adaptive_window`), else null.",
+      "type": "object",
+      "required": ["kind", "reason"],
+      "properties": {
+        "kind": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$", "maxLength": 64 },
+        "reason": {
+          "oneOf": [
+            { "type": "string", "pattern": "^[a-z][a-z0-9_]*$", "maxLength": 64 },
+            { "type": "null" }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "window": {
+      "description": "The participant messages the agent evaluated, oldest first, as references: never their text.",
+      "type": "object",
+      "required": ["messages"],
+      "properties": {
+        "messages": {
+          "type": "array",
+          "maxItems": 100,
+          "items": { "$ref": "#/$defs/messageRef" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "decision": {
+      "description": "`intervene`: the agent asked the speaking agent to intervene. `no_intervention`: it decided not to. `unparsed`: its reply matched neither documented format; `reason` keeps the reply verbatim.",
+      "enum": ["intervene", "no_intervention", "unparsed"]
+    },
+    "category": {
+      "description": "The mode's label for the situation, when the mode defines labels (`contentCoverage`: `CONSTRUCTIVE` or `STUCK`), else null. Always null unless `decision` is `intervene`.",
+      "oneOf": [
+        { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$", "maxLength": 40 },
+        { "type": "null" }
+      ]
+    },
+    "topic": {
+      "description": "The topic the decision asks the speaking agent to raise, from the room's `discussion_topics`, with its name as the room received it; null when the decision names none. Always null unless `decision` is `intervene`.",
+      "oneOf": [
+        { "$ref": "#/$defs/topic" },
+        { "type": "null" }
+      ]
+    },
+    "reason": {
+      "description": "The agent's reason as it wrote it. It is model text about the conversation and may paraphrase or quote participants, so consumers treat it like an agent's chat message for erasure.",
+      "type": "string",
+      "maxLength": 4000
+    },
+    "intervention": {
+      "description": "What followed the decision. `intervened`: the speaking agent posted `messageId`. `suppressed`: it was asked but did not speak, for `suppressedBy` (for example `cooldown`). `failed`: it was asked and its reply was empty or failed. `not_requested`: the decision did not ask for an intervention.",
+      "type": "object",
+      "required": ["status", "agent", "messageId", "suppressedBy"],
+      "properties": {
+        "status": { "enum": ["intervened", "suppressed", "failed", "not_requested"] },
+        "agent": {
+          "description": "Canonical name of the speaking agent asked to intervene; null for `not_requested`.",
+          "oneOf": [
+            { "type": "string", "minLength": 1, "maxLength": 64 },
+            { "type": "null" }
+          ]
+        },
+        "messageId": {
+          "description": "Polyadic's id of the message the speaking agent posted; null unless `intervened`.",
+          "oneOf": [
+            { "type": "integer", "minimum": 1 },
+            { "type": "null" }
+          ]
+        },
+        "suppressedBy": {
+          "description": "Why the speaking agent did not speak; null unless `suppressed`.",
+          "oneOf": [
+            { "type": "string", "pattern": "^[a-z][a-z0-9_]*$", "maxLength": 64 },
+            { "type": "null" }
+          ]
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "messageRef": {
+      "description": "A participant message. `messageId` is Polyadic's id of the stored message; `correlationId` is the `ethicapp_correlation_id` EthicApp sent with it, or null when the message did not come from EthicApp.",
+      "type": "object",
+      "required": ["messageId", "correlationId"],
+      "properties": {
+        "messageId": { "type": "integer", "minimum": 1 },
+        "correlationId": {
+          "oneOf": [
+            { "type": "string", "minLength": 1, "maxLength": 200 },
+            { "type": "null" }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "topic": {
+      "type": "object",
+      "required": ["id", "name"],
+      "properties": {
+        "id": {
+          "description": "Topic id of `topic-listing/v1`.",
+          "type": "string",
+          "pattern": "^T[1-9][0-9]*$",
+          "maxLength": 6
+        },
+        "name": {
+          "description": "The topic's `topic` text as the room received it.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "pattern": "\\S"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

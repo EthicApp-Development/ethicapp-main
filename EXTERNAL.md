@@ -383,7 +383,9 @@ POST /external-services/callbacks
 
 with `"serviceId": "polyadic-devils-advocate"` in the body. The callback payload
 is expected to contain `{ "room": "...", "evaluations": [] }` in the `payload`
-field.
+field, plus `decisions` after a Validator evaluation of a `contentCoverage`
+room (see "Polyadic mediation decisions"). A callback without a room, or
+with neither evaluations nor decisions, is refused as `invalid_payload`.
 The bridge publishes only `Orientador` responses into the EthicApp group chat;
 other agent outputs remain internal to Polyadic.
 
@@ -641,6 +643,128 @@ teacher reviewed it.
 Code: `external-services/adapters/polyadic-bridge.case-inputs.js`. Tests:
 `external-services/adapters/__tests__/polyadic-bridge-case-inputs.adapter.node-test.mjs`.
 
+### Polyadic mediation decisions
+
+A `contentCoverage` room's Validator decides, window by window, whether the
+guide should ask about a topic the group has not discussed. Each evaluation
+is a `mediation-decision/v1` record (#1222, epic
+ethicapp-ai-additions#293; contract "Mediation Decision Record" in the
+ethicapp-ai-additions README, schema copy in
+`canonical-schemas/ai-additions/`), `no_intervention` included. Polyadic
+sends the records in the callback that follows the evaluation, as a
+top-level `decisions` list next to `room` and `evaluations`, with the room's
+correlation id ("Mediation decisions" in `polyadic-agents/README.md`).
+
+**Receiving.** The bridge's `callback-received` handler publishes the
+evaluations as before, then handles `decisions`:
+
+- A callback with `evaluations: []` and at least one decision (the guide did
+  not speak: `NO_INTERVENE`, a cooldown, an empty reply, an unparsable
+  Validator reply) is accepted; before #1222 it was `invalid_payload`. A
+  callback with neither evaluations nor decisions is still refused, and a
+  callback without `decisions` is handled, and its result stored, exactly
+  as before.
+- Each record is validated against the schema copy and the contract's
+  integrity rules (`services/mediation-decision-records.js`, with the
+  problem codes of `validate_mediation_decision()`). An invalid record is
+  skipped and logged with the room, its index, its `decisionId` (when it is
+  a UUID) and the problem codes and paths, never its text; the evaluations
+  and the other records are processed.
+- Valid records are stored once per service and `decisionId`
+  (`external_service_mediation_decisions`, V46): a callback delivered twice
+  stores nothing new. Each row keeps the record verbatim and the room's
+  session, phase, question and group, the room job and the callback's
+  result. When it is stored, each window reference's `correlationId` (the
+  `ethicapp_correlation_id` EthicApp sent with the message: the id of its
+  `chat-message-received` job) is resolved to the chat message that job
+  forwarded (`window_chat_message_ids`, null when a reference has no
+  correlation id or matches no job of the service in the session). For an
+  `intervened` record, the chat message the same callback published for
+  `intervention.agent` is `intervention_chat_message_id`.
+- The callback's adapter result adds `payload.decisions`: `{ received,
+  stored: [decisionId], duplicates: [decisionId], invalid: [{ index,
+  decisionId, problems }], storage? }`, where `storage` is `failed` when the
+  store rejected (logged with ids only) or `unavailable` without a store. A
+  callback with decisions only is `failed` when none of them was stored now
+  or before; one that also published messages stays `completed`.
+
+**Exporting.** The chat transcript (`GET /activity/:session_id/chat_transcript`)
+lists the decisions next to the conversation they refer to, as rows the
+bridge contributes (see "Report contributions"). A session without stored
+decisions keeps its transcript exactly as before: the same four
+`polyadic_agent_*` columns and values. With decisions, the bridge adds these
+columns after its own, and two kinds of rows, told apart by
+`polyadic_row_kind`. The report's other rows leave the new columns empty.
+
+A decision row (`polyadic_row_kind = decision`) is placed in its room's
+phase, question and group at the decision's `decidedAt`. Its `message`,
+`id`, `user_id` and `reply_to` are empty, `author_role` is
+`external_service`, `polyadic_agent_name` is the deciding agent
+(`Validator`), `polyadic_agent_trigger` and `polyadic_agent_in_reply_to`
+are empty and `polyadic_agent_visible_to_students` is `false`:
+
+| Column | Value |
+| --- | --- |
+| `polyadic_decision_id` | The record's `decisionId` (UUID). |
+| `polyadic_decision_pipeline_type` | The room's discussion mode, `contentCoverage`. |
+| `polyadic_decision` | `intervene`, `no_intervention` or `unparsed` (a Validator reply in neither documented format; its reason keeps it verbatim). |
+| `polyadic_decision_category` | `CONSTRUCTIVE` or `STUCK` for an intervention, else empty. |
+| `polyadic_decision_topic_id` | The topic the decision asks the guide to raise (`T#`), else empty. |
+| `polyadic_decision_topic_name` | That topic's text as the room received it. |
+| `polyadic_decision_reason` | The Validator's reason as it wrote it. Model text that may quote participants; see "Erasure" below. |
+| `polyadic_decision_trigger_kind` | What started the evaluation, `adaptive_window`. |
+| `polyadic_decision_trigger_reason` | Why the window closed: `max_messages`, `quiet_timeout` or `max_wait`; empty when the trigger has no reasons. |
+| `polyadic_decision_window_message_ids` | The evaluated participant messages, oldest first, as a JSON array of the transcript's `id` values (`[512,513,null]`); `null` where a message could not be resolved. |
+| `polyadic_decision_window_polyadic_message_ids` | The same messages as Polyadic's ids, a JSON array in the same order. |
+| `polyadic_decision_intervention_status` | `intervened`, `suppressed`, `failed` or `not_requested`. |
+| `polyadic_decision_intervention_agent` | The agent asked to intervene (`ConversationGuide`), else empty. |
+| `polyadic_decision_intervention_message_id` | The transcript `id` of the guide's message, for `intervened`, when the same callback published exactly one message of that agent; else empty. |
+| `polyadic_decision_intervention_polyadic_message_id` | Polyadic's id of the guide's message, for `intervened`. |
+| `polyadic_decision_intervention_suppressed_by` | Why the guide did not speak (`cooldown`), for `suppressed`. |
+| `polyadic_decision_decided_at` | The record's `decidedAt` as sent, ISO 8601 with offset. The row's `time` is the same instant in UTC. |
+
+A room row (`polyadic_row_kind = room_topics`) gives the topic list a room
+was created with, so a reader can resolve every topic id without EthicApp.
+There is one per room job with decisions whose `instantiation_report`
+recorded `discussion_topics` (#1221), placed in the room's phase, question
+and group at the room job's creation:
+
+| Column | Value |
+| --- | --- |
+| `polyadic_room_topics` | A JSON array `[{"id":"T1","name":"..."}]` with the ids the room received, in order. |
+| `polyadic_room_topics_status` | `as_sent` when the case's listing is still the version the room received (same generation, generation time and review time), and `name` holds each topic's text; `listing_changed` when the listing was regenerated or edited since, and `listing_unavailable` when it is gone or cannot be read: then every `name` is null, since today's texts may not be the ones the room saw. The decision rows keep the names of the topics they name, as the room received them, whatever the listing says now. |
+
+A room created before #1221 recorded no topic list and has no room row. The
+transcript's `id` column is EthicApp's chat message id, so the window and
+intervention columns join with the participants' and the guide's rows of
+the same CSV. Polyadic's ids are given beside them for a reader who also
+holds Polyadic's data.
+
+**Erasure.** The records hold no participant text of their own: the window
+refers to messages by id. Their `reason` is model text that may name, quote
+or paraphrase participants, so forgetting a student or a teacher redacts it
+the way Polyadic redacts the agents' replies (ethicapp-ai-additions #214):
+in every group the account wrote in, its names (first name, last name, full
+name and their words of three or more letters) and every run of six or more
+consecutive words of its messages there (ignoring case and punctuation, a
+word cut at either end included) become the placeholder, in the stored
+record and in the callback's stored `raw_payload`. The redaction runs in the
+management console's anonymization step, before the step replaces the
+account's messages and names, which are its terms
+(`management-console/backend/helpers/mediation-decision-erasure.js`); the
+`user-forgotten` request that follows asks Polyadic to forget the account,
+after which Polyadic redacts the reasons of later records itself. The window
+references and ids need nothing. A record that arrives between the
+anonymization and Polyadic's erasure (a room still running) is stored as
+sent.
+
+Code: `external-services/adapters/polyadic-bridge.decisions.js`,
+`services/external-service-mediation-decisions.service.js`. Tests:
+`external-services/adapters/__tests__/polyadic-bridge-decisions.adapter.node-test.mjs`,
+`services/__tests__/mediation-decision-records.node-test.mjs`,
+`services/__tests__/external-service-mediation-decisions.service.node-test.mjs`
+and its integration test.
+
 ## Hook Dispatch
 
 EthicApp dispatches hooks only to services enabled in the phase design:
@@ -831,6 +955,9 @@ and none is added. The trigger is `reactive` only when the callback correlates w
 `polyadic_agent_in_reply_to`; it is `unknown` otherwise, since Polyadic sends
 both its proactive interventions and its window-event replies on the room's
 correlation id (#833). Messages published before #947 get no values.
+In a session with stored mediation decisions (#1222), the bridge also adds a
+row per decision and a row per room's topic list, with their own columns
+(see "Polyadic mediation decisions").
 
 The contract, the reader and the catalog's `report.columnPrefix` are described
 in `ethicapp/backend/external-services/README.md`, "Report building".

@@ -2,6 +2,7 @@ import {
     eraseExternalServicePayloads,
     recordUserErasureRequests,
 } from "./student-ai-service-data-helper.js";
+import { redactMediationDecisionReasons } from "./mediation-decision-erasure.js";
 import {
     profileImageDeletionEntries,
     recordUploadDeletionRequests,
@@ -283,6 +284,15 @@ async function anonymizeAccountInTransaction(client, runId, user, options) {
 
     const currentUser = currentUserResult.rows[0];
 
+    // Before the account's messages and names are replaced: they are what
+    // the reasons of the AI services' mediation decisions are redacted of
+    // (#1222).
+    const mediationDecisions = await redactMediationDecisionReasons(
+        client,
+        user.id,
+        options.placeholderText
+    );
+
     const differentialSelectionResult = await client.query(
         `
             UPDATE differential_selection
@@ -401,6 +411,8 @@ async function anonymizeAccountInTransaction(client, runId, user, options) {
         actorSelectionDescriptions: actorSelectionResult.rowCount || 0,
         externalServiceResults: externalPayloads.results,
         externalServiceJobs: externalPayloads.jobs,
+        mediationDecisionReasons: mediationDecisions.decisions,
+        mediationDecisionPayloads: mediationDecisions.results,
         sessionDevices: sessionDeviceResult.rowCount || 0,
         passwordResetTokens: passwordResetResult.rowCount || 0,
         passkeys: passkeyResult.rowCount || 0,
@@ -415,6 +427,8 @@ async function anonymizeAccountInTransaction(client, runId, user, options) {
         `actor_selection descriptions updated: ${counts.actorSelectionDescriptions}.`,
         `external_service_results payloads erased: ${counts.externalServiceResults}.`,
         `external_service_jobs payloads erased: ${counts.externalServiceJobs}.`,
+        `mediation decision reasons redacted: ${counts.mediationDecisionReasons}.`,
+        `mediation decision payloads redacted: ${counts.mediationDecisionPayloads}.`,
         `session device values cleared: ${counts.sessionDevices}.`,
         `password reset tokens deleted: ${counts.passwordResetTokens}.`,
         `passkeys deleted: ${counts.passkeys}.`,

@@ -1,0 +1,37 @@
+{
+  "schemaVersion": "mediation-decision/v1",
+  "agent": "Validator",
+  "pipelineType": "contentCoverage",
+  "decisionId": "0b9e8a52-7a1f-4f7e-9d43-5c1e2f3a4b04",
+  "decidedAt": "2026-11-18T14:09:03-03:00",
+  "trigger": {
+    "kind": "adaptive_window",
+    "reason": "quiet_timeout"
+  },
+  "window": {
+    "messages": [
+      {
+        "messageId": 117,
+        "correlationId": null
+      },
+      {
+        "messageId": 118,
+        "correlationId": null
+      },
+      {
+        "messageId": 119,
+        "correlationId": null
+      }
+    ]
+  },
+  "decision": "unparsed",
+  "category": null,
+  "topic": null,
+  "reason": "The group might benefit from discussing T4 at some point.",
+  "intervention": {
+    "status": "not_requested",
+    "agent": null,
+    "messageId": null,
+    "suppressedBy": null
+  }
+}

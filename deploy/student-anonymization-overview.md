@@ -81,6 +81,13 @@ The current job anonymizes or clears:
   `adapter_result`, and in `external_service_jobs.outbound_payload`, for the
   rows with the student's `user_id`, is replaced with the placeholder. The
   structure, numbers and the rows are kept.
+- AI service mediation decisions (#1222): in every group the account wrote
+  in, the account's names and verbatim fragments of its messages there (six
+  or more consecutive words) are replaced with the placeholder in the
+  `reason` of the stored `mediation-decision/v1` records
+  (`external_service_mediation_decisions`) and of the callbacks that carried
+  them. This runs before the step replaces the account's messages and names,
+  which are what it searches for.
 - AI Additions: one pending erasure request per service (Argumentation Tutor,
   Polyadic Agents) in `user_erasure_requests`, which ethicapp sends in the
   background (see "Erasure in AI Additions").
@@ -421,5 +428,8 @@ run status, failed account count, and restoration checks.
   `differential_chat` rows of an external agent, and room-level Polyadic
   callback results without a `user_id`) can quote a forgotten student. They
   are kept: Polyadic redacts its own copy, but EthicApp does not search other
-  rows for the student's words.
+  rows for the student's words. The exception is the reasons of Polyadic's
+  mediation decisions (#1222), searched as described above; a decision that
+  arrives after the step and before Polyadic's own erasure is stored as
+  sent.
 

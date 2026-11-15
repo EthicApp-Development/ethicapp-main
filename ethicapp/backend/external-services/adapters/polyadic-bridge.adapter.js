@@ -13,6 +13,12 @@ import {
 import { PARTICIPANT_ACTIVITY_HOOK } from "../catalog.js";
 import { sendRoomActivity } from "./polyadic-bridge.activity.js";
 import {
+    DECISION_REPORT_COLUMN_DECLARATIONS,
+    decisionTranscriptRows,
+    resolveRoomTopics,
+    storeCallbackDecisions,
+} from "./polyadic-bridge.decisions.js";
+import {
     caseInputRejection,
     rejectedCaseInput,
     resolveRoomCaseInputs,
@@ -846,7 +852,10 @@ function placementOf({ result, ownRows, sessionId }) {
  * `mensajes_evaluados` is not exported: it repeats the students' messages
  * under their display names.
  */
-export function buildChatTranscriptContribution(context, storedResults) {
+export function buildChatTranscriptContribution(context, storedResults, {
+    decisions = [],
+    roomTopics = new Map(),
+} = {}) {
     const serviceId = context.serviceId;
     const callbacks = new Map();
     for (const result of storedResults) {
@@ -920,20 +929,44 @@ export function buildChatTranscriptContribution(context, storedResults) {
         }
     }
 
+    // The mediation decisions (#1222) add their columns and rows only when
+    // the session has any, so every other transcript stays as it was.
+    if (decisions.length === 0) {
+        return {
+            columns: REPORT_COLUMN_DECLARATIONS.map(column => ({ ...column })),
+            values,
+            rows,
+        };
+    }
+    const decisionRows = decisionTranscriptRows(decisions, roomTopics, decision => ({
+        [REPORT_COLUMNS.AGENT_NAME]:          reportText(decision.record?.agent),
+        [REPORT_COLUMNS.TRIGGER]:             null,
+        [REPORT_COLUMNS.IN_REPLY_TO]:         null,
+        [REPORT_COLUMNS.VISIBLE_TO_STUDENTS]: false,
+    }));
     return {
-        columns: REPORT_COLUMN_DECLARATIONS.map(column => ({ ...column })),
+        columns: [...REPORT_COLUMN_DECLARATIONS, ...DECISION_REPORT_COLUMN_DECLARATIONS]
+            .map(column => ({ ...column })),
         values,
-        rows,
+        rows: [...rows, ...decisionRows],
     };
 }
 
 // The `report-building` handler: the chat transcript only, from the results
-// reader the collecting dispatch hands it. It reads EthicApp's database only.
-export async function contributeToReport(context, { results }) {
+// reader the collecting dispatch hands it. It reads EthicApp's database
+// only: the stored results and mediation decisions through the reader, and
+// the case's topic listing for the names of the rooms' topics (#1222).
+// `deps.getCaseAnalysis` replaces that read in tests.
+export async function contributeToReport(context, { results }, deps = {}) {
     if (context.reportType !== "chat_transcript") {
         return null;
     }
-    return buildChatTranscriptContribution(context, await results.list());
+    const [storedResults, decisions] = await Promise.all([
+        results.list(),
+        typeof results.mediationDecisions === "function" ? results.mediationDecisions() : [],
+    ]);
+    const roomTopics = decisions.length > 0 ? await resolveRoomTopics(decisions, deps) : new Map();
+    return buildChatTranscriptContribution(context, storedResults, { decisions, roomTopics });
 }
 
 // Without room jobs (a registry that provides none), rooms are created without
@@ -978,6 +1011,9 @@ export async function register({
     aiAdditionsClient: providedAiAdditionsClient,
     roomJobs = NO_ROOM_JOBS,
     sessionInputs = NO_SESSION_INPUTS,
+    // Stored mediation decisions (#1222); without it, the records of a
+    // callback are validated but not stored.
+    mediationDecisions = null,
     polyadicBridgeDependencies = {},
 }) {
     aiAdditionsClient = providedAiAdditionsClient || defaultAiAdditionsClient;
@@ -1387,9 +1423,13 @@ export async function register({
         const requestPayload = context.requestPayload || {};
         const roomName = normalizeText(requestPayload.room);
         const evaluations = Array.isArray(requestPayload.evaluations) ? requestPayload.evaluations : [];
+        // A `contentCoverage` room adds its Validator's decisions (#1222);
+        // after a silent window the callback carries only them.
+        const carriesDecisions = Object.hasOwn(requestPayload, "decisions");
+        const decisions = Array.isArray(requestPayload.decisions) ? requestPayload.decisions : [];
         const savedMessages = [];
 
-        if (!roomName || evaluations.length === 0) {
+        if (!roomName || (evaluations.length === 0 && decisions.length === 0)) {
             await callback({
                 serviceId: service.id,
                 hook:      "callback-received",
@@ -1454,10 +1494,31 @@ export async function register({
             }
         }
 
+        const decisionsOutcome = carriesDecisions
+            ? await storeCallbackDecisions({
+                decisions,
+                room:      roomName,
+                placement: {
+                    sessionId:  storedContext.sessionId,
+                    phaseId:    storedContext.phaseId,
+                    questionId: storedContext.questionId ?? null,
+                    groupId:    storedContext.groupId,
+                },
+                jobId:     context.jobId ?? null,
+                resultId:  context.resultId ?? null,
+                savedMessages,
+                store:     mediationDecisions,
+            })
+            : null;
+        // A callback with decisions only did its work when one was stored, or
+        // had been stored by an earlier delivery.
+        const decisionsOnlyFailed = evaluations.length === 0 && decisionsOutcome
+            && decisionsOutcome.stored.length + decisionsOutcome.duplicates.length === 0;
+
         await callback({
             serviceId: service.id,
             hook:      "callback-received",
-            status:    "completed",
+            status:    decisionsOnlyFailed ? "failed" : "completed",
             payload:   {
                 room:                roomName,
                 evaluationsReceived: evaluations.length,
@@ -1476,6 +1537,10 @@ export async function register({
                     displayName: authorName,
                     evaluationIndex,
                 })),
+                // What became of the callback's decisions (#1222): ids,
+                // indexes and problem codes, never their text. Only in the
+                // result of a callback that carried `decisions`.
+                ...(decisionsOutcome ? { decisions: decisionsOutcome } : {}),
             },
         });
     });

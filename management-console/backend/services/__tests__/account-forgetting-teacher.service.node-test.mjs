@@ -209,6 +209,9 @@ describe('forgetTeacher', () => {
       'RERENDER',
       'INSERT event',
       'STEP lock',
+      // The groups the teacher wrote in, whose mediation decisions are
+      // redacted (#1222); none here.
+      'SELECT tmid AS',
       'UPDATE differential_selection SET',
       'UPDATE differential_chat SET',
       'UPDATE chat SET',

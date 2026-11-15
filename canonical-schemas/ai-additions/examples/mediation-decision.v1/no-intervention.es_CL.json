@@ -1,0 +1,33 @@
+{
+  "schemaVersion": "mediation-decision/v1",
+  "agent": "Validator",
+  "pipelineType": "contentCoverage",
+  "decisionId": "0b9e8a52-7a1f-4f7e-9d43-5c1e2f3a4b03",
+  "decidedAt": "2026-11-18T14:07:20-03:00",
+  "trigger": {
+    "kind": "adaptive_window",
+    "reason": "max_wait"
+  },
+  "window": {
+    "messages": [
+      {
+        "messageId": 115,
+        "correlationId": "6f1c2a4e-0b7d-4c55-9a0e-3d2b1c0a0115"
+      },
+      {
+        "messageId": 116,
+        "correlationId": "6f1c2a4e-0b7d-4c55-9a0e-3d2b1c0a0116"
+      }
+    ]
+  },
+  "decision": "no_intervention",
+  "category": null,
+  "topic": null,
+  "reason": "Hay menos de 3 mensajes de menos de 2 participantes.",
+  "intervention": {
+    "status": "not_requested",
+    "agent": null,
+    "messageId": null,
+    "suppressedBy": null
+  }
+}

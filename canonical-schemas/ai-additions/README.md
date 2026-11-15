@@ -11,6 +11,8 @@ them here: the copy changes only to match the source.
 | `examples/student-result.v1/*.json` | `shared/schemas/examples/student-result.v1/*.json` |
 | `argument-evaluation.v1.schema.json` | `shared/schemas/argument-evaluation.v1.schema.json` |
 | `examples/argument-evaluation.v1/*.json` | `shared/schemas/examples/argument-evaluation.v1/*.json` |
+| `mediation-decision.v1.schema.json` | `shared/schemas/mediation-decision.v1.schema.json` |
+| `examples/mediation-decision.v1/*.json` | `shared/schemas/examples/mediation-decision.v1/*.json` |
 
 Every file was compared byte for byte with commit
 [`eec8f54`](https://github.com/EthicApp-Development/ethicapp-ai-additions/commit/eec8f54).
@@ -24,7 +26,11 @@ The `argument-evaluation/v1` schema and its examples come from PR #280
 `analysis-basic.es_CL.json`), and PR #289 renamed the tutor document its
 description names. The tutor's v19 student documents
 (`tutor-v19-*.json`) come from ethicapp-ai-additions PRs #282 and #285
-(issue #274). The folder keeps the layout of the
+(issue #274). The `mediation-decision/v1` schema and its examples come from
+ethicapp-ai-additions PR #299 (epic #293, unchanged since commit `927760b`)
+and were compared byte for byte with commit
+[`1efd107`](https://github.com/EthicApp-Development/ethicapp-ai-additions/commit/1efd107)
+when they were copied for #1222. The folder keeps the layout of the
 source's `shared/schemas/`, so the examples sit next to their schema as they
 do there.
 
@@ -47,6 +53,19 @@ Its semantics are explained in the "Argument Evaluation Contract" section of
 the ethicapp-ai-additions `README.md`, and how the tutor adapter reads it in
 `ethicapp/backend/external-services/README.md`, "The tutor's rubrics".
 
+`mediation-decision/v1` is one decision of a chat mediation agent that does
+not speak in the chat, such as Polyadic Agents' Validator in the
+`contentCoverage` mode (epic ethicapp-ai-additions#293): whether the speaking
+agent should intervene, why, about which topic of the room's
+`discussion_topics`, which participant messages it evaluated (as references,
+never their text) and what followed. Polyadic sends the records in its room
+callback's `decisions` list; EthicApp validates each one against this copy,
+stores it and exports it in the chat transcript (#1222). Its `reason` is
+model text that may quote participants, so the participant erasure covers
+it. Its semantics are explained in the "Mediation Decision Record" section of
+the ethicapp-ai-additions `README.md`, and EthicApp's side in
+[`EXTERNAL.md`](../../EXTERNAL.md), "Polyadic mediation decisions".
+
 ## Changing the contract
 
 Both copies change together, ethicapp-ai-additions first:
@@ -58,7 +77,8 @@ Both copies change together, ethicapp-ai-additions first:
    commit, as described below.
 3. Update the commit in this README, the tests in
    `canonical-schemas/__tests__/` (`student-result-v1.schema.node-test.mjs`,
-   `argument-evaluation-v1.schema.node-test.mjs`) when the change adds a rule, and `EXTERNAL.md` when it changes what the document
+   `argument-evaluation-v1.schema.node-test.mjs`,
+   `mediation-decision-v1.schema.node-test.mjs`) when the change adds a rule, and `EXTERNAL.md` when it changes what the document
    means. The student app's renderer and EthicApp's validation follow in the
    same pull request or before any service emits the new form.
 4. Record the `shasum` comparison of step 2 in the pull request, since the
@@ -83,11 +103,14 @@ DEST=canonical-schemas/ai-additions
 CONTRACTS="shared/schemas/student-result.v1.schema.json
   shared/schemas/examples/student-result.v1
   shared/schemas/argument-evaluation.v1.schema.json
-  shared/schemas/examples/argument-evaluation.v1"
+  shared/schemas/examples/argument-evaluation.v1
+  shared/schemas/mediation-decision.v1.schema.json
+  shared/schemas/examples/mediation-decision.v1"
 
 git -C "$AI" fetch origin
 rm -f "$DEST"/examples/student-result.v1/*.json \
-  "$DEST"/examples/argument-evaluation.v1/*.json
+  "$DEST"/examples/argument-evaluation.v1/*.json \
+  "$DEST"/examples/mediation-decision.v1/*.json
 for f in $(git -C "$AI" ls-tree -r --name-only "$COMMIT" $CONTRACTS); do
   mkdir -p "$(dirname "$DEST/${f#shared/schemas/}")"
   git -C "$AI" show "$COMMIT:$f" > "$DEST/${f#shared/schemas/}"
@@ -138,3 +161,17 @@ documents leniently, criterion by criterion
 (`ethicapp/backend/external-services/adapters/ats-feedback.evaluation.js`),
 because a forgotten student's stored payloads have their strings redacted
 (V31), and does not validate them against this copy at runtime.
+
+`canonical-schemas/__tests__/mediation-decision-v1.schema.node-test.mjs`
+validates every `mediation-decision/v1` example against its copy, checks that
+the examples cover the three decisions and follow the integrity rules, and
+rejects malformed records: an undefined key (a message text in the window
+included), a missing key, an id, label or enum outside its pattern. The
+integrity rules outside JSON Schema (only an intervention has a category, a
+topic and an asked agent; each intervention status carries exactly its own
+details; no message twice in a window) are checked by ethicapp-ai-additions
+with `ethicapp_ai_capabilities.validate_mediation_decision()`, and by the
+EthicApp backend with the same problem codes (`decision_mismatch`,
+`intervention_mismatch`, `duplicate_message_ref`) in
+`ethicapp/backend/services/mediation-decision-records.js`, which validates
+every record a callback carries before it is stored.

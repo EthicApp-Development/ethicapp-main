@@ -1,0 +1,44 @@
+{
+  "schemaVersion": "mediation-decision/v1",
+  "agent": "Validator",
+  "pipelineType": "contentCoverage",
+  "decisionId": "0b9e8a52-7a1f-4f7e-9d43-5c1e2f3a4b01",
+  "decidedAt": "2026-11-18T14:05:12-03:00",
+  "trigger": {
+    "kind": "adaptive_window",
+    "reason": "quiet_timeout"
+  },
+  "window": {
+    "messages": [
+      {
+        "messageId": 101,
+        "correlationId": "6f1c2a4e-0b7d-4c55-9a0e-3d2b1c0a0101"
+      },
+      {
+        "messageId": 102,
+        "correlationId": "6f1c2a4e-0b7d-4c55-9a0e-3d2b1c0a0102"
+      },
+      {
+        "messageId": 104,
+        "correlationId": "6f1c2a4e-0b7d-4c55-9a0e-3d2b1c0a0104"
+      },
+      {
+        "messageId": 105,
+        "correlationId": "6f1c2a4e-0b7d-4c55-9a0e-3d2b1c0a0105"
+      }
+    ]
+  },
+  "decision": "intervene",
+  "category": "CONSTRUCTIVE",
+  "topic": {
+    "id": "T2",
+    "name": "Presión jerárquica y evaluación"
+  },
+  "reason": "Los participantes se responden y dan razones sobre la veracidad del registro; aún no consideran el peso de la evaluación de la supervisora.",
+  "intervention": {
+    "status": "intervened",
+    "agent": "ConversationGuide",
+    "messageId": 106,
+    "suppressedBy": null
+  }
+}

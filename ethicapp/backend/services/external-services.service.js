@@ -57,6 +57,10 @@ import {
     REPORT_CONTRIBUTION_TIMEOUT_MS,
 } from "./external-service-report-contributions.js";
 import { externalServiceReportResultsService } from "./external-service-report-results.service.js";
+import {
+    createMediationDecisionsAccess,
+    externalServiceMediationDecisionsService,
+} from "./external-service-mediation-decisions.service.js";
 import { errorClassification } from "./external-service-handler-run.js";
 import {
     normalizeEphemeralContext,
@@ -542,6 +546,7 @@ export class ExternalServicesRegistry {
         jobsService,
         roomJobsService,
         reportResultsStore,
+        mediationDecisionsService,
         reportContributionTimeoutMs = REPORT_CONTRIBUTION_TIMEOUT_MS,
         studentResultsTimeoutMs = STUDENT_RESULTS_TIMEOUT_MS,
         loadSessionServiceIds = getEnabledExternalServiceIdsBySessionId,
@@ -575,6 +580,10 @@ export class ExternalServicesRegistry {
         this._jobsService     = jobsService ?? externalServiceJobsService;
         // Room-scoped jobs (#833), handed to adapters as `roomJobs`.
         this._roomJobsService = roomJobsService ?? externalServiceRoomJobsService;
+        // Stored mediation decisions (#1222), handed to adapters as
+        // `mediationDecisions`.
+        this._mediationDecisionsService = mediationDecisionsService
+            ?? externalServiceMediationDecisionsService;
         // What the report-building (#944) and student-results-reading
         // (#1125) hooks read, and how long each adapter is given to answer.
         this._reportResultsStore          = reportResultsStore ?? externalServiceReportResultsService;
@@ -822,6 +831,10 @@ export class ExternalServicesRegistry {
             caseAnalyses,
             designAnalyses,
             roomJobs:                createRoomJobsAccess(this._roomJobsService, normalizedService.id),
+            mediationDecisions:      createMediationDecisionsAccess(
+                this._mediationDecisionsService,
+                normalizedService.id
+            ),
             sessionInputs:           Object.freeze({
                 declares:   name => this.declaresSessionInput(normalizedService.id, name),
                 descriptor: ({ sessionId }) =>
