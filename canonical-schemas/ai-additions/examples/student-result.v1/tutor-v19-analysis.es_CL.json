@@ -1,0 +1,66 @@
+{
+  "schemaVersion": "student-result/v1",
+  "locale": "es-CL",
+  "title": "Retroalimentación sobre tu argumento",
+  "summary": "Tu argumento toma una decisión clara y la apoya en hechos del caso. Para fortalecerlo, explica por qué esos hechos pesan más que el riesgo de que Sebastián pierda la gratuidad.",
+  "overview": "Revisamos tu argumento con una versión simplificada del modelo de Toulmin, que distingue cuatro partes:\n\n- **Afirmación**: tu decisión frente a la pregunta, es decir, qué harías tú.\n- **Evidencia**: los hechos del caso que usas.\n- **Garantía**: el razonamiento que explica por qué esos hechos llevan a tu decisión.\n- **Calificador**: hasta dónde llega tu decisión o bajo qué condición la tomarías.\n\nAbre cada criterio para ver qué significa y cómo se evaluó. Puedes usar esta retroalimentación para mejorar tu argumento.",
+  "sections": [
+    {
+      "kind": "criteria",
+      "title": "Criterios",
+      "items": [
+        {
+          "key": "claim",
+          "label": "Afirmación",
+          "value": "2 de 2 · En contra",
+          "score": 2,
+          "minScore": 0,
+          "maxScore": 2,
+          "description": "La **afirmación** es tu decisión frente a la pregunta: si harías o no harías la acción por la que se pregunta, si estuvieras en esa situación.\n\nSe evalúa de 0 a 2: 2 si dices en primera persona qué harías, 1 si tu decisión se puede deducir de lo que escribes pero no la dices directamente, y 0 si no se puede saber qué harías.\n\nEste criterio no premia una postura: ninguna postura vale más que otra."
+        },
+        {
+          "key": "evidence",
+          "label": "Evidencia",
+          "value": "2 de 2",
+          "score": 2,
+          "minScore": 0,
+          "maxScore": 2,
+          "description": "La **evidencia** son los hechos del caso que usas en tu argumento: lo que hacen o dicen las personas involucradas y las circunstancias en que actúan.\n\nSe evalúa de 0 a 2 según cuántos hechos distintos del caso usas: 2 si usas dos o más, 1 si usas uno y 0 si no usas ninguno. Tus suposiciones y lo que el caso no dice no cuentan como evidencia."
+        },
+        {
+          "key": "warrant",
+          "label": "Garantía",
+          "value": "2 de 2",
+          "score": 2,
+          "minScore": 0,
+          "maxScore": 2,
+          "description": "La **garantía** es el razonamiento que explica por qué decides lo que decides: une los hechos del caso con tu decisión mediante conectores como *porque*, *ya que* o *dado que*.\n\nSe evalúa de 0 a 2: 2 si tu razonamiento se apoya en hechos concretos del caso y está unido a tu decisión, 1 si das razones generales (valores, consecuencias en general o suposiciones) o razones que no quedan unidas a tu decisión, y 0 si no explicas por qué decides."
+        },
+        {
+          "key": "qualifier",
+          "label": "Calificador",
+          "value": "Presente",
+          "score": 1,
+          "minScore": 0,
+          "maxScore": 1,
+          "description": "El **calificador** indica hasta dónde llega tu decisión o bajo qué condición la tomarías, con expresiones como *solo si*, *siempre que*, *a lo más*, *solo esa vez* o *pero no en…*.\n\nSe evalúa como presente o ausente. Expresar cuán seguro estás, con frases como *creo que* o *probablemente*, no cuenta como calificador."
+        }
+      ]
+    },
+    {
+      "kind": "bullets",
+      "title": "Comentarios",
+      "items": [
+        "Afirmación: Dices claramente que no ayudarías a Sebastián a contestar el examen. Mantén esa frase al comienzo, para que tu decisión se lea de inmediato.",
+        "Evidencia: Usas varios hechos del caso, como lo que dijo el papá de Sebastián y los reclamos contra la copia. Revisa que todo lo que mencionas esté en el caso: el caso no dice que a quien ayuda lo puedan echar de la carrera.",
+        "Garantía: Unes tu decisión con lo que dijo el papá de Sebastián mediante un «porque». Puedes desarrollar por qué ese consejo importa en esta situación.",
+        "Calificador: Precisas que lo ayudarías a estudiar antes del examen, pero no durante la prueba. Así queda claro hasta dónde llega tu decisión."
+      ]
+    },
+    {
+      "kind": "text",
+      "title": "Tu argumento",
+      "text": "Yo no ayudaría a Sebastián a contestar el examen, porque su papá le dijo que en su familia no se toman atajos y los dos hemos reclamado a los profesores contra la copia. Sé que si reprueba pierde la gratuidad, y a mí me podrían echar de la carrera. Solo lo ayudaría a estudiar antes del examen, no durante la prueba."
+    }
+  ]
+}

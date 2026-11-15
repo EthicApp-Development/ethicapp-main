@@ -29,8 +29,8 @@ export const EVALUATION_CRITERION_KEYS = Object.freeze([
 ]);
 
 const EVALUATION_KINDS = new Set(["analysis", "comparison"]);
-// v1 describes the enhanced mode only; the basic variant
-// (ethicapp-ai-additions#277) is read as well when it comes.
+// v1 describes the enhanced mode and, since ethicapp-ai-additions#277, the
+// basic mode (no claim type, case quotes in place of EV# ids).
 const TUTOR_MODES = new Set(["enhanced", "basic"]);
 const CLAIM_STANCES = new Set(["in_favor", "against", "alternative", "conditional"]);
 const PROMPT_LOCALES = new Set(["es-CL", "en-US"]);

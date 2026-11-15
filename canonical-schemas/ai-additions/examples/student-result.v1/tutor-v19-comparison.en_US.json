@@ -1,0 +1,104 @@
+{
+  "schemaVersion": "student-result/v1",
+  "locale": "en-US",
+  "title": "Feedback on your revised argument",
+  "overview": "We reviewed your argument with a simplified version of the Toulmin model, which looks at four parts:\n\n- **Claim**: your decision on the question, that is, what you would do.\n- **Evidence**: the facts of the case you use.\n- **Warrant**: the reasoning that explains why those facts lead to your decision.\n- **Qualifier**: how far your decision goes, or the condition under which you would take it.\n\nOpen each criterion to see what it means and how it was evaluated. You can use this feedback to improve your argument.",
+  "sections": [
+    {
+      "kind": "comparison",
+      "title": "Changes from your previous argument",
+      "items": [
+        {
+          "key": "claim",
+          "label": "Claim",
+          "before": "1 of 2 · Against",
+          "after": "2 of 2 · Against",
+          "trend": "improved"
+        },
+        {
+          "key": "evidence",
+          "label": "Evidence",
+          "before": "1 of 2",
+          "after": "2 of 2",
+          "trend": "improved"
+        },
+        {
+          "key": "warrant",
+          "label": "Warrant",
+          "before": "1 of 2",
+          "after": "2 of 2",
+          "trend": "improved"
+        },
+        {
+          "key": "qualifier",
+          "label": "Qualifier",
+          "before": "Absent",
+          "after": "Present",
+          "trend": "improved"
+        }
+      ]
+    },
+    {
+      "kind": "criteria",
+      "title": "Criteria of your revised argument",
+      "items": [
+        {
+          "key": "claim",
+          "label": "Claim",
+          "value": "2 of 2 · Against",
+          "score": 2,
+          "minScore": 0,
+          "maxScore": 2,
+          "description": "Your **claim** is your decision on the question: whether you would or would not take the action the question asks about, if you were in that situation.\n\nIt is scored from 0 to 2: 2 when you say in the first person what you would do, 1 when your decision can be inferred from what you write but you do not state it, and 0 when it is not possible to tell what you would do.\n\nThis criterion does not reward a position: no position is worth more than another."
+        },
+        {
+          "key": "evidence",
+          "label": "Evidence",
+          "value": "2 of 2",
+          "score": 2,
+          "minScore": 0,
+          "maxScore": 2,
+          "description": "**Evidence** is the facts of the case you use in your argument: what the people involved do or say, and the circumstances they act in.\n\nIt is scored from 0 to 2 by how many distinct facts of the case you use: 2 when you use two or more, 1 when you use one, and 0 when you use none. Your own assumptions and what the case does not say do not count as evidence."
+        },
+        {
+          "key": "warrant",
+          "label": "Warrant",
+          "value": "2 of 2",
+          "score": 2,
+          "minScore": 0,
+          "maxScore": 2,
+          "description": "The **warrant** is the reasoning that explains why you decide what you decide: it links the facts of the case to your decision with connectors such as *because*, *since* or *given that*.\n\nIt is scored from 0 to 2: 2 when your reasoning rests on specific facts of the case and is linked to your decision, 1 when you give general reasons (values, consequences in general or assumptions) or reasons that are not linked to your decision, and 0 when you do not explain why you decide."
+        },
+        {
+          "key": "qualifier",
+          "label": "Qualifier",
+          "value": "Present",
+          "score": 1,
+          "minScore": 0,
+          "maxScore": 1,
+          "description": "The **qualifier** shows how far your decision goes, or the condition under which you would take it, with expressions such as *only if*, *as long as*, *at most*, *just that once* or *but not in…*.\n\nIt is evaluated as present or absent. Saying how sure you are, with phrases such as *I think* or *probably*, does not count as a qualifier."
+        }
+      ]
+    },
+    {
+      "kind": "bullets",
+      "title": "Comments",
+      "items": [
+        "Claim: You say in the first person whether you would take the action the question asks about: your decision is clear.",
+        "Evidence: You use at least two distinct facts of the case to support your decision.",
+        "Warrant: You explain why you decide what you decide and link your decision to specific facts of the case.",
+        "Qualifier: You say how far your decision goes or under which condition you would take it."
+      ]
+    },
+    {
+      "kind": "text",
+      "title": "Your previous argument",
+      "text": "It is not right to help Sebastián in the exam. Cheating is unfair to the classmates who study, and besides, the classmates would notice. Sebastián is very anxious and I understand him, but you cannot live in fear of failing."
+    },
+    {
+      "kind": "text",
+      "title": "Your revised argument",
+      "text": "I would not help Sebastián answer the exam, because his dad told him that in his family they do not take shortcuts, and the two of us have complained to the teachers about cheating. I know that if he fails he loses his free tuition, and I could be expelled from the program. I would only help him study before the exam, not during the test."
+    }
+  ]
+}

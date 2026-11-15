@@ -123,5 +123,32 @@ test("ids outside their patterns and keys the schema does not define are invalid
     assertInvalid({ ...example("analysis-no-claim.es_CL.json"), claim: 2 },
         "a legacy score key at the top level");
     assertInvalid({ ...example("analysis-no-claim.es_CL.json"), tutorMode: "basic" },
-        "the basic mode, which v1 does not describe");
+        "an enhanced evaluation labelled basic, without the basic mode's focal action");
+});
+
+// ─── The basic mode (ethicapp-ai-additions#277) ──────────────────────────────
+
+test("a basic evaluation states its focal action and quotes the case, with no ids", () => {
+    const basic = example("analysis-basic.es_CL.json");
+    assert.equal(basic.tutorMode, "basic");
+    const { claim, evidence, warrant } = basic.evaluation.criteria;
+    assert.equal(typeof claim.focalAction, "string");
+    assert.equal(claim.claimTypeId, null);
+    assert.ok(Array.isArray(evidence.caseQuotes));
+    assert.deepEqual(evidence.factIds, []);
+    assert.equal(warrant.factId, null);
+
+    const withoutFocalAction = example("analysis-basic.es_CL.json");
+    delete withoutFocalAction.evaluation.criteria.claim.focalAction;
+    assertInvalid(withoutFocalAction, "a basic claim without its focal action");
+
+    assertInvalid({ ...example("analysis-basic.es_CL.json"), tutorMode: "enhanced" },
+        "a basic evaluation labelled enhanced");
+});
+
+test("a phase that requested basic is never evaluated in the enhanced mode", () => {
+    assertInvalid({ ...example("analysis-enhanced.es_CL.json"), requestedMode: "basic" },
+        "an enhanced evaluation of a phase that requested basic");
+    assertValid({ ...example("analysis-basic.es_CL.json"), requestedMode: "enhanced" },
+        "a basic evaluation of a phase that requested enhanced without a complete context");
 });
