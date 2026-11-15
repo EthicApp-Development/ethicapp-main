@@ -12,6 +12,12 @@ import {
 } from "../../services/external-service-report-contributions.js";
 import { PARTICIPANT_ACTIVITY_HOOK } from "../catalog.js";
 import { sendRoomActivity } from "./polyadic-bridge.activity.js";
+import {
+    caseInputRejection,
+    rejectedCaseInput,
+    resolveRoomCaseInputs,
+    ROOM_FAILURE_REASONS,
+} from "./polyadic-bridge.case-inputs.js";
 
 // The Polyadic Agents API under the AI Additions connection's base URL (#814).
 export const POLYADIC_API_BASE_PATH = "/polyadic-agent/api";
@@ -228,9 +234,25 @@ export function composeTopic(caseText, questionText) {
     return `${topic || "EthicApp discussion"}\n\nCentral question: ${question}`;
 }
 
-async function resolveCaseText(sessionId, dependencies) {
+// The session's case, read once for the topic and the case inputs. A failed
+// read is kept, so that a room that requires a case input is not created
+// without it.
+async function lookupSessionCase(sessionId, dependencies) {
     try {
-        const caseId = await dependencies.getCaseIdBySessionId(sessionId);
+        return { caseId: await dependencies.getCaseIdBySessionId(sessionId) ?? null, error: null };
+    } catch (error) {
+        console.warn(`[polyadic-bridge] Unable to find the case of session ${sessionId}.`,
+            describeError(error));
+        return { caseId: null, error };
+    }
+}
+
+async function resolveCaseText(sessionId, caseLookup, dependencies) {
+    if (caseLookup.error) {
+        return "";
+    }
+    try {
+        const caseId = caseLookup.caseId;
         if (!caseId) {
             console.warn(`[polyadic-bridge] No case found for session ${sessionId}.`);
             return "";
@@ -369,10 +391,15 @@ function configuredSettings(serviceConfiguration) {
  * for a timed phase; no setting replaces it either. Without it the room is
  * untimed, unless the design still stores the deprecated
  * `session_duration_seconds`, which a `phase_clock` overrides.
+ * `caseInputs` (#1221) are the case's session inputs that the room's
+ * configuration requires, such as the `discussion_topics` of a
+ * `contentCoverage` room (polyadic-bridge.case-inputs.js), each under its
+ * key; a room that requires none gets no key.
  * @param {{ topic?: string, locale?: string,
  *   serviceConfiguration?: object, pipelineType?: string,
  *   roomCorrelationId?: string|null,
- *   phaseClock?: { duration_seconds: number, remaining_seconds: number }|null }} options
+ *   phaseClock?: { duration_seconds: number, remaining_seconds: number }|null,
+ *   caseInputs?: Object<string, unknown>|null }} options
  */
 export function buildPolyadicSessionPayload({
     topic,
@@ -381,6 +408,7 @@ export function buildPolyadicSessionPayload({
     pipelineType = getPipelineType(),
     roomCorrelationId = null,
     phaseClock = null,
+    caseInputs = null,
 } = {}) {
     const payload = {
         prompt_inicial: topic || "EthicApp discussion",
@@ -396,7 +424,24 @@ export function buildPolyadicSessionPayload({
     if (phaseClock) {
         payload[PHASE_CLOCK_INPUT] = phaseClock;
     }
+    if (isPlainObject(caseInputs)) {
+        Object.assign(payload, caseInputs);
+    }
     return payload;
+}
+
+/**
+ * The configuration a room is created with, as its case inputs are judged
+ * (#1221): the body buildPolyadicSessionPayload() sends, without the prompt
+ * and the per-request values. `pipeline_type` is therefore the phase's
+ * setting, else AI_ADDITIONS_POLYADIC_AGENTS_PIPELINE_TYPE, else
+ * `abogado-del-diablo`.
+ * @param {{ locale?: string, serviceConfiguration?: object }} options
+ */
+export function roomConfiguration({ locale, serviceConfiguration = {} } = {}) {
+    const configuration = buildPolyadicSessionPayload({ locale, serviceConfiguration });
+    delete configuration.prompt_inicial;
+    return configuration;
 }
 
 export function resolvePolyadicUsername(identity, userId) {
@@ -424,6 +469,9 @@ function createDependencies(overrides = {}) {
         getParticipantIdentity,
         getSessionLanguageCode,
         getPhaseClock:          readPhaseClock,
+        // helpers/case-session-inputs.js reads the case's analyses with its
+        // own defaults (the registry's producers, case-analyses-helper.js).
+        caseInputDependencies:  {},
         ...overrides,
     };
 }
@@ -477,6 +525,27 @@ async function requestPolyadicJson(pathname, { method = "GET", body = null, time
     });
 }
 
+// An error that says why a room was not created (#1221), kept on its room job.
+function roomCreationFailure(reason, details, cause) {
+    return Object.assign(new Error(`The Polyadic room was not created: ${reason}.`), {
+        roomFailure: { reason, ...details },
+        statusCode:  cause?.statusCode,
+        cause,
+    });
+}
+
+// Why a room creation failed, from its error.
+function roomFailureOf(error) {
+    if (error?.roomFailure) {
+        return error.roomFailure;
+    }
+    const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : null;
+    return {
+        reason: ROOM_FAILURE_REASONS.SESSION_CREATION_FAILED,
+        ...(statusCode ? { statusCode } : {}),
+    };
+}
+
 // `roomCorrelationAcknowledged`: Polyadic echoed the room correlation id, so it
 // stored it and sends it with the room's proactive callbacks (#833). An older
 // Polyadic ignores the field and echoes nothing.
@@ -503,15 +572,24 @@ function creationOutcome(response, roomCorrelationId, extra = {}) {
  * called right before each request is sent, the retry included, so that
  * `remaining_seconds` is the time left when Polyadic receives it. The clock
  * sent is returned as `phaseClock`.
+ *
+ * `caseInputs` (#1221) is the room's resolveRoomCaseInputs() result: its
+ * `values` go into the body. The retry without the configured settings would
+ * create the room in another mode, so it never runs for a 400 that names a
+ * case input, nor for a configuration that requires one: the creation then
+ * fails with a `roomFailure` (`case_input_rejected` or
+ * `configuration_rejected`).
  */
 async function ensurePolyadicSession(roomName, {
     topic, locale, serviceConfiguration, roomCorrelationId = null,
     resolvePhaseClock = async () => null,
+    caseInputs = null,
 }) {
     const path = `/rooms/${encodeURIComponent(roomName)}/sessions`;
     let phaseClock = await resolvePhaseClock();
     const body = buildPolyadicSessionPayload({
         topic, locale, serviceConfiguration, roomCorrelationId, phaseClock,
+        caseInputs: caseInputs?.values ?? null,
     });
 
     try {
@@ -522,9 +600,19 @@ async function ensurePolyadicSession(roomName, {
             phaseClock,
         });
     } catch (error) {
+        if (rejectedCaseInput(error, caseInputs?.keys ?? [])) {
+            throw roomCreationFailure(ROOM_FAILURE_REASONS.CASE_INPUT_REJECTED, {
+                rejection: caseInputRejection(error),
+            }, error);
+        }
         const hasConfiguration = Object.keys(configuredSettings(serviceConfiguration)).length > 0;
         if (Number(error?.statusCode) !== 400 || !hasConfiguration) {
             throw error;
+        }
+        if (caseInputs?.required) {
+            throw roomCreationFailure(ROOM_FAILURE_REASONS.CONFIGURATION_REJECTED, {
+                rejection: error.responseBody ?? null,
+            }, error);
         }
 
         console.warn(`[polyadic-bridge] Polyadic rejected the configured settings for ${roomName}; `
@@ -857,10 +945,31 @@ const NO_ROOM_JOBS = Object.freeze({
 });
 
 // Without the registry's access to the descriptor, no session input is
-// declared, so no `phase_clock` is sent.
+// declared, so no `phase_clock` and no case input is sent.
 const NO_SESSION_INPUTS = Object.freeze({
-    declares: async () => false,
+    declares:   async () => false,
+    descriptor: async () => null,
 });
+
+const CASE_INPUT_FAILURES = new Set([
+    ROOM_FAILURE_REASONS.MISSING_CASE_INPUTS,
+    ROOM_FAILURE_REASONS.CASE_INPUTS_UNREADABLE,
+    ROOM_FAILURE_REASONS.CASE_INPUT_REJECTED,
+    ROOM_FAILURE_REASONS.CONFIGURATION_REJECTED,
+]);
+
+// What a room job records about its room (#1221), in its
+// `instantiation_report`: Polyadic's report and the case inputs sent, or why
+// the room was not created.
+function roomJobReport({ outcome = null, caseInputs = null, failure = null }) {
+    return {
+        warnings:              outcome?.warnings ?? [],
+        degraded:              outcome?.degraded === true,
+        configurationRejected: outcome?.configurationRejected === true,
+        ...(caseInputs?.sent?.length > 0 ? { caseInputs: caseInputs.sent } : {}),
+        ...(failure ? { failure } : {}),
+    };
+}
 
 export async function register({
     service,
@@ -902,8 +1011,47 @@ export async function register({
         }
     }
 
-    async function buildTopicForPhase(sessionId, phaseId) {
-        const caseText = await resolveCaseText(sessionId, dependencies);
+    // Polyadic's normalized instance configuration under the session's
+    // pinned AI service policy, for its case inputs (#1221), or null when it
+    // cannot be read: the room then gets no case input, and Polyadic still
+    // refuses a room whose mode requires one.
+    async function caseInputsDescriptor(sessionId) {
+        if (typeof sessionInputs.descriptor !== "function") {
+            return null;
+        }
+        try {
+            return await sessionInputs.descriptor({ sessionId });
+        } catch (error) {
+            console.warn("[polyadic-bridge] Could not read Polyadic's session inputs; "
+                + "creating rooms without case inputs.", describeError(error));
+            return null;
+        }
+    }
+
+    // The case inputs of the phase's rooms (#1221), resolved once for them
+    // all with helpers/case-session-inputs.js, under the configuration the
+    // rooms are created with.
+    async function resolvePhaseCaseInputs({ sessionId, caseLookup, locale, serviceConfiguration }) {
+        const descriptor = await caseInputsDescriptor(sessionId);
+        const caseInputs = await resolveRoomCaseInputs({
+            descriptor,
+            configuration: roomConfiguration({ locale, serviceConfiguration }),
+            caseId:        caseLookup.caseId,
+            caseIdError:   caseLookup.error,
+            deps:          dependencies.caseInputDependencies,
+        });
+        if (caseInputs.error) {
+            console.warn("[polyadic-bridge] Could not read the case inputs of session "
+                + `${sessionId}.`, describeError(caseInputs.error));
+        }
+        return caseInputs;
+    }
+
+    // What every room of a phase is created with: the topic, the locale and
+    // the question, and the case inputs its configuration requires.
+    async function buildRoomInputs(sessionId, phaseId, serviceConfiguration) {
+        const caseLookup = await lookupSessionCase(sessionId, dependencies);
+        const caseText = await resolveCaseText(sessionId, caseLookup, dependencies);
         const question = await dependencies.getFirstQuestionForPhase(phaseId);
         const questionText = formatQuestionText(question);
         const fallbackTopic = `EthicApp session ${sessionId} phase ${phaseId}`;
@@ -913,6 +1061,9 @@ export async function register({
             questionId: question?.id ?? null,
             topic:      composeTopic(caseText || fallbackTopic, questionText),
             locale,
+            caseInputs: await resolvePhaseCaseInputs({
+                sessionId, caseLookup, locale, serviceConfiguration,
+            }),
         };
     }
 
@@ -970,12 +1121,27 @@ export async function register({
         }
     }
 
+    // A room that was not created: its room job fails and records why
+    // (#1221), so the failure stays visible after the request.
+    async function failRoom({ roomName, roomJobId, caseInputs, failure, error = null }) {
+        roomContext.delete(roomName);
+        console.warn(`[polyadic-bridge] Failed to create polyadic room ${roomName}: `
+            + `${failure.reason}.`, error ? describeError(error) : "");
+        await settleRoomJob(roomJobId, roomName,
+            id => roomJobs.fail(id, { report: roomJobReport({ caseInputs, failure }) }));
+        return { roomName, roomJobId, failure };
+    }
+
     // Creates the room with a new room job, whose id it sends to Polyadic.
     // Once the room exists the job opens, bound when Polyadic echoed the id,
     // and supersedes the room's older room jobs; when the room could not be
     // created it fails. Returns `{ roomName, roomJobId, warnings, degraded,
-    // configurationRejected }`, or null when the room could not be created.
-    async function createRoom({ hookName, sessionId, phaseId, groupId, questionId, ...sessionOptions }) {
+    // configurationRejected, caseInputs? }`, or `{ roomName, roomJobId,
+    // failure }` when the room could not be created. A room whose required
+    // case input is missing is never requested (#1221).
+    async function createRoom({
+        hookName, sessionId, phaseId, groupId, questionId, caseInputs = null, ...sessionOptions
+    }) {
         const roomName = getRoomName(sessionId, phaseId, groupId);
         rememberRoomContext(roomName, sessionId, phaseId, groupId, questionId);
         const roomJob = await createRoomJob(hookName, {
@@ -983,25 +1149,33 @@ export async function register({
         });
         const roomJobId = roomJob?.id ?? null;
 
+        if (caseInputs?.failure) {
+            return failRoom({ roomName, roomJobId, caseInputs, failure: caseInputs.failure });
+        }
+
         let outcome;
         try {
             outcome = await ensurePolyadicSession(roomName, {
                 ...sessionOptions,
+                caseInputs,
                 roomCorrelationId: roomJobId,
                 resolvePhaseClock: () => phaseClockFor(sessionId, phaseId),
             });
         } catch (error) {
-            roomContext.delete(roomName);
-            console.warn(`[polyadic-bridge] Failed to create polyadic room ${roomName}.`,
-                describeError(error));
-            await settleRoomJob(roomJobId, roomName, id => roomJobs.fail(id));
-            return null;
+            return failRoom({
+                roomName, roomJobId, caseInputs, failure: roomFailureOf(error), error,
+            });
         }
 
         const { roomCorrelationAcknowledged, ...report } = outcome;
-        await settleRoomJob(roomJobId, roomName,
-            id => roomJobs.open(id, { bound: roomCorrelationAcknowledged }));
-        return { roomName, roomJobId, ...report };
+        const sent = caseInputs?.sent ?? [];
+        // Only a room created with case inputs gets a report on its room job,
+        // so the others' room jobs stay as they were.
+        const openOptions = sent.length > 0
+            ? { bound: roomCorrelationAcknowledged, report: roomJobReport({ outcome, caseInputs }) }
+            : { bound: roomCorrelationAcknowledged };
+        await settleRoomJob(roomJobId, roomName, id => roomJobs.open(id, openOptions));
+        return { roomName, roomJobId, ...report, ...(sent.length > 0 ? { caseInputs: sent } : {}) };
     }
 
     // One creation per room at a time: a concurrent caller gets the same
@@ -1023,7 +1197,7 @@ export async function register({
     // timed room.
     function roomReports(rooms) {
         return rooms.map(({
-            roomName, warnings, degraded, configurationRejected, rejection, phaseClock,
+            roomName, warnings, degraded, configurationRejected, rejection, phaseClock, caseInputs,
         }) => ({
             room: roomName,
             warnings,
@@ -1031,7 +1205,13 @@ export async function register({
             configurationRejected,
             ...(configurationRejected ? { rejection: rejection ?? null } : {}),
             ...(phaseClock ? { phaseClock } : {}),
+            ...(caseInputs ? { caseInputs } : {}),
         }));
+    }
+
+    // The rooms that were not created and why (#1221), for the job result.
+    function failedRoomReports(rooms) {
+        return rooms.map(({ roomName, failure }) => ({ room: roomName, ...failure }));
     }
 
     // One instantiation report per job (#737): every room's warnings, tagged
@@ -1065,18 +1245,26 @@ export async function register({
         // here, instead of completing with every room silently missing.
         await aiAdditionsClient.getEndpoints();
         const teamIds = await dependencies.getTeamIdsForPhase(sessionId, phaseId);
-        const topicData = await buildTopicForPhase(sessionId, phaseId);
+        const roomInputs = await buildRoomInputs(sessionId, phaseId, serviceConfiguration);
         // Rooms are tracked as they are created, so a chat message in a room
         // already created does not create it again.
         const createdRooms = new Set();
         phaseRooms.set(getPhaseRoomsKey(sessionId, phaseId), createdRooms);
         const created = [];
+        const failed = [];
 
         for (const groupId of teamIds) {
             const room = await createRoomOnce({
-                hookName: "phase-started", sessionId, phaseId, groupId, ...topicData, serviceConfiguration,
+                hookName: "phase-started",
+                sessionId,
+                phaseId,
+                groupId,
+                ...roomInputs,
+                serviceConfiguration,
             });
-            if (room) {
+            if (room?.failure) {
+                failed.push(room);
+            } else if (room) {
                 createdRooms.add(room.roomName);
                 created.push(room);
             }
@@ -1084,15 +1272,19 @@ export async function register({
 
         await reportRooms(created, reportInstantiation);
 
+        // A room that could not get its case inputs fails the job (#1221):
+        // the phase's configuration cannot run, and no room runs another mode.
+        const caseInputsFailed = failed.some(room => CASE_INPUT_FAILURES.has(room.failure.reason));
         await callback({
             serviceId: service.id,
             hook:      "phase-started",
-            status:    "completed",
+            status:    caseInputsFailed ? "failed" : "completed",
             payload:   {
                 sessionId,
                 phaseId,
                 roomsCreated: createdRooms.size,
                 rooms:        roomReports(created),
+                ...(failed.length > 0 ? { roomsFailed: failedRoomReports(failed) } : {}),
             },
         });
     });
@@ -1123,23 +1315,27 @@ export async function register({
 
         let createdReport = null;
         if (!phaseCreatedRooms.has(roomName)) {
-            const topicData = await buildTopicForPhase(sessionId, phaseId);
+            const roomInputs = await buildRoomInputs(sessionId, phaseId, serviceConfiguration);
             const createdRoom = await createRoomOnce({
                 hookName:   "chat-message-received",
                 sessionId,
                 phaseId,
                 groupId,
-                ...topicData,
-                questionId: questionId ?? topicData.questionId,
+                ...roomInputs,
+                questionId: questionId ?? roomInputs.questionId,
                 serviceConfiguration,
             });
 
-            if (!createdRoom) {
+            // The message is not forwarded; the group's next message tries to
+            // create the room again.
+            if (!createdRoom || createdRoom.failure) {
+                const failure = createdRoom?.failure
+                    ?? { reason: ROOM_FAILURE_REASONS.SESSION_CREATION_FAILED };
                 await callback({
                     serviceId: service.id,
                     hook:      "chat-message-received",
                     status:    "failed",
-                    payload:   { sessionId, phaseId, groupId, reason: "session_creation_failed" },
+                    payload:   { sessionId, phaseId, groupId, ...failure },
                 });
                 return;
             }

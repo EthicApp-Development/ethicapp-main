@@ -28,10 +28,19 @@ import {
  * when the room was created. A callback without a job that names a room with
  * an open bound job is refused (see hasOpenBoundRoomJob()).
  *
+ * `instantiation_report` (V17) may record what the adapter reports about the
+ * room when its job opens or fails (#1221): the Polyadic bridge records the
+ * case inputs a room was created with, and why a room was not created.
+ *
  * A room is (service, session, phase, group). Every write is one statement,
  * conditional on the job's current status, so concurrent phase transitions
  * and room re-creations cannot reopen a closed job.
  */
+// A report as the jsonb parameter, or null to keep the stored one.
+function reportJson(report) {
+    return report === null || report === undefined ? null : JSON.stringify(report);
+}
+
 export class ExternalServiceRoomJobsService {
     constructor({ dbQuery } = {}) {
         this._db = dbQuery || poolQuery;
@@ -68,13 +77,14 @@ export class ExternalServiceRoomJobsService {
 
     /**
      * Opens a pending room job once its room exists, recording whether the
-     * service acknowledged its correlation id (`bound`). In the same statement,
-     * every older live room job of the same room is closed: the service now
-     * holds this job's id, so the older ones are superseded.
+     * service acknowledged its correlation id (`bound`) and, when given, the
+     * adapter's `report` on the room. In the same statement, every older live
+     * room job of the same room is closed: the service now holds this job's
+     * id, so the older ones are superseded.
      * @returns {Promise<boolean>} false when the job is no longer pending (a
      *          newer room job superseded it, or its phase already ended).
      */
-    async openRoomJob(jobId, { bound = false } = {}) {
+    async openRoomJob(jobId, { bound = false, report = null } = {}) {
         const rows = await this._db(
             `WITH target AS (
                  SELECT id, service_id, session_id, phase_id, group_id, created_at
@@ -96,25 +106,30 @@ export class ExternalServiceRoomJobsService {
                  RETURNING older.id
              )
              UPDATE external_service_jobs AS job
-             SET status = $7, room_bound = $2, dispatched_at = now(), updated_at = now()
+             SET status = $7, room_bound = $2,
+                 instantiation_report = COALESCE($8::jsonb, job.instantiation_report),
+                 dispatched_at = now(), updated_at = now()
              FROM target
              WHERE job.id = target.id AND job.status = $4
              RETURNING job.id`,
             [
                 jobId, bound === true, JOB_KIND.ROOM, JOB_STATUS.PENDING,
                 JOB_STATUS.CLOSED, LIVE_ROOM_JOB_STATUSES, JOB_STATUS.OPEN,
+                reportJson(report),
             ]
         );
         return rows.length > 0;
     }
 
-    // The room could not be created: its pending job never opens.
-    async failRoomJob(jobId) {
+    // The room could not be created: its pending job never opens. The
+    // adapter's `report`, when given, says why.
+    async failRoomJob(jobId, { report = null } = {}) {
         await this._db(
             `UPDATE external_service_jobs
-             SET status = $2, completed_at = now(), updated_at = now()
+             SET status = $2, completed_at = now(), updated_at = now(),
+                 instantiation_report = COALESCE($5::jsonb, instantiation_report)
              WHERE id = $1 AND kind = $3 AND status = $4`,
-            [jobId, JOB_STATUS.FAILED, JOB_KIND.ROOM, JOB_STATUS.PENDING]
+            [jobId, JOB_STATUS.FAILED, JOB_KIND.ROOM, JOB_STATUS.PENDING, reportJson(report)]
         );
     }
 
@@ -188,7 +203,7 @@ export function createRoomJobsAccess(store, serviceId) {
         create: ({ hookName, sessionId, phaseId, groupId, questionId, room }) =>
             store.createRoomJob({ serviceId, hookName, sessionId, phaseId, groupId, questionId, room }),
         open: (jobId, options) => store.openRoomJob(jobId, options),
-        fail: jobId => store.failRoomJob(jobId),
+        fail: (jobId, options) => store.failRoomJob(jobId, options),
     });
 }
 

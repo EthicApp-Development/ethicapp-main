@@ -343,7 +343,11 @@ session (#735) it sends:
   `abogado-del-diablo`), and the `locale` (`es-CL` or `en-US`) from the design
   language. The deprecated `idioma` is no longer sent;
 - for a timed phase, the phase clock as the session input `phase_clock`
-  (#1178, see "Polyadic phase clock" below).
+  (#1178, see "Polyadic phase clock" below);
+- when the room's configuration requires them, the case inputs Polyadic's
+  descriptor declares, such as the `discussion_topics` of a `contentCoverage`
+  room (#1221, see "Polyadic discussion topics" below). Other rooms get no
+  such key.
 
 Anything still unset takes Polyadic's defaults. `agent_nickname` is sent only
 when the phase configures it (#1026, epic #1025): without it, Polyadic names
@@ -355,7 +359,9 @@ identity" below). Polyadic's `warnings` and
 `degraded` flags come back per room in the `phase-started` job result
 (`payload.rooms`). If Polyadic rejects the configured settings (400, a value a
 newer rule no longer accepts), the room is created again with EthicApp's
-defaults and reported with `configurationRejected: true`.
+defaults and reported with `configurationRejected: true`. That retry never
+runs for a configuration that requires a case input, nor for a 400 that names
+one: without its settings the room would run another mode (#1221).
 
 Each room also gets a room job (#833): a long-lived job for that room whose id
 EthicApp sends as the top-level `ethicapp_room_correlation_id` of
@@ -560,9 +566,80 @@ or never answered, or the document lacks the part) or `not_reviewed`.
 **Sending the value.** Adapters build the value with
 `resolveCaseSessionInputs()` and send it, under the entry's key, only to
 sessions or rooms whose configuration requires it (or, for an optional input,
-when it resolves). The Polyadic adapter's `discussion_topics` is
-ethicapp-main#1221. The tutor's `case_context`, which predates this contract,
+when it resolves). The Polyadic adapter sends `discussion_topics` this way
+(#1221, below). The tutor's `case_context`, which predates this contract,
 is still built by its adapter (`helpers/tutor-mode.js`).
+
+### Polyadic discussion topics
+
+A `contentCoverage` room is created with the case's topics (#1221, epic
+ethicapp-ai-additions#293; "Discussion topics" in
+`polyadic-agents/README.md`): `discussion_topics` is the `topics` array of
+the case's `topic-listing/v1`, in the listing's order, whether or not the
+teacher reviewed it.
+
+```json
+{
+  "prompt_inicial": "...",
+  "pipeline_type": "contentCoverage",
+  "locale": "es-CL",
+  "ethicapp_room_correlation_id": "6f1c...",
+  "discussion_topics": [
+    { "id": "T1", "topic": "Responsabilidad profesional", "description": "..." }
+  ]
+}
+```
+
+- **Which rooms.** The bridge reads Polyadic's descriptor under the session's
+  pinned AI service policy version (`sessionInputs.descriptor()`, from the
+  descriptor cache) and asks `resolveCaseSessionInputs()` for the inputs of
+  the configuration it sends: the phase's settings with `pipeline_type`
+  resolved as above, so `AI_ADDITIONS_POLYADIC_AGENTS_PIPELINE_TYPE` counts
+  too. It does so once per `phase-started` for all the phase's rooms, and
+  for each room a chat message creates later. A configuration that requires
+  nothing reads no analysis, and its rooms' bodies are byte for byte the ones
+  sent before #1221; so are those of a Polyadic whose descriptor does not
+  declare the input or cannot be read.
+- **No room in another mode.** A required input whose analysis is absent,
+  pending, failed or unreadable, or a session whose case cannot be read,
+  stops the room before any request. Polyadic's 400 that names a case input
+  (`{"detail": {"field": "discussion_topics", ...}}`), and any 400 for a
+  configuration that requires one, fail the room instead of the retry
+  without configured settings. Phase start already refuses a phase whose
+  inputs are missing (#1220); this covers a listing that changed between the
+  phase's start and the room's creation, and a listing Polyadic finds
+  invalid.
+- **Where a failure shows.** No teacher view shows Polyadic rooms yet. The
+  room's room job fails (`status: failed`) and records why in its
+  `instantiation_report.failure`: `{ reason, missing?, rejection? }`, with
+  `reason` `missing_case_inputs` (and the helper's `missing` list),
+  `case_inputs_unreadable`, `case_input_rejected` (`rejection: { field,
+  error, paths }`, without Polyadic's messages, which may quote the topics)
+  or `configuration_rejected` (Polyadic's answer). The `phase-started` job
+  fails and lists the rooms as `payload.roomsFailed[]` (`{ room, reason,
+  ... }`); `chat-message-received` fails with the same `reason` and does not
+  forward the message, and the group's next message tries again. Other
+  creation failures are listed in `roomsFailed` too, with reason
+  `session_creation_failed`, and leave the job `completed` as before.
+- **What was sent.** A room created with case inputs records them on its
+  room job, in `instantiation_report.caseInputs`, and in the job result's
+  `payload.rooms[].caseInputs`, so the export (#1222) can resolve topic ids
+  after the listing changes:
+
+  ```json
+  [{ "key": "discussion_topics", "serviceId": "case-analyst-topic-listing",
+     "caseId": 51, "documentSchema": "topic-listing/v1", "pointer": "/topics",
+     "jobId": "9b0c...", "generatedAt": "2026-11-14T09:30:00.000Z",
+     "reviewedAt": null, "ids": ["T1", "T2", "T3"] }]
+  ```
+
+  `jobId` is the listing's generation (null after a teacher's edit), and
+  `generatedAt` and `reviewedAt` tell which version was sent. The topics'
+  texts are not recorded. Rooms without case inputs record nothing new on
+  their room job.
+
+Code: `external-services/adapters/polyadic-bridge.case-inputs.js`. Tests:
+`external-services/adapters/__tests__/polyadic-bridge-case-inputs.adapter.node-test.mjs`.
 
 ## Hook Dispatch
 

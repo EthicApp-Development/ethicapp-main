@@ -116,6 +116,37 @@ test("room jobs: a failed room creation leaves no open room job", { skip: SKIP_R
     assert.equal(await services.roomJobs.openRoomJob(job.id, { bound: true }), false);
 });
 
+test("room jobs: open and fail store the adapter's report on the room (#1221)", { skip: SKIP_REASON }, async () => {
+    const reportOf = async id => (await dbQuery(
+        "SELECT instantiation_report FROM external_service_jobs WHERE id = $1", [id]
+    ))[0].instantiation_report;
+    const services = makeServices();
+    const sent = {
+        warnings:              [],
+        degraded:              false,
+        configurationRejected: false,
+        caseInputs:            [{ key: "discussion_topics", ids: ["T1", "T2"] }],
+    };
+    const failed = { ...sent, failure: { reason: "case_input_rejected" } };
+
+    const opened = await createRoomJob(services, 301);
+    assert.equal(await services.roomJobs.openRoomJob(opened.id, { bound: true, report: sent }), true);
+    assert.deepEqual(await reportOf(opened.id), sent);
+
+    const plain = await createRoomJob(services, 302);
+    assert.equal(await services.roomJobs.openRoomJob(plain.id, { bound: true }), true);
+    assert.equal(await reportOf(plain.id), null);
+
+    const refused = await createRoomJob(services, 303);
+    await services.roomJobs.failRoomJob(refused.id, { report: failed });
+    assert.equal((await jobRow(refused.id)).status, JOB_STATUS.FAILED);
+    assert.deepEqual(await reportOf(refused.id), failed);
+
+    // A job that is no longer pending keeps its report.
+    await services.roomJobs.failRoomJob(opened.id, { report: failed });
+    assert.deepEqual(await reportOf(opened.id), sent);
+});
+
 test("room jobs: the CHECKs accept open and closed, and bound only on room jobs", { skip: SKIP_REASON }, async () => {
     const services = makeServices();
     const hookJob = await services.jobs.createJob({ serviceId: services.serviceId, hookName: "phase-started" });
