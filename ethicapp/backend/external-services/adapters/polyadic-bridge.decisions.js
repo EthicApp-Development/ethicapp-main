@@ -16,6 +16,7 @@
 
 import { getCaseAnalysis as defaultGetCaseAnalysis } from "../../helpers/case-analyses-helper.js";
 import { resolveJsonPointer } from "../../helpers/case-session-inputs.js";
+import { normalizeExternalAgentAuthorName } from "../../helpers/external-agent-author.js";
 import { describeError } from "../../helpers/log-safety.js";
 import {
     loggableDecisionId,
@@ -383,6 +384,10 @@ function decisionValues(decision) {
  * job's creation. `agentValues(decision)` gives the bridge's agent columns
  * of a decision row.
  *
+ * A decision row names the deciding agent as its author (`authorName`,
+ * #1228), the record's `agent`, such as `Validator`. A room row was written
+ * by no agent: its `authorName` is null.
+ *
  * @param {Object[]} decisions - The reader's stored decisions.
  * @param {Map<string, Object>} roomTopics - resolveRoomTopics().
  * @param {(decision: Object) => Object} agentValues
@@ -403,8 +408,9 @@ export function decisionTranscriptRows(decisions, roomTopics, agentValues) {
         rows.push({
             ...placement,
             time,
-            message: null,
-            values:  { ...agentValues(decision), ...decisionValues(decision) },
+            message:    null,
+            authorName: normalizeExternalAgentAuthorName(decision.record?.agent) || null,
+            values:     { ...agentValues(decision), ...decisionValues(decision) },
         });
     }
 
@@ -415,9 +421,10 @@ export function decisionTranscriptRows(decisions, roomTopics, agentValues) {
         }
         rows.push({
             ...first.placement,
-            time:    isoTimeOf(job.createdAt) ?? first.time,
-            message: null,
-            values:  {
+            time:       isoTimeOf(job.createdAt) ?? first.time,
+            message:    null,
+            authorName: null,
+            values:     {
                 [C.ROW_KIND]:           REPORT_ROW_KIND.ROOM_TOPICS,
                 [C.ROOM_TOPICS]:        topicsJson(topics),
                 [C.ROOM_TOPICS_STATUS]: status,

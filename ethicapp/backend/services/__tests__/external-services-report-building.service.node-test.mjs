@@ -576,3 +576,29 @@ test("contributed chat rows need a phase and a time, and carry only declared sca
         "rows[0].values names undeclared column ats_x",
     ]);
 });
+
+test("a contributed row's authorName is a string or null, and absent stays absent (#1228)", () => {
+    const row = { phaseId: 2, time: "2026-10-01T10:05:00Z" };
+    const { valid, contribution, problems } = validate({
+        rows: [
+            { ...row, authorName: "Validator" },
+            { ...row, authorName: null },
+            { ...row, authorName: undefined },
+            row,
+        ],
+    }, { reportType: "chat_transcript", rows: CHAT_ROWS });
+
+    assert.deepEqual(problems, []);
+    assert.equal(valid, true);
+    assert.deepEqual(contribution.rows.map(normalized => [
+        Object.hasOwn(normalized, "authorName"), normalized.authorName,
+    ]), [[true, "Validator"], [true, null], [false, undefined], [false, undefined]]);
+
+    for (const authorName of [0, false, {}, ["Validator"], "x".repeat(MAX_CONTRIBUTION_STRING_LENGTH + 1)]) {
+        const invalid = validate({ rows: [{ ...row, authorName }] }, { reportType: "chat_transcript", rows: CHAT_ROWS });
+        assert.equal(invalid.valid, false);
+        assert.deepEqual(invalid.problems, [
+            `rows[0].authorName must be a string of at most ${MAX_CONTRIBUTION_STRING_LENGTH} characters or null`,
+        ]);
+    }
+});

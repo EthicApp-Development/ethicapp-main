@@ -699,8 +699,8 @@ columns after its own, and two kinds of rows, told apart by
 A decision row (`polyadic_row_kind = decision`) is placed in its room's
 phase, question and group at the decision's `decidedAt`. Its `message`,
 `id`, `user_id` and `reply_to` are empty, `author_role` is
-`external_service`, `polyadic_agent_name` is the deciding agent
-(`Validator`), `polyadic_agent_trigger` and `polyadic_agent_in_reply_to`
+`external_service`, `name` and `polyadic_agent_name` are the deciding agent
+(`Validator`, #1228), `polyadic_agent_trigger` and `polyadic_agent_in_reply_to`
 are empty and `polyadic_agent_visible_to_students` is `false`:
 
 | Column | Value |
@@ -727,7 +727,9 @@ A room row (`polyadic_row_kind = room_topics`) gives the topic list a room
 was created with, so a reader can resolve every topic id without EthicApp.
 There is one per room job with decisions whose `instantiation_report`
 recorded `discussion_topics` (#1221), placed in the room's phase, question
-and group at the room job's creation:
+and group at the room job's creation. No agent wrote it: its `name` and
+`external_agent_id` are empty (#1228), and so are the `polyadic_agent_*`
+columns:
 
 | Column | Value |
 | --- | --- |
@@ -931,8 +933,8 @@ contribution gets its own outcome and is left out; the others are unaffected.
 
 Both semantic-differential reports merge the completed contributions (#945):
 columns after the report's own, by service in subscription order, and, in the
-chat transcript, contributed rows attributed to the service and placed by
-time. Contributed rows must name a phase, question and group of the session.
+chat transcript, contributed rows attributed to the service, or to the
+author a row names (`authorName`, #1228), and placed by time. Contributed rows must name a phase, question and group of the session.
 The export's audit row records each contribution's outcome and counts, never
 its values. Without contributions the CSV is unchanged byte for byte. The dev
 mock adapters `mock-ai-response-review` and `mock-chat-agent` contribute, for
@@ -945,6 +947,10 @@ kept agent names, from the message row's agent, #1155), `polyadic_agent_trigger`
 and `polyadic_agent_visible_to_students = true`. Each evaluation a callback
 carried but the bridge did not publish becomes a row at the callback's receipt
 time, with the same columns and `polyadic_agent_visible_to_students = false`.
+Its `name` is the name the room shows for the agent, the evaluation's
+`display_name`, else the agent's canonical name (`Validator`), so it no longer
+reads as the guide (#1228); published messages keep the name they show in the
+chat (`agente`).
 The callback handler records, for each message it publishes, the index of the
 evaluation it came from (`publishedMessages[n].evaluationIndex`), so each
 unpublished evaluation is added exactly once. For callbacks stored without

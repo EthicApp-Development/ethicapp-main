@@ -1,3 +1,4 @@
+import { normalizeExternalAgentAuthorName } from "../../helpers/external-agent-author.js";
 import { withPlainQuestionText } from "./report-rows.js";
 
 /**
@@ -115,19 +116,43 @@ function sessionScopeProblems(rows, scope) {
     return problems;
 }
 
+// The author columns of a contributed chat row (#1228). Without
+// `authorName`, the service's agent row names it (the service id when it has
+// none). A string names the row's author, trimmed and cut as the author names
+// of published agent messages are; the row keeps the service's agent id,
+// since the service's agent row stands for every agent of the service, as it
+// does for published messages that show a room's own name for the agent. A
+// blank string counts as absent. `null` marks a row that no agent wrote:
+// empty name and no agent id.
+function contributedAuthorOf(row, { serviceId, agent }) {
+    const serviceAuthor = {
+        external_agent_id: agent?.external_agent_id ?? null,
+        name:              agent?.display_name ?? serviceId,
+    };
+    if (row.authorName === undefined) {
+        return serviceAuthor;
+    }
+    if (row.authorName === null) {
+        return { external_agent_id: null, name: null };
+    }
+    const name = normalizeExternalAgentAuthorName(row.authorName);
+    return name ? { external_agent_id: serviceAuthor.external_agent_id, name } : serviceAuthor;
+}
+
 // A contributed chat row in the transcript's columns. The generator, not the
 // service, fills the identity columns: the row is the service's, with no chat
 // message, user or gender.
 function attributedChatRow(row, { serviceId, agent, scope }) {
     const phase = scope.phases.get(row.phaseId);
     const question = row.questionId === null ? null : phase.questions.get(row.questionId);
+    const author = contributedAuthorOf(row, { serviceId, agent });
     return {
         id:                         null,
         user_id:                    null,
-        external_agent_id:          agent?.external_agent_id ?? null,
+        external_agent_id:          author.external_agent_id,
         team_id:                    row.groupId,
         author_role:                "external_service",
-        name:                       agent?.display_name ?? serviceId,
+        name:                       author.name,
         gender:                     null,
         external_service_id:        serviceId,
         question_number:            question?.question_number ?? null,

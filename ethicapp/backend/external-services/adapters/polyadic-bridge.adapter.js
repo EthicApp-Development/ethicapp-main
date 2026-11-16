@@ -781,12 +781,13 @@ function unpublishedByAgent(candidates, publishedMessages) {
         || !publishedAgents.has(agentName));
 }
 
-// The evaluations of a callback that the handler did not publish, each once:
-// those of agents that do not speak in the chat, and those of chat agents
-// whose publication failed. Evaluations without text are skipped, as the
-// handler skips them. Each published message names the evaluation it came
-// from (`evaluationIndex`); when any entry of the result lacks it, the
-// evaluations are matched by agent instead (unpublishedByAgent()).
+// The evaluations of a callback that the handler did not publish, each once,
+// with their position in `evaluations`: those of agents that do not speak in
+// the chat, and those of chat agents whose publication failed. Evaluations
+// without text are skipped, as the handler skips them. Each published message
+// names the evaluation it came from (`evaluationIndex`); when any entry of
+// the result lacks it, the evaluations are matched by agent instead
+// (unpublishedByAgent()).
 export function unpublishedEvaluations(evaluations, publishedMessages) {
     const candidates = [];
     evaluations.forEach((evaluation, index) => {
@@ -803,7 +804,17 @@ export function unpublishedEvaluations(evaluations, publishedMessages) {
         ? candidates.filter(({ index }) => !publishedMessages.some(entry => entry.evaluationIndex === index))
         : unpublishedByAgent(candidates, publishedMessages);
 
-    return unpublished.map(({ agentName, content }) => ({ agentName, content }));
+    return unpublished.map(({ index, agentName, content }) => ({ index, agentName, content }));
+}
+
+// The author of an unpublished evaluation's row (#1228): the name the room
+// shows for the agent, as its published messages do (#1026), else its
+// canonical name. Undefined, so the row is the service's, when the
+// evaluation names neither.
+function unpublishedAuthorNameOf(evaluation, agentName) {
+    return normalizeExternalAgentAuthorName(evaluation?.display_name)
+        || normalizeExternalAgentAuthorName(agentName)
+        || undefined;
 }
 
 // Where a callback's unpublished evaluations go: beside the messages the same
@@ -847,7 +858,11 @@ function placementOf({ result, ownRows, sessionId }) {
  * - Each evaluation a handled callback received but did not publish becomes
  *   a row at the result's `receivedAt`, with the same columns and
  *   `visible_to_students = false`. Published evaluations are already rows of
- *   the transcript and are never added again.
+ *   the transcript and are never added again. The row's author (#1228) is
+ *   the name the room shows for the agent, else the agent's canonical name.
+ * - A session with mediation decisions also gets their rows (#1222), each
+ *   authored by its deciding agent, and a row per room's topic list,
+ *   authored by no agent.
  *
  * `mensajes_evaluados` is not exported: it repeats the students' messages
  * under their display names.
@@ -914,11 +929,13 @@ export function buildChatTranscriptContribution(context, storedResults, {
             continue;
         }
         const { trigger, inReplyTo } = triggerOf(result);
-        for (const { agentName, content } of unpublished) {
+        for (const { index, agentName, content } of unpublished) {
+            const authorName = unpublishedAuthorNameOf(evaluations[index], agentName);
             rows.push({
                 ...placement,
                 time:    time.toISOString(),
                 message: reportText(content),
+                ...(authorName ? { authorName } : {}),
                 values:  {
                     [REPORT_COLUMNS.AGENT_NAME]:          reportText(agentName),
                     [REPORT_COLUMNS.TRIGGER]:             trigger,

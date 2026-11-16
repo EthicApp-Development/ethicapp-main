@@ -493,6 +493,7 @@ test("every decision is a row next to the transcript, no_intervention included",
         groupId:    301,
         time:       "2026-11-18T17:05:12.000Z",
         message:    null,
+        authorName: "Validator",
         values:     {
             [REPORT_COLUMNS.AGENT_NAME]:                           "Validator",
             [REPORT_COLUMNS.TRIGGER]:                              null,
@@ -533,6 +534,7 @@ test("every decision is a row next to the transcript, no_intervention included",
         groupId:    301,
         time:       "2026-11-18T17:00:00.000Z",
         message:    null,
+        authorName: null,
         values:     {
             polyadic_row_kind:           "room_topics",
             polyadic_room_topics:        JSON.stringify([
