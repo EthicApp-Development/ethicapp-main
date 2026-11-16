@@ -375,6 +375,30 @@ it, and its rooms keep the verified-destination rule. A room created again
 (lazily, for example after a restart) gets a new id that supersedes the old
 one. See `ethicapp/backend/external-services/README.md`, "Room jobs".
 
+A creation request that gets no answer leaves its outcome unknown (#1227):
+the client timed out (`AI_ADDITIONS_HTTP_TIMEOUT_MS`, 12 s by default) or the
+connection failed before a status arrived, and Polyadic may have created the
+room after EthicApp stopped waiting. The bridge then sends the same request
+once more, with the same room job and the phase clock read again:
+
+| Resend's answer | Outcome |
+| --- | --- |
+| `created`, or `ya_inicializado` echoing the id (a room the first request created) | The room job opens, bound; the room is reported as created |
+| `ya_inicializado` without the id | The room job opens unbound, as for any such answer |
+| An HTTP status (400 included) | Handled as the same answer to the first request is: the retry without configured settings, or a failure with `case_input_rejected`, `configuration_rejected` or `session_creation_failed` |
+| No answer again | The room fails with `session_creation_timed_out` |
+
+The retry without configured settings follows only an answered 400, never a
+timeout, and its own request gets the same single resend. Answers with an
+HTTP status, and EthicApp's own errors before any answer (no connection, no
+credentials), are handled as before, without a resend. A room the resend
+finds running reports no `warnings`: `ya_inicializado` carries none. Each
+request keeps the client's timeout: the resend reaches a room Polyadic
+registered before generating its welcome, so it answers without the model,
+and an unreachable Polyadic already holds the phase start for two timeouts
+per room, as its rooms are created one after another. Tests:
+`external-services/adapters/__tests__/polyadic-bridge-creation-timeout.adapter.node-test.mjs`.
+
 Polyadic callbacks target the unified callback endpoint:
 
 ```text
@@ -621,8 +645,13 @@ teacher reviewed it.
   fails and lists the rooms as `payload.roomsFailed[]` (`{ room, reason,
   ... }`); `chat-message-received` fails with the same `reason` and does not
   forward the message, and the group's next message tries again. Other
-  creation failures are listed in `roomsFailed` too, with reason
-  `session_creation_failed`, and leave the job `completed` as before.
+  creation failures are listed in `roomsFailed` too, and recorded on the
+  room job the same way, but leave the `phase-started` job `completed` as
+  before. Their reason is `session_creation_timed_out` when neither the
+  creation request nor its resend got an answer (#1227, see the resend's
+  outcomes above; Polyadic may have created the room anyway), and
+  `session_creation_failed` otherwise, with `statusCode` when Polyadic
+  answered one.
 - **What was sent.** A room created with case inputs records them on its
   room job, in `instantiation_report.caseInputs`, and in the job result's
   `payload.rooms[].caseInputs`, so the export (#1222) can resolve topic ids

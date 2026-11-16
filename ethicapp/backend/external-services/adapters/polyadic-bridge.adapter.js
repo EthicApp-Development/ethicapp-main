@@ -1,6 +1,9 @@
 import * as rpg2 from "../../db/rest-pg-2.js";
 import * as config from "../../config/database.config.js";
-import defaultAiAdditionsClient from "../../services/ai-additions-client.service.js";
+import defaultAiAdditionsClient, {
+    isAiAdditionsCredentialsMissing,
+    isAiAdditionsNotConfigured,
+} from "../../services/ai-additions-client.service.js";
 import { plainTextOf } from "../../helpers/rich-text-helper.js";
 import { describeError } from "../../helpers/log-safety.js";
 import { normalizeExternalAgentAuthorName } from "../../helpers/external-agent-author.js";
@@ -532,6 +535,59 @@ async function requestPolyadicJson(pathname, { method = "GET", body = null, time
     });
 }
 
+// Transport failures that Node's fetch (undici) and the network stack report
+// by code, on the error or on its `cause`.
+const NO_ANSWER_ERROR_CODES = new Set([
+    "ECONNREFUSED",
+    "ECONNRESET",
+    "EPIPE",
+    "EHOSTUNREACH",
+    "ENETUNREACH",
+    "ENOTFOUND",
+    "EAI_AGAIN",
+    "ETIMEDOUT",
+    "UND_ERR_CONNECT_TIMEOUT",
+    "UND_ERR_HEADERS_TIMEOUT",
+    "UND_ERR_BODY_TIMEOUT",
+    "UND_ERR_SOCKET",
+]);
+
+/**
+ * Whether a request to AI Additions ended without an answer (#1227), so its
+ * outcome is unknown: the service may or may not have acted on it.
+ *
+ * - The client aborts a request after its timeout (`AbortController`), and
+ *   fetch rejects with an `AbortError` (a `TimeoutError` for a timeout
+ *   signal).
+ * - A connection that fails before a status arrives (refused, reset, DNS)
+ *   rejects with undici's `TypeError: fetch failed`, its network code on
+ *   `cause`.
+ *
+ * Never for an answer with an HTTP status (`statusCode`, set by the client
+ * for any non-2xx), nor for EthicApp's own configuration gaps
+ * (`not_configured`, `credentials_missing`), which no resend fixes.
+ * @param {unknown} error
+ * @returns {boolean}
+ */
+export function isUnansweredRequest(error) {
+    if (!error || typeof error !== "object") {
+        return false;
+    }
+    if (Number.isInteger(error.statusCode) && error.statusCode > 0) {
+        return false;
+    }
+    if (isAiAdditionsNotConfigured(error) || isAiAdditionsCredentialsMissing(error)) {
+        return false;
+    }
+    if (error.name === "AbortError" || error.name === "TimeoutError") {
+        return true;
+    }
+    if (NO_ANSWER_ERROR_CODES.has(error.code) || NO_ANSWER_ERROR_CODES.has(error.cause?.code)) {
+        return true;
+    }
+    return error instanceof TypeError;
+}
+
 // An error that says why a room was not created (#1221), kept on its room job.
 function roomCreationFailure(reason, details, cause) {
     return Object.assign(new Error(`The Polyadic room was not created: ${reason}.`), {
@@ -566,6 +622,54 @@ function creationOutcome(response, roomCorrelationId, extra = {}) {
     };
 }
 
+// How many times one room creation is sent when it gets no answer (#1227):
+// the request and one resend.
+const ROOM_CREATION_ATTEMPTS = 2;
+
+/**
+ * Sends one room creation, `POST /rooms/{room}/sessions` with
+ * `bodyOf(phaseClock)`, and resolves to `{ response, phaseClock }`.
+ *
+ * A request without an answer (isUnansweredRequest()) leaves the outcome
+ * unknown: Polyadic may have created the room after EthicApp stopped waiting.
+ * It is sent once more with the same body, so with the same room correlation
+ * id, its clock read again. Creation is idempotent in Polyadic: for a running
+ * room it answers `ya_inicializado` and stores and echoes the id it was sent,
+ * which binds the same room job. A second request without an answer rejects
+ * with a `roomFailure` `session_creation_timed_out`.
+ *
+ * Each request keeps the client's timeout (AI_ADDITIONS_HTTP_TIMEOUT_MS,
+ * 12 s by default) rather than a longer one: a resend reaches a room that
+ * Polyadic registered before its welcome, so it answers without waiting for
+ * the model, and an unreachable Polyadic already costs the phase start two
+ * timeouts per room, its rooms being created one after another.
+ *
+ * An answer with an HTTP status, or any other error, rejects at once as the
+ * client reported it, whether the request or the resend got it.
+ */
+async function sendRoomCreation(roomName, path, resolvePhaseClock, bodyOf) {
+    for (let attempt = 1; ; attempt += 1) {
+        const phaseClock = await resolvePhaseClock();
+        try {
+            const response = await requestPolyadicJson(path, {
+                method: "POST",
+                body:   bodyOf(phaseClock),
+            });
+            return { response, phaseClock };
+        } catch (error) {
+            if (!isUnansweredRequest(error)) {
+                throw error;
+            }
+            if (attempt >= ROOM_CREATION_ATTEMPTS) {
+                throw roomCreationFailure(
+                    ROOM_FAILURE_REASONS.SESSION_CREATION_TIMED_OUT, {}, error);
+            }
+            console.warn(`[polyadic-bridge] Polyadic did not answer the creation of ${roomName}; `
+                + "sending it again with the same room job.", describeError(error));
+        }
+    }
+}
+
 /**
  * Creates the Polyadic session of a room and returns Polyadic's lifecycle
  * report, `{ warnings, degraded, configurationRejected }` (#735, recorded by
@@ -586,6 +690,11 @@ function creationOutcome(response, roomCorrelationId, extra = {}) {
  * case input, nor for a configuration that requires one: the creation then
  * fails with a `roomFailure` (`case_input_rejected` or
  * `configuration_rejected`).
+ *
+ * A request that gets no answer (#1227) is sent once more, unchanged but for
+ * its clock (sendRoomCreation()), and a second one without an answer fails
+ * the creation with `session_creation_timed_out`. The retry without the
+ * configured settings follows only an answered 400, never a timeout.
  */
 async function ensurePolyadicSession(roomName, {
     topic, locale, serviceConfiguration, roomCorrelationId = null,
@@ -593,14 +702,13 @@ async function ensurePolyadicSession(roomName, {
     caseInputs = null,
 }) {
     const path = `/rooms/${encodeURIComponent(roomName)}/sessions`;
-    let phaseClock = await resolvePhaseClock();
-    const body = buildPolyadicSessionPayload({
-        topic, locale, serviceConfiguration, roomCorrelationId, phaseClock,
-        caseInputs: caseInputs?.values ?? null,
-    });
 
     try {
-        const response = await requestPolyadicJson(path, { method: "POST", body });
+        const { response, phaseClock } = await sendRoomCreation(roomName, path, resolvePhaseClock,
+            clock => buildPolyadicSessionPayload({
+                topic, locale, serviceConfiguration, roomCorrelationId, phaseClock: clock,
+                caseInputs: caseInputs?.values ?? null,
+            }));
         console.info(`[polyadic-bridge] Polyadic session ready for ${roomName}.`);
         return creationOutcome(response, roomCorrelationId, {
             configurationRejected: false,
@@ -624,11 +732,10 @@ async function ensurePolyadicSession(roomName, {
 
         console.warn(`[polyadic-bridge] Polyadic rejected the configured settings for ${roomName}; `
             + "creating the session with EthicApp's defaults.", error.responseBody ?? error);
-        phaseClock = await resolvePhaseClock();
-        const fallback = buildPolyadicSessionPayload({
-            topic, locale, roomCorrelationId, phaseClock,
-        });
-        const response = await requestPolyadicJson(path, { method: "POST", body: fallback });
+        const { response, phaseClock } = await sendRoomCreation(roomName, path, resolvePhaseClock,
+            clock => buildPolyadicSessionPayload({
+                topic, locale, roomCorrelationId, phaseClock: clock,
+            }));
         console.info(`[polyadic-bridge] Polyadic session ready for ${roomName} without configured settings.`);
         return creationOutcome(response, roomCorrelationId, {
             configurationRejected: true,
