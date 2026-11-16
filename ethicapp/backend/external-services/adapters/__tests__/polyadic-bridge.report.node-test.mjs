@@ -180,6 +180,7 @@ test("unpublished evaluations become rows at the result's time, not visible to s
         questionId: 701,
         time:       "2026-11-02T10:00:00.000Z",
         message:    "The group agrees too fast.",
+        authorName: "Analista",
         values:     {
             polyadic_agent_name:                "Analista",
             polyadic_agent_trigger:             AGENT_TRIGGER.REACTIVE,
@@ -219,7 +220,7 @@ test("a chat agent's evaluation whose publication failed is a row, not visible t
             { agente: "Orientador", respuesta: "Shown." },
         ],
         [{ messageId: 602, agentName: "Orientador" }]
-    ), [{ agentName: "ConversationGuide", content: "Lost." }]);
+    ), [{ index: 0, agentName: "ConversationGuide", content: "Lost." }]);
 });
 
 test("legacy messages without a result link, and results without published messages, add nothing", () => {
@@ -457,8 +458,8 @@ test("indexed metadata: every evaluation not published is a row exactly once", (
             { messageId: 603, agentName: "ConversationGuide", evaluationIndex: 3 },
         ]
     ), [
-        { agentName: "Analista", content: "B" },
-        { agentName: "ConversationGuide", content: "C" },
+        { index: 1, agentName: "Analista", content: "B" },
+        { index: 2, agentName: "ConversationGuide", content: "C" },
     ]);
 });
 

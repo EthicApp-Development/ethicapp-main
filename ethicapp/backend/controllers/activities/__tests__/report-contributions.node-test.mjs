@@ -567,3 +567,109 @@ test("when the session cannot be read, contributions with rows are left out as f
     assert.equal(result.rows.length, CHAT_ROWS.length);
     assert.equal(result.rows[0].tutor_note, "ok");
 });
+
+// ─── Contributed rows' authors (#1228) ──────────────────────────────────────
+
+// Two services' contributions without `authorName`: one with an agent row,
+// one without.
+function unattributedHandlers() {
+    return {
+        "chat-service": async () => ({
+            columns: [{ id: "chat_shown" }],
+            values:  [{ rowKey: 502, values: { chat_shown: true } }],
+            rows:    [
+                { phaseId: 71, questionId: 81, groupId: 4, time: "2026-10-01T10:01:00.000Z",
+                    message: "Between, \"quoted\"", values: { chat_shown: false } },
+                { phaseId: 72, questionId: null, groupId: null, time: "2026-10-01T09:30:00.000Z" },
+            ],
+        }),
+        "tutor-service": async () => ({
+            rows: [{ phaseId: 71, questionId: 81, groupId: 5, time: "2026-10-01T10:01:30.000Z", message: "Tutor" }],
+        }),
+    };
+}
+
+test("rows without authorName export exactly as before #1228", async () => {
+    const report = await buildChat(unattributedHandlers());
+
+    // Built before #1228 from the same contributions.
+    assert.equal(csvOf(report), `${BOM}${[
+        "\"id\",\"user_id\",\"external_agent_id\",\"team_id\",\"author_role\",\"name\",\"gender\","
+            + "\"external_service_id\",\"question_number\",\"question_text\",\"left_pole\",\"right_pole\","
+            + "\"message\",\"phase_number\",\"time\",\"reply_to\",\"chat_shown\"",
+        "\"501\",\"31\",\"\",\"4\",\"A\",\"Student 1\",\"F\",\"\",\"1\",\"Should Ana report it?\",\"No\",\"Yes\","
+            + "\"Message 501\",\"1\",\"2026-10-01T10:00:00.000Z\",\"\",\"\"",
+        "\"\",\"\",\"9\",\"4\",\"external_service\",\"Chat agent\",\"\",\"chat-service\",\"1\","
+            + "\"Should Ana report it?\",\"No\",\"Yes\",\"Between, \"\"quoted\"\"\",\"1\","
+            + "\"2026-10-01T10:01:00.000Z\",\"\",\"false\"",
+        "\"502\",\"31\",\"\",\"4\",\"A\",\"Student 1\",\"F\",\"\",\"1\",\"Should Ana report it?\",\"No\",\"Yes\","
+            + "\"Message 502\",\"1\",\"2026-10-01T10:02:00.000Z\",\"\",\"true\"",
+        "\"503\",\"31\",\"\",\"5\",\"A\",\"Student 1\",\"F\",\"\",\"1\",\"Should Ana report it?\",\"No\",\"Yes\","
+            + "\"Message 503\",\"1\",\"2026-10-01T10:01:00.000Z\",\"\",\"\"",
+        "\"\",\"\",\"\",\"5\",\"external_service\",\"tutor-service\",\"\",\"tutor-service\",\"1\","
+            + "\"Should Ana report it?\",\"No\",\"Yes\",\"Tutor\",\"1\",\"2026-10-01T10:01:30.000Z\",\"\",\"\"",
+        "\"504\",\"31\",\"\",\"6\",\"A\",\"Student 1\",\"F\",\"\",\"1\",\"Should Ana report it?\",\"No\",\"Yes\","
+            + "\"Message 504\",\"2\",\"2026-10-01T09:00:00.000Z\",\"\",\"\"",
+        "\"\",\"\",\"9\",\"\",\"external_service\",\"Chat agent\",\"\",\"chat-service\",\"\",\"\",\"\",\"\",\"\","
+            + "\"2\",\"2026-10-01T09:30:00.000Z\",\"\",\"\"",
+    ].join("\n")}\n`);
+});
+
+test("authorName names a contributed row's author, or no agent", async () => {
+    const at = minute => `2026-10-01T10:${String(minute).padStart(2, "0")}:00.000Z`;
+    const report = await buildChat({
+        "chat-service": async () => ({
+            rows: [
+                { phaseId: 71, time: at(10), message: "Named", authorName: "Validator" },
+                { phaseId: 71, time: at(11), message: "Trimmed and cut", authorName: `  ${"é".repeat(90)}  ` },
+                { phaseId: 71, time: at(12), message: "Nobody", authorName: null },
+                { phaseId: 71, time: at(13), message: "Blank", authorName: "   " },
+                { phaseId: 71, time: at(14), message: "Absent" },
+            ],
+        }),
+        "tutor-service": async () => ({
+            rows: [
+                { phaseId: 71, time: at(15), message: "Named, no agent row", authorName: "Tutor" },
+                { phaseId: 71, time: at(16), message: "Nobody, no agent row", authorName: null },
+            ],
+        }),
+    }, { rows: [] });
+
+    assert.deepEqual(report.rows.map(row => [row.message, row.name, row.external_agent_id, row.author_role]), [
+        ["Named", "Validator", 9, "external_service"],
+        // As the author names of published agent messages: 80 characters.
+        ["Trimmed and cut", "é".repeat(80), 9, "external_service"],
+        ["Nobody", null, null, "external_service"],
+        ["Blank", "Chat agent", 9, "external_service"],
+        ["Absent", "Chat agent", 9, "external_service"],
+        ["Named, no agent row", "Tutor", null, "external_service"],
+        ["Nobody, no agent row", null, null, "external_service"],
+    ]);
+    assert.ok(report.rows.every(row => !Object.hasOwn(row, "authorName")), "authorName is not a column");
+    assert.deepEqual(report.columns, SEMANTIC_DIFFERENTIAL_CHAT_COLUMNS);
+});
+
+test("an authorName that is neither a string nor null makes the contribution invalid", async () => {
+    for (const authorName of [7, true, {}, ["Validator"], "x".repeat(10001)]) {
+        const { result, warnings } = await captureWarnings(() => buildChat({
+            "chat-service": async () => ({
+                rows: [
+                    { phaseId: 71, time: "2026-10-01T10:00:00.000Z", message: "Fine", authorName: "Validator" },
+                    { phaseId: 71, time: "2026-10-01T10:01:00.000Z", message: PRIVATE_MARKER, authorName },
+                ],
+            }),
+        }));
+
+        assert.deepEqual(result.contributions, [{
+            serviceId: "chat-service",
+            status:    "invalid",
+            columns:   0,
+            values:    0,
+            rows:      0,
+            reason:    "the contribution is invalid",
+            problems:  ["rows[1].authorName must be a string of at most 10000 characters or null"],
+        }]);
+        assert.equal(result.rows.length, CHAT_ROWS.length);
+        assert.doesNotMatch(warnings.join("\n"), new RegExp(PRIVATE_MARKER, "u"));
+    }
+});

@@ -827,7 +827,7 @@ to add) or to:
 {
     columns: [{ id: "ats_title", label: "Title" }],         // label optional
     values:  [{ rowKey: 101, values: { ats_title: "..." } }],
-    rows:    [{ phaseId, questionId, groupId, time, message, values }], // chat transcript only
+    rows:    [{ phaseId, questionId, groupId, time, message, authorName, values }], // chat transcript only
 }
 ```
 
@@ -842,6 +842,11 @@ to add) or to:
   date (normalized to ISO 8601), `message` a string or `null`, and `values` as
   above. The generator fills the identity columns itself and attributes the row
   to the service (`author_role = external_service`, #945).
+- `authorName` (optional, #1228) names who wrote a row, for a service with
+  more than one agent: a string of at most 10,000 characters, or `null` for a
+  row that no agent wrote, such as a record of what the service was given.
+  Without the key the row is attributed to the service's agent, as before.
+  Any other value makes the contribution `invalid`.
 - Unknown keys, unknown row keys, undeclared columns, non-scalar or over-long
   values, and rows for the responses report make the whole contribution
   `invalid`. Long strings are not truncated.
@@ -868,6 +873,14 @@ reports still answer 501.
   (the service id when it has none), the question columns from `questionId`,
   `team_id` from `groupId`, and `phase_number` from `phaseId`. `id`, `user_id`,
   `gender` and `reply_to` stay empty.
+- A row's `authorName` (#1228) changes only its author columns. A string is
+  the row's `name`, trimmed and cut to 80 characters like the author names of
+  published agent messages (`helpers/external-agent-author.js`); the row keeps
+  the service's `external_agent_id`, which stands for every agent of the
+  service, as on published messages whose `name` is the room's own name for
+  the agent (#1026). A blank string counts as absent. `null` leaves `name` and
+  `external_agent_id` empty. A contribution without `authorName` exports
+  exactly as before.
 - Contributed rows are placed in the transcript's order (phase, question,
   group, time, NULLs last). The report's own rows keep their order; a
   contributed row that ties one of them goes after it, and ties between

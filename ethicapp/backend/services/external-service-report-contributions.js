@@ -48,7 +48,9 @@ const COLUMN_ID_PATTERN = /^[a-z][a-z0-9_]*$/u;
 const CONTRIBUTION_KEYS     = Object.freeze(["columns", "values", "rows"]);
 const COLUMN_KEYS           = Object.freeze(["id", "label"]);
 const VALUE_ENTRY_KEYS      = Object.freeze(["rowKey", "values"]);
-const CONTRIBUTED_ROW_KEYS  = Object.freeze(["phaseId", "questionId", "groupId", "time", "message", "values"]);
+const CONTRIBUTED_ROW_KEYS  = Object.freeze([
+    "phaseId", "questionId", "groupId", "time", "message", "authorName", "values",
+]);
 
 function isPlainObject(value) {
     return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -224,12 +226,23 @@ function validateContributedRows(rows, { reportType, columnIds }, problems) {
                 + `${MAX_CONTRIBUTION_STRING_LENGTH} characters or null`);
         }
 
+        // Who wrote the row (#1228): a name, null for a row no agent wrote,
+        // or absent for the service's agent. Absent stays absent, so the
+        // generator can tell it from null.
+        if (row.authorName !== undefined && row.authorName !== null
+            && (typeof row.authorName !== "string"
+                || row.authorName.length > MAX_CONTRIBUTION_STRING_LENGTH)) {
+            problems.push(`${label}.authorName must be a string of at most `
+                + `${MAX_CONTRIBUTION_STRING_LENGTH} characters or null`);
+        }
+
         normalized.push({
             phaseId:    row.phaseId,
             questionId: row.questionId ?? null,
             groupId:    row.groupId ?? null,
             time:       time && !Number.isNaN(time.getTime()) ? time.toISOString() : null,
             message:    typeof row.message === "string" ? row.message : null,
+            ...(row.authorName === undefined ? {} : { authorName: row.authorName }),
             values:     row.values === undefined
                 ? {}
                 : validateCellValues(row.values, columnIds, `${label}.values`, problems),
@@ -251,7 +264,10 @@ function validateContributedRows(rows, { reportType, columnIds }, problems) {
  *   to scalars: strings of at most MAX_CONTRIBUTION_STRING_LENGTH characters,
  *   finite numbers, booleans or null.
  * - `rows`, chat transcript only: `[{ phaseId, questionId?, groupId?, time,
- *   message?, values? }]`. The generator attributes them to the service.
+ *   message?, authorName?, values? }]`. The generator attributes them to the
+ *   service; `authorName` (#1228), a string of at most
+ *   MAX_CONTRIBUTION_STRING_LENGTH characters or null, names the row's author
+ *   instead (null: no agent wrote it).
  *
  * Any problem makes the whole contribution invalid.
  *
