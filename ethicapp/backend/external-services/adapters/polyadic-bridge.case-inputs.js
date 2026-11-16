@@ -32,17 +32,22 @@ export const DISCUSSION_TOPICS_INPUT = "discussion_topics";
 // result.
 export const ROOM_FAILURE_REASONS = Object.freeze({
     // A required case input has no usable analysis (helper `missing`).
-    MISSING_CASE_INPUTS:     "missing_case_inputs",
+    MISSING_CASE_INPUTS:        "missing_case_inputs",
     // A case analysis could not be read while an input was required.
-    CASE_INPUTS_UNREADABLE:  "case_inputs_unreadable",
+    CASE_INPUTS_UNREADABLE:     "case_inputs_unreadable",
     // Polyadic answered 400 naming a case input.
-    CASE_INPUT_REJECTED:     "case_input_rejected",
+    CASE_INPUT_REJECTED:        "case_input_rejected",
     // Polyadic answered 400 for a configuration that requires a case input;
     // without its settings the room would run another mode, so it is not
     // retried.
-    CONFIGURATION_REJECTED:  "configuration_rejected",
-    // Any other failure (Polyadic unreachable, 5xx, a 400 retried in vain).
-    SESSION_CREATION_FAILED: "session_creation_failed",
+    CONFIGURATION_REJECTED:     "configuration_rejected",
+    // Neither the creation request nor its resend got an answer (#1227): a
+    // timeout, or a connection error without an HTTP status. Polyadic may
+    // have created the room anyway.
+    SESSION_CREATION_TIMED_OUT: "session_creation_timed_out",
+    // Any other failure (an HTTP error status such as a 5xx, a 400 retried
+    // in vain, or an error before any request was sent).
+    SESSION_CREATION_FAILED:    "session_creation_failed",
 });
 
 const MAX_REJECTION_TEXT_LENGTH = 500;

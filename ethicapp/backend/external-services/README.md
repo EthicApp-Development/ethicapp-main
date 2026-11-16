@@ -215,6 +215,14 @@ Polyadic:
   it is refused (`409`). An older Polyadic does not echo the field; its rooms
   stay unbound and keep the verified-destination rule above. Either release
   can therefore ship first.
+- A creation request that gets no answer (a timeout, or a connection error
+  without an HTTP status) is sent once more with the same room job (#1227),
+  since Polyadic may have created the room after EthicApp stopped waiting.
+  For a running room Polyadic answers `ya_inicializado` and echoes the id,
+  so the same job opens bound. The job fails only when the resend gets no
+  answer either, with `failure.reason` `session_creation_timed_out`; until
+  then it is `pending` and accepts the room's first callbacks. `EXTERNAL.md`
+  lists the resend's outcomes.
 
 `open(id, { bound, report })` and `fail(id, { report })` may store the
 adapter's report on the room in the job's `instantiation_report`. Polyadic
