@@ -43,6 +43,32 @@ than this file; see their GitHub Releases.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v2026.11.16] - 2026-11-16
+
+EthicApp supports Polyadic's content coverage mode: it sends each case's discussion topics and stores and exports the agent's decisions (ethicapp-ai-additions epic #293).
+
+Partial release: only the `ethicapp`, `management-console` and `db-migrations` images.
+
+### Added
+
+- Saving a design, the design editor and phase start check the case inputs that a service's descriptor requires (`session_inputs` with a `source` and `required_when`). A configuration that needs a case analysis the case does not have is refused with `400 MISSING_CASE_INPUTS` when saved and `422 MISSING_CASE_INPUTS` at phase start, naming what is missing (#1220).
+- The Polyadic adapter sends the case's topic listing (`topic-listing/v1`, drafts included) as `discussion_topics` when the room's configuration requires it, and records the listing it sent on the room job. A room that requires topics never falls back to Polyadic's defaults (#1221).
+- Polyadic callbacks may carry `mediation-decision/v1` records, also with `evaluations: []`. They are stored once per `decisionId` in `external_service_mediation_decisions` and exported in the chat transcript as `decision` rows, with one `room_topics` row per room (#1222).
+- Forgetting a student replaces their names and verbatim fragments in the stored decisions' `reason`, as in agent messages (#1222).
+- The chat transcript exports what made each agent message speak (`session_start`, `time_milestone`, `inactivity`, `mention`, `message`, `window_full`, `adaptive_window`) and, for a guide message a decision asked for, that decision's id. Callbacks without Polyadic's `trigger` export `reactive` or `unknown` as before (#1226).
+- `canonical-schemas/ai-additions/` holds `mediation-decision/v1` and its examples, identical to ethicapp-ai-additions `v2026.11.16-ai-additions` (#1222).
+
+### Changed
+
+- Rows a service contributes to a transcript can name their author (`authorName`). Decision rows name `Validator` and `room_topics` rows no author, where both named the service's agent (#1228).
+- A room creation that gets no answer from Polyadic is sent once more with the same room job; if that also gets no answer, the room fails with `session_creation_timed_out` (#1227).
+
+### Deployment
+
+- Migrations: V46 (adds `external_service_mediation_decisions`).
+- Environment contract: unchanged.
+- Deploy before ethicapp-ai-additions `v2026.11.16-ai-additions`, or in the same window. Its Polyadic sends decision-only callbacks (`evaluations: []`), which EthicApp before this release rejects; this release works with the earlier Polyadic.
+
 ## [v2026.11.15] - 2026-11-15
 
 EthicApp reads the Argumentation Tutor's v19 rubric evaluations (ethicapp-ai-additions epic #267), and student responses in anonymous phases no longer carry peers' names (#1199).
@@ -929,6 +955,8 @@ Earliest published image set of ethicapp-main in the registry, built from 32b294
 - A GitHub workflow publishes the service images to GHCR, and a canonical environment contract (`config/env.contract.yml`) describes the deployment variables.
 - Production Compose runs separate Redis instances for sessions and for cache, configured with `REDIS_SESSION_*` and `REDIS_CACHE_*` and falling back to `REDIS_*`.
 
+[v2026.11.16]: https://github.com/EthicApp-Development/ethicapp-main/releases/tag/v2026.11.16
+[v2026.11.15]: https://github.com/EthicApp-Development/ethicapp-main/releases/tag/v2026.11.15
 [v2026.11.12.2]: https://github.com/EthicApp-Development/ethicapp-main/releases/tag/v2026.11.12.2
 [v2026.11.12.1]: https://github.com/EthicApp-Development/ethicapp-main/releases/tag/v2026.11.12.1
 [v2026.11.12]: https://github.com/EthicApp-Development/ethicapp-main/releases/tag/v2026.11.12
