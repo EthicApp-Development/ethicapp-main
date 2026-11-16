@@ -692,9 +692,18 @@ evaluations as before, then handles `decisions`:
 lists the decisions next to the conversation they refer to, as rows the
 bridge contributes (see "Report contributions"). A session without stored
 decisions keeps its transcript exactly as before: the same four
-`polyadic_agent_*` columns and values. With decisions, the bridge adds these
-columns after its own, and two kinds of rows, told apart by
-`polyadic_row_kind`. The report's other rows leave the new columns empty.
+`polyadic_agent_*` columns and values. With decisions, the bridge adds
+`polyadic_agent_decision_id` and these columns after its own, and two kinds
+of rows, told apart by `polyadic_row_kind`. The report's other rows leave the
+new columns empty.
+
+`polyadic_agent_decision_id` (#1226) is on agent message rows: the
+`decisionId` of the decision that asked the agent to speak, from the
+evaluation's `trigger.decision_id` (ethicapp-ai-additions#303), else empty
+(also when it is not a UUID). It equals that decision row's
+`polyadic_decision_id`, so a guide intervention and its decision join both
+ways: the decision row's `polyadic_decision_intervention_message_id` is the
+guide row's `id`. Decision and room rows leave it empty.
 
 A decision row (`polyadic_row_kind = decision`) is placed in its room's
 phase, question and group at the decision's `decidedAt`. Its `message`,
@@ -956,14 +965,33 @@ evaluation it came from (`publishedMessages[n].evaluationIndex`), so each
 unpublished evaluation is added exactly once. For callbacks stored without
 that index, a chat agent's evaluations are added only when none of its
 evaluations was published; when some were, which ones failed cannot be told,
-and none is added. The trigger is `reactive` only when the callback correlates with the
-`chat-message-received` job of a student message, whose id is then
-`polyadic_agent_in_reply_to`; it is `unknown` otherwise, since Polyadic sends
-both its proactive interventions and its window-event replies on the room's
-correlation id (#833). Messages published before #947 get no values.
+and none is added. Messages published before #947 get no values.
+
+`polyadic_agent_trigger` says what made the agent speak (#1226). Polyadic sends
+it in each callback evaluation's `trigger.kind` (ethicapp-ai-additions#303),
+and the export gives that kind verbatim, read from the row's own evaluation:
+for a published message, the evaluation its `evaluationIndex` names; for an
+unpublished evaluation's row, that evaluation.
+
+| Value | Meaning |
+| --- | --- |
+| `session_start` | The welcome when the room's session starts. |
+| `time_milestone` | A time milestone of a timed room (25, 50 or 75 % of the phase). |
+| `inactivity` | A prompt after the room has been silent. |
+| `mention` | A reply to a participant's `@mention` of the agent. |
+| `message` | A pipeline reply to a participant's message. |
+| `adaptive_window`, `window_full` | An evaluation of a window of messages (`adaptive_window` in `contentCoverage` rooms), and a guide intervention it asked for. |
+| `reactive` | Without a `trigger` (an older Polyadic, or a callback stored before it sent one): the callback correlates with the `chat-message-received` job of a student message. |
+| `unknown` | Without a `trigger`, any other callback: Polyadic sends both its proactive interventions and its window-event replies on the room's correlation id (#833). Also a `trigger` whose `kind` is not a lowercase identifier (`^[a-z][a-z0-9_]*$`, 64 characters at most). |
+
+Polyadic may add kinds; they are exported as they come. Callbacks without
+`trigger` export as before #1226, so earlier sessions keep their values.
+`polyadic_agent_in_reply_to` still comes from the callback's job: the student
+message whose `chat-message-received` job the callback correlates with, else
+empty.
 In a session with stored mediation decisions (#1222), the bridge also adds a
 row per decision and a row per room's topic list, with their own columns
-(see "Polyadic mediation decisions").
+(see "Polyadic mediation decisions"), and `polyadic_agent_decision_id`.
 
 The contract, the reader and the catalog's `report.columnPrefix` are described
 in `ethicapp/backend/external-services/README.md`, "Report building".

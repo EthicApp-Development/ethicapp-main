@@ -13,6 +13,7 @@ import {
 import { PARTICIPANT_ACTIVITY_HOOK } from "../catalog.js";
 import { sendRoomActivity } from "./polyadic-bridge.activity.js";
 import {
+    decisionIdOf,
     DECISION_REPORT_COLUMN_DECLARATIONS,
     decisionTranscriptRows,
     resolveRoomTopics,
@@ -694,6 +695,9 @@ export const REPORT_COLUMNS = Object.freeze({
     TRIGGER:             "polyadic_agent_trigger",
     IN_REPLY_TO:         "polyadic_agent_in_reply_to",
     VISIBLE_TO_STUDENTS: "polyadic_agent_visible_to_students",
+    // Declared with the decision columns (#1226): only a transcript whose
+    // session has mediation decisions gets it.
+    DECISION_ID:         "polyadic_agent_decision_id",
 });
 
 const REPORT_COLUMN_DECLARATIONS = Object.freeze([
@@ -703,18 +707,34 @@ const REPORT_COLUMN_DECLARATIONS = Object.freeze([
     { id: REPORT_COLUMNS.VISIBLE_TO_STUDENTS, label: "Visible to students" },
 ]);
 
-// What made an agent speak, as far as EthicApp can tell. Polyadic's callback
-// does not say. A reactive reply carries the correlation id of the student
+const DECISION_ID_COLUMN_DECLARATION = Object.freeze({
+    id:    REPORT_COLUMNS.DECISION_ID,
+    label: "Decision that made the agent speak",
+});
+
+// What made an agent speak. Polyadic says it in each callback evaluation's
+// `trigger.kind` (ethicapp-ai-additions#303): `session_start`,
+// `time_milestone`, `inactivity`, `mention`, `message`, or the window step's
+// kind (`adaptive_window`, `window_full`); the export gives the kind
+// verbatim. An evaluation without `trigger` (an older Polyadic, or a callback
+// stored before it sent one) falls back to what EthicApp can tell from the
+// callback: a reactive reply carries the correlation id of the student
 // message it answers, the id of that message's chat-message-received job,
-// whose `source` names the message (#946). Every other callback is `unknown`:
-// on the room job's correlation id (#833) Polyadic sends its proactive
-// interventions (welcome, time milestones, inactivity), but also the replies
-// of its window events, which answer the room's recent messages; and a
-// callback without a job (before #833) may be either too.
+// whose `source` names the message (#946). Every other such callback is
+// `unknown`: on the room job's correlation id (#833) Polyadic sends its
+// proactive interventions (welcome, time milestones, inactivity), but also
+// the replies of its window events, which answer the room's recent messages;
+// and a callback without a job (before #833) may be either too. A `trigger`
+// whose kind is not an identifier is `unknown` too.
 export const AGENT_TRIGGER = Object.freeze({
     REACTIVE: "reactive",
     UNKNOWN:  "unknown",
 });
+
+// The shape of Polyadic's trigger kinds, as `mediation-decision/v1` gives
+// its `trigger.kind`.
+const TRIGGER_KIND_PATTERN = /^[a-z][a-z0-9_]*$/u;
+const MAX_TRIGGER_KIND_LENGTH = 64;
 
 function positiveIdOf(value) {
     const id = Number(value);
@@ -734,6 +754,43 @@ function triggerOf(result) {
         return { trigger: AGENT_TRIGGER.REACTIVE, inReplyTo: positiveIdOf(source.id) };
     }
     return { trigger: AGENT_TRIGGER.UNKNOWN, inReplyTo: null };
+}
+
+function isTriggerKind(value) {
+    return typeof value === "string" && value.length <= MAX_TRIGGER_KIND_LENGTH
+        && TRIGGER_KIND_PATTERN.test(value);
+}
+
+// What made one evaluation's agent speak (#1226): the evaluation's own
+// `trigger.kind` and `trigger.decision_id` when it carries a `trigger`, else
+// the callback's (triggerOf()). The answered message always comes from the
+// callback's job. `evaluation` is undefined when the row's evaluation cannot
+// be told, as for messages published before #949.
+function evaluationTriggerOf(evaluation, result) {
+    const callbackTrigger = triggerOf(result);
+    const trigger = isPlainObject(evaluation) ? evaluation.trigger : undefined;
+    if (trigger === undefined || trigger === null) {
+        return { ...callbackTrigger, decisionId: null };
+    }
+    return {
+        trigger:    isTriggerKind(trigger?.kind) ? trigger.kind : AGENT_TRIGGER.UNKNOWN,
+        inReplyTo:  callbackTrigger.inReplyTo,
+        decisionId: isPlainObject(trigger) ? decisionIdOf(trigger.decision_id) : null,
+    };
+}
+
+// The bridge's agent columns of a row; the decision link only in a
+// transcript that declares it.
+function agentValues({
+    agentName, trigger, inReplyTo, decisionId = null, visible,
+}, { withDecisions }) {
+    return {
+        [REPORT_COLUMNS.AGENT_NAME]:          reportText(agentName),
+        [REPORT_COLUMNS.TRIGGER]:             trigger,
+        [REPORT_COLUMNS.IN_REPLY_TO]:         inReplyTo,
+        [REPORT_COLUMNS.VISIBLE_TO_STUDENTS]: visible,
+        ...(withDecisions ? { [REPORT_COLUMNS.DECISION_ID]: decisionId } : {}),
+    };
 }
 
 // The agent of a message the bridge published (#1155): the name its callback
@@ -849,12 +906,14 @@ function placementOf({ result, ownRows, sessionId }) {
  *
  * - Each agent message the bridge published from a callback (linked by
  *   `externalServiceResultId`, #947) gets the agent that wrote it, the
- *   trigger, the student message it answered when known, and
- *   `visible_to_students = true`. Messages published before #947 have no
- *   link and get no values. The agent is the one the callback recorded,
- *   unless that name is not a chat agent's: then the erasure redacted the
- *   result of an anonymized student (V31), and the message row's agent
- *   (`externalAgentName`) names it (#1155).
+ *   trigger of the evaluation it came from (#1226), the student message it
+ *   answered when known, and `visible_to_students = true`; in a session with
+ *   mediation decisions, also the decision that made the agent speak.
+ *   Messages published before #947 have no link and get no values. The
+ *   agent is the one the callback recorded, unless that name is not a chat
+ *   agent's: then the erasure redacted the result of an anonymized student
+ *   (V31), and the message row's agent (`externalAgentName`) names it
+ *   (#1155).
  * - Each evaluation a handled callback received but did not publish becomes
  *   a row at the result's `receivedAt`, with the same columns and
  *   `visible_to_students = false`. Published evaluations are already rows of
@@ -872,6 +931,7 @@ export function buildChatTranscriptContribution(context, storedResults, {
     roomTopics = new Map(),
 } = {}) {
     const serviceId = context.serviceId;
+    const withDecisions = decisions.length > 0;
     const callbacks = new Map();
     for (const result of storedResults) {
         const handled = handledCallbackOf(result);
@@ -896,19 +956,21 @@ export function buildChatTranscriptContribution(context, storedResults, {
         if (!handled) {
             continue;
         }
-        const { trigger, inReplyTo } = triggerOf(handled.result);
         for (const row of ownRows) {
             const published = handled.publishedMessages
                 .find(entry => entry?.messageId !== null && entry?.messageId !== undefined
                     && String(entry.messageId) === String(row.messageId));
+            // The evaluation the message came from (#949), for its trigger.
+            const evaluation = isEvaluationIndex(published?.evaluationIndex, handled.evaluations)
+                ? handled.evaluations[published.evaluationIndex]
+                : undefined;
             values.push({
                 rowKey: row.messageId,
-                values: {
-                    [REPORT_COLUMNS.AGENT_NAME]:          reportText(publishedAgentName(published, row)),
-                    [REPORT_COLUMNS.TRIGGER]:             trigger,
-                    [REPORT_COLUMNS.IN_REPLY_TO]:         inReplyTo,
-                    [REPORT_COLUMNS.VISIBLE_TO_STUDENTS]: true,
-                },
+                values: agentValues({
+                    agentName: publishedAgentName(published, row),
+                    ...evaluationTriggerOf(evaluation, handled.result),
+                    visible:   true,
+                }, { withDecisions }),
             });
         }
     }
@@ -928,7 +990,6 @@ export function buildChatTranscriptContribution(context, storedResults, {
         if (!placement) {
             continue;
         }
-        const { trigger, inReplyTo } = triggerOf(result);
         for (const { index, agentName, content } of unpublished) {
             const authorName = unpublishedAuthorNameOf(evaluations[index], agentName);
             rows.push({
@@ -936,34 +997,37 @@ export function buildChatTranscriptContribution(context, storedResults, {
                 time:    time.toISOString(),
                 message: reportText(content),
                 ...(authorName ? { authorName } : {}),
-                values:  {
-                    [REPORT_COLUMNS.AGENT_NAME]:          reportText(agentName),
-                    [REPORT_COLUMNS.TRIGGER]:             trigger,
-                    [REPORT_COLUMNS.IN_REPLY_TO]:         inReplyTo,
-                    [REPORT_COLUMNS.VISIBLE_TO_STUDENTS]: false,
-                },
+                values:  agentValues({
+                    agentName,
+                    ...evaluationTriggerOf(evaluations[index], result),
+                    visible: false,
+                }, { withDecisions }),
             });
         }
     }
 
     // The mediation decisions (#1222) add their columns and rows only when
     // the session has any, so every other transcript stays as it was.
-    if (decisions.length === 0) {
+    if (!withDecisions) {
         return {
             columns: REPORT_COLUMN_DECLARATIONS.map(column => ({ ...column })),
             values,
             rows,
         };
     }
-    const decisionRows = decisionTranscriptRows(decisions, roomTopics, decision => ({
-        [REPORT_COLUMNS.AGENT_NAME]:          reportText(decision.record?.agent),
-        [REPORT_COLUMNS.TRIGGER]:             null,
-        [REPORT_COLUMNS.IN_REPLY_TO]:         null,
-        [REPORT_COLUMNS.VISIBLE_TO_STUDENTS]: false,
-    }));
+    // A decision row's own trigger is in its decision columns.
+    const decisionRows = decisionTranscriptRows(decisions, roomTopics, decision => agentValues({
+        agentName: decision.record?.agent,
+        trigger:   null,
+        inReplyTo: null,
+        visible:   false,
+    }, { withDecisions }));
     return {
-        columns: [...REPORT_COLUMN_DECLARATIONS, ...DECISION_REPORT_COLUMN_DECLARATIONS]
-            .map(column => ({ ...column })),
+        columns: [
+            ...REPORT_COLUMN_DECLARATIONS,
+            DECISION_ID_COLUMN_DECLARATION,
+            ...DECISION_REPORT_COLUMN_DECLARATIONS,
+        ].map(column => ({ ...column })),
         values,
         rows: [...rows, ...decisionRows],
     };

@@ -482,7 +482,10 @@ test("every decision is a row next to the transcript, no_intervention included",
 
     const validation = validate(contribution, rows);
     assert.equal(validation.valid, true, JSON.stringify(validation.problems));
-    assert.deepEqual(contribution.columns.map(column => column.id), [...LEGACY_COLUMNS, ...DECISION_COLUMNS]);
+    // The decision link of agent messages (#1226) comes with the decision columns.
+    assert.deepEqual(contribution.columns.map(column => column.id), [
+        ...LEGACY_COLUMNS, "polyadic_agent_decision_id", ...DECISION_COLUMNS,
+    ]);
     assert.deepEqual(contribution.values, []);
     assert.equal(contribution.rows.length, 5);
 
@@ -499,6 +502,7 @@ test("every decision is a row next to the transcript, no_intervention included",
             [REPORT_COLUMNS.TRIGGER]:                              null,
             [REPORT_COLUMNS.IN_REPLY_TO]:                          null,
             [REPORT_COLUMNS.VISIBLE_TO_STUDENTS]:                  false,
+            [REPORT_COLUMNS.DECISION_ID]:                          null,
             polyadic_row_kind:                                     "decision",
             polyadic_decision_id:                                  "0b9e8a52-7a1f-4f7e-9d43-5c1e2f3a4b01",
             polyadic_decision_pipeline_type:                       "contentCoverage",
@@ -580,6 +584,7 @@ test("decision rows sit beside the transcript's own contributed rows", () => {
             polyadic_agent_trigger:             "unknown",
             polyadic_agent_in_reply_to:         null,
             polyadic_agent_visible_to_students: true,
+            polyadic_agent_decision_id:         null,
         },
     }]);
     assert.equal(contribution.rows.length, 1);

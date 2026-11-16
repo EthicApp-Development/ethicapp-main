@@ -116,6 +116,15 @@ function textOrNull(value) {
         : null;
 }
 
+/**
+ * A decision id another record refers to, such as a callback evaluation's
+ * `trigger.decision_id` (#1226): the value when it is the UUID a record's
+ * `decisionId` must be, else null.
+ */
+export function decisionIdOf(value) {
+    return loggableDecisionId({ decisionId: value });
+}
+
 function isoTimeOf(value) {
     if (value === null || value === undefined) {
         return null;
