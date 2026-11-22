@@ -1,12 +1,14 @@
 // Configuration form for one external service in one design phase (#732).
 // Built from the service's capability descriptor fields, loaded in the UI
 // language (#745), and stored in `phase.externalServices.configurations`
-// (#729). The rules come from service-configuration-form.js.
+// (#729). The rules come from service-configuration-form.js. A field whose
+// `applies_when` does not hold is hidden and keeps its stored value (#1234).
 
 import { normalizeExternalServicesConfig } from "../helpers/phase-external-services.js";
 import {
     advancedNeedsAttention,
     buildFieldSections,
+    conditionFieldKeys,
     configurationErrors,
     controlKind,
     defaultText,
@@ -162,6 +164,12 @@ function ServiceConfigurationFormController($scope, $rootScope, $translate,
     function store(field, value) {
         setConfigurationValue(configurations(), vm.serviceId, field.key, value);
         delete serverErrorsByField[field.key];
+        // A field another field's `applies_when` names (#1234) shows or hides
+        // that field: the sections follow it. Other changes keep the sections,
+        // as the form always did.
+        if (conditionFieldKeys(vm.fields).has(field.key)) {
+            vm.sections = buildFieldSections(vm.fields, currentConfiguration());
+        }
         vm.validate();
     }
 
