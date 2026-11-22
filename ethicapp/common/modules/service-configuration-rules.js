@@ -6,7 +6,10 @@
 // `fields` use the shape of ethicapp/backend/services/capability-descriptors.service.js:
 // { key, type, required, default, status, supersededBy, validation }, where
 // `validation` is { entries } for enum, { minimum, maximum, step } for integer
-// and number, { maxLength, pattern, multiline } for text, {} for boolean.
+// and number, { maxLength, pattern, multiline } for text, {} for boolean, and
+// `appliesWhen` on the fields that apply to some configurations only (#1234).
+
+import { fieldApplies, fieldsByKeyOf } from "./configuration-conditions.js";
 
 const STEP_TOLERANCE = 1e-9;
 
@@ -105,6 +108,11 @@ function deprecation(key, code, value, supersededBy) {
 /**
  * Checks one configuration against a service's normalized descriptor fields.
  * Pure: no lifecycle policy, no stored design.
+ *
+ * A field that does not apply to the configuration (its `appliesWhen` does
+ * not hold, #1234) is not checked: its value, which the design keeps for
+ * when the field applies again, is never sent, so it can neither block a
+ * save nor warn, and the field is never required.
  * @param {object} configuration field key → scalar
  * @param {object[]} fields normalized descriptor fields (capability-descriptors.service.js)
  * @returns {{ problems: object[], deprecations: object[] }}
@@ -113,7 +121,8 @@ function deprecation(key, code, value, supersededBy) {
 export function checkServiceConfiguration(configuration, fields) {
     const problems = [];
     const deprecations = [];
-    const fieldsByKey = new Map(fields.map(field => [field.key, field]));
+    const fieldsByKey = fieldsByKeyOf(fields);
+    const applies = field => fieldApplies(field, configuration, fieldsByKey);
 
     for (const [key, value] of Object.entries(configuration)) {
         const field = fieldsByKey.get(key);
@@ -121,7 +130,7 @@ export function checkServiceConfiguration(configuration, fields) {
             problems.push({ field: key, code: "unknown_field", value });
             continue;
         }
-        if (isUnset(value)) {
+        if (isUnset(value) || !applies(field)) {
             continue; // the service default applies; `required` is checked below
         }
 
@@ -143,7 +152,7 @@ export function checkServiceConfiguration(configuration, fields) {
     }
 
     for (const field of fields) {
-        if (field.required && isUnset(configuration[field.key])) {
+        if (field.required && isUnset(configuration[field.key]) && applies(field)) {
             problems.push({ field: field.key, code: "required", value: null });
         }
     }
