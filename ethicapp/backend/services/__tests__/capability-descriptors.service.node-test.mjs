@@ -258,6 +258,132 @@ test("normalizeDescriptor: drops unusable and repeated fields with warnings", ()
     ]);
 });
 
+// ─── applies_when on instance fields (#1234) ─────────────────────────────────
+
+// Polyadic's `pipeline_type` and the advanced `topic_tracking` that applies
+// to `contentCoverage` rooms only (ethicapp-ai-additions#314, #319).
+function pipelineTypeField() {
+    return {
+        key:        "pipeline_type",
+        type:       "enum",
+        required:   false,
+        default:    "standard",
+        display:    { label: "Discussion Mode", group: "General", order: 10 },
+        validation: { enum: [
+            { value: "standard", label: "Standard" },
+            { value: "contentCoverage", label: "Content coverage" },
+        ] },
+    };
+}
+
+function topicTrackingField(overrides = {}) {
+    return {
+        key:          "topic_tracking",
+        type:         "boolean",
+        required:     false,
+        default:      true,
+        display:      { label: "Topic tracking", group: "advanced", order: 90 },
+        validation:   {},
+        applies_when: [{ field: "pipeline_type", in: ["contentCoverage"] }],
+        ...overrides,
+    };
+}
+
+function withFields(...extraFields) {
+    const raw = makeDescriptor();
+    raw.instance_configuration.fields.push(...extraFields);
+    return raw;
+}
+
+test("normalizeDescriptor: keeps a valid applies_when as appliesWhen", () => {
+    const result = normalizeDescriptor(withFields(pipelineTypeField(), topicTrackingField()),
+        "polyadic-agent");
+
+    assert.equal(result.ok, true);
+    assert.deepEqual(result.warnings, []);
+    const topicTracking = result.descriptor.fields.find(field => field.key === "topic_tracking");
+    assert.deepEqual(topicTracking.appliesWhen,
+        [{ field: "pipeline_type", in: ["contentCoverage"] }]);
+    assert.equal(topicTracking.group, "advanced");
+});
+
+test("normalizeDescriptor: fields without applies_when normalize exactly as before", () => {
+    const baseline = normalizeDescriptor(makeDescriptor(), "polyadic-agent");
+    const result = normalizeDescriptor(withFields(topicTrackingField({
+        applies_when: [{ field: "agent_role", in: ["moderator"] }],
+    })), "polyadic-agent");
+
+    assert.deepEqual(result.descriptor.fields.slice(0, 3), baseline.descriptor.fields);
+    for (const field of result.descriptor.fields.slice(0, 3)) {
+        assert.equal(Object.hasOwn(field, "appliesWhen"), false, field.key);
+    }
+});
+
+test("normalizeDescriptor: drops an unusable applies_when with a warning, and keeps the field", () => {
+    const cases = [
+        ["always", "has an applies_when that is not a non-empty list"],
+        [null, "has an applies_when that is not a non-empty list"],
+        [[], "has an applies_when that is not a non-empty list"],
+        [[{ field: "pipeline_type", in: [] }], "has an applies_when with an invalid condition"],
+        [[{ field: "", in: ["x"] }], "has an applies_when with an invalid condition"],
+        [[{ field: "pipeline_type", in: ["x"], not: ["y"] }], "has an applies_when with an invalid condition"],
+        [[{ field: "topic_tracking", in: [true] }], "has an applies_when on itself"],
+        [[{ field: "pipeline_type", in: ["contentCoverage"] }, { field: "room_id", in: ["a"] }],
+            "has an applies_when on an unknown field \"room_id\""],
+    ];
+
+    for (const [appliesWhen, warning] of cases) {
+        const result = normalizeDescriptor(
+            withFields(pipelineTypeField(), topicTrackingField({ applies_when: appliesWhen })),
+            "polyadic-agent");
+        const topicTracking = result.descriptor.fields.find(field => field.key === "topic_tracking");
+
+        assert.ok(topicTracking, warning);
+        assert.equal(Object.hasOwn(topicTracking, "appliesWhen"), false, warning);
+        assert.deepEqual(result.warnings, [`field "topic_tracking" ${warning}`]);
+    }
+});
+
+test("normalizeDescriptor: a condition on a field dropped as unusable names an unknown field", () => {
+    const brokenPipeline = { ...pipelineTypeField(), type: "slider" };
+    const result = normalizeDescriptor(withFields(brokenPipeline, topicTrackingField()),
+        "polyadic-agent");
+
+    assert.deepEqual(result.warnings, [
+        "field \"pipeline_type\" has unsupported type \"slider\"",
+        "field \"topic_tracking\" has an applies_when on an unknown field \"pipeline_type\"",
+    ]);
+});
+
+test("normalizeDescriptor: conditions never chain", () => {
+    const summary = topicTrackingField({
+        key:          "coverage_summary",
+        applies_when: [{ field: "topic_tracking", in: [true] }],
+    });
+    const result = normalizeDescriptor(withFields(pipelineTypeField(), topicTrackingField(), summary),
+        "polyadic-agent");
+    const byKey = new Map(result.descriptor.fields.map(field => [field.key, field]));
+
+    assert.deepEqual(byKey.get("topic_tracking").appliesWhen,
+        [{ field: "pipeline_type", in: ["contentCoverage"] }]);
+    assert.equal(Object.hasOwn(byKey.get("coverage_summary"), "appliesWhen"), false);
+    assert.deepEqual(result.warnings, ["field \"coverage_summary\" has an applies_when on "
+        + "\"topic_tracking\", which has its own applies_when"]);
+});
+
+test("getInstanceConfiguration: carries appliesWhen to the form, and logs a dropped one", async () => {
+    const raw = withFields(pipelineTypeField(), topicTrackingField(),
+        topicTrackingField({ key: "broken_condition", applies_when: [] }));
+    const { client, logger } = makeClient({ responses: [raw] });
+
+    const configuration = await client.getInstanceConfiguration("svc-described", "en_US");
+
+    assert.deepEqual(configuration.fields.find(field => field.key === "topic_tracking").appliesWhen,
+        [{ field: "pipeline_type", in: ["contentCoverage"] }]);
+    assert.deepEqual(logger.warnings, ["[capability-descriptors] svc-described: field "
+        + "\"broken_condition\" has an applies_when that is not a non-empty list; ignored."]);
+});
+
 // ─── student_outputs (#1131) ─────────────────────────────────────────────────
 
 // The tutor's declaration (ethicapp-ai-additions argumentation-tutor/backend/
