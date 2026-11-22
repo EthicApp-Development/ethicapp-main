@@ -710,6 +710,18 @@ evaluations as before, then handles `decisions`:
   correlation id or matches no job of the service in the session). For an
   `intervened` record, the chat message the same callback published for
   `intervention.agent` is `intervention_chat_message_id`.
+- A record may carry the room's topic coverage as the Validator saw it,
+  the optional `topicCoverage` key (#1233, ethicapp-ai-additions#313): each
+  topic of the room with its level (`pending`, `partial`, `developed`) and
+  the participant messages cited as evidence, as references like the
+  window's. The schema copy and the integrity rules check it (codes
+  `duplicate_topic_id`, `unknown_topic_id`, `coverage_mismatch` and
+  `duplicate_message_ref`). The record is stored verbatim, the coverage
+  included, and each evidence reference is resolved like a window reference
+  (`coverage_evidence_chat_message_ids`, V47: one array per topic, aligned
+  with its evidence). Evidence may cite messages of earlier windows; they
+  resolve the same way. A record without coverage is stored as before, with
+  that column null.
 - The callback's adapter result adds `payload.decisions`: `{ received,
   stored: [decisionId], duplicates: [decisionId], invalid: [{ index,
   decisionId, problems }], storage? }`, where `storage` is `failed` when the
@@ -780,6 +792,36 @@ intervention columns join with the participants' and the guide's rows of
 the same CSV. Polyadic's ids are given beside them for a reader who also
 holds Polyadic's data.
 
+**Topic coverage.** When at least one decision of the session carries a
+`topicCoverage` (#1233), the transcript adds four columns after the room
+columns, on the decision rows. A transcript whose decisions carry none, as
+every transcript did before #1233, keeps exactly the columns and values
+above. Within a transcript that has the columns, a decision without coverage
+leaves them empty, and so do the room rows and the report's other rows.
+
+| Column | Value |
+| --- | --- |
+| `polyadic_decision_topic_status` | The level, in this decision's coverage, of the topic the decision names (`polyadic_decision_topic_id`): `pending`, `partial` or `developed`. Empty when the decision names no topic. |
+| `polyadic_decision_coverage_status` | The outcome of the tracker's run on this window: `updated` (it raised a topic's level or gave a topic new evidence), `unchanged` (nothing new) or `failed` (no valid reply; the coverage is the previous one). |
+| `polyadic_decision_coverage_updated_topic_ids` | The topics this run updated, a JSON array of ids (`["T2"]`); `[]` for `unchanged` and `failed`. |
+| `polyadic_decision_coverage_topics` | The room's cumulative coverage as the Validator received it, a JSON array with every topic of the room in the room's order: `[{"id":"T1","status":"developed","evidence_message_ids":[5101,5104,null],"evidence_polyadic_message_ids":[101,104,109]}]`. `evidence_message_ids` are the transcript `id` values of the messages cited as evidence, in the order the tracker accepted them, `null` where a message could not be resolved; `evidence_polyadic_message_ids` are the same messages as Polyadic's ids. A topic carries at most its 20 most recent citations; older ones are in the rows of the decisions whose windows cited them. |
+
+The value of `polyadic_decision_coverage_topics` stays within the report's
+limit of 10000 characters per value: when the full array would not fit,
+`evidence_polyadic_message_ids` is left out of every topic, and when even
+then it would not fit, both evidence lists are. With the contract's limits
+(20 topics of 20 citations) the transcript ids always fit.
+
+The coverage is exported on the decision rows because it is the input of
+that decision: a reader sees on one row which topic the Validator chose, its
+reason, the level of that topic and of every other one, and what the window
+changed, and the latest decision row of a group gives the group's coverage
+at that time. Rows of their own, one per topic and decision, would add up to
+20 rows at each decision's time, all between the participants' messages,
+and the reader would join them back by decision id to see what the
+Validator saw. The topic names are in the room row, keyed by the same ids,
+and the evidence ids join with the participants' rows of the same CSV.
+
 **Erasure.** The records hold no participant text of their own: the window
 refers to messages by id. Their `reason` is model text that may name, quote
 or paraphrase participants, so forgetting a student or a teacher redacts it
@@ -794,12 +836,14 @@ account's messages and names, which are its terms
 (`management-console/backend/helpers/mediation-decision-erasure.js`); the
 `user-forgotten` request that follows asks Polyadic to forget the account,
 after which Polyadic redacts the reasons of later records itself. The window
-references and ids need nothing. A record that arrives between the
+references and ids need nothing, and neither does the topic coverage
+(#1233), which holds topic ids and message references only. A record that arrives between the
 anonymization and Polyadic's erasure (a room still running) is stored as
 sent.
 
 Code: `external-services/adapters/polyadic-bridge.decisions.js`,
-`services/external-service-mediation-decisions.service.js`. Tests:
+`services/external-service-mediation-decisions.service.js`,
+`services/mediation-decision-records.js`. Tests:
 `external-services/adapters/__tests__/polyadic-bridge-decisions.adapter.node-test.mjs`,
 `services/__tests__/mediation-decision-records.node-test.mjs`,
 `services/__tests__/external-service-mediation-decisions.service.node-test.mjs`

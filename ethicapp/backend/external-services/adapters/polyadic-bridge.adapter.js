@@ -17,8 +17,10 @@ import { PARTICIPANT_ACTIVITY_HOOK } from "../catalog.js";
 import { sendRoomActivity } from "./polyadic-bridge.activity.js";
 import {
     decisionIdOf,
+    COVERAGE_REPORT_COLUMN_DECLARATIONS,
     DECISION_REPORT_COLUMN_DECLARATIONS,
     decisionTranscriptRows,
+    hasTopicCoverage,
     resolveRoomTopics,
     storeCallbackDecisions,
 } from "./polyadic-bridge.decisions.js";
@@ -1129,11 +1131,14 @@ export function buildChatTranscriptContribution(context, storedResults, {
         inReplyTo: null,
         visible:   false,
     }, { withDecisions }));
+    // The topic coverage (#1233) adds its columns only when a decision of
+    // the session carries one.
     return {
         columns: [
             ...REPORT_COLUMN_DECLARATIONS,
             DECISION_ID_COLUMN_DECLARATION,
             ...DECISION_REPORT_COLUMN_DECLARATIONS,
+            ...(hasTopicCoverage(decisions) ? COVERAGE_REPORT_COLUMN_DECLARATIONS : []),
         ].map(column => ({ ...column })),
         values,
         rows: [...rows, ...decisionRows],
