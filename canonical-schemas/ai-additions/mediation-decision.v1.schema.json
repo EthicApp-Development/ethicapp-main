@@ -122,6 +122,31 @@
         }
       },
       "additionalProperties": false
+    },
+    "topicCoverage": {
+      "description": "Optional. The room's cumulative coverage of its `discussion_topics` as the agent received it for this evaluation: the snapshot after the topic tracker's run on this window. Absent when the room runs without a topic tracker. It carries topic ids and message references only; topic names are in the room's topic list.",
+      "type": "object",
+      "required": ["status", "updatedTopicIds", "topics"],
+      "properties": {
+        "status": {
+          "description": "`updated`: this run raised a topic's status or gave it new evidence. `unchanged`: the tracker found nothing new. `failed`: the tracker gave no reply or an invalid one, and `topics` is the previous snapshot.",
+          "enum": ["updated", "unchanged", "failed"]
+        },
+        "updatedTopicIds": {
+          "description": "The topics this run raised or gave new evidence, each once; empty unless `status` is `updated`.",
+          "type": "array",
+          "maxItems": 20,
+          "items": { "$ref": "#/$defs/topicId" }
+        },
+        "topics": {
+          "description": "Every topic of the room, in the order the room received them, each once.",
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 20,
+          "items": { "$ref": "#/$defs/topicProgress" }
+        }
+      },
+      "additionalProperties": false
     }
   },
   "additionalProperties": false,
@@ -157,6 +182,28 @@
           "minLength": 1,
           "maxLength": 160,
           "pattern": "\\S"
+        }
+      },
+      "additionalProperties": false
+    },
+    "topicId": {
+      "description": "Topic id of `topic-listing/v1`.",
+      "type": "string",
+      "pattern": "^T[1-9][0-9]*$",
+      "maxLength": 6
+    },
+    "topicProgress": {
+      "description": "One topic's coverage. `pending`: no evidence that the group discussed it. `partial`: mentioned or explored with limited reasoning. `developed`: explored with arguments, explanations, comparisons or consequences. A tracker never lowers a status.",
+      "type": "object",
+      "required": ["id", "status", "evidence"],
+      "properties": {
+        "id": { "$ref": "#/$defs/topicId" },
+        "status": { "enum": ["pending", "partial", "developed"] },
+        "evidence": {
+          "description": "The participant messages the tracker cited for this topic, in the order it accepted them, each once; they may belong to earlier windows. Empty for a `pending` topic, at least one otherwise. A topic with more than 20 carries its 20 most recent.",
+          "type": "array",
+          "maxItems": 20,
+          "items": { "$ref": "#/$defs/messageRef" }
         }
       },
       "additionalProperties": false

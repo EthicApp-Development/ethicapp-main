@@ -13,7 +13,8 @@ import {
  * ethicapp-ai-additions#293): one decision of a chat mediation agent that
  * does not speak in the chat, such as Polyadic's Validator. Polyadic sends
  * them in its room callback's `decisions` list, and EthicApp stores only the
- * records that validate.
+ * records that validate. A record may carry the room's topic coverage as the
+ * agent saw it, `topicCoverage` (#1233, ethicapp-ai-additions#313).
  *
  * The schema is EthicApp's verbatim copy in `canonical-schemas/ai-additions/`,
  * compiled with `@cfworker/json-schema` as `npm run test:schemas` does. The
@@ -35,11 +36,15 @@ export const MEDIATION_DECISION_PROBLEM_CODES = Object.freeze({
     DECISION_MISMATCH:     "decision_mismatch",
     INTERVENTION_MISMATCH: "intervention_mismatch",
     DUPLICATE_MESSAGE_REF: "duplicate_message_ref",
+    DUPLICATE_TOPIC_ID:    "duplicate_topic_id",
+    UNKNOWN_TOPIC_ID:      "unknown_topic_id",
+    COVERAGE_MISMATCH:     "coverage_mismatch",
 });
 
 const SCHEMA_FILE_NAME = "mediation-decision.v1.schema.json";
 const DECISIONS = new Set(["intervene", "no_intervention", "unparsed"]);
 const INTERVENTION_STATUSES = new Set(["intervened", "suppressed", "failed", "not_requested"]);
+const TOPIC_STATUSES = new Set(["pending", "partial", "developed"]);
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u;
 
 function isPlainObject(value) {
@@ -113,15 +118,14 @@ function interventionProblems(intervention) {
     return problems;
 }
 
-// No message appears twice in a window.
-function windowProblems(window) {
-    const messages = isPlainObject(window) ? window.messages : null;
-    if (!Array.isArray(messages)) {
+// Each message is referenced once in a list of references.
+function duplicateReferenceProblems(references, path) {
+    if (!Array.isArray(references)) {
         return [];
     }
     const problems = [];
     const seen = new Set();
-    messages.forEach((ref, index) => {
+    references.forEach((ref, index) => {
         const messageId = isPlainObject(ref) ? ref.messageId : null;
         if (!Number.isInteger(messageId)) {
             return;
@@ -129,7 +133,7 @@ function windowProblems(window) {
         if (seen.has(messageId)) {
             problems.push({
                 code: MEDIATION_DECISION_PROBLEM_CODES.DUPLICATE_MESSAGE_REF,
-                path: `window.messages[${index}].messageId`,
+                path: `${path}[${index}].messageId`,
             });
         }
         seen.add(messageId);
@@ -137,10 +141,110 @@ function windowProblems(window) {
     return problems;
 }
 
+// No message appears twice in a window.
+function windowProblems(window) {
+    const messages = isPlainObject(window) ? window.messages : null;
+    return duplicateReferenceProblems(messages, "window.messages");
+}
+
+const COVERAGE = Object.freeze({
+    duplicateTopic: path => ({ code: MEDIATION_DECISION_PROBLEM_CODES.DUPLICATE_TOPIC_ID, path }),
+    unknownTopic:   path => ({ code: MEDIATION_DECISION_PROBLEM_CODES.UNKNOWN_TOPIC_ID, path }),
+    mismatch:       path => ({ code: MEDIATION_DECISION_PROBLEM_CODES.COVERAGE_MISMATCH, path }),
+});
+
+// A pending topic has no evidence, a covered one has some, each message once.
+function topicProgressProblems(progress, path) {
+    const { status, evidence } = progress;
+    if (!Array.isArray(evidence)) {
+        return [];
+    }
+    const mismatch = status === "pending"
+        ? evidence.length > 0
+        : TOPIC_STATUSES.has(status) && evidence.length === 0;
+    return [
+        ...(mismatch ? [COVERAGE.mismatch(`${path}.evidence`)] : []),
+        ...duplicateReferenceProblems(evidence, `${path}.evidence`),
+    ];
+}
+
+// Only an `updated` run names topics, each once, all of them covered topics
+// of the snapshot. `statuses` maps the snapshot's topic ids to their status,
+// or is null when the snapshot is not a list (the schema reports it).
+function updatedTopicProblems(coverage, statuses) {
+    const updated = coverage.updatedTopicIds;
+    if (!Array.isArray(updated)) {
+        return [];
+    }
+    const problems = [];
+    const status = coverage.status;
+    if ((status === "unchanged" || status === "failed") && updated.length > 0) {
+        problems.push(COVERAGE.mismatch("topicCoverage.updatedTopicIds"));
+    } else if (status === "updated" && updated.length === 0) {
+        problems.push(COVERAGE.mismatch("topicCoverage.updatedTopicIds"));
+    }
+    const seen = new Set();
+    updated.forEach((topicId, index) => {
+        if (typeof topicId !== "string") {
+            return;
+        }
+        const path = `topicCoverage.updatedTopicIds[${index}]`;
+        if (seen.has(topicId)) {
+            problems.push(COVERAGE.duplicateTopic(path));
+            return;
+        }
+        seen.add(topicId);
+        if (statuses === null) {
+            return;
+        }
+        if (!statuses.has(topicId)) {
+            problems.push(COVERAGE.unknownTopic(path));
+        } else if (statuses.get(topicId) === "pending") {
+            problems.push(COVERAGE.mismatch(path));
+        }
+    });
+    return problems;
+}
+
+// The coverage is one consistent snapshot of the room's topics: each topic
+// once, its evidence matching its level, the updated topics among them and
+// raised, and the decision's topic one of them.
+function coverageProblems(coverage, topic) {
+    if (!isPlainObject(coverage)) {
+        return [];
+    }
+    const problems = [];
+    const topics = Array.isArray(coverage.topics) ? coverage.topics : null;
+    const statuses = new Map();
+    (topics ?? []).forEach((progress, index) => {
+        if (!isPlainObject(progress)) {
+            return;
+        }
+        const path = `topicCoverage.topics[${index}]`;
+        problems.push(...topicProgressProblems(progress, path));
+        const topicId = progress.id;
+        if (typeof topicId !== "string") {
+            return;
+        }
+        if (statuses.has(topicId)) {
+            problems.push(COVERAGE.duplicateTopic(`${path}.id`));
+            return;
+        }
+        statuses.set(topicId, progress.status);
+    });
+    problems.push(...updatedTopicProblems(coverage, topics ? statuses : null));
+    const topicId = isPlainObject(topic) ? topic.id : null;
+    if (typeof topicId === "string" && topics && !statuses.has(topicId)) {
+        problems.push(COVERAGE.unknownTopic("topic.id"));
+    }
+    return problems;
+}
+
 /**
  * The integrity rules of `mediation-decision/v1` that JSON Schema cannot
- * express (`_decision_problems`, `_intervention_problems` and
- * `_window_problems` in ethicapp_ai_capabilities/mediation_decision.py).
+ * express (`_decision_problems`, `_intervention_problems`,
+ * `_window_problems` and, for a record with `topicCoverage`,
+ * `_coverage_problems` in ethicapp_ai_capabilities/mediation_decision.py).
  */
 export function mediationDecisionIntegrityProblems(record) {
     if (!isPlainObject(record)) {
@@ -150,6 +254,9 @@ export function mediationDecisionIntegrityProblems(record) {
         ...decisionProblems(record),
         ...interventionProblems(record.intervention),
         ...windowProblems(record.window),
+        ...(Object.hasOwn(record, "topicCoverage")
+            ? coverageProblems(record.topicCoverage, record.topic)
+            : []),
     ];
 }
 

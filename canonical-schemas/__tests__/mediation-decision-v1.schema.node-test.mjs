@@ -148,3 +148,108 @@ test("nullable parts accept null and their own shape only", () => {
     withNumberTopic.topic = 2;
     assertInvalid(withNumberTopic, "topic as a number");
 });
+
+// ─── The topic coverage (#1233, ethicapp-ai-additions#313) ──────────────────
+
+const COVERAGE_EXAMPLE = "topic-coverage.es_CL.json";
+
+function pendingTopics(count) {
+    return Array.from({ length: count }, (_, index) => ({
+        id: `T${index + 1}`, status: "pending", evidence: [],
+    }));
+}
+
+test("the coverage is optional and closed, with its own topic id pattern", () => {
+    assert.equal(schema.required.includes("topicCoverage"), false);
+    const coverage = schema.properties.topicCoverage;
+    assert.equal(coverage.additionalProperties, false);
+    assert.deepEqual(coverage.required, ["status", "updatedTopicIds", "topics"]);
+    assert.deepEqual(coverage.properties.status.enum, ["updated", "unchanged", "failed"]);
+    assert.deepEqual(schema.$defs.topicProgress.properties.status.enum, ["pending", "partial", "developed"]);
+    assert.equal(schema.$defs.topicProgress.additionalProperties, false);
+    assert.equal(schema.$defs.topicId.pattern, schema.$defs.topic.properties.id.pattern);
+});
+
+test("only the coverage example carries a coverage, with every level and evidence old and new", () => {
+    const examples = readExamples();
+    assert.deepEqual(examples.filter(({ record }) => "topicCoverage" in record).map(({ name }) => name),
+        [COVERAGE_EXAMPLE]);
+    const record = example(COVERAGE_EXAMPLE);
+    const { topics, updatedTopicIds, status } = record.topicCoverage;
+    assert.deepEqual([...new Set(topics.map(topic => topic.status))].sort(), ["developed", "partial", "pending"]);
+    const windowIds = new Set(record.window.messages.map(reference => reference.messageId));
+    const evidenceIds = topics.flatMap(topic => topic.evidence.map(reference => reference.messageId));
+    assert.ok(evidenceIds.some(id => windowIds.has(id)), "evidence from this window");
+    assert.ok(evidenceIds.some(id => !windowIds.has(id)), "evidence from earlier windows");
+    assert.equal(status, "updated");
+    assert.ok(updatedTopicIds.length > 0);
+});
+
+test("the coverage example follows the coverage's integrity rules", () => {
+    const { topic, topicCoverage } = example(COVERAGE_EXAMPLE);
+    const statuses = new Map(topicCoverage.topics.map(progress => [progress.id, progress.status]));
+    assert.equal(statuses.size, topicCoverage.topics.length, "each topic once");
+    for (const progress of topicCoverage.topics) {
+        assert.equal(progress.evidence.length > 0, progress.status !== "pending", progress.id);
+        const ids = progress.evidence.map(reference => reference.messageId);
+        assert.equal(new Set(ids).size, ids.length, `${progress.id} cites each message once`);
+    }
+    for (const id of topicCoverage.updatedTopicIds) {
+        assert.ok(statuses.has(id) && statuses.get(id) !== "pending", id);
+    }
+    assert.ok(statuses.has(topic.id), "the decision's topic is in the coverage");
+});
+
+test("every other example accepts a coverage", () => {
+    for (const { name, record } of readExamples()) {
+        if (name === COVERAGE_EXAMPLE) {
+            continue;
+        }
+        assertValid({
+            ...record,
+            topicCoverage: { status: "unchanged", updatedTopicIds: [], topics: pendingTopics(4) },
+        }, name);
+    }
+});
+
+test("the coverage's bounds and patterns are enforced", () => {
+    const withTopics = count => {
+        const record = example(COVERAGE_EXAMPLE);
+        record.topic = null;
+        record.topicCoverage = { status: "unchanged", updatedTopicIds: [], topics: pendingTopics(count) };
+        return record;
+    };
+    assertValid(withTopics(20), "20 topics");
+    assertInvalid(withTopics(21), "21 topics");
+    assertInvalid(withTopics(0), "no topics");
+
+    const evidence = count => {
+        const record = example(COVERAGE_EXAMPLE);
+        record.topicCoverage.topics[0].evidence = Array.from({ length: count }, (_, index) => ({
+            messageId: index + 1, correlationId: null,
+        }));
+        return record;
+    };
+    assertValid(evidence(20), "20 evidence messages");
+    assertInvalid(evidence(21), "21 evidence messages");
+
+    const cases = [
+        ["topic id outside T#", record => { record.topicCoverage.topics[0].id = "topic-1"; }],
+        ["updated id outside T#", record => { record.topicCoverage.updatedTopicIds = ["T0"]; }],
+        ["unknown run status", record => { record.topicCoverage.status = "partial"; }],
+        ["unknown topic level", record => { record.topicCoverage.topics[0].status = "covered"; }],
+        ["a topic's title", record => { record.topicCoverage.topics[0].name = "Veracidad"; }],
+        ["evidence text", record => { record.topicCoverage.topics[0].evidence[0].text = "x"; }],
+        ["an undefined coverage key", record => { record.topicCoverage.summary = "x"; }],
+        ["a null coverage", record => { record.topicCoverage = null; }],
+        ["without updatedTopicIds", record => { delete record.topicCoverage.updatedTopicIds; }],
+        ["21 updated topics", record => {
+            record.topicCoverage.updatedTopicIds = pendingTopics(21).map(topic => topic.id);
+        }],
+    ];
+    for (const [label, change] of cases) {
+        const record = example(COVERAGE_EXAMPLE);
+        change(record);
+        assertInvalid(record, label);
+    }
+});

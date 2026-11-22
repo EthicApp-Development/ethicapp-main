@@ -1,0 +1,94 @@
+{
+  "schemaVersion": "mediation-decision/v1",
+  "agent": "Validator",
+  "pipelineType": "contentCoverage",
+  "decisionId": "0b9e8a52-7a1f-4f7e-9d43-5c1e2f3a4b05",
+  "decidedAt": "2026-11-18T14:11:47-03:00",
+  "trigger": {
+    "kind": "adaptive_window",
+    "reason": "max_messages"
+  },
+  "window": {
+    "messages": [
+      {
+        "messageId": 121,
+        "correlationId": "6f1c2a4e-0b7d-4c55-9a0e-3d2b1c0a0121"
+      },
+      {
+        "messageId": 122,
+        "correlationId": "6f1c2a4e-0b7d-4c55-9a0e-3d2b1c0a0122"
+      },
+      {
+        "messageId": 124,
+        "correlationId": "6f1c2a4e-0b7d-4c55-9a0e-3d2b1c0a0124"
+      },
+      {
+        "messageId": 125,
+        "correlationId": "6f1c2a4e-0b7d-4c55-9a0e-3d2b1c0a0125"
+      }
+    ]
+  },
+  "decision": "intervene",
+  "category": "CONSTRUCTIVE",
+  "topic": {
+    "id": "T3",
+    "name": "Costos personales de denunciar"
+  },
+  "reason": "CONSTRUCTIVE - T3 Costos personales de denunciar - El grupo ya desarrolló la veracidad del registro y empieza a discutir la presión de la supervisora; nadie ha considerado qué arriesga quien denuncia.",
+  "intervention": {
+    "status": "intervened",
+    "agent": "ConversationGuide",
+    "messageId": 126,
+    "suppressedBy": null
+  },
+  "topicCoverage": {
+    "status": "updated",
+    "updatedTopicIds": [
+      "T2"
+    ],
+    "topics": [
+      {
+        "id": "T1",
+        "status": "developed",
+        "evidence": [
+          {
+            "messageId": 101,
+            "correlationId": "6f1c2a4e-0b7d-4c55-9a0e-3d2b1c0a0101"
+          },
+          {
+            "messageId": 104,
+            "correlationId": "6f1c2a4e-0b7d-4c55-9a0e-3d2b1c0a0104"
+          },
+          {
+            "messageId": 109,
+            "correlationId": "6f1c2a4e-0b7d-4c55-9a0e-3d2b1c0a0109"
+          }
+        ]
+      },
+      {
+        "id": "T2",
+        "status": "partial",
+        "evidence": [
+          {
+            "messageId": 122,
+            "correlationId": "6f1c2a4e-0b7d-4c55-9a0e-3d2b1c0a0122"
+          },
+          {
+            "messageId": 125,
+            "correlationId": "6f1c2a4e-0b7d-4c55-9a0e-3d2b1c0a0125"
+          }
+        ]
+      },
+      {
+        "id": "T3",
+        "status": "pending",
+        "evidence": []
+      },
+      {
+        "id": "T4",
+        "status": "pending",
+        "evidence": []
+      }
+    ]
+  }
+}
