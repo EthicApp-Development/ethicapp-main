@@ -1,5 +1,6 @@
-// Stored mediation decisions (#1222, V46): the store adapters write through,
-// and the report reader that reads them back.
+// Stored mediation decisions (#1222, V46, and their topic coverage, #1233,
+// V47): the store adapters write through, and the report reader that reads
+// them back.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
@@ -83,7 +84,48 @@ test("stores each record once with its room, job, result and resolved messages",
         record.decidedAt, JSON.stringify(record),
         [5001, 5002, null, null],
         6001,
+        // A record without coverage stores no coverage evidence.
+        null,
     ]);
+    assert.match(insert.sql, /coverage_evidence_chat_message_ids\) VALUES/);
+});
+
+test("a coverage's evidence resolves with the window's, also from earlier windows", async () => {
+    const record = example("topic-coverage.es_CL.json");
+    // T1's evidence comes from earlier windows; 109 has no job, and T2's 125
+    // has no correlation id.
+    record.topicCoverage.topics[1].evidence[1].correlationId = null;
+    const { db, calls } = fakeDb({
+        jobs: [
+            { correlation_id: "6f1c2a4e-0b7d-4c55-9a0e-3d2b1c0a0101", source_id: "5101" },
+            { correlation_id: "6f1c2a4e-0b7d-4c55-9a0e-3d2b1c0a0104", source_id: "5104" },
+            { correlation_id: "6f1c2a4e-0b7d-4c55-9a0e-3d2b1c0a0121", source_id: "5121" },
+            { correlation_id: "6f1c2a4e-0b7d-4c55-9a0e-3d2b1c0a0122", source_id: "5122" },
+        ],
+    });
+    const store = new ExternalServiceMediationDecisionsService({ dbQuery: db });
+
+    await store.recordDecisions({
+        serviceId: SERVICE_ID, sessionId: 11, phaseId: 22, groupId: 301,
+        decisions: [{ record }],
+    });
+
+    // One lookup for the window and the evidence, each id once.
+    assert.equal(calls.length, 2);
+    assert.deepEqual(calls[0].params[3], [
+        "6f1c2a4e-0b7d-4c55-9a0e-3d2b1c0a0121",
+        "6f1c2a4e-0b7d-4c55-9a0e-3d2b1c0a0122",
+        "6f1c2a4e-0b7d-4c55-9a0e-3d2b1c0a0124",
+        "6f1c2a4e-0b7d-4c55-9a0e-3d2b1c0a0125",
+        "6f1c2a4e-0b7d-4c55-9a0e-3d2b1c0a0101",
+        "6f1c2a4e-0b7d-4c55-9a0e-3d2b1c0a0104",
+        "6f1c2a4e-0b7d-4c55-9a0e-3d2b1c0a0109",
+    ]);
+    const params = calls[1].params;
+    // The record is stored verbatim, its coverage included.
+    assert.equal(params[9], JSON.stringify(record));
+    assert.deepEqual(params[10], [5121, 5122, null, null]);
+    assert.equal(params[12], JSON.stringify([[5101, 5104, null], [5122, null], [], []]));
 });
 
 test("a callback delivered twice stores its decisions once", async () => {
@@ -171,11 +213,12 @@ test("the reader returns the service's decisions of the session with their room 
         groupId:                   301,
         resultId:                  "0f8fad5b-d9cb-469f-a165-70867728950e",
         record:                    example("constructive.es_CL.json"),
-        windowChatMessageIds:      [5001, 5002, null, 5005],
-        interventionChatMessageId: 6001,
-        decidedAt:                 "2026-11-18T17:05:12.000Z",
-        receivedAt:                "2026-11-18T17:05:13.000Z",
-        job:                       {
+        windowChatMessageIds:           [5001, 5002, null, 5005],
+        interventionChatMessageId:      6001,
+        coverageEvidenceChatMessageIds: null,
+        decidedAt:                      "2026-11-18T17:05:12.000Z",
+        receivedAt:                     "2026-11-18T17:05:13.000Z",
+        job:                            {
             id:                  "8a6e0804-2bd0-4672-b79d-d97027f9071a",
             kind:                "room",
             createdAt:           "2026-11-18T17:00:00.000Z",
@@ -185,6 +228,24 @@ test("the reader returns the service's decisions of the session with their room 
     assert.equal(decisions[1].job, null);
     assert.equal(decisions[1].interventionChatMessageId, null);
     assert.ok(Object.isFrozen(decisions[0]));
+});
+
+test("the reader gives a coverage's evidence as chat message ids, aligned with its topics", async () => {
+    const record = example("topic-coverage.es_CL.json");
+    const store = {
+        listMediationDecisions: async () => [decisionRow({
+            decision_id:                        record.decisionId,
+            record,
+            coverage_evidence_chat_message_ids: [["5101", 5104, null], ["5122", "x"], [], "?"],
+        })],
+    };
+    const reader = createReportResultsReader(store, { serviceId: SERVICE_ID, sessionId: 11 });
+
+    const [decision] = await reader.mediationDecisions();
+
+    assert.deepEqual(decision.coverageEvidenceChatMessageIds, [[5101, 5104, null], [5122, null], [], []]);
+    assert.ok(Object.isFrozen(decision.coverageEvidenceChatMessageIds));
+    assert.ok(Object.isFrozen(decision.coverageEvidenceChatMessageIds[0]));
 });
 
 test("a store that keeps no decisions gives none", async () => {

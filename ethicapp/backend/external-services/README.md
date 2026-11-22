@@ -350,7 +350,8 @@ table `external_service_mediation_decisions`, V46). `record()` takes records
 the adapter already validated (`services/mediation-decision-records.js`), as
 `decisions: [{ record, interventionChatMessageId? }]`, stores each once per
 service and `decisionId`, resolves each window reference's `correlationId`
-to the chat message its `chat-message-received` job forwarded, and resolves
+to the chat message its `chat-message-received` job forwarded, does the same
+for the evidence of a record's `topicCoverage` (#1233, V47), and resolves
 to `{ stored, duplicates }` (decision ids). Errors propagate. The Polyadic
 bridge is the only user; see `EXTERNAL.md`, "Polyadic mediation decisions".
 
@@ -824,9 +825,14 @@ such as jobs of other hooks and jobs created before migration V38.
 `results.mediationDecisions()` (#1222) resolves to the service's stored
 mediation decisions of the session, oldest `decidedAt` first, as frozen
 `{ id, decisionId, phaseId, questionId, groupId, resultId, record,
-windowChatMessageIds, interventionChatMessageId, decidedAt, receivedAt, job }`,
-where `job` is `{ id, kind, createdAt, instantiationReport }` of the job the
-callback correlated with (the room job), or null. It takes no filters.
+windowChatMessageIds, interventionChatMessageId,
+coverageEvidenceChatMessageIds, decidedAt, receivedAt, job }`, where `job` is
+`{ id, kind, createdAt, instantiationReport }` of the job the callback
+correlated with (the room job), or null, and
+`coverageEvidenceChatMessageIds` holds the chat message ids of the evidence
+of `record.topicCoverage`, one array per topic aligned with its `evidence`
+(null where unresolved), or is null for a record without coverage (#1233).
+It takes no filters.
 
 **Contribution contract.** The handler resolves to `undefined`/`null` (nothing
 to add) or to:

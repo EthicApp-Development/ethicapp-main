@@ -15,7 +15,8 @@ them here: the copy changes only to match the source.
 | `examples/mediation-decision.v1/*.json` | `shared/schemas/examples/mediation-decision.v1/*.json` |
 
 Every file was compared byte for byte with commit
-[`eec8f54`](https://github.com/EthicApp-Development/ethicapp-ai-additions/commit/eec8f54).
+[`48a3f26`](https://github.com/EthicApp-Development/ethicapp-ai-additions/commit/48a3f26)
+for #1233.
 The `student-result/v1` schema comes from ethicapp-ai-additions PR #234
 (issue #232), and its tutor examples were regenerated from the tutor's own
 output by PR #235 (issue #233); they are unchanged since commit `3b292d1`.
@@ -30,7 +31,9 @@ description names. The tutor's v19 student documents
 ethicapp-ai-additions PR #299 (epic #293, unchanged since commit `927760b`)
 and were compared byte for byte with commit
 [`1efd107`](https://github.com/EthicApp-Development/ethicapp-ai-additions/commit/1efd107)
-when they were copied for #1222. The folder keeps the layout of the
+when they were copied for #1222. ethicapp-ai-additions PR #318 (issue #313,
+epic #312) added the optional `topicCoverage` key and the example
+`topic-coverage.es_CL.json`, copied for #1233. The folder keeps the layout of the
 source's `shared/schemas/`, so the examples sit next to their schema as they
 do there.
 
@@ -58,9 +61,11 @@ not speak in the chat, such as Polyadic Agents' Validator in the
 `contentCoverage` mode (epic ethicapp-ai-additions#293): whether the speaking
 agent should intervene, why, about which topic of the room's
 `discussion_topics`, which participant messages it evaluated (as references,
-never their text) and what followed. Polyadic sends the records in its room
-callback's `decisions` list; EthicApp validates each one against this copy,
-stores it and exports it in the chat transcript (#1222). Its `reason` is
+never their text) and what followed, and optionally the room's topic
+coverage as the agent saw it (`topicCoverage`: each topic's level and the
+messages cited as evidence, as references). Polyadic sends the records in
+its room callback's `decisions` list; EthicApp validates each one against
+this copy, stores it and exports it in the chat transcript (#1222, #1233). Its `reason` is
 model text that may quote participants, so the participant erasure covers
 it. Its semantics are explained in the "Mediation Decision Record" section of
 the ethicapp-ai-additions `README.md`, and EthicApp's side in
@@ -166,12 +171,21 @@ because a forgotten student's stored payloads have their strings redacted
 validates every `mediation-decision/v1` example against its copy, checks that
 the examples cover the three decisions and follow the integrity rules, and
 rejects malformed records: an undefined key (a message text in the window
-included), a missing key, an id, label or enum outside its pattern. The
+included), a missing key, an id, label or enum outside its pattern. For the
+topic coverage it checks that the key is optional and closed, that only the
+coverage example carries one (with every level, and evidence from its window
+and from earlier ones) and that it follows the coverage's rules, that every
+other example accepts a coverage, and the bounds (1 to 20 topics, at most 20
+updated topics and 20 evidence messages per topic) and patterns. The
 integrity rules outside JSON Schema (only an intervention has a category, a
 topic and an asked agent; each intervention status carries exactly its own
-details; no message twice in a window) are checked by ethicapp-ai-additions
-with `ethicapp_ai_capabilities.validate_mediation_decision()`, and by the
+details; no message twice in a window; in a coverage, each topic once, a
+pending topic without evidence and a covered one with some, the updated
+topics named only by an `updated` run and raised, and the decision's topic
+among the coverage's) are checked by ethicapp-ai-additions with
+`ethicapp_ai_capabilities.validate_mediation_decision()`, and by the
 EthicApp backend with the same problem codes (`decision_mismatch`,
-`intervention_mismatch`, `duplicate_message_ref`) in
+`intervention_mismatch`, `duplicate_message_ref`, `duplicate_topic_id`,
+`unknown_topic_id`, `coverage_mismatch`) in
 `ethicapp/backend/services/mediation-decision-records.js`, which validates
 every record a callback carries before it is stored.

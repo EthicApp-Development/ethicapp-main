@@ -1,5 +1,6 @@
 // mediation-decision/v1 records (#1222): validation against EthicApp's copy
-// of the schema and the integrity rules of ethicapp_ai_capabilities.
+// of the schema and the integrity rules of ethicapp_ai_capabilities, the
+// topic coverage's included (#1233).
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync } from "node:fs";
 import test from "node:test";
@@ -27,7 +28,7 @@ function codes(result) {
 
 test("every example of the copy is valid", () => {
     const names = readdirSync(EXAMPLES_URL).filter(name => name.endsWith(".json"));
-    assert.equal(names.length, 4);
+    assert.equal(names.length, 5);
     for (const name of names) {
         assert.deepEqual(validateMediationDecision(example(name)), { valid: true, problems: [] }, name);
     }
@@ -91,6 +92,137 @@ test("a message evaluated twice in one window is refused", () => {
     assert.deepEqual(codes(validateMediationDecision(record)), [
         "duplicate_message_ref window.messages[4].messageId",
     ]);
+});
+
+// ─── The topic coverage (#1233, ethicapp-ai-additions#313) ──────────────────
+
+const COVERAGE_EXAMPLE = "topic-coverage.es_CL.json";
+
+function ref(messageId) {
+    return { messageId, correlationId: null };
+}
+
+test("a record without coverage is unaffected, and every example accepts one", () => {
+    const names = readdirSync(EXAMPLES_URL).filter(name => name.endsWith(".json") && name !== COVERAGE_EXAMPLE);
+    for (const name of names) {
+        const record = example(name);
+        assert.equal(Object.hasOwn(record, "topicCoverage"), false, name);
+        record.topicCoverage = {
+            status:          "unchanged",
+            updatedTopicIds: [],
+            topics:          ["T1", "T2", "T3", "T4"].map(id => ({ id, status: "pending", evidence: [] })),
+        };
+        assert.deepEqual(validateMediationDecision(record), { valid: true, problems: [] }, name);
+    }
+});
+
+test("a coverage key the copy does not define is refused", () => {
+    const record = example(COVERAGE_EXAMPLE);
+    record.topicCoverage.topics[0].title = "Veracidad del registro";
+    const result = validateMediationDecision(record);
+    assert.equal(result.valid, false);
+    assert.ok(codes(result).includes("schema_violation topicCoverage.topics[0].title"), codes(result).join());
+    assert.equal(JSON.stringify(result).includes("Veracidad"), false);
+});
+
+test("each topic appears once in the coverage and in its updated topics", () => {
+    const duplicate = example(COVERAGE_EXAMPLE);
+    duplicate.topicCoverage.topics.push({ id: "T4", status: "pending", evidence: [] });
+    assert.deepEqual(codes(validateMediationDecision(duplicate)), [
+        "duplicate_topic_id topicCoverage.topics[4].id",
+    ]);
+
+    const updatedTwice = example(COVERAGE_EXAMPLE);
+    updatedTwice.topicCoverage.updatedTopicIds = ["T2", "T2"];
+    assert.deepEqual(codes(validateMediationDecision(updatedTwice)), [
+        "duplicate_topic_id topicCoverage.updatedTopicIds[1]",
+    ]);
+});
+
+test("the updated topics are raised topics of the snapshot, named only by an updated run", () => {
+    const unknown = example(COVERAGE_EXAMPLE);
+    unknown.topicCoverage.updatedTopicIds = ["T2", "T9"];
+    assert.deepEqual(codes(validateMediationDecision(unknown)), [
+        "unknown_topic_id topicCoverage.updatedTopicIds[1]",
+    ]);
+
+    const pending = example(COVERAGE_EXAMPLE);
+    pending.topicCoverage.updatedTopicIds = ["T4"];
+    assert.deepEqual(codes(validateMediationDecision(pending)), [
+        "coverage_mismatch topicCoverage.updatedTopicIds[0]",
+    ]);
+
+    for (const status of ["unchanged", "failed"]) {
+        const record = example(COVERAGE_EXAMPLE);
+        record.topicCoverage.status = status;
+        assert.deepEqual(codes(validateMediationDecision(record)), [
+            "coverage_mismatch topicCoverage.updatedTopicIds",
+        ], status);
+        record.topicCoverage.updatedTopicIds = [];
+        assert.deepEqual(validateMediationDecision(record), { valid: true, problems: [] }, status);
+    }
+
+    const empty = example(COVERAGE_EXAMPLE);
+    empty.topicCoverage.updatedTopicIds = [];
+    assert.deepEqual(codes(validateMediationDecision(empty)), [
+        "coverage_mismatch topicCoverage.updatedTopicIds",
+    ]);
+});
+
+test("a topic's evidence matches its level and cites each message once", () => {
+    const pending = example(COVERAGE_EXAMPLE);
+    pending.topicCoverage.topics[2].evidence = [ref(121)];
+    assert.deepEqual(codes(validateMediationDecision(pending)), [
+        "coverage_mismatch topicCoverage.topics[2].evidence",
+    ]);
+
+    for (const status of ["partial", "developed"]) {
+        const record = example(COVERAGE_EXAMPLE);
+        record.topicCoverage.topics[0].status = status;
+        record.topicCoverage.topics[0].evidence = [];
+        assert.deepEqual(codes(validateMediationDecision(record)), [
+            "coverage_mismatch topicCoverage.topics[0].evidence",
+        ], status);
+    }
+
+    const twice = example(COVERAGE_EXAMPLE);
+    twice.topicCoverage.topics[0].evidence.push({ ...twice.topicCoverage.topics[0].evidence[1] });
+    assert.deepEqual(codes(validateMediationDecision(twice)), [
+        "duplicate_message_ref topicCoverage.topics[0].evidence[3].messageId",
+    ]);
+
+    // A message may support several topics, and evidence may come from
+    // earlier windows only.
+    const shared = example(COVERAGE_EXAMPLE);
+    shared.topicCoverage.topics[0].evidence.push(ref(122));
+    shared.topicCoverage.status = "unchanged";
+    shared.topicCoverage.updatedTopicIds = [];
+    shared.window.messages = [];
+    assert.deepEqual(validateMediationDecision(shared), { valid: true, problems: [] });
+});
+
+test("the decision's topic is a topic of the coverage", () => {
+    const record = example(COVERAGE_EXAMPLE);
+    record.topic = { id: "T7", name: "Un tópico de otra sala" };
+    assert.deepEqual(codes(validateMediationDecision(record)), ["unknown_topic_id topic.id"]);
+});
+
+test("malformed coverages are reported, never thrown", () => {
+    const records = [
+        { topicCoverage: "x" },
+        { topicCoverage: { status: "updated", updatedTopicIds: "T1", topics: { T1: "pending" } } },
+        { topicCoverage: { status: 3, updatedTopicIds: [null, 1, "T1"], topics: [null, "T1", { id: 1 }] } },
+        { topic: { id: "T1" }, topicCoverage: { topics: [{ id: "T2", status: "partial", evidence: "x" }] } },
+        { topicCoverage: { topics: [{ id: "T1", status: "pending", evidence: [null, { messageId: true }] }] } },
+    ];
+    for (const record of records) {
+        const result = validateMediationDecision(record);
+        assert.equal(result.valid, false, JSON.stringify(record));
+        assert.doesNotThrow(() => mediationDecisionIntegrityProblems(record));
+    }
+    assert.deepEqual(mediationDecisionIntegrityProblems({
+        topicCoverage: { status: 3, updatedTopicIds: [null, 1, "T1"], topics: [null, "T1", { id: 1 }] },
+    }), [{ code: "unknown_topic_id", path: "topicCoverage.updatedTopicIds[2]" }]);
 });
 
 test("integrity rules ignore values the schema already refuses", () => {

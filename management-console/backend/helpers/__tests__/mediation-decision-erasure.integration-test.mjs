@@ -55,8 +55,9 @@ async function insertTeam() {
   return team.id;
 }
 
-// A room-level callback carrying one decision, and its stored record.
-async function insertDecision(groupId, reason) {
+// A room-level callback carrying one decision, and its stored record; with
+// a topic coverage (#1233, V47) and its resolved evidence when given.
+async function insertDecision(groupId, reason, { topicCoverage, coverageEvidence } = {}) {
   const decisionId = randomUUID();
   const record = {
     schemaVersion: 'mediation-decision/v1',
@@ -70,7 +71,8 @@ async function insertDecision(groupId, reason) {
     category: null,
     topic: null,
     reason,
-    intervention: { status: 'not_requested', agent: null, messageId: null, suppressedBy: null }
+    intervention: { status: 'not_requested', agent: null, messageId: null, suppressedBy: null },
+    ...(topicCoverage ? { topicCoverage } : {})
   };
   const [result] = await query(
     `
@@ -83,10 +85,14 @@ async function insertDecision(groupId, reason) {
   await query(
     `
       INSERT INTO external_service_mediation_decisions
-        (service_id, decision_id, session_id, phase_id, group_id, result_id, decided_at, record)
-      VALUES ($1, $2, 1, 2, $3, $4, $5, $6::jsonb)
+        (service_id, decision_id, session_id, phase_id, group_id, result_id, decided_at, record,
+         coverage_evidence_chat_message_ids)
+      VALUES ($1, $2, 1, 2, $3, $4, $5, $6::jsonb, $7::jsonb)
     `,
-    [SERVICE_ID, decisionId, groupId, result.id, record.decidedAt, JSON.stringify(record)]
+    [
+      SERVICE_ID, decisionId, groupId, result.id, record.decidedAt, JSON.stringify(record),
+      coverageEvidence ? JSON.stringify(coverageEvidence) : null
+    ]
   );
   return { decisionId, resultId: result.id };
 }
@@ -142,4 +148,44 @@ test('forgetting a student redacts the decisions of the groups they wrote in, in
   );
   assert.match(event.message, /mediation decision reasons redacted: 1\./);
   assert.match(event.message, /mediation decision payloads redacted: 1\./);
+});
+
+test('forgetting a student redacts the reason of a decision with a topic coverage and leaves the coverage', {
+  skip: SKIP_REASON
+}, async () => {
+  const student = await insertUser('Ignacia', 'Fuentes');
+  const team = await insertTeam();
+  await query('INSERT INTO differential_chat (uid, tmid, content) VALUES ($1, $2, $3)', [
+    student.id, team, 'La supervisora no puede pedirnos firmar algo que no revisamos.'
+  ]);
+  const topicCoverage = {
+    status: 'unchanged',
+    updatedTopicIds: [],
+    topics: [
+      { id: 'T1', status: 'partial', evidence: [{ messageId: 115, correlationId: null }] },
+      { id: 'T2', status: 'pending', evidence: [] }
+    ]
+  };
+  const coverageEvidence = [[null], []];
+  const decision = await insertDecision(team, 'Ignacia habla de la supervisora.',
+    { topicCoverage, coverageEvidence });
+
+  const result = await createAccountForgettingService({ pool: getPool(), env: {}, logger: silentLogger })
+    .forgetStudent({ adminUserId: ADMIN_USER_ID, userId: student.id, expectedEmail: student.mail });
+  assert.equal(result.status, 'anonymized');
+
+  const expected = `${P} habla de la supervisora.`;
+  assert.deepEqual(await storedReasons(decision), { decision: expected, payload: expected });
+  // The coverage holds ids only: the erasure leaves it and its evidence as stored.
+  const [row] = await query(
+    `SELECT record -> 'topicCoverage' AS coverage, coverage_evidence_chat_message_ids AS evidence
+     FROM external_service_mediation_decisions WHERE decision_id = $1`,
+    [decision.decisionId]
+  );
+  assert.deepEqual(row, { coverage: topicCoverage, evidence: coverageEvidence });
+  const [payload] = await query(
+    'SELECT raw_payload -> \'decisions\' -> 0 -> \'topicCoverage\' AS coverage FROM external_service_results WHERE id = $1',
+    [decision.resultId]
+  );
+  assert.deepEqual(payload.coverage, topicCoverage);
 });

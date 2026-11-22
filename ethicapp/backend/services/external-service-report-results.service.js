@@ -76,6 +76,18 @@ function idOrNull(value) {
     return Number.isSafeInteger(id) && id > 0 ? id : null;
 }
 
+// The chat message ids of a decision's coverage evidence (#1233, V47),
+// aligned with its topics and each topic's evidence; null for a decision
+// without coverage.
+function coverageEvidenceIdsFromRow(value) {
+    if (!Array.isArray(value)) {
+        return null;
+    }
+    return Object.freeze(value.map(ids => Object.freeze(Array.isArray(ids)
+        ? ids.map(idOrNull)
+        : [])));
+}
+
 // A stored mediation decision (#1222, V46) with the job its callback
 // correlated with, normally the room job of its room (#833).
 function mediationDecisionFromRow(row) {
@@ -87,18 +99,21 @@ function mediationDecisionFromRow(row) {
             instantiationReport: row.job_instantiation_report ?? null,
         })
         : null;
+    const windowIds = (row.window_chat_message_ids ?? []).map(idOrNull);
+    const coverageIds = coverageEvidenceIdsFromRow(row.coverage_evidence_chat_message_ids);
     return Object.freeze({
-        id:                        row.id,
-        decisionId:                row.decision_id,
-        phaseId:                   row.phase_id ?? null,
-        questionId:                row.question_id ?? null,
-        groupId:                   row.group_id ?? null,
-        resultId:                  row.result_id ?? null,
-        record:                    row.record ?? null,
-        windowChatMessageIds:      Object.freeze((row.window_chat_message_ids ?? []).map(idOrNull)),
-        interventionChatMessageId: idOrNull(row.intervention_chat_message_id),
-        decidedAt:                 isoOrNull(row.decided_at),
-        receivedAt:                isoOrNull(row.received_at),
+        id:                             row.id,
+        decisionId:                     row.decision_id,
+        phaseId:                        row.phase_id ?? null,
+        questionId:                     row.question_id ?? null,
+        groupId:                        row.group_id ?? null,
+        resultId:                       row.result_id ?? null,
+        record:                         row.record ?? null,
+        windowChatMessageIds:           Object.freeze(windowIds),
+        interventionChatMessageId:      idOrNull(row.intervention_chat_message_id),
+        coverageEvidenceChatMessageIds: coverageIds,
+        decidedAt:                      isoOrNull(row.decided_at),
+        receivedAt:                     isoOrNull(row.received_at),
         job,
     });
 }
@@ -179,6 +194,7 @@ export class ExternalServiceReportResultsService {
             `SELECT d.id, d.service_id, d.session_id, d.decision_id::text AS decision_id,
                     d.phase_id, d.question_id, d.group_id, d.result_id, d.record,
                     d.window_chat_message_ids, d.intervention_chat_message_id,
+                    d.coverage_evidence_chat_message_ids,
                     d.decided_at, d.received_at, d.job_id,
                     j.kind AS job_kind, j.created_at AS job_created_at,
                     j.instantiation_report AS job_instantiation_report

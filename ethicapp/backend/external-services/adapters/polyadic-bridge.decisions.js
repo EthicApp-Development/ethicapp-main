@@ -13,6 +13,11 @@
 //   `decidedAt`, and one row per room with the topic list the room was
 //   created with. A session without stored decisions keeps its transcript
 //   exactly as before.
+// - A record may carry the room's topic coverage as the Validator saw it
+//   (`topicCoverage`, #1233, ethicapp-ai-additions#313). Its evidence is
+//   resolved to chat messages when it is stored, and the decision rows
+//   export it in four more columns, added only to transcripts with at least
+//   one such record, so every other transcript keeps its columns and values.
 
 import { getCaseAnalysis as defaultGetCaseAnalysis } from "../../helpers/case-analyses-helper.js";
 import { resolveJsonPointer } from "../../helpers/case-session-inputs.js";
@@ -84,6 +89,25 @@ export const DECISION_REPORT_COLUMN_DECLARATIONS = Object.freeze([
     { id: C.DECIDED_AT,                       label: "Decided at" },
     { id: C.ROOM_TOPICS,                      label: "Room topics" },
     { id: C.ROOM_TOPICS_STATUS,               label: "Room topics status" },
+]);
+
+// The topic coverage columns of the decision rows (#1233), declared only
+// when a decision of the session carries a coverage. Documented in
+// EXTERNAL.md, "Polyadic mediation decisions".
+export const COVERAGE_REPORT_COLUMNS = Object.freeze({
+    TOPIC_STATUS:      "polyadic_decision_topic_status",
+    STATUS:            "polyadic_decision_coverage_status",
+    UPDATED_TOPIC_IDS: "polyadic_decision_coverage_updated_topic_ids",
+    TOPICS:            "polyadic_decision_coverage_topics",
+});
+
+const V = COVERAGE_REPORT_COLUMNS;
+
+export const COVERAGE_REPORT_COLUMN_DECLARATIONS = Object.freeze([
+    { id: V.TOPIC_STATUS,      label: "Decision topic's coverage" },
+    { id: V.STATUS,            label: "Topic coverage update" },
+    { id: V.UPDATED_TOPIC_IDS, label: "Topics updated in this window" },
+    { id: V.TOPICS,            label: "Topic coverage" },
 ]);
 
 export const REPORT_ROW_KIND = Object.freeze({
@@ -354,6 +378,86 @@ function idListJson(ids) {
     return JSON.stringify(ids.map(id => positiveIdOf(id)));
 }
 
+// ─── Topic coverage ─────────────────────────────────────────────────────────
+
+function coverageOf(record) {
+    return isPlainObject(record?.topicCoverage) ? record.topicCoverage : null;
+}
+
+/**
+ * Whether any of the stored decisions carries a topic coverage (#1233): the
+ * coverage columns are declared only then.
+ */
+export function hasTopicCoverage(decisions) {
+    return decisions.some(decision => coverageOf(decision?.record) !== null);
+}
+
+// The coverage's topics as exported, with their evidence as transcript ids
+// (resolved when the record was stored) and as Polyadic's ids.
+function coverageTopicsOf(coverage, evidenceIds) {
+    const topics = Array.isArray(coverage.topics) ? coverage.topics : [];
+    return topics.map((topic, topicIndex) => {
+        const evidence = Array.isArray(topic?.evidence) ? topic.evidence : [];
+        const chatIds = evidenceIds?.[topicIndex];
+        const chatIdAt = index => positiveIdOf(chatIds?.[index]);
+        return {
+            id:                            typeof topic?.id === "string" ? topic.id : null,
+            status:                        typeof topic?.status === "string" ? topic.status : null,
+            evidence_message_ids:          evidence.map((_, index) => chatIdAt(index)),
+            evidence_polyadic_message_ids: evidence.map(ref => positiveIdOf(ref?.messageId)),
+        };
+    });
+}
+
+// The JSON of the coverage's topics, within the contract's string limit:
+// without Polyadic's ids when they would not fit, and without the evidence
+// when even the transcript ids would not.
+function coverageTopicsJson(topics) {
+    const candidates = [
+        topics,
+        topics.map(({ id, status, evidence_message_ids }) => ({
+            id, status, evidence_message_ids,
+        })),
+        topics.map(({ id, status }) => ({ id, status })),
+    ];
+    for (const candidate of candidates) {
+        const json = JSON.stringify(candidate);
+        if (json.length <= MAX_CONTRIBUTION_STRING_LENGTH) {
+            return json;
+        }
+    }
+    return null;
+}
+
+// The coverage values of one decision row: all empty for a record without
+// a coverage.
+function coverageValues(decision) {
+    const record = isPlainObject(decision.record) ? decision.record : {};
+    const coverage = coverageOf(record);
+    if (!coverage) {
+        return {
+            [V.TOPIC_STATUS]:      null,
+            [V.STATUS]:            null,
+            [V.UPDATED_TOPIC_IDS]: null,
+            [V.TOPICS]:            null,
+        };
+    }
+    const topics = coverageTopicsOf(coverage, decision.coverageEvidenceChatMessageIds);
+    const topicId = isPlainObject(record.topic) ? record.topic.id : null;
+    const decisionTopic = typeof topicId === "string"
+        ? topics.find(topic => topic.id === topicId)
+        : undefined;
+    const updated = Array.isArray(coverage.updatedTopicIds)
+        ? coverage.updatedTopicIds.filter(id => typeof id === "string")
+        : [];
+    return {
+        [V.TOPIC_STATUS]:      decisionTopic?.status ?? null,
+        [V.STATUS]:            textOrNull(coverage.status),
+        [V.UPDATED_TOPIC_IDS]: textOrNull(JSON.stringify(updated)),
+        [V.TOPICS]:            coverageTopicsJson(topics),
+    };
+}
+
 // The values of one decision row. The record was validated before it was
 // stored, but a value of an unexpected type is exported as empty rather
 // than making the whole contribution invalid.
@@ -391,7 +495,8 @@ function decisionValues(decision) {
  * The transcript rows of a session's stored decisions: one per decision at
  * its `decidedAt`, and one per room with a recorded topic list at its room
  * job's creation. `agentValues(decision)` gives the bridge's agent columns
- * of a decision row.
+ * of a decision row. When any decision carries a topic coverage, every
+ * decision row also has the coverage columns (#1233).
  *
  * A decision row names the deciding agent as its author (`authorName`,
  * #1228), the record's `agent`, such as `Validator`. A room row was written
@@ -405,6 +510,7 @@ function decisionValues(decision) {
 export function decisionTranscriptRows(decisions, roomTopics, agentValues) {
     const rows = [];
     const firstDecisionOfRoom = new Map();
+    const withCoverage = hasTopicCoverage(decisions);
     for (const decision of decisions) {
         const placement = placementOf(decision);
         const time = isoTimeOf(decision.record?.decidedAt) ?? isoTimeOf(decision.decidedAt);
@@ -419,7 +525,11 @@ export function decisionTranscriptRows(decisions, roomTopics, agentValues) {
             time,
             message:    null,
             authorName: normalizeExternalAgentAuthorName(decision.record?.agent) || null,
-            values:     { ...agentValues(decision), ...decisionValues(decision) },
+            values:     {
+                ...agentValues(decision),
+                ...decisionValues(decision),
+                ...(withCoverage ? coverageValues(decision) : {}),
+            },
         });
     }
 

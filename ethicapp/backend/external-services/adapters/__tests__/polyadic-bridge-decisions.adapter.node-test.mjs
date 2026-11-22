@@ -13,6 +13,7 @@ import {
     REPORT_COLUMNS,
 } from "../polyadic-bridge.adapter.js";
 import {
+    COVERAGE_REPORT_COLUMNS,
     DECISION_REPORT_COLUMNS,
     DECISION_STORAGE,
     interventionChatMessageIdOf,
@@ -321,6 +322,39 @@ test("storeCallbackDecisions records indexes and codes only", async () => {
     assert.equal(warnings.some(line => line.includes("Beto")), false);
 });
 
+test("a record with a topic coverage is stored as sent; an inconsistent coverage is skipped", async t => {
+    const lines = silenceConsole(t);
+    const harness = createHarness();
+    await harness.initialize();
+    const record = example("topic-coverage.es_CL.json");
+    const inconsistent = example("topic-coverage.es_CL.json");
+    inconsistent.decisionId = "0b9e8a52-7a1f-4f7e-9d43-5c1e2f3a4b99";
+    inconsistent.topicCoverage.updatedTopicIds = ["T4"];
+
+    const result = await harness.dispatch({
+        resultId:       RESULT_ID,
+        jobId:          ROOM_JOB_ID,
+        requestPayload: {
+            room:        ROOM,
+            evaluations: [{ agente: "ConversationGuide", respuesta: "¿Y quien denuncia?" }],
+            decisions:   [record, inconsistent],
+        },
+    });
+
+    assert.deepEqual(harness.recorded[0].decisions, [{ record, interventionChatMessageId: 9001 }]);
+    assert.deepEqual(result.payload.decisions, {
+        received:   2,
+        stored:     [record.decisionId],
+        duplicates: [],
+        invalid:    [{
+            index:      1,
+            decisionId: inconsistent.decisionId,
+            problems:   [{ code: "coverage_mismatch", path: "topicCoverage.updatedTopicIds[0]" }],
+        }],
+    });
+    assert.equal(lines.some(line => line.includes("Costos personales")), false);
+});
+
 // ─── The chat transcript ────────────────────────────────────────────────────
 
 const TOPICS_RECORD = Object.freeze({
@@ -431,8 +465,16 @@ const DECISION_COLUMNS = [
     "polyadic_room_topics_status",
 ];
 
+const COVERAGE_COLUMNS = [
+    "polyadic_decision_topic_status",
+    "polyadic_decision_coverage_status",
+    "polyadic_decision_coverage_updated_topic_ids",
+    "polyadic_decision_coverage_topics",
+];
+
 test("the decision columns have stable names", () => {
     assert.deepEqual(Object.values(DECISION_REPORT_COLUMNS), DECISION_COLUMNS);
+    assert.deepEqual(Object.values(COVERAGE_REPORT_COLUMNS), COVERAGE_COLUMNS);
 });
 
 test("a session without decisions keeps its contribution exactly", async () => {
@@ -639,4 +681,161 @@ test("one listing read serves every room of the case", async () => {
     } });
     assert.equal(reads, 1);
     assert.deepEqual([...rooms.keys()], [ROOM_JOB_ID, otherJob.id]);
+});
+
+// ─── The topic coverage (#1233) ─────────────────────────────────────────────
+
+const COVERAGE_LISTING_ROW = Object.freeze({
+    ...LISTING_ROW,
+    document: {
+        ...LISTING_ROW.document,
+        topics: [...LISTING_ROW.document.topics, { id: "T4", topic: "Lealtad con el equipo" }],
+    },
+});
+
+const COVERAGE_ROOM_JOB = Object.freeze({
+    ...ROOM_JOB,
+    instantiationReport: {
+        ...ROOM_JOB.instantiationReport,
+        caseInputs: [{ ...TOPICS_RECORD, ids: ["T1", "T2", "T3", "T4"] }],
+    },
+});
+
+test("decisions without coverage keep the transcript's columns and values exactly", async () => {
+    const rows = [studentRow(5000, "2026-11-18T17:04:00.000Z")];
+    const names = [
+        "constructive.es_CL.json", "stuck-suppressed.es_CL.json",
+        "no-intervention.es_CL.json", "unparsed.en_US.json",
+    ];
+    const reader = {
+        list:               async () => [],
+        mediationDecisions: async () => names.map(name => storedDecision(name)),
+    };
+
+    const contribution = await contributeToReport(contextOf(rows), { results: reader }, {
+        getCaseAnalysis: async () => LISTING_ROW,
+    });
+
+    assert.deepEqual(contribution.columns.map(column => column.id), [
+        ...LEGACY_COLUMNS, "polyadic_agent_decision_id", ...DECISION_COLUMNS,
+    ]);
+    const decisionKeys = [
+        ...LEGACY_COLUMNS, "polyadic_agent_decision_id",
+        ...DECISION_COLUMNS.filter(column => !column.startsWith("polyadic_room_topics")),
+    ];
+    for (const row of contribution.rows.slice(0, names.length)) {
+        assert.deepEqual(Object.keys(row.values).sort(), [...decisionKeys].sort());
+    }
+    assert.deepEqual(Object.keys(contribution.rows.at(-1).values).sort(),
+        ["polyadic_room_topics", "polyadic_room_topics_status", "polyadic_row_kind"]);
+});
+
+test("a decision's topic coverage is exported on its row, with the evidence as transcript ids", async () => {
+    const rows = [studentRow(5121, "2026-11-18T17:10:00.000Z")];
+    const covered = storedDecision("topic-coverage.es_CL.json", {
+        job:                            COVERAGE_ROOM_JOB,
+        windowChatMessageIds:           [5121, 5122, 5124, 5125],
+        interventionChatMessageId:      6001,
+        // 109 could not be resolved.
+        coverageEvidenceChatMessageIds: [[5101, 5104, null], [5122, 5125], [], []],
+    });
+    const earlier = storedDecision("no-intervention.es_CL.json", { job: COVERAGE_ROOM_JOB });
+    const reader = { list: async () => [], mediationDecisions: async () => [earlier, covered] };
+
+    const contribution = await contributeToReport(contextOf(rows), { results: reader }, {
+        getCaseAnalysis: async () => COVERAGE_LISTING_ROW,
+    });
+
+    const validation = validate(contribution, rows);
+    assert.equal(validation.valid, true, JSON.stringify(validation.problems));
+    assert.deepEqual(contribution.columns.map(column => column.id), [
+        ...LEGACY_COLUMNS, "polyadic_agent_decision_id", ...DECISION_COLUMNS, ...COVERAGE_COLUMNS,
+    ]);
+    assert.equal(contribution.rows.length, 3);
+    const [earlierRow, coveredRow, topicsRow] = contribution.rows;
+
+    // The record without coverage leaves the coverage columns empty.
+    for (const column of COVERAGE_COLUMNS) {
+        assert.equal(earlierRow.values[column], null, column);
+    }
+    assert.equal(coveredRow.values.polyadic_decision_topic_id, "T3");
+    assert.deepEqual(
+        Object.fromEntries(COVERAGE_COLUMNS.map(column => [column, coveredRow.values[column]])),
+        {
+            polyadic_decision_topic_status:               "pending",
+            polyadic_decision_coverage_status:            "updated",
+            polyadic_decision_coverage_updated_topic_ids: "[\"T2\"]",
+            polyadic_decision_coverage_topics:            JSON.stringify([
+                { id: "T1", status: "developed", evidence_message_ids: [5101, 5104, null],
+                    evidence_polyadic_message_ids: [101, 104, 109] },
+                { id: "T2", status: "partial", evidence_message_ids: [5122, 5125],
+                    evidence_polyadic_message_ids: [122, 125] },
+                { id: "T3", status: "pending", evidence_message_ids: [], evidence_polyadic_message_ids: [] },
+                { id: "T4", status: "pending", evidence_message_ids: [], evidence_polyadic_message_ids: [] },
+            ]),
+        }
+    );
+    // The room row is unchanged: it names the topics the coverage refers to.
+    assert.deepEqual(Object.keys(topicsRow.values).sort(),
+        ["polyadic_room_topics", "polyadic_room_topics_status", "polyadic_row_kind"]);
+    assert.deepEqual(JSON.parse(topicsRow.values.polyadic_room_topics).map(topic => topic.id),
+        ["T1", "T2", "T3", "T4"]);
+});
+
+test("a coverage whose evidence was not resolved, or that names no decision topic, is still exported", () => {
+    const record = example("topic-coverage.es_CL.json");
+    record.decision = "no_intervention";
+    record.category = null;
+    record.topic = null;
+    record.intervention = { status: "not_requested", agent: null, messageId: null, suppressedBy: null };
+    record.topicCoverage.status = "failed";
+    record.topicCoverage.updatedTopicIds = [];
+    const decision = storedDecision("topic-coverage.es_CL.json", {
+        record,
+        coverageEvidenceChatMessageIds: null,
+    });
+
+    const [row] = buildChatTranscriptContribution(contextOf([]), [], {
+        decisions:  [decision],
+        roomTopics: new Map(),
+    }).rows;
+
+    assert.equal(row.values.polyadic_decision_topic_status, null);
+    assert.equal(row.values.polyadic_decision_coverage_status, "failed");
+    assert.equal(row.values.polyadic_decision_coverage_updated_topic_ids, "[]");
+    const topics = JSON.parse(row.values.polyadic_decision_coverage_topics);
+    assert.deepEqual(topics[0].evidence_message_ids, [null, null, null]);
+    assert.deepEqual(topics[0].evidence_polyadic_message_ids, [101, 104, 109]);
+});
+
+test("the largest coverage fits the report's string limit", () => {
+    const record = example("topic-coverage.es_CL.json");
+    record.topicCoverage.topics = Array.from({ length: 20 }, (_, topic) => ({
+        id:       `T${topic + 1}`,
+        status:   "developed",
+        evidence: Array.from({ length: 20 }, (_, index) => ({
+            messageId:     900000000 + topic * 20 + index,
+            correlationId: null,
+        })),
+    }));
+    record.topicCoverage.updatedTopicIds = ["T3"];
+    const huge = id => 9000000000000 + id;
+    const decision = storedDecision("topic-coverage.es_CL.json", {
+        record,
+        coverageEvidenceChatMessageIds: record.topicCoverage.topics.map(topic =>
+            topic.evidence.map(reference => huge(reference.messageId))),
+    });
+
+    const contribution = buildChatTranscriptContribution(contextOf([]), [], {
+        decisions:  [decision],
+        roomTopics: new Map(),
+    });
+
+    assert.equal(validate(contribution, []).valid, true);
+    // Polyadic's ids are left out first; the transcript ids stay.
+    const topics = JSON.parse(contribution.rows[0].values.polyadic_decision_coverage_topics);
+    assert.equal(topics.length, 20);
+    assert.deepEqual(Object.keys(topics[0]), ["id", "status", "evidence_message_ids"]);
+    assert.equal(topics[0].evidence_message_ids.length, 20);
+    assert.equal(contribution.rows[0].values.polyadic_decision_topic_status, "developed");
 });

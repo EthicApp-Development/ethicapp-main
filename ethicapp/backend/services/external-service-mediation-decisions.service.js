@@ -3,7 +3,8 @@ import { JOB_SOURCE_KIND, poolQuery } from "./external-service-jobs.service.js";
 /**
  * Stored mediation decisions (#1222, epic ethicapp-ai-additions#293, V46):
  * the `mediation-decision/v1` records a service's callbacks carry, such as
- * the decisions of Polyadic's Validator in the `contentCoverage` mode.
+ * the decisions of Polyadic's Validator in the `contentCoverage` mode, with
+ * the room's topic coverage when the record has one (#1233, V47).
  *
  * The adapter validates each record (services/mediation-decision-records.js)
  * and stores the valid ones through createMediationDecisionsAccess(). Each
@@ -17,6 +18,27 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
 function windowReferences(record) {
     const messages = record?.window?.messages;
     return Array.isArray(messages) ? messages : [];
+}
+
+// The topics of a record's coverage, or null for a record without one.
+function coverageTopics(record) {
+    const coverage = record?.topicCoverage;
+    if (coverage === null || typeof coverage !== "object" || Array.isArray(coverage)) {
+        return null;
+    }
+    return Array.isArray(coverage.topics) ? coverage.topics : [];
+}
+
+function evidenceReferences(topic) {
+    return Array.isArray(topic?.evidence) ? topic.evidence : [];
+}
+
+// Every message reference of a record: its window's and its coverage's.
+function messageReferences(record) {
+    return [
+        ...windowReferences(record),
+        ...(coverageTopics(record) ?? []).flatMap(evidenceReferences),
+    ];
 }
 
 function positiveIdOrNull(value) {
@@ -91,29 +113,40 @@ export class ExternalServiceMediationDecisionsService {
         const chatMessageIds = await this.chatMessageIdsByCorrelation({
             serviceId,
             sessionId,
-            correlationIds: decisions.flatMap(({ record }) => windowReferences(record)
+            correlationIds: decisions.flatMap(({ record }) => messageReferences(record)
                 .map(reference => reference?.correlationId)),
         });
+        const chatMessageIdOf = reference => {
+            const correlationId = reference?.correlationId;
+            return typeof correlationId === "string"
+                ? chatMessageIds.get(correlationId.toLowerCase()) ?? null
+                : null;
+        };
 
         for (const { record, interventionChatMessageId = null } of decisions) {
-            const windowChatMessageIds = windowReferences(record).map(reference => {
-                const correlationId = reference?.correlationId;
-                return typeof correlationId === "string"
-                    ? chatMessageIds.get(correlationId.toLowerCase()) ?? null
-                    : null;
-            });
+            const windowChatMessageIds = windowReferences(record).map(chatMessageIdOf);
+            // Aligned with the coverage's topics and each topic's evidence;
+            // null for a record without coverage (#1233, V47).
+            const topics = coverageTopics(record);
+            const coverageEvidenceChatMessageIds = topics
+                ? topics.map(topic => evidenceReferences(topic).map(chatMessageIdOf))
+                : null;
             const rows = await this._db(
                 `INSERT INTO external_service_mediation_decisions
                      (service_id, decision_id, session_id, phase_id, question_id, group_id,
                       job_id, result_id, decided_at, record, window_chat_message_ids,
-                      intervention_chat_message_id)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11::bigint[], $12)
+                      intervention_chat_message_id, coverage_evidence_chat_message_ids)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11::bigint[], $12,
+                         $13::jsonb)
                  ON CONFLICT (service_id, decision_id) DO NOTHING
                  RETURNING id`,
                 [
                     serviceId, record.decisionId, sessionId, phaseId, questionId, groupId,
                     jobId, resultId, record.decidedAt, JSON.stringify(record),
                     windowChatMessageIds, positiveIdOrNull(interventionChatMessageId),
+                    coverageEvidenceChatMessageIds === null
+                        ? null
+                        : JSON.stringify(coverageEvidenceChatMessageIds),
                 ]
             );
             (rows.length > 0 ? stored : duplicates).push(record.decisionId);
