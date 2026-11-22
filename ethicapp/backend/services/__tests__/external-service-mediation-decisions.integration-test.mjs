@@ -1,8 +1,9 @@
-// Integration tests for stored mediation decisions (#1222, V46), against a
-// real PostgreSQL database with migrations V1-V46 applied: the uniqueness
-// that makes a repeated callback store nothing, the record check, the
-// resolution of the window's references through the jobs' sources and the
-// report's read with the room job cannot be checked with fakes.
+// Integration tests for stored mediation decisions (#1222, V46) and their
+// topic coverage (#1233, V47), against a real PostgreSQL database with
+// migrations V1-V47 applied: the uniqueness that makes a repeated callback
+// store nothing, the record checks, the resolution of the window's and the
+// coverage's references through the jobs' sources and the report's read
+// with the room job cannot be checked with fakes.
 //
 // Run with `npm run test:integration`, setting ETHICAPP_INTEGRATION_DATABASE_URL
 // to a disposable database.
@@ -157,4 +158,82 @@ test("the same decision id of two services is two rows", { skip: SKIP_REASON }, 
             { stored: [record.decisionId], duplicates: [] }
         );
     }
+});
+
+// A coverage record of the example with fresh ids, its window and evidence
+// references pointing at the given correlation ids by Polyadic message id.
+function freshCoverageRecord(correlationIdsByMessage) {
+    const record = JSON.parse(readFileSync(new URL("topic-coverage.es_CL.json", EXAMPLES_URL), "utf8"));
+    record.decisionId = randomUUID();
+    const references = [
+        ...record.window.messages,
+        ...record.topicCoverage.topics.flatMap(topic => topic.evidence),
+    ];
+    for (const reference of references) {
+        reference.correlationId = correlationIdsByMessage[reference.messageId] ?? null;
+    }
+    return record;
+}
+
+test("a coverage's evidence is resolved and read back; a record without one keeps NULL",
+    { skip: SKIP_REASON }, async () => {
+        const context = await setup();
+        const { serviceId, sessionId, roomJob, messageJobs, resultId, store } = context;
+        // T1's 101 is a message of an earlier window, T2's 122 one of this
+        // window; 109 and 125 match no job.
+        const record = freshCoverageRecord({
+            101: messageJobs[0].id,
+            122: messageJobs[1].id,
+            125: randomUUID(),
+        });
+        const plain = freshRecord("no-intervention.es_CL.json");
+
+        assert.deepEqual(await store.recordDecisions({
+            serviceId, sessionId, phaseId: 22, questionId: 701, groupId: 301,
+            jobId: roomJob.id, resultId,
+            decisions: [{ record, interventionChatMessageId: 6001 }, { record: plain }],
+        }), { stored: [record.decisionId, plain.decisionId], duplicates: [] });
+
+        const rows = await dbQuery(
+            `SELECT decision_id::text AS decision_id, window_chat_message_ids,
+                    coverage_evidence_chat_message_ids
+             FROM external_service_mediation_decisions
+             WHERE decision_id = ANY($1::uuid[])`,
+            [[record.decisionId, plain.decisionId]]
+        );
+        assert.equal(rows.length, 2);
+        const byId = new Map(rows.map(row => [row.decision_id, row]));
+        assert.deepEqual(byId.get(record.decisionId).coverage_evidence_chat_message_ids,
+            [[5001, null, null], [5002, null], [], []]);
+        assert.deepEqual(byId.get(record.decisionId).window_chat_message_ids, [null, "5002", null, null]);
+        assert.equal(byId.get(plain.decisionId).coverage_evidence_chat_message_ids, null);
+
+        const reader = createReportResultsReader(context.reports, { serviceId, sessionId });
+        const decisions = new Map((await reader.mediationDecisions())
+            .map(decision => [decision.decisionId, decision]));
+        assert.deepEqual(decisions.get(record.decisionId).record, record);
+        assert.deepEqual(decisions.get(record.decisionId).coverageEvidenceChatMessageIds,
+            [[5001, null, null], [5002, null], [], []]);
+        assert.equal(decisions.get(plain.decisionId).coverageEvidenceChatMessageIds, null);
+    });
+
+test("the table ties the coverage evidence to the record's coverage", { skip: SKIP_REASON }, async () => {
+    const { serviceId, sessionId } = await setup();
+    const insert = (record, evidence) => dbQuery(
+        `INSERT INTO external_service_mediation_decisions
+             (service_id, decision_id, session_id, phase_id, decided_at, record,
+              coverage_evidence_chat_message_ids)
+         VALUES ($1, $2, $3, 22, now(), $4::jsonb, $5::jsonb)`,
+        [serviceId, record.decisionId, sessionId, JSON.stringify(record),
+            evidence === null ? null : JSON.stringify(evidence)]
+    );
+
+    // A coverage without its evidence ids, evidence ids without a coverage,
+    // and evidence ids that are not an array are refused.
+    await assert.rejects(insert(freshCoverageRecord({}), null), { code: "23514" });
+    await assert.rejects(insert(freshRecord("unparsed.en_US.json"), []), { code: "23514" });
+    await assert.rejects(insert(freshCoverageRecord({}), { T1: [] }), { code: "23514" });
+
+    await insert(freshCoverageRecord({}), [[null, null, null], [null, null], [], []]);
+    await insert(freshRecord("unparsed.en_US.json"), null);
 });
