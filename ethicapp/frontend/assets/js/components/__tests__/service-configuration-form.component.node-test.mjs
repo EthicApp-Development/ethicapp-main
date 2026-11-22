@@ -35,18 +35,21 @@ const FIELDS = Object.freeze([
         [entry("v19"), entry("v12", "deprecated")]),
 ]);
 
-async function createForm(configuration = {}) {
+async function createForm(configuration = {}, {
+    fields = FIELDS,
+    serviceId = "argumentation-tutor-system",
+} = {}) {
     const vm = new ServiceConfigurationFormController(
         { $id: 4, $applyAsync: () => {} },
         { $on: () => () => {} },
         { instant: key => key },
-        { getInstanceConfiguration: async () => ({ available: true, fields: FIELDS }) }
+        { getInstanceConfiguration: async () => ({ available: true, fields }) }
     );
-    vm.serviceId = "argumentation-tutor-system";
+    vm.serviceId = serviceId;
     vm.phase = { externalServices: {
-        enabledServiceIds: ["argumentation-tutor-system"],
+        enabledServiceIds: [serviceId],
         configurations:    Object.keys(configuration).length > 0
-            ? { "argumentation-tutor-system": { ...configuration } }
+            ? { [serviceId]: { ...configuration } }
             : {},
     } };
     vm.storedConfigurations = [];
@@ -85,5 +88,109 @@ describe("service configuration form: advanced options (#1214)", () => {
         const vm = await createForm({ evaluation_rubric: "v19" });
 
         assert.equal(vm.advancedOpen, false);
+    });
+});
+
+// Polyadic's mode and its advanced `topic_tracking`, which applies to
+// `contentCoverage` rooms only (ethicapp-ai-additions#314, #319), as the
+// instance configuration route returns them.
+const POLYADIC = "polyadic-agent";
+const PIPELINE = enumField("pipeline_type", "Modo de discusión", "General", 10, "standard",
+    [entry("standard"), entry("devilsAdvocate"), entry("contentCoverage")]);
+const TOPIC_TRACKING = {
+    key:          "topic_tracking",
+    type:         "boolean",
+    required:     false,
+    default:      true,
+    label:        "Seguimiento de temas",
+    description:  null,
+    group:        "advanced",
+    order:        90,
+    status:       "active",
+    supersededBy: null,
+    validation:   {},
+    appliesWhen:  [{ field: "pipeline_type", in: ["contentCoverage"] }],
+};
+const POLYADIC_FIELDS = Object.freeze([FIELDS[0], PIPELINE, TOPIC_TRACKING]);
+
+function polyadicForm(configuration = {}) {
+    return createForm(configuration, { fields: POLYADIC_FIELDS, serviceId: POLYADIC });
+}
+
+function shownKeys(vm) {
+    return vm.sections.flatMap(section => section.fields.map(field => field.key));
+}
+
+function stored(vm) {
+    return vm.phase.externalServices.configurations[POLYADIC];
+}
+
+describe("service configuration form: fields that apply to some modes only (#1234)", () => {
+    it("shows topic_tracking under the advanced options only for contentCoverage", async () => {
+        const coverage = await polyadicForm({ pipeline_type: "contentCoverage" });
+        assert.deepEqual(shownKeys(coverage), ["llm_tier", "pipeline_type", "topic_tracking"]);
+        assert.equal(coverage.hasAdvancedSection(), true);
+        assert.equal(coverage.advancedOpen, false);
+
+        for (const configuration of [{}, { pipeline_type: "devilsAdvocate" }]) {
+            const vm = await polyadicForm(configuration);
+            assert.deepEqual(shownKeys(vm), ["llm_tier", "pipeline_type"]);
+            assert.equal(vm.hasAdvancedSection(), false);
+        }
+    });
+
+    it("shows and hides it as the teacher changes the mode, keeping its value", async () => {
+        const vm = await polyadicForm();
+
+        vm.values.pipeline_type = "contentCoverage";
+        vm.onChange(PIPELINE);
+        assert.deepEqual(shownKeys(vm), ["llm_tier", "pipeline_type", "topic_tracking"]);
+
+        vm.toggle(TOPIC_TRACKING);
+        assert.deepEqual(stored(vm), { pipeline_type: "contentCoverage", topic_tracking: false });
+
+        vm.values.pipeline_type = "devilsAdvocate";
+        vm.onChange(PIPELINE);
+        assert.deepEqual(shownKeys(vm), ["llm_tier", "pipeline_type"]);
+        assert.equal(vm.hasAdvancedSection(), false);
+        assert.deepEqual(stored(vm), { pipeline_type: "devilsAdvocate", topic_tracking: false });
+
+        vm.values.pipeline_type = "";
+        vm.onChange(PIPELINE);
+        assert.deepEqual(shownKeys(vm), ["llm_tier", "pipeline_type"], "the default mode");
+
+        vm.values.pipeline_type = "contentCoverage";
+        vm.onChange(PIPELINE);
+        assert.equal(vm.effectiveBoolean(TOPIC_TRACKING), false, "the kept value comes back");
+    });
+
+    it("a value kept for another mode neither blocks the design nor opens the options", async () => {
+        const counts = [];
+        const vm = await polyadicForm({ pipeline_type: "devilsAdvocate", topic_tracking: "yes" });
+        vm.onErrorsChange = ({ count }) => counts.push(count);
+        vm.validate();
+
+        assert.deepEqual(vm.errors, {});
+        assert.deepEqual(vm.notices.byField, {});
+        assert.equal(vm.advancedOpen, false);
+        assert.deepEqual(counts, [0]);
+
+        vm.values.pipeline_type = "contentCoverage";
+        vm.onChange(PIPELINE);
+        assert.deepEqual(vm.errors, { topic_tracking: "invalid_type" });
+        assert.equal(vm.advancedOpen, true);
+        assert.deepEqual(counts.at(-1), 1);
+    });
+
+    it("keeps the sections of a descriptor without applies_when as they were", async () => {
+        const vm = await createForm();
+        const sections = vm.sections;
+
+        vm.values.llm_tier = "advanced";
+        vm.onChange(FIELDS[0]);
+
+        assert.equal(vm.sections, sections, "no rebuild for a field no condition names");
+        assert.deepEqual(vm.phase.externalServices.configurations,
+            { "argumentation-tutor-system": { llm_tier: "advanced" } });
     });
 });

@@ -20,8 +20,10 @@
  *
  * - An input is required when any `required_when` condition holds: the
  *   configuration's effective value of the condition's field (the stored
- *   value, else the descriptor field's default) is one of `in`. An input
- *   with a `source` and no `required_when` is optional.
+ *   value, else the descriptor field's default) is one of `in`
+ *   (common/modules/configuration-conditions.js, which also evaluates the
+ *   `applies_when` of instance fields, #1234). An input with a `source` and
+ *   no `required_when` is optional.
  * - The value is the part, at the RFC 6901 JSON Pointer `source.pointer`, of
  *   the document of the case analysis whose schema is
  *   `source.document_schema` ('' is the whole document). An analysis is used
@@ -39,6 +41,10 @@
  * failed or never answered, or the document lacks the pointed part), and
  * `not_reviewed` (ready but unreviewed, when `require_reviewed`).
  */
+import {
+    anyConditionHolds,
+    fieldsByKeyOf,
+} from "../../common/modules/configuration-conditions.js";
 import { getCaseAnalysis as defaultGetCaseAnalysis } from "./case-analyses-helper.js";
 import { normalizeSessionInputs } from "../services/capability-descriptors.service.js";
 
@@ -89,27 +95,6 @@ function fieldsOf(descriptor) {
 }
 
 /**
- * The effective value of a configuration field: the stored value, else the
- * descriptor field's default, else undefined. A stored null counts as unset,
- * as the editor stores no value for "use the default".
- */
-function effectiveValue(field, configuration, fieldsByKey) {
-    const stored = isPlainObject(configuration) ? configuration[field] : undefined;
-    if (stored !== undefined && stored !== null) {
-        return stored;
-    }
-    const descriptorField = fieldsByKey.get(field);
-    return descriptorField && Object.hasOwn(descriptorField, "default")
-        ? descriptorField.default
-        : undefined;
-}
-
-function conditionHolds(condition, configuration, fieldsByKey) {
-    const value = effectiveValue(condition.field, configuration, fieldsByKey);
-    return value !== undefined && condition.in.some(entry => entry === value);
-}
-
-/**
  * The case inputs a service needs under one configuration.
  *
  * @param {Object|null} descriptor - The service's normalized instance
@@ -127,9 +112,7 @@ function conditionHolds(condition, configuration, fieldsByKey) {
  *     hold are left out.
  */
 export function caseSessionInputs(descriptor, configuration = {}) {
-    const fieldsByKey = new Map(fieldsOf(descriptor)
-        .filter(field => isPlainObject(field) && typeof field.key === "string")
-        .map(field => [field.key, field]));
+    const fieldsByKey = fieldsByKeyOf(fieldsOf(descriptor));
 
     return Object.entries(declarationsOf(descriptor)).flatMap(([key, declaration]) => {
         const source = declaration?.source;
@@ -140,7 +123,7 @@ export function caseSessionInputs(descriptor, configuration = {}) {
         if (!Array.isArray(conditions)) {
             return [{ key, source: { ...source }, required: false }];
         }
-        return conditions.some(condition => conditionHolds(condition, configuration, fieldsByKey))
+        return anyConditionHolds(conditions, configuration, fieldsByKey)
             ? [{ key, source: { ...source }, required: true }]
             : [];
     });

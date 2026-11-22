@@ -4,11 +4,13 @@ import { describe, it } from "node:test";
 import {
     advancedNeedsAttention,
     buildFieldSections,
+    conditionFieldKeys,
     configurationErrors,
     controlKind,
     defaultText,
     enumOptions,
     errorParameters,
+    fieldAppliesTo,
     isAdvancedGroup,
     readControlValue,
     setConfigurationValue,
@@ -324,5 +326,91 @@ describe("advanced options (#1214)", () => {
     it("offers the deprecated rubric only while a design stores it", () => {
         assert.deepEqual(enumOptions(RUBRIC, undefined).map(entry => entry.value), ["v19"]);
         assert.deepEqual(enumOptions(RUBRIC, "v12").map(entry => entry.value), ["v19", "v12"]);
+    });
+});
+
+describe("fields that apply to some configurations only (#1234)", () => {
+    // Polyadic's mode and its advanced `topic_tracking`, which applies to
+    // `contentCoverage` rooms only (ethicapp-ai-additions#314, #319).
+    const PIPELINE = field("pipeline_type", "enum", {
+        entries: [
+            { value: "standard", label: "Estándar", status: "active", supersededBy: null },
+            { value: "contentCoverage", label: "Cobertura", status: "active", supersededBy: null },
+        ],
+    }, { default: "standard", group: "General", order: 10 });
+    const COVERAGE_ONLY = [{ field: "pipeline_type", in: ["contentCoverage"] }];
+    const TOPIC_TRACKING = field("topic_tracking", "boolean", {},
+        { default: true, group: "advanced", order: 90, appliesWhen: COVERAGE_ONLY });
+    const COVERAGE_FIELDS = [TIER, PIPELINE, TOPIC_TRACKING];
+    const COVERAGE = { pipeline_type: "contentCoverage" };
+
+    const keysOf = sections => sections.map(section => [section.group, section.advanced,
+        section.fields.map(f => f.key)]);
+
+    it("shows the field only while its condition holds", () => {
+        assert.deepEqual(keysOf(buildFieldSections(COVERAGE_FIELDS, COVERAGE)), [
+            ["General", false, ["llm_tier", "pipeline_type"]],
+            ["advanced", true, ["topic_tracking"]],
+        ]);
+        for (const configuration of [{}, { pipeline_type: "standard" },
+            { pipeline_type: "standard", topic_tracking: false }]) {
+            assert.deepEqual(keysOf(buildFieldSections(COVERAGE_FIELDS, configuration)), [
+                ["General", false, ["llm_tier", "pipeline_type"]],
+            ], JSON.stringify(configuration));
+        }
+    });
+
+    it("follows the default of the named field when the design stores none", () => {
+        const coverageByDefault = [{ ...PIPELINE, default: "contentCoverage" }, TOPIC_TRACKING];
+
+        assert.equal(fieldAppliesTo(TOPIC_TRACKING, {}, coverageByDefault), true);
+        assert.equal(fieldAppliesTo(TOPIC_TRACKING, { pipeline_type: "standard" },
+            coverageByDefault), false);
+    });
+
+    it("names the fields whose changes show or hide others", () => {
+        assert.deepEqual([...conditionFieldKeys(COVERAGE_FIELDS)], ["pipeline_type"]);
+        assert.deepEqual([...conditionFieldKeys(FIELDS)], []);
+    });
+
+    it("never reports an error or a notice for a field that does not apply", () => {
+        const broken = { pipeline_type: "standard", topic_tracking: "yes" };
+        const required = [PIPELINE, { ...TOPIC_TRACKING, required: true }];
+
+        assert.deepEqual(configurationErrors(COVERAGE_FIELDS, broken), {});
+        assert.deepEqual(configurationErrors(required, { pipeline_type: "standard" }), {});
+        assert.deepEqual(settingNotices(COVERAGE_FIELDS, broken).byField, {});
+        assert.deepEqual(settingNotices(COVERAGE_FIELDS, broken).retiredFields, []);
+
+        assert.deepEqual(configurationErrors(COVERAGE_FIELDS, { ...broken, ...COVERAGE }),
+            { topic_tracking: "invalid_type" });
+        assert.deepEqual(configurationErrors(required, COVERAGE), { topic_tracking: "required" });
+    });
+
+    it("opens the advanced options only for a field that applies", () => {
+        const needsAttention = configuration => advancedNeedsAttention(
+            buildFieldSections(COVERAGE_FIELDS, configuration),
+            configurationErrors(COVERAGE_FIELDS, configuration),
+            settingNotices(COVERAGE_FIELDS, configuration)
+        );
+
+        assert.equal(needsAttention({ pipeline_type: "standard", topic_tracking: "yes" }), false);
+        assert.equal(needsAttention({ ...COVERAGE, topic_tracking: "yes" }), true);
+        assert.equal(needsAttention({ ...COVERAGE, topic_tracking: false }), false);
+    });
+
+    it("leaves a descriptor without appliesWhen as it was", () => {
+        const withoutCondition = COVERAGE_FIELDS.map((candidate) => {
+            const copy = { ...candidate };
+            delete copy.appliesWhen;
+            return copy;
+        });
+
+        assert.deepEqual(keysOf(buildFieldSections(withoutCondition, {})), [
+            ["General", false, ["llm_tier", "pipeline_type"]],
+            ["advanced", true, ["topic_tracking"]],
+        ]);
+        assert.deepEqual(configurationErrors(withoutCondition, { topic_tracking: "yes" }),
+            { topic_tracking: "invalid_type" });
     });
 });

@@ -4,6 +4,7 @@ import defaultAiAdditionsClient, {
     isAiAdditionsCredentialsMissing,
     isAiAdditionsNotConfigured,
 } from "../../services/ai-additions-client.service.js";
+import { applicableConfiguration } from "../../../common/modules/configuration-conditions.js";
 import { plainTextOf } from "../../helpers/rich-text-helper.js";
 import { describeError } from "../../helpers/log-safety.js";
 import { normalizeExternalAgentAuthorName } from "../../helpers/external-agent-author.js";
@@ -454,6 +455,27 @@ export function roomConfiguration({ locale, serviceConfiguration = {} } = {}) {
     const configuration = buildPolyadicSessionPayload({ locale, serviceConfiguration });
     delete configuration.prompt_inicial;
     return configuration;
+}
+
+/**
+ * The phase's settings a room is created with (#1234): `serviceConfiguration`
+ * without the values of the instance fields whose `applies_when` does not
+ * hold. Conditions are evaluated on the configuration the room is created
+ * with (roomConfiguration()), as its case inputs are, so `topic_tracking`
+ * reaches Polyadic only for a `contentCoverage` room. The design keeps the
+ * value, which is sent again once the field applies. Without a readable
+ * descriptor, or with one that declares no `applies_when`, every setting is
+ * sent, as before.
+ * @param {{ descriptor: object|null, locale?: string, serviceConfiguration?: object }} options
+ *   `descriptor`: Polyadic's normalized instance configuration
+ *   (registry getSessionServiceInstanceConfiguration()), or null.
+ */
+export function applicableRoomSettings({ descriptor, locale, serviceConfiguration = {} }) {
+    if (!descriptor || descriptor.available === false || !Array.isArray(descriptor.fields)) {
+        return serviceConfiguration;
+    }
+    return applicableConfiguration(serviceConfiguration, descriptor.fields,
+        roomConfiguration({ locale, serviceConfiguration }));
 }
 
 export function resolvePolyadicUsername(identity, userId) {
@@ -1260,8 +1282,9 @@ export async function register({
     // The case inputs of the phase's rooms (#1221), resolved once for them
     // all with helpers/case-session-inputs.js, under the configuration the
     // rooms are created with.
-    async function resolvePhaseCaseInputs({ sessionId, caseLookup, locale, serviceConfiguration }) {
-        const descriptor = await caseInputsDescriptor(sessionId);
+    async function resolvePhaseCaseInputs({
+        sessionId, descriptor, caseLookup, locale, serviceConfiguration,
+    }) {
         const caseInputs = await resolveRoomCaseInputs({
             descriptor,
             configuration: roomConfiguration({ locale, serviceConfiguration }),
@@ -1277,7 +1300,8 @@ export async function register({
     }
 
     // What every room of a phase is created with: the topic, the locale and
-    // the question, and the case inputs its configuration requires.
+    // the question, the case inputs its configuration requires, and the
+    // phase's settings that apply to it (applicableRoomSettings(), #1234).
     async function buildRoomInputs(sessionId, phaseId, serviceConfiguration) {
         const caseLookup = await lookupSessionCase(sessionId, dependencies);
         const caseText = await resolveCaseText(sessionId, caseLookup, dependencies);
@@ -1285,14 +1309,18 @@ export async function register({
         const questionText = formatQuestionText(question);
         const fallbackTopic = `EthicApp session ${sessionId} phase ${phaseId}`;
         const { locale } = await resolveSessionLanguageContext(sessionId);
+        const descriptor = await caseInputsDescriptor(sessionId);
+        const caseInputs = await resolvePhaseCaseInputs({
+            sessionId, descriptor, caseLookup, locale, serviceConfiguration,
+        });
+        const settings = applicableRoomSettings({ descriptor, locale, serviceConfiguration });
 
         return {
             questionId: question?.id ?? null,
             topic:      composeTopic(caseText || fallbackTopic, questionText),
             locale,
-            caseInputs: await resolvePhaseCaseInputs({
-                sessionId, caseLookup, locale, serviceConfiguration,
-            }),
+            caseInputs,
+            serviceConfiguration: settings,
         };
     }
 
@@ -1489,7 +1517,6 @@ export async function register({
                 phaseId,
                 groupId,
                 ...roomInputs,
-                serviceConfiguration,
             });
             if (room?.failure) {
                 failed.push(room);
@@ -1552,7 +1579,6 @@ export async function register({
                 groupId,
                 ...roomInputs,
                 questionId: questionId ?? roomInputs.questionId,
-                serviceConfiguration,
             });
 
             // The message is not forwarded; the group's next message tries to

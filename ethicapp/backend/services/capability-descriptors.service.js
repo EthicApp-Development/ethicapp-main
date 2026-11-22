@@ -3,10 +3,11 @@
 // (`instance_configuration`). This module fetches a service's descriptor
 // through the AI additions client, checks it against contract version "1"
 // (ethicapp-ai-additions, shared/schemas/capability-descriptor.v1.schema.json),
-// normalizes its instance fields, the documents it declares for students
-// (`student_outputs`, epic #1124, #1131) and the session inputs it accepts
-// (`session_inputs`, #1178, with the case inputs' `source` and
-// `required_when`, #1220), and caches the result in memory per process.
+// normalizes its instance fields (with their `applies_when`, #1234), the
+// documents it declares for students (`student_outputs`, epic #1124, #1131)
+// and the session inputs it accepts (`session_inputs`, #1178, with the case
+// inputs' `source` and `required_when`, #1220), and caches the result in
+// memory per process.
 // Nothing is stored in Redis. `runtime_configuration` is never returned.
 
 export const DESCRIPTOR_CONTRACT_VERSION = "1";
@@ -246,7 +247,7 @@ export function normalizeStudentOutputs(raw) {
 const SESSION_INPUT_SOURCE_KEYS = Object.freeze([
     "kind", "document_schema", "pointer", "require_reviewed",
 ]);
-const SESSION_INPUT_CONDITION_KEYS = Object.freeze(["field", "in"]);
+const CONDITION_KEYS = Object.freeze(["field", "in"]);
 export const CASE_ANALYSIS_SOURCE_KIND = "case_analysis";
 const SOURCE_DOCUMENT_SCHEMA_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*\/v[1-9][0-9]*$/u;
 const JSON_POINTER_PATTERN = /^(?:\/(?:[^~/]|~[01])*)*$/u;
@@ -287,25 +288,114 @@ export function normalizeSessionInputSource(raw) {
     };
 }
 
+// A list of `{ field, in }` conditions, the shape of a session input's
+// `required_when` and of an instance field's `applies_when` (#1234), or why
+// it is unusable: a non-empty list of objects with exactly those keys,
+// `field` a non-empty string and `in` a non-empty list.
+// `name` is the key with its article, as warnings read it.
+function normalizeConditions(raw, name) {
+    if (!Array.isArray(raw) || raw.length === 0) {
+        return { error: `has ${name} that is not a non-empty list` };
+    }
+    const valid = raw.every(condition => isPlainObject(condition)
+        && hasOnlyKeys(condition, CONDITION_KEYS)
+        && isNonEmptyString(condition.field)
+        && Array.isArray(condition.in) && condition.in.length > 0);
+    if (!valid) {
+        return { error: `has ${name} with an invalid condition` };
+    }
+    return {
+        conditions: raw.map(condition => ({ field: condition.field, in: [...condition.in] })),
+    };
+}
+
 /**
  * Normalizes a session input's `required_when`, or explains why it is
  * unusable: a non-empty list of `{ field, in }`, `in` a non-empty list.
  * @returns {{ requiredWhen: Array<{ field: string, in: unknown[] }> } | { error: string }}
  */
 export function normalizeSessionInputConditions(raw) {
-    if (!Array.isArray(raw) || raw.length === 0) {
-        return { error: "has a required_when that is not a non-empty list" };
+    const result = normalizeConditions(raw, "a required_when");
+    return result.error ? result : { requiredWhen: result.conditions };
+}
+
+/**
+ * Normalizes an instance field's `applies_when` (#1234,
+ * ethicapp-ai-additions#319), or explains why its shape is unusable. It has
+ * the shape of a `required_when`. Whether its conditions name usable fields
+ * is checked against the whole descriptor (normalizeFieldConditions()).
+ * @returns {{ appliesWhen: Array<{ field: string, in: unknown[] }> } | { error: string }}
+ */
+export function normalizeAppliesWhen(raw) {
+    const result = normalizeConditions(raw, "an applies_when");
+    return result.error ? result : { appliesWhen: result.conditions };
+}
+
+// Why a well-shaped `applies_when` of field `key` cannot be evaluated, or
+// null: each condition must name another instance field of the descriptor,
+// and one without an `applies_when` of its own, since conditions never chain.
+function appliesWhenProblem(key, appliesWhen, knownKeys, conditionalKeys) {
+    for (const condition of appliesWhen) {
+        if (condition.field === key) {
+            return "has an applies_when on itself";
+        }
+        if (!knownKeys.has(condition.field)) {
+            return `has an applies_when on an unknown field "${condition.field}"`;
+        }
+        if (conditionalKeys.has(condition.field)) {
+            return `has an applies_when on "${condition.field}", which has its own applies_when`;
+        }
     }
-    const valid = raw.every(condition => isPlainObject(condition)
-        && hasOnlyKeys(condition, SESSION_INPUT_CONDITION_KEYS)
-        && isNonEmptyString(condition.field)
-        && Array.isArray(condition.in) && condition.in.length > 0);
-    if (!valid) {
-        return { error: "has a required_when with an invalid condition" };
+    return null;
+}
+
+/**
+ * Adds `appliesWhen` to the normalized instance fields that declare a usable
+ * `applies_when` (#1234). An unusable one (a wrong shape, a condition on the
+ * field itself, on a field the descriptor does not define or on a field with
+ * its own `applies_when`) is dropped with a warning, and the field then
+ * always applies. Fields without `applies_when` are returned unchanged, so a
+ * descriptor that uses none normalizes exactly as before.
+ * @param {object[]} fields - Normalized fields, in descriptor order.
+ * @param {Map<string, object>} rawFieldsByKey - Their raw descriptors.
+ * @returns {{ fields: object[], warnings: string[] }}
+ */
+export function normalizeFieldConditions(fields, rawFieldsByKey) {
+    const shaped = new Map();
+    const shapeErrors = new Map();
+    for (const field of fields) {
+        const raw = rawFieldsByKey.get(field.key)?.applies_when;
+        if (raw === undefined) {
+            continue;
+        }
+        const result = normalizeAppliesWhen(raw);
+        if (result.error) {
+            shapeErrors.set(field.key, result.error);
+        } else {
+            shaped.set(field.key, result.appliesWhen);
+        }
     }
-    return {
-        requiredWhen: raw.map(condition => ({ field: condition.field, in: [...condition.in] })),
-    };
+
+    const knownKeys = new Set(fields.map(field => field.key));
+    const conditionalKeys = new Set(shaped.keys());
+    const warnings = [];
+    const normalized = fields.map((field) => {
+        if (shapeErrors.has(field.key)) {
+            warnings.push(`field "${field.key}" ${shapeErrors.get(field.key)}`);
+            return field;
+        }
+        const appliesWhen = shaped.get(field.key);
+        if (!appliesWhen) {
+            return field;
+        }
+        const problem = appliesWhenProblem(field.key, appliesWhen, knownKeys, conditionalKeys);
+        if (problem) {
+            warnings.push(`field "${field.key}" ${problem}`);
+            return field;
+        }
+        return { ...field, appliesWhen };
+    });
+    return { fields: normalized, warnings };
 }
 
 /**
@@ -397,7 +487,8 @@ function hasFieldGroup(group) {
  * Checks a raw descriptor against contract version "1" and normalizes its
  * instance configuration and its student outputs. Unknown keys are ignored, as
  * the contract requires. Unusable fields and student outputs, and repeated
- * keys and ids, are dropped and reported in `warnings`.
+ * keys and ids, are dropped and reported in `warnings`. A field keeps a usable
+ * `applies_when` as `appliesWhen` (normalizeFieldConditions(), #1234).
  * @param {unknown} raw
  * @param {string} expectedServiceId the descriptor id the manifest maps to
  * @returns {{ ok: true, descriptor: object, warnings: string[] }
@@ -424,8 +515,8 @@ export function normalizeDescriptor(raw, expectedServiceId) {
     }
 
     const warnings = [];
-    const fields = [];
-    const seenKeys = new Set();
+    const accepted = [];
+    const rawFieldsByKey = new Map();
 
     raw.instance_configuration.fields.forEach((rawField, index) => {
         const { field, error } = normalizeFieldDescriptor(rawField);
@@ -437,14 +528,18 @@ export function normalizeDescriptor(raw, expectedServiceId) {
             warnings.push(`field ${label} ${error}`);
             return;
         }
-        if (seenKeys.has(field.key)) {
+        if (rawFieldsByKey.has(field.key)) {
             warnings.push(`field ${label} is repeated`);
             return;
         }
 
-        seenKeys.add(field.key);
-        fields.push(field);
+        rawFieldsByKey.set(field.key, rawField);
+        accepted.push(field);
     });
+
+    const { fields, warnings: conditionWarnings } =
+        normalizeFieldConditions(accepted, rawFieldsByKey);
+    warnings.push(...conditionWarnings);
 
     const studentOutputs = normalizeStudentOutputs(raw.student_outputs);
     warnings.push(...studentOutputs.warnings);

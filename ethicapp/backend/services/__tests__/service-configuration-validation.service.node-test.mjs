@@ -462,3 +462,67 @@ test("validateDesignServiceConfigurations: the tutor's evaluation_mode is valida
         phaseIndex: 0, serviceId: TUTOR, field: "evaluation_mode", code: "not_in_enum", value: "turbo",
     }]);
 });
+
+// ─── Fields that apply to some configurations only (#1234) ───────────────────
+
+// Polyadic's `topic_tracking`, which applies to `contentCoverage` rooms only
+// (ethicapp-ai-additions#314, #319). `coverage_note` is a required field with
+// the same condition, to show that a field that does not apply is never
+// required.
+const { descriptor: coverageDescriptor } = normalizeDescriptor({
+    contract_version:       "1",
+    service:                { id: "polyadic-agent", name: "Polyadic Agents", uses_llm: true },
+    instance_configuration: {
+        fields: [
+            field("pipeline_type", "enum", {
+                enum: [
+                    { value: "standard", label: "Standard" },
+                    { value: "contentCoverage", label: "Content coverage" },
+                ],
+            }, { default: "standard" }),
+            field("topic_tracking", "boolean", {}, {
+                default:      true,
+                display:      { label: "Topic tracking", group: "advanced" },
+                applies_when: [{ field: "pipeline_type", in: ["contentCoverage"] }],
+            }),
+            field("coverage_note", "text", { max_length: 5 }, {
+                required:     true,
+                applies_when: [{ field: "pipeline_type", in: ["contentCoverage"] }],
+            }),
+        ],
+    },
+    runtime_configuration: { fields: [] },
+}, "polyadic-agent");
+
+test("field check: a field that does not apply is neither checked nor required", () => {
+    const fields = coverageDescriptor.fields;
+    assert.ok(fields[1].appliesWhen, "the descriptor declares the condition");
+
+    for (const configuration of [
+        { pipeline_type: "standard", topic_tracking: "yes", coverage_note: "far too long" },
+        { topic_tracking: false },
+        {},
+    ]) {
+        assert.deepEqual(checkServiceConfiguration(configuration, fields),
+            { problems: [], deprecations: [] }, JSON.stringify(configuration));
+    }
+});
+
+test("field check: a field that applies is checked and required as usual", () => {
+    const { problems } = checkServiceConfiguration(
+        { pipeline_type: "contentCoverage", topic_tracking: "yes" }, coverageDescriptor.fields);
+
+    assert.deepEqual(problems, [
+        { field: "topic_tracking", code: "invalid_type", value: "yes" },
+        { field: "coverage_note", code: "required", value: null },
+    ]);
+});
+
+test("design check: a value kept for a field that does not apply never blocks a save", async () => {
+    const result = await validateDesignServiceConfigurations({
+        design:                   designWith({ pipeline_type: "standard", topic_tracking: false }),
+        getInstanceConfiguration: async () => ({ available: true, fields: coverageDescriptor.fields }),
+    });
+
+    assert.deepEqual(result, { errors: [], warnings: [] });
+});

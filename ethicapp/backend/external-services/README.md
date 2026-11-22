@@ -438,6 +438,36 @@ const configuration = await externalServicesRegistry
   `integer` and `number`, `{ maxLength, pattern, multiline }` for `text`, and
   `{}` for `boolean`. Deprecated fields and entries are kept, so stored values
   can still be shown.
+- **Fields that apply to some configurations only.** A field's optional
+  `applies_when` (#1234, ethicapp-ai-additions#319) is normalized to
+  `appliesWhen: [{ field, in }]`, with the shape of a session input's
+  `required_when`. The field applies when any condition holds on the
+  effective value (stored, else the field's default) of the instance field
+  it names, and always applies without the key; a field without it is
+  normalized exactly as before, with no `appliesWhen` key. An `applies_when`
+  that is not a non-empty list of `{ field, in }`, or whose condition names
+  the field itself, a field the descriptor does not define (or defines
+  unusably) or a field with its own `applies_when` (conditions never chain),
+  is dropped with a warning, and the field then always applies. Polyadic's
+  advanced `topic_tracking` applies when `pipeline_type` is
+  `contentCoverage` (ethicapp-ai-additions#314). The evaluation lives in
+  `ethicapp/common/modules/configuration-conditions.js`, shared by the
+  backend and the design editor, and also evaluates `required_when` ("Case
+  inputs"). What EthicApp does with a field that does not apply:
+  - the design editor hides it, re-evaluating as the teacher changes the
+    field the condition names, and the advanced options (#1214) open only
+    for a field that applies; the design and activity views leave it out;
+  - the design keeps its stored value, so the teacher finds it again when
+    the field applies again, and designs saved before keep their values;
+  - the value is not validated and the field is never required, so it never
+    blocks a save or a phase start ("Configuration validation");
+  - the adapter does not send it. The Polyadic bridge evaluates the
+    conditions on the configuration the room is created with
+    (`applicableRoomSettings()`, the same configuration its case inputs are
+    judged on, so a phase without `pipeline_type` follows
+    `AI_ADDITIONS_POLYADIC_AGENTS_PIPELINE_TYPE`). An adapter that reads its
+    descriptor drops such values with `applicableConfiguration()`; the
+    services ignore them anyway.
 - **Student outputs.** The optional `student_outputs` (epic #1124, #1131) are
   normalized to `studentOutputs`, next to `fields`: one
   `{ id, documentSchema, scopes, label, description }` per declared output,
@@ -562,7 +592,9 @@ configurations of other services are kept as they are.
 Each value is checked for its field's `type`, enum membership, `minimum`,
 `maximum` and `step`, `max_length` and `pattern`, and every `required` field
 needs a value. Keys the descriptor does not define are errors. `null` means
-"use the service default".
+"use the service default". A field whose `applies_when` does not hold on the
+configuration (#1234, "Capability descriptors") is skipped: its stored
+value is neither checked nor warned about, and it is never required.
 
 A save with errors answers `400`:
 
@@ -621,7 +653,10 @@ which receives `(context)` only (see "Ephemeral hooks"):
   stores for this service in the hook's phase
   (`phases[n].externalServices.configurations[serviceId]`, validated against
   the service's capability descriptor on save, #731): descriptor field keys to
-  scalars, holding only what the teacher set. It is `{}` when nothing is
+  scalars, holding only what the teacher set, including values kept for
+  fields whose `applies_when` does not hold (#1234), which the adapter must
+  not send (`applicableConfiguration()`, "Capability descriptors"). It is
+  `{}` when nothing is
   stored and for hooks without a phase (`case-created`, `activity-finished`,
   `callback-received`). It is read from the design when the hook fires and is
   a copy, so changing it has no effect. Adapters map it into the AI service's
@@ -1561,7 +1596,9 @@ reads only those two keys, so nothing below knows a service.
   - `caseSessionInputs(descriptor, configuration)` lists `{ key, source,
     required }` for every entry with a `source`. `required` is true when one
     `required_when` condition holds for the configuration's effective value
-    (the stored value, else the field's default; values compared with `===`),
+    (the stored value, else the field's default; values compared with `===`;
+    `ethicapp/common/modules/configuration-conditions.js`, which also
+    evaluates the `applies_when` of instance fields, #1234),
     false for an entry without `required_when`; an entry whose conditions do
     not hold is left out. `descriptor` is what
     `getServiceInstanceConfiguration()` returns, or a raw descriptor.

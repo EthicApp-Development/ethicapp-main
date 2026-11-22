@@ -212,3 +212,28 @@ describe("advanced settings in the summary (#1214)", () => {
         assert.equal(rows.at(-1), row, "after the other settings");
     });
 });
+
+describe("fields that apply to some configurations only in the summary (#1234)", () => {
+    const PIPELINE = field("pipeline_type", "enum", {
+        entries: [ENTRY("standard", "Estándar"), ENTRY("contentCoverage", "Cobertura")],
+    }, { label: "Modo", default: "standard", group: "General", order: 1 });
+    const TOPIC_TRACKING = field("topic_tracking", "boolean", {}, {
+        label:       "Seguimiento de temas",
+        default:     true,
+        group:       "advanced",
+        order:       90,
+        appliesWhen: [{ field: "pipeline_type", in: ["contentCoverage"] }],
+    });
+
+    it("shows a stored value only while its field applies", () => {
+        const summarize = configuration => Object.keys(rowsByKey(
+            summarizeServiceSettings([PIPELINE, TOPIC_TRACKING], configuration)));
+
+        assert.deepEqual(summarize({ pipeline_type: "contentCoverage", topic_tracking: false }),
+            ["pipeline_type", "topic_tracking"]);
+        assert.deepEqual(summarize({ pipeline_type: "standard", topic_tracking: false }),
+            ["pipeline_type"]);
+        assert.deepEqual(summarizeServiceSettings([PIPELINE, TOPIC_TRACKING],
+            { topic_tracking: false }).retiredFields, []);
+    });
+});

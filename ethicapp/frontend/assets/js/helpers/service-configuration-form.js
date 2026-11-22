@@ -7,6 +7,10 @@
 // save (common/modules/service-configuration-rules.js, #731).
 
 import {
+    fieldApplies,
+    fieldsByKeyOf,
+} from "../../../../common/modules/configuration-conditions.js";
+import {
     fieldValueProblem,
     isUnset,
 } from "../../../../common/modules/service-configuration-rules.js";
@@ -21,8 +25,35 @@ function sortOrder(field) {
 
 // Deprecated fields are offered only while a design still stores a value for
 // them, so new designs use their replacements (#133, #733).
-function isVisible(field, configuration) {
+function isOffered(field, configuration) {
     return field.status !== "deprecated" || !isUnset(configuration[field.key]);
+}
+
+/**
+ * Whether a field applies to the configuration: always, unless its
+ * descriptor declares `applies_when` (`appliesWhen`, #1234) and none of its
+ * conditions holds on the effective value (stored, else default) of the
+ * field it names. A field that does not apply is hidden, never reported and
+ * never sent; the design keeps its value for when it applies again.
+ */
+export function fieldAppliesTo(field, configuration, fields) {
+    return fieldApplies(field, configuration, fieldsByKeyOf(fields));
+}
+
+// A field is shown while it is offered and applies.
+function isVisible(field, configuration, fields) {
+    return isOffered(field, configuration) && fieldAppliesTo(field, configuration, fields);
+}
+
+/**
+ * The keys of the fields named by another field's `appliesWhen` (#1234):
+ * changing one of them may show or hide fields.
+ * @returns {Set<string>}
+ */
+export function conditionFieldKeys(fields) {
+    return new Set((Array.isArray(fields) ? fields : [])
+        .flatMap(field => (Array.isArray(field.appliesWhen) ? field.appliesWhen : []))
+        .map(condition => condition.field));
 }
 
 // The names of the descriptor group whose fields are technical settings,
@@ -48,15 +79,18 @@ export function isAdvancedGroup(group) {
 
 /**
  * Visible fields grouped by `group` and ordered by `order` (fields without an
- * order last, ties in descriptor order). Groups follow their first field,
- * except the advanced group (isAdvancedGroup()), which always comes last and
- * is marked `advanced: true`; the form shows it collapsed.
+ * order last, ties in descriptor order). A field is visible while it is not a
+ * deprecated one without a stored value and while it applies
+ * (fieldAppliesTo()). Groups follow their first field, except the advanced
+ * group (isAdvancedGroup()), which always comes last and is marked
+ * `advanced: true`; the form shows it collapsed. A group without visible
+ * fields has no section.
  * @returns {{ group: string|null, advanced: boolean, fields: object[] }[]}
  */
 export function buildFieldSections(fields, configuration = {}) {
     const ordered = fields
         .map((field, index) => ({ field, index }))
-        .filter(({ field }) => isVisible(field, configuration))
+        .filter(({ field }) => isVisible(field, configuration, fields))
         .sort((left, right) => (sortOrder(left.field) - sortOrder(right.field))
             || (left.index - right.index))
         .map(({ field }) => field);
@@ -212,10 +246,10 @@ function storedProblem(field, storedConfiguration) {
 }
 
 /**
- * Errors to show for the visible fields, as `{ [key]: code }`. As on the
- * server (#731), a problem the stored design already had for this service
- * (same field, value and code, in any phase) is not an error: the teacher did
- * not introduce it. Required fields count only once the service has a
+ * Errors to show for the visible fields (buildFieldSections()), as
+ * `{ [key]: code }`. As on the server (#731), a problem the stored design
+ * already had for this service (same field, value and code, in any phase) is
+ * not an error: the teacher did not introduce it. Required fields count only once the service has a
  * configuration, as the server only checks configurations that exist.
  * @param {object[]} storedConfigurations this service's configurations in the
  *   design as stored (one per phase that has one)
@@ -225,7 +259,7 @@ export function configurationErrors(fields, configuration = {}, storedConfigurat
     const hasConfiguration = Object.keys(configuration).length > 0;
 
     for (const field of fields) {
-        if (!isVisible(field, configuration)) {
+        if (!isVisible(field, configuration, fields)) {
             continue;
         }
         const value = configuration[field.key];
@@ -278,7 +312,9 @@ function replacementValue(field, entry) {
  * - `retired_value`: the enum no longer lists the value; the service uses the
  *   field default instead (`defaultText`);
  * - `no_longer_valid`: the value breaks a current rule (`reason`, an error code).
- * Fields the descriptor no longer defines come back in `retiredFields`.
+ * Fields the descriptor no longer defines come back in `retiredFields`. A
+ * field that does not apply (fieldAppliesTo(), #1234) gets no notice: its
+ * value is kept but not used.
  * @returns {{ byField: object, retiredFields: { key: string, value: * }[] }}
  */
 export function settingNotices(fields, configuration = {}) {
@@ -287,7 +323,7 @@ export function settingNotices(fields, configuration = {}) {
 
     for (const field of fields) {
         const value = configuration[field.key];
-        if (isUnset(value)) {
+        if (isUnset(value) || !fieldAppliesTo(field, configuration, fields)) {
             continue;
         }
 
