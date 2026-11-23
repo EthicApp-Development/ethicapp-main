@@ -9,12 +9,12 @@
     "calls": {
       "correction": {
         "promptVersion": "correccion_argumento_etica_v19_basico",
-        "model": "gpt-5-mini",
+        "model": "gpt-6-luna",
         "reasoningEffort": null
       },
       "mapping": {
         "promptVersion": "mapeo_evidencia_v17e_basico",
-        "model": "gpt-5-mini",
+        "model": "gpt-6-luna",
         "reasoningEffort": "medium"
       }
     },
