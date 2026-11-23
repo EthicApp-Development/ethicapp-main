@@ -43,6 +43,25 @@ than this file; see their GitHub Releases.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v2026.11.23] - 2026-11-23
+
+EthicApp stores and exports the topic coverage of Polyadic's decisions and shows a configuration field only where it applies (ethicapp-ai-additions epic #312).
+
+Partial release: only the `ethicapp` and `db-migrations` images.
+
+### Added
+
+- Polyadic decision records may carry the optional `topicCoverage` key of `mediation-decision/v1`: each topic's level after the TopicTracker's run, with message references as evidence. Records are validated with the same coverage rules as `validate_mediation_decision()`, stored verbatim, and the evidence is resolved to EthicApp chat message ids in `coverage_evidence_chat_message_ids` (#1233).
+- When some decision of a session carries a coverage, the chat transcript adds `polyadic_decision_topic_status`, `polyadic_decision_coverage_status`, `polyadic_decision_coverage_updated_topic_ids` and `polyadic_decision_coverage_topics` to the decision rows. Transcripts without coverage keep their columns and values (#1233).
+- Service descriptors may declare `applies_when` on instance configuration fields. The design editor shows such a field only while its conditions hold, validation skips it otherwise, and the Polyadic adapter leaves its value out of rooms where it does not apply; the stored value is kept. Polyadic's advanced "Topic Tracking" appears only for Content Coverage (#1234).
+- `canonical-schemas/ai-additions/` holds `mediation-decision/v1` with `topicCoverage` and the example `topic-coverage.es_CL.json`, identical to ethicapp-ai-additions `v2026.11.23-ai-additions` (#1233).
+
+### Deployment
+
+- Migrations: V47 (adds `external_service_mediation_decisions.coverage_evidence_chat_message_ids`).
+- Environment contract: unchanged.
+- Deploy before ethicapp-ai-additions `v2026.11.23-ai-additions`, or in the same window. Its Polyadic sends `topicCoverage` in the decisions of rooms with topic tracking, and EthicApp before this release skips those records; this release works with the earlier Polyadic.
+
 ## [v2026.11.16] - 2026-11-16
 
 EthicApp supports Polyadic's content coverage mode: it sends each case's discussion topics and stores and exports the agent's decisions (ethicapp-ai-additions epic #293).
@@ -955,6 +974,7 @@ Earliest published image set of ethicapp-main in the registry, built from 32b294
 - A GitHub workflow publishes the service images to GHCR, and a canonical environment contract (`config/env.contract.yml`) describes the deployment variables.
 - Production Compose runs separate Redis instances for sessions and for cache, configured with `REDIS_SESSION_*` and `REDIS_CACHE_*` and falling back to `REDIS_*`.
 
+[v2026.11.23]: https://github.com/EthicApp-Development/ethicapp-main/releases/tag/v2026.11.23
 [v2026.11.16]: https://github.com/EthicApp-Development/ethicapp-main/releases/tag/v2026.11.16
 [v2026.11.15]: https://github.com/EthicApp-Development/ethicapp-main/releases/tag/v2026.11.15
 [v2026.11.12.2]: https://github.com/EthicApp-Development/ethicapp-main/releases/tag/v2026.11.12.2
