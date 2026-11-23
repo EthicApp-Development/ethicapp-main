@@ -15,8 +15,8 @@ them here: the copy changes only to match the source.
 | `examples/mediation-decision.v1/*.json` | `shared/schemas/examples/mediation-decision.v1/*.json` |
 
 Every file was compared byte for byte with commit
-[`48a3f26`](https://github.com/EthicApp-Development/ethicapp-ai-additions/commit/48a3f26)
-for #1233.
+[`3024013`](https://github.com/EthicApp-Development/ethicapp-ai-additions/commit/3024013)
+for ethicapp-ai-additions#327.
 The `student-result/v1` schema comes from ethicapp-ai-additions PR #234
 (issue #232), and its tutor examples were regenerated from the tutor's own
 output by PR #235 (issue #233); they are unchanged since commit `3b292d1`.
@@ -24,8 +24,9 @@ The `argument-evaluation/v1` schema and its examples come from PR #280
 (issue #268) and were copied for #1214; ethicapp-ai-additions PR #287 (issue
 #277) added the basic mode (`tutorMode: basic`, with `focalAction`,
 `caseQuotes` and the warrant's `caseQuote`, example
-`analysis-basic.es_CL.json`), and PR #289 renamed the tutor document its
-description names. The tutor's v19 student documents
+`analysis-basic.es_CL.json`), PR #289 renamed the tutor document its
+description names, and PR #328 (issue #327) set the examples' `model` to
+`gpt-6-luna`, the v19 evaluation's model since OpenAI retires `gpt-5-mini`. The tutor's v19 student documents
 (`tutor-v19-*.json`) come from ethicapp-ai-additions PRs #282 and #285
 (issue #274). The `mediation-decision/v1` schema and its examples come from
 ethicapp-ai-additions PR #299 (epic #293, unchanged since commit `927760b`)

@@ -20,7 +20,7 @@ export const EXAMPLE_NAMES = [
 
 // The argument-evaluation/v1 examples in fixtures/argument-evaluation.v1/ are
 // verbatim copies of ethicapp-ai-additions
-// shared/schemas/examples/argument-evaluation.v1/ at commit c4a573a (PR #280),
+// shared/schemas/examples/argument-evaluation.v1/ at commit 3024013 (PR #328),
 // as canonical-schemas/ai-additions/ holds them (#1214).
 export function argumentEvaluationExample(name) {
   const url = new URL(`./fixtures/argument-evaluation.v1/${name}.json`, import.meta.url);
